@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Search, List, Eye, FileEdit, PlayCircle, Zap } from "lucide-react";
+import { Search, List, Eye, FileEdit, PlayCircle, Zap, AlertCircle } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { getFileIconInfo } from "../../lib/fileIcons";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
@@ -16,6 +16,9 @@ interface ActionCardProps {
 
 export const ActionCard = memo(({ trace, resultCount, className, assets, setActiveArtifactId }: ActionCardProps) => {
   const toolName = (trace.name || "").toLowerCase();
+  const traceMetadata = (trace.metadata_vars ?? {}) as Record<string, any>;
+  const output = traceMetadata.output as string | undefined;
+  const hasError = !!(traceMetadata.error || (output && output.includes("Exit Code:") && !output.includes("Exit Code: 0")));
   
   if (trace.trace_type !== TraceType.TOOL_START) return null;
 
@@ -87,7 +90,14 @@ export const ActionCard = memo(({ trace, resultCount, className, assets, setActi
       )}
       {!fileName && trace.name && <span className="font-mono text-primary/70 truncate">{trace.name}</span>}
       
-      {resultCount !== undefined && (
+      {hasError && (
+        <span className="ml-auto text-[10px] text-red-400 font-mono flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Failed
+        </span>
+      )}
+
+      {resultCount !== undefined && !hasError && (
         <span className="ml-auto text-[10px] text-muted-foreground/30 font-mono">
           {resultCount} results
         </span>

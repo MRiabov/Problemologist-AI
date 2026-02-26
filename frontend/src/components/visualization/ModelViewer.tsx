@@ -323,21 +323,34 @@ export default function ModelViewer({
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       
       {/* Model Browser Sidebar (Inventor Style) */}
-      {showTopology && (
-        <ModelBrowser 
-          nodes={topologyNodes}
-          hiddenParts={hiddenParts}
-          onToggleVisibility={(id) => {
-            setHiddenParts(prev => 
-                prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-            )
-          }}
-          className="w-72 shrink-0 z-20"
-        />
-      )}
+      <ModelBrowser 
+        nodes={topologyNodes}
+        hiddenParts={hiddenParts}
+        onToggleVisibility={(id) => {
+          setHiddenParts(prev => 
+              prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+          )
+        }}
+        className={cn(
+          "w-72 shrink-0 z-20 transition-all duration-150",
+          showTopology ? "opacity-100" : "w-0 opacity-0 overflow-hidden border-r-0 pointer-events-none"
+        )}
+      />
 
       {/* Main Viewport Area */}
       <div className="flex-1 flex flex-col relative min-w-0">
+      {!showTopology && (
+        <Button
+          variant="secondary"
+          size="icon"
+          title="Toggle Model Browser"
+          data-testid="model-browser-toggle"
+          className="absolute top-4 left-4 z-30 h-8 w-8 rounded-full shadow-lg border-primary/20"
+          onClick={() => setShowTopology(true)}
+        >
+          <Layers className="h-4 w-4" />
+        </Button>
+      )}
 
       {/* Main Viewport */}
       <div className="flex-1 min-h-0 relative">
@@ -387,10 +400,11 @@ export default function ModelViewer({
             {/* Rebuild Prompt Overlay */}
             {urls.length === 0 && onRebuildModel && (
                 <Html center>
-                    <div className="w-64 text-center pointer-events-auto">
+                    <div data-testid="no-model-overlay" className="w-64 text-center pointer-events-auto">
                          <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-                            <h3 className="text-sm font-bold text-slate-200">No Model Loaded</h3>
+                            <h3 data-testid="no-model-title" className="text-sm font-bold text-slate-200">No Model Loaded</h3>
                             <Button 
+                                data-testid="rebuild-model-button"
                                 size="sm" 
                                 variant="outline" 
                                 onClick={onRebuildModel}
@@ -452,7 +466,11 @@ export default function ModelViewer({
                 variant="secondary" 
                 size="icon" 
                 title="Toggle Model Browser"
-                className={cn("h-8 w-8 rounded-full shadow-lg border-primary/20", showTopology && "bg-primary text-primary-foreground")}
+                data-testid="model-browser-toggle"
+                className={cn(
+                  "h-8 w-8 rounded-full shadow-lg border-primary/20",
+                  showTopology ? "bg-primary text-primary-foreground" : "hidden"
+                )}
                 onClick={() => setShowTopology(!showTopology)}
             >
                 <Layers className="h-4 w-4" />
@@ -505,6 +523,7 @@ export default function ModelViewer({
               <Button 
                 variant="ghost" 
                 size="icon" 
+                data-testid="simulation-play-toggle"
                 className="h-8 w-8 text-primary shrink-0"
                 onClick={() => setIsPlaying(!isPlaying)}
               >
@@ -512,6 +531,7 @@ export default function ModelViewer({
               </Button>
               <div className="flex-1 relative flex items-center">
                   <input 
+                      data-testid="simulation-timeline-slider"
                       type="range" 
                       min="0" 
                       max="100" 
@@ -525,13 +545,22 @@ export default function ModelViewer({
                   />
               </div>
               <div className="flex items-center gap-1 shrink-0 px-2 font-mono text-[10px] text-muted-foreground w-20 justify-end">
-                  <span className="text-foreground font-bold">{(currentTime / 10).toFixed(1)}s</span>
+                  <span data-testid="simulation-current-time" className="text-foreground font-bold">{(currentTime / 10).toFixed(1)}s</span>
                   <span>/ 10.0s</span>
               </div>
           </div>
           <div className="flex items-center justify-between px-1">
               <div className="flex gap-2">
-                   <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+                   <Button
+                      variant="ghost"
+                      size="icon"
+                      data-testid="simulation-reset-button"
+                      className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setCurrentTime(0);
+                        setIsPlaying(false);
+                      }}
+                   >
                       <RotateCcw className="h-3 w-3" />
                    </Button>
                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">

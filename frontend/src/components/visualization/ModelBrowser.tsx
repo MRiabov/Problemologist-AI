@@ -111,7 +111,10 @@ export function ModelBrowser({ nodes, hiddenParts, onToggleVisibility, className
   };
 
   return (
-    <div className={cn("flex flex-col bg-slate-950 border-r border-slate-800 text-slate-300", className)}>
+    <div
+      data-testid="model-browser-panel"
+      className={cn("flex flex-col bg-slate-950 border-r border-slate-800 text-slate-300", className)}
+    >
       <div className="p-3 border-b border-slate-800 bg-slate-900/50">
         <div className="flex items-center gap-2 mb-3">
           <div className="size-1.5 rounded-full bg-primary animate-pulse" />

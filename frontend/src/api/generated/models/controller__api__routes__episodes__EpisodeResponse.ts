@@ -18,6 +18,7 @@ export type controller__api__routes__episodes__EpisodeResponse = {
     journal?: (string | null);
     plan?: (string | null);
     validation_logs?: (Array<string> | null);
+    last_trace_id?: (number | null);
     traces?: (Array<TraceResponse> | null);
     assets?: (Array<AssetResponse> | null);
 };

@@ -61,11 +61,15 @@ export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: Fe
                 className="absolute inset-0 bg-background/60 backdrop-blur-[2px]" 
                 onClick={onClose}
             />
-            <div className="bg-background border border-border shadow-2xl rounded-2xl p-6 max-w-lg w-full relative animate-in fade-in zoom-in-95 duration-200">
+            <div 
+                data-testid="feedback-modal"
+                className="bg-background border border-border shadow-2xl rounded-2xl p-6 max-w-lg w-full relative animate-in fade-in zoom-in-95 duration-200"
+            >
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Agent Feedback</h2>
                     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
                         <button
+                            data-testid="modal-thumbs-up"
                             onClick={() => setScore(1)}
                             className={cn(
                                 "p-2 rounded-lg transition-all",
@@ -75,6 +79,7 @@ export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: Fe
                             <ThumbsUp className="h-4 w-4" />
                         </button>
                         <button
+                            data-testid="modal-thumbs-down"
                             onClick={() => setScore(0)}
                             className={cn(
                                 "p-2 rounded-lg transition-all",

@@ -54,6 +54,20 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([]);
   const [feedbackState, setFeedbackState] = useState<{ traceId: number; score: number } | null>(null);
 
+  // WP10: Restore selected episode from localStorage on mount
+  useEffect(() => {
+    const savedId = localStorage.getItem("selectedEpisodeId");
+    if (savedId && !selectedEpisode) {
+        fetchEpisode(savedId).then(data => {
+            setSelectedEpisode(data);
+        }).catch(err => {
+            console.error("Failed to restore episode from localStorage:", err);
+            localStorage.removeItem("selectedEpisodeId");
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const refreshEpisodes = useCallback(async () => {
     try {
       const data = await fetchEpisodes();
@@ -72,15 +86,20 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     try {
       const fullEp = await fetchEpisode(id);
       setSelectedEpisode(fullEp);
+      localStorage.setItem("selectedEpisodeId", id);
     } catch (e) {
       console.error("Failed to fetch episode details", e);
       const ep = episodes.find(e => e.id === id);
-      if (ep) setSelectedEpisode(ep);
+      if (ep) {
+          setSelectedEpisode(ep);
+          localStorage.setItem("selectedEpisodeId", id);
+      }
     }
   }, [episodes]);
 
   const clearSelection = useCallback(() => {
     setSelectedEpisode(null);
+    localStorage.removeItem("selectedEpisodeId");
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
     setTopologyNodes([]);
@@ -89,6 +108,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
   const createNewBenchmark = useCallback((isBenchmark: boolean = false) => {
     setSelectedEpisode(null);
+    localStorage.removeItem("selectedEpisodeId");
     setIsCreationMode(true);
     setIsBenchmarkCreation(isBenchmark);
     setTopologyNodes([]);
@@ -140,6 +160,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           assets: []
         };
         setSelectedEpisode(newEpisode);
+        localStorage.setItem("selectedEpisodeId", response.episode_id);
         await refreshEpisodes();
       }
     } catch (e) {

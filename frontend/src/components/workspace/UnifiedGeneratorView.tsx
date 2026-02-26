@@ -232,10 +232,14 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                   />
 
                   {modelUrls.length === 0 && !videoAsset && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+                    <div
+                      data-testid="no-assets-overlay"
+                      className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+                    >
                         <div className="bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-                            <h3 className="text-sm font-bold text-slate-200">No Assets Loaded</h3>
+                            <h3 data-testid="no-assets-title" className="text-sm font-bold text-slate-200">No Assets Loaded</h3>
                             <Button 
+                                data-testid="rebuild-assets-button"
                                 size="sm" 
                                 variant="outline" 
                                 onClick={async () => {

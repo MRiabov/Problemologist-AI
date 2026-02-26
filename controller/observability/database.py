@@ -114,6 +114,50 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
+    async def record_tool_start(self, tool_name: str, input_data: str) -> int:
+        """Explicitly log the start of a tool call."""
+        try:
+            async with self.session_factory() as db:
+                trace_obj = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.TOOL_START,
+                    name=tool_name,
+                    content=input_data,
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(trace_obj)
+                await db.commit()
+                await db.refresh(trace_obj)
+                await self._broadcast_trace(trace_obj)
+                return trace_obj.id
+        except Exception as e:
+            logger.warning("database_tool_start_failed", error=str(e))
+            return 0
+
+    async def record_tool_end(
+        self, trace_id: int, output_data: str, is_error: bool = False
+    ) -> None:
+        """Explicitly log the end of a tool call, potentially updating metadata."""
+        if not trace_id:
+            return
+        try:
+            async with self.session_factory() as db:
+                trace_obj = await db.get(Trace, trace_id)
+                if trace_obj:
+                    # For now, we update the existing TOOL_START trace with results
+                    # to keep the UI simple (ActionCard can show output).
+                    # Alternatively, we could create a TOOL_END trace.
+                    meta = dict(trace_obj.metadata_vars or {})
+                    if is_error:
+                        meta["error"] = output_data
+                    else:
+                        meta["output"] = output_data
+                    trace_obj.metadata_vars = meta
+                    await db.commit()
+                    await self._broadcast_trace(trace_obj)
+        except Exception as e:
+            logger.warning("database_tool_end_failed", error=str(e))
+
     # Keep generic event recording
     async def record_events(self, events: list[dict[str, Any]]) -> None:
         """Record domain-specific events in the database."""
