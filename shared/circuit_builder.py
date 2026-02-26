@@ -24,6 +24,12 @@ def resolve_node_name(comp_id: str, term: str) -> str:
     if term == "b":
         term = "-"
 
+    # Normalization for logic board terminals
+    if term == "vin":
+        term = "+"
+    if term == "gnd":
+        term = "-"
+
     return f"{comp_id}_{term}"
 
 
@@ -102,6 +108,21 @@ def build_circuit_from_section(
             # No explicit resistance is modeled between pins unless we knew the internal schematic.
             # Wires connect to "connector_id_pin" nodes, which implicitly joins them.
             pass
+
+        elif comp.type == ElectronicComponentType.LOGIC_BOARD:
+            # Model logic board as a resistive load
+            # Use provided specs or defaults if missing
+            # Default to 5V / 0.1A = 50 Ohms if not specified
+            v_rated = comp.rated_voltage or 5.0
+            i_draw = comp.stall_current_a or 0.1
+            resistance = v_rated / i_draw
+
+            circuit.R(
+                f"lb_{comp.component_id}",
+                f"{comp.component_id}_+",
+                f"{comp.component_id}_-",
+                resistance @ u_Ohm,
+            )
 
     # 3. Add Wiring
     for wire in section.wiring:
