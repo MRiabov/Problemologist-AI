@@ -114,6 +114,24 @@ scenarios:
             overwrite: true
         - name: "write_file"
           input: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
     electronics_planner:
       summary: "No electronics needed."
       thought: "No electronics needed."

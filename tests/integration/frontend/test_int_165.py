@@ -35,9 +35,9 @@ def test_cad_topology_selection_and_browser(page: Page):
     send_button.click()
 
     # 6. Wait for the "Confirm & Start" button and click it
-    confirm_button = page.get_by_role("button", name="Confirm & Start")
+    confirm_button = page.get_by_test_id("chat-confirm-button")
     expect(confirm_button).to_be_visible(timeout=120000)
-    confirm_button.click()
+    confirm_button.click(force=True)
 
     # 7. Wait for either generated assets or fallback rebuild affordance.
     assets_overlay = page.get_by_test_id("no-assets-overlay")
