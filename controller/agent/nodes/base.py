@@ -82,7 +82,7 @@ class SharedNodeContext:
     ) -> DatabaseCallbackHandler:
         """Creates a database recorder for traces."""
         sid = session_id or self.session_id
-        return DatabaseCallbackHandler(episode_id=sid)
+        return DatabaseCallbackHandler(episode_id=sid, loop=self.main_loop)
 
 
 class BaseNode:
@@ -141,14 +141,11 @@ class BaseNode:
 
                     try:
                         if asyncio.iscoroutinefunction(func):
-                            # For the tool itself, we still need a loop if it's async
-                            new_loop = asyncio.new_event_loop()
-                            try:
-                                result = new_loop.run_until_complete(
-                                    func(*args, **kwargs)
-                                )
-                            finally:
-                                new_loop.close()
+                            # WP10: Use run_coroutine_threadsafe on the main loop
+                            future = asyncio.run_coroutine_threadsafe(
+                                func(*args, **kwargs), self.ctx.main_loop
+                            )
+                            result = future.result(timeout=60)
                         else:
                             result = func(*args, **kwargs)
 
@@ -294,7 +291,9 @@ class BaseNode:
                 episode_id = getattr(session, "session_id", None)
 
         if episode_id and str(episode_id).strip():
-            db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
+            db_callback = DatabaseCallbackHandler(
+                episode_id=str(episode_id), loop=self.ctx.main_loop
+            )
 
         interpreter = WorkerInterpreter(
             worker_client=self.ctx.worker_client, session_id=self.ctx.session_id

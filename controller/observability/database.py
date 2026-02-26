@@ -36,6 +36,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
     def __init__(
         self,
         episode_id: str | uuid.UUID,
+        loop: asyncio.AbstractEventLoop | None = None,
     ):
         if isinstance(episode_id, str):
             try:
@@ -46,6 +47,9 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             self.episode_id = episode_id
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
+        self.loop = loop or (
+            asyncio.get_event_loop() if asyncio.get_event_loop().is_running() else None
+        )
 
     async def _broadcast_trace(self, trace_obj: Trace) -> None:
         """Helper to broadcast a new trace."""
@@ -159,59 +163,36 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         except Exception as e:
             logger.warning("database_tool_end_failed", error=str(e))
 
-    def record_tool_start_sync(self, tool_name: str, input_data: str) -> int:
-        """Synchronous wrapper for record_tool_start."""
-        try:
+        def record_tool_start_sync(self, tool_name: str, input_data: str) -> int:
+            """Synchronous wrapper for record_tool_start."""
             try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                # We are in a thread, but there is a running loop.
-                # However, we can't easily run_until_complete if we are in the main thread's loop.
-                # But here we are likely in a dspy thread.
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        lambda: asyncio.run(
-                            self.record_tool_start(tool_name, input_data)
-                        )
+                if self.loop and self.loop.is_running():
+                    future = asyncio.run_coroutine_threadsafe(
+                        self.record_tool_start(tool_name, input_data), self.loop
                     )
-                    return future.result()
-            else:
-                return asyncio.run(self.record_tool_start(tool_name, input_data))
-        except Exception as e:
-            logger.warning("database_tool_start_sync_failed", error=str(e))
-            return 0
+                    return future.result(timeout=10)
+                else:
+                    return asyncio.run(self.record_tool_start(tool_name, input_data))
+            except Exception as e:
+                logger.warning("database_tool_start_sync_failed", error=str(e))
+                return 0
 
-    def record_tool_end_sync(
-        self, trace_id: int, output_data: str, is_error: bool = False
-    ) -> None:
-        """Synchronous wrapper for record_tool_end."""
-        if not trace_id:
-            return
-        try:
+        def record_tool_end_sync(
+            self, trace_id: int, output_data: str, is_error: bool = False
+        ) -> None:
+            """Synchronous wrapper for record_tool_end."""
+            if not trace_id:
+                return
             try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        lambda: asyncio.run(
-                            self.record_tool_end(trace_id, output_data, is_error)
-                        )
+                if self.loop and self.loop.is_running():
+                    future = asyncio.run_coroutine_threadsafe(
+                        self.record_tool_end(trace_id, output_data, is_error), self.loop
                     )
-                    future.result()
-            else:
-                asyncio.run(self.record_tool_end(trace_id, output_data, is_error))
-        except Exception as e:
-            logger.warning("database_tool_end_sync_failed", error=str(e))
+                    future.result(timeout=10)
+                else:
+                    asyncio.run(self.record_tool_end(trace_id, output_data, is_error))
+            except Exception as e:
+                logger.warning("database_tool_end_sync_failed", error=str(e))
 
     # Keep generic event recording
     async def record_events(self, events: list[dict[str, Any]]) -> None:

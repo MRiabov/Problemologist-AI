@@ -130,7 +130,9 @@ async def execute_agent_task(
                 await db.refresh(initial_trace)
 
                 # Setup real-time tracing to DB
-                db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
+                db_callback = DatabaseCallbackHandler(
+                    episode_id=str(episode_id), loop=asyncio.get_running_loop()
+                )
 
                 # Broadcast initial trace (refresh to get ID)
                 await db.refresh(initial_trace)
@@ -512,7 +514,9 @@ async def continue_agent_task(
                 await db.refresh(user_trace)
 
                 # Setup callbacks
-                db_callback = DatabaseCallbackHandler(episode_id=str(episode_id))
+                db_callback = DatabaseCallbackHandler(
+                    episode_id=str(episode_id), loop=asyncio.get_running_loop()
+                )
                 await db_callback._broadcast_trace(user_trace)
 
                 callbacks = [db_callback]

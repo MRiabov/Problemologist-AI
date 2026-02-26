@@ -10,9 +10,8 @@ from controller.config.settings import settings
 
 logger = structlog.get_logger(__name__)
 
-# Cache engines and sessionmakers per event loop to avoid cross-loop usage errors
-# in highly concurrent environments like integration tests.
-_engine_cache: dict[int, Any] = {}
+# Global engine used across all event loops (engines are thread-safe and manage their own pools)
+_global_engine: Any = None
 _sessionmaker_cache: dict[int, Any] = {}
 _cache_lock = threading.RLock()
 
@@ -22,31 +21,22 @@ class Base(DeclarativeBase):
 
 
 def get_engine():
-    """Get or create a cached async engine for the current event loop."""
-    global _engine_cache
-
-    try:
-        loop = asyncio.get_running_loop()
-        loop_id = id(loop)
-    except RuntimeError:
-        # Fallback for non-async contexts or setup
-        loop_id = 0
+    """Get or create the global async engine."""
+    global _global_engine
 
     with _cache_lock:
-        if loop_id in _engine_cache:
-            return _engine_cache[loop_id]
+        if _global_engine is not None:
+            return _global_engine
 
         database_url = settings.database_url
-        logger.info("creating_new_engine", loop_id=loop_id, url=database_url)
-        engine = create_async_engine(
+        _global_engine = create_async_engine(
             database_url,
             echo=False,
             pool_pre_ping=True,
             pool_size=20,
             max_overflow=10,
         )
-        _engine_cache[loop_id] = engine
-        return engine
+        return _global_engine
 
 
 def get_sessionmaker():
@@ -63,7 +53,6 @@ def get_sessionmaker():
         if loop_id in _sessionmaker_cache:
             return _sessionmaker_cache[loop_id]
 
-        logger.info("creating_new_sessionmaker", loop_id=loop_id)
         engine = get_engine()
         sm = async_sessionmaker(
             engine,

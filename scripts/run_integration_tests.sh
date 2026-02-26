@@ -321,9 +321,10 @@ cleanup() {
 
   if [ "$DOWN_FLAG" = true ]; then
     echo "Bringing down infrastructure containers (--down flag provided)..."
-    docker compose -f docker-compose.test.yaml down -v
+    docker compose -f docker-compose.test.yaml down
   else
-    echo "Keeping infrastructure containers running (use --down to bring them down)."
+    echo "Stopping infrastructure containers..."
+    docker compose -f docker-compose.test.yaml stop
   fi
   
   exit $EXIT_STATUS
