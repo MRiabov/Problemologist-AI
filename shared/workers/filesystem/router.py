@@ -141,7 +141,9 @@ class FilesystemRouter:
         base = mount.local_path.resolve()
 
         if not target.is_relative_to(base):
-            logger.warning("path_traversal_attempted", path=path, mount=mount.virtual_prefix)
+            logger.warning(
+                "path_traversal_attempted", path=path, mount=mount.virtual_prefix
+            )
             raise PermissionError(f"Path traversal attempted: {path}")
 
         return target

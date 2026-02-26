@@ -74,7 +74,9 @@ async def get_episode_asset(
         worker_session_id = str(episode_id)
 
     worker_light_url = settings.worker_light_url
-    asset_url = f"{worker_light_url}/assets/{path}"
+    # Ensure path doesn't start with a slash to avoid double slash in URL
+    safe_path = path.lstrip("/")
+    asset_url = f"{worker_light_url}/assets/{safe_path}"
 
     async with httpx.AsyncClient() as client:
         try:
