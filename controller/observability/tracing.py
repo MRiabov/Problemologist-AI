@@ -80,8 +80,22 @@ async def sync_asset(
     """
     if isinstance(episode_id, str):
         try:
-            episode_uuid = uuid.UUID(episode_id)
+            # Strip common prefixes like INT-XXX- or sim-
+            clean_id = episode_id
+            if "-" in episode_id and not episode_id.startswith("{"):
+                parts = episode_id.split("-")
+                # If first part is not numeric and not a uuid part, it might be a prefix
+                if len(parts) > 1 and len(parts[0]) <= 4:
+                    # Check if the rest looks like a UUID or at least has enough parts
+                    potential_uuid = "-".join(parts[1:])
+                    if len(potential_uuid) >= 32:
+                        clean_id = potential_uuid
+
+            episode_uuid = uuid.UUID(clean_id)
         except ValueError:
+            logger.warning(
+                "sync_asset_uuid_invalid", episode_id=episode_id, path=str(path)
+            )
             return None
     else:
         episode_uuid = episode_id
@@ -114,6 +128,12 @@ async def sync_asset(
         if asset:
             asset.content = content
             asset.asset_type = asset_type
+            logger.info(
+                "sync_asset_updated",
+                episode_id=str(episode_uuid),
+                path=str(path),
+                type=asset_type,
+            )
         else:
             asset = Asset(
                 episode_id=episode_uuid,
@@ -122,6 +142,12 @@ async def sync_asset(
                 asset_type=asset_type,
             )
             db.add(asset)
+            logger.info(
+                "sync_asset_created",
+                episode_id=str(episode_uuid),
+                path=str(path),
+                type=asset_type,
+            )
 
         await db.commit()
         await db.refresh(asset)
