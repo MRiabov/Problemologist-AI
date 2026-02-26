@@ -132,6 +132,7 @@ class ElectronicComponentType(StrEnum):
     RELAY = "RELAY"
     SWITCH = "SWITCH"
     CONNECTOR = "CONNECTOR"
+    LOGIC_BOARD = "LOGIC_BOARD"
 
 
 class ManufacturingMethod(StrEnum):
