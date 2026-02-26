@@ -77,12 +77,17 @@ fi
 
 # Parse arguments
 REVERSE_FLAG=""
+DOWN_FLAG=false
 PYTEST_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --reverse)
       REVERSE_FLAG="--reverse"
+      shift
+      ;;
+    --down)
+      DOWN_FLAG=true
       shift
       ;;
     --no-smoke)
@@ -314,8 +319,12 @@ cleanup() {
     rm -rf "$WORKER_SESSIONS_DIR"
   fi
 
-  echo "Bringing down infrastructure containers..."
-  docker compose -f docker-compose.test.yaml down -v
+  if [ "$DOWN_FLAG" = true ]; then
+    echo "Bringing down infrastructure containers (--down flag provided)..."
+    docker compose -f docker-compose.test.yaml down -v
+  else
+    echo "Keeping infrastructure containers running (use --down to bring them down)."
+  fi
   
   exit $EXIT_STATUS
 }
