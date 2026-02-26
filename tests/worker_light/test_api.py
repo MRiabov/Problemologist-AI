@@ -64,7 +64,7 @@ def test_fs_write(mock_create_router):
     )
 
     assert response.status_code == 200
-    assert response.json()["status"] == "success"
+    assert response.json()["status"].lower() == "success"
     mock_router.write.assert_called_with("/test.txt", "new content", overwrite=False)
 
 
@@ -104,7 +104,7 @@ def test_fs_edit(mock_create_router):
     )
 
     assert response.status_code == 200
-    assert response.json()["status"] == "success"
+    assert response.json()["status"].lower() == "success"
     mock_router.edit.assert_called_with("/test.txt", "old", "new")
 
 

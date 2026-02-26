@@ -22,7 +22,7 @@ def test_validate_circuit_happy_path():
     components = [
         ElectronicComponent(
             component_id="m1",
-            type="motor",
+            type="MOTOR",
             rated_voltage=12.0,
             stall_current_a=2.0,
         )
@@ -62,7 +62,7 @@ def test_validate_circuit_short_circuit():
     components = [
         ElectronicComponent(
             component_id="shorty",
-            type="motor",
+            type="MOTOR",
             rated_voltage=12.0,
             stall_current_a=12000.0,
         )
@@ -100,7 +100,7 @@ def test_validate_circuit_overcurrent():
     components = [
         ElectronicComponent(
             component_id="m1",
-            type="motor",
+            type="MOTOR",
             rated_voltage=12.0,
             stall_current_a=2.0,
         )
@@ -136,8 +136,8 @@ def test_static_power_budget():
     """T008: Test static power budget calculation."""
     psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=5.0)
     components = [
-        ElectronicComponent(component_id="m1", type="motor", stall_current_a=2.0),
-        ElectronicComponent(component_id="m2", type="motor", stall_current_a=4.0),
+        ElectronicComponent(component_id="m1", type="MOTOR", stall_current_a=2.0),
+        ElectronicComponent(component_id="m2", type="MOTOR", stall_current_a=4.0),
     ]
     section = ElectronicsSection(
         power_supply=psu_config, components=components, wiring=[]
@@ -154,7 +154,7 @@ def test_validate_circuit_disconnected_motor():
     """T007: Test if a disconnected motor is detected."""
     psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0)
     components = [
-        ElectronicComponent(component_id="m1", type="motor", stall_current_a=2.0),
+        ElectronicComponent(component_id="m1", type="MOTOR", stall_current_a=2.0),
     ]
     # No wiring!
     section = ElectronicsSection(

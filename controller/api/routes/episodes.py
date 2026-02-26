@@ -59,6 +59,12 @@ async def get_episode_asset(
     db: AsyncSession = Depends(get_db),
 ):
     """Proxy asset requests to the worker."""
+    # WP08: Prevent path traversal
+    from pathlib import Path
+    p = Path(path)
+    if p.is_absolute() or ".." in p.parts or path.startswith("."):
+        raise HTTPException(status_code=400, detail="Invalid asset path")
+
     result = await db.execute(select(Episode).where(Episode.id == episode_id))
     episode = result.scalar_one_or_none()
 

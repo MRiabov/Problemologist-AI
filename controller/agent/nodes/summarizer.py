@@ -68,11 +68,17 @@ class SummarizerNode(BaseNode):
 @type_check
 async def summarizer_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
-    from controller.config.settings import settings as global_settings
 
-    worker_light_url = global_settings.worker_light_url
-    ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
-    )
+    if state.context:
+        ctx = state.context
+    else:
+        from controller.config.settings import settings as global_settings
+
+        worker_light_url = global_settings.worker_light_url
+        ctx = SharedNodeContext.create(
+            worker_light_url=worker_light_url, session_id=session_id
+        )
+        state.context = ctx
+
     node = SummarizerNode(context=ctx)
     return await node(state)

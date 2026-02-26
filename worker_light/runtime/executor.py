@@ -37,32 +37,13 @@ class RuntimeConfig(BaseModel):
     working_directory: StrictStr | None = None
 
 
-@type_check
-def run_python_code(
-    code: str,
-    env: dict[str, str] | None = None,
-    config: RuntimeConfig | None = None,
-) -> ExecutionResult:
-    """Execute Python code in a subprocess.
+from contextlib import contextmanager
 
-    Args:
-        code: Python code to execute.
-        env: Optional environment variables for the subprocess.
-        config: Optional runtime configuration.
 
-    Returns:
-        ExecutionResult containing stdout, stderr, exit_code, and timeout status.
-    """
-    if config is None:
-        config = RuntimeConfig()
-
-    logger.debug(
-        "runtime_execute",
-        code_length=len(code),
-        timeout=config.timeout_seconds,
-    )
-
-    # Set up PYTHONPATH to include src/worker for utils import
+def _prepare_execution(
+    code: str, env: dict[str, str] | None
+) -> tuple[str, dict[str, str]]:
+    """Common logic for setting up PYTHONPATH and temporary file."""
     import os
 
     actual_env = os.environ.copy()
@@ -70,9 +51,6 @@ def run_python_code(
         actual_env.update(env)
 
     current_pythonpath = actual_env.get("PYTHONPATH", "")
-
-    # Get the directory containing the 'worker' package
-    # worker/runtime/executor.py -> parents[2] is the project root (e.g. /app or src)
     project_root = Path(__file__).resolve().parents[2]
     worker_package_parent = str(project_root)
 
@@ -81,7 +59,6 @@ def run_python_code(
     else:
         actual_env["PYTHONPATH"] = worker_package_parent
 
-    # Write code to a temporary file
     with tempfile.NamedTemporaryFile(
         mode="w",
         suffix=".py",
@@ -90,55 +67,74 @@ def run_python_code(
         f.write(code)
         script_path = f.name
 
+    return script_path, actual_env
+
+
+@contextmanager
+def _execution_context(code: str, env: dict[str, str] | None):
+    """Context manager for execution preparation and cleanup."""
+    script_path, actual_env = _prepare_execution(code, env)
     try:
-        # Build subprocess command
-        cmd = [config.python_executable, script_path]
-
-        # Run the subprocess
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=config.timeout_seconds,
-            env=actual_env,
-            cwd=config.working_directory,
-        )
-
-        logger.info(
-            "runtime_execute_complete",
-            exit_code=result.returncode,
-            stdout_length=len(result.stdout),
-            stderr_length=len(result.stderr),
-        )
-
-        return ExecutionResult(
-            stdout=result.stdout,
-            stderr=result.stderr,
-            exit_code=result.returncode,
-            timed_out=False,
-        )
-
-    except subprocess.TimeoutExpired:
-        logger.warning("runtime_execute_timeout", timeout=config.timeout_seconds)
-        return ExecutionResult(
-            stdout="",
-            stderr=f"Execution timed out after {config.timeout_seconds} seconds",
-            exit_code=-1,
-            timed_out=True,
-        )
-
-    except Exception as e:
-        logger.error("runtime_execute_error", error=str(e))
-        return ExecutionResult(
-            stdout="",
-            stderr=str(e),
-            exit_code=-1,
-            timed_out=False,
-        )
-
+        yield script_path, actual_env
     finally:
-        # Clean up temporary file
         Path(script_path).unlink(missing_ok=True)
+
+
+@type_check
+def run_python_code(
+    code: str,
+    env: dict[str, str] | None = None,
+    config: RuntimeConfig | None = None,
+) -> ExecutionResult:
+    """Execute Python code in a subprocess."""
+    if config is None:
+        config = RuntimeConfig()
+
+    logger.debug("runtime_execute", code_length=len(code), timeout=config.timeout_seconds)
+
+    with _execution_context(code, env) as (script_path, actual_env):
+        try:
+            cmd = [config.python_executable, script_path]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=config.timeout_seconds,
+                env=actual_env,
+                cwd=config.working_directory,
+            )
+
+            logger.info(
+                "runtime_execute_complete",
+                exit_code=result.returncode,
+                stdout_length=len(result.stdout),
+                stderr_length=len(result.stderr),
+            )
+
+            return ExecutionResult(
+                stdout=result.stdout,
+                stderr=result.stderr,
+                exit_code=result.returncode,
+                timed_out=False,
+            )
+
+        except subprocess.TimeoutExpired:
+            logger.warning("runtime_execute_timeout", timeout=config.timeout_seconds)
+            return ExecutionResult(
+                stdout="",
+                stderr=f"Execution timed out after {config.timeout_seconds} seconds",
+                exit_code=-1,
+                timed_out=True,
+            )
+
+        except Exception as e:
+            logger.error("runtime_execute_error", error=str(e))
+            return ExecutionResult(
+                stdout="",
+                stderr=str(e),
+                exit_code=-1,
+                timed_out=False,
+            )
 
 
 @type_check
@@ -147,16 +143,7 @@ async def run_python_code_async(
     env: dict[str, str] | None = None,
     config: RuntimeConfig | None = None,
 ) -> ExecutionResult:
-    """Execute Python code asynchronously in a subprocess.
-
-    Args:
-        code: Python code to execute.
-        env: Optional environment variables for the subprocess.
-        config: Optional runtime configuration.
-
-    Returns:
-        ExecutionResult containing stdout, stderr, exit_code, and timeout status.
-    """
+    """Execute Python code asynchronously in a subprocess."""
     if config is None:
         config = RuntimeConfig()
 
@@ -166,99 +153,55 @@ async def run_python_code_async(
         timeout=config.timeout_seconds,
     )
 
-    # Set up PYTHONPATH to include src/worker for utils import
-    import os
-
-    actual_env = os.environ.copy()
-    if env:
-        actual_env.update(env)
-
-    current_pythonpath = actual_env.get("PYTHONPATH", "")
-
-    # Get the directory containing the 'worker' package
-    # worker/runtime/executor.py -> parents[2] is the project root (e.g. /app or src)
-    project_root = Path(__file__).resolve().parents[2]
-    worker_package_parent = str(project_root)
-
-    if current_pythonpath:
-        actual_env["PYTHONPATH"] = f"{worker_package_parent}:{current_pythonpath}"
-    else:
-        actual_env["PYTHONPATH"] = worker_package_parent
-
-    # Write code to a temporary file
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".py",
-        delete=False,
-    ) as f:
-        f.write(code)
-        script_path = f.name
-
-    try:
-        # Create subprocess
-        process = await asyncio.create_subprocess_exec(
-            config.python_executable,
-            script_path,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=actual_env,
-            cwd=config.working_directory,
-        )
-
+    with _execution_context(code, env) as (script_path, actual_env):
         try:
-            # Wait for completion with timeout
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=config.timeout_seconds,
+            process = await asyncio.create_subprocess_exec(
+                config.python_executable,
+                script_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=actual_env,
+                cwd=config.working_directory,
             )
 
-            exit_code = process.returncode or 0
-
-            logger.info(
-                "runtime_execute_async_complete",
-                exit_code=exit_code,
-                stdout_length=len(stdout),
-                stderr_length=len(stderr),
-            )
-
-            if exit_code != 0:
-                logger.error(
-                    "runtime_execute_async_failed", stderr=stderr.decode("utf-8")
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=config.timeout_seconds,
                 )
 
-            return ExecutionResult(
-                stdout=stdout.decode("utf-8"),
-                stderr=stderr.decode("utf-8"),
-                exit_code=exit_code,
-                timed_out=False,
-            )
+                exit_code = process.returncode or 0
 
-        except TimeoutError:
-            # Kill the process if it times out
-            process.kill()
-            await process.wait()
+                logger.info(
+                    "runtime_execute_async_complete",
+                    exit_code=exit_code,
+                    stdout_length=len(stdout),
+                    stderr_length=len(stderr),
+                )
 
-            logger.warning(
-                "runtime_execute_async_timeout",
-                timeout=config.timeout_seconds,
-            )
+                return ExecutionResult(
+                    stdout=stdout.decode("utf-8"),
+                    stderr=stderr.decode("utf-8"),
+                    exit_code=exit_code,
+                    timed_out=False,
+                )
 
+            except TimeoutError:
+                process.kill()
+                await process.wait()
+                logger.warning("runtime_execute_async_timeout", timeout=config.timeout_seconds)
+                return ExecutionResult(
+                    stdout="",
+                    stderr=f"Execution timed out after {config.timeout_seconds} seconds",
+                    exit_code=-1,
+                    timed_out=True,
+                )
+
+        except Exception as e:
+            logger.error("runtime_execute_async_error", error=str(e))
             return ExecutionResult(
                 stdout="",
-                stderr=f"Execution timed out after {config.timeout_seconds} seconds",
+                stderr=str(e),
                 exit_code=-1,
-                timed_out=True,
+                timed_out=False,
             )
-
-    except Exception as e:
-        logger.error("runtime_execute_async_error", error=str(e))
-        return ExecutionResult(
-            stdout="",
-            stderr=str(e),
-            exit_code=-1,
-            timed_out=False,
-        )
-
-    finally:
-        # Clean up temporary file
-        Path(script_path).unlink(missing_ok=True)
