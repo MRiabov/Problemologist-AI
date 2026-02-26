@@ -18,7 +18,7 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     """
     # 1. Navigate to the local development server
     page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
-    page.wait_for_load_state("networkidle")
+    page.wait_for_load_state("domcontentloaded")
 
     # 2. Click "CREATE NEW" button
     page.get_by_test_id("create-new-button").click()

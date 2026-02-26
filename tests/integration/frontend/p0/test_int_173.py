@@ -18,7 +18,7 @@ def test_int_173_exact_pointing_payload(page: Page):
     """
     # 1. Start a benchmark generation
     page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
-    page.wait_for_load_state("networkidle")
+    page.wait_for_load_state("domcontentloaded")
 
     # Click CREATE NEW
     page.get_by_test_id("create-new-button").click()

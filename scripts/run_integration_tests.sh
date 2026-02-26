@@ -268,7 +268,7 @@ if [ "$RUN_PLAYWRIGHT" = true ]; then
   (cd frontend && rm -rf dist && npm run build)
   
   # Start serving on port 15173
-  (cd frontend && npx serve -s dist -p 15173 > "../$LOG_DIR/frontend.log" 2>&1) &
+  (cd frontend/dist && python3 -m http.server 15173 > "../../$LOG_DIR/frontend.log" 2>&1) &
   FRONTEND_PID=$!
   echo $FRONTEND_PID > logs/frontend.pid
   echo "Frontend server started (PID: $FRONTEND_PID) on http://localhost:15173"

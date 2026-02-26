@@ -74,20 +74,9 @@ def configure_logging(_service_name: str):
         u_logger.propagate = True
         u_logger.setLevel(log_level_num)
 
-    # Demote uvicorn access logs to DEBUG so they don't clutter INFO/WARNING
+    # Keep access logs at INFO for visibility during debugging
     access_logger = logging.getLogger("uvicorn.access")
-    # We must allow DEBUG level on the logger itself so the records are created
-    access_logger.setLevel(logging.DEBUG)
-
-    class AccessLogFilter(logging.Filter):
-        def filter(self, record):
-            if record.levelno == logging.INFO:
-                record.levelno = logging.DEBUG
-                record.levelname = "DEBUG"
-            # Now explicitly filter based on the global level
-            return record.levelno >= log_level_num
-
-    access_logger.addFilter(AccessLogFilter())
+    access_logger.setLevel(logging.INFO)
 
 
 def get_logger(name: str) -> structlog.BoundLogger:
