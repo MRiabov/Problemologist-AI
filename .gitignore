@@ -41,6 +41,7 @@ wheels/
 /workspaces/
 /workspace/
 /tests/output/
+/test_output/
 /test_datasets/
 /test_assets/
 /scripts/throwaway/

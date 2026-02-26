@@ -128,10 +128,23 @@ class FilesystemRouter:
 
         Returns:
             Resolved local Path.
+
+        Raises:
+            PermissionError: If path traversal is attempted.
         """
         normalized = path if path.startswith("/") else f"/{path}"
         relative = normalized[len(mount.virtual_prefix) :].lstrip("/")
-        return mount.local_path / relative
+
+        # Path traversal protection
+        # We use resolve() to collapse '..' and then verify it's still within mount.local_path
+        target = (mount.local_path / relative).resolve()
+        base = mount.local_path.resolve()
+
+        if not target.is_relative_to(base):
+            logger.warning("path_traversal_attempted", path=path, mount=mount.virtual_prefix)
+            raise PermissionError(f"Path traversal attempted: {path}")
+
+        return target
 
     def ls(self, path: str = "/") -> list[FileInfo]:
         """List contents of a directory.
@@ -431,10 +444,13 @@ class FilesystemRouter:
             regex = re.compile(re.escape(pattern))
 
             # Resolve search start for this mount
-            local_start = mount.local_path
-            if path and normalized_path.startswith(mount.virtual_prefix):
-                rel_path = normalized_path[len(mount.virtual_prefix) :].lstrip("/")
-                local_start = mount.local_path / rel_path
+            try:
+                if path and normalized_path.startswith(mount.virtual_prefix):
+                    local_start = self._resolve_local_path(normalized_path, mount)
+                else:
+                    local_start = mount.local_path.resolve()
+            except PermissionError:
+                continue
 
             if not local_start.exists():
                 continue
