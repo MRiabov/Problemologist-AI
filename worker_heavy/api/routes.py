@@ -333,6 +333,8 @@ async def api_simulate(
                     stress_summaries=result.stress_summaries,
                     fluid_metrics=result.fluid_metrics,
                     failure=result.failure,
+                    total_cost=result.total_cost,
+                    total_weight_g=result.total_weight_g,
                 )
                 return BenchmarkToolResponse(
                     success=result.success,
