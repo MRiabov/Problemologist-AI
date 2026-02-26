@@ -25,7 +25,7 @@ target_metadata = Base.metadata
 
 
 def get_url():
-    url = os.getenv("POSTGRES_URL")
+    url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
     if url and url.startswith("postgresql+asyncpg://"):
         return url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
     return url or config.get_main_option("sqlalchemy.url")

@@ -108,7 +108,7 @@ async def test_benchmark_coder_with_mock_llm(temp_session_dir):
         mock_settings.is_integration_test = True
         mock_settings.worker_heavy_url = "http://heavy"
         mock_settings.spec_001_api_url = "http://light"
-        mock_settings.postgres_url = (
+        mock_settings.database_url = (
             "postgresql+asyncpg://mock:mock@localhost:5432/mock"
         )
 
