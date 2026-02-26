@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -22,6 +23,9 @@ async def record_events(episode_id: str, events: list[Any]):
 
 async def broadcast_file_update(episode_id_str: str, path: str, content: str):
     """Broadcast file update to frontend and sync to Asset table."""
+    global logger
+    if "logger" not in globals() or logger is None:
+        logger = structlog.get_logger(__name__)
     try:
         # Sync to Asset table first to get DB record.
         # sync_asset now handles prefixed UUID strings.
