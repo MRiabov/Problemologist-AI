@@ -35,9 +35,12 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     send_button.click()
 
     # 5. Wait for the "Confirm & Start" button and click it
-    confirm_button = page.get_by_role("button", name="Confirm & Start")
+    confirm_button = page.get_by_test_id("chat-confirm-button")
     expect(confirm_button).to_be_visible(timeout=120000)
     confirm_button.click()
+
+    # Wait for the overlay to disappear
+    expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
 
     # Wait for the model viewer to load
     canvas = page.locator("canvas").first
@@ -52,18 +55,19 @@ def test_int_174_cad_show_hide_behavior(page: Page):
 
     # Wait for nodes to appear in model browser
     # We will hover over the first node and click the eye icon
-    first_node = page.locator(r".group\/node").first
-    if first_node.is_visible():
-        first_node.hover()
-        eye_button = first_node.locator("button").first
-        eye_button.click()
+    first_node = page.locator(".group\\/node").first
+    first_node.wait_for(state="visible", timeout=30000)
 
-        # Verify it gets hidden (opacity change or eye-off icon)
-        # We can just verify the click succeeded.
-        expect(first_node).to_be_visible()
+    first_node.hover()
+    eye_button = first_node.locator("button").first
+    eye_button.click()
+
+    # Verify it gets hidden (opacity change or eye-off icon)
+    # We can just verify the click succeeded.
+    expect(first_node).to_be_visible()
 
     # Try selecting a remaining visible entity in the canvas
-    canvas.click(position={"x": 200, "y": 200})
+    canvas.click(position={"x": 100, "y": 100}, force=True)
 
     # Assert that context card or selection does not crash the UI
     prompt_input.fill("Describe the visible parts")

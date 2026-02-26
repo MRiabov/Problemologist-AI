@@ -28,9 +28,12 @@ def test_int_173_exact_pointing_payload(page: Page):
     page.get_by_label("Send Message").click()
 
     # Wait for completion and confirm
-    confirm_button = page.get_by_role("button", name="Confirm & Start")
+    confirm_button = page.get_by_test_id("chat-confirm-button")
     expect(confirm_button).to_be_visible(timeout=120000)
     confirm_button.click()
+
+    # Wait for the overlay to disappear
+    expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
 
     # Wait for the model viewer to load and have assets
     # E.g. waiting for no-assets-overlay to NOT be visible or waiting for a model to load
@@ -44,7 +47,7 @@ def test_int_173_exact_pointing_payload(page: Page):
         part_selection.click()
 
     # Click in the middle of the canvas to select a part
-    canvas.click(position={"x": 200, "y": 200})
+    canvas.click(position={"x": 100, "y": 100}, force=True)
 
     # Alternatively we can type a mention in chat and see the payload
     # Let's intercept the request when sending the message

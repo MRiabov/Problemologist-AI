@@ -1,11 +1,12 @@
 import os
 import uuid
 import re
+import httpx
 import pytest
 from playwright.sync_api import Page, expect
 
-
 # Constants
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
@@ -43,15 +44,44 @@ def test_int_179_manual_at_mention_contract(page: Page):
         ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=120000
     )
 
+    # Verify asset exists via API to ensure polling has it
+    import time
+
+    asset_found = False
+    for _ in range(15):
+        url = page.url
+        if "/episodes/" in url:
+            ep_id = url.split("/episodes/")[1].split("/")[0]
+            with httpx.Client() as client:
+                resp = client.get(f"{CONTROLLER_URL}/episodes/{ep_id}")
+                if resp.status_code == 200:
+                    assets = resp.json().get("assets", [])
+                    if any(a["s3_path"].endswith("script.py") for a in assets):
+                        asset_found = True
+                        break
+        time.sleep(2)
+
+    assert asset_found, f"Asset script.py not found via API after 30s. URL: {page.url}"
+
     # 4. Type a valid @mention for a file
     chat_input.fill("Explain @script.py:1-10")
 
+    # Give it a moment to highlight
+    page.wait_for_timeout(2000)
+
     # 5. Verify visual success (text-primary)
     # We just check that @script.py:1-10 is there and NOT red
-    valid_mention = page.locator(".pointer-events-none").get_by_text("@script.py:1-10")
+    # The highlighter layer has text-transparent, but spans have color
+    valid_mention = (
+        page.locator(".pointer-events-none span")
+        .filter(has_text=re.compile(r"@script\.py:1-10"))
+        .first
+    )
     expect(valid_mention).to_be_visible(timeout=10000)
-    # It should NOT have the red class
-    expect(valid_mention).not_to_have_class(re.compile(r"text-red-400"))
+
+    # Wait for validation to turn it primary (might take a polling cycle)
+    # We check if it has text-primary class
+    expect(valid_mention).to_have_class(re.compile(r"text-primary"), timeout=20000)
 
     # 6. Verify autocomplete suggestions appear when typing @
     chat_input.fill("Check @")

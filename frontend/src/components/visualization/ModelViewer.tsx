@@ -354,7 +354,7 @@ export default function ModelViewer({
 
       {/* Main Viewport */}
       <div className="flex-1 min-h-0 relative">
-        <Canvas shadows dpr={[1, 2]}>
+        <Canvas shadows dpr={[1, 2]} data-testid="main-canvas">
             <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
             <OrbitControls 
             ref={controlsRef}

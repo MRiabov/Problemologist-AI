@@ -9,7 +9,8 @@ import {
   AlertCircle,
   LayoutGrid,
   Search,
-  File
+  File,
+  Play
 } from "lucide-react";
 
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -28,8 +29,11 @@ import CircuitTimeline from "../visualization/CircuitTimeline";
 import WireView from "../visualization/WireView";
 import { SimulationResults } from "../visualization/SimulationResults";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { runSimulation } from "../../api/client";
 import { AssetType } from "../../api/generated/models/AssetType";
 import { TraceType } from "../../api/generated/models/TraceType";
+import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -42,9 +46,20 @@ export default function ArtifactView({
   assets = [],
   isConnected = true
 }: ArtifactViewProps) {
-  const { selectedEpisode, activeArtifactId, setActiveArtifactId, addToContext, selectedContext } = useEpisodes();
+  const { 
+    selectedEpisode, 
+    activeArtifactId, 
+    setActiveArtifactId, 
+    addToContext, 
+    selectedContext,
+    running,
+    confirmBenchmark
+  } = useEpisodes();
   const { theme } = useTheme();
   const [inlineContextLabel, setInlineContextLabel] = useState<string | null>(null);
+
+  const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'PLANNED';
+  const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !running && selectedEpisode?.status !== EpisodeStatus.COMPLETED;
 
   const getAssetUrl = (assetPath: string | undefined) => {
     if (!assetPath || !selectedEpisode) return null;
@@ -323,7 +338,31 @@ export default function ArtifactView({
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                     <LayoutGrid className="h-3.5 w-3.5" /> Resources
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
+                    {showExecutionPlan && (
+                        <Button 
+                            data-testid="file-explorer-confirm-button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-all"
+                            title="Confirm & Start Implementation"
+                            onClick={async () => {
+                                if (!selectedEpisode) return;
+                                try {
+                                    if (isPlanned) {
+                                        await confirmBenchmark(selectedEpisode.id, "");
+                                    } else {
+                                        const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
+                                        await runSimulation(sessionId);
+                                    }
+                                } catch (e) {
+                                    console.error("Failed to start implementation from explorer", e);
+                                }
+                            }}
+                        >
+                            <Play className="h-3.5 w-3.5 fill-current" />
+                        </Button>
+                    )}
                     <Search className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
             </div>
