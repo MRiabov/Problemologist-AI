@@ -1,111 +1,97 @@
 {
   "runs": [
     {
-      "timestamp": "2026-02-26T09:37:33.932961",
+      "timestamp": "2026-02-26T18:55:13.488061",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 194.935,
+      "duration": 55.595,
       "tests": [
         {
           "name": "test_int_159_plan_approval_comment[chromium]",
           "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 188.828,
+          "time": 46.752,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"INT-159: Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n        expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\n    \n        # 3. Verify comment field exists\n        comment_field = page.get_by_placeholder(\"Optional comment for the agent...\")\n        expect(comment_field).to_be_visible()\n    \n        # 4. Fill in a comment and confirm\n        test_comment = f\"Test Comment {uuid.uuid4()}\"\n        comment_field.fill(test_comment)\n        page.get_by_test_id(\"chat-confirm-button\").click()\n    \n        # Wait for the agent to transition to RUNNING state in the UI\n>       expect(page.get_by_text(re.compile(r\"thinking\", re.IGNORECASE))).to_be_visible(\n            timeout=30000\n        )\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(re.compile(r\"thinking\", re.IGNORECASE))\n\ntests/integration/frontend/p0/test_frontend_p0.py:178: AssertionError"
         }
       ]
     },
     {
-      "timestamp": "2026-02-26T09:25:39.055484",
+      "timestamp": "2026-02-26T18:52:17.031175",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 193.206,
+      "duration": 52.772,
       "tests": [
         {
           "name": "test_int_159_plan_approval_comment[chromium]",
           "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 188.464,
+          "time": 45.654,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"INT-159: Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n        expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\n    \n        # 3. Verify comment field exists\n        comment_field = page.get_by_placeholder(\"Optional comment for the agent...\")\n        expect(comment_field).to_be_visible()\n    \n        # 4. Fill in a comment and confirm\n        test_comment = f\"Test Comment {uuid.uuid4()}\"\n        comment_field.fill(test_comment)\n        page.get_by_test_id(\"chat-confirm-button\").click()\n    \n        # Wait for the agent to transition to RUNNING state in the UI\n>       expect(page.get_by_text(re.compile(r\"thinking\", re.IGNORECASE))).to_be_visible(\n            timeout=30000\n        )\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_text(re.compile(r\"thinking\", re.IGNORECASE))\n\ntests/integration/frontend/p0/test_frontend_p0.py:178: AssertionError"
         }
       ]
     },
     {
-      "timestamp": "2026-02-26T09:18:32.828653",
+      "timestamp": "2026-02-26T18:47:24.767423",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 193.448,
+      "duration": 48.069,
       "tests": [
         {
           "name": "test_int_159_plan_approval_comment[chromium]",
           "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 187.645,
+          "time": 40.555,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n        expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\n    \n        # 3. Verify comment field exists\n        comment_field = page.get_by_placeholder(\"Optional comment for the agent...\")\n        expect(comment_field).to_be_visible()\n    \n        # 4. Fill in a comment and confirm\n        test_comment = f\"Test Comment {uuid.uuid4()}\"\n        comment_field.fill(test_comment)\n>       page.get_by_test_id(\"chat-confirm-button\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:175: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = <playwright._impl._connection.Connection object at 0x7f0b52cc4890>\ncb = <function Channel.send.<locals>.<lambda> at 0x7f0b52953ce0>\nis_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.\nE           Call log:\nE             - waiting for get_by_test_id(\"chat-confirm-button\")\nE               - locator resolved to <button data-testid=\"chat-confirm-button\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 px-4 py-2 flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-primary/20\">\u2026</button>\nE             - attempting click action\nE               - waiting for element to be visible, enabled and stable\nE             - element was detached from the DOM, retrying\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: TimeoutError"
         }
       ]
     },
     {
-      "timestamp": "2026-02-26T09:09:07.763859",
-      "status": "failed",
-      "total": 3,
-      "passed": 2,
-      "failed": 1,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 220.721,
-      "tests": [
-        {
-          "name": "test_int_157_session_history[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 17.377,
-          "status": "passed",
-          "message": null
-        },
-        {
-          "name": "test_int_158_workflow_parity[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 17.486,
-          "status": "passed",
-          "message": null
-        },
-        {
-          "name": "test_int_159_plan_approval_comment[chromium]",
-          "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 181.45,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-26T09:00:02.546955",
+      "timestamp": "2026-02-26T18:44:49.894028",
       "status": "failed",
       "total": 1,
       "passed": 0,
       "failed": 1,
       "skipped": 0,
       "errors": 0,
-      "duration": 194.786,
+      "duration": 22.074,
       "tests": [
         {
           "name": "test_int_159_plan_approval_comment[chromium]",
           "classname": "tests.integration.frontend.p0.test_frontend_p0",
-          "time": 189.077,
+          "time": 14.08,
           "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n        expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\n    \n        # 3. Verify comment field exists\n        comment_field = page.get_by_placeholder(\"Optional comment for the agent...\")\n        expect(comment_field).to_be_visible()\n    \n        # 4. Fill in a comment and confirm\n        test_comment = f\"Test Comment {uuid.uuid4()}\"\n        comment_field.fill(test_comment)\n>       page.get_by_role(\"button\", name=\"Confirm & Start\").click()\n\ntests/integration/frontend/p0/test_frontend_p0.py:175: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py:15631: in click\n    self._sync(\n.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py:162: in click\n    return await self._frame._click(self._selector, strict=True, **params)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py:566: in _click\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:69: in send\n    return await self._connection.wrap_api_call(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = <playwright._impl._connection.Connection object at 0x7fbf179d8c80>\ncb = <function Channel.send.<locals>.<lambda> at 0x7fbf17667ce0>\nis_internal = False, title = None\n\n    async def wrap_api_call(\n        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None\n    ) -> Any:\n        if self._api_zone.get():\n            return await cb()\n        task = asyncio.current_task(self._loop)\n        st: List[inspect.FrameInfo] = getattr(\n            task, \"__pw_stack__\", None\n        ) or inspect.stack(0)\n    \n        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)\n        self._api_zone.set(parsed_st)\n        try:\n            return await cb()\n        except Exception as error:\n>           raise rewrite_error(error, f\"{parsed_st['apiName']}: {error}\") from None\nE           playwright._impl._errors.Error: Locator.click: Error: strict mode violation: get_by_role(\"button\", name=\"Confirm & Start\") resolved to 2 elements:\nE               1) <button data-testid=\"chat-confirm-button\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 px-4 py-2 flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-primary/20\">\u2026</button> aka get_by_test_id(\"chat-confirm-button\")\nE               2) <button title=\"Confirm & Start Implementation\" data-testid=\"file-explorer-confirm-button\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground text-xs h-6 w-6 p-0 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-all\">\u2026</button> aka get_by_test_id(\"file-explorer-confirm-button\")\nE           \nE           Call log:\nE             - waiting for get_by_role(\"button\", name=\"Confirm & Start\")\n\n.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py:559: Error"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T17:12:11.123103",
+      "status": "failed",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 16.603,
+      "tests": [
+        {
+          "name": "test_benchmark_creation_flow[chromium]",
+          "classname": "tests.e2e.test_playwright_benchmark",
+          "time": 16.4,
+          "status": "failed",
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_benchmark_creation_flow(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)\n        benchmark_link = page.get_by_role(\"link\", name=re.compile(r\"Benchmark\", re.IGNORECASE))\n        if not benchmark_link.is_visible():\n            benchmark_link = page.get_by_text(\"Benchmark\").first\n    \n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = (\n            \"We need to move a steel ball 40mm radius, 1m sideways. \"\n            \"Start with a ball in one side of the simulation space and make \"\n            \"a goal in the other. Make a benchmark that would test \"\n            \"a machine that does it.\"\n        )\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        # Using explicit click on Send Message button for reliability\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the generation to start (Stop Agent button appears)\n        expect(page.get_by_label(\"Stop Agent\")).to_be_visible(timeout=30000)\n    \n        # 7. Wait for the generation to finish (Send Message button returns)\n        # This might take a while, increase timeout\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Select plan.md in Resources sidebar\n        plan_button = page.get_by_role(\"button\", name=\"plan.md\")\n>       expect(plan_button).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: strict mode violation: get_by_role(\"button\", name=\"plan.md\") resolved to 2 elements:\nE           1) <button class=\"group flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all duration-200 bg-primary/10 text-primary font-medium shadow-sm\">\u2026</button> aka get_by_role(\"button\", name=\"plan.md\").first\nE           2) <button class=\"group flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all duration-200 text-muted-foreground hover:bg-muted hover:text-foreground\">\u2026</button> aka get_by_role(\"button\", name=\"plan.md\").nth(1)\nE        \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_role(\"button\", name=\"plan.md\")\n\ntests/e2e/test_playwright_benchmark.py:51: AssertionError"
         }
       ]
     }

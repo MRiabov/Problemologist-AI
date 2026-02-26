@@ -4,6 +4,7 @@ from typing import Any, Literal
 
 import httpx
 
+from shared.enums import ResponseStatus
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import (
@@ -181,7 +182,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"] == ResponseStatus.SUCCESS
         finally:
             await self._close_client(client)
 
@@ -220,7 +221,7 @@ class WorkerClient:
                 timeout=30.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"] == ResponseStatus.SUCCESS
         finally:
             await self._close_client(client)
 
@@ -282,7 +283,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"] == ResponseStatus.SUCCESS
         finally:
             await self._close_client(client)
 
@@ -425,7 +426,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"] == ResponseStatus.SUCCESS
         finally:
             await self._close_client(client)
 
@@ -471,7 +472,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"] == ResponseStatus.SUCCESS
         finally:
             await self._close_client(client)
 
@@ -485,7 +486,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"] == ResponseStatus.SUCCESS
         finally:
             await self._close_client(client)
 
