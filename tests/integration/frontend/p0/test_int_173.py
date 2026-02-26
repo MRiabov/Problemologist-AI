@@ -43,8 +43,8 @@ def test_int_173_exact_pointing_payload(page: Page):
 
     # Enable part selection mode
     part_selection = page.get_by_title("Part Selection")
-    if part_selection.is_visible():
-        part_selection.click()
+    part_selection.wait_for(state="visible", timeout=30000)
+    part_selection.click()
 
     # Click in the middle of the canvas to select a part
     canvas.click(position={"x": 100, "y": 100}, force=True)

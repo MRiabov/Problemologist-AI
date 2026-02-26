@@ -93,40 +93,45 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     expect(page.get_by_text("Feedback Received")).to_be_visible(timeout=30000)
 
     # 9. Verify via API that the final state (Thumbs Down + Comment) is persisted
-    with httpx.Client() as client:
-        # Get all episodes
-        resp = client.get(f"{CONTROLLER_URL}/episodes/")
-        assert resp.status_code == 200
-        episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())
+    # We add a small retry loop because DB commit might be slightly delayed in some environments
+    found_feedback = False
+    import time
 
-        # The most recent episode should be ours
-        # Episode names usually match the prompt or truncated prompt
-        # But we can just check the last few episodes
-        found_feedback = False
-        for ep in episodes[:5]:  # Check first 5 episodes
-            resp_ep = client.get(f"{CONTROLLER_URL}/episodes/{ep.id}")
-            if resp_ep.status_code != 200:
-                continue
+    for attempt in range(5):
+        with httpx.Client() as client:
+            # Get all episodes
+            resp = client.get(f"{CONTROLLER_URL}/episodes/")
+            assert resp.status_code == 200
+            episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())
 
-            full_ep = EpisodeResponse.model_validate(resp_ep.json())
-            # Find the trace that has feedback
-            for trace in full_ep.traces:
-                # Based on the implementation, feedback is likely attached to the assistant's message trace
-                # In FeedbackSystem.tsx, submitTraceFeedback is called with traceId
-                # Let's check if the feedback fields match
-                if (
-                    trace.feedback_score == 0
-                    and trace.feedback_comment
-                    and f"[{topic_name}] {test_comment}" in trace.feedback_comment
-                ):
-                    found_feedback = True
+            # The most recent episode should be ours
+            for ep in episodes[:5]:  # Check first 5 episodes
+                resp_ep = client.get(f"{CONTROLLER_URL}/episodes/{ep.id}")
+                if resp_ep.status_code != 200:
+                    continue
+
+                full_ep = EpisodeResponse.model_validate(resp_ep.json())
+                # Find the trace that has feedback
+                for trace in full_ep.traces or []:
+                    # Based on the implementation, feedback is likely attached to the assistant's message trace
+                    # In FeedbackSystem.tsx, submitTraceFeedback is called with traceId
+                    # Let's check if the feedback fields match
+                    if (
+                        trace.feedback_score == 0
+                        and trace.feedback_comment
+                        and f"[{topic_name}] {test_comment}" in trace.feedback_comment
+                    ):
+                        found_feedback = True
+                        break
+                if found_feedback:
                     break
-            if found_feedback:
-                break
+        if found_feedback:
+            break
+        time.sleep(2)
 
-        assert found_feedback, (
-            "Persisted feedback did not match final edited state (Score: 0, Comment: [Topic] Text)"
-        )
+    assert found_feedback, (
+        "Persisted feedback did not match final edited state (Score: 0, Comment: [Topic] Text)"
+    )
 
 
 import re

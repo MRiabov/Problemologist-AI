@@ -50,14 +50,14 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     model_browser = page.get_by_test_id("model-browser-panel")
     if not model_browser.is_visible():
         toggle = page.get_by_test_id("model-browser-toggle").first
-        if toggle.is_visible():
-            toggle.click()
+        toggle.wait_for(state="visible", timeout=30000)
+        toggle.click()
+        expect(model_browser).to_be_visible(timeout=10000)
 
     # Wait for nodes to appear in model browser
     # We will hover over the first node and click the eye icon
     first_node = page.locator(".group\\/node").first
-    first_node.wait_for(state="visible", timeout=30000)
-
+    first_node.wait_for(state="visible", timeout=60000)
     first_node.hover()
     eye_button = first_node.locator("button").first
     eye_button.click()
