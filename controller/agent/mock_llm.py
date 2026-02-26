@@ -135,9 +135,9 @@ class MockDSPyLM(dspy.LM):
 
         # Track explicit tool progress from trajectory markers, not LM call count.
         # DSPy can invoke LM multiple times per step, so call count alone is unstable.
-        completed_tools = len(
-            re.findall(r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text)
-        )
+        custom_markers = re.findall(r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text)
+        standard_markers = re.findall(r"Observation:", full_text, re.IGNORECASE)
+        completed_tools = len(custom_markers) + len(standard_markers)
         self._tool_progress[node_key] = completed_tools
 
         # 3. Handle multi-turn state and loop protection
