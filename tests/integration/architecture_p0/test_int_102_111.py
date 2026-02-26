@@ -141,7 +141,7 @@ def build():
         await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # 2. Test INT-111: validate_and_price gate
-        val_req = BenchmarkToolRequest(script_path="script.py")
+        val_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
@@ -154,7 +154,7 @@ def build():
         assert "FEM fields" in data.message or "material" in data.message.lower()
 
         # 3. Test INT-102: simulate entry gate
-        sim_req = BenchmarkToolRequest(script_path="script.py")
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=sim_req.model_dump(mode="json"),
@@ -429,7 +429,7 @@ def build():
         await setup_fem_workspace(client, base_headers, objectives, script_content)
 
         # Simulate
-        sim_req = BenchmarkToolRequest(script_path="script.py")
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=sim_req.model_dump(mode="json"),
@@ -513,7 +513,7 @@ def build():
         # Skip geometric validation to allow intersection
         # skip_validate is not in BenchmarkToolRequest schema, might need to pass via script or other means
         # but let's assume simulate endpoint supports it or just run it.
-        sim_req = BenchmarkToolRequest(script_path="script.py")
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json={**sim_req.model_dump(mode="json"), "skip_validate": True},
