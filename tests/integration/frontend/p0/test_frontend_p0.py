@@ -159,7 +159,7 @@ def test_int_159_plan_approval_comment(page: Page):
     # Click CREATE NEW
     page.get_by_test_id("create-new-button").click()
 
-    page.locator("#chat-input").fill(f"Generate a simple benchmark {uuid.uuid4()}")
+    page.locator("#chat-input").fill(f"INT-159: Generate a simple benchmark {uuid.uuid4()}")
     page.get_by_label("Send Message").click()
 
     # 2. Wait for the "Execution Plan Ready" card
