@@ -150,16 +150,12 @@ scenarios:
           input: 
             path: "plan.md"
             content: |
-              ## 1. Solution Overview
-              Cube test.
-              ## 2. Parts List
-              - Cube
-              ## 3. Assembly Strategy
-              1. Place.
-              ## 4. Cost & Weight Budget
-              - $5
-              ## 5. Risk Assessment
-              - Minimal.
+              ## Learning Objective
+              - Test payload with cube.
+              ## Geometry
+              - Simple cube.
+              ## Objectives
+              - Validate payload.
             overwrite: true
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Create cube", overwrite: true }
@@ -206,17 +202,12 @@ scenarios:
           input: 
             path: "plan.md"
             content: |
-              ## 1. Solution Overview
-              Two parts test.
-              ## 2. Parts List
-              - Part 1
-              - Part 2
-              ## 3. Assembly Strategy
-              1. Connect.
-              ## 4. Cost & Weight Budget
-              - $10
-              ## 5. Risk Assessment
-              - Low.
+              ## Learning Objective
+              - Test two parts.
+              ## Geometry
+              - Two cubes.
+              ## Objectives
+              - Validate selection.
             overwrite: true
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Create parts", overwrite: true }
@@ -328,45 +319,17 @@ scenarios:
       summary: "Plan for INT-177 generated."
       thought: "Planning for INT-177."
       tool_calls:
-        - name: "execute_command"
+        - name: "write_file"
           input:
-            command: |
-              cat > plan.md <<'EOF'
-              ## 1. Solution Overview
-              Test feedback.
-              ## 2. Parts List
-              - Test part
-              ## 3. Assembly Strategy
-              1. Test step
-              ## 4. Cost & Weight Budget
-              - Test budget
-              ## 5. Risk Assessment
-              - Test risk
-              EOF
-              cat > todo.md <<'EOF'
-              - [x] Initial plan
-              - [x] Check electronics
-              EOF
-              cat > assembly_definition.yaml <<'EOF'
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-              EOF
-              cat > objectives.yaml <<'EOF'
-              constraints:
-                max_unit_cost: 50
-                max_weight_g: 1000.0
-              EOF
+            path: "plan.md"
+            content: |
+              ## Learning Objective
+              - Test feedback.
+              ## Geometry
+              - Test geometry.
+              ## Objectives
+              - Validate feedback.
+            overwrite: true
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Test", overwrite: true }
         - name: "write_file"
@@ -451,16 +414,12 @@ scenarios:
           input: 
             path: "plan.md"
             content: |
-              ## 1. Solution Overview
-              Test mentions.
-              ## 2. Parts List
-              - Test part
-              ## 3. Assembly Strategy
-              1. Test step
-              ## 4. Cost & Weight Budget
-              - Test budget
-              ## 5. Risk Assessment
-              - Test risk
+              ## Learning Objective
+              - Test mentions.
+              ## Geometry
+              - Test geometry.
+              ## Objectives
+              - Validate mentions.
             overwrite: true
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Test", overwrite: true }
@@ -621,16 +580,12 @@ scenarios:
           input: 
             path: "plan.md"
             content: |
-              ## 1. Solution Overview
-              Default.
-              ## 2. Parts List
-              - Default
-              ## 3. Assembly Strategy
-              1. Default
-              ## 4. Cost & Weight Budget
-              - Default
-              ## 5. Risk Assessment
-              - Default
+              ## Learning Objective
+              - Default.
+              ## Geometry
+              - Default.
+              ## Objectives
+              - Default.
             overwrite: true
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Done", overwrite: true }
