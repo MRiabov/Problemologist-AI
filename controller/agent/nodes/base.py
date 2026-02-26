@@ -14,6 +14,8 @@ from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import init_tracing
+from controller.persistence.models import Trace
+from shared.enums import TraceType
 from shared.models.schemas import CodeReference
 
 if TYPE_CHECKING:
