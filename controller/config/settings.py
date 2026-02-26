@@ -25,9 +25,9 @@ class Settings(BaseSettings):
     worker_heavy_url: str | None = Field(
         default="http://127.0.0.1:18002", alias="WORKER_HEAVY_URL"
     )
-    postgres_url: str = Field(
+    database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres",
-        alias="POSTGRES_URL",
+        validation_alias=AliasChoices("DATABASE_URL", "POSTGRES_URL"),
     )
 
     # Observability Settings
