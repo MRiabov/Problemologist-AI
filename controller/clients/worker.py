@@ -50,12 +50,21 @@ class WorkerClient:
         if self.http_client:
             return self.http_client
 
-        loop = asyncio.get_running_loop()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # Fallback for sync contexts that might somehow call this
+            return httpx.AsyncClient()
+
         loop_id = id(loop)
 
+        if loop_id in self._loop_clients:
+            client = self._loop_clients[loop_id]
+            # Check if the client is effectively closed or the loop is not running
+            if getattr(client, "is_closed", False) or not loop.is_running():
+                del self._loop_clients[loop_id]
+
         if loop_id not in self._loop_clients:
-            # Note: Minimal race condition risk here across threads due to GIL and loop-local id,
-            # but even if two threads create different clients for different loops, it's fine.
             if loop_id not in self._loop_locks:
                 self._loop_locks[loop_id] = asyncio.Lock()
 
@@ -181,7 +190,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"].lower() == "success"
         finally:
             await self._close_client(client)
 
@@ -220,7 +229,7 @@ class WorkerClient:
                 timeout=30.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"].lower() == "success"
         finally:
             await self._close_client(client)
 
@@ -282,7 +291,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"].lower() == "success"
         finally:
             await self._close_client(client)
 
@@ -425,7 +434,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"].lower() == "success"
         finally:
             await self._close_client(client)
 
@@ -471,7 +480,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"].lower() == "success"
         finally:
             await self._close_client(client)
 
@@ -485,7 +494,7 @@ class WorkerClient:
                 timeout=10.0,
             )
             response.raise_for_status()
-            return response.json()["status"] == "success"
+            return response.json()["status"].lower() == "success"
         finally:
             await self._close_client(client)
 

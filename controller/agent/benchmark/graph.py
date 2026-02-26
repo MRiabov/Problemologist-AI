@@ -50,12 +50,12 @@ def define_graph():
 
     # Define transitions
     def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
-        if state.session.status == SessionStatus.EXECUTING:
+        if state.session.status in [SessionStatus.EXECUTING, SessionStatus.PLANNED]:
             return "coder"
         return "planner"
 
     workflow.add_conditional_edges(START, route_start)
-    workflow.add_edge("planner", "coder")
+    workflow.add_edge("planner", END)
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
     workflow.add_conditional_edges(
@@ -176,7 +176,10 @@ async def _execute_graph_streaming(
             should_stop = False
 
             if node_name == "planner":
-                if final_state.plan and final_state.plan.theme != "error":
+                if (
+                    final_state.plan
+                    and getattr(final_state.plan, "theme", None) != "error"
+                ):
                     new_status = SessionStatus.PLANNED
                     should_stop = True
                 else:
@@ -444,7 +447,14 @@ async def _persist_session_assets(
                         ):
                             return
 
-                        files = await backend.als_info(dir_path)
+                        try:
+                            files = await asyncio.wait_for(
+                                backend.als_info(dir_path), timeout=10.0
+                            )
+                        except asyncio.TimeoutError:
+                            logger.warning("sync_dir_list_timeout", path=dir_path)
+                            return
+
                         logger.info(
                             "syncing_benchmark_assets",
                             session_id=session_id,
@@ -480,21 +490,30 @@ async def _persist_session_assets(
 
                                 content = ""
                                 if is_text:
-                                    with suppress(Exception):
-                                        raw_content = await backend.aread(path)
+                                    try:
+                                        raw_content = await asyncio.wait_for(
+                                            backend.aread(path), timeout=5.0
+                                        )
                                         if isinstance(raw_content, bytes):
                                             content = raw_content.decode(
                                                 "utf-8", errors="replace"
                                             )
                                         else:
                                             content = str(raw_content)
+                                    except Exception:
+                                        continue
 
-                                await broadcast_file_update(
-                                    str(session_id), path, content
-                                )
+                                try:
+                                    await asyncio.wait_for(
+                                        broadcast_file_update(
+                                            str(session_id), path, content
+                                        ),
+                                        timeout=5.0,
+                                    )
+                                except Exception:
+                                    continue
 
                     await sync_dir("/")
-                    await db.commit()
             except Exception as e:
                 logger.error("failed_to_sync_assets_to_db", error=str(e))
     except Exception as e:
