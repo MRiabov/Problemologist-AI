@@ -27,8 +27,8 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_004_episode_artifact_persistence():
-    """INT-004: Verify artifacts are persisted and accessible via API."""
+async def test_int_031_episode_artifact_persistence():
+    """INT-031: Verify artifacts are persisted and accessible via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-p0-{uuid.uuid4().hex[:8]}"
 
@@ -78,40 +78,19 @@ async def test_int_005_trace_realtime_broadcast():
         run_data = AgentRunResponse.model_validate(resp.json())
         episode_id = run_data.episode_id
 
-        # Wait a bit for traces
-        await asyncio.sleep(5.0)
+        # Wait for traces to appear via polling
+        max_attempts = 30
+        traces_found = False
+        for _ in range(max_attempts):
+            resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            if resp.status_code == 200:
+                ep_data = EpisodeResponse.model_validate(resp.json())
+                if len(ep_data.traces) > 0:
+                    traces_found = True
+                    break
+            await asyncio.sleep(1.0)
 
-        resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
-        ep_data = EpisodeResponse.model_validate(resp.json())
-        assert len(ep_data.traces) > 0
-
-
-@pytest.mark.integration_p0
-@pytest.mark.asyncio
-async def test_int_011_planner_target_caps_validation():
-    """INT-011: Verify planner target caps must be <= benchmark caps."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
-
-        invalid_asm = """
-version: "1.0"
-constraints:
-  benchmark_max_unit_cost_usd: 100.0
-  benchmark_max_weight_g: 1000.0
-  planner_target_max_unit_cost_usd: 150.0  # INVALID
-  planner_target_max_weight_g: 500.0
-totals:
-  estimated_unit_cost_usd: 10.0
-  estimated_weight_g: 100.0
-  estimate_confidence: high
-"""
-        write_req = WriteFileRequest(path="invalid_asm.yaml", content=invalid_asm)
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json=write_req.model_dump(mode="json"),
-            headers={"X-Session-ID": session_id},
-        )
-        pass
+        assert traces_found, "Traces did not appear for episode in time"
 
 
 @pytest.mark.integration_p0
