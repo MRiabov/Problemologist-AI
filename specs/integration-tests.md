@@ -200,6 +200,7 @@ Priorities:
 ### Frontend category: UI integration and delivery contract
 
 These are end-to-end frontend integration tests (browser + real APIs + real artifacts). They must run against the same compose stack and must not mock controller/worker API responses.
+This category is functional-only: do not add pixel-perfect or visual-style assertions.
 To ensure stability and prevent Hot Module Replacement (HMR) reloads from interfering with tests, the frontend must be built and served as a static distribution on port **15173** (using `npx serve -s dist -p 15173`). All frontend service integration tests must standardize on this port.
 Additionally, we use test selectors for robust and easy frontend visibility testing like `data-testid="sidebar-resizer"`.
 
@@ -220,6 +221,14 @@ Additionally, we use test selectors for robust and easy frontend visibility test
 | INT-169 | P2 | Theme toggle persistence | Light/dark mode toggle updates UI theme and persists across reload/session restore without breaking core workflow readability. |
 | INT-170 | P0 | Post-run feedback UX + API persistence | Thumbs up/down appears only after model output completion; modal supports topic selection + text; submission is persisted via feedback API. |
 | INT-171 | P1 | 3-column layout + resize persistence | Session/chat/viewer columns load in default 3:3:6 layout, are user-resizable, and retain user-adjusted split on reload. |
+| INT-172 | P0 | Plan-approval control placement + gating | Approve/disapprove controls are available in both expected UI locations (chat-bottom and file-explorer/top-right) when planning is complete; controls are hidden/disabled before planner output is ready. |
+| INT-173 | P0 | Exact-pointing payload contract (CAD entities) | Selecting face/edge/vertex/part/subassembly produces typed context payloads with stable entity IDs and source asset reference; payload reaches backend unchanged. |
+| INT-174 | P0 | CAD show/hide behavior during design and simulation | Users can hide/show selected parts both in design and simulation views; visibility toggles do not corrupt selection state or context-card creation for visible entities. |
+| INT-175 | P1 | Controller-first API boundary for frontend | Browser network traffic for chat/files/assets/sessions uses controller endpoints only; frontend never calls worker host directly in normal operation. |
+| INT-176 | P1 | Tool-call failure recovery path in chat | Failed tool call message is rendered with failure reason, and subsequent successful tool calls/messages continue streaming without UI deadlock. |
+| INT-177 | P0 | Feedback modal edit/recall + persistence contract | After output completion, user can open feedback modal, change thumbs direction before submit, select topic(s), add text, and persisted feedback reflects final edited state. |
+| INT-178 | P1 | Session restore continuity (functional) | Reloading an active episode restores workflow mode, chat transcript, and artifact panel state from live APIs without requiring manual re-selection. |
+| INT-179 | P1 | Manual `@` mention contract in chat input | Typed `@` mentions for supported targets (CAD entities and code ranges) are accepted and serialized as structured steering inputs; invalid mentions return explicit user-visible validation errors. |
 
 ## Per-test Unit->Integration Implementation Map (mandatory)
 
@@ -349,6 +358,14 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-169 | Toggle theme in live app, reload browser, assert persisted preference in real runtime behavior. | Unit test of theme store/localStorage adapter only. |
 | INT-170 | Submit post-run feedback in live UI and assert API persistence + retrieval in episode trace metadata. | Modal component unit test with mocked submit handler. |
 | INT-171 | Resize live 3-column layout, reload, and assert persisted split ratios and working panes. | CSS layout unit snapshot without runtime persistence. |
+| INT-172 | Drive planner run to completion in live UI and assert approve/disapprove controls in both required locations; before planner completion, assert controls absent or disabled. | Asserting only conditional rendering flags in component props. |
+| INT-173 | In live CAD viewer, select face/edge/vertex/part/subassembly and submit prompt; assert outbound payload includes typed entity schema + stable IDs and backend receives same structure. | Unit-testing selection-to-payload mapper with static fixtures only. |
+| INT-174 | Use live CAD/simulation view to hide/show parts and then select remaining visible entities; assert visibility changes and intact context-card behavior end-to-end. | Toggling local visibility state without real assets or backend context submission. |
+| INT-175 | Capture browser network in live run and assert all API calls target controller origin (sessions/chat/files/assets), with no direct worker-origin calls. | Checking frontend base URL constants only. |
+| INT-176 | Force a real tool-call failure during run and assert failure row appears with reason; then assert later successful calls and tokens continue to render. | Rendering hardcoded failed/success event fixtures. |
+| INT-177 | Submit feedback in live UI after editing score/topics/comment before final submit; assert persisted record equals final edited values, not intermediate draft. | Unit-testing modal form reducer only. |
+| INT-178 | Reload browser mid-episode in live stack; assert same episode/workflow opens and chat/artifact panes repopulate from API state. | Snapshot-testing initial page layout without backend state restoration. |
+| INT-179 | Type valid and invalid `@` mentions directly in live chat input; assert valid structured payload creation and explicit validation errors for invalid mention syntax/ranges. | Parsing `@` tokens in an isolated helper test only. |
 
 ## Coverage map: current vs required
 
@@ -361,7 +378,7 @@ This section exists to force implementation as true integration tests, not unit 
   - INT-120 through INT-128 (WP3: circuit validation, electrical failure modes, motor power gating, wire tear, backward compat, electronics schema).
   - INT-131 through INT-141 (WP2/WP3 P1: full fluid and electromechanical workflows, agent handovers, stress rendering, wire routing, power budget, COTS electrical, smoke-test mode, data storage policy, circuit transient).
   - INT-151 through INT-156 (WP2/WP3 P2: breakage prevention evals, safety factor range, fluid benchmark evals, circuit success rate, wire survival, motor gating correctness).
-  - INT-157 through INT-171 (Frontend category: chat/workflow parity, plan approval UX, reasoning/tool-call visibility, interrupt propagation, steerability context, CAD/simulation/circuit viewers, worker asset fetch contract, feedback flow, layout/theme persistence).
+  - INT-157 through INT-179 (Frontend category: chat/workflow parity, plan approval UX and placement, reasoning/tool-call visibility and recovery, interrupt propagation, steerability context and exact pointing payloads, CAD/simulation/circuit viewers, controller-first network boundary, feedback flow, session restore continuity, layout/theme persistence).
 
 ## Recommended suite organization
 
@@ -369,8 +386,8 @@ This section exists to force implementation as true integration tests, not unit 
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-101..INT-112, INT-120..INT-128.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
-- `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170.
-- `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171.
+- `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177.
+- `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171, INT-175, INT-176, INT-178, INT-179.
 - `tests/integration/frontend/p2/`: INT-169.
 
 Marker recommendation:
