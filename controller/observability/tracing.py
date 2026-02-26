@@ -2,12 +2,15 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import structlog
 from sqlalchemy import select
 
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Trace
 from shared.enums import AssetType, TraceType
 from shared.observability.schemas import BaseEvent
+
+logger = structlog.get_logger(__name__)
 
 
 async def record_worker_events(
