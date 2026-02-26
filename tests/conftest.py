@@ -1,11 +1,58 @@
 import httpx
 import pytest
+import os
+import datetime
 
 SERVICES = [
     "http://127.0.0.1:18000",  # Controller
     "http://127.0.0.1:18001",  # Worker Light
     "http://127.0.0.1:18002",  # Worker Heavy
 ]
+
+
+@pytest.fixture(autouse=True)
+def capture_frontend_logs(request):
+    """
+    Automatically hooks into the Playwright 'page' fixture (if present) to capture
+    console logs and page errors into logs/integration_tests/browser_console.log.
+    """
+    # Only run for tests that use the 'page' fixture (Playwright)
+    if "page" not in request.fixturenames:
+        yield
+        return
+
+    # request.getfixturevalue("page") will trigger instantiation of the 'page' fixture
+    page = request.getfixturevalue("page")
+    test_id = request.node.nodeid
+    log_dir = "logs/integration_tests"
+    log_file = os.path.join(log_dir, "browser_console.log")
+
+    # Ensure log directory exists
+    os.makedirs(log_dir, exist_ok=True)
+
+    def handle_console(msg):
+        # We want to exclude some extremely noisy logs if necessary,
+        # but for now, capture everything.
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        with open(log_file, "a") as f:
+            f.write(f"[{timestamp}] [{test_id}] [{msg.type.upper()}] {msg.text}\n")
+
+    def handle_error(exc):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        with open(log_file, "a") as f:
+            f.write(f"[{timestamp}] [{test_id}] [BROWSER_EXCEPTION] {exc}\n")
+
+    page.on("console", handle_console)
+    page.on("pageerror", handle_error)
+
+    # Initial marker in console log to delimit tests
+    with open(log_file, "a") as f:
+        f.write(f"\n--- START TEST BROWSER LOG: {test_id} ---\n")
+
+    yield
+
+    with open(log_file, "a") as f:
+        f.write(f"--- FINISH TEST BROWSER LOG: {test_id} ---\n")
 
 
 @pytest.fixture(autouse=True)

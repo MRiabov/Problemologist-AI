@@ -479,39 +479,47 @@ scenarios:
           input: 
             path: "plan.md"
             content: |
-              ## 1. Solution Overview
-              Benchmark test.
-              ## 2. Parts List
-              - Test part
-              ## 3. Assembly Strategy
-              1. Test step
-              ## 4. Cost & Weight Budget
-              - Test budget
-              ## 5. Risk Assessment
-              - Test risk
+              ## Learning Objective
+              - Move a sphere into the goal zone.
+              ## Geometry
+              - Simple box environment around origin.
+              ## Objectives
+              - Reach goal while avoiding forbid zone.
             overwrite: true
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Test benchmark", overwrite: true }
         - name: "write_file"
           input: 
-            path: "assembly_definition.yaml"
+            path: "objectives.yaml"
             content: |
-              version: '1.0'
+              objectives:
+                goal_zone:
+                  min: [6, -2, 0]
+                  max: [10, 2, 4]
+                forbid_zones:
+                  - name: "obstacle_collision_zone"
+                    min: [2, -3, 0]
+                    max: [4, 3, 4]
+                build_zone:
+                  min: [-10, -10, -10]
+                  max: [10, 10, 10]
+              simulation_bounds:
+                min: [-20, -20, -20]
+                max: [20, 20, 20]
+              moved_object:
+                label: "projectile_ball"
+                shape: "sphere"
+                static_randomization:
+                  radius: [1, 2]
+                start_position: [0, 0, 0]
+                runtime_jitter: [0.5, 0.5, 0.5]
               constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
+                max_unit_cost: 50.0
+                max_weight_g: 1200.0
+              randomization:
+                static_variation_id: "v1.0"
+                runtime_jitter_enabled: true
             overwrite: true
-        - name: "write_file"
-          input: { path: "objectives.yaml", content: "constraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
     coder:
       journal: "Work completed."
       thought: "Implementing benchmark script and setting up mandatory files."

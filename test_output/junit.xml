@@ -1,1 +1,29 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="15.040" timestamp="2026-02-26T08:34:22.827248+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_int_177" name="test_int_177_feedback_modal_edit_recall[chromium]" time="14.880" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="194.935" timestamp="2026-02-26T09:34:17.407270+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_frontend_p0" name="test_int_159_plan_approval_comment[chromium]" time="188.828"><failure message="AssertionError: Locator expected to be visible&#10;Actual value: None&#10;Error: element(s) not found &#10;Call log:&#10;  - Expect &quot;to_be_visible&quot; with timeout 180000ms&#10;  - waiting for get_by_text(&quot;Execution Plan Ready&quot;)">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
+
+    @pytest.mark.integration_frontend
+    def test_int_159_plan_approval_comment(page: Page):
+        """
+        INT-159: After planner output, approve/disapprove controls appear;
+        action posts decision to API; optional user comment is persisted
+        and visible in run history.
+        """
+        # 1. Start a benchmark generation
+        page.goto(f"{FRONTEND_URL}/benchmark")
+        page.wait_for_load_state("networkidle")
+    
+        # Click CREATE NEW
+        page.get_by_test_id("create-new-button").click()
+    
+        page.locator("#chat-input").fill(f"Generate a simple benchmark {uuid.uuid4()}")
+        page.get_by_label("Send Message").click()
+    
+        # 2. Wait for the "Execution Plan Ready" card
+&gt;       expect(page.get_by_text("Execution Plan Ready")).to_be_visible(timeout=180000)
+E       AssertionError: Locator expected to be visible
+E       Actual value: None
+E       Error: element(s) not found 
+E       Call log:
+E         - Expect "to_be_visible" with timeout 180000ms
+E         - waiting for get_by_text("Execution Plan Ready")
+
+tests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError</failure></testcase></testsuite></testsuites>

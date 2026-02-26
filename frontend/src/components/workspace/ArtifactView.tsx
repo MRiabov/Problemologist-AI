@@ -52,14 +52,19 @@ export default function ArtifactView({
     setActiveArtifactId, 
     addToContext, 
     selectedContext,
-    running,
     confirmBenchmark
   } = useEpisodes();
   const { theme } = useTheme();
   const [inlineContextLabel, setInlineContextLabel] = useState<string | null>(null);
 
-  const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'PLANNED';
-  const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !running && selectedEpisode?.status !== EpisodeStatus.COMPLETED;
+  const isPlanned =
+    selectedEpisode?.status === EpisodeStatus.PLANNED ||
+    selectedEpisode?.metadata_vars?.detailed_status === "PLANNED";
+  const showExecutionPlan =
+    !!selectedEpisode &&
+    (isPlanned || !!selectedEpisode.plan) &&
+    selectedEpisode.status !== EpisodeStatus.COMPLETED &&
+    selectedEpisode.status !== EpisodeStatus.FAILED;
 
   const getAssetUrl = (assetPath: string | undefined) => {
     if (!assetPath || !selectedEpisode) return null;
