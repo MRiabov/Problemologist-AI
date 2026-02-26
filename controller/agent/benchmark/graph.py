@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
@@ -130,7 +131,9 @@ async def _execute_graph_streaming(
     final_state = initial_state
 
     # Database tracing
-    db_callback = DatabaseCallbackHandler(episode_id=str(session_id))
+    db_callback = DatabaseCallbackHandler(
+        episode_id=str(session_id), loop=asyncio.get_running_loop()
+    )
     callbacks = [db_callback]
 
     async for output in app.astream(initial_state, config={"callbacks": callbacks}):
