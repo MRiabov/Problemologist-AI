@@ -138,22 +138,22 @@ class MockDSPyLM(dspy.LM):
         completed_tools = len(
             re.findall(r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text)
         )
-        self._tool_progress[node_key] = completed_tools
+        self._tool_progress[lookup_key] = completed_tools
 
         # 3. Handle multi-turn state and loop protection
-        count = self._call_counts.get(node_key, 0)
-        self._call_counts[node_key] = count + 1
+        count = self._call_counts.get(lookup_key, 0)
+        self._call_counts[lookup_key] = count + 1
 
         # For scripted tool sequences, only force-finish once tools are exhausted.
         # DSPy may invoke LM multiple times between tool executions.
         tool_calls = node_data.get("tool_calls", [])
         if count > 5 and (not tool_calls or completed_tools >= len(tool_calls)):
-            logger.warning("mock_dspy_lm_loop_detected", node=node_key, count=count)
+            logger.warning("mock_dspy_lm_loop_detected", node=lookup_key, count=count)
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
         # Only force finish on observation when explicit tool calls are exhausted.
         tool_calls = node_data.get("tool_calls", [])
-        tool_progress = self._tool_progress.get(node_key, 0)
+        tool_progress = self._tool_progress.get(lookup_key, 0)
         if self._is_finishing(full_text) and (
             not tool_calls or tool_progress >= len(tool_calls)
         ):
