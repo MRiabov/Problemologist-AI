@@ -92,26 +92,93 @@ async def test_int_011_planner_target_caps_validation():
     """INT-011: Verify planner target caps must be <= benchmark caps."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
+        headers = {"X-Session-ID": session_id}
 
+        # 1. Setup required files for submission
+        plan_md = """## 1. Solution Overview\nWe will build a box.\n\n## 2. Parts List\n- Box: 10x10x10mm\n\n## 3. Assembly Strategy\n1. Build the box.\n\n## 4. Cost & Weight Budget\n- Cost: $10\n\n## 5. Risk Assessment\n- None."""
+        todo_md = "- [x] Task 1"
+        objectives_yaml = """
+objectives:
+  goal_zone:
+    min: [10, 10, 10]
+    max: [20, 20, 20]
+  build_zone:
+    min: [0, 0, 0]
+    max: [100, 100, 100]
+simulation_bounds:
+  min: [-10, -10, -10]
+  max: [110, 110, 110]
+moved_object:
+  label: target_box
+  shape: box
+  start_position: [0, 0, 5]
+  runtime_jitter: [0, 0, 0]
+constraints:
+  max_unit_cost: 100.0
+  max_weight_g: 1000.0
+"""
+        script_py = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "target_box"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return p
+"""
+        # Note: we need to initialize a git repo for immutability check to pass or be skipped cleanly
+        await client.post(f"{WORKER_LIGHT_URL}/git/init", headers=headers)
+
+        files = {
+            "plan.md": plan_md,
+            "todo.md": todo_md,
+            "objectives.yaml": objectives_yaml,
+            "script.py": script_py,
+            "validation_results.json": '{"is_valid": true}',
+        }
+
+        for path, content in files.items():
+            await client.post(
+                f"{WORKER_LIGHT_URL}/fs/write",
+                json=WriteFileRequest(path=path, content=content).model_dump(mode="json"),
+                headers=headers,
+            )
+
+        # 2. Write INVALID assembly_definition.yaml (planner target > benchmark cap)
         invalid_asm = """
 version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100.0
   benchmark_max_weight_g: 1000.0
-  planner_target_max_unit_cost_usd: 150.0  # INVALID
+  planner_target_max_unit_cost_usd: 150.0  # INVALID (> 100.0)
   planner_target_max_weight_g: 500.0
 totals:
   estimated_unit_cost_usd: 10.0
   estimated_weight_g: 100.0
   estimate_confidence: high
 """
-        write_req = WriteFileRequest(path="invalid_asm.yaml", content=invalid_asm)
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
-            json=write_req.model_dump(mode="json"),
-            headers={"X-Session-ID": session_id},
+            json=WriteFileRequest(path="assembly_definition.yaml", content=invalid_asm).model_dump(mode="json"),
+            headers=headers,
         )
-        pass
+
+        # 3. Call /benchmark/submit
+        from shared.workers.schema import BenchmarkToolRequest, BenchmarkToolResponse
+        submit_req = BenchmarkToolRequest(script_path="script.py")
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=headers,
+            timeout=60.0,
+        )
+
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "Planner target cost" in data.message
+        assert "(150.0)" in data.message
+        assert "benchmark max cost" in data.message
 
 
 @pytest.mark.integration_p0
