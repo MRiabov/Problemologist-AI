@@ -149,3 +149,26 @@ async def test_int_063_mounted_path_read_only():
                 headers={"X-Session-ID": session_id},
             )
             assert resp.status_code == 403, f"Expected 403 for {ro_path} delete"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_064_path_traversal_protection():
+    """INT-064: Path traversal protection for mounted directories."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"test-64-{int(time.time())}"
+
+        # Attempt to escape /utils mount point via path traversal.
+        # We use /fs/read because GET /assets/... might be normalized by the HTTP client.
+        # Path in JSON body is not normalized by the client.
+        from shared.workers.schema import ReadFileRequest
+        read_req = ReadFileRequest(path="/utils/../pyproject.toml")
+        resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=read_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        # Should be blocked with 403 Forbidden.
+        assert resp.status_code == 403
+        assert "Path traversal attempted" in resp.text
