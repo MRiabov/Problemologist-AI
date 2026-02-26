@@ -1,0 +1,134 @@
+[
+  {
+    "timestamp": "2026-02-26T00:41:57.093999",
+    "status": "passed",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 1.648,
+    "tests": [
+      {
+        "name": "test_int_061_asset_serving_security",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.814,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_062_worker_openapi_contract",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.404,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_063_mounted_path_read_only",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.169,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T00:43:07.659066",
+    "status": "passed",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 0.364,
+    "tests": [
+      {
+        "name": "test_path_traversal_vulnerability",
+        "classname": "tests.repro_path_traversal",
+        "time": 0.294,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T00:48:20.379062",
+    "status": "failed",
+    "total": 4,
+    "passed": 3,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 2.998,
+    "tests": [
+      {
+        "name": "test_int_061_asset_serving_security",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.926,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_062_worker_openapi_contract",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.826,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_063_mounted_path_read_only",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.217,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_064_path_traversal_protection",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.183,
+        "status": "failed",
+        "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_064_path_traversal_protection():\n        \"\"\"INT-064: Path traversal protection for mounted directories.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"test-64-{int(time.time())}\"\n    \n            # Attempt to escape /utils mount point via path traversal.\n            # The router should catch this and raise a PermissionError.\n            traversal_path = \"/utils/../pyproject.toml\"\n            resp = await client.get(\n                f\"{WORKER_LIGHT_URL}/assets{traversal_path}\",\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            # Should be blocked. Current implementation returns 500 on unhandled PermissionError.\n>           assert resp.status_code in (403, 500)\nE           assert 404 in (403, 500)\nE            +  where 404 = <Response [404 Not Found]>.status_code\n\ntests/integration/architecture_p0/test_int_061_063.py:170: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T00:49:22.254164",
+    "status": "passed",
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 1.441,
+    "tests": [
+      {
+        "name": "test_int_061_asset_serving_security",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.362,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_062_worker_openapi_contract",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.421,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_063_mounted_path_read_only",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.172,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_064_path_traversal_protection",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.134,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  }
+]
