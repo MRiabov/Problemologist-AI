@@ -14,12 +14,12 @@ def get_schematic_pin_index(term: str) -> str:
     Map a component terminal name to a schematic pin index.
 
     Standard mappings:
-    - +, a, in, v+, supply_v+, 1 -> "1"
+    - +, a, in, v+, supply_v+, vin, 1 -> "1"
     - -, b, out, 0, gnd, 2 -> "2"
     """
     term = term.lower()
 
-    if term in ["+", "a", "in", "v+", "supply_v+", "1"]:
+    if term in ["+", "a", "in", "v+", "supply_v+", "vin", "1"]:
         return "1"
     if term in ["-", "b", "out", "0", "gnd", "2"]:
         return "2"
@@ -55,6 +55,8 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[SchematicItem]
             symbol_name = "battery"
         elif comp.type == ElectronicComponentType.CONNECTOR:
             symbol_name = "header"
+        elif comp.type == ElectronicComponentType.LOGIC_BOARD:
+            symbol_name = "mcu"
 
         comp_id = f"comp_{comp.component_id}"
 

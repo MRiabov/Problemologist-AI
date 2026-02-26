@@ -124,7 +124,7 @@ class FailureReason(StrEnum):
 SimulationFailureMode = FailureReason
 
 
-class ElectronicComponentType(StrEnum):
+class ElectronicComponentType(UppercaseStrEnum):
     """Types of electronic components supported in the netlist."""
 
     MOTOR = "MOTOR"
@@ -132,9 +132,10 @@ class ElectronicComponentType(StrEnum):
     RELAY = "RELAY"
     SWITCH = "SWITCH"
     CONNECTOR = "CONNECTOR"
+    LOGIC_BOARD = "LOGIC_BOARD"
 
 
-class ManufacturingMethod(StrEnum):
+class ManufacturingMethod(UppercaseStrEnum):
     """Supported manufacturing methods."""
 
     CNC = "CNC"
