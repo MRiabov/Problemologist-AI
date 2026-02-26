@@ -7,7 +7,6 @@ from httpx import AsyncClient
 from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
-    ArtifactEntry,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
     ConfirmRequest,
@@ -109,12 +108,12 @@ async def test_engineering_full_loop():
             pytest.fail(f"Engineer loop timed out. Last status: {last_status}")
 
         # 4. Verify Engineering Artifacts
-        artifacts_resp = await client.get(f"/artifacts/{engineer_session_id}")
-        assert artifacts_resp.status_code == 200, (
-            f"Failed to fetch artifacts for {engineer_session_id}: {artifacts_resp.text}"
+        episode_assets_resp = await client.get(f"/episodes/{episode_id}")
+        assert episode_assets_resp.status_code == 200, (
+            f"Failed to fetch episode assets for {episode_id}: {episode_assets_resp.text}"
         )
-        artifacts = [ArtifactEntry.model_validate(a) for a in artifacts_resp.json()]
-        artifact_paths = [a.path for a in artifacts]
+        episode_data = EpisodeResponse.model_validate(episode_assets_resp.json())
+        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
 
         # Check for Planner artifacts
         assert any("plan.md" in p for p in artifact_paths), (

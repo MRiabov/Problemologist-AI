@@ -4,8 +4,12 @@ import httpx
 import pytest_asyncio
 
 # Constants
-WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001"))
-WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001"))
+WORKER_LIGHT_URL = os.getenv(
+    "WORKER_LIGHT_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001")
+)
+WORKER_HEAVY_URL = os.getenv(
+    "WORKER_HEAVY_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001")
+)
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 

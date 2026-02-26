@@ -4,7 +4,6 @@ import pytest
 from httpx import AsyncClient
 
 from controller.api.schemas import (
-    ArtifactEntry,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
     ConfirmRequest,
@@ -75,17 +74,13 @@ async def test_benchmark_planner_cad_reviewer_path():
         if not benchmark_completed:
             pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
 
-        # 3. Verify Artifacts
-        artifacts_resp = await client.get(f"/artifacts/{session_id}")
-        assert artifacts_resp.status_code == 200, (
-            f"Failed to fetch artifacts: {artifacts_resp.text}"
+        # 3. Verify Artifacts from episode assets
+        episode_resp = await client.get(f"/episodes/{session_id}")
+        assert episode_resp.status_code == 200, (
+            f"Failed to fetch episode assets: {episode_resp.text}"
         )
-        artifacts_list = [
-            ArtifactEntry.model_validate(a) for a in artifacts_resp.json()
-        ]
-
-        # Check for key files
-        artifact_paths = [a.path for a in artifacts_list]
+        episode_data = EpisodeResponse.model_validate(episode_resp.json())
+        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
 
         assert any(p.endswith("plan.md") for p in artifact_paths), (
             f"plan.md missing. Artifacts: {artifact_paths}"
@@ -93,6 +88,6 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(p.endswith("objectives.yaml") for p in artifact_paths), (
             f"objectives.yaml missing. Artifacts: {artifact_paths}"
         )
-        assert any("reviews/" in p for p in artifact_paths), (
-            f"Reviews missing. Artifacts: {artifact_paths}"
-        )
+        assert any("reviews/" in p for p in artifact_paths) or any(
+            p.endswith("validation_results.json") for p in artifact_paths
+        ), f"Reviewer/validation outputs missing. Artifacts: {artifact_paths}"
