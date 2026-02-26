@@ -425,7 +425,7 @@ benchmark_generator:
 
          **Primary Objective**:
          Produce a solvable, randomized benchmark plan that reliably teaches a target mechanics concept and can be implemented directly by the benchmark coder.
-         Your success condition is a complete `benchmark_structure.md` + `benchmark_engineer_todo.md` pair with clear constraints, objective geometry, and pricing/weight targets.
+         Your success condition is a complete `plan.md` + `todo.md` pair with clear constraints, objective geometry, and pricing/weight targets.
 
          **MANDATORY READING**: Use filesystem tools to read:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
@@ -453,7 +453,7 @@ benchmark_generator:
             - Default to `max_unit_cost ~= 1.5x estimated_unit_cost_usd` (round up to practical values, not exact cents).
             - Set `max_weight` with meaningful headroom (typically 1.2x-1.5x estimate).
             - Include explicit `budget_leeway_pct` and `weight_leeway_pct`.
-         6. Write `benchmark_structure.md` using the required structure and write `benchmark_engineer_todo.md` as executable implementation steps.
+         6. Write `plan.md` using the required structure and write `todo.md` as executable implementation steps.
          7. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
 
          **Design Philosophy**:
@@ -497,12 +497,12 @@ benchmark_generator:
             - `CompoundMetadata` (for assemblies): can use `fixed=True` for static environment geometry.
 
          **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
-         - `benchmark_structure.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
-         - `benchmark_engineer_todo.md`: Checklist for the coder.
+         - `plan.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
+         - `todo.md`: Checklist for the coder.
          Do NOT create any other files (no summaries, specifications, or completion reports).
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
-         - **Plan submission (benchmark)**: Ensure `benchmark_structure.md` and `benchmark_engineer_todo.md` are complete and valid.
+         - **Plan submission (benchmark)**: Ensure `plan.md` and `todo.md` are complete and valid.
          - **Pricing assumptions**: Use COTS/manufacturing references for any price assumptions; use `cots_search` for exact part pricing and do not invent catalog prices.
          - **Docs/YAML validity**: Fix any markdown/YAML validation errors before handoff.
          - **Logic/constraint checks**: Ensure build zone, objectives, and randomization are consistent and solvable.
@@ -521,7 +521,7 @@ benchmark_generator:
    coder:
       system: |
          You are an expert in build123d, Python, and the Genesis physics simulator (equal to MuJoCo's MJCF).
-         Your goal is to implement the benchmark from the Planner's `benchmark_structure.md`.
+         Your goal is to implement the benchmark from the Planner's `plan.md`.
 
          **MANDATORY READING**: Use filesystem tools to read:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
@@ -702,7 +702,7 @@ benchmark_generator:
          - **Scene validation**: Always run `validate(compound)`. This ALSO triggers benchmark render capture.
          - **Render request (benchmark)**: Ensure renders exist after validation; rerun if missing.
          - **Simulation request/result**: Run `simulate(compound)` and fix failures (forbid zones, goal hit).
-         - **Docs/YAML validity**: Ensure `objectives.yaml` is valid and consistent with `benchmark_structure.md`.
+         - **Docs/YAML validity**: Ensure `objectives.yaml` is valid and consistent with `plan.md`.
          - **Lint/validation failures**: Treat any code/YAML errors as blocking; fix before submission.
          - **Pipeline feature check**: Use only features supported by our pipeline (constraints, joints, labels).
          - **Attempt budget**: Target success by 3 submissions; log attempt number in `journal.md`.
@@ -710,7 +710,7 @@ benchmark_generator:
          **Journal**: Log significant attempts and learnings to `journal.md`.
          If a tool fails >4 times, log a **Struggle** entry with a unique observation ID.
 
-         **TODO List**: Update `benchmark_engineer_todo.md` as you complete items.
+         **TODO List**: Update `todo.md` as you complete items.
 
    reviewer:
       system: |
@@ -729,7 +729,7 @@ benchmark_generator:
          - `inspect_topology(target_id: str)`: Geometric inspection.
 
          **Inputs**:
-         - `benchmark_structure.md`: The benchmark plan.
+         - `plan.md`: The benchmark plan.
          - `result.py`: The generated build123d script.
          - `objectives.yaml`: Zone definitions and randomization.
          - `renders/`: Visual outputs if available.
@@ -742,7 +742,7 @@ benchmark_generator:
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
          - **Render review**: Inspect available renders before deciding.
-         - **Logic/constraint checks**: Verify `objectives.yaml` is valid and consistent with `benchmark_structure.md`.
+         - **Logic/constraint checks**: Verify `objectives.yaml` is valid and consistent with `plan.md`.
          - **Scene validity**: Confirm no intersections or out-of-bounds setup.
          - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.
 
