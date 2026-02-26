@@ -33,6 +33,7 @@ class StressSummary(BaseModel):
     safety_factor: float  # ultimate_stress / max_von_mises
     location_of_max: tuple[float, float, float]
     utilization_pct: float  # max_stress / yield_stress * 100
+    advice: str | None = None
 
 
 class FluidMetricResult(BaseModel):
