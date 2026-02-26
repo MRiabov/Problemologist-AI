@@ -1027,40 +1027,6 @@
         }
       }
     },
-    "/health": {
-      "get": {
-        "summary": "Health Check",
-        "description": "Health check endpoint.",
-        "operationId": "health_check_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/": {
-      "get": {
-        "summary": "Root",
-        "description": "Root endpoint returning API information.",
-        "operationId": "root__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/benchmark/verify": {
       "post": {
         "tags": [
@@ -1484,10 +1450,231 @@
           }
         }
       }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint returning API information.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnalyzeRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "GENESIS"
+          },
+          "smoke_test_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate."
+          },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
+          },
+          "method": {
+            "$ref": "#/components/schemas/ManufacturingMethod",
+            "description": "Manufacturing method to analyze (cnc, 3dp, im)."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantity",
+            "description": "Number of units to manufacture for pricing.",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "title": "AnalyzeRequest",
+        "description": "Request to run manufacturing analysis."
+      },
+      "BenchmarkToolRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "description": "Path to the script containing the build() function.",
+            "default": "script.py"
+          },
+          "script_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Content",
+            "description": "Direct content of the script."
+          },
+          "bundle_base64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Base64",
+            "description": "Gzipped tarball of the session workspace (base64 encoded)."
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType",
+            "description": "Physics backend to use.",
+            "default": "GENESIS"
+          },
+          "smoke_test_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoke Test Mode",
+            "description": "If true: cap particles to 5000, label results as approximate."
+          },
+          "particle_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Particle Budget",
+            "description": "Optional particle budget override."
+          }
+        },
+        "type": "object",
+        "title": "BenchmarkToolRequest",
+        "description": "Request to run a benchmark tool (simulate, validate, etc.)."
+      },
+      "BenchmarkToolResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "high"
+          },
+          "artifacts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationArtifacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventRecord"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "BenchmarkToolResponse",
+        "description": "Response from a benchmark tool."
+      },
       "Body_upload_file_fs_upload_file_post": {
         "properties": {
           "path": {
@@ -1506,6 +1693,54 @@
           "file"
         ],
         "title": "Body_upload_file_fs_upload_file_post"
+      },
+      "CostBreakdown": {
+        "properties": {
+          "process": {
+            "type": "string",
+            "title": "Process"
+          },
+          "total_cost": {
+            "type": "number",
+            "title": "Total Cost"
+          },
+          "unit_cost": {
+            "type": "number",
+            "title": "Unit Cost"
+          },
+          "material_cost_per_unit": {
+            "type": "number",
+            "title": "Material Cost Per Unit"
+          },
+          "setup_cost": {
+            "type": "number",
+            "title": "Setup Cost"
+          },
+          "is_reused": {
+            "type": "boolean",
+            "title": "Is Reused"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "pricing_explanation": {
+            "type": "string",
+            "title": "Pricing Explanation",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "process",
+          "total_cost",
+          "unit_cost",
+          "material_cost_per_unit",
+          "setup_cost",
+          "is_reused"
+        ],
+        "title": "CostBreakdown"
       },
       "DeleteFileRequest": {
         "properties": {
@@ -1565,6 +1800,137 @@
         ],
         "title": "EditOp",
         "description": "A single edit operation (find and replace)."
+      },
+      "ElectronicComponent": {
+        "properties": {
+          "component_id": {
+            "type": "string",
+            "title": "Component Id"
+          },
+          "type": {
+            "$ref": "#/components/schemas/ElectronicComponentType"
+          },
+          "cots_part_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cots Part Id"
+          },
+          "assembly_part_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assembly Part Ref"
+          },
+          "rated_voltage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rated Voltage"
+          },
+          "stall_current_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stall Current A"
+          }
+        },
+        "type": "object",
+        "required": [
+          "component_id",
+          "type"
+        ],
+        "title": "ElectronicComponent",
+        "description": "A component in the electronic circuit."
+      },
+      "ElectronicComponentType": {
+        "type": "string",
+        "enum": [
+          "MOTOR",
+          "POWER_SUPPLY",
+          "RELAY",
+          "SWITCH",
+          "CONNECTOR"
+        ],
+        "title": "ElectronicComponentType",
+        "description": "Types of electronic components supported in the netlist."
+      },
+      "ElectronicsSection": {
+        "properties": {
+          "power_supply": {
+            "$ref": "#/components/schemas/PowerSupplyConfig"
+          },
+          "wiring": {
+            "items": {
+              "$ref": "#/components/schemas/WireConfig"
+            },
+            "type": "array",
+            "title": "Wiring",
+            "default": []
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ElectronicComponent"
+            },
+            "type": "array",
+            "title": "Components",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "power_supply"
+        ],
+        "title": "ElectronicsSection",
+        "description": "Electronics section of the assembly definition."
+      },
+      "ElectronicsValidationRequest": {
+        "properties": {
+          "section": {
+            "$ref": "#/components/schemas/ElectronicsSection"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section"
+        ],
+        "title": "ElectronicsValidationRequest",
+        "description": "Request to validate an electronic circuit."
+      },
+      "EventRecord": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "event_type"
+        ],
+        "title": "EventRecord",
+        "description": "A single emitted observability event."
       },
       "ExecuteRequest": {
         "properties": {
@@ -1638,6 +2004,65 @@
         ],
         "title": "ExistsResponse",
         "description": "Response for file existence check."
+      },
+      "FailureReason": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "TIMEOUT",
+          "OUT_OF_BOUNDS",
+          "FORBID_ZONE_HIT",
+          "PART_BREAKAGE",
+          "MOTOR_OVERLOAD",
+          "STABILITY_ISSUE",
+          "PHYSICS_INSTABILITY",
+          "SHORT_CIRCUIT",
+          "OVERCURRENT",
+          "WIRE_TORN",
+          "OPEN_CIRCUIT",
+          "ASSET_GENERATION_FAILED",
+          "FLUID_OBJECTIVE_FAILED",
+          "STRESS_OBJECTIVE_EXCEEDED",
+          "ELECTRONICS_FLUID_DAMAGE",
+          "VALIDATION_FAILED",
+          "MANUFACTURABILITY_FAILED",
+          "VERIFICATION_ERROR"
+        ],
+        "title": "FailureReason",
+        "description": "Unified failure modes for physics and electronics simulation."
+      },
+      "FluidMetricResult": {
+        "properties": {
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "fluid_id": {
+            "type": "string",
+            "title": "Fluid Id"
+          },
+          "measured_value": {
+            "type": "number",
+            "title": "Measured Value"
+          },
+          "target_value": {
+            "type": "number",
+            "title": "Target Value"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_type",
+          "fluid_id",
+          "measured_value",
+          "target_value",
+          "passed"
+        ],
+        "title": "FluidMetricResult"
       },
       "FsFileEntry": {
         "properties": {
@@ -2008,551 +2433,6 @@
         "title": "ListFilesRequest",
         "description": "Request to list files in a directory."
       },
-      "ReadFileRequest": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Path"
-          }
-        },
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "title": "ReadFileRequest",
-        "description": "Request to read a file."
-      },
-      "ReadFileResponse": {
-        "properties": {
-          "content": {
-            "type": "string",
-            "title": "Content"
-          }
-        },
-        "type": "object",
-        "required": [
-          "content"
-        ],
-        "title": "ReadFileResponse",
-        "description": "Response from reading a file."
-      },
-      "ResponseStatus": {
-        "type": "string",
-        "enum": [
-          "OK",
-          "HEALTHY",
-          "ACCEPTED",
-          "COMPLETED",
-          "SUCCESS",
-          "ERROR"
-        ],
-        "title": "ResponseStatus",
-        "description": "Standard API response status values."
-      },
-      "StatusResponse": {
-        "properties": {
-          "status": {
-            "$ref": "#/components/schemas/ResponseStatus"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "StatusResponse",
-        "description": "Generic status response."
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      },
-      "WriteFileRequest": {
-        "properties": {
-          "path": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Path"
-          },
-          "content": {
-            "type": "string",
-            "title": "Content"
-          },
-          "overwrite": {
-            "type": "boolean",
-            "title": "Overwrite",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "path",
-          "content"
-        ],
-        "title": "WriteFileRequest",
-        "description": "Request to write a file."
-      },
-      "AnalyzeRequest": {
-        "properties": {
-          "script_path": {
-            "type": "string",
-            "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
-            "default": "script.py"
-          },
-          "script_content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Script Content",
-            "description": "Direct content of the script."
-          },
-          "bundle_base64": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bundle Base64",
-            "description": "Gzipped tarball of the session workspace (base64 encoded)."
-          },
-          "backend": {
-            "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "GENESIS"
-          },
-          "smoke_test_mode": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate."
-          },
-          "particle_budget": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Particle Budget",
-            "description": "Optional particle budget override."
-          },
-          "method": {
-            "$ref": "#/components/schemas/ManufacturingMethod",
-            "description": "Manufacturing method to analyze (cnc, 3dp, im)."
-          },
-          "quantity": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Quantity",
-            "description": "Number of units to manufacture for pricing.",
-            "default": 1
-          }
-        },
-        "type": "object",
-        "required": [
-          "method"
-        ],
-        "title": "AnalyzeRequest",
-        "description": "Request to run manufacturing analysis."
-      },
-      "BenchmarkToolRequest": {
-        "properties": {
-          "script_path": {
-            "type": "string",
-            "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
-            "default": "script.py"
-          },
-          "script_content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Script Content",
-            "description": "Direct content of the script."
-          },
-          "bundle_base64": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Bundle Base64",
-            "description": "Gzipped tarball of the session workspace (base64 encoded)."
-          },
-          "backend": {
-            "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "GENESIS"
-          },
-          "smoke_test_mode": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Smoke Test Mode",
-            "description": "If true: cap particles to 5000, label results as approximate."
-          },
-          "particle_budget": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Particle Budget",
-            "description": "Optional particle budget override."
-          }
-        },
-        "type": "object",
-        "title": "BenchmarkToolRequest",
-        "description": "Request to run a benchmark tool (simulate, validate, etc.)."
-      },
-      "BenchmarkToolResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "confidence": {
-            "type": "string",
-            "title": "Confidence",
-            "default": "high"
-          },
-          "artifacts": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/SimulationArtifacts"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "events": {
-            "items": {
-              "$ref": "#/components/schemas/EventRecord"
-            },
-            "type": "array",
-            "title": "Events"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message"
-        ],
-        "title": "BenchmarkToolResponse",
-        "description": "Response from a benchmark tool."
-      },
-      "CostBreakdown": {
-        "properties": {
-          "process": {
-            "type": "string",
-            "title": "Process"
-          },
-          "total_cost": {
-            "type": "number",
-            "title": "Total Cost"
-          },
-          "unit_cost": {
-            "type": "number",
-            "title": "Unit Cost"
-          },
-          "material_cost_per_unit": {
-            "type": "number",
-            "title": "Material Cost Per Unit"
-          },
-          "setup_cost": {
-            "type": "number",
-            "title": "Setup Cost"
-          },
-          "is_reused": {
-            "type": "boolean",
-            "title": "Is Reused"
-          },
-          "details": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Details"
-          },
-          "pricing_explanation": {
-            "type": "string",
-            "title": "Pricing Explanation",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "process",
-          "total_cost",
-          "unit_cost",
-          "material_cost_per_unit",
-          "setup_cost",
-          "is_reused"
-        ],
-        "title": "CostBreakdown"
-      },
-      "ElectronicComponent": {
-        "properties": {
-          "component_id": {
-            "type": "string",
-            "title": "Component Id"
-          },
-          "type": {
-            "$ref": "#/components/schemas/ElectronicComponentType"
-          },
-          "cots_part_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cots Part Id"
-          },
-          "assembly_part_ref": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Assembly Part Ref"
-          },
-          "rated_voltage": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rated Voltage"
-          },
-          "stall_current_a": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Stall Current A"
-          }
-        },
-        "type": "object",
-        "required": [
-          "component_id",
-          "type"
-        ],
-        "title": "ElectronicComponent",
-        "description": "A component in the electronic circuit."
-      },
-      "ElectronicComponentType": {
-        "type": "string",
-        "enum": [
-          "MOTOR",
-          "POWER_SUPPLY",
-          "RELAY",
-          "SWITCH",
-          "CONNECTOR"
-        ],
-        "title": "ElectronicComponentType",
-        "description": "Types of electronic components supported in the netlist."
-      },
-      "ElectronicsSection": {
-        "properties": {
-          "power_supply": {
-            "$ref": "#/components/schemas/PowerSupplyConfig"
-          },
-          "wiring": {
-            "items": {
-              "$ref": "#/components/schemas/WireConfig"
-            },
-            "type": "array",
-            "title": "Wiring",
-            "default": []
-          },
-          "components": {
-            "items": {
-              "$ref": "#/components/schemas/ElectronicComponent"
-            },
-            "type": "array",
-            "title": "Components",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "power_supply"
-        ],
-        "title": "ElectronicsSection",
-        "description": "Electronics section of the assembly definition."
-      },
-      "ElectronicsValidationRequest": {
-        "properties": {
-          "section": {
-            "$ref": "#/components/schemas/ElectronicsSection"
-          }
-        },
-        "type": "object",
-        "required": [
-          "section"
-        ],
-        "title": "ElectronicsValidationRequest",
-        "description": "Request to validate an electronic circuit."
-      },
-      "EventRecord": {
-        "properties": {
-          "event_type": {
-            "type": "string",
-            "title": "Event Type"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "event_type"
-        ],
-        "title": "EventRecord",
-        "description": "A single emitted observability event."
-      },
-      "FailureReason": {
-        "type": "string",
-        "enum": [
-          "NONE",
-          "TIMEOUT",
-          "OUT_OF_BOUNDS",
-          "FORBID_ZONE_HIT",
-          "PART_BREAKAGE",
-          "MOTOR_OVERLOAD",
-          "STABILITY_ISSUE",
-          "PHYSICS_INSTABILITY",
-          "SHORT_CIRCUIT",
-          "OVERCURRENT",
-          "WIRE_TORN",
-          "OPEN_CIRCUIT",
-          "ASSET_GENERATION_FAILED",
-          "FLUID_OBJECTIVE_FAILED",
-          "STRESS_OBJECTIVE_EXCEEDED",
-          "ELECTRONICS_FLUID_DAMAGE",
-          "VALIDATION_FAILED",
-          "MANUFACTURABILITY_FAILED",
-          "VERIFICATION_ERROR"
-        ],
-        "title": "FailureReason",
-        "description": "Unified failure modes for physics and electronics simulation."
-      },
-      "FluidMetricResult": {
-        "properties": {
-          "metric_type": {
-            "type": "string",
-            "title": "Metric Type"
-          },
-          "fluid_id": {
-            "type": "string",
-            "title": "Fluid Id"
-          },
-          "measured_value": {
-            "type": "number",
-            "title": "Measured Value"
-          },
-          "target_value": {
-            "type": "number",
-            "title": "Target Value"
-          },
-          "passed": {
-            "type": "boolean",
-            "title": "Passed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "metric_type",
-          "fluid_id",
-          "measured_value",
-          "target_value",
-          "passed"
-        ],
-        "title": "FluidMetricResult"
-      },
       "ManufacturingMethod": {
         "type": "string",
         "enum": [
@@ -2758,6 +2638,48 @@
         ],
         "title": "PreviewDesignResponse",
         "description": "Response from preview design endpoint."
+      },
+      "ReadFileRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "title": "ReadFileRequest",
+        "description": "Request to read a file."
+      },
+      "ReadFileResponse": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "ReadFileResponse",
+        "description": "Response from reading a file."
+      },
+      "ResponseStatus": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "HEALTHY",
+          "ACCEPTED",
+          "COMPLETED",
+          "SUCCESS",
+          "ERROR"
+        ],
+        "title": "ResponseStatus",
+        "description": "Standard API response status values."
       },
       "SimulationArtifacts": {
         "properties": {
@@ -2992,6 +2914,19 @@
         ],
         "title": "SimulatorBackendType"
       },
+      "StatusResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "StatusResponse",
+        "description": "Generic status response."
+      },
       "StressFieldData": {
         "properties": {
           "nodes": {
@@ -3070,6 +3005,46 @@
           "utilization_pct"
         ],
         "title": "StressSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       },
       "VerificationRequest": {
         "properties": {
@@ -3355,6 +3330,31 @@
           "unit_cost"
         ],
         "title": "WorkbenchResult"
+      },
+      "WriteFileRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Path"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "title": "Overwrite",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "title": "WriteFileRequest",
+        "description": "Request to write a file."
       }
     }
   }
