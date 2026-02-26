@@ -21,6 +21,7 @@ import ConnectionError from "../shared/ConnectionError";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import { useEpisodes, type ContextItem } from "../../context/EpisodeContext";
+import { PathUtils } from "../../lib/pathUtils";
 import { getFileIconInfo as getSharedIconInfo } from "../../lib/fileIcons";
 import { detectLanguage } from "../../lib/languageUtils";
 import { useTheme } from "../../context/ThemeContext";
@@ -69,7 +70,7 @@ export default function ArtifactView({
   const getAssetUrl = (assetPath: string | undefined) => {
     if (!assetPath || !selectedEpisode) return null;
     if (assetPath.startsWith('http')) return assetPath;
-    return `/api/episodes/${selectedEpisode.id}/assets/${assetPath}`;
+    return PathUtils.join('/api/episodes', selectedEpisode.id, 'assets', assetPath);
   };
 
   const getFileIconInfo = (name: string, type: string) => {

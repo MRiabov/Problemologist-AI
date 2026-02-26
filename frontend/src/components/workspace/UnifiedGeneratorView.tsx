@@ -18,6 +18,7 @@ import {
   ResizablePanelGroup
 } from "../ui/resizable";
 import { DesignViewer } from '../visualization/DesignViewer';
+import { PathUtils } from '../../lib/pathUtils';
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 import { AssetType } from "../../api/generated/models/AssetType";
@@ -73,7 +74,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   const getAssetUrl = (asset: AssetResponse) => {
     if (!asset || !selectedEpisode) return null;
     if (asset.s3_path.startsWith('http')) return asset.s3_path;
-    return `/api/episodes/${selectedEpisode.id}/assets/${asset.s3_path}`;
+    return PathUtils.join('/api/episodes', selectedEpisode.id, 'assets', asset.s3_path);
   };
 
   const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === AssetType.VIDEO);
