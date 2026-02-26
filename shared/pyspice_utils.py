@@ -102,8 +102,16 @@ def validate_circuit(
                 ElectronicComponentType.RELAY,
             ]:
                 required = ["in", "out"]
-            elif comp.type == ElectronicComponentType.POWER_SUPPLY:
-                required = ["+", "-"]
+            elif comp.type in [
+                ElectronicComponentType.POWER_SUPPLY,
+                ElectronicComponentType.LOGIC_BOARD,
+            ]:
+                # Both PSU and Logic boards use vin/gnd which resolve to +/-
+                # We check for vin/gnd connection intent
+                if comp.type == ElectronicComponentType.LOGIC_BOARD:
+                    required = ["vin", "gnd"]
+                else:
+                    required = ["+", "-"]
 
             for term in required:
                 target_node = resolve_node_name(comp.component_id, term)
