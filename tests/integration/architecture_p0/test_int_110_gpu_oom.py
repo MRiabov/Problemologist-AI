@@ -72,6 +72,24 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
             headers=base_headers,
         )
 
+        # Write the missing script.py
+        script_content = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "obj"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return p
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py", content=script_content
+            ).model_dump(mode="json"),
+            headers=base_headers,
+        )
+
         # Trigger simulation with a huge particle count that exceeds typical RAM/VRAM
         sim_req = BenchmarkToolRequest(script_path="script.py", particle_budget=10**9)
         resp = await client.post(
@@ -81,11 +99,20 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
             timeout=180.0,
         )
 
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+
+        # We don't assert data.success because the goal is not reached,
+        # but we do assert that it didn't crash or fail with a specific error.
+        assert data.artifacts.failure is None or data.artifacts.failure.reason != "VERIFICATION_ERROR", f"Simulation crashed: {data.message}"
+
         # If it retried, we expect 'gpu_oom_retry' event
         # and result annotated 'confidence: approximate'
-        data = BenchmarkToolResponse.model_validate(resp.json())
-        if any(e["event_type"] == "gpu_oom_retry" for e in data.events):
+        events = data.events
+        has_retry_event = any(
+            (e["event_type"] if isinstance(e, dict) else getattr(e, "event_type", "")) == "gpu_oom_retry"
+            for e in events
+        )
+
+        if has_retry_event:
             assert data.confidence == "approximate"
-        else:
-            # If no GPU, it might just fail or run on CPU
-            pass

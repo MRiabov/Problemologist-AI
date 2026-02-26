@@ -63,8 +63,8 @@ async def test_int_004_episode_artifact_persistence():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_005_trace_realtime_broadcast():
-    """INT-005: Verify traces are broadcasted via DB/API."""
+async def test_int_031_trace_realtime_broadcast():
+    """INT-031: Verify traces are broadcasted via DB/API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-trace-{uuid.uuid4().hex[:8]}"
 
@@ -84,34 +84,6 @@ async def test_int_005_trace_realtime_broadcast():
         resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(resp.json())
         assert len(ep_data.traces) > 0
-
-
-@pytest.mark.integration_p0
-@pytest.mark.asyncio
-async def test_int_011_planner_target_caps_validation():
-    """INT-011: Verify planner target caps must be <= benchmark caps."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
-
-        invalid_asm = """
-version: "1.0"
-constraints:
-  benchmark_max_unit_cost_usd: 100.0
-  benchmark_max_weight_g: 1000.0
-  planner_target_max_unit_cost_usd: 150.0  # INVALID
-  planner_target_max_weight_g: 500.0
-totals:
-  estimated_unit_cost_usd: 10.0
-  estimated_weight_g: 100.0
-  estimate_confidence: high
-"""
-        write_req = WriteFileRequest(path="invalid_asm.yaml", content=invalid_asm)
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json=write_req.model_dump(mode="json"),
-            headers={"X-Session-ID": session_id},
-        )
-        pass
 
 
 @pytest.mark.integration_p0
