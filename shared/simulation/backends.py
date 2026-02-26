@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
@@ -6,35 +7,38 @@ from pydantic import BaseModel, Field, model_validator
 from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
 
 
-class BodyState(BaseModel):
+@dataclass
+class BodyState:
     pos: tuple[float, float, float]
     quat: tuple[float, float, float, float]
     vel: tuple[float, float, float]
     angvel: tuple[float, float, float]
 
 
-class StressField(BaseModel):
+@dataclass
+class StressField:
     nodes: np.ndarray  # (N, 3)
     stress: np.ndarray  # (N,) von Mises stress
 
-    model_config = {"arbitrary_types_allowed": True}
 
-
-class ContactForce(BaseModel):
+@dataclass
+class ContactForce:
     body1: str
     body2: str
     force: tuple[float, float, float]
     position: tuple[float, float, float]
 
 
-class ActuatorState(BaseModel):
+@dataclass
+class ActuatorState:
     force: float
     velocity: float
     ctrl: float
     forcerange: tuple[float, float]
 
 
-class SiteState(BaseModel):
+@dataclass
+class SiteState:
     pos: tuple[float, float, float]
     quat: tuple[float, float, float, float]
     size: tuple[float, float, float]
