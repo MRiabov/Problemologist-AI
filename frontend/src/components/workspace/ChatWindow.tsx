@@ -101,8 +101,14 @@ export default function ChatWindow({
     }
   }, [traces]);
 
-  const isPlanned = selectedEpisode?.metadata_vars?.detailed_status === 'PLANNED';
-  const showExecutionPlan = (selectedEpisode?.plan || isPlanned) && !isRunning && selectedEpisode?.status !== EpisodeStatus.COMPLETED;
+  const isPlanned =
+    selectedEpisode?.status === EpisodeStatus.PLANNED ||
+    selectedEpisode?.metadata_vars?.detailed_status === "PLANNED";
+  const showExecutionPlan =
+    !!selectedEpisode &&
+    (isPlanned || !!selectedEpisode.plan) &&
+    selectedEpisode.status !== EpisodeStatus.COMPLETED &&
+    selectedEpisode.status !== EpisodeStatus.FAILED;
 
   // Stable handlers
   const handleShowFeedback = useCallback((traceId: number, score: number) => {

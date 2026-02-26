@@ -281,6 +281,7 @@ ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
 ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
 if [ "$RUN_PLAYWRIGHT" = true ]; then
   ln -sf "integration_tests/frontend.log" logs/frontend.log
+  ln -sf "integration_tests/browser_console.log" logs/browser_console.log
 fi
 
 cleanup() {

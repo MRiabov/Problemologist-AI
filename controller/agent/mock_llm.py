@@ -23,6 +23,7 @@ class MockDSPyLM(dspy.LM):
         self.responses_path = Path("tests/integration/mock_responses.yaml")
         self.scenarios = self._load_scenarios()
         self._call_counts = {}  # Tracks calls per node key to detect loops
+        self._tool_progress = {}  # Tracks completed tool steps from trajectory text
 
     def _load_scenarios(self) -> dict:
         if not self.responses_path.exists():
@@ -132,16 +133,30 @@ class MockDSPyLM(dspy.LM):
             has_data=bool(node_data),
         )
 
+        # Track explicit tool progress from trajectory markers, not LM call count.
+        # DSPy can invoke LM multiple times per step, so call count alone is unstable.
+        completed_tools = len(
+            re.findall(r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text)
+        )
+        self._tool_progress[node_key] = completed_tools
+
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(node_key, 0)
         self._call_counts[node_key] = count + 1
 
-        if count > 5:
+        # For scripted tool sequences, only force-finish once tools are exhausted.
+        # DSPy may invoke LM multiple times between tool executions.
+        tool_calls = node_data.get("tool_calls", [])
+        if count > 5 and (not tool_calls or completed_tools >= len(tool_calls)):
             logger.warning("mock_dspy_lm_loop_detected", node=node_key, count=count)
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
-        # Only finish if we see an observation and we've already done something
-        if self._is_finishing(full_text) and count > 1:
+        # Only force finish on observation when explicit tool calls are exhausted.
+        tool_calls = node_data.get("tool_calls", [])
+        tool_progress = self._tool_progress.get(node_key, 0)
+        if self._is_finishing(full_text) and (
+            not tool_calls or tool_progress >= len(tool_calls)
+        ):
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
         return self._handle_action(sig_lookup, node_data, is_json, expected_fields)
@@ -274,10 +289,15 @@ class MockDSPyLM(dspy.LM):
         # Force finish for reviewer to avoid loops in mock
         force_finish = node_key in ["reviewer"]
 
-        # If we have already returned an action for this node key in this session,
-        # we should finish.
         count = self._call_counts.get(node_key, 0)
-        should_finish = node_data.get("finished", force_finish) or count > 1
+        tool_calls = node_data.get("tool_calls", [])
+
+        # When explicit tool calls exist, continue until all calls are exhausted.
+        if tool_calls:
+            tool_progress = self._tool_progress.get(node_key, 0)
+            should_finish = tool_progress >= len(tool_calls)
+        else:
+            should_finish = node_data.get("finished", force_finish) or count > 1
 
         return self._generate_response(
             node_key,
@@ -305,15 +325,16 @@ class MockDSPyLM(dspy.LM):
         # WP10: Support explicit tool calls in scenarios
         # We use call_count to track which tool we are on
         count = self._call_counts.get(node_key, 0)
+        tool_progress = self._tool_progress.get(node_key, 0)
         tool_calls = node_data.get("tool_calls", [])
 
         tool_name = None
         tool_args = {}
 
         if not finished:
-            if count <= len(tool_calls) and len(tool_calls) > 0:
-                # Still have explicit tools to call
-                tc = tool_calls[count - 1]
+            if tool_progress < len(tool_calls) and len(tool_calls) > 0:
+                # Still have explicit tools to call.
+                tc = tool_calls[tool_progress]
                 thought = tc.get("thought", thought)
                 tool_name = tc.get("name")
                 tool_args = tc.get("input", {})
@@ -430,7 +451,12 @@ class MockDSPyLM(dspy.LM):
                 "electronics_planner": ["reasoning", "summary"],
             }.get(sig_lookup, [])
 
-            all_fields = list(dict.fromkeys(expected_fields + sig_fields))
+            # For ReAct tool-call turns, return only the explicitly requested fields.
+            # Extra signature fields here can cause parse/retry loops before tool execution.
+            if "next_tool_name" in expected_fields:
+                all_fields = list(dict.fromkeys(expected_fields))
+            else:
+                all_fields = list(dict.fromkeys(expected_fields + sig_fields))
 
             lines = []
             for field in all_fields:
@@ -455,6 +481,9 @@ class MockDSPyLM(dspy.LM):
 
                 # TypedPredictor expects [[ ## field ## ]] followed by value on NEXT line
                 lines.append(f"[[ ## {field} ## ]]\n{val!s}")
+
+            # Keep the expected ReAct delimiter to avoid parser retries.
+            lines.append("[[ ## completed ## ]]\n")
 
             result = "\n\n".join(lines)
             logger.info("mock_dspy_returning_fields", text=result[:200] + "...")
