@@ -34,7 +34,7 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     send_button.click()
 
     # 6. Wait for the "Confirm & Start" button to appear and click it
-    confirm_button = page.get_by_role("button", name="Confirm & Start")
+    confirm_button = page.get_by_test_id("chat-confirm-button")
     expect(confirm_button).to_be_visible(timeout=120000)
     confirm_button.click()
 
