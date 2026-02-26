@@ -159,7 +159,7 @@ def test_int_159_plan_approval_comment(page: Page):
     # Click CREATE NEW
     page.get_by_test_id("create-new-button").click()
 
-    page.locator("#chat-input").fill(f"Generate a simple benchmark {uuid.uuid4()}")
+    page.locator("#chat-input").fill(f"INT-159: Generate a simple benchmark {uuid.uuid4()}")
     page.get_by_label("Send Message").click()
 
     # 2. Wait for the "Execution Plan Ready" card
@@ -172,7 +172,7 @@ def test_int_159_plan_approval_comment(page: Page):
     # 4. Fill in a comment and confirm
     test_comment = f"Test Comment {uuid.uuid4()}"
     comment_field.fill(test_comment)
-    page.get_by_role("button", name="Confirm & Start").click()
+    page.get_by_test_id("chat-confirm-button").click()
 
     # Wait for the agent to transition to RUNNING state in the UI
     expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(

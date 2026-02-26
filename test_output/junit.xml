@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="194.935" timestamp="2026-02-26T09:34:17.407270+00:00" hostname="maksym-Latitude-5410"><testcase classname="tests.integration.frontend.p0.test_frontend_p0" name="test_int_159_plan_approval_comment[chromium]" time="188.828"><failure message="AssertionError: Locator expected to be visible&#10;Actual value: None&#10;Error: element(s) not found &#10;Call log:&#10;  - Expect &quot;to_be_visible&quot; with timeout 180000ms&#10;  - waiting for get_by_text(&quot;Execution Plan Ready&quot;)">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="55.595" timestamp="2026-02-26T18:54:15.288637+00:00" hostname="devbox"><testcase classname="tests.integration.frontend.p0.test_frontend_p0" name="test_int_159_plan_approval_comment[chromium]" time="46.752"><failure message="AssertionError: Locator expected to be visible&#10;Actual value: None&#10;Error: element(s) not found &#10;Call log:&#10;  - Expect &quot;to_be_visible&quot; with timeout 30000ms&#10;  - waiting for get_by_text(re.compile(r&quot;thinking&quot;, re.IGNORECASE))">page = &lt;Page url='http://localhost:15173/benchmark'&gt;
 
     @pytest.mark.integration_frontend
     def test_int_159_plan_approval_comment(page: Page):
@@ -14,16 +14,30 @@
         # Click CREATE NEW
         page.get_by_test_id("create-new-button").click()
     
-        page.locator("#chat-input").fill(f"Generate a simple benchmark {uuid.uuid4()}")
+        page.locator("#chat-input").fill(f"INT-159: Generate a simple benchmark {uuid.uuid4()}")
         page.get_by_label("Send Message").click()
     
         # 2. Wait for the "Execution Plan Ready" card
-&gt;       expect(page.get_by_text("Execution Plan Ready")).to_be_visible(timeout=180000)
+        expect(page.get_by_text("Execution Plan Ready")).to_be_visible(timeout=180000)
+
+        # 3. Verify comment field exists
+        comment_field = page.get_by_placeholder("Optional comment for the agent...")
+        expect(comment_field).to_be_visible()
+
+        # 4. Fill in a comment and confirm
+        test_comment = f"Test Comment {uuid.uuid4()}"
+        comment_field.fill(test_comment)
+        page.get_by_test_id("chat-confirm-button").click()
+
+        # Wait for the agent to transition to RUNNING state in the UI
+&gt;       expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
+            timeout=30000
+        )
 E       AssertionError: Locator expected to be visible
 E       Actual value: None
 E       Error: element(s) not found 
 E       Call log:
-E         - Expect "to_be_visible" with timeout 180000ms
-E         - waiting for get_by_text("Execution Plan Ready")
+E         - Expect "to_be_visible" with timeout 30000ms
+E         - waiting for get_by_text(re.compile(r"thinking", re.IGNORECASE))
 
-tests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError</failure></testcase></testsuite></testsuites>
+tests/integration/frontend/p0/test_frontend_p0.py:178: AssertionError</failure></testcase></testsuite></testsuites>

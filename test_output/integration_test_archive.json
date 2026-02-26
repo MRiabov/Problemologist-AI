@@ -4063,5 +4063,190 @@
         "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n>       expect(confirm_button).to_be_visible(timeout=120000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 120000ms\nE         - waiting for get_by_test_id(\"chat-confirm-button\")\n\ntests/integration/frontend/p0/test_int_173.py:32: AssertionError"
       }
     ]
+  },
+  {
+    "timestamp": "2026-02-26T09:00:02.546955",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 194.786,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 189.077,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:09:07.763859",
+    "status": "failed",
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 220.721,
+    "tests": [
+      {
+        "name": "test_int_157_session_history[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 17.377,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_158_workflow_parity[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 17.486,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 181.45,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:18:32.828653",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 193.448,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 187.645,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:25:39.055484",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 193.206,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 188.464,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:37:33.932961",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 194.935,
+    "tests": [
+      {
+        "name": "test_int_159_plan_approval_comment[chromium]",
+        "classname": "tests.integration.frontend.p0.test_frontend_p0",
+        "time": 188.828,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_159_plan_approval_comment(page: Page):\n        \"\"\"\n        INT-159: After planner output, approve/disapprove controls appear;\n        action posts decision to API; optional user comment is persisted\n        and visible in run history.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\")\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        page.locator(\"#chat-input\").fill(f\"Generate a simple benchmark {uuid.uuid4()}\")\n        page.get_by_label(\"Send Message\").click()\n    \n        # 2. Wait for the \"Execution Plan Ready\" card\n>       expect(page.get_by_text(\"Execution Plan Ready\")).to_be_visible(timeout=180000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 180000ms\nE         - waiting for get_by_text(\"Execution Plan Ready\")\n\ntests/integration/frontend/p0/test_frontend_p0.py:166: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T16:59:27.908530",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 38.393,
+    "tests": [
+      {
+        "name": "test_benchmark_creation_flow[chromium]",
+        "classname": "tests.e2e.test_playwright_benchmark",
+        "time": 38.192,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/'>\n\n    @pytest.mark.integration_frontend\n    def test_benchmark_creation_flow(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)\n        benchmark_link = page.get_by_text(r\"/^Benchmark$/i\", exact=False).first\n        if not benchmark_link.is_visible():\n            benchmark_link = page.get_by_role(\"link\", name=r\"/Benchmark/i\")\n    \n>       expect(benchmark_link).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_role(\"link\", name=\"/Benchmark/i\")\n\ntests/e2e/test_playwright_benchmark.py:15: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T17:02:46.041710",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 48.091,
+    "tests": [
+      {
+        "name": "test_benchmark_creation_flow[chromium]",
+        "classname": "tests.e2e.test_playwright_benchmark",
+        "time": 47.777,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_benchmark_creation_flow(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)\n        benchmark_link = page.get_by_role(\"link\", name=re.compile(r\"Benchmark\", re.IGNORECASE))\n        if not benchmark_link.is_visible():\n            benchmark_link = page.get_by_text(\"Benchmark\").first\n    \n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = (\n            \"We need to move a steel ball 40mm radius, 1m sideways. \"\n            \"Start with a ball in one side of the simulation space and make \"\n            \"a goal in the other. Make a benchmark that would test \"\n            \"a machine that does it.\"\n        )\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.press_sequentially(prompt_text)\n    \n        # 5. Submit the prompt\n        # Using explicit click on Send Message button for reliability\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the generation to start (Stop Agent button appears)\n        expect(page.get_by_label(\"Stop Agent\")).to_be_visible(timeout=30000)\n    \n        # 7. Wait for the generation to finish (Send Message button returns)\n        # This might take a while, increase timeout\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Select plan.md in Resources sidebar\n        # The artifact sidebar has a \"Resources\" header\n        sidebar = page.locator(\"div\").filter(has_text=\"Resources\").last\n        plan_button = sidebar.get_by_role(\"button\", name=\"plan.md\")\n>       expect(plan_button).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for locator(\"div\").filter(has_text=\"Resources\").last.get_by_role(\"button\", name=\"plan.md\")\n\ntests/e2e/test_playwright_benchmark.py:53: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T17:05:25.128259",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 49.27,
+    "tests": [
+      {
+        "name": "test_benchmark_creation_flow[chromium]",
+        "classname": "tests.e2e.test_playwright_benchmark",
+        "time": 49.04,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_benchmark_creation_flow(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)\n        benchmark_link = page.get_by_role(\"link\", name=re.compile(r\"Benchmark\", re.IGNORECASE))\n        if not benchmark_link.is_visible():\n            benchmark_link = page.get_by_text(\"Benchmark\").first\n    \n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = (\n            \"We need to move a steel ball 40mm radius, 1m sideways. \"\n            \"Start with a ball in one side of the simulation space and make \"\n            \"a goal in the other. Make a benchmark that would test \"\n            \"a machine that does it.\"\n        )\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.press_sequentially(prompt_text)\n    \n        # 5. Submit the prompt\n        # Using explicit click on Send Message button for reliability\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the generation to start (Stop Agent button appears)\n        expect(page.get_by_label(\"Stop Agent\")).to_be_visible(timeout=30000)\n    \n        # 7. Wait for the generation to finish (Send Message button returns)\n        # This might take a while, increase timeout\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Select plan.md in Resources sidebar\n        plan_button = page.get_by_role(\"button\", name=\"plan.md\")\n>       expect(plan_button).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for get_by_role(\"button\", name=\"plan.md\")\n\ntests/e2e/test_playwright_benchmark.py:51: AssertionError"
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T17:10:18.032573",
+    "status": "failed",
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 20.941,
+    "tests": [
+      {
+        "name": "test_benchmark_creation_flow[chromium]",
+        "classname": "tests.e2e.test_playwright_benchmark",
+        "time": 20.73,
+        "status": "failed",
+        "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_benchmark_creation_flow(page: Page):\n        # 1. Navigate to the local development server\n        page.goto(\"http://localhost:15173\", timeout=60000)\n    \n        # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)\n        benchmark_link = page.get_by_role(\"link\", name=re.compile(r\"Benchmark\", re.IGNORECASE))\n        if not benchmark_link.is_visible():\n            benchmark_link = page.get_by_text(\"Benchmark\").first\n    \n        expect(benchmark_link).to_be_visible(timeout=30000)\n        benchmark_link.click()\n    \n        # 3. Click \"CREATE NEW\" button\n        create_new_button = page.get_by_role(\"button\", name=\"CREATE NEW\")\n        expect(create_new_button).to_be_visible(timeout=30000)\n        create_new_button.click()\n    \n        # 4. Enter the prompt\n        prompt_text = (\n            \"We need to move a steel ball 40mm radius, 1m sideways. \"\n            \"Start with a ball in one side of the simulation space and make \"\n            \"a goal in the other. Make a benchmark that would test \"\n            \"a machine that does it.\"\n        )\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 5. Submit the prompt\n        # Using explicit click on Send Message button for reliability\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 6. Wait for the generation to start (Stop Agent button appears)\n        expect(page.get_by_label(\"Stop Agent\")).to_be_visible(timeout=30000)\n    \n        # 7. Wait for the generation to finish (Send Message button returns)\n        # This might take a while, increase timeout\n        expect(page.get_by_label(\"Send Message\")).to_be_visible(timeout=120000)\n    \n        # 8. Select plan.md in Resources sidebar\n        plan_button = page.get_by_role(\"button\", name=\"plan.md\")\n        expect(plan_button).to_be_visible(timeout=30000)\n        plan_button.click()\n    \n        # 9. Verify the plan is \"non-template\"\n        # The content is rendered in a SyntaxHighlighter viewport\n        content_area = page.locator(\".flex-1.min-w-0.bg-background\\\\/50\")\n>       expect(content_area.get_by_text(\"steel ball\", ignore_case=True)).to_be_visible(\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n            timeout=30000\n        )\nE       TypeError: Locator.get_by_text() got an unexpected keyword argument 'ignore_case'\n\ntests/e2e/test_playwright_benchmark.py:57: TypeError"
+      }
+    ]
   }
 ]

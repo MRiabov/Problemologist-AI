@@ -177,8 +177,14 @@ class MockDSPyLM(dspy.LM):
         for scenario_id in sorted_scenarios:
             if scenario_id == "default" or scenario_id == "benchmark":
                 continue
-            if scenario_id in text:
+            # Use word boundaries for better matching
+            if re.search(rf"\b{re.escape(scenario_id)}\b", text):
                 return scenario_id
+
+        # Secondary check for benchmark scenario if it looks like one
+        if "move" in text.lower() and "sphere" in text.lower() or "steel ball" in text.lower():
+            return "benchmark"
+
         return None
 
     def _get_scenario_id(self) -> str:
