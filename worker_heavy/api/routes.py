@@ -398,6 +398,21 @@ async def api_validate(
                     is_valid = False
                     message = (message + "; " + fem_msg) if message else fem_msg
 
+                # INT-011: Also validate assembly_definition.yaml if it exists
+                asm_path = root / "assembly_definition.yaml"
+                if asm_path.exists():
+                    from worker_heavy.utils.file_validation import (
+                        validate_assembly_definition_yaml,
+                    )
+
+                    asm_valid, asm_res = validate_assembly_definition_yaml(
+                        asm_path.read_text()
+                    )
+                    if not asm_valid:
+                        is_valid = False
+                        asm_msg = f"assembly_definition.yaml invalid: {asm_res}"
+                        message = (message + "; " + asm_msg) if message else asm_msg
+
                 record_validation_result(root, is_valid, message)
 
                 events = _collect_events(fs_router, root=root)

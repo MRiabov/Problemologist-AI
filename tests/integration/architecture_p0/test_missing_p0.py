@@ -14,6 +14,8 @@ from controller.api.schemas import (
 from controller.api.tasks import AgentRunRequest
 from shared.enums import EpisodeStatus
 from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
     ReadFileRequest,
     ReadFileResponse,
     WriteFileRequest,
@@ -93,25 +95,48 @@ async def test_int_011_planner_target_caps_validation():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
 
+        # 1. Setup invalid assembly_definition.yaml (target > benchmark)
         invalid_asm = """
 version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100.0
   benchmark_max_weight_g: 1000.0
-  planner_target_max_unit_cost_usd: 150.0  # INVALID
+  planner_target_max_unit_cost_usd: 150.0  # INVALID: > 100.0
   planner_target_max_weight_g: 500.0
 totals:
   estimated_unit_cost_usd: 10.0
   estimated_weight_g: 100.0
   estimate_confidence: high
 """
-        write_req = WriteFileRequest(path="invalid_asm.yaml", content=invalid_asm)
+        write_req = WriteFileRequest(path="assembly_definition.yaml", content=invalid_asm)
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=write_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
-        pass
+
+        # 2. Setup dummy script.py
+        script = "from build123d import Box\ndef build(): return Box(1, 1, 1)"
+        write_script_req = WriteFileRequest(path="script.py", content=script)
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=write_script_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        # 3. Call validate and expect failure
+        val_req = BenchmarkToolRequest(script_path="script.py")
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=val_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert not data.success
+        assert "assembly_definition.yaml invalid" in data.message
+        assert "Planner target cost (150.0) must be less than or equal to benchmark max cost (100.0)" in data.message
 
 
 @pytest.mark.integration_p0
