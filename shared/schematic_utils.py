@@ -14,19 +14,36 @@ def get_schematic_pin_index(term: str) -> str:
     Map a component terminal name to a schematic pin index.
 
     Standard mappings:
-    - +, a, in, v+, supply_v+, 1 -> "1"
-    - -, b, out, 0, gnd, 2 -> "2"
+    - +, a, in, v+, supply_v+, 1, coil+ -> "1"
+    - -, b, out, 0, gnd, 2, coil- -> "2"
+    - com -> "3"
+    - no -> "4"
+    - nc -> "5"
     """
     term = term.lower()
 
-    if term in ["+", "a", "in", "v+", "supply_v+", "1"]:
+    if term in ["+", "a", "in", "v+", "supply_v+", "1", "coil+"]:
         return "1"
-    if term in ["-", "b", "out", "0", "gnd", "2"]:
+    if term in ["-", "b", "out", "0", "gnd", "2", "coil-"]:
         return "2"
+
+    # Common relay/switch terminals
+    if term == "com":
+        return "3"
+    if term == "no":
+        return "4"
+    if term == "nc":
+        return "5"
 
     # Fallback: if it's a digit, use it directly
     if term.isdigit():
         return term
+
+    # If it looks like a valid alphanumeric identifier, use it
+    import re
+    clean_term = re.sub(r'[^a-zA-Z0-9]', '', term)
+    if clean_term:
+        return clean_term
 
     # Default to "1" if unknown (better than failing, but risky)
     return "1"
@@ -57,38 +74,54 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[SchematicItem]
             symbol_name = "header"
 
         comp_id = f"comp_{comp.component_id}"
+        center_x = 10 + i * 40
 
         soup.append(
             SchematicItem(
                 type="schematic_component",
                 id=comp_id,
                 name=comp.component_id,
-                center={"x": 10 + i * 40, "y": 10},
+                center={"x": center_x, "y": 10},
                 rotation=0,
                 symbol_name=symbol_name,
             )
         )
 
-        # Add standard pins (1 and 2)
-        # TODO: support more pins for connectors/relays if needed
-        soup.append(
-            SchematicItem(
-                type="schematic_pin",
-                id=f"{comp_id}_p1",
-                component_id=comp_id,
-                name="1",
-                center={"x": 10 + i * 40 - 10, "y": 10},
+        # Collect pins from wiring
+        used_pins = set()
+        for wire in assembly.electronics.wiring:
+            if wire.from_terminal.component == comp.component_id:
+                used_pins.add(get_schematic_pin_index(wire.from_terminal.terminal))
+            if wire.to_terminal.component == comp.component_id:
+                used_pins.add(get_schematic_pin_index(wire.to_terminal.terminal))
+
+        # Ensure at least pins 1 and 2 exist for standard components if no wiring implies otherwise
+        if not used_pins:
+            used_pins.add("1")
+            used_pins.add("2")
+
+        sorted_pins = sorted(list(used_pins))
+
+        # Distribute pins horizontally centered on the component
+        # Width available roughly 20 units (-10 to +10)
+        num_pins = len(sorted_pins)
+        for p_idx, pin_name in enumerate(sorted_pins):
+            # Calculate offset
+            if num_pins > 1:
+                # Spread linearly from -10 to +10
+                offset = (p_idx * 20.0 / (num_pins - 1)) - 10
+            else:
+                offset = 0
+
+            soup.append(
+                SchematicItem(
+                    type="schematic_pin",
+                    id=f"{comp_id}_p{pin_name}",
+                    component_id=comp_id,
+                    name=pin_name,
+                    center={"x": center_x + offset, "y": 10},
+                )
             )
-        )
-        soup.append(
-            SchematicItem(
-                type="schematic_pin",
-                id=f"{comp_id}_p2",
-                component_id=comp_id,
-                name="2",
-                center={"x": 10 + i * 40 + 10, "y": 10},
-            )
-        )
 
     # 2. Add traces
     for wire in assembly.electronics.wiring:

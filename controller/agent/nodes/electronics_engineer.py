@@ -122,6 +122,12 @@ class ElectronicsEngineerNode(BaseNode):
         if current_step in todo:
             new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
 
+        # Update todo.md on worker
+        try:
+            await self.ctx.fs.write_file("todo.md", new_todo)
+        except Exception as e:
+            logger.warning("failed_to_update_todo_file", error=str(e))
+
         return state.model_copy(
             update={
                 "todo": new_todo,
