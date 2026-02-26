@@ -63,7 +63,7 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
             fluid_objectives=[flow_obj],
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         ),
-        physics=PhysicsConfig(backend="genesis"),
+        physics=PhysicsConfig(backend="GENESIS"),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         moved_object=MovedObject(
             label="target",

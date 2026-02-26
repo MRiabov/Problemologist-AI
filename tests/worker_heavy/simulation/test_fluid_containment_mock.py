@@ -22,11 +22,11 @@ def test_fluid_containment_logic(tmp_path):
             "build_zone": {"min": [-5, -5, -5], "max": [5, 5, 5]},
             "fluid_objectives": [
                 {
-                    "type": "fluid_containment",
+                    "type": "FLUID_CONTAINMENT",
                     "fluid_id": "water",
                     "containment_zone": {"min": [-1, -1, -1], "max": [1, 1, 1]},
                     "threshold": 0.9,
-                    "eval_at": "end",
+                    "eval_at": "END",
                 }
             ],
         },

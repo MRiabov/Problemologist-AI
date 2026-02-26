@@ -52,7 +52,7 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
             goal_zone=BoundingBox(min=(0, 0, 0), max=(1, 1, 1)),
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         ),
-        physics=PhysicsConfig(backend="genesis", fem_enabled=True),
+        physics=PhysicsConfig(backend="GENESIS", fem_enabled=True),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         moved_object=MovedObject(
             label="test_part",
@@ -103,7 +103,7 @@ def test_genesis_builder_no_msh_when_fem_disabled(
             goal_zone=BoundingBox(min=(0, 0, 0), max=(1, 1, 1)),
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         ),
-        physics=PhysicsConfig(backend="genesis", fem_enabled=False),
+        physics=PhysicsConfig(backend="GENESIS", fem_enabled=False),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         moved_object=MovedObject(
             label="test_part",

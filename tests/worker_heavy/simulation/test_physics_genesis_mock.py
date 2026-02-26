@@ -90,7 +90,7 @@ def test_fluid_containment_integration(mock_genesis_backend, tmp_path):
         fluid_id="water",
         containment_zone=BoundingBox(min=(0, 0, 0), max=(1, 1, 1)),
         threshold=0.9,
-        eval_at="end",
+        eval_at="END",
     )
 
     objectives = ObjectivesYaml(
@@ -99,7 +99,7 @@ def test_fluid_containment_integration(mock_genesis_backend, tmp_path):
             fluid_objectives=[containment_obj],
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         ),
-        physics=PhysicsConfig(backend="genesis"),
+        physics=PhysicsConfig(backend="GENESIS"),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         moved_object=MovedObject(
             label="target",
@@ -112,7 +112,7 @@ def test_fluid_containment_integration(mock_genesis_backend, tmp_path):
             FluidDefinition(
                 fluid_id="water",
                 initial_volume=FluidVolume(
-                    type="box", center=(0.5, 0.5, 0.5), size=(0.1, 0.1, 0.1)
+                        type="BOX", center=(0.5, 0.5, 0.5), size=(0.1, 0.1, 0.1)
                 ),
             )
         ],
@@ -170,7 +170,7 @@ def test_fluid_containment_failure(mock_genesis_backend, tmp_path):
             fluid_objectives=[containment_obj],
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         ),
-        physics=PhysicsConfig(backend="genesis"),
+        physics=PhysicsConfig(backend="GENESIS"),
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         moved_object=MovedObject(
             label="target",
