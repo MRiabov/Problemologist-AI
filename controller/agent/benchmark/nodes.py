@@ -462,7 +462,7 @@ class BenchmarkReviewerSignature(dspy.Signature):
 
     theme = dspy.InputField()
     prompt = dspy.InputField()
-    benchmark_structure = dspy.InputField()
+    plan_md = dspy.InputField()
     objectives = dspy.InputField()
     simulation_logs = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
@@ -476,12 +476,10 @@ class BenchmarkReviewerNode(BaseNode):
         logger.info("reviewer_node_start", round=state.review_round)
 
         # Read context files
-        benchmark_structure = "# No benchmark_structure.md found."
+        plan_md = "# No plan.md found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("benchmark_structure.md"):
-                benchmark_structure = await self.ctx.worker_client.read_file(
-                    "benchmark_structure.md"
-                )
+            if await self.ctx.worker_client.exists("plan.md"):
+                plan_md = await self.ctx.worker_client.read_file("plan.md")
 
         objectives = "# No objectives.yaml found."
         with suppress(Exception):
@@ -517,7 +515,7 @@ class BenchmarkReviewerNode(BaseNode):
         inputs = {
             "theme": state.plan.theme if state.plan else "Unknown",
             "prompt": state.session.prompt,
-            "benchmark_structure": benchmark_structure,
+            "plan_md": plan_md,
             "objectives": objectives,
             "simulation_logs": str(
                 state.simulation_result.logs if state.simulation_result else []

@@ -109,10 +109,18 @@ async def sync_asset(
             asset_type = AssetType.MJCF
         elif ext in (".png", ".jpg", ".jpeg", ".webp"):
             asset_type = AssetType.IMAGE
-        elif ext == ".glb":
+        elif ext in (".glb", ".gltf"):
             asset_type = AssetType.GLB
-        elif ext == ".stl":
+        elif ext in (".stl",):
             asset_type = AssetType.STL
+        elif ext in (".step", ".stp"):
+            asset_type = AssetType.STEP
+        elif ext in (".mp4", ".mov", ".avi", ".webm"):
+            asset_type = AssetType.VIDEO
+        elif ext in (".md", ".txt"):
+            asset_type = AssetType.MARKDOWN
+        elif ext in (".json", ".yaml", ".yml"):
+            asset_type = AssetType.OTHER
         else:
             asset_type = AssetType.OTHER
 

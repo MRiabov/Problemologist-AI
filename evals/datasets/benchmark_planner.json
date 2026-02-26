@@ -51,7 +51,7 @@
     },
     {
         "id": "bp-011",
-        "task": "Create a benchmark for a simple ramp. You MUST produce `benchmark_structure.md` and `benchmark_engineer_todo.md`. You MUST also update the existing `objectives.yaml` template with the correct goal and build zones.",
+        "task": "Create a benchmark for a simple ramp. You MUST produce `plan.md` and `todo.md`. You MUST also update the existing `objectives.yaml` template with the correct goal and build zones.",
         "expected_criteria": "Agent produces mandatory markdown files and modifies `objectives.yaml` while preserving the template header."
     }
 ]

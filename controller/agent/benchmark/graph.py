@@ -221,6 +221,8 @@ async def _execute_graph_streaming(
 
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
+                # Persist assets so they are visible in UI during pause
+                await _persist_session_assets(final_state, session_id)
                 return final_state
 
     # Report automated score to Langfuse
@@ -393,131 +395,119 @@ async def run_generation_session(
 async def _persist_session_assets(
     final_state: BenchmarkGeneratorState, session_id: uuid.UUID
 ):
-    """Helper to persist final assets after a successful session."""
-    if final_state.session.status != SessionStatus.ACCEPTED:
+    """
+    Helper to persist assets.
+    - Final artifacts (BenchmarkAsset) are only saved if status is ACCEPTED.
+    - Real-time assets (Asset table + Broadcast) are synced if status is PLANNED or ACCEPTED.
+    """
+    from shared.enums import SessionStatus
+
+    # 1. Final artifact persistence (BenchmarkAsset table)
+    if final_state.session.status == SessionStatus.ACCEPTED:
+        session_factory = get_sessionmaker()
+        try:
+            async with session_factory() as db:
+                storage = BenchmarkStorage()
+
+                sim_result = final_state.simulation_result
+                render_data = sim_result.render_data if sim_result else []
+
+                mjcf_content = (
+                    final_state.mjcf_content or "<!-- MJCF content missing in state -->"
+                )
+
+                await storage.save_asset(
+                    benchmark_id=session_id,
+                    script=final_state.current_script,
+                    mjcf=mjcf_content,
+                    images=render_data,
+                    metadata=final_state.plan.model_dump() if final_state.plan else {},
+                    db=db,
+                )
+                logger.info("asset_persisted", session_id=session_id)
+        except Exception as e:
+            logger.error("final_asset_persistence_failed", error=str(e))
+
+    # 2. Real-time file sync (Asset table + Broadcast)
+    # Allow this during PLANNED (pause) or ACCEPTED (completion)
+    if final_state.session.status not in (
+        SessionStatus.ACCEPTED,
+        SessionStatus.PLANNED,
+    ):
         return
 
-    session_factory = get_sessionmaker()
+    # Sync assets to the Asset table
     try:
-        async with session_factory() as db:
-            storage = BenchmarkStorage()
+        from controller.config.settings import settings as global_settings
 
-            sim_result = final_state.simulation_result
-            render_data = sim_result.render_data if sim_result else []
+        worker_light_url = global_settings.worker_light_url
+        async with httpx.AsyncClient() as http_client:
+            client = WorkerClient(
+                base_url=worker_light_url,
+                session_id=str(session_id),
+                http_client=http_client,
+                heavy_url=global_settings.worker_heavy_url,
+            )
+            middleware = RemoteFilesystemMiddleware(client)
+            backend = RemoteFilesystemBackend(middleware)
 
-            mjcf_content = (
-                final_state.mjcf_content or "<!-- MJCF content missing in state -->"
+            from controller.observability.middleware_helper import (
+                broadcast_file_update,
             )
 
-            await storage.save_asset(
-                benchmark_id=session_id,
-                script=final_state.current_script,
-                mjcf=mjcf_content,
-                images=render_data,
-                metadata=final_state.plan.model_dump() if final_state.plan else {},
-                db=db,
-            )
-            logger.info("asset_persisted", session_id=session_id)
-
-            # Sync assets to the Asset table
-            try:
-                from contextlib import suppress
-
-                from controller.config.settings import settings as global_settings
-
-                worker_light_url = global_settings.worker_light_url
-                async with httpx.AsyncClient() as http_client:
-                    client = WorkerClient(
-                        base_url=worker_light_url,
-                        session_id=str(session_id),
-                        http_client=http_client,
-                        heavy_url=global_settings.worker_heavy_url,
+            # Only sync top-level files and critical directories to avoid hangs
+            # We sync /assets and /renders as they contain the visual outputs
+            for dir_to_sync in ["/", "/assets/", "/renders/"]:
+                try:
+                    files = await asyncio.wait_for(
+                        backend.als_info(dir_to_sync), timeout=5.0
                     )
-                    middleware = RemoteFilesystemMiddleware(client)
-                    backend = RemoteFilesystemBackend(middleware)
+                    for file_info in files:
+                        if file_info["is_dir"]:
+                            continue
 
-                    from controller.observability.middleware_helper import (
-                        broadcast_file_update,
-                    )
+                        path = file_info["path"]
+                        # Skip obviously irrelevant files
+                        if path.endswith((".log", ".lock", ".tmp", ".pyc")):
+                            continue
 
-                    async def sync_dir(dir_path: str):
-                        # Avoid infinite recursion and stay in workspace
-                        if dir_path.startswith(
-                            ("/utils", "/reviews", "/config", "/skills", "/.git")
-                        ):
-                            return
-
-                        try:
-                            files = await asyncio.wait_for(
-                                backend.als_info(dir_path), timeout=10.0
+                        # Text files: read content for preview
+                        is_text = path.endswith(
+                            (
+                                ".py",
+                                ".yaml",
+                                ".yml",
+                                ".md",
+                                ".json",
+                                ".txt",
+                                ".mjcf",
+                                ".xml",
                             )
-                        except asyncio.TimeoutError:
-                            logger.warning("sync_dir_list_timeout", path=dir_path)
-                            return
-
-                        logger.info(
-                            "syncing_benchmark_assets",
-                            session_id=session_id,
-                            path=dir_path,
-                            count=len(files),
                         )
-
-                        for file_info in files:
-                            path = file_info["path"]
-                            if file_info["is_dir"]:
-                                # Recurse into subdirectories like assets/ and renders/
-                                if not path.endswith("/"):
-                                    path += "/"
-                                await sync_dir(path)
-                            else:
-                                # Skip obviously irrelevant files
-                                if path.endswith((".log", ".lock", ".tmp", ".pyc")):
-                                    continue
-
-                                # Determine if we should read content
-                                is_text = path.endswith(
-                                    (
-                                        ".py",
-                                        ".yaml",
-                                        ".yml",
-                                        ".md",
-                                        ".json",
-                                        ".txt",
-                                        ".mjcf",
-                                        ".xml",
-                                    )
+                        content = ""
+                        if is_text:
+                            try:
+                                raw_content = await asyncio.wait_for(
+                                    backend.aread(path), timeout=2.0
                                 )
+                                content = (
+                                    raw_content.decode("utf-8", errors="replace")
+                                    if isinstance(raw_content, bytes)
+                                    else str(raw_content)
+                                )
+                            except Exception:
+                                pass  # Proceed with empty content if read fails
 
-                                content = ""
-                                if is_text:
-                                    try:
-                                        raw_content = await asyncio.wait_for(
-                                            backend.aread(path), timeout=5.0
-                                        )
-                                        if isinstance(raw_content, bytes):
-                                            content = raw_content.decode(
-                                                "utf-8", errors="replace"
-                                            )
-                                        else:
-                                            content = str(raw_content)
-                                    except Exception:
-                                        continue
-
-                                try:
-                                    await asyncio.wait_for(
-                                        broadcast_file_update(
-                                            str(session_id), path, content
-                                        ),
-                                        timeout=5.0,
-                                    )
-                                except Exception:
-                                    continue
-
-                    await sync_dir("/")
-            except Exception as e:
-                logger.error("failed_to_sync_assets_to_db", error=str(e))
+                        # Broadcast to frontend. This will trigger sync_asset in middleware_helper
+                        # which determines AssetType from extension.
+                        await asyncio.wait_for(
+                            broadcast_file_update(str(session_id), path, content),
+                            timeout=2.0,
+                        )
+                except Exception:
+                    continue
     except Exception as e:
-        logger.error("asset_persistence_failed", error=str(e))
+        logger.error("failed_to_sync_assets_to_db", error=str(e))
 
 
 async def _update_episode_persistence(

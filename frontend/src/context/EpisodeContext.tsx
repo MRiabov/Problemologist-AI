@@ -316,9 +316,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                     return a;
                 });
 
-                if (!assetFound && message.data.id) {
+                if (!assetFound) {
                     updatedAssets.push({
-                        id: message.data.id,
+                        id: message.data.id || `temp-${Date.now()}-${Math.random()}`,
                         s3_path: message.data.path,
                         content: message.data.content,
                         asset_type: message.data.asset_type,
