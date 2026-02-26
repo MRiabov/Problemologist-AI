@@ -91,13 +91,21 @@ async def create_test_episode(request: AgentRunRequest):
     if not settings.is_integration_test:
         raise HTTPException(status_code=403, detail="Only allowed in integration tests")
 
+    # Ensure session_id is preserved in metadata
+    from shared.models.schemas import EpisodeMetadata
+
+    metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
+    # If not already set, use the session_id from the request
+    if not metadata.worker_session_id:
+        metadata.worker_session_id = request.session_id
+
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         episode = Episode(
             id=uuid.uuid4(),
             task=request.task,
             status=EpisodeStatus.RUNNING,
-            metadata_vars=request.metadata_vars,
+            metadata_vars=metadata.model_dump(),
             skill_git_hash=request.skill_git_hash,
         )
         db.add(episode)
