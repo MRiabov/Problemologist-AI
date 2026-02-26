@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="97.733" timestamp="2026-02-26T10:01:11.891481+00:00" hostname="devbox"><testcase classname="tests.integration.architecture_p0.test_architecture_p0" name="test_int_022_motor_overload_behavior" time="90.652"><failure message="AssertionError: assert -1 == 0&#10; +  where -1 = ExecuteResponse(stdout='', stderr='Execution timed out after 90 seconds', exit_code=-1, timed_out=True, events=[{'event_type': 'simulation_backend_selected', 'timestamp': '2026-02-26T10:01:34.134963Z', 'agent_id': None, 'backend': 'GENESIS', 'fem_enabled': False, 'compute_target': 'auto', 'unix_timestamp': 1772100094.1350474}]).exit_code">worker_light_client = &lt;httpx.AsyncClient object at 0x7f98eb604320&gt;
+
+    @pytest.mark.integration_p0
+    @pytest.mark.asyncio
+    async def test_int_022_motor_overload_behavior(worker_light_client):
+        """INT-022: Verify motor overload detection."""
+        client = worker_light_client
+        session_id = f"test-int-022-{int(time.time())}"
+
+        script_path = Path("tests/integration/architecture_p0/scripts/verify_overload.py")
+        with script_path.open() as f:
+            script_content = f.read()
+
+        await client.post(
+            "/fs/write",
+            json=WriteFileRequest(
+                path="verify_overload.py", content=script_content
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        resp = await client.post(
+            "/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "import sys; sys.path.append('.'); import verify_overload; "
+                    "import asyncio; asyncio.run(verify_overload.run())"
+                ),
+                timeout=90,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=120.0,
+        )
+        assert resp.status_code == 200
+        data = ExecuteResponse.model_validate(resp.json())
+
+&gt;       assert data.exit_code == 0
+E       AssertionError: assert -1 == 0
+E        +  where -1 = ExecuteResponse(stdout='', stderr='Execution timed out after 90 seconds', exit_code=-1, timed_out=True, events=[{'event_type': 'simulation_backend_selected', 'timestamp': '2026-02-26T10:01:34.134963Z', 'agent_id': None, 'backend': 'GENESIS', 'fem_enabled': False, 'compute_target': 'auto', 'unix_timestamp': 1772100094.1350474}]).exit_code
+
+tests/integration/architecture_p0/test_architecture_p0.py:453: AssertionError</failure></testcase></testsuite></testsuites>

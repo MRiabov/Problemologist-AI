@@ -131,7 +131,21 @@ class FilesystemRouter:
         """
         normalized = path if path.startswith("/") else f"/{path}"
         relative = normalized[len(mount.virtual_prefix) :].lstrip("/")
-        return mount.local_path / relative
+        local_p = (mount.local_path / relative).resolve()
+
+        # Verify that the resolved path is still within the mount's local directory
+        if not local_p.is_relative_to(mount.local_path.resolve()):
+            logger.warning(
+                "mount_path_traversal_attempted",
+                path=path,
+                mount=mount.virtual_prefix,
+                resolved=str(local_p),
+            )
+            raise PermissionError(
+                f"Path traversal attempted via mount {mount.virtual_prefix}: {path}"
+            )
+
+        return local_p
 
     def ls(self, path: str = "/") -> list[FileInfo]:
         """List contents of a directory.

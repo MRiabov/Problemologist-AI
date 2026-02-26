@@ -91,6 +91,18 @@ async def test_int_061_asset_serving_security():
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "image/png"
 
+        # 7. Verify path traversal is blocked (regression test for fix)
+        # Note: Some clients might normalize this, but we try to send it anyway
+        resp = await client.get(
+            f"{WORKER_LIGHT_URL}/assets/utils/../../README.md",
+            headers={"X-Session-ID": session_a},
+        )
+        # It should either be 403 (PermissionError) or 404 (if normalized away by client)
+        # but NOT 200 with README content
+        assert resp.status_code != 200
+        if resp.status_code == 200:
+            assert "Problemologist" not in resp.text
+
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio

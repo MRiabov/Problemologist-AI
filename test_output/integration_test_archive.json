@@ -1,0 +1,209 @@
+[
+  {
+    "timestamp": "2026-02-26T09:25:22.609457",
+    "status": "passed",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 12.52,
+    "tests": [
+      {
+        "name": "test_int_012_013_cots_search_contract_and_readonly",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.813,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_016_reviewer_decision_schema_gate",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 4.51,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_017_plan_refusal_loop",
+        "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+        "time": 0.584,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:30:56.238504",
+    "status": "passed",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 291.897,
+    "tests": [
+      {
+        "name": "test_int_102_111_fem_material_validation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 209.724,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_103_part_breakage_detection",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 10.333,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_104_stress_reporting",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 11.023,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_107_stress_objective_evaluation",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 10.411,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_109_physics_instability_abort",
+        "classname": "tests.integration.architecture_p0.test_int_102_111",
+        "time": 50.104,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:32:23.478126",
+    "status": "passed",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 46.315,
+    "tests": [
+      {
+        "name": "test_int_120_circuit_validation_gate",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 45.469,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_121_short_circuit_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.133,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_122_overcurrent_supply_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.134,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_123_overcurrent_wire_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.131,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_124_open_circuit_detection",
+        "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+        "time": 0.129,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:33:02.585921",
+    "status": "passed",
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 1.123,
+    "tests": [
+      {
+        "name": "test_int_061_asset_serving_security",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.306,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_062_worker_openapi_contract",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.376,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_063_mounted_path_read_only",
+        "classname": "tests.integration.architecture_p0.test_int_061_063",
+        "time": 0.147,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-02-26T09:35:45.186572",
+    "status": "passed",
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "errors": 0,
+    "duration": 99.024,
+    "tests": [
+      {
+        "name": "test_int_004_episode_artifact_persistence",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.667,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_005_trace_realtime_broadcast",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.21,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_011_planner_target_caps_validation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 0.242,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_014_cots_propagation",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 5.188,
+        "status": "passed",
+        "message": null
+      },
+      {
+        "name": "test_int_025_events_collection_e2e",
+        "classname": "tests.integration.architecture_p0.test_missing_p0",
+        "time": 80.875,
+        "status": "passed",
+        "message": null
+      }
+    ]
+  }
+]

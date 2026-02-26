@@ -1,0 +1,491 @@
+{
+  "runs": [
+    {
+      "timestamp": "2026-02-26T10:02:53.138537",
+      "status": "failed",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 97.733,
+      "tests": [
+        {
+          "name": "test_int_022_motor_overload_behavior",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 90.652,
+          "status": "failed",
+          "message": "worker_light_client = <httpx.AsyncClient object at 0x7f98eb604320>\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_022_motor_overload_behavior(worker_light_client):\n        \"\"\"INT-022: Verify motor overload detection.\"\"\"\n        client = worker_light_client\n        session_id = f\"test-int-022-{int(time.time())}\"\n    \n        script_path = Path(\"tests/integration/architecture_p0/scripts/verify_overload.py\")\n        with script_path.open() as f:\n            script_content = f.read()\n    \n        await client.post(\n            \"/fs/write\",\n            json=WriteFileRequest(\n                path=\"verify_overload.py\", content=script_content\n            ).model_dump(mode=\"json\"),\n            headers={\"X-Session-ID\": session_id},\n        )\n    \n        resp = await client.post(\n            \"/runtime/execute\",\n            json=ExecuteRequest(\n                code=(\n                    \"import sys; sys.path.append('.'); import verify_overload; \"\n                    \"import asyncio; asyncio.run(verify_overload.run())\"\n                ),\n                timeout=90,\n            ).model_dump(mode=\"json\"),\n            headers={\"X-Session-ID\": session_id},\n            timeout=120.0,\n        )\n        assert resp.status_code == 200\n        data = ExecuteResponse.model_validate(resp.json())\n    \n>       assert data.exit_code == 0\nE       AssertionError: assert -1 == 0\nE        +  where -1 = ExecuteResponse(stdout='', stderr='Execution timed out after 90 seconds', exit_code=-1, timed_out=True, events=[{'event_type': 'simulation_backend_selected', 'timestamp': '2026-02-26T10:01:34.134963Z', 'agent_id': None, 'backend': 'GENESIS', 'fem_enabled': False, 'compute_target': 'auto', 'unix_timestamp': 1772100094.1350474}]).exit_code\n\ntests/integration/architecture_p0/test_architecture_p0.py:453: AssertionError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T09:57:16.521355",
+      "status": "failed",
+      "total": 55,
+      "passed": 51,
+      "failed": 3,
+      "skipped": 1,
+      "errors": 0,
+      "duration": 509.874,
+      "tests": [
+        {
+          "name": "test_int_001_compose_boot_health_contract",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 0.479,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_002_controller_worker_execution_boundary",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 10.373,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_003_session_filesystem_isolation",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 0.133,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_004_simulation_serialization",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 111.35,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_020_simulation_failure_taxonomy",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 6.228,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_021_runtime_randomization_robustness",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 0.344,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_022_motor_overload_behavior",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 90.312,
+          "status": "failed",
+          "message": "worker_light_client = <httpx.AsyncClient object at 0x7fa94d072db0>\n\n    @pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_022_motor_overload_behavior(worker_light_client):\n        \"\"\"INT-022: Verify motor overload detection.\"\"\"\n        client = worker_light_client\n        session_id = f\"test-int-022-{int(time.time())}\"\n    \n        script_path = Path(\"tests/integration/architecture_p0/scripts/verify_overload.py\")\n        with script_path.open() as f:\n            script_content = f.read()\n    \n        await client.post(\n            \"/fs/write\",\n            json=WriteFileRequest(\n                path=\"verify_overload.py\", content=script_content\n            ).model_dump(mode=\"json\"),\n            headers={\"X-Session-ID\": session_id},\n        )\n    \n        resp = await client.post(\n            \"/runtime/execute\",\n            json=ExecuteRequest(\n                code=(\n                    \"import sys; sys.path.append('.'); import verify_overload; \"\n                    \"import asyncio; asyncio.run(verify_overload.run())\"\n                ),\n                timeout=90,\n            ).model_dump(mode=\"json\"),\n            headers={\"X-Session-ID\": session_id},\n            timeout=120.0,\n        )\n        assert resp.status_code == 200\n        data = ExecuteResponse.model_validate(resp.json())\n    \n>       assert data.exit_code == 0\nE       AssertionError: assert -1 == 0\nE        +  where -1 = ExecuteResponse(stdout='', stderr='Execution timed out after 90 seconds', exit_code=-1, timed_out=True, events=[{'event_type': 'simulation_backend_selected', 'timestamp': '2026-02-26T09:50:58.933126Z', 'agent_id': None, 'backend': 'GENESIS', 'fem_enabled': False, 'compute_target': 'auto', 'unix_timestamp': 1772099458.9331944}]).exit_code\n\ntests/integration/architecture_p0/test_architecture_p0.py:453: AssertionError"
+        },
+        {
+          "name": "test_int_023_fastener_validity_rules",
+          "classname": "tests.integration.architecture_p0.test_architecture_p0",
+          "time": 83.75,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_012_013_cots_search_contract_and_readonly",
+          "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+          "time": 0.143,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_016_reviewer_decision_schema_gate",
+          "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+          "time": 0.334,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_017_plan_refusal_loop",
+          "classname": "tests.integration.architecture_p0.test_cots_reviewer",
+          "time": 0.668,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_026_mandatory_event_families",
+          "classname": "tests.integration.architecture_p0.test_int_026_030",
+          "time": 4.572,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_027_seed_variant_tracking",
+          "classname": "tests.integration.architecture_p0.test_int_026_030",
+          "time": 0.164,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_028_strict_api_schema_contract",
+          "classname": "tests.integration.architecture_p0.test_int_026_030",
+          "time": 0.695,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_029_api_key_enforcement",
+          "classname": "tests.integration.architecture_p0.test_int_026_030",
+          "time": 0.151,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_030_interrupt_propagation",
+          "classname": "tests.integration.architecture_p0.test_int_026_030",
+          "time": 1.177,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_061_asset_serving_security",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.157,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_062_worker_openapi_contract",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.133,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_063_mounted_path_read_only",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.15,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_102_111_fem_material_validation",
+          "classname": "tests.integration.architecture_p0.test_int_102_111",
+          "time": 12.065,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_103_part_breakage_detection",
+          "classname": "tests.integration.architecture_p0.test_int_102_111",
+          "time": 11.421,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_104_stress_reporting",
+          "classname": "tests.integration.architecture_p0.test_int_102_111",
+          "time": 9.811,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_107_stress_objective_evaluation",
+          "classname": "tests.integration.architecture_p0.test_int_102_111",
+          "time": 9.803,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_109_physics_instability_abort",
+          "classname": "tests.integration.architecture_p0.test_int_102_111",
+          "time": 1.957,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_108_tetrahedralization_pipeline",
+          "classname": "tests.integration.architecture_p0.test_int_108_meshing",
+          "time": 16.379,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_110_gpu_oom_retry",
+          "classname": "tests.integration.architecture_p0.test_int_110_gpu_oom",
+          "time": 0.165,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_120_circuit_validation_gate",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.569,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_121_short_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.142,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_122_overcurrent_supply_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.137,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_123_overcurrent_wire_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.194,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_124_open_circuit_detection",
+          "classname": "tests.integration.architecture_p0.test_int_120_electronics",
+          "time": 0.193,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_004_episode_artifact_persistence",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 0.171,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_005_trace_realtime_broadcast",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 5.192,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_011_planner_target_caps_validation",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 0.142,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_014_cots_propagation",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 5.177,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 80.542,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_053_temporal_workflow_lifecycle",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 1.592,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_055_s3_artifact_upload_logging",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 0.782,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_054_temporal_failure_path",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 3.584,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_056_s3_upload_failure_retry",
+          "classname": "tests.integration.architecture_p0.test_observability",
+          "time": 1.194,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_101_physics_backend_selection",
+          "classname": "tests.integration.architecture_p0.test_physics_fluids",
+          "time": 10.208,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_101_physics_backend_selection():\n        \"\"\"INT-101: Verify physics backend selection and event emission.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            await _require_service(client, \"worker-light\", WORKER_LIGHT_URL)\n            await _require_service(client, \"worker-heavy\", WORKER_HEAVY_URL)\n            session_id = f\"test-int-101-{int(time.time())}\"\n    \n            # 1. Setup objectives.yaml with Genesis backend\n            objectives = ObjectivesYaml(\n                physics=PhysicsConfig(\n                    backend=SimulatorBackendType.GENESIS,\n                    fem_enabled=True,\n                    compute_target=\"cpu\",\n                ),\n                objectives=ObjectivesSection(\n                    goal_zone=BoundingBox(min=(5, 5, 5), max=(7, 7, 7)),\n                    build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),\n                ),\n                simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),\n                moved_object=MovedObject(\n                    label=\"test_obj\",\n                    shape=\"sphere\",\n                    start_position=(0, 0, 5),\n                    runtime_jitter=(0, 0, 0),\n                ),\n                constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),\n            )\n            write_obj_req = WriteFileRequest(\n                path=\"objectives.yaml\",\n                content=yaml.dump(objectives.model_dump(mode=\"json\")),\n                overwrite=True,\n            )\n            await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/write\",\n                json=write_obj_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            # 2. Simple box script\n            script = \"\"\"\n    from build123d import *\n    from shared.models.schemas import PartMetadata\n    def build():\n        p = Box(1, 1, 1)\n        p.label = \"test_part\"\n        p.metadata = PartMetadata(material_id=\"aluminum_6061\", fixed=True)\n        return p\n    \"\"\"\n            write_script_req = WriteFileRequest(\n                path=\"script.py\", content=script, overwrite=True\n            )\n            await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/write\",\n                json=write_script_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            # 3. Simulate\n            sim_req = BenchmarkToolRequest(script_path=\"script.py\", smoke_test_mode=True)\n            resp = await client.post(\n                f\"{WORKER_HEAVY_URL}/benchmark/simulate\",\n                json=sim_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n                timeout=900.0,\n            )\n            assert resp.status_code == 200\n            data = BenchmarkToolResponse.model_validate(resp.json())\n            events = data.events\n    \n            # Verify event emission\n            event_dict = next(\n                (\n                    _event_as_dict(e)\n                    for e in events\n                    if _event_get(e, \"event_type\") == \"simulation_backend_selected\"\n                ),\n                None,\n            )\n            assert event_dict is not None, \"Missing simulation_backend_selected event\"\n    \n            event = SimulationBackendSelectedEvent.model_validate(event_dict)\n>           assert event.backend == \"genesis\"\nE           AssertionError: assert 'GENESIS' == 'genesis'\nE             \nE             - genesis\nE             + GENESIS\n\ntests/integration/architecture_p0/test_physics_fluids.py:143: AssertionError"
+        },
+        {
+          "name": "test_int_105_fluid_containment_evaluation",
+          "classname": "tests.integration.architecture_p0.test_physics_fluids",
+          "time": 4.359,
+          "status": "skipped",
+          "message": "Skipping Genesis MPM test on CPU due to performance constraints."
+        },
+        {
+          "name": "test_int_106_flow_rate_evaluation",
+          "classname": "tests.integration.architecture_p0.test_physics_fluids",
+          "time": 2.269,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_112_mujoco_backward_compat",
+          "classname": "tests.integration.architecture_p0.test_physics_fluids",
+          "time": 0.285,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_005_mandatory_artifacts_gate",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.589,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_006_plan_structure_validation",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.181,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_007_todo_integrity",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.182,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_008_objectives_validation",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.183,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_009_cost_estimation_validation",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.196,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_011_planner_caps_enforcement",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 6.069,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_015_engineer_handover_immutability",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 2.372,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_019_hard_constraints_gates",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.218,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_010_planner_pricing_script_integration",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 2.608,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_018_validate_and_price_integration_gate",
+          "classname": "tests.integration.architecture_p0.test_planner_gates",
+          "time": 0.169,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_path_traversal_vulnerability",
+          "classname": "tests.integration.architecture_p0.test_repro_vulnerability",
+          "time": 0.133,
+          "status": "failed",
+          "message": "@pytest.mark.asyncio\n    async def test_path_traversal_vulnerability():\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = \"test-vulnerability\"\n    \n            # Try to read README.md from project root via /utils mount\n            # /utils is at project_root/worker_heavy/utils\n            # So /utils/../../README.md should resolve to project_root/README.md\n    \n            # We use a path that should survive some normalization if it happens\n            traversal_path = \"/utils/../../README.md\"\n    \n            # To avoid client-side normalization, we can use a custom request\n            req = httpx.Request(\"GET\", f\"{WORKER_LIGHT_URL}/assets{traversal_path}\")\n            print(f\"Request URL: {req.url}\")\n    \n>           resp = await client.send(req, headers={\"X-Session-ID\": session_id})\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           TypeError: AsyncClient.send() got an unexpected keyword argument 'headers'\n\ntests/integration/architecture_p0/test_repro_vulnerability.py:23: TypeError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T09:40:15.156766",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 1.154,
+      "tests": [
+        {
+          "name": "test_int_061_asset_serving_security",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.318,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_062_worker_openapi_contract",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.38,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_063_mounted_path_read_only",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.149,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T09:37:16.614695",
+      "status": "failed",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 0.449,
+      "tests": [
+        {
+          "name": "test_path_traversal_vulnerability",
+          "classname": "tests.integration.architecture_p0.test_repro_vulnerability",
+          "time": 0.304,
+          "status": "failed",
+          "message": "@pytest.mark.asyncio\n    async def test_path_traversal_vulnerability():\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = \"test-vulnerability\"\n    \n            # Try to read README.md from project root via /utils mount\n            # /utils is at project_root/worker_heavy/utils\n            # So /utils/../../README.md should resolve to project_root/README.md\n    \n            # We use a path that should survive some normalization if it happens\n            traversal_path = \"/utils/../../README.md\"\n    \n            # To avoid client-side normalization, we can use a custom request\n            req = httpx.Request(\"GET\", f\"{WORKER_LIGHT_URL}/assets{traversal_path}\")\n            print(f\"Request URL: {req.url}\")\n    \n>           resp = await client.send(req, headers={\"X-Session-ID\": session_id})\n                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE           TypeError: AsyncClient.send() got an unexpected keyword argument 'headers'\n\ntests/integration/architecture_p0/test_repro_vulnerability.py:23: TypeError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T09:36:25.314582",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 0.39,
+      "tests": [
+        {
+          "name": "test_path_traversal_vulnerability",
+          "classname": "tests.integration.architecture_p0.test_repro_vulnerability",
+          "time": 0.317,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    }
+  ]
+}

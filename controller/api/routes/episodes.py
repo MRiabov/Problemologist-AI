@@ -73,6 +73,10 @@ async def get_episode_asset(
         # Fallback for older episodes or benchmarks where session_id might be the id itself
         worker_session_id = str(episode_id)
 
+    # Basic path traversal validation
+    if ".." in path.split("/") or path.startswith("/") or path.startswith("."):
+        raise HTTPException(status_code=400, detail="Invalid asset path")
+
     worker_light_url = settings.worker_light_url
     asset_url = f"{worker_light_url}/assets/{path}"
 
