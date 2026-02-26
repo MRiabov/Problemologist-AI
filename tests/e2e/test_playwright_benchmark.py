@@ -10,7 +10,9 @@ def test_benchmark_creation_flow(page: Page):
     page.goto("http://localhost:15173", timeout=60000)
 
     # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)
-    benchmark_link = page.get_by_role("link", name=re.compile(r"Benchmark", re.IGNORECASE))
+    benchmark_link = page.get_by_role(
+        "link", name=re.compile(r"Benchmark", re.IGNORECASE)
+    )
     if not benchmark_link.is_visible():
         benchmark_link = page.get_by_text("Benchmark").first
 
@@ -54,9 +56,9 @@ def test_benchmark_creation_flow(page: Page):
     # 9. Verify the plan is "non-template"
     # The content is rendered in a SyntaxHighlighter viewport
     content_area = page.locator(".flex-1.min-w-0.bg-background\\/50")
-    expect(content_area.get_by_text(re.compile("steel ball", re.IGNORECASE))).to_be_visible(
-        timeout=30000
-    )
+    expect(
+        content_area.get_by_text(re.compile("steel ball", re.IGNORECASE))
+    ).to_be_visible(timeout=30000)
     expect(content_area.get_by_text(re.compile("40mm", re.IGNORECASE))).to_be_visible(
         timeout=30000
     )
