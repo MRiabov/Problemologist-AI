@@ -98,3 +98,25 @@ three_dp:
       friction_coef: 0.4
   costs:
     setup_fee: 10.0
+
+wires:
+  awg10:
+    cost_per_m: 1.50
+  awg12:
+    cost_per_m: 1.20
+  awg14:
+    cost_per_m: 0.90
+  awg16:
+    cost_per_m: 0.70
+  awg18:
+    cost_per_m: 0.50
+  awg20:
+    cost_per_m: 0.40
+  awg22:
+    cost_per_m: 0.30
+  awg24:
+    cost_per_m: 0.20
+  awg26:
+    cost_per_m: 0.15
+  awg28:
+    cost_per_m: 0.10
