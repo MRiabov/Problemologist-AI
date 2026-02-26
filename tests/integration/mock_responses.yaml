@@ -256,10 +256,10 @@ scenarios:
       summary: "Plan for INT-177 generated."
       thought: "Planning for INT-177."
       tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
+        - name: "execute_command"
+          input:
+            command: |
+              cat > plan.md <<'EOF'
               ## 1. Solution Overview
               Test feedback.
               ## 2. Parts List
@@ -270,7 +270,31 @@ scenarios:
               - Test budget
               ## 5. Risk Assessment
               - Test risk
-            overwrite: true
+              EOF
+              cat > todo.md <<'EOF'
+              - [x] Initial plan
+              - [x] Check electronics
+              EOF
+              cat > assembly_definition.yaml <<'EOF'
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+              EOF
+              cat > objectives.yaml <<'EOF'
+              constraints:
+                max_unit_cost: 50
+                max_weight_g: 1000.0
+              EOF
         - name: "write_file"
           input: { path: "todo.md", content: "- [ ] Test", overwrite: true }
         - name: "write_file"

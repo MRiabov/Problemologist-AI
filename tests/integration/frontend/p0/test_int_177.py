@@ -49,28 +49,18 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
         timeout=120000,
     )
 
-    # 3. Click Thumbs Up in chat
-    # Need to hover the message first to make buttons visible
-    # We look for any message content or thinking
-    page.wait_for_selector(
-        '[data-testid="chat-message"], [data-testid="thought-block"]', timeout=60000
+    # 3. Open feedback modal from sidebar episode feedback action
+    # Sidebar actions are shown on hover and target the selected episode's latest trace.
+    page.wait_for_selector('[data-testid="sidebar-episode-item"]', timeout=60000)
+    episode_row = (
+        page.get_by_test_id("sidebar-episode-item")
+        .filter(has_text=re.compile("INT-177"))
+        .first
     )
-
-    # If it's a thought block, we might need to wait for the actual message
-    page.wait_for_selector('[data-testid="chat-message"]', timeout=60000)
-
-    last_message = page.get_by_test_id("chat-message").last
-    last_message.hover()
-
-    thumbs_up_chat = page.get_by_test_id("chat-thumbs-up").last
-    # Sometimes hover takes a moment to trigger CSS transition
-    for _ in range(5):
-        if thumbs_up_chat.is_visible():
-            break
-        last_message.hover()
-        page.wait_for_timeout(500)
-
-    thumbs_up_chat.click()
+    episode_row.hover()
+    thumbs_up_sidebar = episode_row.get_by_test_id("sidebar-thumbs-up")
+    expect(thumbs_up_sidebar).to_be_visible(timeout=10000)
+    thumbs_up_sidebar.click()
 
     # 4. Verify modal opens and Thumbs Up is selected (score 1)
     modal = page.get_by_test_id("feedback-modal")
