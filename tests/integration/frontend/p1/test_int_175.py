@@ -61,7 +61,7 @@ def test_int_175_controller_first_api_boundary(page: Page):
 
     # 5. Wait for the "Confirm & Start" button and click it to trigger more traffic
     try:
-        confirm_button = page.get_by_role("button", name="Confirm & Start")
+        confirm_button = page.get_by_test_id("chat-confirm-button")
         expect(confirm_button).to_be_visible(timeout=120000)
         confirm_button.click()
         page.wait_for_timeout(5000)
