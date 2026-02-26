@@ -1,4 +1,76 @@
 scenarios:
+  # INT-011: Planner target caps validation (No specific mock needed as it's a validation test)
+
+  INT-014:
+    planner:
+      summary: "Plan with MOCK-MOTOR-ID generated."
+      thought: "I will design a mechanism with a servo motor using MOCK-MOTOR-ID."
+      tool_calls:
+        - name: "write_file"
+          input: 
+            path: "plan.md"
+            content: |
+              ## 1. Solution Overview
+              Mechanism with MOCK-MOTOR-ID.
+              ## 2. Parts List
+              - MOCK-MOTOR-ID (Servo Motor)
+              ## 3. Assembly Strategy
+              1. Attach motor.
+              ## 4. Cost & Weight Budget
+              - $20
+              ## 5. Risk Assessment
+              - Low.
+            overwrite: true
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [ ] Design with MOCK-MOTOR-ID", overwrite: true }
+        - name: "write_file"
+          input: 
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts:
+                - part_number: "MOCK-MOTOR-ID"
+                  category: "motor"
+                  quantity: 1
+              final_assembly: []
+            overwrite: true
+        - name: "write_file"
+          input: { path: "objectives.yaml", content: "constraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
+    electronics_planner:
+      summary: "No electronics needed."
+      thought: "No electronics needed."
+      tool_calls:
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+    coder:
+      journal: "Implemented mechanism with MOCK-MOTOR-ID."
+      thought: "Implementing the design."
+      generated_code: |
+        from build123d import *
+        import os
+        import trimesh
+        os.makedirs('assets', exist_ok=True)
+        b = Box(10,10,10)
+        export_stl(b, 'assets/box.stl')
+        mesh = trimesh.load('assets/box.stl')
+        mesh.export('assets/box.glb', file_type='glb')
+        with open('script.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "The design satisfies all requirements."
+        required_fixes: []
+
   # INT-002: Engineering execution boundary
   test-exec:
     planner:
