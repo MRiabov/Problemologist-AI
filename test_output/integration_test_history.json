@@ -1,6 +1,39 @@
 {
   "runs": [
     {
+      "timestamp": "2026-02-26T13:17:19.766924",
+      "status": "failed",
+      "total": 3,
+      "passed": 1,
+      "failed": 2,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 398.723,
+      "tests": [
+        {
+          "name": "test_int_173_exact_pointing_payload[chromium]",
+          "classname": "tests.integration.frontend.p0.test_int_173",
+          "time": 195.9,
+          "status": "failed",
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # Wait for the overlay to disappear\n>       expect(page.get_by_test_id(\"no-assets-overlay\")).to_be_hidden(timeout=180000)\nE       AssertionError: Locator expected to be hidden\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_hidden\" with timeout 180000ms\nE         - waiting for get_by_test_id(\"no-assets-overlay\")\nE           177 \u00d7 locator resolved to <div data-testid=\"no-assets-overlay\" class=\"absolute inset-0 flex items-center justify-center pointer-events-auto\">\u2026</div>\nE               - unexpected value \"visible\"\n\ntests/integration/frontend/p0/test_int_173.py:36: AssertionError"
+        },
+        {
+          "name": "test_int_174_cad_show_hide_behavior[chromium]",
+          "classname": "tests.integration.frontend.p0.test_int_174",
+          "time": 189.747,
+          "status": "failed",
+          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_174_cad_show_hide_behavior(page: Page):\n        \"\"\"\n        INT-174: Users can hide/show selected parts both in design and simulation views;\n        visibility toggles do not corrupt selection state or context-card creation\n        for visible entities.\n        \"\"\"\n        # 1. Navigate to the local development server\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # 2. Click \"CREATE NEW\" button\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        # 3. Enter the prompt\n        prompt_text = f\"Create a simple benchmark with two parts {uuid.uuid4()}\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 4. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 5. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # Wait for the overlay to disappear\n>       expect(page.get_by_test_id(\"no-assets-overlay\")).to_be_hidden(timeout=180000)\nE       AssertionError: Locator expected to be hidden\nE       Actual value: visible \nE       Call log:\nE         - Expect \"to_be_hidden\" with timeout 180000ms\nE         - waiting for get_by_test_id(\"no-assets-overlay\")\nE           174 \u00d7 locator resolved to <div data-testid=\"no-assets-overlay\" class=\"absolute inset-0 flex items-center justify-center pointer-events-auto\">\u2026</div>\nE               - unexpected value \"visible\"\n\ntests/integration/frontend/p0/test_int_174.py:43: AssertionError"
+        },
+        {
+          "name": "test_int_177_feedback_modal_edit_recall[chromium]",
+          "classname": "tests.integration.frontend.p0.test_int_177",
+          "time": 12.613,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
       "timestamp": "2026-02-26T13:05:03.923124",
       "status": "failed",
       "total": 3,
@@ -127,39 +160,6 @@
           "name": "test_int_177_feedback_modal_edit_recall[chromium]",
           "classname": "tests.integration.frontend.p0.test_int_177",
           "time": 9.68,
-          "status": "passed",
-          "message": null
-        }
-      ]
-    },
-    {
-      "timestamp": "2026-02-26T12:31:02.811580",
-      "status": "failed",
-      "total": 3,
-      "passed": 1,
-      "failed": 2,
-      "skipped": 0,
-      "errors": 0,
-      "duration": 152.167,
-      "tests": [
-        {
-          "name": "test_int_173_exact_pointing_payload[chromium]",
-          "classname": "tests.integration.frontend.p0.test_int_173",
-          "time": 93.173,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_173_exact_pointing_payload(page: Page):\n        \"\"\"\n        INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads\n        with stable entity IDs and source asset reference; payload reaches backend unchanged.\n        \"\"\"\n        # 1. Start a benchmark generation\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # Click CREATE NEW\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        prompt_text = f\"Generate a simple cube for testing {uuid.uuid4()}\"\n        page.locator(\"#chat-input\").fill(prompt_text)\n        page.get_by_label(\"Send Message\").click()\n    \n        # Wait for completion and confirm\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # Wait for the overlay to disappear\n        expect(page.get_by_test_id(\"no-assets-overlay\")).to_be_hidden(timeout=180000)\n    \n        # Wait for the model viewer to load and have assets\n        # E.g. waiting for no-assets-overlay to NOT be visible or waiting for a model to load\n        # Let's just wait a bit or wait for canvas\n        canvas = page.locator(\"canvas\").first\n>       expect(canvas).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for locator(\"canvas\").first\n\ntests/integration/frontend/p0/test_int_173.py:42: AssertionError"
-        },
-        {
-          "name": "test_int_174_cad_show_hide_behavior[chromium]",
-          "classname": "tests.integration.frontend.p0.test_int_174",
-          "time": 49.164,
-          "status": "failed",
-          "message": "page = <Page url='http://localhost:15173/benchmark'>\n\n    @pytest.mark.integration_frontend\n    def test_int_174_cad_show_hide_behavior(page: Page):\n        \"\"\"\n        INT-174: Users can hide/show selected parts both in design and simulation views;\n        visibility toggles do not corrupt selection state or context-card creation\n        for visible entities.\n        \"\"\"\n        # 1. Navigate to the local development server\n        page.goto(f\"{FRONTEND_URL}/benchmark\", timeout=60000)\n        page.wait_for_load_state(\"networkidle\")\n    \n        # 2. Click \"CREATE NEW\" button\n        page.get_by_test_id(\"create-new-button\").click()\n    \n        # 3. Enter the prompt\n        prompt_text = f\"Create a simple benchmark with two parts {uuid.uuid4()}\"\n        prompt_input = page.locator(\"#chat-input\")\n        expect(prompt_input).to_be_visible(timeout=30000)\n        prompt_input.fill(prompt_text)\n    \n        # 4. Submit the prompt\n        send_button = page.get_by_label(\"Send Message\")\n        expect(send_button).to_be_enabled(timeout=30000)\n        send_button.click()\n    \n        # 5. Wait for the \"Confirm & Start\" button and click it\n        confirm_button = page.get_by_test_id(\"chat-confirm-button\")\n        expect(confirm_button).to_be_visible(timeout=120000)\n        confirm_button.click()\n    \n        # Wait for the overlay to disappear\n        expect(page.get_by_test_id(\"no-assets-overlay\")).to_be_hidden(timeout=180000)\n    \n        # Wait for the model viewer to load\n        canvas = page.locator(\"canvas\").first\n>       expect(canvas).to_be_visible(timeout=30000)\nE       AssertionError: Locator expected to be visible\nE       Actual value: None\nE       Error: element(s) not found \nE       Call log:\nE         - Expect \"to_be_visible\" with timeout 30000ms\nE         - waiting for locator(\"canvas\").first\n\ntests/integration/frontend/p0/test_int_174.py:47: AssertionError"
-        },
-        {
-          "name": "test_int_177_feedback_modal_edit_recall[chromium]",
-          "classname": "tests.integration.frontend.p0.test_int_177",
-          "time": 9.595,
           "status": "passed",
           "message": null
         }

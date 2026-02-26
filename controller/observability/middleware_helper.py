@@ -23,9 +23,25 @@ async def record_events(episode_id: str, events: list[Any]):
 async def broadcast_file_update(episode_id_str: str, path: str, content: str):
     """Broadcast file update to frontend and sync to Asset table."""
     try:
-        episode_id = uuid.UUID(episode_id_str)
-        # Sync to Asset table first to get DB record
-        asset = await sync_asset(episode_id, path, content)
+        # Sync to Asset table first to get DB record.
+        # sync_asset now handles prefixed UUID strings.
+        asset = await sync_asset(episode_id_str, path, content)
+
+        try:
+            # We still need a UUID for broadcasting via EpisodeBroadcaster
+            # Attempt to parse it using the same logic as sync_asset
+            clean_id = episode_id_str
+            if "-" in episode_id_str and not episode_id_str.startswith("{"):
+                parts = episode_id_str.split("-")
+                if len(parts) > 1 and len(parts[0]) <= 4:
+                    potential_uuid = "-".join(parts[1:])
+                    if len(potential_uuid) >= 32:
+                        clean_id = potential_uuid
+
+            episode_id = uuid.UUID(clean_id)
+        except ValueError:
+            # Fallback to direct conversion if my stripping was too aggressive/wrong
+            episode_id = uuid.UUID(episode_id_str)
 
         payload = {
             "type": "file_update",
