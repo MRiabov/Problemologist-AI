@@ -106,6 +106,8 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
         return fs_router.ls(request.path)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Directory not found")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_ls_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -117,6 +119,8 @@ async def file_exists(request: ReadFileRequest, fs_router=Depends(get_router)):
     try:
         exists = fs_router.exists(request.path)
         return ExistsResponse(exists=exists)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_exists_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -130,6 +134,8 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
         return ReadFileResponse(content=content.decode("utf-8"))
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_read_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -141,7 +147,7 @@ async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     try:
         fs_router.write(request.path, request.content, overwrite=request.overwrite)
         return StatusResponse(status=ResponseStatus.SUCCESS)
-    except WritePermissionError as e:
+    except (WritePermissionError, PermissionError) as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_write_failed", path=request.path, error=str(e))
@@ -166,7 +172,7 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
                 )
 
         return StatusResponse(status=ResponseStatus.SUCCESS)
-    except WritePermissionError as e:
+    except (WritePermissionError, PermissionError) as e:
         raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
         raise
@@ -205,6 +211,8 @@ async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
         return Response(content=content, media_type="application/octet-stream")
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error("api_read_blob_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
@@ -220,6 +228,8 @@ async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
         if isinstance(matches, str):
             raise HTTPException(status_code=400, detail=matches)
         return matches
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -262,7 +272,7 @@ async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router))
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Path not found")
-    except WritePermissionError as e:
+    except (WritePermissionError, PermissionError) as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         logger.error("api_delete_failed", path=request.path, error=str(e))
@@ -382,6 +392,8 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
         return Response(content=content, media_type=media_type)
     except (FileNotFoundError, IsADirectoryError):
         raise HTTPException(status_code=404, detail="Asset not found")
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:

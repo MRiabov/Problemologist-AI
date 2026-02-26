@@ -1,0 +1,211 @@
+{
+  "runs": [
+    {
+      "timestamp": "2026-02-26T01:16:26.580524",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 1.361,
+      "tests": [
+        {
+          "name": "test_int_061_asset_serving_security",
+          "classname": "tests.integration.architecture_p0.test_int_061_064",
+          "time": 0.351,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_062_worker_openapi_contract",
+          "classname": "tests.integration.architecture_p0.test_int_061_064",
+          "time": 0.388,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_063_mounted_path_read_only",
+          "classname": "tests.integration.architecture_p0.test_int_061_064",
+          "time": 0.158,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_064_path_traversal_protection",
+          "classname": "tests.integration.architecture_p0.test_int_061_064",
+          "time": 0.134,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T01:12:31.523399",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 1.439,
+      "tests": [
+        {
+          "name": "test_int_061_asset_serving_security",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.377,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_062_worker_openapi_contract",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.403,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_063_mounted_path_read_only",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.186,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_064_path_traversal_protection",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.144,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T01:11:19.217970",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 2.122,
+      "tests": [
+        {
+          "name": "test_int_061_asset_serving_security",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.604,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_062_worker_openapi_contract",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.474,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_063_mounted_path_read_only",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.238,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_064_path_traversal_protection",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.216,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T01:08:37.188673",
+      "status": "failed",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 2.141,
+      "tests": [
+        {
+          "name": "test_int_061_asset_serving_security",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.471,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_062_worker_openapi_contract",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.587,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_063_mounted_path_read_only",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.212,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_064_path_traversal_protection",
+          "classname": "tests.integration.architecture_p0.test_int_061_063",
+          "time": 0.173,
+          "status": "failed",
+          "message": "@pytest.mark.integration_p0\n    @pytest.mark.asyncio\n    async def test_int_064_path_traversal_protection():\n        \"\"\"INT-064: Path traversal protection for mounted directories.\"\"\"\n        async with httpx.AsyncClient(timeout=300.0) as client:\n            session_id = f\"test-64-{int(time.time())}\"\n    \n            # Attempt to escape /utils mount point via path traversal.\n            # We use /fs/read because GET /assets/... might be normalized by the HTTP client.\n            # Path in JSON body is not normalized by the client.\n            from shared.workers.schema import ReadFileRequest\n            read_req = ReadFileRequest(path=\"/utils/../pyproject.toml\")\n            resp = await client.post(\n                f\"{WORKER_LIGHT_URL}/fs/read\",\n                json=read_req.model_dump(mode=\"json\"),\n                headers={\"X-Session-ID\": session_id},\n            )\n    \n            # Should be blocked with 403 Forbidden.\n>           assert resp.status_code == 403\nE           assert 500 == 403\nE            +  where 500 = <Response [500 Internal Server Error]>.status_code\n\ntests/integration/architecture_p0/test_int_061_063.py:173: AssertionError"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-26T01:05:42.067795",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "duration": 99.431,
+      "tests": [
+        {
+          "name": "test_int_004_episode_artifact_persistence",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 0.729,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_005_trace_realtime_broadcast",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 5.28,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_011_planner_target_caps_validation",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 0.138,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_014_cots_propagation",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 5.217,
+          "status": "passed",
+          "message": null
+        },
+        {
+          "name": "test_int_025_events_collection_e2e",
+          "classname": "tests.integration.architecture_p0.test_missing_p0",
+          "time": 80.645,
+          "status": "passed",
+          "message": null
+        }
+      ]
+    }
+  ]
+}
