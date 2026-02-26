@@ -12,6 +12,7 @@ from controller.observability.middleware_helper import (
 from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
     HeavyPreviewWorkflow,
+    HeavyRenderSnapshotWorkflow,
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
 )
@@ -38,11 +39,14 @@ from shared.workers.schema import (
     GrepMatch,
     HeavyPreviewParams,
     HeavyPreviewResponse,
+    HeavyRenderSnapshotParams,
+    HeavyRenderSnapshotResponse,
     HeavySimulationParams,
     HeavyValidationParams,
     HeavyValidationResponse,
     InspectTopologyResponse,
     PreviewDesignResponse,
+    RenderSnapshotResponse,
     ScriptExecutionRequest,
 )
 
@@ -278,6 +282,44 @@ class RemoteFilesystemMiddleware:
             )
 
         return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+
+    async def render_snapshot(
+        self,
+        target_ids: list[str],
+        view_matrix: list[list[float]],
+        script_path: str | Path = "script.py",
+    ) -> RenderSnapshotResponse:
+        """Render a snapshot of selected features via worker client (with bundling)."""
+        p_str = str(script_path)
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            res: HeavyRenderSnapshotResponse = (
+                await self.temporal_client.execute_workflow(
+                    HeavyRenderSnapshotWorkflow.run,
+                    HeavyRenderSnapshotParams(
+                        bundle_bytes=bundle,
+                        script_path=p_str,
+                        target_ids=target_ids,
+                        view_matrix=view_matrix,
+                    ),
+                    id=f"snap-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                    task_queue="simulation-task-queue",
+                )
+            )
+            return RenderSnapshotResponse(
+                success=res.success,
+                message="Snapshot generated via Temporal"
+                if res.success
+                else f"Snapshot failed: {res.error}",
+                image_key=res.image_key,
+            )
+
+        return await self.client.render_snapshot(
+            target_ids=target_ids,
+            view_matrix=view_matrix,
+            script_path=p_str,
+        )
 
     async def validate(
         self, script_path: str | Path

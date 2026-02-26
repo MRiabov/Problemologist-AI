@@ -6,6 +6,8 @@ from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     HeavyPreviewParams,
     HeavyPreviewResponse,
+    HeavyRenderSnapshotParams,
+    HeavyRenderSnapshotResponse,
     HeavySimulationParams,
     HeavyValidationParams,
     HeavyValidationResponse,
@@ -46,6 +48,21 @@ class HeavyPreviewWorkflow:
         """Run design rendering on a heavy worker."""
         return await workflow.execute_activity(
             "worker_preview_design",
+            params,
+            start_to_close_timeout=timedelta(minutes=2),
+            task_queue="heavy-tasks-queue",
+        )
+
+
+@workflow.defn
+class HeavyRenderSnapshotWorkflow:
+    @workflow.run
+    async def run(
+        self, params: HeavyRenderSnapshotParams
+    ) -> HeavyRenderSnapshotResponse:
+        """Run selection snapshot rendering on a heavy worker."""
+        return await workflow.execute_activity(
+            "worker_render_snapshot",
             params,
             start_to_close_timeout=timedelta(minutes=2),
             task_queue="heavy-tasks-queue",

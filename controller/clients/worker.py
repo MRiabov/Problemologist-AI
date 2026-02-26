@@ -14,6 +14,7 @@ from shared.workers.schema import (
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
+    RenderSnapshotResponse,
 )
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
@@ -267,6 +268,37 @@ class WorkerClient:
             )
             response.raise_for_status()
             return response.json()
+        finally:
+            await self._close_client(client)
+
+    async def render_snapshot(
+        self,
+        target_ids: list[str],
+        view_matrix: list[list[float]],
+        script_path: str = "script.py",
+        script_content: str | None = None,
+    ) -> RenderSnapshotResponse:
+        """Render a snapshot of selected features via worker."""
+        client = await self._get_client()
+        try:
+            payload = {
+                "script_path": script_path,
+                "target_ids": target_ids,
+                "view_matrix": view_matrix,
+            }
+            if script_content is not None:
+                payload["script_content"] = script_content
+
+            await self._add_bundle_to_payload(payload)
+
+            response = await client.post(
+                f"{self.heavy_url}/benchmark/render_snapshot",
+                json=payload,
+                headers=self.headers,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return RenderSnapshotResponse.model_validate(response.json())
         finally:
             await self._close_client(client)
 

@@ -33,6 +33,8 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    RenderSnapshotRequest,
+    RenderSnapshotResponse,
     SimulationArtifacts,
     VerificationRequest,
 )
@@ -551,6 +553,57 @@ async def api_preview(
     except Exception as e:
         logger.error("api_benchmark_preview_failed", error=str(e))
         return PreviewDesignResponse(success=False, message=str(e))
+    finally:
+        SIMULATION_QUEUE_DEPTH -= 1
+
+
+@heavy_router.post(
+    "/benchmark/render_snapshot", response_model=RenderSnapshotResponse
+)
+async def api_render_snapshot(
+    request: RenderSnapshotRequest,
+    x_session_id: str = Header(...),
+    fs_router=Depends(get_router),
+):
+    """Render a selection snapshot of the CAD design."""
+    global SIMULATION_QUEUE_DEPTH
+    SIMULATION_QUEUE_DEPTH += 1
+    try:
+        from worker_heavy.activities.rendering import render_selection_snapshot
+
+        async with HEAVY_OPERATION_LOCK:
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                # Resolve script path
+                script_p = (
+                    root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path)
+                )
+
+                # We need to write the script content if provided (legacy support or direct execution)
+                if request.script_content:
+                    if not script_p.exists():
+                        script_p.parent.mkdir(parents=True, exist_ok=True)
+                        script_p.write_text(request.script_content)
+
+                image_key = await asyncio.to_thread(
+                    render_selection_snapshot,
+                    ids=request.target_ids,
+                    view_matrix=request.view_matrix,
+                    script_path=script_p,
+                )
+
+                return RenderSnapshotResponse(
+                    success=True,
+                    message="Snapshot generated successfully",
+                    image_key=image_key,
+                )
+
+    except Exception as e:
+        logger.error("api_benchmark_render_snapshot_failed", error=str(e))
+        return RenderSnapshotResponse(success=False, message=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
 

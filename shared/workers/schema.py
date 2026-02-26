@@ -383,6 +383,41 @@ class HeavyPreviewResponse(BaseModel):
     filename: str | None = None
 
 
+class HeavyRenderSnapshotParams(BaseModel):
+    """Parameters for worker_render_snapshot activity."""
+
+    bundle_bytes: bytes
+    script_path: str
+    target_ids: list[str]
+    view_matrix: list[list[float]]
+
+
+class HeavyRenderSnapshotResponse(BaseModel):
+    """Response from worker_render_snapshot activity."""
+
+    success: bool
+    image_key: str | None = None
+    error: str | None = None
+
+
+class RenderSnapshotRequest(BaseModel):
+    """Request to render a snapshot of selected features."""
+
+    script_path: StrictStr = Field(default="script.py")
+    script_content: StrictStr | None = None
+    bundle_base64: str | None = None
+    target_ids: list[StrictStr] = Field(..., min_length=1)
+    view_matrix: list[list[float]] = Field(..., description="4x4 camera view matrix")
+
+
+class RenderSnapshotResponse(BaseModel):
+    """Response from render snapshot endpoint."""
+
+    success: StrictBool
+    message: StrictStr
+    image_key: StrictStr | None = None  # S3 key
+
+
 class LintRequest(BaseModel):
     """Request to lint Python code."""
 
