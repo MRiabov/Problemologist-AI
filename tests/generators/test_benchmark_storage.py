@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from controller.agent.benchmark.storage import BenchmarkStorage
 from controller.persistence.db import Base
 from controller.persistence.models import BenchmarkAsset as BenchmarkAssetModel
+from shared.simulation.schemas import AssetMetadata
 
 DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -56,7 +57,8 @@ async def test_save_asset_with_variants(db_session, mock_boto3):
         script = "print('hello')"
         mjcf = "<xml></xml>"
         images = [b"image1", b"image2"]
-        metadata = {"difficulty_score": 0.5}
+        metadata = AssetMetadata(theme="test", complexity="low")
+        difficulty_score = 0.5
         random_variants = [uuid.uuid4(), uuid.uuid4()]
 
         asset = await storage.save_asset(
@@ -66,6 +68,7 @@ async def test_save_asset_with_variants(db_session, mock_boto3):
             images=images,
             metadata=metadata,
             db=db_session,
+            difficulty_score=difficulty_score,
             random_variants=random_variants,
         )
 

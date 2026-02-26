@@ -16,7 +16,11 @@ from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import EpisodeStatus, ReviewDecision
-from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
+from shared.simulation.schemas import (
+    AssetMetadata,
+    CustomObjectives,
+    SimulatorBackendType,
+)
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -406,12 +410,41 @@ async def _persist_session_assets(
                 final_state.mjcf_content or "<!-- MJCF content missing in state -->"
             )
 
+            # Convert RandomizationStrategy to AssetMetadata
+            difficulty_score = 0.0
+            metadata = AssetMetadata()
+
+            if final_state.plan:
+                plan = final_state.plan
+                if isinstance(plan, dict):
+                    theme = plan.get("theme", "unknown")
+                    difficulty_score = plan.get("difficulty_score", 0.0)
+                    additional_info = plan
+                else:
+                    theme = plan.theme
+                    difficulty_score = plan.difficulty_score
+                    additional_info = plan.model_dump()
+
+                # Map difficulty to complexity
+                complexity = "medium"
+                if difficulty_score < 0.3:
+                    complexity = "low"
+                elif difficulty_score > 0.7:
+                    complexity = "high"
+
+                metadata = AssetMetadata(
+                    theme=theme,
+                    complexity=complexity,
+                    additional_info=additional_info,
+                )
+
             await storage.save_asset(
                 benchmark_id=session_id,
                 script=final_state.current_script,
                 mjcf=mjcf_content,
                 images=render_data,
-                metadata=final_state.plan.model_dump() if final_state.plan else {},
+                metadata=metadata,
+                difficulty_score=difficulty_score,
                 db=db,
             )
             logger.info("asset_persisted", session_id=session_id)
