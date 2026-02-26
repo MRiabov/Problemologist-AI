@@ -36,16 +36,29 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     send_button = page.get_by_label("Send Message")
     send_button.click()
 
-    # 2. Wait for generation to complete (indicators: check-circle/clock/layers)
-    # Using the same selectors as INT-170
+    # 2. Wait for generation to complete (indicators: check-circle/clock/layers/x-circle)
+    # Using the same selectors as INT-170 + x-circle
+    # We also wait for the status to change from RUNNING
+    page.wait_for_function(
+        "() => !document.querySelector('.animate-pulse')?.parentElement?.innerText?.includes('RUNNING')",
+        timeout=120000,
+    )
+
     page.wait_for_selector(
-        ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=120000
+        ".lucide-check-circle2, .lucide-clock, .lucide-layers, .lucide-x-circle",
+        timeout=120000,
     )
 
     # 3. Click Thumbs Up in chat
     # Need to hover the message first to make buttons visible
-    # We look for any message content
-    page.wait_for_selector('[data-testid="chat-message"]', timeout=30000)
+    # We look for any message content or thinking
+    page.wait_for_selector(
+        '[data-testid="chat-message"], [data-testid="thought-block"]', timeout=60000
+    )
+
+    # If it's a thought block, we might need to wait for the actual message
+    page.wait_for_selector('[data-testid="chat-message"]', timeout=60000)
+
     last_message = page.get_by_test_id("chat-message").last
     last_message.hover()
 

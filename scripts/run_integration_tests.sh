@@ -264,6 +264,7 @@ if [ "$RUN_PLAYWRIGHT" = true ]; then
   PYTHONPATH=. uv run python scripts/generate_openapi.py
   (cd frontend && npm run gen:api)
   echo "VITE_API_URL=http://localhost:18000" > frontend/.env.production
+  echo "VITE_IS_INTEGRATION_TEST=true" >> frontend/.env.production
   (cd frontend && rm -rf dist && npm run build)
   
   # Start serving on port 15173

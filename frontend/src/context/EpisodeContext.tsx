@@ -128,7 +128,6 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
   const startAgent = useCallback(async (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => {
     setRunning(true);
-    const wasCreationMode = isCreationMode;
     const wasBenchmarkCreation = isBenchmarkCreation;
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
@@ -137,7 +136,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       let response;
       const isSolvingBenchmark = metadata && metadata.benchmark_id;
 
-      if ((wasBenchmarkCreation || (wasCreationMode && objectives)) && !isSolvingBenchmark) {
+      if (wasBenchmarkCreation && !isSolvingBenchmark) {
          response = await generateBenchmark(task, objectives);
          // Backend returns { session_id: ... }
          if (response.session_id) {
@@ -228,7 +227,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshEpisodes();
     // Regular polling for episode list updates (e.g. new sessions created elsewhere)
-    const listInterval = setInterval(refreshEpisodes, 10000);
+    const listInterval = setInterval(refreshEpisodes, import.meta.env.VITE_IS_INTEGRATION_TEST === 'true' ? 2000 : 10000);
     return () => clearInterval(listInterval);
   }, [refreshEpisodes]);
 
@@ -382,7 +381,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           console.error("Polling failed", e);
         }
-      }, 10000);
+      }, import.meta.env.VITE_IS_INTEGRATION_TEST === 'true' ? 3000 : 10000);
     }
     return () => clearInterval(interval);
   }, [selectedEpisode?.id, running]);

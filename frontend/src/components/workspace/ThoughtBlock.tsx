@@ -16,6 +16,7 @@ export const ThoughtBlock = memo(({ duration = 0, content, className }: ThoughtB
   return (
     <div className={cn("space-y-1 mb-2", className)}>
       <button 
+        data-testid="thought-block"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 text-[12px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-0.5"
       >

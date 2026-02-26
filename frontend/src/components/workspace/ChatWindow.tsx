@@ -206,6 +206,7 @@ export default function ChatWindow({
 
                             <div className="flex gap-2 w-full mt-2">
                                 <Button 
+                                    data-testid="chat-confirm-button"
                                     className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-[10px] uppercase tracking-widest h-10 shadow-lg shadow-primary/20"
                                     onClick={async () => {
                                         if (!selectedEpisode) return;

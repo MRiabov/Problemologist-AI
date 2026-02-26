@@ -28,7 +28,7 @@ def test_int_172_plan_approval_control_placement(page: Page):
     page.locator("#chat-input").fill(prompt_text)
 
     # Verify controls are hidden/disabled before planner output is ready
-    chat_confirm_button = page.get_by_role("button", name="Confirm & Start")
+    chat_confirm_button = page.get_by_test_id("chat-confirm-button")
     # We will just look for Confirm & Start in chat
     expect(chat_confirm_button).not_to_be_visible()
 
@@ -41,9 +41,9 @@ def test_int_172_plan_approval_control_placement(page: Page):
     page.get_by_label("Send Message").click()
 
     # 2. Wait for the "Execution Plan Ready" card or completion of planning
-    expect(page.get_by_text("Execution Plan Ready", re.IGNORECASE)).to_be_visible(
-        timeout=180000
-    )
+    expect(
+        page.get_by_text(re.compile("Execution Plan Ready", re.IGNORECASE))
+    ).to_be_visible(timeout=180000)
 
     # 3. Assert Approve/disapprove controls are available in chat-bottom
     expect(chat_confirm_button).to_be_visible(timeout=10000)

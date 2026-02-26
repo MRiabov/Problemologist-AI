@@ -65,6 +65,23 @@ export const TraceList = memo(({
                 </div>
               );
           }
+          if (trace.trace_type === TraceType.LOG && trace.content) {
+              const meta = (trace.metadata_vars || {}) as any;
+              if (meta.role === 'user' || trace.content.startsWith('User message:')) {
+                  const displayContent = meta.message || trace.content.replace('User message: ', '');
+                  return (
+                    <div key={trace.id} data-testid="chat-message" className="flex justify-end mb-4">
+                        <div className="max-w-[85%] bg-primary/10 rounded-2xl p-3 shadow-sm border border-primary/20">
+                            <div className="text-[13px] leading-relaxed text-foreground whitespace-pre-wrap">
+                                {displayContent}
+                            </div>
+                        </div>
+                    </div>
+                  );
+              }
+              // Normal log - skip or show small
+              return null;
+          }
           if (trace.trace_type === TraceType.LLM_END && trace.content) {
             const isLastLlmEnd = traces && traces.filter(t => t.trace_type === TraceType.LLM_END).pop()?.id === trace.id;
 

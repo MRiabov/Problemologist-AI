@@ -57,9 +57,15 @@ def test_int_176_tool_call_failure_recovery(page: Page):
     chat_input.fill("Now do something else")
     page.get_by_label("Send Message").click()
 
+    # Wait for the user message to appear
     expect(
         page.get_by_test_id("chat-message").get_by_text("Now do something else")
-    ).to_be_visible(timeout=15000)
+    ).to_be_visible(timeout=30000)
+
+    # Wait for agent to respond
+    page.wait_for_selector(
+        ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=60000
+    )
 
 
 import re

@@ -157,7 +157,11 @@ class MockDSPyLM(dspy.LM):
 
     def _detect_scenario_from_text(self, text: str) -> str | None:
         """Detect scenario ID from prompt text keywords."""
-        for scenario_id in self.scenarios.keys():
+        # Sort by length descending to match most specific first (e.g. INT-177 before INT)
+        sorted_scenarios = sorted(self.scenarios.keys(), key=len, reverse=True)
+        for scenario_id in sorted_scenarios:
+            if scenario_id == "default" or scenario_id == "benchmark":
+                continue
             if scenario_id in text:
                 return scenario_id
         return None
@@ -299,16 +303,29 @@ class MockDSPyLM(dspy.LM):
         expected_fields = expected_fields or []
 
         # WP10: Support explicit tool calls in scenarios
+        # We use call_count to track which tool we are on
         count = self._call_counts.get(node_key, 0)
-        tool_calls = node_data.get("tool_calls")
-        if not finished and tool_calls and count <= len(tool_calls):
-            tc = tool_calls[count - 1]
-            thought = tc.get("thought", thought)
-            tool_name = tc.get("name")
-            tool_args = tc.get("input", {})
-        else:
-            tool_name = None
-            tool_args = {}
+        tool_calls = node_data.get("tool_calls", [])
+
+        tool_name = None
+        tool_args = {}
+
+        if not finished:
+            if count <= len(tool_calls) and len(tool_calls) > 0:
+                # Still have explicit tools to call
+                tc = tool_calls[count - 1]
+                thought = tc.get("thought", thought)
+                tool_name = tc.get("name")
+                tool_args = tc.get("input", {})
+            else:
+                # Explicit tools exhausted, use generated_code if present
+                code = node_data.get("generated_code")
+                if code:
+                    tool_name = "execute_command"
+                    tool_args = {"command": code}
+                else:
+                    tool_name = "finish"
+                    tool_args = {}
 
         # Base schema for DSPy JSONAdapter
         resp = {
@@ -325,15 +342,9 @@ class MockDSPyLM(dspy.LM):
                 resp["next_tool_name"] = tool_name
                 resp["next_tool_args"] = tool_args
             else:
-                code = node_data.get("generated_code")
-                if code and not finished:
-                    resp["next_tool_name"] = "execute_command"
-                    # The execute_command tool implementation actually expects Python code
-                    # (calls worker_client.execute_python)
-                    resp["next_tool_args"] = {"command": code}
-                else:
-                    resp["next_tool_name"] = "finish"
-                    resp["next_tool_args"] = {}
+                # If finished or no tools left, finish
+                resp["next_tool_name"] = "finish"
+                resp["next_tool_args"] = {}
 
         # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses
