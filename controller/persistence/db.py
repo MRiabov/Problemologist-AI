@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 # in highly concurrent environments like integration tests.
 _engine_cache: dict[int, Any] = {}
 _sessionmaker_cache: dict[int, Any] = {}
-_cache_lock = threading.Lock()
+_cache_lock = threading.RLock()
 
 
 class Base(DeclarativeBase):
@@ -37,6 +37,7 @@ def get_engine():
             return _engine_cache[loop_id]
 
         database_url = settings.database_url
+        logger.info("creating_new_engine", loop_id=loop_id, url=database_url)
         engine = create_async_engine(
             database_url,
             echo=False,
@@ -62,6 +63,7 @@ def get_sessionmaker():
         if loop_id in _sessionmaker_cache:
             return _sessionmaker_cache[loop_id]
 
+        logger.info("creating_new_sessionmaker", loop_id=loop_id)
         engine = get_engine()
         sm = async_sessionmaker(
             engine,

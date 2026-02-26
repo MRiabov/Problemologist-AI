@@ -162,13 +162,26 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
     def record_tool_start_sync(self, tool_name: str, input_data: str) -> int:
         """Synchronous wrapper for record_tool_start."""
         try:
-            loop = asyncio.new_event_loop()
             try:
-                return loop.run_until_complete(
-                    self.record_tool_start(tool_name, input_data)
-                )
-            finally:
-                loop.close()
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # We are in a thread, but there is a running loop.
+                # However, we can't easily run_until_complete if we are in the main thread's loop.
+                # But here we are likely in a dspy thread.
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        lambda: asyncio.run(
+                            self.record_tool_start(tool_name, input_data)
+                        )
+                    )
+                    return future.result()
+            else:
+                return asyncio.run(self.record_tool_start(tool_name, input_data))
         except Exception as e:
             logger.warning("database_tool_start_sync_failed", error=str(e))
             return 0
@@ -180,13 +193,23 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         if not trace_id:
             return
         try:
-            loop = asyncio.new_event_loop()
             try:
-                loop.run_until_complete(
-                    self.record_tool_end(trace_id, output_data, is_error)
-                )
-            finally:
-                loop.close()
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        lambda: asyncio.run(
+                            self.record_tool_end(trace_id, output_data, is_error)
+                        )
+                    )
+                    future.result()
+            else:
+                asyncio.run(self.record_tool_end(trace_id, output_data, is_error))
         except Exception as e:
             logger.warning("database_tool_end_sync_failed", error=str(e))
 
