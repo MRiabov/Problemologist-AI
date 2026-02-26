@@ -53,8 +53,17 @@ class MockDSPyLM(dspy.LM):
         full_text = self._get_full_text(prompt, messages)
         logger.info("mock_dspy_full_text", text=full_text)
 
-        # 1. Detect Scenario from session_id
-        scenario_id = self._get_scenario_id()
+        # 1. Detect Scenario (text-based detection prioritized over session_id)
+        scenario_id = self._detect_scenario_from_text(full_text)
+
+        if not scenario_id:
+            scenario_id = self._get_scenario_id()
+            if scenario_id == "benchmark" or scenario_id == "default":
+                # Double check text if session_id is generic
+                detected = self._detect_scenario_from_text(full_text)
+                if detected:
+                    scenario_id = detected
+
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
 
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
@@ -145,6 +154,13 @@ class MockDSPyLM(dspy.LM):
             for msg in messages:
                 text += str(msg.get("content", ""))
         return text
+
+    def _detect_scenario_from_text(self, text: str) -> str | None:
+        """Detect scenario ID from prompt text keywords."""
+        for scenario_id in self.scenarios.keys():
+            if scenario_id in text:
+                return scenario_id
+        return None
 
     def _get_scenario_id(self) -> str:
         """Extract scenario ID from session_id, handling UUIDs and test prefixes."""
@@ -282,6 +298,18 @@ class MockDSPyLM(dspy.LM):
         reasoning = node_data.get("reasoning", "Verified all requirements.")
         expected_fields = expected_fields or []
 
+        # WP10: Support explicit tool calls in scenarios
+        count = self._call_counts.get(node_key, 0)
+        tool_calls = node_data.get("tool_calls")
+        if not finished and tool_calls and count <= len(tool_calls):
+            tc = tool_calls[count - 1]
+            thought = tc.get("thought", thought)
+            tool_name = tc.get("name")
+            tool_args = tc.get("input", {})
+        else:
+            tool_name = None
+            tool_args = {}
+
         # Base schema for DSPy JSONAdapter
         resp = {
             "thought": thought,
@@ -293,15 +321,19 @@ class MockDSPyLM(dspy.LM):
         # ReAct compatibility - handle intermediate tool calling phase
         if "next_tool_name" in expected_fields:
             resp["next_thought"] = thought
-            code = node_data.get("generated_code")
-            if code and not finished:
-                resp["next_tool_name"] = "execute_command"
-                # The execute_command tool implementation actually expects Python code
-                # (calls worker_client.execute_python)
-                resp["next_tool_args"] = {"command": code}
+            if tool_name:
+                resp["next_tool_name"] = tool_name
+                resp["next_tool_args"] = tool_args
             else:
-                resp["next_tool_name"] = "finish"
-                resp["next_tool_args"] = {}
+                code = node_data.get("generated_code")
+                if code and not finished:
+                    resp["next_tool_name"] = "execute_command"
+                    # The execute_command tool implementation actually expects Python code
+                    # (calls worker_client.execute_python)
+                    resp["next_tool_args"] = {"command": code}
+                else:
+                    resp["next_tool_name"] = "finish"
+                    resp["next_tool_args"] = {}
 
         # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses

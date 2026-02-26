@@ -55,11 +55,21 @@ export const TraceList = memo(({
                 />
               );
           }
+          if (trace.trace_type === TraceType.ERROR) {
+              return (
+                <div key={trace.id} className="flex items-start gap-2 p-3 bg-red-500/10 rounded-lg border border-red-500/20 my-2">
+                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                    <div className="text-[11px] text-red-400 font-mono whitespace-pre-wrap">
+                        {trace.content || "An error occurred."}
+                    </div>
+                </div>
+              );
+          }
           if (trace.trace_type === TraceType.LLM_END && trace.content) {
             const isLastLlmEnd = traces && traces.filter(t => t.trace_type === TraceType.LLM_END).pop()?.id === trace.id;
 
             return (
-                <div key={trace.id} className="relative group/msg">
+                <div key={trace.id} data-testid="chat-message" className="relative group/msg">
                     <HighlightedContent
                       content={trace.content}
                       language="markdown"
@@ -72,6 +82,7 @@ export const TraceList = memo(({
                         {isLastLlmEnd && !isRunning ? (
                             <div className="flex items-center gap-1">
                                 <button
+                                    data-testid="chat-thumbs-up"
                                     onClick={() => onShowFeedback(trace.id, 1)}
                                     className="p-1 hover:bg-muted rounded-md text-muted-foreground hover:text-green-500 transition-colors"
                                     title="Thumbs Up"
@@ -79,6 +90,7 @@ export const TraceList = memo(({
                                     <ThumbsUp className="h-3.5 w-3.5" />
                                 </button>
                                 <button
+                                    data-testid="chat-thumbs-down"
                                     onClick={() => onShowFeedback(trace.id, 0)}
                                     className="p-1 hover:bg-muted rounded-md text-muted-foreground hover:text-red-500 transition-colors"
                                     title="Thumbs Down"

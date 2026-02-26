@@ -2067,6 +2067,17 @@
             ],
             "title": "Validation Logs"
           },
+          "last_trace_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Trace Id"
+          },
           "traces": {
             "anyOf": [
               {
@@ -2212,6 +2223,17 @@
               }
             ],
             "title": "Validation Logs"
+          },
+          "last_trace_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Trace Id"
           },
           "traces": {
             "items": {

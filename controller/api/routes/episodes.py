@@ -317,6 +317,7 @@ class EpisodeResponse(BaseModel):
     journal: str | None = None
     plan: str | None = None
     validation_logs: list[str] | None = None
+    last_trace_id: int | None = None
     traces: list[TraceResponse] | None = None
     assets: list[AssetResponse] | None = None
 
@@ -330,6 +331,8 @@ async def list_episodes(
     db: AsyncSession = Depends(get_db),
 ):
     """List all agent episodes."""
+    from sqlalchemy import func
+
     try:
         result = await db.execute(
             select(Episode)
@@ -338,6 +341,18 @@ async def list_episodes(
             .offset(offset)
         )
         episodes = result.scalars().all()
+
+        # Batch fetch last trace IDs for the UI feedback system
+        ep_ids = [ep.id for ep in episodes]
+        last_trace_map = {}
+        if ep_ids:
+            trace_result = await db.execute(
+                select(Trace.episode_id, func.max(Trace.id))
+                .where(Trace.episode_id.in_(ep_ids))
+                .group_by(Trace.episode_id)
+            )
+            last_trace_map = dict(trace_result.all())
+
         # Explicitly convert to EpisodeResponse to avoid lazy-loading traces/assets during serialization
         return [
             EpisodeResponse(
@@ -353,8 +368,9 @@ async def list_episodes(
                 journal=ep.journal,
                 plan=ep.plan,
                 validation_logs=ep.validation_logs,
-                traces=None,
-                assets=None,
+                last_trace_id=last_trace_map.get(ep.id),
+                traces=[],
+                assets=[],
             )
             for ep in episodes
         ]

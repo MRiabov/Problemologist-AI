@@ -86,7 +86,9 @@ class BaseNode:
     def __init__(self, context: SharedNodeContext):
         self.ctx = context
 
-    def _get_tool_functions(self, tool_factory: Callable) -> dict[str, Callable]:
+    def _get_tool_functions(
+        self, tool_factory: Callable, db_callback: DatabaseCallbackHandler | None = None
+    ) -> dict[str, Callable]:
         """Collects tool functions for DSPy compatibility."""
         tools = tool_factory(self.ctx.fs, self.ctx.session_id)
         tool_fns = {}
@@ -94,26 +96,90 @@ class BaseNode:
             # Now tools are already raw functions or wrapped in search_cots_catalog
             name = getattr(t, "name", t.__name__ if hasattr(t, "__name__") else str(t))
 
-            # WP11: ReAct (sync) needs sync functions. Wrap async tools.
-            if asyncio.iscoroutinefunction(t):
-                import functools
+            import functools
+            import json
 
-                def make_sync(func):
-                    @functools.wraps(func)
-                    def sync_wrapper(*args, **kwargs):
-                        new_loop = asyncio.new_event_loop()
+            def make_traced(func, tool_name):
+                @functools.wraps(func)
+                def sync_wrapper(*args, **kwargs):
+                    # WP10: Explicitly record tool start
+                    trace_id = 0
+                    if db_callback:
                         try:
-                            return new_loop.run_until_complete(func(*args, **kwargs))
-                        finally:
-                            new_loop.close()
+                            # ReAct often passes complex objects, try to serialize or stringify
+                            input_dict = {}
+                            if args:
+                                input_dict["args"] = [str(a) for a in args]
+                            if kwargs:
+                                input_dict["kwargs"] = {
+                                    k: str(v) for k, v in kwargs.items()
+                                }
+                            input_str = json.dumps(input_dict)
+                        except Exception:
+                            input_str = str(args) + " " + str(kwargs)
 
-                    return sync_wrapper
+                        try:
+                            # We are in to_thread, so we can use a new loop for async DB calls
+                            loop = asyncio.new_event_loop()
+                            try:
+                                trace_id = loop.run_until_complete(
+                                    db_callback.record_tool_start(tool_name, input_str)
+                                )
+                            finally:
+                                loop.close()
+                        except Exception as e:
+                            logger.warning("tool_start_trace_failed", error=str(e))
 
-                wrapped = make_sync(t)
-                wrapped.__name__ = name
-                tool_fns[name] = wrapped
-            else:
-                tool_fns[name] = t
+                    try:
+                        if asyncio.iscoroutinefunction(func):
+                            new_loop = asyncio.new_event_loop()
+                            try:
+                                result = new_loop.run_until_complete(
+                                    func(*args, **kwargs)
+                                )
+                            finally:
+                                new_loop.close()
+                        else:
+                            result = func(*args, **kwargs)
+
+                        # WP10: Explicitly record tool success
+                        if db_callback and trace_id:
+                            try:
+                                loop = asyncio.new_event_loop()
+                                try:
+                                    loop.run_until_complete(
+                                        db_callback.record_tool_end(
+                                            trace_id, str(result)
+                                        )
+                                    )
+                                finally:
+                                    loop.close()
+                            except Exception:
+                                pass
+
+                        return result
+                    except Exception as e:
+                        # WP10: Explicitly record tool error
+                        if db_callback and trace_id:
+                            try:
+                                loop = asyncio.new_event_loop()
+                                try:
+                                    loop.run_until_complete(
+                                        db_callback.record_tool_end(
+                                            trace_id, str(e), is_error=True
+                                        )
+                                    )
+                                finally:
+                                    loop.close()
+                            except Exception:
+                                pass
+                        raise e
+
+                return sync_wrapper
+
+            wrapped = make_traced(t, name)
+            wrapped.__name__ = name
+            tool_fns[name] = wrapped
         return tool_fns
 
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
@@ -228,10 +294,16 @@ class BaseNode:
         from controller.agent.dspy_utils import WorkerInterpreter
         from worker_heavy.utils.file_validation import validate_node_output
 
+        # Prepare explicit DB logger for UI events
+        db_callback = None
+        episode_id = getattr(state, "episode_id", None)
+        if episode_id and str(episode_id).strip():
+            db_callback = DatabaseCallbackHandler(episode_id=episode_id)
+
         interpreter = WorkerInterpreter(
             worker_client=self.ctx.worker_client, session_id=self.ctx.session_id
         )
-        tool_fns = self._get_tool_functions(tool_factory)
+        tool_fns = self._get_tool_functions(tool_factory, db_callback=db_callback)
 
         # WP07: Inject system instructions from prompts.yaml into signature
         # Template names are now standardized to match node_type or explicit mappings
@@ -252,12 +324,6 @@ class BaseNode:
         journal_entry = ""
         prediction = None
         artifacts = {}
-
-        # Prepare explicit DB logger for UI events
-        db_callback = None
-        episode_id = getattr(state, "episode_id", None)
-        if episode_id and str(episode_id).strip():
-            db_callback = DatabaseCallbackHandler(episode_id=episode_id)
 
         dspy_timeout = 300.0 if settings.is_integration_test else 300.0
 

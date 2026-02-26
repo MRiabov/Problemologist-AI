@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { 
   VscCode
@@ -44,6 +44,7 @@ export default function ArtifactView({
 }: ArtifactViewProps) {
   const { selectedEpisode, activeArtifactId, setActiveArtifactId, addToContext, selectedContext } = useEpisodes();
   const { theme } = useTheme();
+  const [inlineContextLabel, setInlineContextLabel] = useState<string | null>(null);
 
   const getAssetUrl = (assetPath: string | undefined) => {
     if (!assetPath || !selectedEpisode) return null;
@@ -227,9 +228,32 @@ export default function ArtifactView({
     }
 
     const language = detectLanguage(activeAsset.name, activeAsset.asset_type === AssetType.MJCF ? 'json' : (activeAsset.asset_type || 'text'));
+    const addCodeLineContext = (assetPath: string, lineNumber: number) => {
+      const label = `${assetPath.split('/').pop()}:${lineNumber}`;
+      setInlineContextLabel(label);
+      addToContext({
+        id: `code-${assetPath}-${lineNumber}`,
+        type: 'code',
+        label,
+        metadata: {
+          path: assetPath,
+          line: lineNumber
+        }
+      });
+    };
 
     return (
         <div className="relative h-full overflow-hidden flex flex-col">
+            {inlineContextLabel && (
+                <div className="px-4 py-2 border-b bg-primary/5">
+                    <div
+                        data-testid="context-card"
+                        className="inline-flex items-center gap-2 px-2 py-1 bg-background border border-border/50 rounded-md shadow-sm"
+                    >
+                        <span className="text-[11px] font-medium">{inlineContextLabel}</span>
+                    </div>
+                </div>
+            )}
             <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">{activeAsset.name}</span>
@@ -275,18 +299,9 @@ export default function ArtifactView({
                                 borderLeft: isHighlighted ? '2px solid #38bdf8' : '2px solid transparent'
                             },
                             "data-testid": `code-line-${lineNumber}`,
+                            onMouseDown: () => addCodeLineContext(assetPath, lineNumber),
                             onClick: () => {
-                                if (activeAsset) {
-                                    addToContext({
-                                        id: `code-${assetPath}-${lineNumber}`,
-                                        type: 'code',
-                                        label: `${assetPath.split('/').pop()}:${lineNumber}`,
-                                        metadata: {
-                                            path: assetPath,
-                                            line: lineNumber
-                                        }
-                                    });
-                                }
+                                addCodeLineContext(assetPath, lineNumber);
                             }
                         };
                     }}

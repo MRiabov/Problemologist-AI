@@ -80,6 +80,7 @@ class EpisodeResponse(BaseModel):
     journal: str | None = None
     plan: str | None = None
     validation_logs: list[str] | None = None
+    last_trace_id: int | None = None
     traces: list[TraceResponse] = []
     assets: list[AssetResponse] = []
 
@@ -125,6 +126,7 @@ class EpisodeListItem(BaseModel):
     journal: str | None = None
     plan: str | None = None
     todo_list: dict | None = None
+    last_trace_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
