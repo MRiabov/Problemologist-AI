@@ -132,17 +132,14 @@ async def test_int_014_cots_propagation():
         run_data = AgentRunResponse.model_validate(run_resp.json())
         episode_id = run_data.episode_id
 
-        # Wait for agent to reach EXECUTING or COMPLETED status
+        # Wait for agent to reach COMPLETED status
         max_attempts = 60
         for _ in range(max_attempts):
             await asyncio.sleep(5.0)
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             ep_data = EpisodeResponse.model_validate(status_resp.json())
-            if ep_data.status in [EpisodeStatus.RUNNING, EpisodeStatus.COMPLETED]:
-                # status_resp.json()["status"] might be lowercase in some contexts but EpisodeStatus enum handles it if model_validate is used correctly
-                # and if DB stores it as lowercase but enum is Uppercase, pydantic might need Config
-                if str(ep_data.status).upper() in ["RUNNING", "COMPLETED"]:
-                    break
+            if ep_data.status == EpisodeStatus.COMPLETED:
+                break
         else:
             pytest.fail("Agent did not complete planning in time")
 
