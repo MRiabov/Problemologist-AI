@@ -8,8 +8,8 @@ from playwright.sync_api import Page, expect
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 
-# Possible worker URLs to check against
-FORBIDDEN_WORKER_PORTS = ["8000", "8001", "8002"]
+# Possible worker URLs to check against (including integration test ports)
+FORBIDDEN_WORKER_PORTS = ["8000", "8001", "8002", "18001", "18002"]
 
 
 @pytest.mark.integration_frontend
