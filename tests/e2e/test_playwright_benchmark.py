@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -8,9 +10,9 @@ def test_benchmark_creation_flow(page: Page):
     page.goto("http://localhost:15173", timeout=60000)
 
     # 2. Navigate to the Benchmark page (using regex for flexibility with sidebar state)
-    benchmark_link = page.get_by_text(r"/^Benchmark$/i", exact=False).first
+    benchmark_link = page.get_by_role("link", name=re.compile(r"Benchmark", re.IGNORECASE))
     if not benchmark_link.is_visible():
-        benchmark_link = page.get_by_role("link", name=r"/Benchmark/i")
+        benchmark_link = page.get_by_text("Benchmark").first
 
     expect(benchmark_link).to_be_visible(timeout=30000)
     benchmark_link.click()
@@ -29,7 +31,7 @@ def test_benchmark_creation_flow(page: Page):
     )
     prompt_input = page.locator("#chat-input")
     expect(prompt_input).to_be_visible(timeout=30000)
-    prompt_input.press_sequentially(prompt_text)
+    prompt_input.fill(prompt_text)
 
     # 5. Submit the prompt
     # Using explicit click on Send Message button for reliability
@@ -45,23 +47,21 @@ def test_benchmark_creation_flow(page: Page):
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
 
     # 8. Select plan.md in Resources sidebar
-    # The artifact sidebar has a "Resources" header
-    sidebar = page.locator("div").filter(has_text="Resources").last
-    plan_button = sidebar.get_by_role("button", name="plan.md")
+    plan_button = page.get_by_role("button", name="plan.md")
     expect(plan_button).to_be_visible(timeout=30000)
     plan_button.click()
 
-    # 8. Verify the plan is "non-template"
+    # 9. Verify the plan is "non-template"
     # The content is rendered in a SyntaxHighlighter viewport
     content_area = page.locator(".flex-1.min-w-0.bg-background\\/50")
-    expect(content_area.get_by_text("steel ball", ignore_case=True)).to_be_visible(
+    expect(content_area.get_by_text(re.compile("steel ball", re.IGNORECASE))).to_be_visible(
         timeout=30000
     )
-    expect(content_area.get_by_text("40mm", ignore_case=True)).to_be_visible(
+    expect(content_area.get_by_text(re.compile("40mm", re.IGNORECASE))).to_be_visible(
         timeout=30000
     )
 
     # Final check: ensure "goal" is mentioned
-    expect(content_area.get_by_text("goal", ignore_case=True)).to_be_visible(
+    expect(content_area.get_by_text(re.compile("goal", re.IGNORECASE))).to_be_visible(
         timeout=30000
     )
