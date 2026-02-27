@@ -52,6 +52,46 @@ class FeedbackRequest(BaseModel):
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
 
+@router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
+async def report_trace_feedback(
+    episode_id: uuid.UUID,
+    trace_id: int,
+    feedback: FeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Report feedback for a specific trace to Langfuse."""
+    logger.info("searching_for_trace", episode_id=str(episode_id), trace_id=trace_id)
+    result = await db.execute(
+        select(Trace).where(Trace.id == trace_id, Trace.episode_id == episode_id)
+    )
+    trace = result.scalar_one_or_none()
+
+    if not trace:
+        logger.warning("trace_not_found", episode_id=str(episode_id), trace_id=trace_id)
+        raise HTTPException(status_code=404, detail="Trace not found")
+
+    # Langfuse update (best effort)
+    if trace.langfuse_trace_id:
+        try:
+            langfuse = get_langfuse_client()
+            if langfuse:
+                langfuse.create_score(
+                    trace_id=trace.langfuse_trace_id,
+                    name="user-feedback",
+                    value=feedback.score,
+                    comment=feedback.comment,
+                )
+        except Exception as e:
+            logger.warning("langfuse_feedback_failed", error=str(e))
+
+    # Store locally
+    trace.feedback_score = feedback.score
+    trace.feedback_comment = feedback.comment
+    await db.commit()
+
+    return {"status": ResponseStatus.ACCEPTED}
+
+
 @router.get("/{episode_id}/assets/{path:path}")
 async def get_episode_asset(
     episode_id: uuid.UUID,
@@ -102,44 +142,6 @@ async def get_episode_asset(
             raise HTTPException(
                 status_code=500, detail=f"Failed to proxy asset: {e!s}"
             ) from e
-
-
-@router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
-async def report_trace_feedback(
-    episode_id: uuid.UUID,
-    trace_id: Annotated[int, Path(le=2147483647)],  # Postgres Integer max
-    feedback: FeedbackRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    """Report feedback for a specific trace to Langfuse."""
-    result = await db.execute(
-        select(Trace).where(Trace.id == trace_id, Trace.episode_id == episode_id)
-    )
-    trace = result.scalar_one_or_none()
-
-    if not trace:
-        raise HTTPException(status_code=404, detail="Trace not found")
-
-    # Langfuse update (best effort)
-    if trace.langfuse_trace_id:
-        try:
-            langfuse = get_langfuse_client()
-            if langfuse:
-                langfuse.create_score(
-                    trace_id=trace.langfuse_trace_id,
-                    name="user-feedback",
-                    value=feedback.score,
-                    comment=feedback.comment,
-                )
-        except Exception as e:
-            logger.warning("langfuse_feedback_failed", error=str(e))
-
-    # Store locally
-    trace.feedback_score = feedback.score
-    trace.feedback_comment = feedback.comment
-    await db.commit()
-
-    return {"status": ResponseStatus.ACCEPTED}
 
 
 class ReviewRequest(BaseModel):

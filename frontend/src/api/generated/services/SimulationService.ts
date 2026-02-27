@@ -16,12 +16,12 @@ export class SimulationService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static runSimulationSimulationRunPost(
+    public static runSimulationApiSimulationRunPost(
         requestBody: RunSimulationRequest,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/simulation/run',
+            url: '/api/simulation/run',
             body: requestBody,
             mediaType: 'application/json',
             errors: {

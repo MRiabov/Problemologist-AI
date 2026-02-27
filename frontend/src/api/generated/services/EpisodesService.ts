@@ -11,30 +11,6 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class EpisodesService {
     /**
-     * Get Episode Asset
-     * Proxy asset requests to the worker.
-     * @param episodeId
-     * @param path
-     * @returns any Successful Response
-     * @throws ApiError
-     */
-    public static getEpisodeAssetEpisodesEpisodeIdAssetsPathGet(
-        episodeId: string,
-        path: string,
-    ): CancelablePromise<any> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/episodes/{episode_id}/assets/{path}',
-            path: {
-                'episode_id': episodeId,
-                'path': path,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
      * Report Trace Feedback
      * Report feedback for a specific trace to Langfuse.
      * @param episodeId
@@ -43,20 +19,44 @@ export class EpisodesService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static reportTraceFeedbackEpisodesEpisodeIdTracesTraceIdFeedbackPost(
+    public static reportTraceFeedbackApiEpisodesEpisodeIdTracesTraceIdFeedbackPost(
         episodeId: string,
         traceId: number,
         requestBody: FeedbackRequest,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/episodes/{episode_id}/traces/{trace_id}/feedback',
+            url: '/api/episodes/{episode_id}/traces/{trace_id}/feedback',
             path: {
                 'episode_id': episodeId,
                 'trace_id': traceId,
             },
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Episode Asset
+     * Proxy asset requests to the worker.
+     * @param episodeId
+     * @param path
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeAssetApiEpisodesEpisodeIdAssetsPathGet(
+        episodeId: string,
+        path: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/episodes/{episode_id}/assets/{path}',
+            path: {
+                'episode_id': episodeId,
+                'path': path,
+            },
             errors: {
                 422: `Validation Error`,
             },
@@ -70,13 +70,13 @@ export class EpisodesService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static reviewEpisodeEpisodesEpisodeIdReviewPost(
+    public static reviewEpisodeApiEpisodesEpisodeIdReviewPost(
         episodeId: string,
         requestBody: ReviewRequest,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/episodes/{episode_id}/review',
+            url: '/api/episodes/{episode_id}/review',
             path: {
                 'episode_id': episodeId,
             },
@@ -95,13 +95,13 @@ export class EpisodesService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static continueEpisodeEpisodesEpisodeIdMessagesPost(
+    public static continueEpisodeApiEpisodesEpisodeIdMessagesPost(
         episodeId: string,
         requestBody: MessageRequest,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/episodes/{episode_id}/messages',
+            url: '/api/episodes/{episode_id}/messages',
             path: {
                 'episode_id': episodeId,
             },
@@ -119,12 +119,12 @@ export class EpisodesService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static getEpisodeSchematicEpisodesEpisodeIdElectronicsSchematicGet(
+    public static getEpisodeSchematicApiEpisodesEpisodeIdElectronicsSchematicGet(
         episodeId: string,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/episodes/{episode_id}/electronics/schematic',
+            url: '/api/episodes/{episode_id}/electronics/schematic',
             path: {
                 'episode_id': episodeId,
             },
@@ -141,13 +141,13 @@ export class EpisodesService {
      * @returns controller__api__routes__episodes__EpisodeResponse Successful Response
      * @throws ApiError
      */
-    public static listEpisodesEpisodesGet(
+    public static listEpisodesApiEpisodesGet(
         limit: number = 100,
         offset?: number,
     ): CancelablePromise<Array<controller__api__routes__episodes__EpisodeResponse>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/episodes/',
+            url: '/api/episodes/',
             query: {
                 'limit': limit,
                 'offset': offset,
@@ -164,12 +164,12 @@ export class EpisodesService {
      * @returns controller__api__routes__episodes__EpisodeResponse Successful Response
      * @throws ApiError
      */
-    public static getEpisodeEpisodesEpisodeIdGet(
+    public static getEpisodeApiEpisodesEpisodeIdGet(
         episodeId: string,
     ): CancelablePromise<controller__api__routes__episodes__EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/episodes/{episode_id}',
+            url: '/api/episodes/{episode_id}',
             path: {
                 'episode_id': episodeId,
             },
@@ -185,12 +185,12 @@ export class EpisodesService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static deleteEpisodeEpisodesEpisodeIdDelete(
+    public static deleteEpisodeApiEpisodesEpisodeIdDelete(
         episodeId: string,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/episodes/{episode_id}',
+            url: '/api/episodes/{episode_id}',
             path: {
                 'episode_id': episodeId,
             },
@@ -206,12 +206,12 @@ export class EpisodesService {
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static interruptEpisodeEpisodesEpisodeIdInterruptPost(
+    public static interruptEpisodeApiEpisodesEpisodeIdInterruptPost(
         episodeId: string,
     ): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/episodes/{episode_id}/interrupt',
+            url: '/api/episodes/{episode_id}/interrupt',
             path: {
                 'episode_id': episodeId,
             },
