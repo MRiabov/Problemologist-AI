@@ -30,13 +30,15 @@ export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: Fe
     const handleSubmit = async () => {
         setIsSubmitting(true);
         setError(null);
+        console.log("Submitting feedback for episode:", episodeId, "trace:", traceId, "score:", score);
         try {
             const combinedComment = topic ? `[${topic}] ${comment}` : comment;
             await submitTraceFeedback(episodeId, traceId, score, combinedComment);
+            console.log("Feedback submitted successfully");
             setSubmitted(true);
             setTimeout(() => {
                 if (onClose) onClose();
-            }, 2000);
+            }, 5000);
         } catch (e) {
             console.error("Failed to submit feedback", e);
             setError("Failed to submit feedback. Please try again.");
@@ -47,10 +49,16 @@ export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: Fe
 
     if (submitted) {
         return (
-            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex flex-col items-center justify-center gap-2 animate-in fade-in zoom-in-95">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-                <span className="text-xs font-bold text-green-500 uppercase tracking-widest">Feedback Received</span>
-                <p className="text-[10px] text-green-500/70 text-center">Thank you for helping us improve our engineers.</p>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="feedback-success">
+                <div className="bg-background border border-border shadow-2xl rounded-2xl p-8 max-w-sm w-full flex flex-col items-center justify-center gap-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <CheckCircle className="h-6 w-6 text-green-500" />
+                    </div>
+                    <div className="text-center space-y-1">
+                        <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Feedback Received</h3>
+                        <p className="text-xs text-muted-foreground">Thank you for helping us improve.</p>
+                    </div>
+                </div>
             </div>
         );
     }

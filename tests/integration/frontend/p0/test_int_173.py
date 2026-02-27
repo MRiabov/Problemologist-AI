@@ -38,6 +38,7 @@ def test_int_173_exact_pointing_payload(page: Page):
     # Wait for the model viewer to load and have assets
     # E.g. waiting for no-assets-overlay to NOT be visible or waiting for a model to load
     # Let's just wait a bit or wait for canvas
+    page.wait_for_selector("canvas", state="visible", timeout=60000)
     canvas = page.locator("canvas").first
     expect(canvas).to_be_visible(timeout=30000)
 
