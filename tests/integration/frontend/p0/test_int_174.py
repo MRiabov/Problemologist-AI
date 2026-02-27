@@ -43,6 +43,7 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
 
     # Wait for the model viewer to load
+    page.wait_for_selector("canvas", state="visible", timeout=60000)
     canvas = page.locator("canvas").first
     expect(canvas).to_be_visible(timeout=30000)
 

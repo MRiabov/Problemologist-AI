@@ -100,13 +100,13 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     for attempt in range(5):
         with httpx.Client() as client:
             # Get all episodes
-            resp = client.get(f"{CONTROLLER_URL}/episodes/")
+            resp = client.get(f"{CONTROLLER_URL}/api/episodes/")
             assert resp.status_code == 200
             episodes = TypeAdapter(list[EpisodeListItem]).validate_python(resp.json())
 
             # The most recent episode should be ours
             for ep in episodes[:5]:  # Check first 5 episodes
-                resp_ep = client.get(f"{CONTROLLER_URL}/episodes/{ep.id}")
+                resp_ep = client.get(f"{CONTROLLER_URL}/api/episodes/{ep.id}")
                 if resp_ep.status_code != 200:
                     continue
 

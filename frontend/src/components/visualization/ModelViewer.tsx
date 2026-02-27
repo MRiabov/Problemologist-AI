@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState, Suspense } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center, Html } from '@react-three/drei'
 import * as THREE from 'three'
@@ -370,32 +370,34 @@ export default function ModelViewer({
             <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
             <pointLight position={[-10, -10, -10]} intensity={0.5} />
             
-            {urls.length > 0 ? (
-                urls.map(url => (
-                    <GlbModel 
-                        key={url} 
-                        url={url} 
-                        hiddenParts={hiddenParts} 
-                        selectionMode={selectionMode}
-                        isElectronicsView={isElectronicsView}
-                        onStructureParsed={onTopologyChange}
-                        onSelect={(name, level, metadata) => {
-                            addToContext({
-                                id: `cad-${name}`,
-                                type: 'cad',
-                                label: name,
-                                metadata: { 
-                                    part: name,
-                                    level: level,
-                                    ...metadata
-                                }
-                            });
-                        }}
-                    />
-                ))
-            ) : (
-                <PlaceholderModel />
-            )}
+            <Suspense fallback={null}>
+                {urls.length > 0 ? (
+                    urls.map(url => (
+                        <GlbModel 
+                            key={url} 
+                            url={url} 
+                            hiddenParts={hiddenParts} 
+                            selectionMode={selectionMode}
+                            isElectronicsView={isElectronicsView}
+                            onStructureParsed={onTopologyChange}
+                            onSelect={(name, level, metadata) => {
+                                addToContext({
+                                    id: `cad-${name}`,
+                                    type: 'cad',
+                                    label: name,
+                                    metadata: { 
+                                        part: name,
+                                        level: level,
+                                        ...metadata
+                                    }
+                                });
+                            }}
+                        />
+                    ))
+                ) : (
+                    <PlaceholderModel />
+                )}
+            </Suspense>
             
             {/* Rebuild Prompt Overlay */}
             {urls.length === 0 && onRebuildModel && (
