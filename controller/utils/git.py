@@ -96,6 +96,13 @@ class GitManager:
         """Resolve git conflicts using LLM."""
         unmerged = self.repo.git.diff("--name-only", "--diff-filter=U").splitlines()
 
+        def read_local_file(path: str) -> str:
+            return Path(path).read_text()
+
+        def write_local_file(path: str, content: str) -> str:
+            Path(path).write_text(content)
+            return f"Wrote to {path}"
+
         for file_path in unmerged:
             full_path = self.repo_path / file_path
             if not full_path.exists():
@@ -108,8 +115,8 @@ class GitManager:
 
             with dspy.settings.context(lm=lm):
                 resolver = dspy.ReAct(
-                    GitResolver, tools=[]
-                )  # FIXME should have all engineering tools. Else how would it edit?
+                    GitResolver, tools=[read_local_file, write_local_file]
+                )
                 prediction = resolver(conflict_content=content)
                 resolved_content = prediction.resolved_content
 
