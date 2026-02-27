@@ -54,16 +54,17 @@ class MockDSPyLM(dspy.LM):
         full_text = self._get_full_text(prompt, messages)
         logger.info("mock_dspy_full_text", text=full_text)
 
-        # 1. Detect Scenario (text-based detection prioritized over session_id)
-        scenario_id = self._detect_scenario_from_text(full_text)
+        # 1. Detect Scenario
+        scenario_id = self._get_scenario_id()
+        detected = self._detect_scenario_from_text(full_text)
 
-        if not scenario_id:
-            scenario_id = self._get_scenario_id()
-            if scenario_id == "benchmark" or scenario_id == "default":
-                # Double check text if session_id is generic
-                detected = self._detect_scenario_from_text(full_text)
-                if detected:
-                    scenario_id = detected
+        # Prioritize specific detected scenarios over generic session IDs
+        # If detected is "benchmark", we only use it if the session_id was already generic.
+        if detected and (
+            detected != "benchmark"
+            or scenario_id in ["benchmark", "default", "default-session"]
+        ):
+            scenario_id = detected
 
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
 
