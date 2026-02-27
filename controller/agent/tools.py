@@ -66,7 +66,65 @@ def get_engineer_tools(
     fs: RemoteFilesystemMiddleware, session_id: str
 ) -> list[Callable]:
     """
-    Get the tools for the Engineer agent.
-    Now uses the common toolset.
+    Get the tools for the Engineer agent (Planner, Coder, etc.).
+    Includes common tools plus engineering-specific tools.
     """
-    return get_common_tools(fs, session_id)
+    tools = get_common_tools(fs, session_id)
+
+    async def validate_costing_and_price():
+        """
+        Validate 'assembly_definition.yaml' and compute cost/weight totals.
+        Automatically updates 'objectives.yaml' with the calculated totals.
+        """
+        # Sections 3 & 4 of Planner workflow: runs the validation script
+        res = await fs.run_command(
+            "python3 skills/manufacturing-knowledge/scripts/validate_and_price.py"
+        )
+        return (
+            res.stdout if res.exit_code == 0 else f"Validation failed: {res.stderr}"
+        )
+
+    async def simulate(script_path: str = "script.py"):
+        """
+        Simulate the design in the physics engine.
+        Returns simulation results including success/failure and metrics.
+        """
+        return await fs.simulate(script_path)
+
+    async def preview_design(
+        script_path: str = "script.py", pitch: float = -45.0, yaw: float = 45.0
+    ):
+        """
+        Generate a visual preview (render) of the current design.
+        """
+        return await fs.preview(script_path, pitch=pitch, yaw=yaw)
+
+    async def submit_for_review(script_path: str = "script.py"):
+        """
+        Submit the current design for review by the reviewer agent.
+        """
+        return await fs.submit(script_path)
+
+    async def get_docs_for(query: str):
+        """
+        Search for documentation and usage examples for a given entity or keyword (e.g., 'Box', 'fillet').
+        """
+        # T015: Basic sanitization to prevent simple injection
+        safe_query = query.replace("'", "\\'").replace('"', '\\"')
+        code = (
+            "from worker_light.utils.docs import get_docs_for; "
+            f"print(get_docs_for('{safe_query}'))"
+        )
+        res = await fs.run_command(f"python3 -c \"{code}\"")
+        return res.stdout if res.exit_code == 0 else f"Search failed: {res.stderr}"
+
+    tools.extend(
+        [
+            validate_costing_and_price,
+            simulate,
+            preview_design,
+            submit_for_review,
+            get_docs_for,
+        ]
+    )
+    return tools

@@ -289,6 +289,7 @@ class ObjectivesYaml(BaseModel):
     randomization: RandomizationMeta = RandomizationMeta()
     electronics_requirements: ElectronicsRequirements | None = None
     assembly_totals: dict[str, float] | None = None
+    drillable_entities: list[str] = Field(default_factory=list)
 
 
 # =============================================================================
@@ -310,6 +311,7 @@ class PartMetadata(BaseModel):
     material_id: str | None = None
     cots_id: str | None = None
     is_fixed: bool = Field(default=False, alias="fixed")
+    drillable: bool = True
     manufacturing_method: ManufacturingMethod | None = None
     joint: JointMetadata | None = None
 
@@ -326,6 +328,7 @@ class CompoundMetadata(BaseModel):
     """Metadata for compounds (assemblies) in a CAD hierarchy."""
 
     is_fixed: bool = Field(default=False, alias="fixed")
+    drillable: bool = True
     joint: JointMetadata | None = None
 
     model_config = ConfigDict(populate_by_name=True)

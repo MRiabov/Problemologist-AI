@@ -74,6 +74,24 @@ class PlannerNode(BaseNode):
             "planner",
         )
 
+        # WP06: Pre-handover validation gate
+        if prediction and artifacts.get("assembly_definition.yaml"):
+            try:
+                # Sections 3 & 4 of Planner workflow: runs the validation script
+                res = await self.ctx.fs.run_command(
+                    "python3 skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                )
+                if res.exit_code != 0:
+                    logger.warning("planner_pre_handover_validation_failed", error=res.stderr)
+                    journal_entry += f"\n[Validation Error] assembly_definition.yaml is invalid or over budget: {res.stderr}"
+                    # Force a retry if validation fails
+                    prediction = None
+            except Exception as e:
+                logger.error("planner_pre_handover_validation_error", error=str(e))
+                journal_entry += f"\n[System Error] Pre-handover validation crashed: {e}"
+                # Force a retry if validation script fails to execute
+                prediction = None
+
         if not prediction:
             return state.model_copy(
                 update={
