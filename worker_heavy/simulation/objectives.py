@@ -122,15 +122,13 @@ class ObjectiveEvaluator:
                     )
                 return self.fail_reason
 
-        # 3. Track Flow Rate
-        has_flow_rate = any(
-            fo.type == FluidObjectiveType.FLOW_RATE
-            for fo in self.objectives.objectives.fluid_objectives
-        )
-        if has_flow_rate:
+        # 3. Track Fluid Objectives (Flow Rate & Continuous Containment)
+        fluid_objectives = self.objectives.objectives.fluid_objectives
+        if fluid_objectives:
             particles = backend.get_particle_positions()
             if particles is not None and len(particles) > 0:
-                for i, fo in enumerate(self.objectives.objectives.fluid_objectives):
+                for i, fo in enumerate(fluid_objectives):
+                    # Flow Rate
                     if fo.type == FluidObjectiveType.FLOW_RATE:
                         obj_id = f"{fo.fluid_id}_{fo.type}_{i}"
                         p0 = np.array(fo.gate_plane_point)
@@ -148,6 +146,16 @@ class ObjectiveEvaluator:
                                 self.cumulative_crossed_count.get(obj_id, 0) + count
                             )
                         self.prev_particle_distances[obj_id] = current_distances
+
+                    # Continuous Containment (WP2)
+                    elif (
+                        fo.type == FluidObjectiveType.FLUID_CONTAINMENT
+                        and hasattr(fo, "eval_at")
+                        and fo.eval_at == FluidEvalAt.CONTINUOUS
+                    ):
+                        self._evaluate_fluid_containment(fo, particles)
+                        if self.fail_reason and self.fail_reason.reason == FailureReason.FLUID_OBJECTIVE_FAILED:
+                            return self.fail_reason
 
         return None
 
