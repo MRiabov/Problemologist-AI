@@ -219,6 +219,7 @@ find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/d
 pkill -f "uvicorn.*18000" || true
 pkill -f "uvicorn.*18001" || true
 pkill -f "uvicorn.*18002" || true
+pkill -f "python3 -m http.server 15173" || true
 pkill -f "python -m controller.temporal_worker" || true
 pkill -f "npm run dev" || true
 pkill -f "vite" || true
@@ -242,6 +243,7 @@ fi
 # Start Unified Worker (port 18001) - handles both light and heavy tasks
 export WORKER_TYPE=unified
 export WORKER_HEAVY_URL="http://127.0.0.1:18001"
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_debug.log"
 uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
 WORKER_HEAVY_PID=$WORKER_LIGHT_PID # Same process
@@ -249,6 +251,7 @@ echo $WORKER_LIGHT_PID > logs/worker_light.pid
 echo "Unified Worker started (PID: $WORKER_LIGHT_PID)"
 
 # Start Controller (port 18000)
+export EXTRA_DEBUG_LOG="$LOG_DIR/controller_debug.log"
 uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
 CONTROLLER_PID=$!
 echo $CONTROLLER_PID > logs/controller.pid
@@ -256,10 +259,12 @@ echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
+export EXTRA_DEBUG_LOG="$LOG_DIR/temporal_worker_debug.log"
 uv run python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
+unset EXTRA_DEBUG_LOG
 
 # Start Frontend if Playwright tests are requested
 FRONTEND_PID=""
@@ -272,8 +277,8 @@ if [ "$RUN_PLAYWRIGHT" = true ]; then
   echo "VITE_IS_INTEGRATION_TEST=true" >> frontend/.env.production
   (cd frontend && rm -rf dist && npm run build)
   
-  # Start serving on port 15173
-  (cd frontend/dist && python3 -m http.server 15173 > "../../$LOG_DIR/frontend.log" 2>&1) &
+  # Start serving on port 15173 with proxy to controller
+  (cd frontend/dist && npx http-server -p 15173 --proxy http://localhost:18000? > "../../$LOG_DIR/frontend.log" 2>&1) &
   FRONTEND_PID=$!
   echo $FRONTEND_PID > logs/frontend.pid
   echo "Frontend server started (PID: $FRONTEND_PID) on http://localhost:15173"
@@ -281,9 +286,11 @@ fi
 
 # Create convenience symlinks in the logs/ root for the current run
 ln -sf "integration_tests/controller.log" logs/controller.log
+ln -sf "integration_tests/controller_debug.log" logs/controller_debug.log
 ln -sf "integration_tests/worker_light.log" logs/worker_light.log
-ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
+ln -sf "integration_tests/worker_debug.log" logs/worker_debug.log
 ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
+ln -sf "integration_tests/temporal_worker_debug.log" logs/temporal_worker_debug.log
 if [ "$RUN_PLAYWRIGHT" = true ]; then
   ln -sf "integration_tests/frontend.log" logs/frontend.log
   ln -sf "integration_tests/browser_console.log" logs/browser_console.log
