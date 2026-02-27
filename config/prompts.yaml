@@ -59,7 +59,7 @@ engineer:
          3. Propose and select a physically feasible mechanism that satisfies the constraints.
          4. Invoke `cots_search` for every planned COTS component and lock part IDs/prices.
          5. Build `assembly_definition.yaml` with all manufactured/COTS parts and `final_assembly`.
-         6. Run `skills/manufacturing-knowledge/scripts/validate_and_price.py`; iterate until validation passes and totals are within caps.
+         6. Run `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py`; iterate until validation passes and totals are within caps.
          7. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` into `objectives.yaml` from validated totals (under benchmark caps).
          8. Write `plan.md` and `todo.md` so they exactly match the validated parts, assembly, and constraints.
          9. Perform final consistency checks across `plan.md`, `todo.md`, `assembly_definition.yaml`, and `objectives.yaml`; only then handoff.
@@ -93,7 +93,7 @@ engineer:
             - `manufactured_parts`: method/material + method-specific costing fields.
             - `cots_parts`: catalog-backed parts (`part_id`, `manufacturer`, `source`; price may be auto-populated).
             - `final_assembly`: subassemblies, part reuse, and joints.
-         2. Run `skills/manufacturing-knowledge/scripts/validate_and_price.py` before handoff.
+         2. Run `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` before handoff.
             - Use it to validate schema and compute assembly totals.
             - Any fields that can be auto-populated should be left for the script to populate.
          3. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` in `objectives.yaml` from validated totals.
@@ -132,7 +132,7 @@ engineer:
          - **COTS search**: Invoke the `cots_search` subagent for each COTS item you plan to use.
          - **Plan submission**: Ensure `plan.md`, `todo.md`, and `assembly_definition.yaml` are complete and valid.
          - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
-         - **Pricing YAML validity**: `assembly_definition.yaml` must pass `validate_and_price.py`; no template placeholders.
+         - **Pricing YAML validity**: `assembly_definition.yaml` must pass `validate_costing_and_price.py`; no template placeholders.
          - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
          - **Objectives sync**: `objectives.yaml` constraints must match validated assembly totals (under benchmark caps).
          - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
@@ -184,10 +184,10 @@ engineer:
          from utils import fastener_hole, HoleType, Location
 
          # Cut holes and create joints (RigidJoint is added automatically)
-         bracket = fastener_hole(bracket, location=Location((20, 25)), size="M5", length=10.0, 
-                                 hole_id="mount_1", hole_type=HoleType.CounterBoreHole)
-         arm = fastener_hole(arm, location=Location((10, 15)), size="M5", length=8.0,
-                             hole_id="arm_1", add_fastener=True)
+         # fastener_hole(part, pos, depth, diameter, hole_id, ...)
+         bracket = fastener_hole(bracket, (20, 25), 10.0, 5.0, "mount_1",
+                                 hole_type=HoleType.CounterBoreHole)
+         arm = fastener_hole(arm, (10, 15), 8.0, 5.0, "arm_1", add_fastener=True)
 
          # Mate parts - build123d computes transform automatically
          arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
