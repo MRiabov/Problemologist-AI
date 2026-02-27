@@ -342,6 +342,12 @@ class BaseNode:
                                 asyncio.to_thread(program, **inputs),
                                 timeout=dspy_timeout,
                             )
+                            logger.info(
+                                f"{node_type}_raw_prediction",
+                                prediction=str(prediction),
+                                prediction_type=str(type(prediction)),
+                                session_id=self.ctx.session_id,
+                            )
                         except TimeoutError:
                             logger.error(
                                 f"{node_type}_dspy_timeout",

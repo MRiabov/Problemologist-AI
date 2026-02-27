@@ -190,7 +190,7 @@ export default function ChatWindow({
 
                 {/* Execution Plan Card (Inline) */}
                 {showExecutionPlan && (
-                    <div className="mt-8 mb-4 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div key={`exec-plan-${selectedEpisode?.id}-${selectedEpisode?.status}`} className="mt-8 mb-4 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 shadow-2xl">
                         <div className="flex flex-col items-center text-center gap-3">
                             <div className="size-12 flex items-center justify-center bg-primary/20 rounded-full text-primary ring-4 ring-primary/10">
                                 <Check className="h-6 w-6 stroke-[3]" />

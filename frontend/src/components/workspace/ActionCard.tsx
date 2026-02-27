@@ -18,7 +18,7 @@ export const ActionCard = memo(({ trace, resultCount, className, assets, setActi
   const toolName = (trace.name || "").toLowerCase();
   const traceMetadata = (trace.metadata_vars ?? {}) as Record<string, any>;
   const output = traceMetadata.output as string | undefined;
-  const hasError = !!(traceMetadata.error || (output && output.includes("Exit Code:") && !output.includes("Exit Code: 0")));
+  const hasError = !!(traceMetadata.error || (output && output.includes("exit_code") && !output.includes("exit_code': 0") && !output.includes('exit_code": 0') && !output.includes("exit_code=0")));
   
   if (trace.trace_type !== TraceType.TOOL_START) return null;
 

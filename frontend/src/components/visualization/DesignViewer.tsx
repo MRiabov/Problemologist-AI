@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { 
@@ -40,13 +40,27 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
   onTopologyChange,
   onRebuildModel
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>(videoUrl ? 'video' : '3d');
+  const [viewMode, setViewMode] = useState<ViewMode>((videoUrl && videoUrl !== 'null') ? 'video' : '3d');
   const [activeHeatmapIdx, setActiveHeatmapIdx] = useState(0);
+
+  // WP11: Reset viewMode if video disappears or appears
+  useEffect(() => {
+    const hasVideo = !!videoUrl && videoUrl !== 'null';
+    if (hasVideo && viewMode !== 'video') {
+      setViewMode('video');
+    } else if (!hasVideo && viewMode === 'video') {
+      setViewMode('3d');
+    }
+  }, [videoUrl]);
 
   const hasHeatmaps = heatmapUrls.length > 0;
 
   return (
-    <div className="w-full h-full relative flex flex-col bg-slate-950 overflow-hidden">
+    <div className="w-full h-full relative flex flex-col bg-slate-950 overflow-hidden" data-testid="design-viewer-root">
+      {/* Debug Info for CI */}
+      <div data-testid="viewer-debug-info" className="hidden">
+          {JSON.stringify({ viewMode, modelUrlsCount: modelUrls.length, hasVideo: !!videoUrl, videoUrl, modelUrls })}
+      </div>
       {/* View Mode Switcher */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 bg-background/40 backdrop-blur-md rounded-full border border-white/10 shadow-2xl">
         <Button
@@ -106,7 +120,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 relative min-h-0">
+      <div className="flex-1 relative min-h-0 w-full h-full" data-testid="design-viewer-content">
         {viewMode === '3d' && (
           <ModelViewer 
             assetUrls={modelUrls} 
@@ -116,11 +130,12 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
             topologyNodes={topologyNodes}
             onTopologyChange={onTopologyChange}
             onRebuildModel={onRebuildModel}
+            data-testid="design-viewer-3d"
           />
         )}
 
         {viewMode === 'video' && videoUrl && (
-          <div className="w-full h-full flex items-center justify-center bg-black p-8">
+          <div className="w-full h-full flex items-center justify-center bg-black p-8" data-testid="design-viewer-video">
             <video 
               src={videoUrl} 
               controls 
@@ -192,6 +207,18 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
                 />
             </div>
           </div>
+        )}
+
+        {!['3d', 'video', 'heatmaps', 'electronics'].includes(viewMode) && (
+            <div className="w-full h-full flex items-center justify-center text-white" data-testid="viewer-invalid-mode">
+                Invalid View Mode: {viewMode}
+            </div>
+        )}
+        
+        {viewMode === '3d' && modelUrls.length === 0 && (
+            <div className="w-full h-full flex items-center justify-center text-white" data-testid="viewer-no-urls">
+                No Model URLs in 3D mode
+            </div>
         )}
       </div>
 

@@ -179,14 +179,28 @@ async def _execute_graph_streaming(
             should_stop = False
 
             if node_name == "planner":
-                if (
-                    final_state.plan
-                    and getattr(final_state.plan, "theme", None) != "error"
-                ):
+                # Handle both object and dict types for the plan
+                plan_theme = None
+                logger.info(
+                    "checking_planner_output",
+                    node=node_name,
+                    plan=str(final_state.plan),
+                )
+                if final_state.plan:
+                    if isinstance(final_state.plan, dict):
+                        plan_theme = final_state.plan.get("theme")
+                    else:
+                        plan_theme = getattr(final_state.plan, "theme", None)
+
+                logger.info("detected_plan_theme", theme=plan_theme)
+
+                # WP10: Be more permissive. If the node finished successfully,
+                # we should usually proceed to PLANNED unless explicitly told it's an error.
+                if plan_theme == "error":
+                    new_status = SessionStatus.FAILED
+                else:
                     new_status = SessionStatus.PLANNED
                     should_stop = True
-                else:
-                    new_status = SessionStatus.FAILED
             elif node_name == "coder":
                 new_status = SessionStatus.VALIDATING
             elif node_name == "reviewer":
