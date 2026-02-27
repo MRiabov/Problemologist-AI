@@ -16,13 +16,13 @@ export class CotsService {
      * @returns CotsSearchItem Successful Response
      * @throws ApiError
      */
-    public static searchCotsCotsSearchGet(
+    public static searchCotsApiCotsSearchGet(
         q: string,
         limit: number = 20,
     ): CancelablePromise<Array<CotsSearchItem>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/cots/search',
+            url: '/api/cots/search',
             query: {
                 'q': q,
                 'limit': limit,
@@ -38,10 +38,10 @@ export class CotsService {
      * @returns CotsMetadataResponse Successful Response
      * @throws ApiError
      */
-    public static getCatalogMetadataCotsMetadataGet(): CancelablePromise<CotsMetadataResponse> {
+    public static getCatalogMetadataApiCotsMetadataGet(): CancelablePromise<CotsMetadataResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/cots/metadata',
+            url: '/api/cots/metadata',
         });
     }
 }

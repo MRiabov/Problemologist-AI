@@ -20,12 +20,12 @@ export class BenchmarkService {
      * @returns BenchmarkGenerateResponse Successful Response
      * @throws ApiError
      */
-    public static generateBenchmarkBenchmarkGeneratePost(
+    public static generateBenchmarkApiBenchmarkGeneratePost(
         requestBody: BenchmarkGenerateRequest,
     ): CancelablePromise<BenchmarkGenerateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/benchmark/generate',
+            url: '/api/benchmark/generate',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -41,13 +41,13 @@ export class BenchmarkService {
      * @returns BenchmarkConfirmResponse Successful Response
      * @throws ApiError
      */
-    public static confirmBenchmarkBenchmarkSessionIdConfirmPost(
+    public static confirmBenchmarkApiBenchmarkSessionIdConfirmPost(
         sessionId: string,
         requestBody: ConfirmRequest,
     ): CancelablePromise<BenchmarkConfirmResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/benchmark/{session_id}/confirm',
+            url: '/api/benchmark/{session_id}/confirm',
             path: {
                 'session_id': sessionId,
             },
@@ -64,12 +64,12 @@ export class BenchmarkService {
      * @returns controller__api__schemas__EpisodeResponse Successful Response
      * @throws ApiError
      */
-    public static getSessionBenchmarkSessionIdGet(
+    public static getSessionApiBenchmarkSessionIdGet(
         sessionId: string,
     ): CancelablePromise<controller__api__schemas__EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/benchmark/{session_id}',
+            url: '/api/benchmark/{session_id}',
             path: {
                 'session_id': sessionId,
             },
@@ -86,13 +86,13 @@ export class BenchmarkService {
      * @returns BenchmarkObjectivesResponse Successful Response
      * @throws ApiError
      */
-    public static updateObjectivesBenchmarkSessionIdObjectivesPost(
+    public static updateObjectivesApiBenchmarkSessionIdObjectivesPost(
         sessionId: string,
         requestBody: UpdateObjectivesRequest,
     ): CancelablePromise<BenchmarkObjectivesResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/benchmark/{session_id}/objectives',
+            url: '/api/benchmark/{session_id}/objectives',
             path: {
                 'session_id': sessionId,
             },

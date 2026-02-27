@@ -1,7 +1,7 @@
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from temporalio.client import Client
 
@@ -66,14 +66,14 @@ async def read_root():
     return {"status": "ok", "service": "controller"}
 
 
-app.include_router(episodes.router)
-app.include_router(benchmark.router)
-app.include_router(skills.router)
-app.include_router(ops.router)
-app.include_router(cots.router)
+app.include_router(episodes.router, prefix="/api")
+app.include_router(benchmark.router, prefix="/api")
+app.include_router(skills.router, prefix="/api")
+app.include_router(ops.router, prefix="/api")
+app.include_router(cots.router, prefix="/api")
 from controller.api.routes import simulation, steerability
 
-app.include_router(simulation.router)
+app.include_router(simulation.router, prefix="/api")
 app.include_router(steerability.router, prefix="/api/v1")
 
 
@@ -85,7 +85,7 @@ from controller.api.schemas import (
 from controller.api.tasks import execute_agent_task
 
 
-@app.post("/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
+@app.post("/api/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
 async def create_test_episode(request: AgentRunRequest):
     """Create a dummy episode for testing purposes (no agent run)."""
     if not settings.is_integration_test:
@@ -106,6 +106,7 @@ async def create_test_episode(request: AgentRunRequest):
         return EpisodeCreateResponse(episode_id=episode.id)
 
 
+@app.get("/api/health")
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -115,7 +116,7 @@ async def health_check():
     }
 
 
-@app.post("/agent/run", status_code=202, response_model=AgentRunResponse)
+@app.post("/api/agent/run", status_code=202, response_model=AgentRunResponse)
 async def run_agent(request: AgentRunRequest):
     # Note: We removed BackgroundTasks - we use asyncio.create_task for granular control
     session_factory = get_sessionmaker()

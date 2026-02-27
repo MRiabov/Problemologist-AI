@@ -21,13 +21,11 @@ export default defineConfig({
       '/api/benchmark/build': {
         target: 'http://localhost:18001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/api': {
         target: 'http://localhost:18000',
         changeOrigin: true,
         ws: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

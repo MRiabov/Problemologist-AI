@@ -14,12 +14,12 @@ export class OperationsService {
      * @returns BackupTriggerResponse Successful Response
      * @throws ApiError
      */
-    public static triggerBackupOpsBackupPost(
+    public static triggerBackupApiOpsBackupPost(
         xBackupSecret?: string,
     ): CancelablePromise<BackupTriggerResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/ops/backup',
+            url: '/api/ops/backup',
             headers: {
                 'x-backup-secret': xBackupSecret,
             },

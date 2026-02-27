@@ -13,19 +13,19 @@ export type { EpisodeResponse as Episode };
 export type { Skill };
 
 export async function fetchEpisodes(): Promise<EpisodeResponse[]> {
-    return EpisodesService.listEpisodesEpisodesGet();
+    return EpisodesService.listEpisodesApiEpisodesGet();
 }
 
 export async function fetchSkills(): Promise<Skill[]> {
-    return SkillsService.listSkillsSkillsGet();
+    return SkillsService.listSkillsApiSkillsGet();
 }
 
 export async function fetchEpisode(id: string): Promise<EpisodeResponse> {
-    return EpisodesService.getEpisodeEpisodesEpisodeIdGet(id);
+    return EpisodesService.getEpisodeApiEpisodesEpisodeIdGet(id);
 }
 
 export async function runAgent(task: string, sessionId: string, metadata?: Record<string, any>): Promise<AgentRunResponse> {
-    return DefaultService.runAgentAgentRunPost({
+    return DefaultService.runAgentApiAgentRunPost({
         task,
         session_id: sessionId,
         metadata_vars: metadata
@@ -33,11 +33,11 @@ export async function runAgent(task: string, sessionId: string, metadata?: Recor
 }
 
 export async function interruptEpisode(id: string): Promise<BenchmarkConfirmResponse> {
-    return EpisodesService.interruptEpisodeEpisodesEpisodeIdInterruptPost(id);
+    return EpisodesService.interruptEpisodeApiEpisodesEpisodeIdInterruptPost(id);
 }
 
 export async function submitTraceFeedback(episodeId: string, traceId: number, score: number, comment?: string): Promise<any> {
-    return EpisodesService.reportTraceFeedbackEpisodesEpisodeIdTracesTraceIdFeedbackPost(
+    return EpisodesService.reportTraceFeedbackApiEpisodesEpisodeIdTracesTraceIdFeedbackPost(
         episodeId,
         traceId,
         { score, comment }
@@ -45,7 +45,7 @@ export async function submitTraceFeedback(episodeId: string, traceId: number, sc
 }
 
 export async function runSimulation(sessionId: string, compoundJson: string = '{}'): Promise<BenchmarkConfirmResponse> {
-    return SimulationService.runSimulationSimulationRunPost({
+    return SimulationService.runSimulationApiSimulationRunPost({
         session_id: sessionId,
         compound_json: compoundJson
     });
@@ -53,7 +53,7 @@ export async function runSimulation(sessionId: string, compoundJson: string = '{
 
 export async function checkConnection(): Promise<{ connected: boolean; isMockMode: boolean }> {
     try {
-        const health = await DefaultService.healthCheckHealthGet();
+        const health = await DefaultService.healthCheckApiHealthGet();
         return { 
             connected: true, 
             isMockMode: !!health.is_integration_test 
@@ -71,6 +71,11 @@ export async function checkConnection(): Promise<{ connected: boolean; isMockMod
 import { request as __request } from './generated/core/request';
 import { OpenAPI } from './generated/core/OpenAPI';
 
+// Initialize BASE URL
+// In development, we use the vite proxy (/api)
+// In integration tests, we hit the controller directly
+OpenAPI.BASE = import.meta.env.VITE_API_URL || '';
+
 export interface BenchmarkObjectives {
     max_cost?: number;
     max_weight?: number;
@@ -80,7 +85,7 @@ export interface BenchmarkObjectives {
 export async function generateBenchmark(prompt: string, objectives?: BenchmarkObjectives): Promise<BenchmarkGenerateResponse> {
     return __request(OpenAPI, {
         method: 'POST',
-        url: '/benchmark/generate',
+        url: '/api/benchmark/generate',
         body: {
             prompt,
             max_cost: objectives?.max_cost,
@@ -94,7 +99,7 @@ export async function generateBenchmark(prompt: string, objectives?: BenchmarkOb
 export async function updateBenchmarkObjectives(sessionId: string, objectives: BenchmarkObjectives): Promise<BenchmarkObjectivesResponse> {
      return __request(OpenAPI, {
         method: 'POST',
-        url: `/benchmark/${sessionId}/objectives`, // Updated URL path to match backend
+        url: `/api/benchmark/${sessionId}/objectives`, // Updated URL path to match backend
         body: {
             max_cost: objectives.max_cost,
             max_weight: objectives.max_weight,
@@ -107,7 +112,7 @@ export async function updateBenchmarkObjectives(sessionId: string, objectives: B
 export async function confirmBenchmark(sessionId: string, comment?: string): Promise<BenchmarkConfirmResponse> {
     return __request(OpenAPI, {
         method: 'POST',
-        url: `/benchmark/${sessionId}/confirm`,
+        url: `/api/benchmark/${sessionId}/confirm`,
         body: { comment },
         mediaType: 'application/json',
     });
@@ -116,7 +121,7 @@ export async function confirmBenchmark(sessionId: string, comment?: string): Pro
 export async function continueEpisode(id: string, message: string, metadata?: Record<string, any>): Promise<BenchmarkConfirmResponse> {
     return __request(OpenAPI, {
         method: 'POST',
-        url: `/episodes/${id}/messages`,
+        url: `/api/episodes/${id}/messages`,
         body: { 
             message,
             metadata_vars: metadata
@@ -128,7 +133,7 @@ export async function continueEpisode(id: string, message: string, metadata?: Re
 export async function rebuildModel(scriptPath: string): Promise<any> {
     return __request(OpenAPI, {
         method: 'POST',
-        url: '/benchmark/build',
+        url: '/api/benchmark/build',
         body: {
             script_path: scriptPath
         },
@@ -139,7 +144,7 @@ export async function rebuildModel(scriptPath: string): Promise<any> {
 export async function steerAgent(sessionId: string, text: string, metadata?: Record<string, any>): Promise<any> {
     return __request(OpenAPI, {
         method: 'POST',
-        url: `/sessions/${sessionId}/steer`,
+        url: `/api/sessions/${sessionId}/steer`,
         body: {
             text,
             selections: metadata?.selections || [],

@@ -240,7 +240,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     
     if (base.startsWith('http')) {
         // Absolute URL (standard in integration tests / production)
-        wsUrl = base.replace(/^http/, 'ws') + `/episodes/${selectedEpisode.id}/ws`;
+        wsUrl = base.replace(/^http/, 'ws') + `/api/episodes/${selectedEpisode.id}/ws`;
     } else {
         // Relative URL or empty (standard in dev proxy mode)
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
