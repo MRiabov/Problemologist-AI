@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
-from controller.agent.tools import get_engineer_tools
+from controller.agent.tools import get_planner_tools
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
@@ -65,7 +65,7 @@ class ElectronicsPlannerNode(BaseNode):
             signature_cls=ElectronicsPlannerSignature,
             state=state,
             inputs=inputs,
-            tool_factory=get_engineer_tools,
+            tool_factory=get_planner_tools,
             validate_files=validate_files,
             node_type="electronics_planner",
         )

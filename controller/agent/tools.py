@@ -62,11 +62,57 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
     ]
 
 
+def get_planner_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """
+    Get the tools for Planner agents.
+    Includes costing validation and objectives autopopulation.
+    """
+    common_tools = get_common_tools(fs, session_id)
+
+    async def validate_costing_and_price():
+        """
+        Validate 'assembly_definition.yaml' and autopopulate 'objectives.yaml' with totals.
+        Returns the output of the validation script.
+        """
+        script_path = "skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+        command = f"python3 {script_path}"
+        # Find and call the already traced execute_command
+        exec_cmd = next((t for t in common_tools if getattr(t, "__name__", "") == "execute_command"), fs.run_command)
+        return await exec_cmd(command)
+
+    return [*common_tools, validate_costing_and_price]
+
+
+def get_coder_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """
+    Get the tools for Coder/Implementer agents.
+    Includes assembly-level validation tool.
+    """
+    common_tools = get_common_tools(fs, session_id)
+
+    async def validate_assembly():
+        """
+        Validate 'assembly_definition.yaml' structure and compute totals by running
+        'skills/manufacturing-knowledge/scripts/validate_and_price.py'.
+        Returns the output of the validation script.
+        """
+        script_path = "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+        command = f"python3 {script_path}"
+        # Find and call the already traced execute_command
+        exec_cmd = next((t for t in common_tools if getattr(t, "__name__", "") == "execute_command"), fs.run_command)
+        return await exec_cmd(command)
+
+    return [*common_tools, validate_assembly]
+
+
 def get_engineer_tools(
     fs: RemoteFilesystemMiddleware, session_id: str
 ) -> list[Callable]:
     """
-    Get the tools for the Engineer agent.
-    Now uses the common toolset.
+    Get the tools for Coder and Engineer agents.
     """
-    return get_common_tools(fs, session_id)
+    return get_coder_tools(fs, session_id)

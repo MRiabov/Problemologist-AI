@@ -309,74 +309,60 @@ def calculate_assembly_totals(
                 error=str(e),
             )
 
-    # 2. Electronics and COTS parts
+    # 2. Electronics and COTS parts (INT-140)
     if electronics:
+        # T015: Refactor to query centralized COTS database instead of hardcoded classes
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import Session
+        from shared.cots.database.models import COTSItemORM
+        from shared.cots.runtime import DEFAULT_DB_PATH
+
+        engine = None
+        if Path(DEFAULT_DB_PATH).exists():
+            engine = create_engine(f"sqlite:///{DEFAULT_DB_PATH}")
+
         for comp in electronics.components:
-            if comp.type == ElectronicComponentType.POWER_SUPPLY and comp.cots_part_id:
-                from shared.cots.parts.electronics import PowerSupply
+            if comp.cots_part_id:
+                cost = 0.0
+                weight = 0.0
+                found = False
 
-                try:
-                    psu = PowerSupply(size=comp.cots_part_id)
-                    total_cost += getattr(psu, "price", 0.0)
-                    total_weight += getattr(psu, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_psu",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
-                from shared.cots.parts.electronics import ElectronicRelay
+                if engine:
+                    with Session(engine) as session:
+                        item = session.query(COTSItemORM).get(comp.cots_part_id)
+                        if item:
+                            cost = item.unit_cost
+                            weight = item.weight_g
+                            found = True
 
-                try:
-                    relay = ElectronicRelay(size=comp.cots_part_id)
-                    total_cost += getattr(relay, "price", 0.0)
-                    total_weight += getattr(relay, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_relay",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
-                from shared.cots.parts.electronics import Switch
+                if not found:
+                    # Fallback to hardcoded classes if DB query fails or item not found
+                    try:
+                        if comp.type == ElectronicComponentType.POWER_SUPPLY:
+                            from shared.cots.parts.electronics import PowerSupply
+                            obj = PowerSupply(size=comp.cots_part_id)
+                            cost, weight = getattr(obj, "price", 0.0), getattr(obj, "weight_g", 0.0)
+                        elif comp.type == ElectronicComponentType.RELAY:
+                            from shared.cots.parts.electronics import ElectronicRelay
+                            obj = ElectronicRelay(size=comp.cots_part_id)
+                            cost, weight = getattr(obj, "price", 0.0), getattr(obj, "weight_g", 0.0)
+                        elif comp.type == ElectronicComponentType.MOTOR:
+                            from shared.cots.parts.motors import ServoMotor
+                            obj = ServoMotor(size=comp.cots_part_id)
+                            cost, weight = getattr(obj, "price", 0.0), getattr(obj, "weight_g", 0.0)
+                        elif comp.type == ElectronicComponentType.CONNECTOR:
+                            from shared.cots.parts.electronics import Connector
+                            obj = Connector(size=comp.cots_part_id)
+                            cost, weight = getattr(obj, "price", 0.0), getattr(obj, "weight_g", 0.0)
+                        elif comp.type == ElectronicComponentType.SWITCH:
+                            from shared.cots.parts.electronics import Switch
+                            obj = Switch(size=comp.cots_part_id)
+                            cost, weight = getattr(obj, "price", 0.0), getattr(obj, "weight_g", 0.0)
+                    except Exception as e:
+                        logger.warning("fallback_pricing_failed", cots_id=comp.cots_part_id, error=str(e))
 
-                try:
-                    sw = Switch(size=comp.cots_part_id)
-                    total_cost += getattr(sw, "price", 0.0)
-                    total_weight += getattr(sw, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_switch",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
-                from shared.cots.parts.electronics import Connector
-
-                try:
-                    conn = Connector(size=comp.cots_part_id)
-                    total_cost += getattr(conn, "price", 0.0)
-                    total_weight += getattr(conn, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_connector",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
-            elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
-                from shared.cots.parts.motors import ServoMotor
-
-                try:
-                    motor = ServoMotor(size=comp.cots_part_id)
-                    total_cost += getattr(motor, "price", 0.0)
-                    total_weight += getattr(motor, "weight_g", 0.0)
-                except Exception as e:
-                    logger.error(
-                        "failed_to_price_motor",
-                        cots_id=comp.cots_part_id,
-                        error=str(e),
-                    )
+                total_cost += cost
+                total_weight += weight
 
         for wire in electronics.wiring:
             from shared.wire_utils import get_awg_properties

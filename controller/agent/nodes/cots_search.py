@@ -6,7 +6,7 @@ from shared.type_checking import type_check
 
 from ..config import settings
 from ..state import AgentState
-from ..tools import get_engineer_tools
+from ..tools import get_coder_tools
 from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
@@ -44,7 +44,7 @@ class COTSSearchNode(BaseNode):
             COTSSearchSignature,
             state,
             inputs,
-            get_engineer_tools,
+            get_coder_tools,
             [],
             "cots_search",
         )

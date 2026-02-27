@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
-from controller.agent.tools import get_engineer_tools
+from controller.agent.tools import get_coder_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import ReviewDecision
 from shared.models.schemas import ReviewResult
@@ -72,7 +72,7 @@ class ElectronicsReviewerNode(BaseNode):
             signature_cls=ElectronicsReviewerSignature,
             state=state,
             inputs=inputs,
-            tool_factory=get_engineer_tools,
+            tool_factory=get_coder_tools,
             validate_files=validate_files,
             node_type="electronics_reviewer",
         )

@@ -1095,7 +1095,7 @@ Expected flow:
 2. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
     - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
-3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
+3. Planner runs `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py`.
     - The script validates schema consistency and computes assembly totals.
     - The script auto-populates the unit cost and weight to the objectives.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.

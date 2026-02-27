@@ -57,30 +57,43 @@ def _get_fastener_instance(hole_type: HoleType, size: str, length: float):
 
 def fastener_hole(
     part: Part,
-    location: Location,
+    pos: tuple[float, float] | tuple[float, float, float] | Location,
+    depth: float,
+    diameter: float,
     hole_id: str,
-    size: str = "M3",
-    length: float = 10.0,
-    hole_type: HoleType = HoleType.CounterBoreHole,
+    hole_type: HoleType = HoleType.FlatHeadHole,
     add_fastener: bool = False,
     fit: str = "Normal",
 ) -> Part:
     """
     Creates a hole in the part for a fastener and assigns a RigidJoint.
+    Aligned with desired_architecture.md parameters.
 
     Args:
         part: The part to modify.
-        location: The location (position + orientation) of the hole/joint.
+        pos: Position (and optionally orientation) of the hole.
+        depth: Depth of the fastener/hole (mm).
+        diameter: Diameter of the fastener (mm).
         hole_id: Unique identifier for the joint.
-        size: Fastener size (e.g., "M3", "M4"). Pitch is auto-appended if missing.
-        length: Length of the fastener (used for validation/selection).
         hole_type: Type of hole pattern.
-        add_fastener: (Not fully implemented validation) - intended to signal fastener addition.
+        add_fastener: Whether to include the fastener visual.
         fit: Clearance fit ("Close", "Normal", "Loose").
 
     Returns:
         The modified part with the hole cut and RigidJoint assigned.
     """
+    # Map diameter to size string (e.g. 3.0 -> "M3")
+    size = f"M{int(diameter)}" if diameter == int(diameter) else f"M{diameter}"
+    length = depth
+
+    # Handle pos as Location or tuple
+    if isinstance(pos, Location):
+        location = pos
+    elif len(pos) == 2:
+        location = Location((pos[0], pos[1], 0))
+    else:
+        location = Location(pos)
+
     try:
         fastener = _get_fastener_instance(hole_type, size, length)
     except Exception as e:
