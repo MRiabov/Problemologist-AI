@@ -80,7 +80,3 @@ async def test_worker_concurrency():
     # Session B should NOT see file_a
     assert file_b in stdout_b
     assert file_a not in stdout_b
-
-
-if __name__ == "__main__":
-    asyncio.run(test_worker_concurrency())

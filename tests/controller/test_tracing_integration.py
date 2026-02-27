@@ -70,7 +70,3 @@ async def test_record_worker_events():
                     ]
         finally:
             await engine.dispose()
-
-
-if __name__ == "__main__":
-    asyncio.run(test_record_worker_events())

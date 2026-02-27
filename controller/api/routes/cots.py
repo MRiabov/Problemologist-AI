@@ -17,7 +17,12 @@ engine = create_engine(
 )
 from shared.cots.database.models import Base
 
-Base.metadata.create_all(engine)
+# Ensure tables exist, but handle potential race conditions if multiple workers run this
+try:
+    Base.metadata.create_all(engine)
+except Exception:
+    pass
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

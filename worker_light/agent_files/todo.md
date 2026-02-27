@@ -1,6 +1,6 @@
 # TODO List
 
-- [ ] Define randomization strategy
-- [ ] Implement build(seed, scale)
+- [x] Define randomization strategy
+- [x] Implement build(seed, scale)
 - [ ] Verify collision checks
 - [ ] Export MJCF

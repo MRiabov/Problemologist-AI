@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from build123d import Box, BuildPart, Compound
 
+from shared.models.schemas import PartMetadata
 from tests.observability.test_observability_utils import (
     assert_event_emitted,
     clear_emitted_events,
@@ -66,6 +67,9 @@ def test_simulation():
     with BuildPart() as p:
         Box(10, 10, 10)
 
+    # Assign required metadata
+    p.part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+
     res = simulate(p.part)
     assert res.success, f"Simulation failed: {res.summary}"
 
@@ -75,6 +79,9 @@ def test_handover():
 
     with BuildPart() as p:
         Box(10, 10, 10)
+
+    # Assign required metadata
+    p.part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
 
     os.environ["SESSION_ID"] = "test_session"
     plan_path = Path("plan.md")
