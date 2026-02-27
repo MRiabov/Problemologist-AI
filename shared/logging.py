@@ -6,20 +6,27 @@ import structlog
 from structlog.types import Processor
 
 
-def configure_logging(_service_name: str):
+def configure_logging(service_name: str):
     """
     Configure structlog for the given service.
 
     In production (LOG_FORMAT=json), it outputs JSON.
     Otherwise, it outputs colored text for development.
+
+    Supports EXTRA_DEBUG_LOG environment variable to output DEBUG logs to a file
+    while keeping stdout at LOG_LEVEL.
     """
     log_format = os.getenv("LOG_FORMAT", "console").lower()
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     log_level_num = getattr(logging, log_level, logging.INFO)
 
+    # Extra debug log file
+    extra_debug_log = os.getenv("EXTRA_DEBUG_LOG")
+
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.TimeStamper(fmt="iso"),
@@ -33,14 +40,11 @@ def configure_logging(_service_name: str):
     ]
 
     # Session context processor
-    def add_session_context(logger, method_name, event_dict):
-        # We can also add other context here
+    def add_service_context(logger, method_name, event_dict):
+        event_dict["service"] = service_name
         return event_dict
 
-    processors.insert(0, add_session_context)
-
-    # Add trace_id and span_id if they exist in contextvars
-    # These are usually added via middleware or explicitly
+    processors.insert(0, add_service_context)
 
     if log_format == "json":
         processors.append(structlog.processors.dict_tracebacks)
@@ -50,36 +54,55 @@ def configure_logging(_service_name: str):
 
     structlog.configure(
         processors=processors,
-        logger_factory=structlog.PrintLoggerFactory(),
-        wrapper_class=structlog.make_filtering_bound_logger(log_level_num),
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
 
-    # Root logger configuration for standard library logging
-    if log_format == "json":
-        # In production, we might want standard logs to be JSON too
-        pass
+    # Root logger configuration
+    root_logger = logging.getLogger()
 
-    logging.basicConfig(
-        format="%(message)s",
-        stream=sys.stdout,
-        level=log_level_num,
-        force=True,
-    )
+    # Clear existing handlers to avoid duplicates
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(log_level_num)
+    console_handler.setFormatter(logging.Formatter("%(message)s"))
+    root_logger.addHandler(console_handler)
+
+    # Optional file handler for DEBUG logs
+    if extra_debug_log:
+        # Ensure directory exists
+        extra_debug_log_abs = os.path.abspath(extra_debug_log)
+        os.makedirs(os.path.dirname(extra_debug_log_abs), exist_ok=True)
+        file_handler = logging.FileHandler(extra_debug_log_abs)
+        file_handler.setLevel(logging.DEBUG)
+
+        # We use a simple formatter because structlog already formatted the message
+        file_handler.setFormatter(logging.Formatter("%(message)s"))
+        root_logger.addHandler(file_handler)
+
+        # If we have a debug file, root must be at least DEBUG to let messages through
+        root_logger.setLevel(logging.DEBUG)
+    else:
+        root_logger.setLevel(log_level_num)
 
     # Ensure uvicorn loggers follow the global level and propagate to root
     for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         u_logger = logging.getLogger(logger_name)
         u_logger.handlers = []
         u_logger.propagate = True
-        u_logger.setLevel(log_level_num)
+        u_logger.setLevel(logging.DEBUG if extra_debug_log else log_level_num)
 
-    # Keep access logs at INFO for visibility during debugging
-    access_logger = logging.getLogger("uvicorn.access")
-    access_logger.setLevel(logging.INFO)
+    # Keep access logs at INFO for visibility during debugging unless debug file is on
+    if not extra_debug_log:
+        access_logger = logging.getLogger("uvicorn.access")
+        access_logger.setLevel(logging.INFO)
 
 
-def get_logger(name: str) -> structlog.BoundLogger:
+def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     return structlog.get_logger(name)
 
 
