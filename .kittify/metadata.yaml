@@ -3,12 +3,48 @@
 # DO NOT EDIT MANUALLY
 
 spec_kitty:
-  version: 0.16.1
+  version: 2.0.2
   initialized_at: '2026-02-06T20:37:28.835502'
-  last_upgraded_at: '2026-02-25T14:03:24.619115'
+  last_upgraded_at: '2026-02-27T10:10:40.352359'
 environment:
   python_version: 3.12.3
   platform: linux
   platform_version: Linux-6.17.0-14-generic-x86_64-with-glibc2.39
 migrations:
-  applied: []
+  applied:
+  - id: 2.0.0a5_remove_wp_status_gitignore_rule
+    applied_at: '2026-02-27T10:10:39.836384'
+    result: success
+    notes: 'Removed 2 stale WP status ignore entries from .gitignore; Line 27: Removed
+      ''# Block WP status files (managed in main repo, prevents merge conflicts)'';
+      Line 28: Removed ''# Research artifacts in kitty-specs/**/research/ are allowed'''
+  - id: 2.0.0_constitution_directory
+    applied_at: '2026-02-27T10:10:39.872120'
+    result: success
+    notes: 'Moved .kittify/memory/constitution.md -> .kittify/constitution/constitution.md;
+      Initial extraction: 3 YAML files created'
+  - id: 2.0.0_historical_status_migration
+    applied_at: '2026-02-27T10:10:40.313812'
+    result: success
+    notes: '001-agentic-cad-environment: migrated (7 WPs, 7 events); 002-vlm-cad-agent:
+      migrated (7 WPs, 7 events); 003-simulation-engine: migrated (5 WPs, 5 events);
+      004-advanced-manufacturing-workbenches: migrated (4 WPs, 4 events); 005-benchmark-scenario-generator:
+      migrated (5 WPs, 5 events); 006-cots-assembly-system: migrated (3 WPs, 3 events);
+      007-agentic-cad-dashboard: migrated (3 WPs, 3 events); 008-observability-system:
+      migrated (4 WPs, 4 events); 009-fluids-deformable-materials: migrated (7 WPs,
+      7 events); 010-electromechanical-integration: migrated (7 WPs, 7 events); 011-interactive-steerability-and-design-feedback:
+      migrated (6 WPs, 6 events)'
+  - id: 2.0.0_retire_git_hooks
+    applied_at: '2026-02-27T10:10:40.317602'
+    result: success
+    notes: 'Removed 2 managed git hook(s); Removed managed hook: pre-commit-agent-check;
+      Removed managed hook: pre-commit-encoding-check'
+  - id: 2.0.1_fix_generated_command_templates
+    applied_at: '2026-02-27T10:10:40.352342'
+    result: success
+    notes: 'Updated: .claude/commands/spec-kitty.accept.md; Updated: .claude/commands/spec-kitty.analyze.md;
+      Updated: .claude/commands/spec-kitty.checklist.md; Updated: .claude/commands/spec-kitty.merge.md;
+      Updated: .gemini/commands/spec-kitty.accept.toml; Updated: .gemini/commands/spec-kitty.analyze.toml;
+      Updated: .gemini/commands/spec-kitty.checklist.toml; Updated: .gemini/commands/spec-kitty.merge.toml;
+      Updated: .codex/prompts/spec-kitty.accept.md; Updated: .codex/prompts/spec-kitty.analyze.md;
+      Updated: .codex/prompts/spec-kitty.checklist.md; Updated: .codex/prompts/spec-kitty.merge.md'

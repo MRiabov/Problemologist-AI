@@ -1,0 +1,45 @@
+{
+  "event_count": 4,
+  "feature_slug": "008-observability-system",
+  "last_event_id": "01KJF98EDMP269Q7PBK3V211XS",
+  "materialized_at": "2026-02-27T10:10:40.190411+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 4,
+    "for_review": 0,
+    "in_progress": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98ECVNAJ38D4YXSXQM03H",
+      "last_transition_at": "2026-02-27T10:10:40.155653+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98ED2NG6CE3CZX2SF30M0",
+      "last_transition_at": "2026-02-27T10:10:40.162544+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98ED90GGTE3VWRF1ZGDD3",
+      "last_transition_at": "2026-02-27T10:10:40.169344+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EDMP269Q7PBK3V211XS",
+      "last_transition_at": "2026-02-27T10:10:40.180480+00:00"
+    }
+  }
+}
