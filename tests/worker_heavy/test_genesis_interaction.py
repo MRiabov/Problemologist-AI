@@ -17,12 +17,15 @@ def genesis_backend():
 
 def test_apply_control(genesis_backend):
     mock_entity = MagicMock()
+    # Ensure it only has one of the control methods to avoid ambiguity
+    del mock_entity.control_dofs_force
     genesis_backend.entities = {"motor1": mock_entity}
     genesis_backend.motors = [{"part_name": "motor1"}]
 
     genesis_backend.apply_control({"motor1": 10.0})
 
     # Check if set_dofs_force was called with a numpy array containing 10.0
+    mock_entity.set_dofs_force.assert_called_once()
     args, kwargs = mock_entity.set_dofs_force.call_args
     assert np.allclose(args[0], np.array([10.0]))
 
