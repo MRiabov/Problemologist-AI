@@ -28,16 +28,10 @@ async def run(_ctx=None):
             tmp.write(TEST_OVERLOAD_XML)
             tmp_path = Path(tmp.name)
 
+        # Force MUJOCO to avoid high Genesis initialization overhead in CPU-only CI/sandbox
         from shared.simulation.schemas import SimulatorBackendType
 
-        # Use MUJOCO if GENESIS is not available (common in CI/sandbox)
-        try:
-            import genesis
-
-            backend = SimulatorBackendType.GENESIS
-        except ImportError:
-            backend = SimulatorBackendType.MUJOCO
-
+        backend = SimulatorBackendType.MUJOCO
         loop = SimulationLoop(str(tmp_path), backend_type=backend)
 
         # Demand large position that can't be reached with tiny forcerange
