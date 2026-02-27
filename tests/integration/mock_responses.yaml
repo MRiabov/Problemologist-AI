@@ -85,7 +85,7 @@ scenarios:
         required_fixes: []
 
   # INT-002: Engineering execution boundary
-  test-exec:
+  INT-002:
     planner:
       summary: "Plan for 10x10x10mm box generated."
       thought: "I will generate the engineering plan for the 10x10x10mm box."

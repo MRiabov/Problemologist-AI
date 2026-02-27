@@ -30,13 +30,8 @@ async def run(_ctx=None):
 
         from shared.simulation.schemas import SimulatorBackendType
 
-        # Use MUJOCO if GENESIS is not available (common in CI/sandbox)
-        try:
-            import genesis
-
-            backend = SimulatorBackendType.GENESIS
-        except ImportError:
-            backend = SimulatorBackendType.MUJOCO
+        # Force MUJOCO to avoid heavy GENESIS startup in CPU-only integration environments
+        backend = SimulatorBackendType.MUJOCO
 
         loop = SimulationLoop(str(tmp_path), backend_type=backend)
 
