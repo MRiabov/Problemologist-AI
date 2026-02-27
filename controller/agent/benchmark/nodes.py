@@ -19,7 +19,11 @@ from shared.type_checking import type_check
 from shared.workers.schema import SimulationArtifacts
 
 from .state import BenchmarkGeneratorState
-from .tools import get_benchmark_tools
+from .tools import (
+    get_benchmark_coder_tools,
+    get_benchmark_planner_tools,
+    get_benchmark_tools,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -115,7 +119,7 @@ class BenchmarkPlannerNode(BaseNode):
             BenchmarkPlannerSignature,
             state,
             inputs,
-            get_benchmark_tools,
+            get_benchmark_planner_tools,
             ["plan.md", "todo.md", "objectives.yaml"],
             "benchmark_planner",
         )
@@ -203,7 +207,7 @@ class BenchmarkCoderNode(BaseNode):
             BenchmarkCoderSignature,
             state,
             inputs,
-            get_benchmark_tools,
+            get_benchmark_coder_tools,
             [SCRIPT_FILE, "plan.md", "todo.md", "objectives.yaml"],
             "benchmark_coder",
         )

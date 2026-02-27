@@ -23,8 +23,7 @@ engineer:
 
          **Python Utils**:
          - `cots_search(query: str)`: Invoke subagent to find COTS parts.
-         - `validate_and_price(part: Compound, method: ManufacturingMethod, config: ManufacturingConfig)`: Schema and price validation.
-         - `validate_costing_and_price()`: Validate pricing YAML, autopopulate fields, and output price.
+         - `validate_costing_and_price()`: Validate 'assembly_definition.yaml' and autopopulate 'objectives.yaml' with totals.
 
          **Primary Objective**:
          Produce an implementation-ready handoff package that is physically feasible, cost-validated, and unambiguous for the CAD Engineer.
@@ -173,6 +172,7 @@ engineer:
 
          **Python Utils** (import in your script):
          - `validate_and_price(part: Compound, method: ManufacturingMethod, config: ManufacturingConfig)`: Validates manufacturability and price. For Compounds, warns if DOFs >= 4.
+         - `validate_assembly()`: Validate 'assembly_definition.yaml' structure and compute totals.
          - `simulate(compound: Compound)`: Runs 5x simulation with perturbed part/object spawns for robustness.
          - `preview_design(compound: Compound, pitch: float = -35.0, yaw: float = 45.0)`: Renders vision inspection (default - standard ISO view).
          - `submit_for_review(compound: Compound)`: Submits the whole assembly to the Reviewer agent.
@@ -219,7 +219,8 @@ engineer:
          4. Write your CAD script (e.g., `solution.py`).
          5. Run and self-test: `execute("python solution.py")`.
          6. Call `validate_and_price()` to check manufacturability, cost, and build zone.
-         7. Call `simulate()` to verify physics. This runs 5 randomized tests.
+         7. Call `validate_assembly()` to ensure cost limits are respected in the definition file.
+         8. Call `simulate()` to verify physics. This runs 5 randomized tests.
          8. Call `submit_for_review()` when requirements are met.
 
          **WP2 Engineering (Fluids & Stress)**:
@@ -236,7 +237,7 @@ engineer:
          - **Planner contract compliance**: Implement planner-specified parts/joints first; log and justify any deviations in `journal.md`.
          - **Part traceability**: Keep `part_id` and quantity intent from `assembly_definition.yaml` traceable in your implementation.
          - **Tool invocation**: Do not skip required tool calls (`validate_and_price`, `preview_design`, `simulate`, `submit_for_review`).
-         - **Manufacturability/price check**: Run `validate_and_price()` and fix any failures.
+         - **Manufacturability/price check**: Run `validate_and_price()` and `validate_assembly()` and fix any failures.
          - **Render request (engineer)**: Call `preview_design()` at least once before simulation.
          - **Simulation request/result**: Run `simulate()` and record success/failure reasons in `journal.md`.
          - **COTS search**: Invoke the `cots_search` subagent if you need specific parts.
@@ -534,6 +535,7 @@ benchmark_generator:
 
          **Python Utils** (import in your script):
          - `validate(compound: Compound)`: Check intersections and bounds under all environment randomization.
+         - `validate_assembly()`: Validate 'assembly_definition.yaml' structure and compute totals.
          - `simulate(compound: Compound)`: Run physics test with environment constraints.
          - `submit_for_review(compound: Compound)`: Submits the whole benchmark compound to the Reviewer.
          - `get_docs_for(type: str)`: Find documentation via subagent.

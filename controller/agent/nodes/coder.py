@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState
-from controller.agent.tools import get_engineer_tools
+from controller.agent.tools import get_coder_tools
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -90,7 +90,7 @@ class CoderNode(BaseNode):
             CoderSignature,
             state,
             inputs,
-            get_engineer_tools,
+            get_coder_tools,
             validate_files,
             "coder",
         )

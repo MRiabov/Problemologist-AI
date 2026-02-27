@@ -8,7 +8,28 @@ from shared.simulation.schemas import SimulatorBackendType
 def get_benchmark_tools(
     fs: RemoteFilesystemMiddleware, session_id: str
 ) -> list[Callable]:
-    common_tools = get_common_tools(fs, session_id)
+    """Base tools for benchmark generator agents."""
+    # We remove validate_costing_and_price if it's there by any chance
+    # but get_common_tools doesn't have it anymore.
+    return get_common_tools(fs, session_id)
+
+
+def get_benchmark_planner_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """Tools for the Benchmark Planner."""
+    from controller.agent.tools import get_planner_tools
+
+    return get_planner_tools(fs, session_id)
+
+
+def get_benchmark_coder_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """Tools for the Benchmark Coder/Implementer."""
+    from controller.agent.tools import get_coder_tools
+
+    base_tools = get_coder_tools(fs, session_id)
 
     async def simulate(
         script_path: str, backend: SimulatorBackendType = SimulatorBackendType.GENESIS
@@ -27,4 +48,4 @@ def get_benchmark_tools(
         """Submit the benchmark for review."""
         return await fs.submit(script_path)
 
-    return [*common_tools, simulate, validate, submit_for_review]
+    return [*base_tools, simulate, validate, submit_for_review]
