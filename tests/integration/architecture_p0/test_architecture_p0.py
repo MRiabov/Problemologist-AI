@@ -66,7 +66,7 @@ async def test_int_001_compose_boot_health_contract():
         assert heavy_health.status.value == "HEALTHY"
 
         # Controller health
-        resp = await client.get(f"{CONTROLLER_URL}/health", timeout=5.0)
+        resp = await client.get(f"{CONTROLLER_URL}/api/health", timeout=5.0)
         assert resp.status_code == 200
         controller_health = HealthResponse.model_validate(resp.json())
         assert controller_health.status.value == "HEALTHY"
@@ -83,7 +83,7 @@ async def test_int_002_controller_worker_execution_boundary():
         # Trigger agent run
         req = AgentRunRequest(task=task, session_id=session_id)
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            f"{CONTROLLER_URL}/api/agent/run",
             json=req.model_dump(mode="json"),
             timeout=600.0,
         )
@@ -96,7 +96,7 @@ async def test_int_002_controller_worker_execution_boundary():
         completed = False
         for _ in range(max_attempts):
             await asyncio.sleep(10.0)
-            s_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            s_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
             ep_data = EpisodeResponse.model_validate(s_resp.json())
             status = ep_data.status
             if status == EpisodeStatus.COMPLETED:
