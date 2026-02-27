@@ -29,12 +29,12 @@ async def test_int_053_temporal_workflow_lifecycle():
             task=task, session_id=f"INT-053-obs-{uuid.uuid4().hex[:8]}"
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            f"{CONTROLLER_URL}/api/agent/run",
             json=req.model_dump(mode="json"),
         )
         if resp.status_code != 202:
             pytest.skip(
-                f"/agent/run unavailable in this run ({resp.status_code}): {resp.text}"
+                f"/api/agent/run unavailable in this run ({resp.status_code}): {resp.text}"
             )
         agent_run_resp = AgentRunResponse.model_validate(resp.json())
         episode_id = agent_run_resp.episode_id
@@ -56,7 +56,7 @@ async def test_int_053_temporal_workflow_lifecycle():
         await handle.result()
 
         # 4. Verify episode status in DB via API
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        status_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
         assert status_resp.status_code == 200
         ep_data = EpisodeResponse.model_validate(status_resp.json())
         assert ep_data.status == EpisodeStatus.COMPLETED
@@ -74,12 +74,12 @@ async def test_int_055_s3_artifact_upload_logging():
             task="Test S3 Upload", session_id=f"INT-055-s3-{uuid.uuid4().hex[:8]}"
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            f"{CONTROLLER_URL}/api/agent/run",
             json=req.model_dump(mode="json"),
         )
         if resp.status_code != 202:
             pytest.skip(
-                f"/agent/run unavailable in this run ({resp.status_code}): {resp.text}"
+                f"/api/agent/run unavailable in this run ({resp.status_code}): {resp.text}"
             )
         agent_run_resp = AgentRunResponse.model_validate(resp.json())
         episode_id = agent_run_resp.episode_id
@@ -94,7 +94,7 @@ async def test_int_055_s3_artifact_upload_logging():
         )
 
         # 3. Verify Asset record via API
-        episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        episode_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(episode_resp.json())
 
         assert len(ep_data.assets) > 0
@@ -112,7 +112,7 @@ async def test_int_054_temporal_failure_path():
         # 1. Create episode via API
         req = AgentRunRequest(task="Test Failure Injection", session_id="INT-054-fail")
         resp = await client.post(
-            f"{CONTROLLER_URL}/test/episodes",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
@@ -140,7 +140,7 @@ async def test_int_054_temporal_failure_path():
             await handle.result()
 
         # 4. Verify episode status is FAILED in DB
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        status_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
         assert status_resp.status_code == 200
         ep_data = EpisodeResponse.model_validate(status_resp.json())
         assert ep_data.status == EpisodeStatus.FAILED
@@ -159,7 +159,7 @@ async def test_int_056_s3_upload_failure_retry():
         # Create episode via test endpoint (no agent task interference)
         req = AgentRunRequest(task="Test S3 Retry", session_id="INT-056-retry")
         resp = await client.post(
-            f"{CONTROLLER_URL}/test/episodes",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=req.model_dump(mode="json"),
         )
         assert resp.status_code == 201
@@ -183,7 +183,7 @@ async def test_int_056_s3_upload_failure_retry():
         # So we check at 1s.
         await asyncio.sleep(1)
 
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        status_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(status_resp.json())
         assert (
             ep_data.status == EpisodeStatus.RUNNING
