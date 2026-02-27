@@ -36,7 +36,7 @@ Hope it helps!"""
     assert code_no_block == "print('world')"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_coder_node_success(mock_state):
     valid_script = textwrap.dedent("""
         import build123d as bd
@@ -53,19 +53,23 @@ async def test_coder_node_success(mock_state):
         patch(
             "controller.agent.benchmark.nodes.SharedNodeContext.create"
         ) as mock_ctx_create,
-        patch("controller.agent.benchmark.nodes.dspy.ReAct") as mock_react,
+        patch(
+            "controller.agent.nodes.base.BaseNode._run_program"
+        ) as mock_run_program,
         patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
     ):
         mock_ctx = MagicMock()
         mock_ctx_create.return_value = mock_ctx
         mock_ctx.worker_client = AsyncMock()
         mock_ctx.worker_client.read_file.return_value = valid_script
-        mock_ctx.worker_client.list_files.return_value = []
-        mock_ctx.get_callbacks.return_value = []
+        mock_ctx.worker_client.validate.return_value = MagicMock(success=True)
+        mock_ctx.worker_client.simulate.return_value = MagicMock(success=True, artifacts=None)
 
-        mock_program = MagicMock()
-        mock_program.return_value = MagicMock(journal="Done")
-        mock_react.return_value = mock_program
+        mock_run_program.return_value = (
+            MagicMock(journal="Done"),
+            {"script.py": valid_script},
+            "journal entry",
+        )
 
         updated_state = await coder_node(mock_state)
 
@@ -83,7 +87,7 @@ async def test_coder_node_success(mock_state):
     assert mjcf == "<mujoco/>"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_coder_node_with_feedback(mock_state):
     from shared.enums import SessionStatus
 
@@ -102,25 +106,29 @@ async def test_coder_node_with_feedback(mock_state):
         patch(
             "controller.agent.benchmark.nodes.SharedNodeContext.create"
         ) as mock_ctx_create,
-        patch("controller.agent.benchmark.nodes.dspy.ReAct") as mock_react,
+        patch(
+            "controller.agent.nodes.base.BaseNode._run_program"
+        ) as mock_run_program,
         patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
     ):
         mock_ctx = MagicMock()
         mock_ctx_create.return_value = mock_ctx
         mock_ctx.worker_client = AsyncMock()
         mock_ctx.worker_client.read_file.return_value = "# refined script"
-        mock_ctx.worker_client.list_files.return_value = []
-        mock_ctx.get_callbacks.return_value = []
+        mock_ctx.worker_client.validate.return_value = MagicMock(success=True)
+        mock_ctx.worker_client.simulate.return_value = MagicMock(success=True, artifacts=None)
 
-        mock_program = MagicMock()
-        mock_program.return_value = MagicMock(journal="Done")
-        mock_react.return_value = mock_program
+        mock_run_program.return_value = (
+            MagicMock(journal="Done"),
+            {"script.py": "# refined script"},
+            "journal entry",
+        )
 
         await coder_node(mock_state)
 
     # Verify agent was called
-    mock_program.assert_called_once()
-    call_args = mock_program.call_args
-    kwargs = call_args.kwargs
-    assert "Make it larger" in kwargs["review_feedback"]
-    assert "Intersections found" in kwargs["validation_logs"]
+    mock_run_program.assert_called_once()
+    call_args = mock_run_program.call_args
+    inputs = call_args.args[3]
+    assert "Make it larger" in inputs["review_feedback"]
+    assert "Intersections found" in inputs["validation_logs"]
