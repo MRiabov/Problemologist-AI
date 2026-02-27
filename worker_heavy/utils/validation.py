@@ -859,7 +859,7 @@ def validate(
         renders_dir = str(output_dir / "renders") if output_dir else None
 
         # Heuristic: use MuJoCo for validation preview unless Genesis is requested
-        backend_type = SimulatorBackendType.GENESIS
+        backend_type = SimulatorBackendType.MUJOCO
         if output_dir:
             obj_path = output_dir / "objectives.yaml"
             if obj_path.exists():
