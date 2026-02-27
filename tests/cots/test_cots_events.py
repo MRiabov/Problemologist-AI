@@ -43,9 +43,23 @@ def test_cots_search_event():
     # Actually looking at shared/cots/runtime.py:67, it emits AFTER stmt.all()
     # So we need it to succeed or mock it.
 
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
-    with patch("shared.cots.runtime.Session"):
+    # Mock Session context manager and query chain
+    mock_session = MagicMock()
+    mock_meta = MagicMock()
+    mock_meta.catalog_version = "v1"
+    mock_meta.bd_warehouse_commit = "sha123"
+    mock_meta.generated_at = MagicMock()
+    mock_meta.generated_at.isoformat.return_value = "2023-01-01T00:00:00"
+
+    mock_session.query.return_value.order_by.return_value.limit.return_value.first.return_value = mock_meta
+
+    # Mock for search results (COTSItemORM)
+    mock_session.query.return_value.filter.return_value.limit.return_value.all.return_value = []
+
+    with patch("shared.cots.runtime.Session") as MockSession:
+        MockSession.return_value.__enter__.return_value = mock_session
         search_parts(query, "dummy.db")
 
     assert_event_emitted("cots_search", query="motor")
