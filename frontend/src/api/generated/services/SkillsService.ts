@@ -13,10 +13,10 @@ export class SkillsService {
      * @returns Skill Successful Response
      * @throws ApiError
      */
-    public static listSkillsSkillsGet(): CancelablePromise<Array<Skill>> {
+    public static listSkillsApiSkillsGet(): CancelablePromise<Array<Skill>> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/skills/',
+            url: '/api/skills/',
         });
     }
 }

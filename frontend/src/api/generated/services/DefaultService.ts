@@ -28,12 +28,12 @@ export class DefaultService {
      * @returns EpisodeCreateResponse Successful Response
      * @throws ApiError
      */
-    public static createTestEpisodeTestEpisodesPost(
+    public static createTestEpisodeApiTestEpisodesPost(
         requestBody: AgentRunRequest,
     ): CancelablePromise<EpisodeCreateResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/test/episodes',
+            url: '/api/test/episodes',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -54,17 +54,29 @@ export class DefaultService {
         });
     }
     /**
+     * Health Check
+     * Health check endpoint.
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static healthCheckApiHealthGet(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/health',
+        });
+    }
+    /**
      * Run Agent
      * @param requestBody
      * @returns AgentRunResponse Successful Response
      * @throws ApiError
      */
-    public static runAgentAgentRunPost(
+    public static runAgentApiAgentRunPost(
         requestBody: AgentRunRequest,
     ): CancelablePromise<AgentRunResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/agent/run',
+            url: '/api/agent/run',
             body: requestBody,
             mediaType: 'application/json',
             errors: {

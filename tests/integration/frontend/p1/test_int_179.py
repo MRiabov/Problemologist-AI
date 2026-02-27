@@ -53,7 +53,7 @@ def test_int_179_manual_at_mention_contract(page: Page):
         if "/episodes/" in url:
             ep_id = url.split("/episodes/")[1].split("/")[0]
             with httpx.Client() as client:
-                resp = client.get(f"{CONTROLLER_URL}/episodes/{ep_id}")
+                resp = client.get(f"{CONTROLLER_URL}/api/episodes/{ep_id}")
                 if resp.status_code == 200:
                     assets = resp.json().get("assets", [])
                     if any(a["s3_path"].endswith("script.py") for a in assets):

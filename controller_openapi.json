@@ -22,14 +22,75 @@
         }
       }
     },
-    "/episodes/{episode_id}/assets/{path}": {
+    "/api/episodes/{episode_id}/traces/{trace_id}/feedback": {
+      "post": {
+        "tags": [
+          "episodes"
+        ],
+        "summary": "Report Trace Feedback",
+        "description": "Report feedback for a specific trace to Langfuse.",
+        "operationId": "report_trace_feedback_api_episodes__episode_id__traces__trace_id__feedback_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          },
+          {
+            "name": "trace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Trace Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/episodes/{episode_id}/assets/{path}": {
       "get": {
         "tags": [
           "episodes"
         ],
         "summary": "Get Episode Asset",
         "description": "Proxy asset requests to the worker.",
-        "operationId": "get_episode_asset_episodes__episode_id__assets__path__get",
+        "operationId": "get_episode_asset_api_episodes__episode_id__assets__path__get",
         "parameters": [
           {
             "name": "episode_id",
@@ -73,76 +134,14 @@
         }
       }
     },
-    "/episodes/{episode_id}/traces/{trace_id}/feedback": {
-      "post": {
-        "tags": [
-          "episodes"
-        ],
-        "summary": "Report Trace Feedback",
-        "description": "Report feedback for a specific trace to Langfuse.",
-        "operationId": "report_trace_feedback_episodes__episode_id__traces__trace_id__feedback_post",
-        "parameters": [
-          {
-            "name": "episode_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Episode Id"
-            }
-          },
-          {
-            "name": "trace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "maximum": 2147483647,
-              "title": "Trace Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FeedbackRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/episodes/{episode_id}/review": {
+    "/api/episodes/{episode_id}/review": {
       "post": {
         "tags": [
           "episodes"
         ],
         "summary": "Review Episode",
         "description": "Submit a review for an episode.",
-        "operationId": "review_episode_episodes__episode_id__review_post",
+        "operationId": "review_episode_api_episodes__episode_id__review_post",
         "parameters": [
           {
             "name": "episode_id",
@@ -187,14 +186,14 @@
         }
       }
     },
-    "/episodes/{episode_id}/messages": {
+    "/api/episodes/{episode_id}/messages": {
       "post": {
         "tags": [
           "episodes"
         ],
         "summary": "Continue Episode",
         "description": "Send a follow-up message to a running or completed episode.",
-        "operationId": "continue_episode_episodes__episode_id__messages_post",
+        "operationId": "continue_episode_api_episodes__episode_id__messages_post",
         "parameters": [
           {
             "name": "episode_id",
@@ -239,14 +238,14 @@
         }
       }
     },
-    "/episodes/{episode_id}/electronics/schematic": {
+    "/api/episodes/{episode_id}/electronics/schematic": {
       "get": {
         "tags": [
           "episodes"
         ],
         "summary": "Get Episode Schematic",
         "description": "Get the electronics schematic for an episode in a format compatible with tscircuit.",
-        "operationId": "get_episode_schematic_episodes__episode_id__electronics_schematic_get",
+        "operationId": "get_episode_schematic_api_episodes__episode_id__electronics_schematic_get",
         "parameters": [
           {
             "name": "episode_id",
@@ -281,14 +280,14 @@
         }
       }
     },
-    "/episodes/": {
+    "/api/episodes/": {
       "get": {
         "tags": [
           "episodes"
         ],
         "summary": "List Episodes",
         "description": "List all agent episodes.",
-        "operationId": "list_episodes_episodes__get",
+        "operationId": "list_episodes_api_episodes__get",
         "parameters": [
           {
             "name": "limit",
@@ -325,7 +324,7 @@
                   "items": {
                     "$ref": "#/components/schemas/controller__api__routes__episodes__EpisodeResponse"
                   },
-                  "title": "Response List Episodes Episodes  Get"
+                  "title": "Response List Episodes Api Episodes  Get"
                 }
               }
             }
@@ -343,14 +342,14 @@
         }
       }
     },
-    "/episodes/{episode_id}": {
+    "/api/episodes/{episode_id}": {
       "get": {
         "tags": [
           "episodes"
         ],
         "summary": "Get Episode",
         "description": "Get a specific episode.",
-        "operationId": "get_episode_episodes__episode_id__get",
+        "operationId": "get_episode_api_episodes__episode_id__get",
         "parameters": [
           {
             "name": "episode_id",
@@ -392,7 +391,7 @@
         ],
         "summary": "Delete Episode",
         "description": "Delete an episode and its associated data.",
-        "operationId": "delete_episode_episodes__episode_id__delete",
+        "operationId": "delete_episode_api_episodes__episode_id__delete",
         "parameters": [
           {
             "name": "episode_id",
@@ -427,14 +426,14 @@
         }
       }
     },
-    "/episodes/{episode_id}/interrupt": {
+    "/api/episodes/{episode_id}/interrupt": {
       "post": {
         "tags": [
           "episodes"
         ],
         "summary": "Interrupt Episode",
         "description": "Interrupt a running episode.",
-        "operationId": "interrupt_episode_episodes__episode_id__interrupt_post",
+        "operationId": "interrupt_episode_api_episodes__episode_id__interrupt_post",
         "parameters": [
           {
             "name": "episode_id",
@@ -469,14 +468,14 @@
         }
       }
     },
-    "/benchmark/generate": {
+    "/api/benchmark/generate": {
       "post": {
         "tags": [
           "benchmark"
         ],
         "summary": "Generate Benchmark",
         "description": "Trigger a new benchmark generation session.",
-        "operationId": "generate_benchmark_benchmark_generate_post",
+        "operationId": "generate_benchmark_api_benchmark_generate_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -511,14 +510,14 @@
         }
       }
     },
-    "/benchmark/{session_id}/confirm": {
+    "/api/benchmark/{session_id}/confirm": {
       "post": {
         "tags": [
           "benchmark"
         ],
         "summary": "Confirm Benchmark",
         "description": "Confirm and continue benchmark generation after planning.",
-        "operationId": "confirm_benchmark_benchmark__session_id__confirm_post",
+        "operationId": "confirm_benchmark_api_benchmark__session_id__confirm_post",
         "parameters": [
           {
             "name": "session_id",
@@ -565,13 +564,13 @@
         }
       }
     },
-    "/benchmark/{session_id}": {
+    "/api/benchmark/{session_id}": {
       "get": {
         "tags": [
           "benchmark"
         ],
         "summary": "Get Session",
-        "operationId": "get_session_benchmark__session_id__get",
+        "operationId": "get_session_api_benchmark__session_id__get",
         "parameters": [
           {
             "name": "session_id",
@@ -608,14 +607,14 @@
         }
       }
     },
-    "/benchmark/{session_id}/objectives": {
+    "/api/benchmark/{session_id}/objectives": {
       "post": {
         "tags": [
           "benchmark"
         ],
         "summary": "Update Objectives",
         "description": "Update objectives.yaml for a specific session.",
-        "operationId": "update_objectives_benchmark__session_id__objectives_post",
+        "operationId": "update_objectives_api_benchmark__session_id__objectives_post",
         "parameters": [
           {
             "name": "session_id",
@@ -662,14 +661,14 @@
         }
       }
     },
-    "/skills/": {
+    "/api/skills/": {
       "get": {
         "tags": [
           "skills"
         ],
         "summary": "List Skills",
         "description": "List available skills.",
-        "operationId": "list_skills_skills__get",
+        "operationId": "list_skills_api_skills__get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -680,7 +679,7 @@
                     "$ref": "#/components/schemas/Skill"
                   },
                   "type": "array",
-                  "title": "Response List Skills Skills  Get"
+                  "title": "Response List Skills Api Skills  Get"
                 }
               }
             }
@@ -688,14 +687,14 @@
         }
       }
     },
-    "/ops/backup": {
+    "/api/ops/backup": {
       "post": {
         "tags": [
           "Operations"
         ],
         "summary": "Trigger Backup",
         "description": "Trigger the automated backup workflow.",
-        "operationId": "trigger_backup_ops_backup_post",
+        "operationId": "trigger_backup_api_ops_backup_post",
         "parameters": [
           {
             "name": "x-backup-secret",
@@ -731,14 +730,14 @@
         }
       }
     },
-    "/cots/search": {
+    "/api/cots/search": {
       "get": {
         "tags": [
           "cots"
         ],
         "summary": "Search Cots",
         "description": "Search for COTS parts by name or category.",
-        "operationId": "search_cots_cots_search_get",
+        "operationId": "search_cots_api_cots_search_get",
         "parameters": [
           {
             "name": "q",
@@ -775,7 +774,7 @@
                   "items": {
                     "$ref": "#/components/schemas/CotsSearchItem"
                   },
-                  "title": "Response Search Cots Cots Search Get"
+                  "title": "Response Search Cots Api Cots Search Get"
                 }
               }
             }
@@ -793,14 +792,14 @@
         }
       }
     },
-    "/cots/metadata": {
+    "/api/cots/metadata": {
       "get": {
         "tags": [
           "cots"
         ],
         "summary": "Get Catalog Metadata",
         "description": "Get the catalog metadata (version, commit, etc.).",
-        "operationId": "get_catalog_metadata_cots_metadata_get",
+        "operationId": "get_catalog_metadata_api_cots_metadata_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -815,14 +814,14 @@
         }
       }
     },
-    "/simulation/run": {
+    "/api/simulation/run": {
       "post": {
         "tags": [
           "simulation"
         ],
         "summary": "Run Simulation",
         "description": "Trigger a benchmark generation session (simulation pipeline).\nThis endpoint reuses the benchmark generation graph but is called 'simulation'\nin the frontend for historical reasons.",
-        "operationId": "run_simulation_simulation_run_post",
+        "operationId": "run_simulation_api_simulation_run_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -957,11 +956,11 @@
         }
       }
     },
-    "/test/episodes": {
+    "/api/test/episodes": {
       "post": {
         "summary": "Create Test Episode",
         "description": "Create a dummy episode for testing purposes (no agent run).",
-        "operationId": "create_test_episode_test_episodes_post",
+        "operationId": "create_test_episode_api_test_episodes_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1013,10 +1012,27 @@
         }
       }
     },
-    "/agent/run": {
+    "/api/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/run": {
       "post": {
         "summary": "Run Agent",
-        "operationId": "run_agent_agent_run_post",
+        "operationId": "run_agent_api_agent_run_post",
         "requestBody": {
           "content": {
             "application/json": {
