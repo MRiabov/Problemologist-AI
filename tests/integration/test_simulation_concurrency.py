@@ -96,7 +96,3 @@ async def test_simulation_concurrency_serialization():
     assert not overlaps, (
         f"Serialization failed: {len(overlaps)} overlaps detected: {overlaps}"
     )
-
-
-if __name__ == "__main__":
-    asyncio.run(test_simulation_concurrency_serialization())

@@ -26,8 +26,8 @@ def test_search_cots_catalog_tool(mock_parts):
     with patch("shared.cots.agent.search_parts") as mock_search:
         mock_search.return_value = mock_parts
 
-        # Tools in LangChain are invoked via .invoke()
-        result = search_cots_catalog.invoke({"query": "bolt", "max_weight_g": 20.0})
+        # Direct function call
+        result = search_cots_catalog(query="bolt", max_weight_g=20.0)
 
         assert "M6 Hex Bolt" in result
         assert "test_bolt_m6" in result
@@ -37,19 +37,21 @@ def test_search_cots_catalog_tool(mock_parts):
         args, _ = mock_search.call_args
         sq = args[0]
         assert sq.query == "bolt"
-        assert sq.constraints["max_weight_g"] == 20.0
+        # Access Pydantic fields via dot notation
+        assert sq.constraints.max_weight_g == 20.0
 
 
 def test_search_cots_catalog_no_results():
     with patch("shared.cots.agent.search_parts") as mock_search:
         mock_search.return_value = []
 
-        result = search_cots_catalog.invoke({"query": "nonexistent"})
+        # Direct function call
+        result = search_cots_catalog(query="nonexistent")
 
         assert "No parts found" in result
 
 
 def test_create_cots_search_agent():
-    with patch("shared.cots.agent.ChatOpenAI") as mock_chat:
+    with patch("shared.cots.agent.dspy.ReAct") as mock_chat:
         agent = create_cots_search_agent("gpt-4o")
         assert agent is not None

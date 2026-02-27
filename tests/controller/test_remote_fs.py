@@ -9,21 +9,20 @@ from controller.tools.fs import create_fs_tools
 @pytest.fixture(autouse=True)
 def mock_observability():
     with (
+        # Patched to match the import in remote_fs.py: from controller.observability.middleware_helper import record_events
         patch(
-            "controller.middleware.remote_fs.record_worker_events",
+            "controller.middleware.remote_fs.record_events",
             new_callable=AsyncMock,
         ) as m1,
+        # Patched to match the import in remote_fs.py: from controller.observability.middleware_helper import broadcast_file_update
         patch(
-            "controller.middleware.remote_fs.sync_asset", new_callable=AsyncMock
+            "controller.middleware.remote_fs.broadcast_file_update", new_callable=AsyncMock
         ) as m2,
-        patch(
-            "controller.observability.broadcast.EpisodeBroadcaster",
-            new_callable=MagicMock,
-        ) as m3,
+        # We don't need to patch EpisodeBroadcaster here if we patch broadcast_file_update,
+        # but let's keep it if other tests rely on it, or remove if unused.
+        # Actually, broadcast_file_update is called, so mocking it is sufficient.
     ):
-        # Mock EpisodeBroadcaster.get_instance().broadcast
-        m3.get_instance.return_value.broadcast = AsyncMock()
-        yield m1, m2, m3
+        yield m1, m2
 
 
 @pytest.mark.asyncio
@@ -81,7 +80,7 @@ async def test_remote_fs_middleware_read():
 
 @pytest.mark.asyncio
 async def test_remote_fs_middleware_overwrite(mock_observability):
-    m1, m2, m3 = mock_observability
+    m1, m2 = mock_observability
     mock_client = AsyncMock()
     middleware = RemoteFilesystemMiddleware(mock_client)
 
@@ -91,7 +90,9 @@ async def test_remote_fs_middleware_overwrite(mock_observability):
 
     # Check event recording
     call_args = m1.call_args_list[0]
-    event = call_args.kwargs["events"][0]
+    # record_events(episode_id, events=[...])
+    events = call_args.kwargs.get("events") or call_args.args[1]
+    event = events[0]
     assert event.overwrite is True
 
     # Test with overwrite=False
@@ -101,5 +102,6 @@ async def test_remote_fs_middleware_overwrite(mock_observability):
     mock_client.write_file.assert_called_with("test.txt", "content", overwrite=False)
 
     call_args = m1.call_args_list[0]
-    event = call_args.kwargs["events"][0]
+    events = call_args.kwargs.get("events") or call_args.args[1]
+    event = events[0]
     assert event.overwrite is False

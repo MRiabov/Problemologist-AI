@@ -35,14 +35,15 @@ def test_search_cots_catalog_success(mock_search_parts):
         ),
     ]
 
-    # Invoke tool with correct arguments dict
-    result = search_cots_catalog.invoke({"query": "M3 bolts", "max_cost": 0.20})
+    # Invoke tool directly as a function
+    result = search_cots_catalog(query="M3 bolts", max_cost=0.20)
 
     # Verify search_parts was called with correct constraints
     args, _ = mock_search_parts.call_args
     search_query = args[0]
     assert search_query.query == "M3 bolts"
-    assert search_query.constraints["max_cost"] == 0.20
+    # Access Pydantic fields via dot notation
+    assert search_query.constraints.max_cost == 0.20
 
     # Verify result formatting
     assert "M3-10" in result
@@ -54,7 +55,7 @@ def test_search_cots_catalog_success(mock_search_parts):
 def test_search_cots_catalog_no_results(mock_search_parts):
     mock_search_parts.return_value = []
 
-    result = search_cots_catalog.invoke({"query": "Unobtainium"})
+    result = search_cots_catalog(query="Unobtainium")
 
     assert "No parts found matching the criteria" in result
 
@@ -62,19 +63,18 @@ def test_search_cots_catalog_no_results(mock_search_parts):
 def test_search_cots_catalog_all_args(mock_search_parts):
     mock_search_parts.return_value = []
 
-    search_cots_catalog.invoke(
-        {
-            "query": "Motor",
-            "max_weight_g": 100.0,
-            "max_cost": 50.0,
-            "category": "motor",
-            "limit": 10,
-        }
+    search_cots_catalog(
+        query="Motor",
+        max_weight_g=100.0,
+        max_cost=50.0,
+        category="motor",
+        limit=10,
     )
 
     args, _ = mock_search_parts.call_args
     search_query = args[0]
-    assert search_query.constraints["max_weight_g"] == 100.0
-    assert search_query.constraints["max_cost"] == 50.0
-    assert search_query.constraints["category"] == "motor"
+    # Access Pydantic fields via dot notation
+    assert search_query.constraints.max_weight_g == 100.0
+    assert search_query.constraints.max_cost == 50.0
+    assert search_query.constraints.category == "motor"
     assert search_query.limit == 10
