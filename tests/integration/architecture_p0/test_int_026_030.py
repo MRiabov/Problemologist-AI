@@ -149,7 +149,7 @@ async def test_int_027_seed_variant_tracking():
             },
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run", json=payload.model_dump(mode="json")
+            f"{CONTROLLER_URL}/api/agent/run", json=payload.model_dump(mode="json")
         )
         assert resp.status_code == 202
         run_data = AgentRunResponse.model_validate(resp.json())
@@ -160,7 +160,7 @@ async def test_int_027_seed_variant_tracking():
         for _ in range(5):
             try:
                 status_resp = await client.get(
-                    f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=10.0
+                    f"{CONTROLLER_URL}/api/episodes/{episode_id}", timeout=10.0
                 )
                 if status_resp.status_code == 200:
                     ep_data = EpisodeResponse.model_validate(status_resp.json())
@@ -228,18 +228,18 @@ async def test_int_029_api_key_enforcement(controller_client):
     client = controller_client
 
     # No key
-    resp = await client.post("/ops/backup")
+    resp = await client.post("/api/ops/backup")
     assert resp.status_code == 403
 
     # Invalid auth
     resp = await client.post(
-        "/ops/backup",
+        "/api/ops/backup",
         headers={"X-Backup-Secret": "invalid-auth-val"},
     )
     assert resp.status_code == 403
 
     valid_auth = os.getenv("BACKUP_SECRET", "change-me-in-production")
-    resp = await client.post("/ops/backup", headers={"X-Backup-Secret": valid_auth})
+    resp = await client.post("/api/ops/backup", headers={"X-Backup-Secret": valid_auth})
     assert resp.status_code in [202, 500]
     if resp.status_code == 500:
         assert (
@@ -260,7 +260,7 @@ async def test_int_030_interrupt_propagation():
             session_id=session_id,
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run", json=payload.model_dump(mode="json")
+            f"{CONTROLLER_URL}/api/agent/run", json=payload.model_dump(mode="json")
         )
         assert resp.status_code == 202
         run_data = AgentRunResponse.model_validate(resp.json())
@@ -269,7 +269,7 @@ async def test_int_030_interrupt_propagation():
         await asyncio.sleep(0.5)
 
         interrupt_resp = await client.post(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/interrupt"
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/interrupt"
         )
         assert interrupt_resp.status_code in [200, 202]
         StandardResponse.model_validate(interrupt_resp.json())
@@ -277,7 +277,7 @@ async def test_int_030_interrupt_propagation():
         status = None
         for i in range(20):
             await asyncio.sleep(0.5)
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            status_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
             assert status_resp.status_code == 200
             ep_data = EpisodeResponse.model_validate(status_resp.json())
             status = ep_data.status
