@@ -1,0 +1,66 @@
+{
+  "event_count": 7,
+  "feature_slug": "010-electromechanical-integration",
+  "last_event_id": "01KJF98EGB53D05377WSDJDX4N",
+  "materialized_at": "2026-02-27T10:10:40.269492+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 6,
+    "for_review": 0,
+    "in_progress": 1,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EF8PJ3E14WK1EJB4S03",
+      "last_transition_at": "2026-02-27T10:10:40.232910+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EFEZ198PJJFKTMRCK0C",
+      "last_transition_at": "2026-02-27T10:10:40.238383+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EFKP1DBGRDBPTEPG67R",
+      "last_transition_at": "2026-02-27T10:10:40.243678+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EFRJSJP21JB4QMFDCZ0",
+      "last_transition_at": "2026-02-27T10:10:40.248817+00:00"
+    },
+    "WP05": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EFYB1GXMDXMZAMWQ94S",
+      "last_transition_at": "2026-02-27T10:10:40.254168+00:00"
+    },
+    "WP06": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "in_progress",
+      "last_event_id": "01KJF98EG3PSJXARV6EM5H7WTW",
+      "last_transition_at": "2026-02-27T10:10:40.259515+00:00"
+    },
+    "WP07": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EGB53D05377WSDJDX4N",
+      "last_transition_at": "2026-02-27T10:10:40.267870+00:00"
+    }
+  }
+}

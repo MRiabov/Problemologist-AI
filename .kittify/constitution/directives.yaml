@@ -1,0 +1,19 @@
+# Auto-generated from constitution.md — do not edit directly.
+# Run 'spec-kitty constitution sync' to regenerate.
+
+directives:
+- id: DIR-001
+  title: '**Microservice-first Architecture**'
+  description: '**Microservice-first Architecture**'
+  severity: warn
+  applies_to: []
+- id: DIR-002
+  title: '**No Reinvention**'
+  description: '**No Reinvention**'
+  severity: warn
+  applies_to: []
+- id: DIR-003
+  title: '**Early Stopping & Fail Fast**'
+  description: '**Early Stopping & Fail Fast**'
+  severity: warn
+  applies_to: []

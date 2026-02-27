@@ -1,0 +1,66 @@
+{
+  "event_count": 7,
+  "feature_slug": "001-agentic-cad-environment",
+  "last_event_id": "01KJF98E5H0X13293BBQG33SRR",
+  "materialized_at": "2026-02-27T10:10:39.926308+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 7,
+    "for_review": 0,
+    "in_progress": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E4PZRHN9XSMBJXJ23GJ",
+      "last_transition_at": "2026-02-27T10:10:39.894009+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E4T5WS3H9PSKC3SYRR6",
+      "last_transition_at": "2026-02-27T10:10:39.898401+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E5067EKFH35JHHX19SD",
+      "last_transition_at": "2026-02-27T10:10:39.904210+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E54Z2VFYCJ2MF9Y36J0",
+      "last_transition_at": "2026-02-27T10:10:39.908671+00:00"
+    },
+    "WP05": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E59GAQBT1H3937RZ30G",
+      "last_transition_at": "2026-02-27T10:10:39.913025+00:00"
+    },
+    "WP06": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E5D945ZTQ1MEPF2H8CV",
+      "last_transition_at": "2026-02-27T10:10:39.917418+00:00"
+    },
+    "WP07": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E5H0X13293BBQG33SRR",
+      "last_transition_at": "2026-02-27T10:10:39.921663+00:00"
+    }
+  }
+}

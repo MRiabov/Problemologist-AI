@@ -1,0 +1,59 @@
+{
+  "event_count": 6,
+  "feature_slug": "011-interactive-steerability-and-design-feedback",
+  "last_event_id": "01KJF98EHQT55TJXM3RA338RWN",
+  "materialized_at": "2026-02-27T10:10:40.313157+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 6,
+    "for_review": 0,
+    "in_progress": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EGSA56RRW8FET2CRSKD",
+      "last_transition_at": "2026-02-27T10:10:40.281624+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EH18PHWRA0M82YEEYX7",
+      "last_transition_at": "2026-02-27T10:10:40.288951+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EH5HQJMZQW0JP196Q4E",
+      "last_transition_at": "2026-02-27T10:10:40.293951+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EHA0S8CCGPGHDSMFPTN",
+      "last_transition_at": "2026-02-27T10:10:40.298816+00:00"
+    },
+    "WP05": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EHJ3J669K8ECCR8Q01C",
+      "last_transition_at": "2026-02-27T10:10:40.306093+00:00"
+    },
+    "WP06": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EHQT55TJXM3RA338RWN",
+      "last_transition_at": "2026-02-27T10:10:40.311635+00:00"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "event_count": 4,
+  "feature_slug": "004-advanced-manufacturing-workbenches",
+  "last_event_id": "01KJF98EA3A5FJ8K7Z3D0775AC",
+  "materialized_at": "2026-02-27T10:10:40.069686+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 4,
+    "for_review": 0,
+    "in_progress": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E89VJFADEBG0VNFKFEV",
+      "last_transition_at": "2026-02-27T10:10:40.009095+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E8E4C3BF02W7KNBW3WE",
+      "last_transition_at": "2026-02-27T10:10:40.014119+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E8PPC69WGF48D0T8SGE",
+      "last_transition_at": "2026-02-27T10:10:40.022718+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EA3A5FJ8K7Z3D0775AC",
+      "last_transition_at": "2026-02-27T10:10:40.067238+00:00"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "event_count": 7,
+  "feature_slug": "009-fluids-deformable-materials",
+  "last_event_id": "01KJF98EF1C47046SZDMQDZT9Q",
+  "materialized_at": "2026-02-27T10:10:40.227216+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 7,
+    "for_review": 0,
+    "in_progress": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EE36ZEYX394J9F59P77",
+      "last_transition_at": "2026-02-27T10:10:40.195623+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EE9QV0JRMR4F8WKZS00",
+      "last_transition_at": "2026-02-27T10:10:40.200942+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EEES6NPVQ9VNGRWGY26",
+      "last_transition_at": "2026-02-27T10:10:40.206112+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EEKME2KJNJCS8YE33AG",
+      "last_transition_at": "2026-02-27T10:10:40.211223+00:00"
+    },
+    "WP05": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EERBRYR72JDQSSZH71W",
+      "last_transition_at": "2026-02-27T10:10:40.216389+00:00"
+    },
+    "WP06": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EEXTKK0648CP78NC224",
+      "last_transition_at": "2026-02-27T10:10:40.221230+00:00"
+    },
+    "WP07": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98EF1C47046SZDMQDZT9Q",
+      "last_transition_at": "2026-02-27T10:10:40.225639+00:00"
+    }
+  }
+}

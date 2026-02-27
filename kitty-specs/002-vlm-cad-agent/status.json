@@ -1,0 +1,66 @@
+{
+  "event_count": 7,
+  "feature_slug": "002-vlm-cad-agent",
+  "last_event_id": "01KJF98E6VBBFSNTMKC378EAWS",
+  "materialized_at": "2026-02-27T10:10:39.964725+00:00",
+  "summary": {
+    "blocked": 0,
+    "canceled": 0,
+    "claimed": 0,
+    "done": 7,
+    "for_review": 0,
+    "in_progress": 0,
+    "planned": 0
+  },
+  "work_packages": {
+    "WP01": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E5WSKQK3A07NBA2ZMZQ",
+      "last_transition_at": "2026-02-27T10:10:39.932552+00:00"
+    },
+    "WP02": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E5ZMYQSRQD2Z0MXWNYP",
+      "last_transition_at": "2026-02-27T10:10:39.935558+00:00"
+    },
+    "WP03": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E670E05M605HSMAWK6Z",
+      "last_transition_at": "2026-02-27T10:10:39.943482+00:00"
+    },
+    "WP04": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E6FAAY8W29A6GC2SMDK",
+      "last_transition_at": "2026-02-27T10:10:39.951459+00:00"
+    },
+    "WP05": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E6MV5539GQFHJXBKG23",
+      "last_transition_at": "2026-02-27T10:10:39.956202+00:00"
+    },
+    "WP06": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E6R2WC82SFSATDJGYP7",
+      "last_transition_at": "2026-02-27T10:10:39.960728+00:00"
+    },
+    "WP07": {
+      "actor": "migration",
+      "force_count": 1,
+      "lane": "done",
+      "last_event_id": "01KJF98E6VBBFSNTMKC378EAWS",
+      "last_transition_at": "2026-02-27T10:10:39.963698+00:00"
+    }
+  }
+}
