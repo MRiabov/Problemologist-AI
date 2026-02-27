@@ -1,7 +1,8 @@
 import os
 
 import pytest
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
+from playwright.sync_api import Page, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 # Constants
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")

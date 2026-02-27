@@ -1,7 +1,8 @@
+import datetime
+import os
+
 import httpx
 import pytest
-import os
-import datetime
 
 SERVICES = [
     "http://127.0.0.1:18000",  # Controller

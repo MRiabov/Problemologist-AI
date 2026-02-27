@@ -9,7 +9,6 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Path,
     Query,
     Response,
     WebSocket,
