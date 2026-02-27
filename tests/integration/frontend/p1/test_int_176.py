@@ -1,5 +1,6 @@
 import os
 import uuid
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -66,6 +67,3 @@ def test_int_176_tool_call_failure_recovery(page: Page):
     page.wait_for_selector(
         ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=60000
     )
-
-
-import re

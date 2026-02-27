@@ -1,6 +1,7 @@
 import os
-import uuid
 import re
+import uuid
+
 import httpx
 import pytest
 from playwright.sync_api import Page, expect

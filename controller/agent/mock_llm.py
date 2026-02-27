@@ -186,10 +186,8 @@ class MockDSPyLM(dspy.LM):
 
         # Secondary check for benchmark scenario if it looks like one
         if (
-            "move" in text.lower()
-            and "sphere" in text.lower()
-            or "steel ball" in text.lower()
-        ):
+            "move" in text.lower() and "sphere" in text.lower()
+        ) or "steel ball" in text.lower():
             return "benchmark"
 
         return None

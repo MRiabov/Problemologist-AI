@@ -154,7 +154,11 @@ class ObjectiveEvaluator:
                         and fo.eval_at == FluidEvalAt.CONTINUOUS
                     ):
                         self._evaluate_fluid_containment(fo, particles)
-                        if self.fail_reason and self.fail_reason.reason == FailureReason.FLUID_OBJECTIVE_FAILED:
+                        if (
+                            self.fail_reason
+                            and self.fail_reason.reason
+                            == FailureReason.FLUID_OBJECTIVE_FAILED
+                        ):
                             return self.fail_reason
 
         return None

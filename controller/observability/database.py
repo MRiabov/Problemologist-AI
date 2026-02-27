@@ -171,8 +171,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                         self.record_tool_start(tool_name, input_data), self.loop
                     )
                     return future.result(timeout=10)
-                else:
-                    return asyncio.run(self.record_tool_start(tool_name, input_data))
+                return asyncio.run(self.record_tool_start(tool_name, input_data))
             except Exception as e:
                 logger.warning("database_tool_start_sync_failed", error=str(e))
                 return 0
