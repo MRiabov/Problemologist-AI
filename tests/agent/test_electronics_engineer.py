@@ -41,6 +41,7 @@ async def test_electronics_engineer_node_success(
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
+        main_loop=MagicMock(),
     )
     mock_ctx_cls.create.return_value = mock_ctx
 
@@ -91,6 +92,7 @@ async def test_electronics_engineer_node_failure(
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=MagicMock(),
+        main_loop=MagicMock(),
     )
     mock_ctx_cls.create.return_value = mock_ctx
 
