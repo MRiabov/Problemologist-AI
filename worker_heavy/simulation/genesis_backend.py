@@ -493,7 +493,8 @@ class GenesisBackend(PhysicsBackend):
                             opacity=color_f[3] if len(color_f) > 3 else 0.8,
                         )
 
-                        if vol["type"] == "box":
+                        vol_type = vol["type"].lower()
+                        if vol_type == "box":
                             self.scene.add_entity(
                                 gs.morphs.Box(
                                     pos=vol["center"],
@@ -502,11 +503,22 @@ class GenesisBackend(PhysicsBackend):
                                 material=material,
                                 surface=surface,
                             )
-                        elif vol["type"] == "sphere":
+                        elif vol_type == "sphere":
                             self.scene.add_entity(
                                 gs.morphs.Sphere(
                                     pos=vol["center"],
                                     radius=vol.get("radius", 0.05),
+                                ),
+                                material=material,
+                                surface=surface,
+                            )
+                        elif vol_type == "cylinder":
+                            self.scene.add_entity(
+                                gs.morphs.Cylinder(
+                                    pos=vol["center"],
+                                    radius=vol.get("radius", 0.05),
+                                    height=vol.get("height", 0.1),
+                                    axis="z",
                                 ),
                                 material=material,
                                 surface=surface,
