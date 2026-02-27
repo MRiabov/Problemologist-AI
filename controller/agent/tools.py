@@ -4,6 +4,7 @@ from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.cots.agent import search_cots_catalog
 from shared.observability.schemas import RunCommandToolEvent
+from shared.simulation.schemas import SimulatorBackendType
 
 
 def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Callable]:
@@ -67,6 +68,60 @@ def get_engineer_tools(
 ) -> list[Callable]:
     """
     Get the tools for the Engineer agent.
-    Now uses the common toolset.
+    Now includes high-level engineering tools (simulate, preview, etc.).
     """
-    return get_common_tools(fs, session_id)
+    common_tools = get_common_tools(fs, session_id)
+
+    async def simulate(
+        script_path: str, backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    ) -> dict:
+        """
+        Run physics simulation for the design.
+        Genesis is used by default for high-fidelity (fluids, FEM).
+        MuJoCo can be selected for fast rigid-body only runs.
+        """
+        return await fs.simulate(script_path, backend=backend)
+
+    async def preview_design(
+        script_path: str, pitch: float = -45.0, yaw: float = 45.0
+    ) -> dict:
+        """
+        Generate a 3D preview image of the current CAD design.
+        Returns the path to the generated image.
+        """
+        return await fs.preview(script_path, pitch=pitch, yaw=yaw)
+
+    async def validate_costing_and_price() -> dict:
+        """
+        Validate 'assembly_definition.yaml' and autopopulate pricing/weight totals.
+        Returns the validation result and calculated totals.
+        """
+        res = await fs.validate_costing_and_price()
+        return {
+            "success": res.exit_code == 0,
+            "stdout": res.stdout,
+            "stderr": res.stderr,
+        }
+
+    async def get_docs_for(type_name: str) -> str:
+        """
+        Retrieve documentation and usage examples for a build123d entity or skill.
+        Example: get_docs_for("Box") or get_docs_for("fastener_hole")
+        """
+        return await fs.get_docs_for(type_name)
+
+    async def submit_for_review(script_path: str = "script.py") -> dict:
+        """
+        Submit the current design and documentation for reviewer approval.
+        This tool should be called once the task in TODO is complete.
+        """
+        return await fs.submit(script_path)
+
+    return [
+        *common_tools,
+        simulate,
+        preview_design,
+        validate_costing_and_price,
+        get_docs_for,
+        submit_for_review,
+    ]
