@@ -110,12 +110,16 @@ find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/d
 
 # Start Worker Light (port 18001)
 export PYTHONPATH=$PYTHONPATH:.
+export WORKER_TYPE=light
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_light_debug.log"
 nohup uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
 echo $WORKER_LIGHT_PID > logs/worker_light.pid
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 
 # Start Worker Heavy (port 18002)
+export WORKER_TYPE=heavy
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_debug.log"
 nohup uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
 echo $WORKER_HEAVY_PID > logs/worker_heavy.pid
@@ -137,7 +141,9 @@ echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 # Create convenience symlinks in the logs/ root for the current environment
 ln -sf "integration_tests/controller.log" logs/controller.log
 ln -sf "integration_tests/worker_light.log" logs/worker_light.log
+ln -sf "integration_tests/worker_light_debug.log" logs/worker_light_debug.log
 ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
+ln -sf "integration_tests/worker_heavy_debug.log" logs/worker_heavy_debug.log
 ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
 
 echo "Waiting for services to be healthy..."
