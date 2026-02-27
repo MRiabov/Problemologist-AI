@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { fetchEpisodes, fetchEpisode, runAgent, generateBenchmark, updateBenchmarkObjectives, continueEpisode, type Episode, type BenchmarkObjectives, steerAgent as apiSteerAgent } from '../api/client';
+import { 
+  fetchEpisodes, 
+  fetchEpisode, 
+  runAgent, 
+  generateBenchmark, 
+  updateBenchmarkObjectives, 
+  continueEpisode, 
+  confirmBenchmark as apiConfirmBenchmark,
+  interruptEpisode as apiInterruptEpisode,
+  type Episode, 
+  type BenchmarkObjectives, 
+  steerAgent as apiSteerAgent 
+} from '../api/client';
 import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
 import { OpenAPI } from '../api/generated/core/OpenAPI';
 import type { TopologyNode } from "../components/visualization/ModelBrowser";
@@ -72,12 +84,27 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await fetchEpisodes();
       setEpisodes(data);
+      
+      // Update selected episode if it's in the list
+      if (selectedEpisode) {
+          const updated = data.find(e => e.id === selectedEpisode.id);
+          if (updated && (
+              updated.status !== selectedEpisode.status || 
+              (updated.traces?.length || 0) > (selectedEpisode.traces?.length || 0) ||
+              (updated.assets?.length || 0) > (selectedEpisode.assets?.length || 0)
+          )) {
+              setSelectedEpisode(prev => {
+                  if (!prev) return updated;
+                  return { ...prev, ...updated };
+              });
+          }
+      }
     } catch (e) {
       console.error("Failed to fetch episodes", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedEpisode?.id, selectedEpisode?.status, selectedEpisode?.traces?.length, selectedEpisode?.assets?.length]);
 
   const selectEpisode = useCallback(async (id: string) => {
     setIsCreationMode(false);
@@ -148,6 +175,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (response.episode_id) {
+        console.log("Agent started, episode_id:", response.episode_id);
         // Create a minimal episode object to start polling
         const newEpisode: Episode = {
           id: response.episode_id,
@@ -156,11 +184,15 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           traces: [],
-          assets: []
+          assets: [],
+          plan: '',
+          metadata_vars: {}
         };
         setSelectedEpisode(newEpisode);
         localStorage.setItem("selectedEpisodeId", response.episode_id);
         await refreshEpisodes();
+      } else {
+        console.error("No episode_id in response:", response);
       }
     } catch (e) {
       console.error("Failed to run agent", e);
@@ -191,7 +223,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const confirmBenchmark = useCallback(async (id: string, comment?: string) => {
     setRunning(true);
     try {
-        await import('../api/client').then(m => m.confirmBenchmark(id, comment));
+        await apiConfirmBenchmark(id, comment);
         await refreshEpisodes();
     } catch (e) {
         console.error("Failed to confirm benchmark", e);
@@ -218,7 +250,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
   const interruptAgent = useCallback(async (id: string) => {
     try {
-        await import('../api/client').then(m => m.interruptEpisode(id));
+        await apiInterruptEpisode(id);
     } catch (e) {
         console.error("Failed to interrupt agent", e);
     }
@@ -359,7 +391,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   // Fallback polling for active episode details (slower than before)
   useEffect(() => {
     let interval: number | undefined;
-    if (selectedEpisode && (selectedEpisode.status === EpisodeStatus.RUNNING || running)) {
+    if (selectedEpisode && !running && (selectedEpisode.status === EpisodeStatus.RUNNING)) {
       interval = window.setInterval(async () => {
         try {
           const [episodesData, currentEp] = await Promise.all([
@@ -371,7 +403,15 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           // Only update if something changed (avoid re-rendering everything if WS handled it)
           setSelectedEpisode((prev: Episode | null) => {
              if (!prev) return currentEp;
-             if (JSON.stringify(prev) === JSON.stringify(currentEp)) return prev;
+             // Check for meaningful changes to avoid re-rendering components like buttons
+             if (prev.id === currentEp.id && 
+                 prev.status === currentEp.status && 
+                 prev.last_trace_id === currentEp.last_trace_id &&
+                 (prev.assets?.length || 0) === (currentEp.assets?.length || 0) &&
+                 (prev.plan === currentEp.plan)) {
+                 return prev;
+             }
+             console.log("Updating selectedEpisode from poller", { old: prev.status, new: currentEp.status });
              return currentEp;
           });
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useEpisodes } from '../../context/EpisodeContext';
 import { useConnection } from '../../context/ConnectionContext';
 import * as yaml from 'js-yaml';
@@ -7,6 +7,7 @@ import {
   AlertCircle,
   RotateCcw
 } from "lucide-react";
+import { OpenAPI } from '../../api/generated/core/OpenAPI';
 import { rebuildModel } from "../../api/client";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -71,15 +72,17 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     return defaultVal;
   };
 
-  const getAssetUrl = (asset: AssetResponse) => {
+  const getAssetUrl = useCallback((asset: AssetResponse) => {
     if (!asset || !selectedEpisode) return null;
     if (asset.s3_path.startsWith('http')) return asset.s3_path;
-    return PathUtils.join('/api/episodes', selectedEpisode.id, 'assets', asset.s3_path);
-  };
+    const path = PathUtils.join(OpenAPI.BASE || '', '/api/episodes', selectedEpisode.id, 'assets', asset.s3_path);
+    return path.startsWith('http') ? path : PathUtils.ensureLeadingSlash(path);
+  }, [selectedEpisode?.id]);
 
-  const videoAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === AssetType.VIDEO);
-  const modelAssets = selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === AssetType.STL || a.asset_type === AssetType.STEP || a.asset_type === AssetType.GLB) || [];
-  const modelUrls = modelAssets.map(getAssetUrl).filter(Boolean) as string[];
+  const videoAsset = useMemo(() => selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === AssetType.VIDEO), [selectedEpisode]);
+  // Only include GLB assets — GLTFLoader cannot parse STL/STEP and crashes with WebGL context loss
+  const modelAssets = useMemo(() => selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === AssetType.GLB) || [], [selectedEpisode]);
+  const modelUrls = useMemo(() => modelAssets.map(getAssetUrl).filter(Boolean) as string[], [modelAssets, getAssetUrl]);
 
   const circuitData = useMemo(() => {
     const assemblyAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.s3_path.endsWith('assembly_definition.yaml'));
@@ -190,8 +193,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
               <ResizablePanel 
                 defaultSize={getSavedLayout(storageKeys.rows, "50%")} 
                 minSize="30%"
+                className="h-full"
               >
-                <div className="h-full relative bg-gradient-to-b from-muted whitespace-nowrap overflow-hidden flex items-center justify-center group">
+                <div className="h-full w-full relative bg-gradient-to-b from-muted whitespace-nowrap overflow-hidden flex items-center justify-center group" data-testid="viewport-container">
                   {viewportOverlays}
 
                   {viewportBadgeText && (
@@ -207,6 +211,16 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                        {viewportControls}
                     </div>
                   )}
+
+                  <div data-testid="unified-debug-info" className="hidden">
+                      {JSON.stringify({ 
+                          modelUrlsCount: modelUrls.length, 
+                          hasVideoAsset: !!videoAsset, 
+                          videoAssetType: videoAsset?.asset_type,
+                          episodeId: selectedEpisode?.id,
+                          episodeStatus: selectedEpisode?.status
+                      })}
+                  </div>
 
                   <DesignViewer 
                     modelUrls={modelUrls}

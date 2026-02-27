@@ -49,19 +49,24 @@ def test_int_179_manual_at_mention_contract(page: Page):
 
     asset_found = False
     for _ in range(15):
-        url = page.url
-        if "/episodes/" in url:
-            ep_id = url.split("/episodes/")[1].split("/")[0]
-            with httpx.Client() as client:
-                resp = client.get(f"{CONTROLLER_URL}/api/episodes/{ep_id}")
-                if resp.status_code == 200:
-                    assets = resp.json().get("assets", [])
-                    if any(a["s3_path"].endswith("script.py") for a in assets):
-                        asset_found = True
-                        break
+        with httpx.Client() as client:
+            resp = client.get(f"{CONTROLLER_URL}/api/episodes/")
+            if resp.status_code == 200:
+                episodes = resp.json()
+                for lst_ep in episodes:
+                    if unique_task in lst_ep.get("task", ""):
+                        ep_id = lst_ep["id"]
+                        resp_ep = client.get(f"{CONTROLLER_URL}/api/episodes/{ep_id}")
+                        if resp_ep.status_code == 200:
+                            assets = resp_ep.json().get("assets", [])
+                            if any(a["s3_path"].endswith("script.py") for a in assets):
+                                asset_found = True
+                        break  # break the inner episodes loop
+            if asset_found:
+                break
         time.sleep(2)
 
-    assert asset_found, f"Asset script.py not found via API after 30s. URL: {page.url}"
+    assert asset_found, "Asset script.py not found via API after 30s."
 
     # 4. Type a valid @mention for a file
     chat_input.fill("Explain @script.py:1-10")

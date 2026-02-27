@@ -21,6 +21,23 @@ import { useEpisodes } from '../../context/EpisodeContext'
 import ConnectionError from '../shared/ConnectionError'
 import { cn } from '../../lib/utils'
 import { ModelBrowser, type TopologyNode } from './ModelBrowser'
+import React from 'react'
+
+// Error boundary to prevent a single failed model from crashing the entire Canvas
+class ModelErrorBoundary extends React.Component<{children: React.ReactNode, url: string}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode, url: string}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error) {
+    console.error(`ModelErrorBoundary caught error for ${this.props.url}:`, error);
+  }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY'
 
@@ -279,6 +296,7 @@ interface ModelViewerProps {
   resetTrigger?: number;
   topologyNodes?: TopologyNode[];
   onTopologyChange?: (nodes: TopologyNode[]) => void;
+  "data-testid"?: string;
 }
 
 export default function ModelViewer({ 
@@ -290,7 +308,8 @@ export default function ModelViewer({
   resetTrigger = 0,
   topologyNodes = [],
   onTopologyChange,
-  onRebuildModel
+  onRebuildModel,
+  "data-testid": testId
 }: ModelViewerProps & { onRebuildModel?: () => void }) {
   const controlsRef = useRef<any>(null)
   const { addToContext } = useEpisodes();
@@ -319,7 +338,7 @@ export default function ModelViewer({
   }, [resetTrigger])
 
   return (
-    <div className={cn(className, "relative group flex overflow-hidden bg-slate-950")}>
+    <div className={cn(className, "relative group flex overflow-hidden bg-slate-950")} data-testid={testId}>
       {!isConnected && <ConnectionError className="absolute inset-0 z-50" />}
       
       {/* Model Browser Sidebar (Inventor Style) */}
@@ -353,8 +372,8 @@ export default function ModelViewer({
       )}
 
       {/* Main Viewport */}
-      <div className="flex-1 min-h-0 relative">
-        <Canvas shadows dpr={[1, 2]} data-testid="main-canvas">
+      <div className="flex-1 min-h-0 relative" data-testid="main-canvas-container">
+        <Canvas shadows dpr={[1, 2]}>
             <PerspectiveCamera makeDefault position={[3, 3, 3]} fov={50} />
             <OrbitControls 
             ref={controlsRef}
@@ -373,26 +392,28 @@ export default function ModelViewer({
             <Suspense fallback={null}>
                 {urls.length > 0 ? (
                     urls.map(url => (
-                        <GlbModel 
-                            key={url} 
-                            url={url} 
-                            hiddenParts={hiddenParts} 
-                            selectionMode={selectionMode}
-                            isElectronicsView={isElectronicsView}
-                            onStructureParsed={onTopologyChange}
-                            onSelect={(name, level, metadata) => {
-                                addToContext({
-                                    id: `cad-${name}`,
-                                    type: 'cad',
-                                    label: name,
-                                    metadata: { 
-                                        part: name,
-                                        level: level,
-                                        ...metadata
-                                    }
-                                });
-                            }}
-                        />
+                        <ModelErrorBoundary key={`eb-${url}`} url={url}>
+                            <GlbModel 
+                                key={url} 
+                                url={url} 
+                                hiddenParts={hiddenParts} 
+                                selectionMode={selectionMode}
+                                isElectronicsView={isElectronicsView}
+                                onStructureParsed={onTopologyChange}
+                                onSelect={(name, level, metadata) => {
+                                    addToContext({
+                                        id: `cad-${name}`,
+                                        type: 'cad',
+                                        label: name,
+                                        metadata: { 
+                                            part: name,
+                                            level: level,
+                                            ...metadata
+                                        }
+                                    });
+                                }}
+                            />
+                        </ModelErrorBoundary>
                     ))
                 ) : (
                     <PlaceholderModel />

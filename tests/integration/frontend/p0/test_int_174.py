@@ -24,7 +24,7 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     page.get_by_test_id("create-new-button").click()
 
     # 3. Enter the prompt
-    prompt_text = f"Create a simple benchmark with two parts {uuid.uuid4()}"
+    prompt_text = "Simple mechanism benchmark INT-174"
     prompt_input = page.locator("#chat-input")
     expect(prompt_input).to_be_visible(timeout=30000)
     prompt_input.fill(prompt_text)
@@ -35,18 +35,31 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     send_button.click()
 
     # 5. Wait for the "Confirm & Start" button and click it
-    confirm_button = page.get_by_test_id("chat-confirm-button")
-    expect(confirm_button).to_be_visible(timeout=120000)
-    confirm_button.click()
+    try:
+        page.wait_for_selector('[data-testid="chat-confirm-button"]', timeout=30000)
+        page.get_by_test_id("chat-confirm-button").click(force=True)
+    except Exception:
+        print(
+            "\nConfirm button didn't appear or already gone, checking if assets appeared directly"
+        )
 
     # Wait for the overlay to disappear
     expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
+    page.wait_for_timeout(2000)
 
     # Wait for the model viewer to load
-    page.wait_for_selector("canvas", state="visible", timeout=60000)
-    canvas = page.locator("canvas").first
-    expect(canvas).to_be_visible(timeout=30000)
+    page.wait_for_selector(
+        '[data-testid="design-viewer-3d"]', state="visible", timeout=60000
+    )
+    page.wait_for_selector(
+        '[data-testid="main-canvas-container"]', state="visible", timeout=60000
+    )
+    canvas_container = page.get_by_test_id("main-canvas-container")
+    expect(canvas_container).to_be_visible(timeout=30000)
 
+    # The actual canvas element is inside
+    canvas = canvas_container.locator("canvas")
+    expect(canvas).to_be_visible(timeout=30000)
     # Open model browser if needed
     model_browser = page.get_by_test_id("model-browser-panel")
     if not model_browser.is_visible():

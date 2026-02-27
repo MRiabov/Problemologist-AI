@@ -123,7 +123,7 @@ export default function Sidebar() {
                                 data-testid="sidebar-episode-item"
                                 onClick={() => handleEpisodeClick(ep.id)}
                                 className={cn(
-                                  "w-full text-left p-2.5 rounded-md transition-all group border border-transparent overflow-hidden",
+                                  "relative w-full text-left p-2.5 rounded-md transition-all group border border-transparent overflow-hidden",
                                   selectedEpisode?.id === ep.id 
                                     ? "bg-primary/10 border-primary/20" 
                                     : "hover:bg-muted/50"
@@ -157,8 +157,14 @@ export default function Sidebar() {
                                         data-testid="sidebar-thumbs-up"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const lastTraceId = ep.last_trace_id || (ep.traces && ep.traces.length > 0 ? ep.traces[ep.traces.length - 1].id : 0);
-                                            setFeedbackState({ traceId: lastTraceId, score: 1 });
+                                            const isSelected = selectedEpisode?.id === ep.id;
+                                            let lastTraceId = ep.last_trace_id;
+                                            if (!lastTraceId && isSelected && selectedEpisode?.traces?.length) {
+                                                lastTraceId = selectedEpisode.traces[selectedEpisode.traces.length - 1].id;
+                                            } else if (!lastTraceId && ep.traces?.length) {
+                                                lastTraceId = ep.traces[ep.traces.length - 1].id;
+                                            }
+                                            setFeedbackState({ traceId: lastTraceId || 0, score: 1 });
                                         }}
                                         className="p-1 rounded-md bg-background/80 backdrop-blur shadow-sm border border-border/50 hover:text-green-500 transition-colors"
                                     >
@@ -168,8 +174,14 @@ export default function Sidebar() {
                                         data-testid="sidebar-thumbs-down"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const lastTraceId = ep.last_trace_id || (ep.traces && ep.traces.length > 0 ? ep.traces[ep.traces.length - 1].id : 0);
-                                            setFeedbackState({ traceId: lastTraceId, score: 0 });
+                                            const isSelected = selectedEpisode?.id === ep.id;
+                                            let lastTraceId = ep.last_trace_id;
+                                            if (!lastTraceId && isSelected && selectedEpisode?.traces?.length) {
+                                                lastTraceId = selectedEpisode.traces[selectedEpisode.traces.length - 1].id;
+                                            } else if (!lastTraceId && ep.traces?.length) {
+                                                lastTraceId = ep.traces[ep.traces.length - 1].id;
+                                            }
+                                            setFeedbackState({ traceId: lastTraceId || 0, score: 0 });
                                         }}
                                         className="p-1 rounded-md bg-background/80 backdrop-blur shadow-sm border border-border/50 hover:text-red-500 transition-colors"
                                     >

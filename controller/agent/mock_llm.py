@@ -471,6 +471,10 @@ class MockDSPyLM(dspy.LM):
             else:
                 all_fields = list(dict.fromkeys(expected_fields + sig_fields))
 
+            # WP10: Force plan inclusion for planner nodes to ensure state transitions work
+            if sig_lookup == "planner" and "plan" not in all_fields:
+                all_fields.append("plan")
+
             lines = []
             for field in all_fields:
                 val = resp.get(field)
@@ -489,7 +493,10 @@ class MockDSPyLM(dspy.LM):
 
                 if isinstance(val, bool):
                     val = str(val).lower()
-                elif isinstance(val, dict):
+                elif field == "plan" and sig_lookup == "planner":
+                    # WP10: Always use JSON for the plan object in planner nodes
+                    val = json.dumps(val)
+                elif isinstance(val, (dict, list)):
                     val = json.dumps(val)
 
                 # TypedPredictor expects [[ ## field ## ]] followed by value on NEXT line
@@ -499,7 +506,7 @@ class MockDSPyLM(dspy.LM):
             lines.append("[[ ## completed ## ]]\n")
 
             result = "\n\n".join(lines)
-            logger.info("mock_dspy_returning_fields", text=result[:200] + "...")
+            logger.info("mock_dspy_returning_fields", text=result)
             return [result]
 
         # Fallback for plain text (rare in our ReAct setups)

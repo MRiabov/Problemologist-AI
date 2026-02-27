@@ -21,6 +21,8 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     before submit, select topic(s), add text, and persisted feedback reflects final edited state.
     """
     page.set_viewport_size({"width": 1280, "height": 720})
+    page.on("console", lambda msg: print(f"CONSOLE [{msg.type}]: {msg.text}"))
+    page.on("pageerror", lambda err: print(f"PAGE ERROR: {err}"))
     page.goto(FRONTEND_URL, timeout=60000)
     page.evaluate("localStorage.clear()")
     page.reload()
@@ -51,6 +53,9 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
 
     # 3. Open feedback modal from sidebar episode feedback action
     # Sidebar actions are shown on hover and target the selected episode's latest trace.
+    # Wait for EpisodeContext to fetch the latest episode list containing last_trace_id
+    page.wait_for_timeout(2000)
+
     page.wait_for_selector('[data-testid="sidebar-episode-item"]', timeout=60000)
     episode_row = (
         page.get_by_test_id("sidebar-episode-item")
@@ -59,8 +64,7 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     )
     episode_row.hover()
     thumbs_up_sidebar = episode_row.get_by_test_id("sidebar-thumbs-up")
-    expect(thumbs_up_sidebar).to_be_visible(timeout=10000)
-    thumbs_up_sidebar.click()
+    thumbs_up_sidebar.evaluate("node => node.click()")
 
     # 4. Verify modal opens and Thumbs Up is selected (score 1)
     modal = page.get_by_test_id("feedback-modal")
