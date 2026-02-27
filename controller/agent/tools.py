@@ -50,6 +50,40 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def cots_search(query: str) -> str:
+        """
+        Search for COTS parts in the catalog.
+        Wraps the search_cots_catalog function to provide a simpler interface for the agent.
+        """
+        return search_cots_catalog(query)
+
+    async def validate_costing_and_price() -> str:
+        """
+        Validate the assembly definition and pricing.
+        Runs the validate_and_price.py script to check cost and weight constraints.
+        """
+        cmd = "python3 skills/manufacturing-knowledge/scripts/validate_and_price.py"
+        await record_worker_events(
+            episode_id=session_id,
+            events=[RunCommandToolEvent(command=cmd)],
+        )
+        return await fs.run_command(cmd)
+
+    async def get_docs_for(query: str) -> str:
+        """
+        Search for documentation for a specific term or concept.
+        Searches skills and build123d docs.
+        """
+        # Simple sanitization
+        safe_query = query.replace('"', '\\"').replace("'", "\\'")
+        cmd = f"python3 -c 'from worker_light.utils.docs import get_docs_for; print(get_docs_for(\"{safe_query}\"))'"
+
+        await record_worker_events(
+            episode_id=session_id,
+            events=[RunCommandToolEvent(command=cmd)],
+        )
+        return await fs.run_command(cmd)
+
     return [
         list_files,
         read_file,
@@ -58,7 +92,9 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
-        search_cots_catalog,
+        cots_search,
+        validate_costing_and_price,
+        get_docs_for,
     ]
 
 
