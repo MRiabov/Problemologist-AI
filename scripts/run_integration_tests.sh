@@ -240,15 +240,21 @@ else
   echo "Xvfb started (PID: $XVFB_PID) on $DISPLAY"
 fi
 
-# Start Unified Worker (port 18001) - handles both light and heavy tasks
-export WORKER_TYPE=unified
-export WORKER_HEAVY_URL="http://127.0.0.1:18001"
-export EXTRA_DEBUG_LOG="$LOG_DIR/worker_debug.log"
+# Start Worker Light (port 18001)
+export WORKER_TYPE=light
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_light_debug.log"
 uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
-WORKER_HEAVY_PID=$WORKER_LIGHT_PID # Same process
 echo $WORKER_LIGHT_PID > logs/worker_light.pid
-echo "Unified Worker started (PID: $WORKER_LIGHT_PID)"
+echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
+
+# Start Worker Heavy (port 18002)
+export WORKER_TYPE=heavy
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_debug.log"
+uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
+WORKER_HEAVY_PID=$!
+echo $WORKER_HEAVY_PID > logs/worker_heavy.pid
+echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
 export EXTRA_DEBUG_LOG="$LOG_DIR/controller_debug.log"
@@ -288,7 +294,9 @@ fi
 ln -sf "integration_tests/controller.log" logs/controller.log
 ln -sf "integration_tests/controller_debug.log" logs/controller_debug.log
 ln -sf "integration_tests/worker_light.log" logs/worker_light.log
-ln -sf "integration_tests/worker_debug.log" logs/worker_debug.log
+ln -sf "integration_tests/worker_light_debug.log" logs/worker_light_debug.log
+ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
+ln -sf "integration_tests/worker_heavy_debug.log" logs/worker_heavy_debug.log
 ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
 ln -sf "integration_tests/temporal_worker_debug.log" logs/temporal_worker_debug.log
 if [ "$RUN_PLAYWRIGHT" = true ]; then
@@ -309,6 +317,7 @@ cleanup() {
   # We use -9 here as some processes (especially when uv run is involved) can hang
   pkill -9 -f "uvicorn.*18000" || true
   pkill -9 -f "uvicorn.*18001" || true
+  pkill -9 -f "uvicorn.*18002" || true
   pkill -9 -f "python -m controller.temporal_worker" || true
   pkill -9 -f "uv run uvicorn" || true
   pkill -9 -f "vite" || true
@@ -363,17 +372,29 @@ done
 HEALTH_COUNT=0
 while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
   if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
-    echo "Unified Worker is healthy!"
+    echo "Worker Light is healthy!"
     break
   fi
-  echo "Waiting for worker... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  echo "Waiting for worker light... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
+  sleep 2
+  HEALTH_COUNT=$((HEALTH_COUNT + 1))
+done
+
+HEALTH_COUNT=0
+while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
+  if curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
+    echo "Worker Heavy is healthy!"
+    break
+  fi
+  echo "Waiting for worker heavy... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
   sleep 2
   HEALTH_COUNT=$((HEALTH_COUNT + 1))
 done
 
 # Final check that all processes are still alive
 if ! kill -0 $CONTROLLER_PID 2>/dev/null; then echo "Controller died!"; exit 1; fi
-if ! kill -0 $WORKER_LIGHT_PID 2>/dev/null; then echo "Unified Worker died!"; exit 1; fi
+if ! kill -0 $WORKER_LIGHT_PID 2>/dev/null; then echo "Worker Light died!"; exit 1; fi
+if ! kill -0 $WORKER_HEAVY_PID 2>/dev/null; then echo "Worker Heavy died!"; exit 1; fi
 if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
   echo "Temporal Worker (PID: $TEMP_WORKER_PID) died unexpectedly!"
   echo "--- LAST 20 LINES OF TEMPORAL WORKER LOG ---"
