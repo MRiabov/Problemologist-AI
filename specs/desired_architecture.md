@@ -1397,8 +1397,7 @@ We should be able to test evaluations on multiple tiers, specifically:
 
 <!-- Future: Given a prompt, the engineering planner doesn't use components that are out of stock -->
 
-<!-- FIXME: Underspec: we don't define coordinate system starting point.I.e. is the center defined as (0,0,0)? Else how do we define it?
-Proposal: normalize the simulation to the center bottom of the build zone. So the bottom center of the simulation would be 0,0,0; whatever is under it would be -z, and everything would be normalized to it. I expect it'll help agents adjust the build. -->
+The global coordinate system for the simulation is defined with the origin at (0,0,0) and the Z-axis pointing up.
 
 ##### Medium evals -  Benchmark Generator
 

@@ -97,7 +97,6 @@ markers = [
     "integration_p1: Nightly integration tests",
     "integration_p2: Weekly/manual integration tests",
     "integration_frontend: end-to-end frontend tests",
-    "unit: marks tests as unit tests", # FIXME: remove
     "benchmark: marks tests related to the benchmark generator",
     "debug_fuzz: manual debugging for schemathesis tests",
     "dev_automations: marks tests for internal automation scripts (orchestrators)",

@@ -52,11 +52,13 @@ async def test_save_asset_with_variants(db_session, mock_boto3):
     ):
         storage = BenchmarkStorage()
 
+        from shared.simulation.schemas import AssetMetadata
+
         benchmark_id = uuid.uuid4()
         script = "print('hello')"
         mjcf = "<xml></xml>"
         images = [b"image1", b"image2"]
-        metadata = {"difficulty_score": 0.5}
+        metadata = AssetMetadata(additional_info={"difficulty_score": 0.5})
         random_variants = [uuid.uuid4(), uuid.uuid4()]
 
         asset = await storage.save_asset(
