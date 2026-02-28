@@ -1,9 +1,10 @@
 import asyncio
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import dspy
 import structlog
@@ -25,6 +26,14 @@ logger = structlog.get_logger(__name__)
 
 
 @dataclass
+class CachedClient:
+    """Wrapper for WorkerClient with access timestamp for eviction."""
+
+    client: WorkerClient
+    last_access: float = field(default_factory=time.time)
+
+
+@dataclass
 class SharedNodeContext:
     """Consolidates shared dependencies for agent nodes."""
 
@@ -36,14 +45,47 @@ class SharedNodeContext:
     fs: RemoteFilesystemMiddleware
     main_loop: asyncio.AbstractEventLoop
 
+    # WP08: Cache WorkerClients per session to avoid httpx client leaks
+    _worker_clients: ClassVar[dict[str, CachedClient]] = {}
+    _last_eviction: ClassVar[float] = 0.0
+
+    @classmethod
+    def _evict_old_clients(cls):
+        """Simple eviction strategy to avoid memory leaks."""
+        now = time.time()
+        # Only evict every 5 minutes
+        if now - cls._last_eviction < 300:
+            return
+
+        # Evict clients not accessed for 1 hour
+        to_evict = [
+            sid
+            for sid, cached in cls._worker_clients.items()
+            if now - cached.last_access > 3600
+        ]
+        for sid in to_evict:
+            logger.info("evicting_cached_worker_client", session_id=sid)
+            # We don't have a sync way to aclose(), but dropping the ref
+            # will eventually close it. Ideally WorkerClient should be managed better.
+            del cls._worker_clients[sid]
+        cls._last_eviction = now
+
     @classmethod
     def create(cls, worker_light_url: str, session_id: str) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
-        worker_client = WorkerClient(
-            base_url=worker_light_url,
-            session_id=session_id,
-            heavy_url=settings.worker_heavy_url,
-        )
+        cls._evict_old_clients()
+
+        if session_id in cls._worker_clients:
+            cached = cls._worker_clients[session_id]
+            cached.last_access = time.time()
+            worker_client = cached.client
+        else:
+            worker_client = WorkerClient(
+                base_url=worker_light_url,
+                session_id=session_id,
+                heavy_url=settings.worker_heavy_url,
+            )
+            cls._worker_clients[session_id] = CachedClient(client=worker_client)
 
         # WP05: Support mock LLMs for integration tests
         if settings.is_integration_test:

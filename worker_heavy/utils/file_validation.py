@@ -263,6 +263,9 @@ def validate_node_output(
             "todo.md",
             "assembly_definition.yaml",
         ],
+        "plan_reviewer": ["plan.md", "todo.md", "assembly_definition.yaml"],
+        "electronics_reviewer": ["plan.md", "todo.md", "assembly_definition.yaml"],
+        "execution_reviewer": ["plan.md", "todo.md", "assembly_definition.yaml"],
     }.get(node_type, [])
 
     for req_file in required_files:
