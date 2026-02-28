@@ -1,3 +1,4 @@
+import asyncio
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -26,6 +27,9 @@ def get_db_url() -> str:
     return url
 
 
+_global_pool: AsyncConnectionPool | None = None
+_pool_lock: asyncio.Lock | None = None
+
 class ControllerCheckpointSaver:
     """
     Persistence layer for LangGraph using Postgres.
@@ -39,10 +43,21 @@ class ControllerCheckpointSaver:
         Context manager that yields a configured PostgresSaver.
         Ensures the connection pool is properly managed.
         """
-        conn_string = get_db_url()
-        async with AsyncConnectionPool(conn_string, max_size=20) as pool:
-            saver = PostgresSaver(pool)
-            yield saver
+        global _global_pool, _pool_lock
+
+        if _pool_lock is None:
+            _pool_lock = asyncio.Lock()
+
+        if _global_pool is None:
+            async with _pool_lock:
+                if _global_pool is None:
+                    conn_string = get_db_url()
+                    pool = AsyncConnectionPool(conn_string, max_size=20, open=False)
+                    await pool.open()
+                    _global_pool = pool
+
+        saver = PostgresSaver(_global_pool)
+        yield saver
 
 
 async def setup_persistence():
