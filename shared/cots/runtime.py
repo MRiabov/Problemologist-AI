@@ -7,12 +7,18 @@ from shared.observability.schemas import COTSSearchEvent
 from .database.models import CatalogMetadataORM, COTSItemORM
 from .models import COTSItem, SearchQuery
 
+_global_engine_cache = {}
+
 
 def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
     """
     Search for COTS parts in the database based on a query and constraints.
     """
-    engine = create_engine(f"sqlite:///{db_path}")
+    global _global_engine_cache
+    if db_path not in _global_engine_cache:
+        _global_engine_cache[db_path] = create_engine(f"sqlite:///{db_path}")
+
+    engine = _global_engine_cache[db_path]
     results = []
 
     with Session(engine) as session:
