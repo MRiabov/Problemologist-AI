@@ -50,6 +50,21 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def validate_costing_and_price():
+        """
+        Validate assembly_definition.yaml, compute totals (cost, weight),
+        and update objectives.yaml with preliminary results.
+        Returns a dict with success, stdout, and stderr.
+        """
+        script_path = ".agent/skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+        command = f"python3 {script_path}"
+        res = await fs.run_command(command)
+        return {
+            "success": res.exit_code == 0,
+            "stdout": res.stdout,
+            "stderr": res.stderr,
+        }
+
     return [
         list_files,
         read_file,
@@ -59,6 +74,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        validate_costing_and_price,
     ]
 
 

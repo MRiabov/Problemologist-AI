@@ -34,7 +34,7 @@ async def test_manufacturing_methods_and_materials():
         request = BenchmarkGenerateRequest(
             prompt="Create a benchmark for a CNC machined part."
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
+        resp = await client.post("/api/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -44,7 +44,7 @@ async def test_manufacturing_methods_and_materials():
 
         # Wait for benchmark
         for _ in range(150):
-            status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
+            status_resp = await client.get(f"/api/benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
                 bench_ep = EpisodeResponse.model_validate(status_resp.json())
                 if bench_ep.status == EpisodeStatus.COMPLETED:
@@ -63,7 +63,7 @@ async def test_manufacturing_methods_and_materials():
             metadata_vars={"benchmark_id": benchmark_session_id},
         )
 
-        run_resp = await client.post("/agent/run", json=run_request.model_dump())
+        run_resp = await client.post("/api/agent/run", json=run_request.model_dump())
         assert run_resp.status_code in [
             200,
             202,
@@ -74,7 +74,7 @@ async def test_manufacturing_methods_and_materials():
         engineer_completed = False
         final_status = None
         for _ in range(150):
-            ep_resp = await client.get(f"/episodes/{episode_id}")
+            ep_resp = await client.get(f"/api/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 ep = EpisodeResponse.model_validate(ep_resp.json())
                 final_status = ep.status
@@ -88,7 +88,7 @@ async def test_manufacturing_methods_and_materials():
 
         # 3. Verify Workbench Execution (INT-036)
         # Use /episodes/{id} to get assets list
-        ep_resp = await client.get(f"/episodes/{episode_id}")
+        ep_resp = await client.get(f"/api/episodes/{episode_id}")
         assert ep_resp.status_code == 200
         ep_data = EpisodeResponse.model_validate(ep_resp.json())
         assets = ep_data.assets or []
@@ -112,7 +112,7 @@ async def test_manufacturing_methods_and_materials():
             metadata_vars={"benchmark_id": benchmark_session_id},
         )
         bad_run_resp = await client.post(
-            "/agent/run", json=bad_run_request.model_dump()
+            "/api/agent/run", json=bad_run_request.model_dump()
         )
         assert bad_run_resp.status_code in [200, 202]
         bad_episode_id = AgentRunResponse.model_validate(bad_run_resp.json()).episode_id
@@ -120,7 +120,7 @@ async def test_manufacturing_methods_and_materials():
         # Minimal assertion for INT-035: The system shouldn't crash, and if it fails, it handles it gracefully.
         bad_engineer_completed = False
         for _ in range(150):
-            ep_resp = await client.get(f"/episodes/{bad_episode_id}")
+            ep_resp = await client.get(f"/api/episodes/{bad_episode_id}")
             if ep_resp.status_code == 200:
                 ep = EpisodeResponse.model_validate(ep_resp.json())
                 if ep.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:

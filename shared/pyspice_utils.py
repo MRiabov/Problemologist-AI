@@ -10,9 +10,16 @@ from PySpice.Unit import *
 if NgSpiceShared.LIBRARY_PATH.startswith("libngspice"):
     # ctypes.util.find_library might find it in non-standard paths
     # or handle the .so.0 vs .so issue
-    lib_path = ctypes.util.find_library("ngspice")
-    if lib_path:
-        NgSpiceShared.LIBRARY_PATH = lib_path
+    import os
+    possible_paths = [
+        "/usr/lib/x86_64-linux-gnu/libngspice.so",
+        "/usr/lib/libngspice.so",
+        ctypes.util.find_library("ngspice")
+    ]
+    for path in possible_paths:
+        if path and os.path.exists(path):
+            NgSpiceShared.LIBRARY_PATH = path
+            break
 
 from shared.circuit_builder import resolve_node_name
 from shared.enums import FailureReason
@@ -159,10 +166,15 @@ def validate_circuit(
         vcc_node = "supply_v+"
         if vcc_node in node_voltages:
             v_vcc = node_voltages[vcc_node]
-            if v_vcc < (psu_config.voltage_dc * 0.9 if psu_config else 0.1):
+            rated_v = psu_config.voltage_dc if psu_config else 0.0
+            if rated_v > 0 and v_vcc < (rated_v * 0.9):
                 # If PSU voltage is dragged down significantly, it might be a short
-                # but ONLY if we are actually supplying power.
-                pass
+                failures.append(
+                    SimulationFailure(
+                        reason=FailureReason.SHORT_CIRCUIT,
+                        detail=f"PSU voltage {v_vcc:.2f}V is below 90% of rated {rated_v:.2f}V (likely short circuit).",
+                    )
+                )
 
         # In PySpice, current through a voltage source is positive if it flows from + to - terminal (passive sign convention).
         # A power supply supplying power will have NEGATIVE current in PySpice's Vsource.
@@ -339,11 +351,15 @@ def calculate_static_power_budget(section: ElectronicsSection) -> dict:
     }
 
 
-def calculate_power_budget(circuit: Circuit, psu_config: PowerSupplyConfig) -> dict:
+def calculate_power_budget(
+    circuit: Circuit,
+    psu_config: PowerSupplyConfig,
+    section: ElectronicsSection | None = None,
+) -> dict:
     """
     Calculate the power budget for the circuit using SPICE simulation (dynamic check).
     """
-    res = validate_circuit(circuit, psu_config)
+    res = validate_circuit(circuit, psu_config, section=section)
 
     total_draw = res.total_draw_a
     capacity = psu_config.max_current_a
