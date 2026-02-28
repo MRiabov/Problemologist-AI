@@ -17,12 +17,16 @@ def genesis_backend():
 
 def test_apply_control(genesis_backend):
     mock_entity = MagicMock()
+    # Need to mock the uid as well, as GenesisBackend.apply_control uses it
+    mock_entity.uid = "motor1_uid"
     genesis_backend.entities = {"motor1": mock_entity}
+    # motors list expects dicts with part_name and optionally other info
     genesis_backend.motors = [{"part_name": "motor1"}]
 
     genesis_backend.apply_control({"motor1": 10.0})
 
     # Check if set_dofs_force was called with a numpy array containing 10.0
+    assert mock_entity.set_dofs_force.called
     args, kwargs = mock_entity.set_dofs_force.call_args
     assert np.allclose(args[0], np.array([10.0]))
 

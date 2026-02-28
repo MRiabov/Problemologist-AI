@@ -80,7 +80,8 @@ def test_wire_clearance_violation(mock_validate_circuit, mock_get_backend):
             from shared.enums import FailureReason
 
             assert metrics.failure.reason == FailureReason.VALIDATION_FAILED
-            assert metrics.failure.detail == loop.wire_clearance_error
+            # The metrics.fail_reason is formatted as REASON:detail
+            assert metrics.fail_reason == f"{FailureReason.VALIDATION_FAILED}:{loop.wire_clearance_error}"
 
 
 @patch("worker_heavy.simulation.loop.get_physics_backend")

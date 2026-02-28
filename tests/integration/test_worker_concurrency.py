@@ -82,5 +82,3 @@ async def test_worker_concurrency():
     assert file_a not in stdout_b
 
 
-if __name__ == "__main__":
-    asyncio.run(test_worker_concurrency())
