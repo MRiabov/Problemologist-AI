@@ -45,9 +45,10 @@ class ElectronicsManager:
                 # For simplicity in this integration, we'll check if the component's '+' or 'in'
                 # node has a significant voltage relative to ground.
                 for comp in self.electronics.components:
+                    key = comp.assembly_part_ref or comp.component_id
                     # Power supply itself is always 'powered' if present
                     if comp.type == "power_supply":
-                        self.is_powered_map[comp.component_id] = 1.0
+                        self.is_powered_map[key] = 1.0
                         continue
 
                     # Determine primary input node for the component
@@ -58,7 +59,7 @@ class ElectronicsManager:
                     voltage = validation.node_voltages.get(node_name, 0.0)
                     # Normalize power scale (0.0 to 1.0) based on supply voltage
                     supply_v = self.electronics.power_supply.voltage_dc
-                    self.is_powered_map[comp.component_id] = (
+                    self.is_powered_map[key] = (
                         min(1.0, max(0.0, voltage / supply_v)) if supply_v > 0 else 0.0
                     )
             else:
@@ -112,4 +113,5 @@ class ElectronicsManager:
                     queue.append(v)
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            key = comp.assembly_part_ref or comp.component_id
+            self.is_powered_map[key] = comp.component_id in powered
