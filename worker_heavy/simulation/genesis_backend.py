@@ -225,6 +225,17 @@ class GenesisBackend(PhysicsBackend):
                         logger.error("failed_to_build_genesis_scene", error=str(e))
                         raise
 
+    def _to_flat_list(self, val):
+        if hasattr(val, "cpu"):
+            val = val.cpu().numpy()
+        if isinstance(val, np.ndarray):
+            if val.ndim > 1:
+                return val[0].tolist()
+            return val.tolist()
+        if isinstance(val, list) and len(val) > 0 and isinstance(val[0], list):
+            return val[0]
+        return val
+
     def set_electronics(self, names: list[str]) -> None:
         """Identify entities for proximity-based fluid damage detection."""
         self.electronics_names = names
@@ -705,32 +716,17 @@ class GenesisBackend(PhysicsBackend):
 
                             # Use get_pos() etc. if they exist, or fallback to properties
                             # T001: Genesis returns batched tensors, take [0] and ensure it's on CPU
-                            def _to_flat_list(val):
-                                if hasattr(val, "cpu"):
-                                    val = val.cpu().numpy()
-                                if isinstance(val, np.ndarray):
-                                    if val.ndim > 1:
-                                        return val[0].tolist()
-                                    return val.tolist()
-                                if (
-                                    isinstance(val, list)
-                                    and len(val) > 0
-                                    and isinstance(val[0], list)
-                                ):
-                                    return val[0]
-                                return val
-
-                            pos = _to_flat_list(
+                            pos = self._to_flat_list(
                                 target_link.get_pos()
                                 if hasattr(target_link, "get_pos")
                                 else target_link.pos
                             )
-                            quat = _to_flat_list(
+                            quat = self._to_flat_list(
                                 target_link.get_quat()
                                 if hasattr(target_link, "get_quat")
                                 else target_link.quat
                             )
-                            vel = _to_flat_list(
+                            vel = self._to_flat_list(
                                 target_link.get_vel()
                                 if hasattr(target_link, "get_vel")
                                 else target_link.vel
@@ -738,9 +734,9 @@ class GenesisBackend(PhysicsBackend):
 
                             angvel = [0, 0, 0]
                             if hasattr(target_link, "get_angvel"):
-                                angvel = _to_flat_list(target_link.get_angvel())
+                                angvel = self._to_flat_list(target_link.get_angvel())
                             elif hasattr(target_link, "angvel"):
-                                angvel = _to_flat_list(target_link.angvel)
+                                angvel = self._to_flat_list(target_link.angvel)
 
                             return BodyState(
                                 pos=pos,
@@ -767,27 +763,16 @@ class GenesisBackend(PhysicsBackend):
             state = entity.get_state()
             logger.debug("genesis_get_state_returned", body_id=body_id)
 
-            def _to_flat_list(val):
-                if hasattr(val, "cpu"):
-                    val = val.cpu().numpy()
-                if isinstance(val, np.ndarray):
-                    if val.ndim > 1:
-                        return val[0].tolist()
-                    return val.tolist()
-                if isinstance(val, list) and len(val) > 0 and isinstance(val[0], list):
-                    return val[0]
-                return val
-
             if hasattr(state, "pos") and state.pos.ndim == 3:
                 # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
                 pos = state.pos[0].cpu().numpy().mean(axis=0).tolist()
                 vel = state.vel[0].cpu().numpy().mean(axis=0).tolist()
                 return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
             return BodyState(
-                pos=_to_flat_list(entity.get_pos()),
-                quat=_to_flat_list(entity.get_quat()),
-                vel=_to_flat_list(entity.get_vel()),
-                angvel=_to_flat_list(entity.get_ang()),
+                pos=self._to_flat_list(entity.get_pos()),
+                quat=self._to_flat_list(entity.get_quat()),
+                vel=self._to_flat_list(entity.get_vel()),
+                angvel=self._to_flat_list(entity.get_ang()),
             )
         except BaseException as e:
             import traceback

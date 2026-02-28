@@ -50,6 +50,53 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def validate_costing_and_price():
+        """
+        Validates assembly_definition.yaml and autopopulates objectives.yaml
+        with calculated unit cost and weight totals.
+        """
+        res = await fs.run_command(
+            "python3 skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+        )
+        return {
+            "success": res.exit_code == 0,
+            "stdout": res.stdout,
+            "stderr": res.stderr,
+        }
+
+    async def simulate(script_path: str = "script.py"):
+        """
+        Triggers a full physics simulation of the assembly.
+        """
+        return await fs.simulate(script_path)
+
+    async def preview_design(script_path: str = "script.py"):
+        """
+        Generates a 3D preview image of the current design.
+        """
+        return await fs.preview(script_path)
+
+    async def submit_for_review(script_path: str = "script.py"):
+        """
+        Submits the current design and plan for engineering review.
+        """
+        return await fs.submit(script_path)
+
+    async def get_docs_for(query: str):
+        """
+        Searches the engineering documentation for the specified query.
+        """
+        # Sanitization: escape quotes to mitigate injection
+        safe_query = query.replace("'", "\\'").replace('"', '\\"')
+        res = await fs.run_command(f"python3 scripts/search_docs.py '{safe_query}'")
+        return res.stdout
+
+    async def validate_design(script_path: str = "script.py"):
+        """
+        Performs geometric and manufacturability validation of the design.
+        """
+        return await fs.validate(script_path)
+
     return [
         list_files,
         read_file,
@@ -59,6 +106,12 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        validate_costing_and_price,
+        simulate,
+        preview_design,
+        submit_for_review,
+        get_docs_for,
+        validate_design,
     ]
 
 
