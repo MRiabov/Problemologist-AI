@@ -34,7 +34,7 @@ def test_run_agent_db_error(mock_get_sessionmaker):
 
     with pytest.raises(Exception, match="DB Connection Failed"):
         client.post(
-            "/agent/run", json={"task": "test task", "session_id": "test-session"}
+            "/api/agent/run", json={"task": "test task", "session_id": "test-session"}
         )
 
 
@@ -42,7 +42,7 @@ def test_run_agent_db_error(mock_get_sessionmaker):
 def test_list_skills_empty(mock_path):
     mock_path.return_value.exists.return_value = False
 
-    response = client.get("/skills/")
+    response = client.get("/api/skills/")
     assert response.status_code == 200
     assert response.json() == []
 
@@ -57,7 +57,7 @@ def test_list_skills_success(mock_path):
 
     mock_path.return_value.iterdir.return_value = [mock_item]
 
-    response = client.get("/skills/")
+    response = client.get("/api/skills/")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -66,13 +66,13 @@ def test_list_skills_success(mock_path):
 
 
 def test_trigger_backup_unauthorized():
-    response = client.post("/ops/backup")
+    response = client.post("/api/ops/backup")
     assert response.status_code == 403
     assert response.json()["detail"] == "Invalid backup secret"
 
 
 def test_trigger_backup_invalid_secret():
-    response = client.post("/ops/backup", headers={"x-backup-secret": "wrong"})
+    response = client.post("/api/ops/backup", headers={"x-backup-secret": "wrong"})
     assert response.status_code == 403
     assert response.json()["detail"] == "Invalid backup secret"
 
@@ -86,7 +86,7 @@ def test_trigger_backup_no_temporal(mock_getenv):
 
     # We need to bypass the secret check
     with patch("controller.api.ops.BACKUP_SECRET", "secret"):
-        response = client.post("/ops/backup", headers={"x-backup-secret": "secret"})
+        response = client.post("/api/ops/backup", headers={"x-backup-secret": "secret"})
         # It should fail because request.app.state.temporal_client is missing in TestClient if not set
         assert response.status_code == 500
         assert "Temporal client not initialized" in response.json()["detail"]
@@ -107,13 +107,14 @@ def test_trigger_backup_success(mock_workflow, mock_getenv):
     app.state.temporal_client = mock_client
 
     with patch("controller.api.ops.BACKUP_SECRET", "secret"):
-        response = client.post("/ops/backup", headers={"x-backup-secret": "secret"})
+        response = client.post("/api/ops/backup", headers={"x-backup-secret": "secret"})
         assert response.status_code == 202
         assert response.json()["workflow_id"] == "test-workflow-id"
         assert response.json()["status"] == "Accepted"
 
 
-def test_websocket_manager():
+@pytest.mark.asyncio
+async def test_websocket_manager():
     from controller.api.manager import ConnectionManager
 
     manager = ConnectionManager()
@@ -123,14 +124,13 @@ def test_websocket_manager():
 
     # Test connect
     # manager.connect(episode_id, mock_ws) is async
-    import asyncio
 
-    asyncio.run(manager.connect(episode_id, mock_ws))
+    await manager.connect(episode_id, mock_ws)
     assert episode_id in manager.active_connections
     assert mock_ws in manager.active_connections[episode_id]
 
     # Test broadcast
-    asyncio.run(manager.broadcast(episode_id, {"type": "test"}))
+    await manager.broadcast(episode_id, {"type": "test"})
     mock_ws.send_json.assert_called_with({"type": "test"})
 
     # Test disconnect
@@ -138,7 +138,8 @@ def test_websocket_manager():
     assert episode_id not in manager.active_connections
 
 
-def test_websocket_broadcast_failure():
+@pytest.mark.asyncio
+async def test_websocket_broadcast_failure():
     from controller.api.manager import ConnectionManager
 
     manager = ConnectionManager()
@@ -147,10 +148,8 @@ def test_websocket_broadcast_failure():
     mock_ws.send_json.side_effect = Exception("Send failed")
     episode_id = uuid.uuid4()
 
-    import asyncio
-
-    asyncio.run(manager.connect(episode_id, mock_ws))
+    await manager.connect(episode_id, mock_ws)
 
     # Should handle failure and disconnect
-    asyncio.run(manager.broadcast(episode_id, {"type": "fail"}))
+    await manager.broadcast(episode_id, {"type": "fail"})
     assert episode_id not in manager.active_connections

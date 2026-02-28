@@ -66,5 +66,3 @@ async def run(_ctx=None):
             tmp_path.unlink()
 
 
-if __name__ == "__main__":
-    asyncio.run(run())

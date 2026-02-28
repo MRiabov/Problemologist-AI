@@ -98,5 +98,3 @@ async def test_simulation_concurrency_serialization():
     )
 
 
-if __name__ == "__main__":
-    asyncio.run(test_simulation_concurrency_serialization())

@@ -118,14 +118,3 @@ def build():
         )
 
 
-if __name__ == "__main__":
-    # Run the test logic manually
-    asyncio.run(test_multitenancy_repro())
-
-
-if __name__ == "__main__":
-    if "httpx" not in sys.modules:
-        # Fallback if I can't run this easily, but user environment has it
-        pass
-    # Run the test logic manually
-    asyncio.run(test_multitenancy_repro())
