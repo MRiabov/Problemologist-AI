@@ -27,7 +27,7 @@ class UppercaseStrEnum(StrEnum):
     __hash__ = str.__hash__
 
 
-class EpisodeStatus(StrEnum):
+class EpisodeStatus(UppercaseStrEnum):
     """Status of an agent episode."""
 
     RUNNING = "RUNNING"
@@ -37,7 +37,7 @@ class EpisodeStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
-class SessionStatus(StrEnum):
+class SessionStatus(UppercaseStrEnum):
     """Status of a benchmark generation session."""
 
     PLANNING = "PLANNING"
@@ -49,7 +49,7 @@ class SessionStatus(StrEnum):
     FAILED = "FAILED"
 
 
-class AssetType(StrEnum):
+class AssetType(UppercaseStrEnum):
     """Type of asset stored in S3."""
 
     VIDEO = "VIDEO"
@@ -78,7 +78,7 @@ class ResponseStatus(UppercaseStrEnum):
     ERROR = "ERROR"
 
 
-class TraceType(StrEnum):
+class TraceType(UppercaseStrEnum):
     """Type of observability trace."""
 
     TOOL_START = "TOOL_START"
@@ -90,7 +90,7 @@ class TraceType(StrEnum):
     EVENT = "EVENT"
 
 
-class FailureReason(StrEnum):
+class FailureReason(UppercaseStrEnum):
     """Unified failure modes for physics and electronics simulation."""
 
     NONE = "NONE"
@@ -124,7 +124,7 @@ class FailureReason(StrEnum):
 SimulationFailureMode = FailureReason
 
 
-class ElectronicComponentType(StrEnum):
+class ElectronicComponentType(UppercaseStrEnum):
     """Types of electronic components supported in the netlist."""
 
     MOTOR = "MOTOR"
@@ -134,7 +134,7 @@ class ElectronicComponentType(StrEnum):
     CONNECTOR = "CONNECTOR"
 
 
-class ManufacturingMethod(StrEnum):
+class ManufacturingMethod(UppercaseStrEnum):
     """Supported manufacturing methods."""
 
     CNC = "CNC"
@@ -142,7 +142,7 @@ class ManufacturingMethod(StrEnum):
     INJECTION_MOLDING = "IM"
 
 
-class MotorControlMode(StrEnum):
+class MotorControlMode(UppercaseStrEnum):
     """Control modes for actuators."""
 
     CONSTANT = "CONSTANT"
@@ -150,7 +150,7 @@ class MotorControlMode(StrEnum):
     ON_OFF = "ON_OFF"
 
 
-class FluidShapeType(StrEnum):
+class FluidShapeType(UppercaseStrEnum):
     """Supported shapes for fluid volumes."""
 
     CYLINDER = "CYLINDER"
@@ -158,21 +158,21 @@ class FluidShapeType(StrEnum):
     SPHERE = "SPHERE"
 
 
-class FluidObjectiveType(StrEnum):
+class FluidObjectiveType(UppercaseStrEnum):
     """Types of fluid-related objectives."""
 
     FLUID_CONTAINMENT = "FLUID_CONTAINMENT"
     FLOW_RATE = "FLOW_RATE"
 
 
-class FluidEvalAt(StrEnum):
+class FluidEvalAt(UppercaseStrEnum):
     """When to evaluate fluid objectives."""
 
     END = "END"
     CONTINUOUS = "CONTINUOUS"
 
 
-class MovingPartType(StrEnum):
+class MovingPartType(UppercaseStrEnum):
     """Types of moving parts in the assembly."""
 
     MOTOR = "MOTOR"
