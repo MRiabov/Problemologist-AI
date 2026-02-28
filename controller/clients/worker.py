@@ -11,6 +11,8 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     EditOp,
     ExecuteResponse,
+    GetDocsRequest,
+    GetDocsResponse,
     GitCommitResponse,
     GitStatusResponse,
     GrepMatch,
@@ -293,6 +295,21 @@ class WorkerClient:
             )
             response.raise_for_status()
             return response.json()["status"] == ResponseStatus.SUCCESS
+        finally:
+            await self._close_client(client)
+
+    async def get_docs_for(self, entity: str) -> GetDocsResponse:
+        """Get documentation for an entity."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/runtime/docs",
+                json={"entity": entity},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return GetDocsResponse.model_validate(response.json())
         finally:
             await self._close_client(client)
 

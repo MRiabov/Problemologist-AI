@@ -18,6 +18,7 @@ from controller.workflows.heavy import (
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
+    GetDocsToolEvent,
     GrepToolEvent,
     LibraryUsageEvent,
     LsFilesToolEvent,
@@ -172,6 +173,15 @@ class RemoteFilesystemMiddleware:
                 # Don't fail the edit if sync fails
                 pass
         return success
+
+    async def get_docs_for(self, entity: str) -> str:
+        """Get documentation for an entity via worker client."""
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[GetDocsToolEvent(entity=entity)],
+        )
+        res = await self.client.get_docs_for(entity)
+        return res.content
 
     async def run_command(self, code: str, timeout: int = 30) -> ExecuteResponse:
         """

@@ -15,6 +15,7 @@ class AgentStatus(StrEnum):
     FAILED = "failed"
     APPROVED = "approved"
     PLAN_REJECTED = "plan_rejected"
+    COTS_SEARCH = "cots_search"
     CODE_REJECTED = "code_rejected"
 
 

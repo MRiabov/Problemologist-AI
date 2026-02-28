@@ -26,6 +26,8 @@ from shared.workers.schema import (
     ExecuteResponse,
     ExistsResponse,
     FsFileEntry,
+    GetDocsRequest,
+    GetDocsResponse,
     GitCommitRequest,
     GitCommitResponse,
     GitMergeRequest,
@@ -355,6 +357,19 @@ async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
         success=False,
         message="Failed to complete merge (conflicts might remain)",
     )
+
+
+@light_router.post("/runtime/docs", response_model=GetDocsResponse)
+async def api_get_docs(request: GetDocsRequest):
+    """Get documentation for a given entity."""
+    try:
+        from worker_light.utils.docs import get_docs_for
+
+        content = get_docs_for(request.entity)
+        return GetDocsResponse(success=True, content=content)
+    except Exception as e:
+        logger.error("api_get_docs_failed", entity=request.entity, error=str(e))
+        return GetDocsResponse(success=False, content=str(e))
 
 
 @light_router.post("/runtime/execute", response_model=ExecuteResponse)

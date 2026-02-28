@@ -404,6 +404,19 @@ class LintResponse(BaseModel):
     warnings: list[dict[StrictStr, Any]] = Field(default_factory=list)
 
 
+class GetDocsRequest(BaseModel):
+    """Request to get documentation for an entity."""
+
+    entity: StrictStr = Field(..., description="Entity name or type to get docs for.")
+
+
+class GetDocsResponse(BaseModel):
+    """Response containing documentation."""
+
+    success: StrictBool
+    content: StrictStr
+
+
 class InspectTopologyRequest(BaseModel):
     """Request to inspect topological features."""
 
