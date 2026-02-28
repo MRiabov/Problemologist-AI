@@ -339,11 +339,15 @@ def calculate_static_power_budget(section: ElectronicsSection) -> dict:
     }
 
 
-def calculate_power_budget(circuit: Circuit, psu_config: PowerSupplyConfig) -> dict:
+def calculate_power_budget(
+    circuit: Circuit,
+    psu_config: PowerSupplyConfig,
+    section: ElectronicsSection | None = None,
+) -> dict:
     """
     Calculate the power budget for the circuit using SPICE simulation (dynamic check).
     """
-    res = validate_circuit(circuit, psu_config)
+    res = validate_circuit(circuit, psu_config, section)
 
     total_draw = res.total_draw_a
     capacity = psu_config.max_current_a
