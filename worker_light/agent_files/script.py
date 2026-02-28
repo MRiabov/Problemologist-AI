@@ -5,11 +5,18 @@ def build(seed: int = 0, scale: float = 1.0) -> Compound:
     """
     Builds the CAD component based on a seed and scale.
     """
+    import random
+
     # Use seed for randomization
-    _ = seed
-    # TODO: Implement randomized geometry
+    random.seed(seed)
+
+    # Implement randomized geometry
+    x_dim = 10 * scale * random.uniform(0.8, 1.2)
+    y_dim = 10 * scale * random.uniform(0.8, 1.2)
+    z_dim = 10 * scale * random.uniform(0.8, 1.2)
+
     with BuildPart() as p:
-        Box(10 * scale, 10 * scale, 10 * scale)
+        Box(x_dim, y_dim, z_dim)
     return p.part
 
 

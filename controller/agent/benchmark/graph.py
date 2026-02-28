@@ -433,12 +433,14 @@ async def _persist_session_assets(
                     final_state.mjcf_content or "<!-- MJCF content missing in state -->"
                 )
 
+                from shared.simulation.schemas import AssetMetadata
+                metadata = AssetMetadata(additional_info=final_state.plan.model_dump()) if final_state.plan else AssetMetadata()
                 await storage.save_asset(
                     benchmark_id=session_id,
                     script=final_state.current_script,
                     mjcf=mjcf_content,
                     images=render_data,
-                    metadata=final_state.plan.model_dump() if final_state.plan else {},
+                    metadata=metadata,
                     db=db,
                 )
                 logger.info("asset_persisted", session_id=session_id)

@@ -153,8 +153,7 @@ class ExecuteResponse(BaseModel):
     stderr: str
     exit_code: int
     timed_out: bool = False
-    events: list[dict[str, Any]] = Field(default_factory=list)
-    # fixme: don't events have a model?
+    events: list["EventRecord"] = Field(default_factory=list)
 
 
 class ScriptExecutionRequest(BaseModel):
@@ -226,6 +225,14 @@ class ElectronicsValidationRequest(BaseModel):
     section: ElectronicsSection
 
 
+class EventRecord(BaseModel):
+    """A single emitted observability event."""
+
+    event_type: str
+
+    model_config = {"extra": "allow"}
+
+
 class SimulationArtifacts(BaseModel):
     """Structured artifacts from a simulation run."""
 
@@ -239,14 +246,6 @@ class SimulationArtifacts(BaseModel):
     verification_result: MultiRunResult | None = None
     total_cost: float | None = None
     total_weight_g: float | None = None
-
-    model_config = {"extra": "allow"}
-
-
-class EventRecord(BaseModel):
-    """A single emitted observability event."""
-
-    event_type: str
 
     model_config = {"extra": "allow"}
 
@@ -337,7 +336,7 @@ class PreviewDesignResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     image_path: StrictStr | None = None
-    events: list[dict[str, Any]] = Field(default_factory=list)
+    events: list["EventRecord"] = Field(default_factory=list)
 
 
 class HeavySimulationParams(BaseModel):

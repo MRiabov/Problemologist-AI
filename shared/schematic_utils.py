@@ -69,26 +69,26 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[SchematicItem]
             )
         )
 
-        # Add standard pins (1 and 2)
-        # TODO: support more pins for connectors/relays if needed
-        soup.append(
-            SchematicItem(
-                type="schematic_pin",
-                id=f"{comp_id}_p1",
-                component_id=comp_id,
-                name="1",
-                center={"x": 10 + i * 40 - 10, "y": 10},
+        # Define the number of pins based on component type
+        num_pins = 2
+        if comp.type == ElectronicComponentType.RELAY:
+            num_pins = 5
+        elif comp.type == ElectronicComponentType.CONNECTOR:
+            num_pins = 4 # Default to 4 pins for connectors as a generic placeholder
+
+        # Add pins
+        for pin_idx in range(1, num_pins + 1):
+            offset_x = -10 if pin_idx % 2 != 0 else 10
+            offset_y = 10 + (pin_idx - 1) // 2 * 10
+            soup.append(
+                SchematicItem(
+                    type="schematic_pin",
+                    id=f"{comp_id}_p{pin_idx}",
+                    component_id=comp_id,
+                    name=str(pin_idx),
+                    center={"x": 10 + i * 40 + offset_x, "y": offset_y},
+                )
             )
-        )
-        soup.append(
-            SchematicItem(
-                type="schematic_pin",
-                id=f"{comp_id}_p2",
-                component_id=comp_id,
-                name="2",
-                center={"x": 10 + i * 40 + 10, "y": 10},
-            )
-        )
 
     # 2. Add traces
     for wire in assembly.electronics.wiring:

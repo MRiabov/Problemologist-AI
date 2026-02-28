@@ -769,8 +769,8 @@ def validate(
                         and "build_zone" in data["objectives"]
                     ):
                         effective_build_zone = data["objectives"]["build_zone"]
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("failed_to_parse_build_zone", error=str(e))
 
     if effective_build_zone:
         b_min = effective_build_zone.get("min", [-1000, -1000, -1000])
@@ -870,8 +870,8 @@ def validate(
                     objs = ObjectivesYaml(**data)
                     if objs.physics and objs.physics.backend:
                         backend_type = SimulatorBackendType(objs.physics.backend)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("failed_to_parse_physics_backend", error=str(e))
 
         prerender_24_views(
             component,

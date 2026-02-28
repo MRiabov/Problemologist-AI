@@ -10,6 +10,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.persistence.models import BenchmarkAsset as BenchmarkAssetModel
+from shared.simulation.schemas import AssetMetadata
 
 from .models import BenchmarkAsset
 
@@ -34,9 +35,7 @@ class BenchmarkStorage:
         script: str,
         mjcf: str,
         images: list[bytes],
-        metadata: dict[
-            str, Any
-        ],  # FIXME: let's make it strict-typed. We have PartMetadata as an example
+        metadata: AssetMetadata,
         db: AsyncSession,
         random_variants: list[uuid.UUID] | None = None,
     ) -> BenchmarkAsset:
@@ -81,8 +80,8 @@ class BenchmarkStorage:
             mjcf_url=mjcf_url,
             build123d_url=script_url,
             preview_bundle_url=bundle_url,
-            benchmark_metadata=metadata,
-            difficulty_score=metadata.get("difficulty_score", 0.0),
+            benchmark_metadata=metadata.model_dump(),
+            difficulty_score=metadata.additional_info.get("difficulty_score", 0.0),
             random_variants=[str(v) for v in (random_variants or [])],
         )
 
