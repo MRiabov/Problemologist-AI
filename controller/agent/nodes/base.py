@@ -270,6 +270,7 @@ class BaseNode:
         validate_files: list[str],
         node_type: str,
         max_retries: int | None = None,
+        validation_gate: Callable[[dict[str, str]], Any] | None = None,
     ) -> tuple[Any, dict[str, Any], str]:
         """
         Reusable execution loop for DSPy nodes with retries and validation.
@@ -382,9 +383,20 @@ class BaseNode:
                         node_type, artifacts
                     )
 
+                    if is_valid and validation_gate:
+                        gate_passed, gate_error = await validation_gate(artifacts)
+                        if not gate_passed:
+                            is_valid = False
+                            validation_errors.append(gate_error)
+
                     if not is_valid:
                         logger.warning(
                             f"{node_type}_validation_failed", errors=validation_errors
+                        )
+                        # WP01: Feed error back to the node by updating prediction and journal
+                        inputs["feedback"] = (
+                            f"Validation failed for step {node_type}:\n"
+                            + "\n".join(validation_errors)
                         )
                         retry_count += 1
                         await asyncio.sleep(1)  # Backoff to prevent log explosion

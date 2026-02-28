@@ -289,6 +289,7 @@ class ObjectivesYaml(BaseModel):
     randomization: RandomizationMeta = RandomizationMeta()
     electronics_requirements: ElectronicsRequirements | None = None
     assembly_totals: dict[str, float] | None = None
+    drillable: bool = True
 
 
 # =============================================================================
@@ -310,6 +311,7 @@ class PartMetadata(BaseModel):
     material_id: str | None = None
     cots_id: str | None = None
     is_fixed: bool = Field(default=False, alias="fixed")
+    drillable: bool = True
     manufacturing_method: ManufacturingMethod | None = None
     joint: JointMetadata | None = None
 
@@ -326,6 +328,7 @@ class CompoundMetadata(BaseModel):
     """Metadata for compounds (assemblies) in a CAD hierarchy."""
 
     is_fixed: bool = Field(default=False, alias="fixed")
+    drillable: bool = True
     joint: JointMetadata | None = None
 
     model_config = ConfigDict(populate_by_name=True)
@@ -456,7 +459,7 @@ class ManufacturedPartEstimate(BaseModel):
                 return ManufacturingMethod.INJECTION_MOLDING
             # Try to match enum values
             for m in ManufacturingMethod:
-                if v_lower == m.value:
+                if v_lower == m.value.lower():
                     return m
         return v
 
@@ -576,6 +579,17 @@ class ElectronicComponent(BaseModel):
 
     component_id: str
     type: ElectronicComponentType
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v_upper = v.upper()
+            for m in ElectronicComponentType:
+                if v_upper == m.value.upper():
+                    return m
+        return v
+
     cots_part_id: str | None = None
     assembly_part_ref: str | None = None
     rated_voltage: float | None = None

@@ -32,6 +32,11 @@ async def should_continue(state: AgentState) -> str:
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
 
+    # T004: Conditional routing to cots_search based on feedback
+    if state.feedback and any(kw in state.feedback.lower() for kw in ["cots", "parts"]):
+        logger.info("routing_to_cots_search", feedback=state.feedback)
+        return "cots_search"
+
     if state.status == AgentStatus.APPROVED:
         # T010: Check if there are more steps in TODO before finishing
         if "- [ ]" in state.todo:
@@ -78,6 +83,7 @@ builder.add_conditional_edges(
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
+        "cots_search": "cots_search",
     },
 )
 
@@ -109,6 +115,7 @@ builder.add_conditional_edges(
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
+        "cots_search": "cots_search",
     },
 )
 

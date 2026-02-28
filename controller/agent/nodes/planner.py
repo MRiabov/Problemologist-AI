@@ -64,6 +64,19 @@ class PlannerNode(BaseNode):
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
 
+        # WP01: Implement pre-handover validation gate
+        async def validation_gate(node_artifacts: dict[str, str]) -> tuple[bool, str]:
+            if "assembly_definition.yaml" not in node_artifacts:
+                return True, ""
+
+            res = await self.ctx.fs.run_command(
+                "python3 skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+            )
+            if res.exit_code != 0:
+                error_msg = f"Assembly validation failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}"
+                return False, error_msg
+            return True, ""
+
         prediction, artifacts, journal_entry = await self._run_program(
             dspy.ReAct,
             PlannerSignature,
@@ -72,6 +85,7 @@ class PlannerNode(BaseNode):
             get_engineer_tools,
             validate_files,
             "planner",
+            validation_gate=validation_gate,
         )
 
         if not prediction:
