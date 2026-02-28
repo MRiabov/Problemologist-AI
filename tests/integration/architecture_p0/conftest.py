@@ -16,7 +16,9 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 @pytest_asyncio.fixture
 async def controller_client():
     """Connect to real controller service."""
-    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+    async with httpx.AsyncClient(
+        base_url=f"{CONTROLLER_URL}/api", timeout=300.0
+    ) as client:
         yield client
 
 

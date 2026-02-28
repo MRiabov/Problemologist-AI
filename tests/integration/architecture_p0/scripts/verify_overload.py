@@ -42,7 +42,14 @@ async def run(_ctx=None):
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
-        metrics = loop.step(control_inputs={"servo": 100.0}, duration=5.0)
+        # Standard step is 0.002s.
+        # Motor overload threshold is 2.0s in SimulationLoop.
+        # We must run for more than 2s to trigger it.
+        # But Genesis in smoke test mode might have a much larger timestep!
+        # SimulationLoop._get_simulation_timestep: Genesis smoke test = 0.05
+        # 2.0 / 0.05 = 40 steps.
+        # 2.5 / 0.05 = 50 steps. Should be fast.
+        metrics = loop.step(control_inputs={"servo": 100.0}, duration=2.5)
 
         from shared.enums import FailureReason
 

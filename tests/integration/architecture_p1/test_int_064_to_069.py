@@ -9,9 +9,9 @@ from controller.api.schemas import (
     CotsMetadataResponse,
     CotsSearchItem,
     EpisodeCreateResponse,
-    SchematicItem,
 )
 from shared.enums import FailureReason as SimulationFailureMode
+from shared.models.schemas import SchematicItem
 from shared.models.steerability import (
     GeometricSelection,
     SelectionLevel,
@@ -35,7 +35,7 @@ async def test_int_064_cots_metadata():
     """INT-064: COTS reproducibility metadata persistence."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Fetch metadata
-        resp = await client.get(f"{CONTROLLER_URL}/cots/metadata")
+        resp = await client.get(f"{CONTROLLER_URL}/api/cots/metadata")
         assert resp.status_code == 200
         # Validate COTS metadata structure
         data = CotsMetadataResponse.model_validate(resp.json())
@@ -46,7 +46,7 @@ async def test_int_064_cots_metadata():
         # We'll just verify the endpoint exists and returns data as a proxy for persistence.
         # Ideally we'd check Langfuse/DB for the COTSSearchEvent fields.
         search_resp = await client.get(
-            f"{CONTROLLER_URL}/cots/search", params={"q": "M3"}
+            f"{CONTROLLER_URL}/api/cots/search", params={"q": "M3"}
         )
         assert search_resp.status_code == 200
         results = [CotsSearchItem.model_validate(item) for item in search_resp.json()]
@@ -201,7 +201,7 @@ async def test_int_067_068_steerability():
         task = "Test steerability"
         request = AgentRunRequest(task=task, session_id="test-steer-123")
         resp = await client.post(
-            f"{CONTROLLER_URL}/test/episodes",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=request.model_dump(),
         )
         assert resp.status_code == 201
@@ -247,7 +247,7 @@ async def test_int_069_frontend_contract():
         task = "Test frontend contract"
         request = AgentRunRequest(task=task, session_id="test-fe-contract")
         resp = await client.post(
-            f"{CONTROLLER_URL}/test/episodes",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=request.model_dump(),
         )
         assert resp.status_code == 201
@@ -282,7 +282,7 @@ totals:
 
         # 3. Test schematic endpoint
         schematic_resp = await client.get(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/electronics/schematic"
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/electronics/schematic"
         )
         assert schematic_resp.status_code == 200
         # Schematic is a list of typed items
@@ -302,7 +302,7 @@ totals:
         )
 
         asset_resp = await client.get(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/assets/renders/test.png"
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/assets/renders/test.png"
         )
         assert asset_resp.status_code == 200
         assert asset_resp.content == b"dummy-binary-content"

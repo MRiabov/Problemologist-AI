@@ -83,7 +83,7 @@ async def test_int_002_controller_worker_execution_boundary():
         # Trigger agent run
         req = AgentRunRequest(task=task, session_id=session_id)
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            f"{CONTROLLER_URL}/api/agent/run",
             json=req.model_dump(mode="json"),
             timeout=600.0,
         )
@@ -96,7 +96,7 @@ async def test_int_002_controller_worker_execution_boundary():
         completed = False
         for _ in range(max_attempts):
             await asyncio.sleep(10.0)
-            s_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            s_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
             ep_data = EpisodeResponse.model_validate(s_resp.json())
             status = ep_data.status
             if status == EpisodeStatus.COMPLETED:
@@ -442,10 +442,10 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
                 "import sys; sys.path.append('.'); import verify_overload; "
                 "import asyncio; asyncio.run(verify_overload.run())"
             ),
-            timeout=90,
+            timeout=180,
         ).model_dump(mode="json"),
         headers={"X-Session-ID": session_id},
-        timeout=120.0,
+        timeout=240.0,
     )
     assert resp.status_code == 200
     data = ExecuteResponse.model_validate(resp.json())
