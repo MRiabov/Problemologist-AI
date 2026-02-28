@@ -216,14 +216,13 @@ fi
 find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 
 # Pre-emptive cleanup of any stale processes from previous runs
-pkill -f "uvicorn.*18000" || true
-pkill -f "uvicorn.*18001" || true
-pkill -f "uvicorn.*18002" || true
-pkill -f "python3 -m http.server 15173" || true
-pkill -f "python -m controller.temporal_worker" || true
-pkill -f "npm run dev" || true
-pkill -f "vite" || true
-pkill -f "npx serve" || true
+pkill -9 -f "uvicorn.*18000" || true
+pkill -9 -f "uvicorn.*18001" || true
+pkill -9 -f "uvicorn.*18002" || true
+pkill -9 -f "python -m controller.temporal_worker" || true
+pkill -9 -f "vite" || true
+pkill -9 -f "npx serve" || true
+pkill -9 -f "serve -s" || true
 pkill Xvfb || true
 
 # Start Xvfb for headless rendering
@@ -283,8 +282,8 @@ if [ "$RUN_PLAYWRIGHT" = true ]; then
   echo "VITE_IS_INTEGRATION_TEST=true" >> frontend/.env.production
   (cd frontend && rm -rf dist && npm run build)
   
-  # Start serving on port 15173 with proxy to controller
-  (cd frontend/dist && npx http-server -p 15173 --proxy http://localhost:18000? > "../../$LOG_DIR/frontend.log" 2>&1) &
+  # Start serving on port 15173 as a Single Page Application (SPA)
+  (npx serve -s frontend/dist -p 15173 > "$LOG_DIR/frontend.log" 2>&1) &
   FRONTEND_PID=$!
   echo $FRONTEND_PID > logs/frontend.pid
   echo "Frontend server started (PID: $FRONTEND_PID) on http://localhost:15173"
@@ -313,8 +312,7 @@ cleanup() {
   # Kill the captured PIDs
   kill $CONTROLLER_PID $WORKER_LIGHT_PID $WORKER_HEAVY_PID $TEMP_WORKER_PID $XVFB_PID $FRONTEND_PID 2>/dev/null || true
   
-  # Force kill any remaining uvicorn/worker processes by pattern to handle orphans
-  # We use -9 here as some processes (especially when uv run is involved) can hang
+  # Force kill any remaining processes by pattern to handle orphans
   pkill -9 -f "uvicorn.*18000" || true
   pkill -9 -f "uvicorn.*18001" || true
   pkill -9 -f "uvicorn.*18002" || true
@@ -322,6 +320,7 @@ cleanup() {
   pkill -9 -f "uv run uvicorn" || true
   pkill -9 -f "vite" || true
   pkill -9 -f "npx serve" || true
+  pkill -9 -f "serve -s" || true
   
   # Remove PID files
   rm -f logs/controller.pid logs/temporal_worker.pid logs/worker_light.pid logs/worker_heavy.pid logs/worker.pid logs/frontend.pid
