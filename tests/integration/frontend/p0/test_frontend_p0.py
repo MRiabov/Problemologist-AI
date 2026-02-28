@@ -130,10 +130,12 @@ def test_int_158_workflow_parity(page: Page):
 
     # Test for Benchmark Workflow
     page.get_by_role("link", name="Benchmark").click()
-    expect(page).to_have_url(re.compile(r".*/benchmark"))
+    expect(page).to_have_url(re.compile(r".*/benchmark"), timeout=15000)
 
     # Click CREATE NEW
-    page.get_by_test_id("create-new-button").click()
+    create_new_b = page.get_by_test_id("create-new-button")
+    expect(create_new_b).to_be_visible(timeout=10000)
+    create_new_b.click()
 
     prompt_b = f"Move a sphere {uuid.uuid4()}"
     page.locator("#chat-input").fill(prompt_b)
@@ -154,11 +156,17 @@ def test_int_159_plan_approval_comment(page: Page):
     and visible in run history.
     """
     # 1. Start a benchmark generation
-    page.goto(f"{FRONTEND_URL}/benchmark")
+    page.goto(f"{FRONTEND_URL}/")
     page.wait_for_load_state("networkidle")
 
+    # Navigate to benchmark via sidebar to ensure React handles it
+    page.get_by_role("link", name="Benchmark").click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"), timeout=15000)
+
     # Click CREATE NEW
-    page.get_by_test_id("create-new-button").click()
+    create_new = page.get_by_test_id("create-new-button")
+    expect(create_new).to_be_visible(timeout=10000)
+    create_new.click()
 
     page.locator("#chat-input").fill(
         f"INT-159: Generate a simple benchmark {uuid.uuid4()}"

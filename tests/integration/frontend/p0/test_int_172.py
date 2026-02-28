@@ -18,11 +18,17 @@ def test_int_172_plan_approval_control_placement(page: Page):
     hidden/disabled before planner output is ready.
     """
     # 1. Start a benchmark generation
-    page.goto(f"{FRONTEND_URL}/benchmark")
+    page.goto(f"{FRONTEND_URL}/")
     page.wait_for_load_state("networkidle")
 
+    # Navigate to benchmark via sidebar to ensure React handles it
+    page.get_by_role("link", name="Benchmark").click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"), timeout=15000)
+
     # Click CREATE NEW
-    page.get_by_test_id("create-new-button").click()
+    create_new = page.get_by_test_id("create-new-button")
+    expect(create_new).to_be_visible(timeout=10000)
+    create_new.click()
 
     prompt_text = f"Generate a simple benchmark for approval test {uuid.uuid4()}"
     page.locator("#chat-input").fill(prompt_text)

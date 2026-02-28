@@ -284,7 +284,11 @@ if [ "$RUN_PLAYWRIGHT" = true ]; then
   (cd frontend && rm -rf dist && npm run build)
   
   # Start serving on port 15173 with proxy to controller
-  (cd frontend/dist && npx http-server -p 15173 --proxy http://localhost:18000? > "../../$LOG_DIR/frontend.log" 2>&1) &
+  # Use 'serve -s' for SPA routing support (falling back to index.html for direct URLs like /benchmark)
+  # serve does not support --proxy, but since the frontend uses absolute URLs (VITE_API_URL) for integration tests,
+  # it should work without a proxy as long as it's served on the expected port.
+  # We use -l 15173 as -p is deprecated and might not work as expected in all versions of serve
+  (cd frontend/dist && npx serve -s -l 15173 > "../../$LOG_DIR/frontend.log" 2>&1) &
   FRONTEND_PID=$!
   echo $FRONTEND_PID > logs/frontend.pid
   echo "Frontend server started (PID: $FRONTEND_PID) on http://localhost:15173"
