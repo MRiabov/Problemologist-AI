@@ -32,6 +32,9 @@ async def should_continue(state: AgentState) -> str:
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
 
+    if state.status == AgentStatus.COTS_SEARCH:
+        return "cots_search"
+
     if state.status == AgentStatus.APPROVED:
         # T010: Check if there are more steps in TODO before finishing
         if "- [ ]" in state.todo:
@@ -78,6 +81,7 @@ builder.add_conditional_edges(
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
+        "cots_search": "cots_search",
     },
 )
 
@@ -109,6 +113,7 @@ builder.add_conditional_edges(
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
+        "cots_search": "cots_search",
     },
 )
 

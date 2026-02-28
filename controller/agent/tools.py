@@ -50,6 +50,19 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def validate_costing_and_price():
+        """
+        Validate assembly_definition.yaml for consistency and output pricing.
+        This tool automatically populates unit cost and weight totals in objectives.yaml.
+        """
+        script_path = ".agent/skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+        res = await fs.run_command(f"python3 {script_path}")
+        return {
+            "success": res.exit_code == 0,
+            "stdout": res.stdout,
+            "stderr": res.stderr,
+        }
+
     return [
         list_files,
         read_file,
@@ -59,6 +72,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         execute_command,
         inspect_topology,
         search_cots_catalog,
+        validate_costing_and_price,
     ]
 
 
