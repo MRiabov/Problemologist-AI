@@ -10,13 +10,14 @@ WORKER_LIGHT_URL = os.getenv(
 WORKER_HEAVY_URL = os.getenv(
     "WORKER_HEAVY_URL", os.getenv("WORKER_URL", "http://127.0.0.1:18001")
 )
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 @pytest_asyncio.fixture
 async def controller_client():
     """Connect to real controller service."""
-    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+    # Append trailing slash to base_url for correct relative path resolution
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL + "/", timeout=300.0) as client:
         yield client
 
 
