@@ -153,6 +153,7 @@ class ForbidZone(BaseModel):
     name: str
     min: CoercedTuple3D
     max: CoercedTuple3D
+    drillable: bool = True
 
 
 class ObjectivesSection(BaseModel):
@@ -161,6 +162,7 @@ class ObjectivesSection(BaseModel):
     goal_zone: BoundingBox
     forbid_zones: list[ForbidZone] = []
     build_zone: BoundingBox
+    drillable: bool = True
     fluid_objectives: list[FluidContainmentObjective | FlowRateObjective] = []
     stress_objectives: list[MaxStressObjective] = []
 
@@ -310,6 +312,7 @@ class PartMetadata(BaseModel):
     material_id: str | None = None
     cots_id: str | None = None
     is_fixed: bool = Field(default=False, alias="fixed")
+    drillable: bool = True
     manufacturing_method: ManufacturingMethod | None = None
     joint: JointMetadata | None = None
 
@@ -326,6 +329,7 @@ class CompoundMetadata(BaseModel):
     """Metadata for compounds (assemblies) in a CAD hierarchy."""
 
     is_fixed: bool = Field(default=False, alias="fixed")
+    drillable: bool = True
     joint: JointMetadata | None = None
 
     model_config = ConfigDict(populate_by_name=True)

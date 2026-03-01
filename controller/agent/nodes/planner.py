@@ -85,6 +85,35 @@ class PlannerNode(BaseNode):
 
         # Success
 
+        # T011: Run validate_costing_and_price on assembly_definition.yaml
+        if await self.ctx.worker_client.exists("assembly_definition.yaml"):
+            logger.info("running_cost_validation", session_id=self.ctx.session_id)
+            # Find the script in the skills folder
+            script_path = ".agent/skills/manufacturing-knowledge/scripts/validate_costing_and_price.py"
+
+            res = await self.ctx.worker_client.execute_python(
+                f"import subprocess; import sys; "
+                f"subprocess.run([sys.executable, '{script_path}'], check=True)"
+            )
+
+            if res.exit_code != 0:
+                logger.warning(
+                    "cost_validation_failed",
+                    session_id=self.ctx.session_id,
+                    stderr=res.stderr,
+                )
+                # If validation fails, we shouldn't proceed
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.PLAN_REJECTED,
+                        "feedback": f"Plan validation failed: {res.stderr}",
+                        "journal": state.journal
+                        + f"\n[Planner] Cost validation failed: {res.stderr}"
+                        + journal_entry,
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
+
         await record_worker_events(
             episode_id=state.episode_id,
             events=[

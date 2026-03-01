@@ -130,7 +130,7 @@ def validate_plan_md(content: str) -> ValidationResult:
 
 
 def validate_todo_md(
-    content: str, require_completion: bool = False
+    content: str, require_completion: bool = False, baseline_content: str | None = None
 ) -> ValidationResult:
     """
     Validate todo.md structure for proper checkbox format.
@@ -141,6 +141,7 @@ def validate_todo_md(
     Args:
         content: The markdown content to validate
         require_completion: If True, no unchecked items are allowed.
+        baseline_content: If provided, ensures no checkboxes were deleted.
 
     Returns:
         ValidationResult with is_valid flag and list of violations
@@ -162,6 +163,15 @@ def validate_todo_md(
     # Check that there's at least one checkbox (it's a TODO list)
     if len(all_checkboxes) == 0:
         violations.append("No checkboxes found. TODO list should have checkbox items.")
+
+    # T010: Detect checkbox deletions if baseline is provided
+    if baseline_content:
+        baseline_checkboxes = INVALID_CHECKBOX_PATTERN.findall(baseline_content)
+        if len(all_checkboxes) < len(baseline_checkboxes):
+            violations.append(
+                f"Checkboxes were deleted from todo.md. "
+                f"Expected at least {len(baseline_checkboxes)}, found {len(all_checkboxes)}."
+            )
 
     if require_completion:
         # Only [x]/[X] (completed) or [-] (skipped) are acceptable at submission
