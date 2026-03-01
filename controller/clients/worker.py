@@ -12,6 +12,7 @@ from shared.workers.schema import (
     EditOp,
     ExecuteResponse,
     GitCommitResponse,
+    GetDocsResponse,
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
@@ -451,6 +452,21 @@ class WorkerClient:
             )
             response.raise_for_status()
             return GitCommitResponse.model_validate(response.json())
+        finally:
+            await self._close_client(client)
+
+    async def get_docs_for(self, query: str) -> GetDocsResponse:
+        """Query documentation from the worker."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/runtime/docs",
+                json={"query": query},
+                headers=self.headers,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return GetDocsResponse.model_validate(response.json())
         finally:
             await self._close_client(client)
 

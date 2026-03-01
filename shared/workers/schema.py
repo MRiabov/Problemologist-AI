@@ -421,6 +421,19 @@ class InspectTopologyResponse(BaseModel):
     message: StrictStr | None = None
 
 
+class GetDocsRequest(BaseModel):
+    """Request for documentation."""
+
+    query: StrictStr = Field(..., min_length=1)
+
+
+class GetDocsResponse(BaseModel):
+    """Response from documentation retrieval."""
+
+    success: StrictBool
+    content: StrictStr
+
+
 class PlanRefusal(BaseModel):
     """Information about a refused plan."""
 

@@ -22,6 +22,7 @@ from shared.observability.schemas import (
     LibraryUsageEvent,
     LsFilesToolEvent,
     ManufacturabilityCheckEvent,
+    GetDocsToolEvent,
     PlanSubmissionEngineerEvent,
     ReadFileToolEvent,
     RunCommandToolEvent,
@@ -315,6 +316,15 @@ class RemoteFilesystemMiddleware:
         )
 
         return res
+
+    async def get_docs_for(self, query: str) -> str:
+        """Query documentation from the worker."""
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[GetDocsToolEvent(query=query)],
+        )
+        res = await self.client.get_docs_for(query)
+        return res.content
 
     async def submit(self, script_path: str | Path) -> BenchmarkToolResponse:
         """Trigger handover to review via worker client."""

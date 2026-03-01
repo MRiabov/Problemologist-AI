@@ -60,6 +60,7 @@ class ObservabilityEventType(StrEnum):
     TOOL_RUN_COMMAND = "run_command_tool"
     TOOL_GIT_INIT = "git_init_tool"
     TOOL_GIT_COMMIT = "git_commit_tool"
+    TOOL_GET_DOCS = "get_docs_tool"
 
     # 20. Simulation instability
     SIMULATION_INSTABILITY = "simulation_instability"
@@ -275,6 +276,11 @@ class GitInitToolEvent(BaseEvent):
 class GitCommitToolEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.TOOL_GIT_COMMIT
     message: str
+
+
+class GetDocsToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_GET_DOCS
+    query: str
 
 
 class SimulationInstabilityEvent(BaseEvent):
