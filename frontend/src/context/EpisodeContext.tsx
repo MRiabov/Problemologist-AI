@@ -61,10 +61,12 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [isCreationMode, setIsCreationMode] = useState(false);
-  const [isBenchmarkCreation, setIsBenchmarkCreation] = useState(false);
+  const [, setIsBenchmarkCreation] = useState(false);
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([]);
   const [feedbackState, setFeedbackState] = useState<{ traceId: number; score: number } | null>(null);
+  const isCreationModeRef = useRef(false);
+  const isBenchmarkCreationRef = useRef(false);
 
   // WP10: Restore selected episode from localStorage on mount
   useEffect(() => {
@@ -95,7 +97,16 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           )) {
               setSelectedEpisode(prev => {
                   if (!prev) return updated;
-                  return { ...prev, ...updated };
+                  const updatedTraces = updated.traces || [];
+                  const updatedAssets = updated.assets || [];
+                  return {
+                    ...prev,
+                    ...updated,
+                    // Preserve richer data when list endpoint omits/under-reports details.
+                    traces: updatedTraces.length > 0 ? updatedTraces : (prev.traces || []),
+                    assets: updatedAssets.length > 0 ? updatedAssets : (prev.assets || []),
+                    plan: updated.plan || prev.plan
+                  };
               });
           }
       }
@@ -109,6 +120,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const selectEpisode = useCallback(async (id: string) => {
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
+    isCreationModeRef.current = false;
+    isBenchmarkCreationRef.current = false;
     setRunning(false);
     try {
       const fullEp = await fetchEpisode(id);
@@ -129,6 +142,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("selectedEpisodeId");
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
+    isCreationModeRef.current = false;
+    isBenchmarkCreationRef.current = false;
     setTopologyNodes([]);
     setRunning(false);
   }, []);
@@ -138,6 +153,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("selectedEpisodeId");
     setIsCreationMode(true);
     setIsBenchmarkCreation(isBenchmark);
+    isCreationModeRef.current = true;
+    isBenchmarkCreationRef.current = isBenchmark;
     setTopologyNodes([]);
     setRunning(false);
   }, []);
@@ -155,9 +172,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
   const startAgent = useCallback(async (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => {
     setRunning(true);
-    const wasBenchmarkCreation = isBenchmarkCreation;
+    const wasBenchmarkCreation = isBenchmarkCreationRef.current;
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
+    isCreationModeRef.current = false;
+    isBenchmarkCreationRef.current = false;
     
     try {
       let response;
@@ -198,7 +217,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to run agent", e);
       setRunning(false);
     }
-  }, [isCreationMode, refreshEpisodes, isBenchmarkCreation]);
+  }, [refreshEpisodes]);
 
   const continueAgent = useCallback(async (id: string, message: string, metadata?: Record<string, unknown>) => {
     setRunning(true);
@@ -339,6 +358,20 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
             if (connectionEpisodeId === selectedEpisodeIdRef.current) {
                 if (message.status !== EpisodeStatus.RUNNING) {
                   setRunning(false);
+                  // Hydrate full episode payload to avoid missing traces/assets after completion.
+                  fetchEpisode(connectionEpisodeId)
+                    .then((fullEp) => {
+                      setSelectedEpisode((prev: Episode | null) => {
+                        if (!prev || prev.id !== connectionEpisodeId || prev.id !== selectedEpisodeIdRef.current) {
+                          return prev;
+                        }
+                        return fullEp;
+                      });
+                      setEpisodes(prevEpisodes => prevEpisodes.map(ep => ep.id === connectionEpisodeId ? { ...ep, ...fullEp } : ep));
+                    })
+                    .catch((e) => {
+                      console.error("Failed to hydrate episode after status update", e);
+                    });
                 }
             }
           } else if (message.type === 'file_update') {

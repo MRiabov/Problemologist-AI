@@ -47,6 +47,18 @@ const findNodeByName = (nodes: TopologyNode[], name: string): TopologyNode | und
   return undefined;
 };
 
+const normalizeMentionPath = (value: string): string => value.replace(/^\/+/, "").toLowerCase();
+
+const assetMatchesMention = (assetPath: string, mention: string): boolean => {
+  const normalizedAssetPath = normalizeMentionPath(assetPath);
+  const normalizedMention = normalizeMentionPath(mention);
+  if (!normalizedAssetPath || !normalizedMention) return false;
+  if (normalizedAssetPath === normalizedMention) return true;
+  if (normalizedAssetPath.endsWith(`/${normalizedMention}`)) return true;
+  const assetBasename = normalizedAssetPath.split("/").pop();
+  return assetBasename === normalizedMention;
+};
+
 export function ChatInput({
   onSendMessage,
   isRunning,
@@ -102,7 +114,7 @@ export function ChatInput({
       
       matches.forEach(match => {
         const [, filename, start, end] = match;
-        const asset = sessionAssets.find(a => a.s3_path.endsWith(filename) || a.s3_path === filename);
+        const asset = sessionAssets.find(a => assetMatchesMention(a.s3_path, filename));
         if (asset) {
             const ref = {
                 file_path: asset.s3_path,
@@ -125,7 +137,7 @@ export function ChatInput({
       mentionMatches.forEach(match => {
         const name = match[1];
         const part = findNodeByName(topologyNodes, name);
-        const asset = sessionAssets.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+        const asset = sessionAssets.find(a => assetMatchesMention(a.s3_path, name));
         
         // Resolve ID if possible, otherwise use name
         const id = part?.id || asset?.id.toString() || name;
@@ -156,7 +168,7 @@ export function ChatInput({
     
     matches.forEach(match => {
         const [, filename, start, end] = match;
-        const asset = sessionAssets.find(a => a.s3_path.endsWith(filename) || a.s3_path === filename);
+        const asset = sessionAssets.find(a => assetMatchesMention(a.s3_path, filename));
         if (asset) {
             const contextId = `steer-${asset.id}-${start}-${end || start}`;
             if (!selectedContext.find(i => i.id === contextId)) {
@@ -284,11 +296,18 @@ export function ChatInput({
                             
                             let isValid = false;
                             if (isSteering) {
-                                isValid = !!sessionAssets.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+                                isValid = !!sessionAssets.find(a => assetMatchesMention(a.s3_path, name));
                             } else {
                                 const part = findNodeByName(topologyNodes, name);
-                                const asset = sessionAssets.find(a => a.s3_path.endsWith(name) || a.s3_path === name);
+                                const asset = sessionAssets.find(a => assetMatchesMention(a.s3_path, name));
                                 isValid = !!(part || asset);
+                            }
+                            
+                            if (!isValid && name.length > 2) {
+                                console.log(`Mention invalid: ${name}. Assets count: ${sessionAssets.length}. Nodes count: ${topologyNodes.length}`);
+                                if (sessionAssets.length > 0) {
+                                    console.log(`Sample asset: ${sessionAssets[0].s3_path}`);
+                                }
                             }
 
                             parts.push(
