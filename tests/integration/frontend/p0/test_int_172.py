@@ -18,8 +18,12 @@ def test_int_172_plan_approval_control_placement(page: Page):
     hidden/disabled before planner output is ready.
     """
     # 1. Start a benchmark generation
-    page.goto(f"{FRONTEND_URL}/benchmark")
+    # NOTE: Direct goto('/benchmark') doesn't work because http-server --proxy
+    # proxies non-static paths to the controller. Navigate via React Router instead.
+    page.goto(FRONTEND_URL)
     page.wait_for_load_state("networkidle")
+    page.get_by_role("link", name="Benchmark").click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"))
 
     # Click CREATE NEW
     page.get_by_test_id("create-new-button").click()

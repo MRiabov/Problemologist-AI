@@ -44,8 +44,23 @@ def test_benchmark_creation_flow(page: Page):
     # 6. Wait for the generation to start (Stop Agent button appears)
     expect(page.get_by_label("Stop Agent")).to_be_visible(timeout=30000)
 
-    # 7. Wait for the generation to finish (indicator: status changes to COMPLETED)
-    # This might take a while, increase timeout
+    # 7. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+    confirm_button = page.get_by_test_id("chat-confirm-button")
+    expect(confirm_button).to_be_visible()
+    confirm_button.click()
+
+    # 8. Wait for completion (status becomes COMPLETED)
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');

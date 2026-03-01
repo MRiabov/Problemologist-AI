@@ -17,8 +17,7 @@ def test_int_176_tool_call_failure_recovery(page: Page):
     """
     page.set_viewport_size({"width": 1280, "height": 720})
     page.goto(FRONTEND_URL, timeout=60000)
-    page.evaluate("localStorage.clear()")
-    page.reload()
+    page.wait_for_load_state("networkidle")
 
     # 1. Start a session with a specific ID to trigger the failure scenario
     # We use INT-176 as prefix for the session_id to match the scenario in mock_responses.yaml
@@ -44,9 +43,11 @@ def test_int_176_tool_call_failure_recovery(page: Page):
     page.get_by_label("Send Message").click()
 
     # 2. Wait for the tool call to appear and show "Failed"
-    # Based on our ActionCard.tsx change, it should show "Failed" with an AlertCircle
-    failed_label = page.get_by_text("Failed")
+    # The ActionCard shows the tool name (execute_command or ls)
+    # We'll just look for ANY failed label in a tool startup card
+    failed_label = page.locator(".group\\/action").get_by_text("Failed").first
     expect(failed_label).to_be_visible(timeout=60000)
+    print("\nDEBUG: 'Failed' label visible in an action card")
 
     # 3. Verify that the agent continues and provides a final response
     # (Indicator: status changes to COMPLETED)
