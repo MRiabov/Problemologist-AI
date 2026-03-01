@@ -15,7 +15,7 @@ from shared.enums import EpisodeStatus
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 

@@ -16,7 +16,7 @@ from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000/api"
 
 
 @pytest.mark.integration_p1

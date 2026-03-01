@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 SERVICES = [
-    "http://127.0.0.1:18000",  # Controller
+    "http://127.0.0.1:18000/api",  # Controller
     "http://127.0.0.1:18001",  # Worker Light
     "http://127.0.0.1:18002",  # Worker Heavy
 ]

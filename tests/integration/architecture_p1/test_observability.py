@@ -13,7 +13,7 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 @pytest.mark.integration_p1

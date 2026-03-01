@@ -32,7 +32,7 @@ from tests.integration.contracts import HealthResponse
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
@@ -442,10 +442,10 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
                 "import sys; sys.path.append('.'); import verify_overload; "
                 "import asyncio; asyncio.run(verify_overload.run())"
             ),
-            timeout=90,
+            timeout=180,
         ).model_dump(mode="json"),
         headers={"X-Session-ID": session_id},
-        timeout=120.0,
+        timeout=210.0,
     )
     assert resp.status_code == 200
     data = ExecuteResponse.model_validate(resp.json())

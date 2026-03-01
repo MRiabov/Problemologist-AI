@@ -12,7 +12,7 @@ from controller.api.schemas import (
 from shared.enums import EpisodeStatus
 from shared.models.schemas import EpisodeMetadata
 
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = "http://127.0.0.1:18000/api"
 
 
 @pytest.mark.integration_p2

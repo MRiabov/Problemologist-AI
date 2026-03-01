@@ -11,7 +11,7 @@ from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeRes
 from shared.enums import EpisodeStatus, TraceType
 from tests.integration.contracts import BackupWorkflowResponse
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "127.0.0.1:17233")
 S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:19000")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
