@@ -4,6 +4,7 @@ import numpy as np
 import structlog
 from build123d import Compound, Part
 
+from shared.config.simulation import simulation_settings
 from shared.enums import FailureReason
 from shared.models.schemas import ElectronicsSection, ObjectivesYaml
 from shared.models.simulation import (
@@ -31,20 +32,12 @@ from worker_heavy.workbenches.config import load_config
 logger = structlog.get_logger(__name__)
 
 
-# Hard cap on simulation time per architecture spec
-MAX_SIMULATION_TIME_SECONDS = 30.0
-# Motor overload threshold: fail if clamped for this duration (seconds)
-MOTOR_OVERLOAD_THRESHOLD_SECONDS = 2.0
-# Standard simulation step for MuJoCo (2ms)
-SIMULATION_STEP_S = 0.002
-
-
 class SimulationLoop:
     def __init__(
         self,
         xml_path: str | Path,
         component: Part | Compound | None = None,
-        max_simulation_time: float = MAX_SIMULATION_TIME_SECONDS,
+        max_simulation_time: float = simulation_settings.max_simulation_time_seconds,
         backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
@@ -108,7 +101,9 @@ class SimulationLoop:
             self.backend.load_scene(scene)
 
             self.component = component
-            self.electronics = electronics
+            self.electronics = (
+                electronics.model_copy(deep=True) if electronics else None
+            )
             self.objectives = objectives
             self.is_powered_map = {}
             self.validation_report = None
@@ -192,7 +187,7 @@ class SimulationLoop:
 
             # Configurable timeout (capped at hard limit)
             self.max_simulation_time = min(
-                max_simulation_time, MAX_SIMULATION_TIME_SECONDS
+                max_simulation_time, simulation_settings.max_simulation_time_seconds
             )
 
             # Performance optimizations: cache backend info
@@ -237,7 +232,7 @@ class SimulationLoop:
             self.metric_collector = MetricCollector()
             self.success_evaluator = SuccessEvaluator(
                 max_simulation_time=self.max_simulation_time,
-                motor_overload_threshold=MOTOR_OVERLOAD_THRESHOLD_SECONDS,
+                motor_overload_threshold=simulation_settings.motor_overload_threshold_seconds,
                 simulation_bounds=self.objectives.simulation_bounds
                 if self.objectives
                 else None,
@@ -326,21 +321,17 @@ class SimulationLoop:
         control_inputs: dict[str, float],
         duration: float = 10.0,
         dynamic_controllers: dict[str, callable] | None = None,
-        render_callback=None,
         video_path: Path | None = None,
         reset_metrics: bool = True,
     ) -> SimulationMetrics:
-        """
-        Runs the simulation for the specified duration.
-        Returns metrics.
-        """
+        """Runs the simulation for the specified duration."""
         if reset_metrics:
             self.reset_metrics()
 
         # 1. Pre-simulation validation
-        validation_error_metrics = self._perform_pre_simulation_validation()
-        if validation_error_metrics:
-            return validation_error_metrics
+        metrics = self._perform_pre_simulation_validation()
+        if metrics:
+            return metrics
 
         # 2. Setup recorders
         media_recorder = MediaRecorder(video_path)
@@ -361,52 +352,61 @@ class SimulationLoop:
         for step_idx in range(steps):
             self.current_step_idx = step_idx
 
-            # Update electronics if state changed
-            if self.electronics and self._electronics_dirty:
-                self._update_electronics()
-                self._electronics_dirty = False
-                self._apply_gated_controls(control_inputs)
-                if self.electronics_validation_error:
-                    # In this case self.fail_reason might be set by _update_electronics
-                    # which uses self.electronics_manager.validation_error
-                    if isinstance(self.electronics_validation_error, SimulationFailure):
-                        self.fail_reason = self.electronics_validation_error
-                    else:
-                        self.fail_reason = SimulationFailure(
-                            reason=FailureReason.VALIDATION_FAILED,
-                            detail=str(self.electronics_validation_error),
-                        )
-                    break
-
-            # Apply dynamic controllers
-            if dynamic_controllers:
-                self._apply_gated_controls({}, current_time, dynamic_controllers)
-
-            # Step backend
-            res = self.backend.step(dt)
-            current_time = res.time
-
-            # Check failures and update metrics
-            # T018: Keep interval small for collisions/overload to avoid missing events
-            check_interval = 1
-            if step_idx % check_interval == 0 or step_idx == steps - 1:
-                if self._check_simulation_failure(
-                    res, current_time, dt * check_interval, target_body_name
-                ):
-                    break
-
-            # Check wire failure
-            if self._handle_wire_failure():
+            if self._step_internal(
+                step_idx,
+                steps,
+                dt,
+                control_inputs,
+                dynamic_controllers,
+                target_body_name,
+            ):
+                current_time = self.backend.get_state()["time"]
                 break
 
             # Video recording
             media_recorder.update(step_idx, self.backend)
+            current_time = self.backend.get_state()["time"]
 
         # 7. Finalization
         media_recorder.save()
         self.objective_evaluator.evaluate_final(self.backend, current_time)
 
         return self._build_simulation_metrics(current_time)
+
+    def _step_internal(
+        self,
+        step_idx: int,
+        steps: int,
+        dt: float,
+        control_inputs: dict[str, float],
+        dynamic_controllers: dict[str, callable] | None,
+        target_body_name: str | None,
+    ) -> bool:
+        """Internal step logic for the simulation loop. Returns True if simulation should stop."""
+        # Update electronics if state changed
+        if self.electronics and self._electronics_dirty:
+            self._update_electronics()
+            self._electronics_dirty = False
+            self._apply_gated_controls(control_inputs)
+
+        # Apply dynamic controllers
+        if dynamic_controllers:
+            current_time = self.backend.get_state()["time"]
+            self._apply_gated_controls({}, current_time, dynamic_controllers)
+
+        # Step backend
+        res = self.backend.step(dt)
+        current_time = res.time
+
+        # Check failures and update metrics
+        check_interval = 1
+        if step_idx % check_interval == 0 or step_idx == steps - 1:
+            if self._check_simulation_failure(
+                res, current_time, dt * check_interval, target_body_name
+            ):
+                return True
+
+        return bool(self._handle_wire_failure())
 
     def _get_stress_fields(self) -> dict[str, dict]:
         fields = {}
@@ -439,7 +439,7 @@ class SimulationLoop:
             self._monitor_names, forces, self._monitor_limits, dt
         ):
             # Find which one
-            for i, name in enumerate(self._monitor_names):
+            for name in self._monitor_names:
                 if (
                     self.success_evaluator.motor_overload_timer.get(name, 0)
                     >= self.success_evaluator.motor_overload_threshold
@@ -530,7 +530,7 @@ class SimulationLoop:
             if self.objectives and self.objectives.physics.fem_enabled:
                 return 0.002
             return 0.05
-        return SIMULATION_STEP_S
+        return simulation_settings.simulation_step_s
 
     def _apply_gated_controls(
         self,
@@ -778,7 +778,12 @@ class SimulationLoop:
                             tension=tension,
                         )
                         wire_broken = True
-                        self.electronics.wiring.remove(wire)
+                        new_wires = [
+                            w
+                            for w in self.electronics.wiring
+                            if w.wire_id != wire.wire_id
+                        ]
+                        self.electronics.wiring = new_wires
                         self._electronics_dirty = True
                         self._update_electronics()
                         self._electronics_dirty = False

@@ -3,7 +3,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, TYPE_CHECKING
 
 import dspy
 import structlog
@@ -39,17 +39,26 @@ class SharedNodeContext:
 
     @classmethod
     def create(
-        cls, worker_light_url: str, session_id: str, episode_id: str | None = None
+        cls,
+        worker_light_url: str,
+        session_id: str,
+        episode_id: str | None = None,
+        worker_client: WorkerClient | None = None,
+        fs: RemoteFilesystemMiddleware | None = None,
     ) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
         # Fallback for episode_id if not provided
         eid = episode_id or session_id
 
-        worker_client = WorkerClient(
-            base_url=worker_light_url,
-            session_id=session_id,
-            heavy_url=settings.worker_heavy_url,
-        )
+        if not worker_client:
+            worker_client = WorkerClient(
+                base_url=worker_light_url,
+                session_id=session_id,
+                heavy_url=settings.worker_heavy_url,
+            )
+
+        if not fs:
+            fs = RemoteFilesystemMiddleware(worker_client)
 
         # WP05: Support mock LLMs for integration tests
         if settings.is_integration_test:
@@ -80,7 +89,7 @@ class SharedNodeContext:
             pm=PromptManager(),
             dspy_lm=dspy_lm,
             worker_client=worker_client,
-            fs=RemoteFilesystemMiddleware(worker_client),
+            fs=fs,
             main_loop=main_loop,
         )
 
@@ -331,7 +340,7 @@ class BaseNode:
         prediction = None
         artifacts = {}
 
-        dspy_timeout = 300.0 if settings.is_integration_test else 300.0
+        dspy_timeout = 300.0
 
         try:
             while retry_count < max_retries:
@@ -359,14 +368,13 @@ class BaseNode:
                                 prediction_type=str(type(prediction)),
                                 session_id=self.ctx.session_id,
                             )
-                        except TimeoutError:
+                        except TimeoutError as err:
                             logger.error(
                                 f"{node_type}_dspy_timeout",
                                 session_id=self.ctx.session_id,
                             )
-                            raise RuntimeError(
-                                f"DSPy program {node_type} timed out after {dspy_timeout}s"
-                            )
+                            msg = f"DSPy program {node_type} timed out after {dspy_timeout}s"
+                            raise RuntimeError(msg) from err
 
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
@@ -450,9 +458,9 @@ class BaseNode:
 
                     return prediction, artifacts, journal_entry
 
-                except Exception as e:
-                    logger.error(f"{node_type}_dspy_failed", error=str(e))
-                    journal_entry += f"\n[System Error] {e}"
+                except Exception as err:
+                    logger.error(f"{node_type}_dspy_failed", error=str(err))
+                    journal_entry += f"\n[System Error] {err}"
                     retry_count += 1
                     await asyncio.sleep(1)  # Backoff to prevent log explosion
 
