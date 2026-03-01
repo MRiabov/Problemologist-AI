@@ -42,7 +42,7 @@ async def run(_ctx=None):
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
-        metrics = loop.step(control_inputs={"servo": 100.0}, duration=5.0)
+        metrics = loop.step(control_inputs={"servo": 100.0}, duration=3.0)
 
         from shared.enums import FailureReason
 
