@@ -11,7 +11,7 @@ from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeRes
 from shared.enums import EpisodeStatus, TraceType
 from tests.integration.contracts import BackupWorkflowResponse
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "127.0.0.1:17233")
 S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:19000")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
@@ -27,15 +27,15 @@ async def test_int_057_backup_logging_flow():
     Verify that backup endpoint triggers workflow, creates S3 objects,
     and (ideally) persists metadata.
     """
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger backup
         # The secret defaults to 'change-me-in-production' in dev compose
         headers = {"X-Backup-Secret": "change-me-in-production"}
-        resp = await client.post(f"{CONTROLLER_URL}/ops/backup", headers=headers)
+        resp = await client.post("ops/backup", headers=headers)
 
         if resp.status_code == 403:
             # Try without secret if it's disabled or different
-            resp = await client.post(f"{CONTROLLER_URL}/ops/backup")
+            resp = await client.post("ops/backup")
 
         assert resp.status_code == 202, f"Backup trigger failed: {resp.text}"
         backup_resp = BackupWorkflowResponse.model_validate(resp.json())
@@ -78,21 +78,21 @@ async def test_int_057_backup_logging_flow():
 @pytest.mark.asyncio
 async def test_int_058_cross_system_correlation():
     """INT-058: Verify cross-system correlation IDs."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         task = "Test cross-system correlation"
         request = AgentRunRequest(
             task=task,
             session_id=f"INT-058-{uuid.uuid4().hex[:8]}",
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            "agent/run",
             json=request.model_dump(),
         )
         assert resp.status_code == 202
         episode_id = AgentRunResponse.model_validate(resp.json()).episode_id
 
         # 1. Verify Episode in DB
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        status_resp = await client.get(f"episodes/{episode_id}")
         assert status_resp.status_code == 200
         ep = EpisodeResponse.model_validate(status_resp.json())
         assert str(ep.id) == str(episode_id)
@@ -100,7 +100,7 @@ async def test_int_058_cross_system_correlation():
         # 2. Wait for completion to ensure traces and assets exist
         max_retries = 30
         for _ in range(max_retries):
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            status_resp = await client.get(f"episodes/{episode_id}")
             ep = EpisodeResponse.model_validate(status_resp.json())
             if ep.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break

@@ -24,7 +24,7 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
@@ -33,7 +33,7 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 @pytest.mark.asyncio
 async def test_int_064_cots_metadata():
     """INT-064: COTS reproducibility metadata persistence."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # Seed a part first to ensure search works
         import sqlite3
         import json
@@ -56,7 +56,7 @@ async def test_int_064_cots_metadata():
         conn.close()
 
         # 1. Fetch metadata
-        resp = await client.get(f"{CONTROLLER_URL}/api/cots/metadata")
+        resp = await client.get("cots/metadata")
         assert resp.status_code == 200
         # Validate COTS metadata structure
         data = CotsMetadataResponse.model_validate(resp.json())
@@ -67,7 +67,7 @@ async def test_int_064_cots_metadata():
         # We'll just verify the endpoint exists and returns data as a proxy for persistence.
         # Ideally we'd check Langfuse/DB for the COTSSearchEvent fields.
         search_resp = await client.get(
-            f"{CONTROLLER_URL}/api/cots/search", params={"q": "M3"}
+            "cots/search", params={"q": "M3"}
         )
         assert search_resp.status_code == 200
         results = [CotsSearchItem.model_validate(item) for item in search_resp.json()]
@@ -217,12 +217,12 @@ fluids:
 @pytest.mark.asyncio
 async def test_int_067_068_steerability():
     """INT-067 & INT-068: Steerability payload and code references."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Create a dummy episode
         task = "Test steerability"
         request = AgentRunRequest(task=task, session_id="test-steer-123")
         resp = await client.post(
-            f"{CONTROLLER_URL}/api/test/episodes",
+            "test/episodes",
             json=request.model_dump(),
         )
         assert resp.status_code == 201
@@ -244,14 +244,14 @@ async def test_int_067_068_steerability():
         )
 
         steer_resp = await client.post(
-            f"{CONTROLLER_URL}/api/v1/sessions/{steer_session_id}/steer",
+            f"v1/sessions/{steer_session_id}/steer",
             json=steer_request.model_dump(),
         )
         assert steer_resp.status_code == 202
 
         # 3. Verify it's in the queue
         queue_resp = await client.get(
-            f"{CONTROLLER_URL}/api/v1/sessions/{steer_session_id}/queue"
+            f"v1/sessions/{steer_session_id}/queue"
         )
         assert queue_resp.status_code == 200
         queue = [SteerablePrompt.model_validate(e) for e in queue_resp.json()]
@@ -263,12 +263,12 @@ async def test_int_067_068_steerability():
 @pytest.mark.asyncio
 async def test_int_069_frontend_contract():
     """INT-069: Frontend delivery visibility contract."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Create an episode
         task = "Test frontend contract"
         request = AgentRunRequest(task=task, session_id="test-fe-contract")
         resp = await client.post(
-            f"{CONTROLLER_URL}/api/test/episodes",
+            "test/episodes",
             json=request.model_dump(),
         )
         assert resp.status_code == 201
@@ -303,7 +303,7 @@ totals:
 
         # 3. Test schematic endpoint
         schematic_resp = await client.get(
-            f"{CONTROLLER_URL}/api/episodes/{episode_id}/electronics/schematic"
+            f"episodes/{episode_id}/electronics/schematic"
         )
         assert schematic_resp.status_code == 200
         # Schematic is a list of typed items
@@ -323,7 +323,7 @@ totals:
         )
 
         asset_resp = await client.get(
-            f"{CONTROLLER_URL}/api/episodes/{episode_id}/assets/renders/test.png"
+            f"episodes/{episode_id}/assets/renders/test.png"
         )
         assert asset_resp.status_code == 200
         assert asset_resp.content == b"dummy-binary-content"

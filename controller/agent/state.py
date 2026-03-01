@@ -35,7 +35,4 @@ class AgentState(BaseModel):
     best_cost: float | None = None
     best_weight_g: float | None = None
     turn_count: StrictInt = 0
-    worker_client: Any = None
-    fs: Any = None
-
     model_config = {"arbitrary_types_allowed": True}

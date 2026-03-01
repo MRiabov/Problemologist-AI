@@ -15,7 +15,7 @@ from shared.enums import EpisodeStatus
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 
@@ -23,7 +23,7 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 @pytest.mark.asyncio
 async def test_int_045_skills_sync_lifecycle():
     """INT-045: Verify skills sync lifecycle."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=30.0) as client:
         # 1. Trigger Agent Run
         task = "Write a script that uses a skill"
         request = AgentRunRequest(
@@ -31,7 +31,7 @@ async def test_int_045_skills_sync_lifecycle():
             session_id=f"INT-045-{uuid.uuid4().hex[:8]}",
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            "agent/run",
             json=request.model_dump(),
         )
         assert resp.status_code == 202
@@ -41,7 +41,7 @@ async def test_int_045_skills_sync_lifecycle():
         # 2. Wait for it to start/complete
         max_retries = 30
         for _ in range(max_retries):
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            status_resp = await client.get(f"episodes/{episode_id}")
             if status_resp.status_code == 200:
                 episode_data = EpisodeResponse.model_validate(status_resp.json())
                 if episode_data.status in [

@@ -1,4 +1,5 @@
 import asyncio
+import os
 import uuid
 
 import pytest
@@ -9,7 +10,7 @@ from shared.enums import EpisodeStatus
 from tests.integration.contracts import BackupWorkflowResponse
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
@@ -23,10 +24,10 @@ async def test_render_artifact_generation_int_039():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Agent Run (or Benchmark Generation)
         prompt = "Create a simple cube and simulate it."
-        # We use /agent/run for a standard agent flow
+        # We use agent/run for a standard agent flow
         session_id = f"INT-039-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
-            "/agent/run", json={"task": prompt, "session_id": session_id}
+            "agent/run", json={"task": prompt, "session_id": session_id}
         )
         assert resp.status_code in [200, 202], f"Failed to trigger agent: {resp.text}"
         run_data = AgentRunResponse.model_validate(resp.json())
@@ -35,7 +36,7 @@ async def test_render_artifact_generation_int_039():
         # 2. Poll for completion
         completed = False
         for _ in range(150):
-            status_resp = await client.get(f"/episodes/{episode_id}")
+            status_resp = await client.get(f"episodes/{episode_id}")
             if status_resp.status_code == 200:
                 ep_data = EpisodeResponse.model_validate(status_resp.json())
                 if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
@@ -47,7 +48,7 @@ async def test_render_artifact_generation_int_039():
 
         # 3. Verify Artifacts (discoverable by reviewer/consumer paths)
         ep_data = EpisodeResponse.model_validate(
-            (await client.get(f"/episodes/{episode_id}")).json()
+            (await client.get(f"episodes/{episode_id}")).json()
         )
         assets = ep_data.assets
 
@@ -81,7 +82,7 @@ async def test_asset_persistence_linkage_int_040():
         # Trigger a run
         session_id = f"INT-040-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
-            "/agent/run",
+            "agent/run",
             json={
                 "task": "Create a part named 'linkage_test' and simulate.",
                 "session_id": session_id,
@@ -93,7 +94,7 @@ async def test_asset_persistence_linkage_int_040():
         # Wait for completion
         for _ in range(150):
             ep_data = EpisodeResponse.model_validate(
-                (await client.get(f"/episodes/{episode_id}")).json()
+                (await client.get(f"episodes/{episode_id}")).json()
             )
             if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
@@ -101,7 +102,7 @@ async def test_asset_persistence_linkage_int_040():
 
         # Verify Linkage
         ep_data = EpisodeResponse.model_validate(
-            (await client.get(f"/episodes/{episode_id}")).json()
+            (await client.get(f"episodes/{episode_id}")).json()
         )
         asset_paths = [a.s3_path for a in ep_data.assets]
 
@@ -138,7 +139,7 @@ async def test_mjcf_joint_mapping_int_037():
         Then simulate."""
 
         resp = await client.post(
-            "/agent/run", json={"task": prompt, "session_id": session_id}
+            "agent/run", json={"task": prompt, "session_id": session_id}
         )
         run_data = AgentRunResponse.model_validate(resp.json())
         episode_id = run_data.episode_id
@@ -146,14 +147,14 @@ async def test_mjcf_joint_mapping_int_037():
         # Wait for completion
         for _ in range(150):
             ep_data = EpisodeResponse.model_validate(
-                (await client.get(f"/episodes/{episode_id}")).json()
+                (await client.get(f"episodes/{episode_id}")).json()
             )
             if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
             await asyncio.sleep(2)
 
         ep_data = EpisodeResponse.model_validate(
-            (await client.get(f"/episodes/{episode_id}")).json()
+            (await client.get(f"episodes/{episode_id}")).json()
         )
         # Find MJCF asset
         mjcf_asset = next(
@@ -202,14 +203,14 @@ async def test_controller_function_family_int_038():
         )
         session_id = f"INT-038-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
-            "/agent/run", json={"task": prompt, "session_id": session_id}
+            "agent/run", json={"task": prompt, "session_id": session_id}
         )
         run_data = AgentRunResponse.model_validate(resp.json())
         episode_id = run_data.episode_id
 
         for _ in range(150):
             ep_data = EpisodeResponse.model_validate(
-                (await client.get(f"/episodes/{episode_id}")).json()
+                (await client.get(f"episodes/{episode_id}")).json()
             )
             if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                 break
@@ -217,7 +218,7 @@ async def test_controller_function_family_int_038():
 
         # Verify it ran without crashing (Simulation stable / Goal achieved)
         ep_data = EpisodeResponse.model_validate(
-            (await client.get(f"/episodes/{episode_id}")).json()
+            (await client.get(f"episodes/{episode_id}")).json()
         )
         assert ep_data.status == EpisodeStatus.COMPLETED
         # Check traces for simulation success
@@ -242,11 +243,11 @@ async def test_temporal_recovery_int_041():
         # Trigger an operations workflow (Backup) which uses Temporal
         # This requires a secret, which defaults to 'change-me-in-production' in dev
         resp = await client.post(
-            "/ops/backup", headers={"X-Backup-Secret": "change-me-in-production"}
+            "ops/backup", headers={"X-Backup-Secret": "change-me-in-production"}
         )
 
         if resp.status_code == 404:
-            pytest.skip("/ops/backup endpoint not found")
+            pytest.skip("ops/backup endpoint not found")
 
         assert resp.status_code == 202
         workflow = BackupWorkflowResponse.model_validate(resp.json())
@@ -263,7 +264,7 @@ async def test_async_callbacks_int_042():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-042-{uuid.uuid4().hex[:8]}"
         resp = await client.post(
-            "/agent/run",
+            "agent/run",
             json={"task": "Just say hello and finish.", "session_id": session_id},
         )
         run_data = AgentRunResponse.model_validate(resp.json())
@@ -271,14 +272,14 @@ async def test_async_callbacks_int_042():
 
         # Immediate status should be RUNNING
         ep_data = EpisodeResponse.model_validate(
-            (await client.get(f"/episodes/{episode_id}")).json()
+            (await client.get(f"episodes/{episode_id}")).json()
         )
         assert ep_data.status == EpisodeStatus.RUNNING
 
         # Wait for completion (simulates async callback/polling)
         for _ in range(150):
             ep_data = EpisodeResponse.model_validate(
-                (await client.get(f"/episodes/{episode_id}")).json()
+                (await client.get(f"episodes/{episode_id}")).json()
             )
             if ep_data.status == EpisodeStatus.COMPLETED:
                 break

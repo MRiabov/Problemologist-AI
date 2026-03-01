@@ -13,10 +13,11 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
+import os
 from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
@@ -43,7 +44,7 @@ async def test_engineering_full_loop():
             prompt="Create a benchmark about stacking blocks.",
             backend=SimulatorBackendType.GENESIS,
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
+        resp = await client.post("benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -54,13 +55,13 @@ async def test_engineering_full_loop():
         # Wait for benchmark
         max_retries = 150
         for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
+            status_resp = await client.get(f"benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 status = sess_data.status
                 if status == EpisodeStatus.PLANNED:
                     await client.post(
-                        f"/benchmark/{benchmark_session_id}/confirm",
+                        f"benchmark/{benchmark_session_id}/confirm",
                         json=ConfirmRequest(comment="Proceed").model_dump(),
                     )
                 elif status == EpisodeStatus.COMPLETED:
@@ -78,7 +79,7 @@ async def test_engineering_full_loop():
             metadata_vars={"benchmark_id": str(benchmark_session_id)},
         )
 
-        run_resp = await client.post("/agent/run", json=run_request.model_dump())
+        run_resp = await client.post("agent/run", json=run_request.model_dump())
         assert run_resp.status_code in [
             200,
             202,
@@ -91,7 +92,7 @@ async def test_engineering_full_loop():
         last_status = None
 
         for _ in range(150):  # Poll for up to 2 mins
-            ep_resp = await client.get(f"/episodes/{episode_id}")
+            ep_resp = await client.get(f"episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 ep_data = EpisodeResponse.model_validate(ep_resp.json())
                 last_status = ep_data.status
@@ -108,7 +109,7 @@ async def test_engineering_full_loop():
             pytest.fail(f"Engineer loop timed out. Last status: {last_status}")
 
         # 4. Verify Engineering Artifacts
-        episode_assets_resp = await client.get(f"/episodes/{episode_id}")
+        episode_assets_resp = await client.get(f"episodes/{episode_id}")
         assert episode_assets_resp.status_code == 200, (
             f"Failed to fetch episode assets for {episode_id}: {episode_assets_resp.text}"
         )

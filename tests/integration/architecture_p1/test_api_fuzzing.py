@@ -4,13 +4,15 @@ import pytest
 import schemathesis
 
 # Target the running service URL for integration testing
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
+from urllib.parse import urljoin
+
 # Create a schema instance from the live OpenAPI spec
 try:
-    schema = schemathesis.openapi.from_url(f"{CONTROLLER_URL}/openapi.json")
+    schema = schemathesis.openapi.from_url(urljoin(CONTROLLER_URL, "/openapi.json"))
 except Exception:
     # Fallback to local file if service is not running (prevents collection error)
     if os.path.exists("controller_openapi.json"):

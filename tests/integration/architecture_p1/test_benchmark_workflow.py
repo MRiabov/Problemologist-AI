@@ -9,11 +9,12 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
+import os
 from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
@@ -33,7 +34,7 @@ async def test_benchmark_planner_cad_reviewer_path():
             prompt="Create a simple path planning benchmark with a wall and a goal.",
             backend=SimulatorBackendType.GENESIS,
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
+        resp = await client.post("benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -47,7 +48,7 @@ async def test_benchmark_planner_cad_reviewer_path():
         confirmed = False
 
         for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{session_id}")
+            status_resp = await client.get(f"benchmark/{session_id}")
             if status_resp.status_code == 200:
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 last_status = sess_data.status
@@ -55,7 +56,7 @@ async def test_benchmark_planner_cad_reviewer_path():
                 if last_status == EpisodeStatus.PLANNED and not confirmed:
                     # WP08: Call confirm to continue from planning to execution
                     confirm_resp = await client.post(
-                        f"/benchmark/{session_id}/confirm",
+                        f"benchmark/{session_id}/confirm",
                         json=ConfirmRequest(comment="Looks good").model_dump(),
                     )
                     assert confirm_resp.status_code in [200, 202]
@@ -75,7 +76,7 @@ async def test_benchmark_planner_cad_reviewer_path():
             pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
 
         # 3. Verify Artifacts from episode assets
-        episode_resp = await client.get(f"/episodes/{session_id}")
+        episode_resp = await client.get(f"episodes/{session_id}")
         assert episode_resp.status_code == 200, (
             f"Failed to fetch episode assets: {episode_resp.text}"
         )

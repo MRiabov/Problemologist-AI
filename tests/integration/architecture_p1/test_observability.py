@@ -13,14 +13,14 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_059_langfuse_trace_linkage():
     """INT-059: Verify Langfuse trace linkage in live runs."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Run an episode
         # We use a simple task that might trigger some traces
         task = "Write a hello world python script"
@@ -29,7 +29,7 @@ async def test_int_059_langfuse_trace_linkage():
             session_id=f"INT-059-{uuid.uuid4().hex[:8]}",
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            "agent/run",
             json=request.model_dump(),
         )
         assert resp.status_code == 202
@@ -40,7 +40,7 @@ async def test_int_059_langfuse_trace_linkage():
         # We'll poll for a bit
         max_retries = 150
         for _ in range(max_retries):
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            status_resp = await client.get(f"episodes/{episode_id}")
             assert status_resp.status_code == 200
             ep_data = EpisodeResponse.model_validate(status_resp.json())
             if ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
@@ -48,7 +48,7 @@ async def test_int_059_langfuse_trace_linkage():
             await asyncio.sleep(2)
 
         # Even if it didn't complete, it should have traces
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        status_resp = await client.get(f"episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(status_resp.json())
         traces = ep_data.traces or []
         assert len(traces) > 0
@@ -81,7 +81,7 @@ async def test_int_059_langfuse_trace_linkage():
 @pytest.mark.asyncio
 async def test_int_060_langfuse_feedback_contract():
     """INT-060: Verify Langfuse feedback forwarding contract."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Create an episode and get a trace with langfuse_id
         task = "Test feedback"
         request = AgentRunRequest(
@@ -89,7 +89,7 @@ async def test_int_060_langfuse_feedback_contract():
             session_id=f"INT-060-{uuid.uuid4().hex[:8]}",
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/agent/run",
+            "agent/run",
             json=request.model_dump(),
         )
         run_data = AgentRunResponse.model_validate(resp.json())
@@ -97,7 +97,7 @@ async def test_int_060_langfuse_feedback_contract():
 
         # Wait for at least one trace
         await asyncio.sleep(2)
-        status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        status_resp = await client.get(f"episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(status_resp.json())
         traces = ep_data.traces or []
         assert len(traces) > 0
@@ -108,7 +108,7 @@ async def test_int_060_langfuse_feedback_contract():
         # 2. Test feedback with langfuse_trace_id
         feedback_request = FeedbackRequest(score=1, comment="Great trace!")
         feedback_resp = await client.post(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/traces/{trace_id}/feedback",
+            f"episodes/{episode_id}/traces/{trace_id}/feedback",
             json=feedback_request.model_dump(),
         )
 
@@ -118,7 +118,7 @@ async def test_int_060_langfuse_feedback_contract():
 
         if feedback_resp.status_code == 202:
             # Verify local persistence
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            status_resp = await client.get(f"episodes/{episode_id}")
             updated_episode = EpisodeResponse.model_validate(status_resp.json())
             updated_trace = next(
                 t for t in (updated_episode.traces or []) if t.id == trace_id
@@ -133,7 +133,7 @@ async def test_int_060_langfuse_feedback_contract():
         # Test 404 for non-existent trace
         bad_feedback_request = FeedbackRequest(score=0)
         bad_feedback_resp = await client.post(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/traces/999999/feedback",
+            f"episodes/{episode_id}/traces/999999/feedback",
             json=bad_feedback_request.model_dump(),
         )
         assert bad_feedback_resp.status_code == 404
@@ -141,7 +141,7 @@ async def test_int_060_langfuse_feedback_contract():
         # Test 404 for non-existent episode
         bad_episode_id = str(uuid.uuid4())
         bad_feedback_resp = await client.post(
-            f"{CONTROLLER_URL}/episodes/{bad_episode_id}/traces/{trace_id}/feedback",
+            f"episodes/{bad_episode_id}/traces/{trace_id}/feedback",
             json=bad_feedback_request.model_dump(),
         )
         assert bad_feedback_resp.status_code == 404

@@ -12,14 +12,14 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
 async def test_int_043_batch_execution_path():
     """INT-043: Verify batch job submission and execution isolation."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # Submit 2 concurrent jobs
         tasks = []
         session_ids = []
@@ -32,7 +32,7 @@ async def test_int_043_batch_execution_path():
             )
             tasks.append(
                 client.post(
-                    f"{CONTROLLER_URL}/agent/run",
+                    "agent/run",
                     json=request.model_dump(),
                     timeout=10.0,
                 )
@@ -57,7 +57,7 @@ async def test_int_043_batch_execution_path():
             all_done = True
             for episode_id in episode_ids:
                 status_resp = await client.get(
-                    f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=5.0
+                    f"episodes/{episode_id}", timeout=5.0
                 )  # should be instant because LLMs are mocked.
                 if status_resp.status_code != 200:
                     all_done = False
@@ -89,6 +89,6 @@ async def test_int_043_batch_execution_path():
 
         # Double check status one last time
         for episode_id in episode_ids:
-            status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+            status_resp = await client.get(f"episodes/{episode_id}")
             ep_data = EpisodeResponse.model_validate(status_resp.json())
             assert ep_data.status in [EpisodeStatus.COMPLETED, EpisodeStatus.CANCELLED]

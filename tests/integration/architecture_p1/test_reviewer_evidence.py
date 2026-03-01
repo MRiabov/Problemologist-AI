@@ -14,10 +14,11 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 from shared.models.schemas import ReviewFrontmatter
+import os
 from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
@@ -41,7 +42,7 @@ async def test_reviewer_evidence_completeness():
             prompt="Create a trivial benchmark.",
             backend=SimulatorBackendType.GENESIS,
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
+        resp = await client.post("benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -51,7 +52,7 @@ async def test_reviewer_evidence_completeness():
 
         # Wait for benchmark
         for _ in range(150):
-            status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
+            status_resp = await client.get(f"benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 if sess_data.status == EpisodeStatus.COMPLETED:
@@ -68,7 +69,7 @@ async def test_reviewer_evidence_completeness():
             metadata_vars={"benchmark_id": str(benchmark_session_id)},
         )
 
-        run_resp = await client.post("/agent/run", json=run_request.model_dump())
+        run_resp = await client.post("agent/run", json=run_request.model_dump())
         assert run_resp.status_code in [
             200,
             202,
@@ -80,7 +81,7 @@ async def test_reviewer_evidence_completeness():
         # A full completion is safest.
         engineer_completed = False
         for _ in range(150):
-            ep_resp = await client.get(f"/episodes/{episode_id}")
+            ep_resp = await client.get(f"episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 ep_data = EpisodeResponse.model_validate(ep_resp.json())
                 if ep_data.status in [
@@ -95,8 +96,8 @@ async def test_reviewer_evidence_completeness():
             pytest.fail("Engineer timed out.")
 
         # 2. Fetch Review Artifact via Assets
-        # Use /episodes/{id} to get assets list
-        ep_resp = await client.get(f"/episodes/{episode_id}")
+        # Use episodes/{id} to get assets list
+        ep_resp = await client.get(f"episodes/{episode_id}")
         assert ep_resp.status_code == 200
         ep_data = EpisodeResponse.model_validate(ep_resp.json())
         assets = ep_data.assets or []
@@ -114,8 +115,8 @@ async def test_reviewer_evidence_completeness():
             if not content:
                 # If content is empty, fetch via proxy
                 path = review_asset.s3_path
-                # Proxy url: /episodes/{id}/assets/{path}
-                proxy_resp = await client.get(f"/episodes/{episode_id}/assets/{path}")
+                # Proxy url: episodes/{id}/assets/{path}
+                proxy_resp = await client.get(f"episodes/{episode_id}/assets/{path}")
                 if proxy_resp.status_code == 200:
                     content = proxy_resp.text
 

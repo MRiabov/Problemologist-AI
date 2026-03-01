@@ -9,11 +9,12 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
+import os
 from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
 
 # Adjust URL to your controller if different
-CONTROLLER_URL = "http://127.0.0.1:18000"
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api/")
 
 
 @pytest.mark.integration_p1
@@ -38,7 +39,7 @@ async def test_benchmark_to_engineer_handoff():
             prompt="Create a benchmark with a moving platform.",  # implies moving parts
             backend=SimulatorBackendType.GENESIS,
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
+        resp = await client.post("benchmark/generate", json=request.model_dump())
         assert resp.status_code in [
             200,
             202,
@@ -52,13 +53,13 @@ async def test_benchmark_to_engineer_handoff():
         last_status = None
 
         for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{session_id}")
+            status_resp = await client.get(f"benchmark/{session_id}")
             if status_resp.status_code == 200:
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 last_status = sess_data.status
                 if last_status == EpisodeStatus.PLANNED:
                     await client.post(
-                        f"/benchmark/{session_id}/confirm",
+                        f"benchmark/{session_id}/confirm",
                         json=ConfirmRequest(comment="Handoff confirm").model_dump(),
                     )
                 if last_status == EpisodeStatus.COMPLETED:
@@ -72,7 +73,7 @@ async def test_benchmark_to_engineer_handoff():
             pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
 
         # 3. Verify Handoff Package Artifacts from episode assets
-        episode_resp = await client.get(f"/episodes/{session_id}")
+        episode_resp = await client.get(f"episodes/{session_id}")
         assert episode_resp.status_code == 200, (
             f"Failed to fetch episode assets: {episode_resp.text}"
         )
