@@ -4,10 +4,8 @@ This file contains specific instructions and tips for software engineering agent
 
 ## Synchronization and Pre-commit
 
-To minimize merge conflicts and ensure you are working with the latest code, you **MUST** run the update utility before submitting your changes.
-
 ### 1. Update to Latest
-Before finalizing your work or submitting a Pull Request, run the following command to rebase your changes onto the latest `main` branch:
+If you want to rebase your changes onto the latest `main` branch, run:
 
 ```bash
 python3 scripts/update_to_latest.py
