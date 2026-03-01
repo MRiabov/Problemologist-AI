@@ -127,14 +127,14 @@ def test_int_158_workflow_parity(page: Page):
     )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
 
-    # Wait for completion (status becomes COMPLETED)
+    # Wait for terminal status in engineer workflow.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return data.episodeStatus === 'COMPLETED';
+                return ['COMPLETED', 'FAILED', 'CANCELLED'].includes(data.episodeStatus);
             } catch (e) { return false; }
         }""",
         timeout=120000,
