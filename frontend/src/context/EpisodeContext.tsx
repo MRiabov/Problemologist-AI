@@ -189,6 +189,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           metadata_vars: {}
         };
         setSelectedEpisode(newEpisode);
+        setEpisodes(prev => [newEpisode, ...prev]);
+        setLoading(false);
         localStorage.setItem("selectedEpisodeId", response.episode_id);
         await refreshEpisodes();
       } else {
