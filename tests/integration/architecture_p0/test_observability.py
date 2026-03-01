@@ -98,8 +98,11 @@ async def test_int_055_s3_artifact_upload_logging():
         ep_data = EpisodeResponse.model_validate(episode_resp.json())
 
         assert len(ep_data.assets) > 0
-        asset = ep_data.assets[0]
-        assert asset.asset_type == AssetType.VIDEO
+        # Filter for VIDEO asset, as agent initialization might create MARKDOWN assets first
+        video_assets = [a for a in ep_data.assets if a.asset_type == AssetType.VIDEO]
+        assert len(video_assets) > 0, f"No VIDEO asset found in {ep_data.assets}"
+
+        asset = video_assets[0]
         assert asset.s3_path.startswith("videos/")
         assert asset.created_at is not None
 
