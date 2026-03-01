@@ -40,9 +40,21 @@ def test_int_179_manual_at_mention_contract(page: Page):
     chat_input.fill(unique_task)
     page.get_by_label("Send Message").click()
 
-    # Wait for completion to have assets (like script.py)
+    # Wait for completion (status becomes COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
     page.wait_for_selector(
-        ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=120000
+        ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=30000
     )
 
     # Verify asset exists via API to ensure polling has it

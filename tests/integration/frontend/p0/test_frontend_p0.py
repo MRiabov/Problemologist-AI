@@ -127,8 +127,19 @@ def test_int_158_workflow_parity(page: Page):
     )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
 
-    # Wait for completion (Send Message button returns)
-    expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
+    # Wait for completion (status becomes COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+    expect(page.get_by_label("Send Message")).to_be_visible()
 
     # Test for Benchmark Workflow
     page.get_by_role("link", name="Benchmark").click()
@@ -145,7 +156,20 @@ def test_int_158_workflow_parity(page: Page):
         timeout=30000
     )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
-    expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
+
+    # Wait for completion (status becomes COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+    expect(page.get_by_label("Send Message")).to_be_visible()
 
 
 @pytest.mark.integration_frontend
@@ -167,8 +191,19 @@ def test_int_159_plan_approval_comment(page: Page):
     )
     page.get_by_label("Send Message").click()
 
-    # 2. Wait for the "Execution Plan Ready" card
-    expect(page.get_by_text("Execution Plan Ready")).to_be_visible(timeout=180000)
+    # 2. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=180000,
+    )
+    expect(page.get_by_text("Execution Plan Ready")).to_be_visible()
 
     # 3. Verify comment field exists
     comment_field = page.get_by_placeholder("Optional comment for the agent...")

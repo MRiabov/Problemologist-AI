@@ -38,11 +38,16 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     send_button = page.get_by_label("Send Message")
     send_button.click()
 
-    # 2. Wait for generation to complete (indicators: check-circle/clock/layers/x-circle)
-    # Using the same selectors as INT-170 + x-circle
-    # We also wait for the status to change from RUNNING
+    # 2. Wait for generation to complete (indicator: status changes to COMPLETED)
     page.wait_for_function(
-        "() => !document.querySelector('.animate-pulse')?.parentElement?.innerText?.includes('RUNNING')",
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
         timeout=120000,
     )
 

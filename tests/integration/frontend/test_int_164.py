@@ -34,12 +34,36 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     expect(send_button).to_be_enabled(timeout=30000)
     send_button.click()
 
-    # 6. Wait for the "Confirm & Start" button to appear and click it
+    # 6. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
     confirm_button = page.get_by_test_id("chat-confirm-button")
-    expect(confirm_button).to_be_visible(timeout=120000)
+    expect(confirm_button).to_be_visible()
     confirm_button.click()
 
-    # 7. Open a file in the code viewer
+    # 7. Wait for completion (status becomes COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
+    # Open a file in the code viewer
     # Clicking script.py in the file tree
     script_file = page.get_by_text("script.py")
     try:
@@ -61,11 +85,20 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
 
     # 10. Submit and verify mention is processed (check for highlighting or specific payload if possible)
     # For integration test, we mainly check if it doesn't crash and sends the message
+    # Wait for completion if needed (indicator: status changes to COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
     send_button_after_mention = page.get_by_label("Send Message")
-    try:
-        expect(send_button_after_mention).to_be_enabled(timeout=120000)
-    except AssertionError:
-        pytest.skip("Composer remained disabled while run was active")
+    expect(send_button_after_mention).to_be_enabled()
     send_button_after_mention.click()
 
     # 11. Verify the message was submitted by ensuring input clears.

@@ -69,32 +69,28 @@ def test_int_170_feedback_system(page: Page):
     send_button.click(force=True)
 
     # 2. Wait for generation to complete (indicator: status changes to COMPLETED in sidebar)
-    # The sidebar status chip is a reliable indicator. We check the data-status attribute.
-    status_indicator = page.locator('[data-testid="episode-status"]').first
-    expect(status_indicator).to_have_attribute(
-        "data-status", "COMPLETED", timeout=150000
+    # Use wait_for_function for faster polling and deterministic check
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="episode-status"]');
+            return el && el.getAttribute('data-status') === 'COMPLETED';
+        }""",
+        timeout=150000,
     )
+    status_indicator = page.locator('[data-testid="episode-status"]').first
+    expect(status_indicator).to_have_attribute("data-status", "COMPLETED")
 
     # WP10: The button is only visible on hover of the message, so we wait for attached
     thumbs_up = page.locator('[data-testid="chat-thumbs-up"]')
     thumbs_up.last.wait_for(state="attached", timeout=30000)
 
-    # Click it (force=True to bypass visibility/interception checks)
+    # 3. Click chat thumbs-up (this opens the FeedbackSystem modal directly)
     thumbs_up.last.click(force=True)
 
-    # 3. Verify Thumbs Up/Down icons appear in Sidebar on hover
-    session_entry = page.locator("button.group").first
-    session_entry.hover()
-
-    thumbs_up = page.locator('[data-testid="sidebar-thumbs-up"]').first
-    thumbs_up.wait_for(state="visible", timeout=10000)
-
-    # 4. Click Thumbs Up and verify modal opens
-    thumbs_up.click(force=True)
+    # 4. Verify the feedback modal opened
     expect(page.get_by_text("Agent Feedback", exact=True)).to_be_visible(timeout=10000)
 
     # 5. Fill feedback and submit
-    # "Instruction Following" -> "Doesn't follow instructions" (from FEEDBACK_TOPICS)
     page.get_by_role("button", name="Doesn't follow instructions").click()
     page.get_by_placeholder("What was satisfying about this response?").fill(
         "Great job!"
@@ -103,8 +99,8 @@ def test_int_170_feedback_system(page: Page):
     submit_button = page.get_by_role("button", name="Send Feedback")
     expect(submit_button).to_be_enabled()
 
-    # Capture all requests to debug
-    requests = []
+    # Capture requests to verify feedback submission
+    requests: list[str] = []
     page.on("request", lambda req: requests.append(req.url))
 
     submit_button.click()

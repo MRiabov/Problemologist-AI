@@ -49,9 +49,21 @@ def test_int_176_tool_call_failure_recovery(page: Page):
     expect(failed_label).to_be_visible(timeout=60000)
 
     # 3. Verify that the agent continues and provides a final response
-    # (Indicators: check-circle/clock/layers)
+    # (Indicator: status changes to COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=60000,
+    )
+
     page.wait_for_selector(
-        ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=60000
+        ".lucide-check-circle2, .lucide-clock, .lucide-layers", timeout=30000
     )
 
     # 4. Verify chat is not deadlocked - we can send another message
