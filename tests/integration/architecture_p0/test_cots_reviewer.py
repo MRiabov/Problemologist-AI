@@ -17,7 +17,7 @@ from shared.workers.schema import FsFileEntry
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ async def test_int_016_reviewer_decision_schema_gate(
     session_id = f"INT-016-{uuid.uuid4().hex[:8]}"
     req = AgentRunRequest(task="Test Review Schema", session_id=session_id)
     run_resp = await client.post(
-        "/agent/run",
+        "agent/run",
         json=req.model_dump(mode="json"),
     )
     assert run_resp.status_code == 202
@@ -106,7 +106,7 @@ This should be rejected.
 """
     # Reviewer output usually goes to a specific path or endpoint
     resp = await client.post(
-        f"/episodes/{episode_id}/review",
+        f"episodes/{episode_id}/review",
         json={"review_content": malformed_review},
     )
 
@@ -134,7 +134,7 @@ async def test_int_017_plan_refusal_loop(session_id, base_headers, controller_cl
     session_id = f"INT-017-{uuid.uuid4().hex[:8]}"
     req = AgentRunRequest(task="Test Refusal Loop", session_id=session_id)
     run_resp = await client.post(
-        "/agent/run",
+        "agent/run",
         json=req.model_dump(mode="json"),
     )
     assert run_resp.status_code == 202
@@ -151,7 +151,7 @@ evidence:
 Refusing this plan.
 """
     resp = await client.post(
-        f"/episodes/{episode_id}/review",
+        f"episodes/{episode_id}/review",
         json={"review_content": review_content},
     )
     assert resp.status_code == 200
@@ -161,7 +161,7 @@ Refusing this plan.
 
     # 3. Verify the agent/episode status is FAILED
     # (Architecture might eventually require a loop/retry, but current impl fails it)
-    status_resp = await client.get(f"/episodes/{episode_id}")
+    status_resp = await client.get(f"episodes/{episode_id}")
     assert status_resp.status_code == 200
     ep_data = EpisodeResponse.model_validate(status_resp.json())
     assert ep_data.status.value == "FAILED"

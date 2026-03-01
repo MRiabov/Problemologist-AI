@@ -32,7 +32,7 @@ from tests.integration.contracts import HealthResponse
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
@@ -83,7 +83,7 @@ async def test_int_002_controller_worker_execution_boundary():
         # Trigger agent run
         req = AgentRunRequest(task=task, session_id=session_id)
         resp = await client.post(
-            f"{CONTROLLER_URL}/api/agent/run",
+            f"{CONTROLLER_URL}/agent/run",
             json=req.model_dump(mode="json"),
             timeout=600.0,
         )
@@ -96,7 +96,7 @@ async def test_int_002_controller_worker_execution_boundary():
         completed = False
         for _ in range(max_attempts):
             await asyncio.sleep(10.0)
-            s_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+            s_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             ep_data = EpisodeResponse.model_validate(s_resp.json())
             status = ep_data.status
             if status == EpisodeStatus.COMPLETED:
