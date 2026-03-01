@@ -14,7 +14,7 @@ from controller.api.schemas import (
 from controller.api.tasks import AgentRunRequest
 from shared.enums import AssetType, EpisodeStatus
 
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "127.0.0.1:17233")
 
 
