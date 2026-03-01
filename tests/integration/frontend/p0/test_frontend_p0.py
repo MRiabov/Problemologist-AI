@@ -157,7 +157,23 @@ def test_int_158_workflow_parity(page: Page):
     )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
 
-    # Wait for completion (status becomes COMPLETED)
+    # Benchmark workflow pauses at PLANNED for user confirmation
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
+    # Confirm the plan to proceed to execution
+    page.get_by_test_id("chat-confirm-button").click()
+
+    # Wait for completion after confirmation
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
@@ -180,8 +196,12 @@ def test_int_159_plan_approval_comment(page: Page):
     and visible in run history.
     """
     # 1. Start a benchmark generation
-    page.goto(f"{FRONTEND_URL}/benchmark")
+    # NOTE: Direct goto('/benchmark') doesn't work because http-server --proxy
+    # proxies non-static paths to the controller. Navigate via React Router instead.
+    page.goto(FRONTEND_URL)
     page.wait_for_load_state("networkidle")
+    page.get_by_role("link", name="Benchmark").click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"))
 
     # Click CREATE NEW
     page.get_by_test_id("create-new-button").click()

@@ -12,11 +12,15 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 def test_code_viewer_line_selection_and_mentions(page: Page):
     # 1. Navigate to the local development server
     page.goto(FRONTEND_URL, timeout=60000)
+    page.wait_for_load_state("networkidle")
 
     # 2. Navigate to the Benchmark page
     benchmark_link = page.get_by_role("link", name="Benchmark")
     expect(benchmark_link).to_be_visible(timeout=30000)
     benchmark_link.click()
+    import re
+
+    expect(page).to_have_url(re.compile(r".*/benchmark"))
 
     # 3. Click "CREATE NEW" button
     create_new_button = page.get_by_role("button", name="CREATE NEW")
@@ -64,13 +68,12 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     )
 
     # Open a file in the code viewer
-    # Clicking script.py in the file tree
-    script_file = page.get_by_text("script.py")
+    script_file = page.get_by_text("script.py").first
     try:
-        expect(script_file).to_be_visible(timeout=60000)
+        script_file.wait_for(state="visible", timeout=60000)
+        script_file.click(force=True)
     except (PlaywrightTimeoutError, AssertionError):
         pytest.skip("Planner/coder artifacts not available in this integration run")
-    script_file.click()
 
     # 8. Select lines in the code viewer
     # Line numbers are usually in a specific column, but we use test-id now

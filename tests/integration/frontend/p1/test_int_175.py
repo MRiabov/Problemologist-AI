@@ -39,11 +39,21 @@ def test_int_175_controller_first_api_boundary(page: Page):
     page.on("request", handle_request)
 
     # 1. Navigate to the local development server
-    page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
+    page.goto(FRONTEND_URL, timeout=60000)
     page.wait_for_load_state("networkidle")
 
+    # Navigate to Benchmark page via React Router
+    benchmark_link = page.get_by_role("link", name="Benchmark")
+    expect(benchmark_link).to_be_visible(timeout=30000)
+    benchmark_link.click()
+    import re as re_lib
+
+    expect(page).to_have_url(re_lib.compile(r".*/benchmark"))
+
     # 2. Click "CREATE NEW" button
-    page.get_by_test_id("create-new-button").click()
+    create_new_button = page.get_by_role("button", name="CREATE NEW")
+    expect(create_new_button).to_be_visible(timeout=30000)
+    create_new_button.click()
 
     # 3. Enter a prompt to generate traffic
     prompt_text = f"Create a simple test for boundary {uuid.uuid4()}"

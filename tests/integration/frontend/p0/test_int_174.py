@@ -16,11 +16,19 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     for visible entities.
     """
     # 1. Navigate to the local development server
-    page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
-    page.wait_for_load_state("domcontentloaded")
+    page.goto(FRONTEND_URL, timeout=60000)
+    page.wait_for_load_state("networkidle")
+
+    # Navigate to Benchmark page via React Router
+    benchmark_link = page.get_by_role("link", name="Benchmark")
+    expect(benchmark_link).to_be_visible(timeout=30000)
+    benchmark_link.click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"))
 
     # 2. Click "CREATE NEW" button
-    page.get_by_test_id("create-new-button").click()
+    create_new_button = page.get_by_role("button", name="CREATE NEW")
+    expect(create_new_button).to_be_visible(timeout=30000)
+    create_new_button.click()
 
     # 3. Enter the prompt
     prompt_text = "Simple mechanism benchmark INT-174"
@@ -84,9 +92,12 @@ def test_int_174_cad_show_hide_behavior(page: Page):
         expect(model_browser).to_be_visible(timeout=10000)
 
     # Wait for nodes to appear in model browser
-    # We will hover over the first node and click the eye icon
+    # In some cases nodes might take time to populate from GLB metadata
+    print("\nDEBUG: Waiting for model browser nodes...")
+    page.wait_for_selector(".group\\/node", timeout=60000)
     first_node = page.locator(".group\\/node").first
-    first_node.wait_for(state="visible", timeout=60000)
+    expect(first_node).to_be_visible(timeout=10000)
+    print(f"DEBUG: Found node: {first_node.inner_text()}")
     first_node.hover()
     eye_button = first_node.locator("button").first
     eye_button.click()

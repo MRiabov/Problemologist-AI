@@ -16,11 +16,19 @@ def test_int_173_exact_pointing_payload(page: Page):
     with stable entity IDs and source asset reference; payload reaches backend unchanged.
     """
     # 1. Start a benchmark generation
-    page.goto(f"{FRONTEND_URL}/benchmark", timeout=60000)
-    page.wait_for_load_state("domcontentloaded")
+    page.goto(FRONTEND_URL, timeout=60000)
+    page.wait_for_load_state("networkidle")
+
+    # Navigate to Benchmark page via React Router
+    benchmark_link = page.get_by_role("link", name="Benchmark")
+    expect(benchmark_link).to_be_visible(timeout=30000)
+    benchmark_link.click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"))
 
     # Click CREATE NEW
-    page.get_by_test_id("create-new-button").click()
+    create_new_button = page.get_by_role("button", name="CREATE NEW")
+    expect(create_new_button).to_be_visible(timeout=30000)
+    create_new_button.click()
 
     prompt_text = "Simple mechanism benchmark INT-173"
     page.locator("#chat-input").fill(prompt_text)
