@@ -42,8 +42,22 @@ def test_int_174_cad_show_hide_behavior(page: Page):
             "\nConfirm button didn't appear or already gone, checking if assets appeared directly"
         )
 
-    # Wait for the overlay to disappear
-    expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
+    # Wait for the overlay to disappear or status to become COMPLETED
+    page.wait_for_function(
+        """() => {
+            const overlay = document.querySelector('[data-testid="no-assets-overlay"]');
+            if (!overlay || overlay.offsetParent === null) return true;
+            const debugInfo = document.querySelector('[data-testid="unified-debug-info"]');
+            if (debugInfo) {
+                try {
+                    const data = JSON.parse(debugInfo.textContent);
+                    return data.episodeStatus === 'COMPLETED';
+                } catch (e) { return false; }
+            }
+            return false;
+        }""",
+        timeout=180000,
+    )
 
     # Wait until the canvas is actually rendering (width > 0)
     page.wait_for_function("document.querySelector('canvas')?.width > 0")

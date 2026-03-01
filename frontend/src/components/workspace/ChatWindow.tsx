@@ -184,7 +184,6 @@ export default function ChatWindow({
                     onAssetClick={handleAssetClick}
                     addToContext={addToContext}
                     onShowFeedback={handleShowFeedback}
-                    isRunning={isRunning}
                   />
                 </div>
 

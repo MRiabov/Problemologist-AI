@@ -15,7 +15,6 @@ interface TraceListProps {
   onAssetClick: (id: string | null) => void;
   addToContext: (item: ContextItem) => void;
   onShowFeedback: (traceId: number, score: number) => void;
-  isRunning?: boolean;
 }
 
 export const TraceList = memo(({
@@ -24,8 +23,7 @@ export const TraceList = memo(({
   theme,
   onAssetClick,
   addToContext,
-  onShowFeedback,
-  isRunning
+  onShowFeedback
 }: TraceListProps) => {
 
   if (!traces || traces.length === 0) {
@@ -96,7 +94,7 @@ export const TraceList = memo(({
                       setActiveArtifactId={onAssetClick}
                     />
                     <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                        {isLastLlmEnd && !isRunning ? (
+                        {isLastLlmEnd ? (
                             <div className="flex items-center gap-1">
                                 <button
                                     data-testid="chat-thumbs-up"

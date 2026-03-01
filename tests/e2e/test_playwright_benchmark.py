@@ -44,9 +44,20 @@ def test_benchmark_creation_flow(page: Page):
     # 6. Wait for the generation to start (Stop Agent button appears)
     expect(page.get_by_label("Stop Agent")).to_be_visible(timeout=30000)
 
-    # 7. Wait for the generation to finish (Send Message button returns)
+    # 7. Wait for the generation to finish (indicator: status changes to COMPLETED)
     # This might take a while, increase timeout
-    expect(page.get_by_label("Send Message")).to_be_visible(timeout=120000)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+    expect(page.get_by_label("Send Message")).to_be_visible()
 
     # 8. Select plan.md in Resources sidebar
     plan_button = page.get_by_role("button", name="plan.md")

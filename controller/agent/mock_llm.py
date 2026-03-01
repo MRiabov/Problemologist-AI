@@ -71,9 +71,11 @@ class MockDSPyLM(dspy.LM):
         node_key = self.node_type or self._detect_node_key(full_text)
 
         # Detect if JSON is requested or if we should provide it for structured nodes
+        low_text = full_text.lower()
         is_json_requested = (
-            "output fields" in full_text.lower() and "json" in full_text.lower()
-        ) or "Respond with a JSON object" in full_text
+            ("output fields" in low_text or "outputs will be" in low_text)
+            and "json" in low_text
+        ) or "respond with a json object" in low_text
 
         # Extract expected fields for ReAct compatibility
         expected_fields = []
@@ -107,10 +109,17 @@ class MockDSPyLM(dspy.LM):
 
         expected_fields = list(dict.fromkeys(expected_fields))
 
-        # ONLY force JSON if explicitly requested or if we have no expected fields but is_json_requested
+        # WP10: Detect expected fields from JSON template if empty
+        if is_json_requested and not expected_fields:
+            expected_fields = self._detect_expected_fields_from_json(full_text)
+            logger.info("mock_dspy_detected_fields_from_json", fields=expected_fields)
+
         # Standard ReAct with TypedPredictor uses field-based formatting [[ ## field ## ]]
-        is_fields_format = "[[ ##" in full_text
-        is_json = is_json_requested and not is_fields_format
+        is_json = is_json_requested
+
+        logger.info(
+            "mock_dspy_expected_fields", fields=expected_fields, is_json=is_json
+        )
 
         # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
@@ -163,6 +172,33 @@ class MockDSPyLM(dspy.LM):
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
         return self._handle_action(sig_lookup, node_data, is_json, expected_fields)
+
+    def _detect_expected_fields_from_json(self, text: str) -> list[str]:
+        """Detect expected JSON keys from a template in the prompt."""
+        # Only look in the last part of the prompt where the output template is
+        search_text = text[-2000:] if len(text) > 2000 else text
+
+        # Find blocks that look like JSON templates: { "key": "{key}", ... }
+        # We look for "key": and extract the key.
+        keys = re.findall(r'"([^"]+)"\s*:', search_text)
+
+        logger.debug("mock_dspy_all_json_keys_found", keys=keys)
+
+        # Filter out common false positives if needed, but for now just take unique ones
+        whitelist = [
+            "next_thought",
+            "next_tool_name",
+            "next_tool_args",
+            "reasoning",
+            "thought",
+            "summary",
+            "plan",
+            "review",
+            "journal",
+            "summarized_journal",
+            "answer",
+        ]
+        return [k for k in list(dict.fromkeys(keys)) if k in whitelist]
 
     def _get_full_text(
         self, prompt: str | None, messages: list[dict[str, Any]] | None
@@ -224,6 +260,8 @@ class MockDSPyLM(dspy.LM):
         low_text = text.lower()
 
         # 1. Specific Role Headers (Highest Priority)
+        if "summarizer node" in low_text:
+            return "summarizer"
         if "sidecar learner" in low_text:
             return "skill_learner"
         if "expert designer of spatial" in low_text:
@@ -368,7 +406,8 @@ class MockDSPyLM(dspy.LM):
         }
 
         # ReAct compatibility - handle intermediate tool calling phase
-        if "next_tool_name" in expected_fields:
+        # WP10: Always include these in JSON mode to be safe, as dspy adapters often expect them
+        if "next_tool_name" in expected_fields or is_json:
             resp["next_thought"] = thought
             if tool_name:
                 resp["next_tool_name"] = tool_name
@@ -403,6 +442,10 @@ class MockDSPyLM(dspy.LM):
             resp["journal"] = node_data.get("journal", "Work completed.")
             if not finished and "generated_code" not in resp:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
+        elif node_key == "summarizer":
+            resp["summarized_journal"] = node_data.get(
+                "summarized_journal", "Journal summary."
+            )
         elif node_key == "skill_learner":
             resp["summary"] = node_data.get("summary", "Skills identified.")
             resp["journal"] = node_data.get("journal", "Learning complete.")
@@ -413,32 +456,9 @@ class MockDSPyLM(dspy.LM):
             resp["summary"] = node_data.get("summary", "Electronics plan added.")
 
         if is_json:
-            # Only return fields that were actually requested to avoid Adapter errors
-            if expected_fields:
-                # Add signature fields to expected_fields if they are present in resp
-                # but NOT already in expected_fields.
-                # ReAct often asks for [next_thought, next_tool_name, next_tool_args]
-                # but then fails if [summary] is missing in the result dict if it's the last turn.
-                filtered_resp = {
-                    k: v
-                    for k, v in resp.items()
-                    if k in expected_fields
-                    or k
-                    in [
-                        "reasoning",
-                        "thought",
-                        "summary",
-                        "plan",
-                        "review",
-                        "journal",
-                        "search_summary",
-                        "next_thought",
-                        "next_tool_name",
-                        "next_tool_args",
-                    ]
-                }
-                logger.info("mock_dspy_returning_json", json=filtered_resp)
-                return [json.dumps(filtered_resp)]
+            # WP10: Do NOT filter JSON responses. dspy adapters are very sensitive to missing fields
+            # but generally ignore extra ones. Filtering often causes AdapterParseError.
+            logger.info("mock_dspy_returning_json", json=resp)
             return [json.dumps(resp)]
 
         # Fallback for field-based format (common in non-JSON dspy.ReAct)
@@ -457,6 +477,7 @@ class MockDSPyLM(dspy.LM):
                 "planner": ["reasoning", "plan", "summary"],
                 "coder": ["journal"],
                 "reviewer": ["review"],
+                "summarizer": ["summarized_journal"],
                 "skill_learner": ["summary", "journal"],
                 "cots_search": ["search_summary"],
                 "electronics_planner": ["reasoning", "summary"],

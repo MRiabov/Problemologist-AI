@@ -61,10 +61,22 @@ def test_int_175_controller_first_api_boundary(page: Page):
     ) as req_info:
         send_button.click()
 
-    # 5. Wait for the "Confirm & Start" button and click it to trigger more traffic
+    # 5. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
     try:
         confirm_button = page.get_by_test_id("chat-confirm-button")
-        expect(confirm_button).to_be_visible(timeout=120000)
+        expect(confirm_button).to_be_visible()
 
         # Capture a network request for confirmation
         with page.expect_request(lambda request: "confirm" in request.url) as req_info:

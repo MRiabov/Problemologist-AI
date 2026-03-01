@@ -218,7 +218,8 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                           hasVideoAsset: !!videoAsset, 
                           videoAssetType: videoAsset?.asset_type,
                           episodeId: selectedEpisode?.id,
-                          episodeStatus: selectedEpisode?.status
+                          episodeStatus: selectedEpisode?.status,
+                          isRunning: running
                       })}
                   </div>
 

@@ -34,10 +34,21 @@ def test_cad_topology_selection_and_browser(page: Page):
     expect(send_button).to_be_enabled(timeout=30000)
     send_button.click()
 
-    # 6. Wait for the "Confirm & Start" button and click it
+    # 6. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
     confirm_button = page.get_by_test_id("chat-confirm-button")
-    expect(confirm_button).to_be_visible(timeout=120000)
-    confirm_button.click(force=True)
+    expect(confirm_button).to_be_visible()
+    confirm_button.click()
 
     # 7. Wait for either generated assets or fallback rebuild affordance.
     assets_overlay = page.get_by_test_id("no-assets-overlay")

@@ -418,7 +418,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   // Fallback polling for active episode details (slower than before)
   useEffect(() => {
     let interval: number | undefined;
-    if (selectedEpisode && !running && (selectedEpisode.status === EpisodeStatus.RUNNING)) {
+    if (selectedEpisode && (running || selectedEpisode.status === EpisodeStatus.RUNNING)) {
       interval = window.setInterval(async () => {
         try {
           const [episodesData, currentEp] = await Promise.all([

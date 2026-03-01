@@ -33,9 +33,20 @@ def test_simulation_navigation_timeline(page: Page):
     expect(send_button).to_be_enabled(timeout=30000)
     send_button.click()
 
-    # 6. Wait for the "Confirm & Start" button and click it
+    # 6. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
     confirm_button = page.get_by_test_id("chat-confirm-button")
-    expect(confirm_button).to_be_visible(timeout=120000)
+    expect(confirm_button).to_be_visible()
     confirm_button.click()
 
     # 7. Test Simulation Controls (available even when viewport assets are still loading)

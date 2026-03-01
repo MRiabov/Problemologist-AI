@@ -203,6 +203,19 @@ async def execute_agent_task(
                         "configurable": {"thread_id": thread_id},
                     },
                 )
+                if isinstance(result, dict):
+                    msgs = result.get("messages", [])
+                    logger.info(
+                        "agent_run_completed_messages_info",
+                        count=len(msgs),
+                        last_msg=str(msgs[-1]) if msgs else "None",
+                    )
+                    logger.info("agent_run_completed_keys", keys=list(result.keys()))
+                else:
+                    logger.info(
+                        "agent_run_completed_raw_result",
+                        result_type=type(result).__name__,
+                    )
 
                 # Final trace
                 if isinstance(result, dict):
@@ -244,6 +257,9 @@ async def execute_agent_task(
 
                 await db.commit()
 
+                # Broadcast final message
+                await db_callback._broadcast_trace(final_llm_trace)
+
                 # Broadcast status update
                 from controller.api.manager import manager
 
@@ -257,8 +273,6 @@ async def execute_agent_task(
                     },
                 )
 
-                # Broadcast final message
-                await db_callback._broadcast_trace(final_llm_trace)
                 logger.info("agent_task_logic_completed", episode_id=episode_id)
 
                 # Report automated score to Langfuse

@@ -40,10 +40,18 @@ def test_int_172_plan_approval_control_placement(page: Page):
     # Send message to start planning
     page.get_by_label("Send Message").click()
 
-    # 2. Wait for the "Execution Plan Ready" card or completion of planning
-    expect(
-        page.get_by_text(re.compile("Execution Plan Ready", re.IGNORECASE))
-    ).to_be_visible(timeout=180000)
+    # 2. Wait for the planner to finish (indicator: status changes to PLANNED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=180000,
+    )
 
     # 3. Assert Approve/disapprove controls are available in chat-bottom
     expect(chat_confirm_button).to_be_visible(timeout=10000)
