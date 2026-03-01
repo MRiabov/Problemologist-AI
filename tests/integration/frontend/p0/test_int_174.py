@@ -44,7 +44,9 @@ def test_int_174_cad_show_hide_behavior(page: Page):
 
     # Wait for the overlay to disappear
     expect(page.get_by_test_id("no-assets-overlay")).to_be_hidden(timeout=180000)
-    page.wait_for_timeout(2000)
+
+    # Wait until the canvas is actually rendering (width > 0)
+    page.wait_for_function("document.querySelector('canvas')?.width > 0")
 
     # Wait for the model viewer to load
     page.wait_for_selector(

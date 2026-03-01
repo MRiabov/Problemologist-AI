@@ -66,6 +66,26 @@ async def report_trace_feedback(
     trace = result.scalar_one_or_none()
 
     if not trace:
+        # Diagnostic: Try finding trace by ID alone to see if episode_id is mismatched
+        diag_result = await db.execute(select(Trace).where(Trace.id == trace_id))
+        diag_trace = diag_result.scalar_one_or_none()
+        if diag_trace:
+            logger.error(
+                "trace_episode_id_mismatch",
+                trace_id=trace_id,
+                requested_episode_id=str(episode_id),
+                actual_episode_id=str(diag_trace.episode_id),
+                trace_type=diag_trace.trace_type,
+                trace_name=diag_trace.name,
+            )
+            # WP10: We return 404 to be strict with the API contract, but the log now has more info
+            raise HTTPException(
+                status_code=404,
+                detail=f"Trace {trace_id} belongs to episode {diag_trace.episode_id}, not {episode_id}",
+            )
+        else:
+            logger.warning("trace_not_found_even_by_id", trace_id=trace_id)
+
         logger.warning("trace_not_found", episode_id=str(episode_id), trace_id=trace_id)
         raise HTTPException(status_code=404, detail="Trace not found")
 
@@ -395,7 +415,29 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
     episode = result.scalar_one_or_none()
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
-    return episode
+
+    # Populate last_trace_id for EpisodeResponse
+    last_trace_id = None
+    if episode.traces:
+        last_trace_id = max(t.id for t in episode.traces)
+
+    return EpisodeResponse(
+        id=episode.id,
+        task=episode.task,
+        status=episode.status,
+        created_at=episode.created_at,
+        updated_at=episode.updated_at,
+        skill_git_hash=episode.skill_git_hash,
+        template_versions=episode.template_versions,
+        metadata_vars=episode.metadata_vars,
+        todo_list=episode.todo_list,
+        journal=episode.journal,
+        plan=episode.plan,
+        validation_logs=episode.validation_logs,
+        last_trace_id=last_trace_id,
+        traces=[TraceResponse.model_validate(t) for t in episode.traces],
+        assets=[AssetResponse.model_validate(a) for a in episode.assets],
+    )
 
 
 @router.delete("/{episode_id}")

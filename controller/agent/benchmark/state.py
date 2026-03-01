@@ -12,6 +12,7 @@ from .models import GenerationSession
 
 class BenchmarkGeneratorState(BaseModel):
     session: GenerationSession
+    episode_id: str = ""  # UUID string for database recording
     current_script: str = ""  # The Python code being generated
     mjcf_content: str = ""  # The generated MuJoCo XML
     simulation_result: ValidationResult | None = None  # Result of the last check

@@ -13,10 +13,13 @@ export default function ConnectionError({
   message = "Unable to reach the benchmark server" 
 }: ConnectionErrorProps) {
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center h-full w-full bg-background/50 backdrop-blur-[2px] z-50 p-6 text-center animate-in fade-in duration-500",
-      className
-    )}>
+    <div 
+      data-testid="connection-error"
+      className={cn(
+        "flex flex-col items-center justify-center h-full w-full bg-background/50 backdrop-blur-[2px] z-50 p-6 text-center animate-in fade-in duration-500",
+        className
+      )}
+    >
       <div className="relative mb-4">
         <div className="absolute inset-0 bg-red-500/20 blur-2xl rounded-full animate-pulse" />
         <div className="relative size-16 flex items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500">

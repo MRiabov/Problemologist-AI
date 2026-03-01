@@ -1,11 +1,5 @@
 # Integration Test Specification
 
-## Why this document exists
-
-This document defines the integration test coverage required to match `kitty-specs/desired_architecture.md`, `kitty-specs/desired_architecture_WP2_fluids.md`, `kitty-specs/desired_architecture_WP3_electronics.md`, and implemented roadmap features in `roadmap.md` as of February 19, 2026.
-
-Short answer to the audit question: **No, current integration tests do not accurately reflect the current desired architecture.**
-
 ## **CRITICAL NOTE TO IMPLEMENTATION AGENTS**
 
 These workflows are integration workflows. Do **not** satisfy them with unit tests disguised as integration tests.
@@ -38,34 +32,30 @@ Additionally:
 8. A test that imports app internals (`controller.*`, `worker.*`) to invoke business logic directly is **not** integration coverage.
 9. Every `build123d` script used in tests must ensure every part has a `.metadata` attribute initialized with a `PartMetadata` or `CompoundMetadata` instance (imported from `shared.models.schemas`), following strict typing rules.
 10. Every JSON, YAML, XML is converted to models e.g. Pydantic models and only then assertions are happening against them (for test maintainability and explainability). If there is no model for a JSON or similar schema, add it.
+11. Tests must utilize state-based polling (e.g., waiting for specific API responses, DB states, or UI elements) rather than hardcoded sleeps or generic timeouts. This ensures tests are deterministic and fail-fast.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
 
-## Audit snapshot
+## Infrastructure & Helpers
+The integration suite is designed for high-velocity local execution and CI parity.
 
-- Integration runner last updated: Feb 24, 2026 (`scripts/run_integration_tests.sh`).
-- `desired_architecture.md` changes since that commit: **25 commits**.
-- Net architecture diff since runner update: **+628 / -55 lines**.
-- Major post-runner additions include:
-  - Engineering planner workflow and mandatory planner artifacts.
-  - COTS subagent architecture and read-only catalog requirements.
-  - `assembly_definition.yaml` + `validate_costing_and_price` gate.
-  - Formal event taxonomy, metrics, and seed tracking.
-  - Multi-tier evaluations and multi-episode integration/post-processing evals.
+- **`IS_INTEGRATION_TEST=true`**: This environment variable is automatically exported by the runner. It enables "smoke test mode" in simulation kernels, significantly reducing particle counts and simulation time for faster feedback.
+- **`scripts/run_integration_tests.sh`**: The central entry point for the integration suite. It manages infrastructure spin-up (Docker), local service lifecycle, and `pytest` execution.
+- **`logs/integration_tests/`**: All service logs (Controller, Worker Light, Worker Heavy, Temporal Worker) and debug traces are persisted here for every run. Previous runs are archived in `logs/archives/`.
+- **`test_output/`**: Stores JUnit XML results and the persisted test history used for trend analysis.
 
-## Current integration coverage (what `scripts/run_integration_tests.sh` executes)
+### Command Reference
+```bash
+# Run P0 architecture baseline
+./scripts/run_integration_tests.sh -m integration_p0
 
-Current marker scope (`pytest -m integration`) includes 6 tests:
+# Run with high-fidelity simulation (disable smoke mode)
+./scripts/run_integration_tests.sh --no-smoke
 
-1. `tests/test_integration_docker.py::test_services_health`
-2. `tests/test_integration_docker.py::test_controller_to_worker_agent_run`
-3. `tests/integration/test_worker_concurrency.py::test_worker_concurrency`
-4. `tests/integration/test_simulation_concurrency.py::test_simulation_concurrency`
-5. `tests/integration/test_full_workflow.py::test_full_workflow_end_to_end`
-6. `tests/integration/test_agent_real_llm.py::test_agent_run_real_llm`
-
-This is useful smoke coverage for health, controller->worker plumbing, and concurrency, but it does not cover most architecture-critical flows.
+# Run specific test file
+./scripts/run_integration_tests.sh tests/integration/test_full_workflow.py
+```
 
 ## Required integration test suite
 
@@ -366,19 +356,6 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-177 | Submit feedback in live UI after editing score/topics/comment before final submit; assert persisted record equals final edited values, not intermediate draft. | Unit-testing modal form reducer only. |
 | INT-178 | Reload browser mid-episode in live stack; assert same episode/workflow opens and chat/artifact panes repopulate from API state. | Snapshot-testing initial page layout without backend state restoration. |
 | INT-179 | Type valid and invalid `@` mentions directly in live chat input; assert valid structured payload creation and explicit validation errors for invalid mention syntax/ranges. | Parsing `@` tokens in an isolated helper test only. |
-
-## Coverage map: current vs required
-
-- Covered partially feb 14:
-  - INT-001, INT-002, INT-003, INT-004 (basic smoke/plumbing/concurrency).
-- Not covered or only weakly covered:
-  - INT-005 through INT-060 (planner gating, COTS, artifact validation, observability completeness, Langfuse logging guarantees, Temporal/S3 logging guarantees, strict schema fuzzing, multi-episode eval architecture, etc.).
-  - INT-061 through INT-069 (asset-serving security/session boundaries, split-worker OpenAPI artifacts, mounted path contracts, COTS reproducibility metadata, skill safety toggle, fluid-electronics coupling, steerability contracts, and UI delivery visibility).
-  - INT-101 through INT-112 (WP2: physics backend abstraction, FEM/deformable materials, fluid simulation, stress reporting, breakage detection, meshing pipeline, fluid/stress metrics, GPU OOM handling).
-  - INT-120 through INT-128 (WP3: circuit validation, electrical failure modes, motor power gating, wire tear, backward compat, electronics schema).
-  - INT-131 through INT-141 (WP2/WP3 P1: full fluid and electromechanical workflows, agent handovers, stress rendering, wire routing, power budget, COTS electrical, smoke-test mode, data storage policy, circuit transient).
-  - INT-151 through INT-156 (WP2/WP3 P2: breakage prevention evals, safety factor range, fluid benchmark evals, circuit success rate, wire survival, motor gating correctness).
-  - INT-157 through INT-179 (Frontend category: chat/workflow parity, plan approval UX and placement, reasoning/tool-call visibility and recovery, interrupt propagation, steerability context and exact pointing payloads, CAD/simulation/circuit viewers, controller-first network boundary, feedback flow, session restore continuity, layout/theme persistence).
 
 ## Recommended suite organization
 

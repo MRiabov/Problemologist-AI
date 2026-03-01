@@ -29,7 +29,8 @@ class SharedNodeContext:
     """Consolidates shared dependencies for agent nodes."""
 
     worker_light_url: str
-    session_id: str
+    session_id: str  # Langfuse/Worker session (string)
+    episode_id: str  # Database episode ID (UUID string)
     pm: PromptManager
     dspy_lm: dspy.LM
     worker_client: WorkerClient
@@ -37,8 +38,13 @@ class SharedNodeContext:
     main_loop: asyncio.AbstractEventLoop
 
     @classmethod
-    def create(cls, worker_light_url: str, session_id: str) -> "SharedNodeContext":
+    def create(
+        cls, worker_light_url: str, session_id: str, episode_id: str | None = None
+    ) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
+        # Fallback for episode_id if not provided
+        eid = episode_id or session_id
+
         worker_client = WorkerClient(
             base_url=worker_light_url,
             session_id=session_id,
@@ -70,6 +76,7 @@ class SharedNodeContext:
         return cls(
             worker_light_url=worker_light_url,
             session_id=session_id,
+            episode_id=eid,
             pm=PromptManager(),
             dspy_lm=dspy_lm,
             worker_client=worker_client,
@@ -78,11 +85,11 @@ class SharedNodeContext:
         )
 
     def get_database_recorder(
-        self, session_id: str | None = None
+        self, episode_id: str | None = None
     ) -> DatabaseCallbackHandler:
         """Creates a database recorder for traces."""
-        sid = session_id or self.session_id
-        return DatabaseCallbackHandler(episode_id=sid, loop=self.main_loop)
+        eid = episode_id or self.episode_id
+        return DatabaseCallbackHandler(episode_id=eid, loop=self.main_loop)
 
 
 class BaseNode:
@@ -284,11 +291,15 @@ class BaseNode:
         # Prepare explicit DB logger for UI events
         db_callback = None
         episode_id = getattr(state, "episode_id", None)
+
         if not episode_id:
-            # Try session.session_id (BenchmarkGeneratorState)
+            # Try session.session_id (BenchmarkGeneratorState) or self.ctx.episode_id
             session = getattr(state, "session", None)
             if session:
                 episode_id = getattr(session, "session_id", None)
+
+            if not episode_id:
+                episode_id = self.ctx.episode_id
 
         if episode_id and str(episode_id).strip():
             db_callback = DatabaseCallbackHandler(
@@ -387,6 +398,25 @@ class BaseNode:
                             f"{node_type}_validation_failed", errors=validation_errors
                         )
                         retry_count += 1
+                        if retry_count >= max_retries:
+                            # Record the last (invalid) attempt for UI before failing
+                            if db_callback and prediction:
+                                content = "Validation failed after max retries."
+                                async with db_callback.session_factory() as db:
+                                    trace_obj = Trace(
+                                        episode_id=db_callback.episode_id,
+                                        trace_type=TraceType.ERROR,
+                                        name=f"{node_type}_validation_error",
+                                        content=f"Validation errors: {validation_errors}",
+                                        metadata_vars={"prediction": str(prediction)},
+                                    )
+                                    db.add(trace_obj)
+                                    await db.commit()
+
+                            raise ValueError(
+                                f"Node {node_type} failed to produce valid output after {max_retries} retries. Errors: {validation_errors}"
+                            )
+
                         await asyncio.sleep(1)  # Backoff to prevent log explosion
                         continue
 

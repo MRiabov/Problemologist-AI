@@ -136,8 +136,11 @@ class PlanReviewerNode(BaseNode):
 @type_check
 async def plan_reviewer_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
+    episode_id = state.episode_id
     ctx = SharedNodeContext.create(
-        worker_light_url=settings.spec_001_api_url, session_id=session_id
+        worker_light_url=settings.spec_001_api_url,
+        session_id=session_id,
+        episode_id=episode_id,
     )
     node = PlanReviewerNode(context=ctx)
     return await node(state)
