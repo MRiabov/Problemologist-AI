@@ -7,7 +7,7 @@ from worker_heavy.simulation.loop import SimulationMetrics
 from worker_heavy.utils.validation import simulate
 
 
-@pytest.mark.unit
+
 def test_gpu_oom_retry_logic(tmp_path):
     """
     Verify that a GPU OOM during Genesis simulation triggers a retry

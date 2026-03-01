@@ -9,8 +9,8 @@ from controller.api.schemas import (
     CotsMetadataResponse,
     CotsSearchItem,
     EpisodeCreateResponse,
-    SchematicItem,
 )
+from shared.models.schemas import SchematicItem
 from shared.enums import FailureReason as SimulationFailureMode
 from shared.models.steerability import (
     GeometricSelection,

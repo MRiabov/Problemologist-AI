@@ -8,7 +8,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
 
-@pytest.mark.unit
+
 def test_fluid_containment_logic(tmp_path):
     """
     Verify that fluid particles are correctly counted against zones in SimulationLoop.

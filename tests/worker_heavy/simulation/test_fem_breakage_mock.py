@@ -9,7 +9,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
 
-@pytest.mark.unit
+
 def test_fem_breakage_detection(tmp_path):
     """
     Verify that exceeding ultimate stress triggers PART_BREAKAGE failure.

@@ -5,7 +5,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
 
-@pytest.mark.unit
+
 def test_physics_parity_rigid_body(tmp_path):
     """
     Compare final positions of a falling box in MuJoCo and Genesis.
