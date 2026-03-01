@@ -247,7 +247,7 @@ export default function ChatWindow({
                 )}
                 
                 {/* Visual indicator for active streaming */}
-                {isRunning && (
+                {isRunning && selectedEpisode && (
                     <div className="mt-4 flex items-center gap-2 text-primary animate-pulse pl-1 opacity-50 text-[10px] font-mono">
                         <div className="size-1 bg-primary rounded-full" />
                         <span>Agent is thinking...</span>

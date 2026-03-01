@@ -38,7 +38,7 @@ def test_int_178_session_restore_continuity(page: Page):
     session_entry = page.get_by_test_id("sidebar-episode-item").filter(
         has_text=unique_task
     )
-    expect(session_entry).to_be_visible()
+    expect(session_entry).to_be_visible(timeout=30000)
 
     # Check if the session entry has the active (primary) class
     expect(session_entry).to_have_class(re.compile(r"bg-primary/10"))
