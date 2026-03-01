@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Any
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -35,3 +35,7 @@ class AgentState(BaseModel):
     best_cost: float | None = None
     best_weight_g: float | None = None
     turn_count: StrictInt = 0
+    worker_client: Any = None
+    fs: Any = None
+
+    model_config = {"arbitrary_types_allowed": True}

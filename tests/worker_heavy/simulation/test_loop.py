@@ -19,10 +19,12 @@ TEST_XML = """
       <geom type="box" size=".05 .05 .05" mass="1"/>
     </body>
     <body name="zone_goal_body" pos="0.5 0 0">
-         <site name="zone_goal" type="box" size="0.1 0.1 0.1" rgba="0 1 0 0.3" group="1"/>
+      <site name="zone_goal" type="box" size="0.1 0.1 0.1"
+            rgba="0 1 0 0.3" group="1"/>
     </body>
     <body name="zone_forbid_body" pos="-0.5 0 0">
-         <site name="zone_forbid_1" type="box" size="0.1 0.1 0.1" rgba="1 0 0 0.3" group="1"/>
+      <site name="zone_forbid_1" type="box" size="0.1 0.1 0.1"
+            rgba="1 0 0 0.3" group="1"/>
     </body>
   </worldbody>
   <actuator>
@@ -36,8 +38,7 @@ TEST_XML = """
 def sim_loop(tmp_path):
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
-    loop = SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
-    return loop
+    return SimulationLoop(str(xml_path), backend_type=SimulatorBackendType.MUJOCO)
 
 
 def test_initialization(sim_loop):
@@ -148,7 +149,11 @@ def test_timeout_configurable(tmp_path):
 
 def test_timeout_capped_at_30s(tmp_path):
     """Test that timeout cannot exceed 30 seconds (hard cap)."""
-    from worker_heavy.simulation.loop import MAX_SIMULATION_TIME_SECONDS
+    from shared.config.simulation import (
+        simulation_settings as settings,
+    )
+
+    max_sim_limit = settings.max_simulation_time_seconds
 
     xml_path = tmp_path / "test.xml"
     xml_path.write_text(TEST_XML)
@@ -157,7 +162,7 @@ def test_timeout_capped_at_30s(tmp_path):
     loop = SimulationLoop(str(xml_path), max_simulation_time=60.0)
 
     # Should be capped at 30s
-    assert loop.max_simulation_time == MAX_SIMULATION_TIME_SECONDS
+    assert loop.max_simulation_time == max_sim_limit
     assert loop.max_simulation_time == 30.0
 
 

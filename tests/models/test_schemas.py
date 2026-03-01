@@ -34,21 +34,21 @@ class TestReviewFrontmatter:
     """Tests for ReviewFrontmatter model."""
 
     def test_approved_decision(self):
-        fm = ReviewFrontmatter(decision="approved", comments=["Looks good"])
-        assert fm.decision == "approved"
+        fm = ReviewFrontmatter(decision="APPROVED", comments=["Looks good"])
+        assert fm.decision == "APPROVED"
         assert fm.comments == ["Looks good"]
 
     def test_rejected_decision(self):
-        fm = ReviewFrontmatter(decision="rejected", comments=["Fix geometry"])
-        assert fm.decision == "rejected"
+        fm = ReviewFrontmatter(decision="REJECTED", comments=["Fix geometry"])
+        assert fm.decision == "REJECTED"
 
     def test_confirm_plan_refusal(self):
-        fm = ReviewFrontmatter(decision="confirm_plan_refusal")
-        assert fm.decision == "confirm_plan_refusal"
+        fm = ReviewFrontmatter(decision="CONFIRM_PLAN_REFUSAL")
+        assert fm.decision == "CONFIRM_PLAN_REFUSAL"
 
     def test_reject_plan_refusal(self):
-        fm = ReviewFrontmatter(decision="reject_plan_refusal")
-        assert fm.decision == "reject_plan_refusal"
+        fm = ReviewFrontmatter(decision="REJECT_PLAN_REFUSAL")
+        assert fm.decision == "REJECT_PLAN_REFUSAL"
 
     def test_invalid_decision(self):
         with pytest.raises(ValidationError):
@@ -65,19 +65,19 @@ class TestMovingPart:
     def test_motor_type(self):
         part = MovingPart(
             part_name="feeder",
-            type="motor",
+            type="MOTOR",
             dofs=["rotate_z"],
         )
-        assert part.type == "motor"
+        assert part.type == "MOTOR"
         assert "rotate_z" in part.dofs
 
     def test_passive_type(self):
         part = MovingPart(
             part_name="slider",
-            type="passive",
+            type="PASSIVE",
             dofs=["slide_y"],
         )
-        assert part.type == "passive"
+        assert part.type == "PASSIVE"
         assert "slide_y" in part.dofs
 
 

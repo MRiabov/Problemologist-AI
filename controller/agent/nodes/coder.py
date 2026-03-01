@@ -118,19 +118,21 @@ class CoderNode(BaseNode):
                 "todo": new_todo,
                 "journal": state.journal + journal_entry,
                 "current_step": current_step,
-                "messages": state.messages
-                + [AIMessage(content=f"Coder summary: {summary}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Coder summary: {summary}"),
+                ],
                 "turn_count": state.turn_count + 1,
             }
         )
 
     def _get_next_step(self, todo: str) -> str | None:
-        """Extract the first '- [ ]' item from the TODO list, ignoring electronics tasks."""
+        """Extract the first '- [ ]' item from the TODO list."""
         elec_keywords = ["circuit", "wire", "electronics", "routing", "psu", "power"]
         for line in todo.split("\n"):
             if line.strip().startswith("- [ ]"):
                 task = line.strip().replace("- [ ]", "").strip()
-                # If it's an electronics task, skip it (ElectronicsEngineer will handle it)
+                # If it's an electronics task, skip it
                 if any(kw in task.lower() for kw in elec_keywords):
                     continue
                 return task
@@ -147,6 +149,16 @@ async def coder_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
+        worker_client=state.worker_client,
+        fs=state.fs,
     )
     node = CoderNode(context=ctx)
-    return await node(state)
+    new_state = await node(state)
+
+    # Persist clients in state for reuse by subsequent nodes
+    return new_state.model_copy(
+        update={
+            "worker_client": ctx.worker_client,
+            "fs": ctx.fs,
+        }
+    )
