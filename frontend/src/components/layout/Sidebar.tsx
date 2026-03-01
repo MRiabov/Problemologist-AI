@@ -136,13 +136,15 @@ export default function Sidebar() {
                                     )}>
                                       {ep.task || ep.id.substring(0,8)}
                                     </span>
-                                    {ep.status === EpisodeStatus.RUNNING ? (
-                                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse mt-1" />
-                                    ) : ep.status === EpisodeStatus.COMPLETED ? (
-                                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                    ) : (
-                                        <XCircle className="h-3 w-3 text-destructive" />
-                                    )}
+                                    <div data-testid="episode-status" data-status={ep.status}>
+                                        {ep.status === EpisodeStatus.RUNNING ? (
+                                            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse mt-1" />
+                                        ) : ep.status === EpisodeStatus.COMPLETED ? (
+                                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                        ) : (
+                                            <XCircle className="h-3 w-3 text-destructive" />
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
                                     <Clock className="h-2.5 w-2.5" />

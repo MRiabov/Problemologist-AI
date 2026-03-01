@@ -144,7 +144,9 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
     )
     node = BenchmarkPlannerNode(context=ctx)
     return await node(state)
@@ -337,7 +339,9 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
     )
     node = BenchmarkCoderNode(context=ctx)
     return await node(state)
@@ -383,7 +387,9 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
     )
     node = BenchmarkCOTSSearchNode(context=ctx)
     return await node(state)
@@ -397,7 +403,8 @@ async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState
 class SummarizerSignature(dspy.Signature):
     """
     Summarizer node: Compresses the journal to stay within token limits.
-    Provide a concise summary of the key decisions, attempts, and outcomes recorded in the journal.
+    Provide a concise summary of the key decisions, attempts, and outcomes
+    recorded in the journal.
     Maintain critical technical details while reducing verbosity.
     """
 
@@ -446,7 +453,9 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
     )
     node = BenchmarkSummarizerNode(context=ctx)
     return await node(state)
@@ -559,7 +568,9 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
-        worker_light_url=worker_light_url, session_id=session_id
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
     )
     node = BenchmarkReviewerNode(context=ctx)
     return await node(state)

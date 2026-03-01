@@ -194,8 +194,8 @@ async def _execute_graph_streaming(
 
                 logger.info("detected_plan_theme", theme=plan_theme)
 
-                # WP10: Be more permissive. If the node finished successfully,
-                # we should usually proceed to PLANNED unless explicitly told it's an error.
+                # WP10: Be more permissive. If the node finished successfully, we should
+                # usually proceed to PLANNED unless explicitly told it's an error.
                 if plan_theme == "error":
                     new_status = SessionStatus.FAILED
                 else:
@@ -326,6 +326,7 @@ async def run_generation_session(
 
     initial_state = BenchmarkGeneratorState(
         session=session,
+        episode_id=str(session_id),
         current_script="",
         simulation_result=None,
         review_feedback=None,
@@ -415,7 +416,8 @@ async def _persist_session_assets(
     """
     Helper to persist assets.
     - Final artifacts (BenchmarkAsset) are only saved if status is ACCEPTED.
-    - Real-time assets (Asset table + Broadcast) are synced if status is PLANNED or ACCEPTED.
+    - Real-time assets (Asset table + Broadcast) are synced if status is
+      PLANNED or ACCEPTED.
     """
     from shared.enums import SessionStatus
 
@@ -515,8 +517,8 @@ async def _persist_session_assets(
                             except Exception:
                                 pass  # Proceed with empty content if read fails
 
-                        # Broadcast to frontend. This will trigger sync_asset in middleware_helper
-                        # which determines AssetType from extension.
+                        # Broadcast to frontend. This will trigger sync_asset in
+                        # middleware_helper which determines AssetType from extension.
                         await asyncio.wait_for(
                             broadcast_file_update(str(session_id), path, content),
                             timeout=2.0,
@@ -624,6 +626,7 @@ async def continue_generation_session(
 
     initial_state = BenchmarkGeneratorState(
         session=session,
+        episode_id=str(session_id),
         current_script="",
         simulation_result=None,
         review_feedback=None,

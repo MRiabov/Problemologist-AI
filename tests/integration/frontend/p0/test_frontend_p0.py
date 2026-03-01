@@ -68,9 +68,11 @@ def test_int_157_session_history(page: Page):
                 if benchmark_id in ep_ids and engineer_id in ep_ids:
                     episodes_found = True
                     break
+
+            # Use a slightly longer wait for the first few retries, then shorter
             import time
 
-            time.sleep(1)
+            time.sleep(0.5 if i > 5 else 1.0)
 
     assert episodes_found, (
         f"Episodes {benchmark_id} and {engineer_id} did not appear in API"

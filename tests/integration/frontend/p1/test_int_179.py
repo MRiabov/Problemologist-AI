@@ -72,9 +72,6 @@ def test_int_179_manual_at_mention_contract(page: Page):
     # 4. Type a valid @mention for a file
     chat_input.fill("Explain @script.py:1-10")
 
-    # Give it a moment to highlight
-    page.wait_for_timeout(2000)
-
     # 5. Verify visual success (text-primary)
     # We just check that @script.py:1-10 is there and NOT red
     # The highlighter layer has text-transparent, but spans have color
@@ -83,10 +80,9 @@ def test_int_179_manual_at_mention_contract(page: Page):
         .filter(has_text=re.compile(r"@script\.py:1-10"))
         .first
     )
-    expect(valid_mention).to_be_visible(timeout=10000)
 
     # Wait for validation to turn it primary (might take a polling cycle)
-    # We check if it has text-primary class
+    # expect() with timeout already handles polling
     expect(valid_mention).to_have_class(re.compile(r"text-primary"), timeout=20000)
 
     # 6. Verify autocomplete suggestions appear when typing @

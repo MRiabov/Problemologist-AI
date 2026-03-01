@@ -54,9 +54,8 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     # 3. Open feedback modal from sidebar episode feedback action
     # Sidebar actions are shown on hover and target the selected episode's latest trace.
     # Wait for EpisodeContext to fetch the latest episode list containing last_trace_id
-    page.wait_for_timeout(2000)
-
     page.wait_for_selector('[data-testid="sidebar-episode-item"]', timeout=60000)
+
     episode_row = (
         page.get_by_test_id("sidebar-episode-item")
         .filter(has_text=re.compile("INT-177"))

@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Trace
+from controller.utils import get_episode_id
 from shared.enums import AssetType, TraceType
 from shared.observability.schemas import BaseEvent
 
@@ -29,14 +30,7 @@ async def record_worker_events(
     if not events:
         return
 
-    # Convert episode_id to UUID if it's a string
-    if isinstance(episode_id, str):
-        try:
-            episode_uuid = uuid.UUID(episode_id)
-        except ValueError:
-            return
-    else:
-        episode_uuid = episode_id
+    episode_uuid = get_episode_id(episode_id)
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:
@@ -81,27 +75,7 @@ async def sync_asset(
         content: Optional content snippet or full content to cache.
         asset_type: Optional explicit AssetType. If None, inferred from extension.
     """
-    if isinstance(episode_id, str):
-        try:
-            # Strip common prefixes like INT-XXX- or sim-
-            clean_id = episode_id
-            if "-" in episode_id and not episode_id.startswith("{"):
-                parts = episode_id.split("-")
-                # If first part is not numeric and not a uuid part, it might be a prefix
-                if len(parts) > 1 and len(parts[0]) <= 4:
-                    # Check if the rest looks like a UUID or at least has enough parts
-                    potential_uuid = "-".join(parts[1:])
-                    if len(potential_uuid) >= 32:
-                        clean_id = potential_uuid
-
-            episode_uuid = uuid.UUID(clean_id)
-        except ValueError:
-            logger.warning(
-                "sync_asset_uuid_invalid", episode_id=episode_id, path=str(path)
-            )
-            return None
-    else:
-        episode_uuid = episode_id
+    episode_uuid = get_episode_id(episode_id)
 
     if asset_type is None:
         p = Path(path)

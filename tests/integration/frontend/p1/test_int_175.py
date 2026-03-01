@@ -54,17 +54,21 @@ def test_int_175_controller_first_api_boundary(page: Page):
     # 4. Submit the prompt
     send_button = page.get_by_label("Send Message")
     expect(send_button).to_be_enabled(timeout=30000)
-    send_button.click()
 
-    # Let some traffic happen
-    page.wait_for_timeout(5000)
+    # Capture a network request that indicates we've started generating
+    with page.expect_request(
+        lambda request: "/api/episodes" in request.url
+    ) as req_info:
+        send_button.click()
 
     # 5. Wait for the "Confirm & Start" button and click it to trigger more traffic
     try:
         confirm_button = page.get_by_test_id("chat-confirm-button")
         expect(confirm_button).to_be_visible(timeout=120000)
-        confirm_button.click()
-        page.wait_for_timeout(5000)
+
+        # Capture a network request for confirmation
+        with page.expect_request(lambda request: "confirm" in request.url) as req_info:
+            confirm_button.click()
     except Exception:
         pass  # Ignore timeout if we don't reach here, the main test is the network traffic
 

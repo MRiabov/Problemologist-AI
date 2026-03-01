@@ -24,7 +24,13 @@ class ConnectionManager:
         if episode_id not in self.active_connections:
             self.active_connections[episode_id] = []
         self.active_connections[episode_id].append(websocket)
-        logger.info("websocket_connected", episode_id=str(episode_id))
+        logger.info(
+            "websocket_connected",
+            episode_id=str(episode_id),
+            id_type=type(episode_id).__name__,
+            total_rooms=len(self.active_connections),
+            room_size=len(self.active_connections[episode_id]),
+        )
 
     def disconnect(self, episode_id: uuid.UUID, websocket: WebSocket):
         """Unregister a connection."""
@@ -33,15 +39,36 @@ class ConnectionManager:
                 self.active_connections[episode_id].remove(websocket)
             if not self.active_connections[episode_id]:
                 del self.active_connections[episode_id]
-        logger.info("websocket_disconnected", episode_id=str(episode_id))
+        logger.info(
+            "websocket_disconnected",
+            episode_id=str(episode_id),
+            id_type=type(episode_id).__name__,
+        )
 
     async def broadcast(self, episode_id: uuid.UUID, message: dict):
         """Send a message to all active connections for a given episode."""
         if episode_id not in self.active_connections:
+            # Diagnostic: check if ID exists as string key
+            found_as_str = False
+            for k in self.active_connections.keys():
+                if str(k) == str(episode_id):
+                    found_as_str = True
+                    break
+
+            if found_as_str:
+                logger.warning(
+                    "broadcast_id_type_mismatch_detected",
+                    episode_id=str(episode_id),
+                    id_type=type(episode_id).__name__,
+                )
             return
 
         logger.info(
-            "broadcasting_message", episode_id=str(episode_id), type=message.get("type")
+            "broadcasting_message",
+            episode_id=str(episode_id),
+            id_type=type(episode_id).__name__,
+            type=message.get("type"),
+            connection_count=len(self.active_connections[episode_id]),
         )
 
         # Collect dead connections to remove them

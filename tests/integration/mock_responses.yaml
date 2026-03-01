@@ -616,6 +616,24 @@ scenarios:
           input: { path: "todo.md", content: "- [ ] Test benchmark", overwrite: true }
         - name: "write_file"
           input: 
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 50
+                benchmark_max_weight_g: 1200
+                planner_target_max_unit_cost_usd: 25
+                planner_target_max_weight_g: 600
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
+        - name: "write_file"
+          input: 
             path: "objectives.yaml"
             content: |
               objectives:

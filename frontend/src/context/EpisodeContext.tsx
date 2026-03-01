@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { 
   fetchEpisodes, 
   fetchEpisode, 
@@ -263,22 +263,30 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(listInterval);
   }, [refreshEpisodes]);
 
+  const selectedEpisodeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedEpisodeIdRef.current = selectedEpisode?.id || null;
+  }, [selectedEpisode?.id]);
+
   // WebSocket subscription for real-time updates
   useEffect(() => {
     if (!selectedEpisode) return;
+    
+    // T026: Store the ID this connection belongs to to avoid leakage from other sessions
+    const connectionEpisodeId = selectedEpisode.id;
 
     let wsUrl: string;
     const base = OpenAPI.BASE || '';
     
     if (base.startsWith('http')) {
         // Absolute URL (standard in integration tests / production)
-        wsUrl = base.replace(/^http/, 'ws') + `/api/episodes/${selectedEpisode.id}/ws`;
+        wsUrl = base.replace(/^http/, 'ws') + `/api/episodes/${connectionEpisodeId}/ws`;
     } else {
         // Relative URL or empty (standard in dev proxy mode)
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
         const prefix = base || '/api';
-        wsUrl = `${protocol}//${host}${prefix}/episodes/${selectedEpisode.id}/ws`;
+        wsUrl = `${protocol}//${host}${prefix}/episodes/${connectionEpisodeId}/ws`;
     }
     
     let ws: WebSocket;
@@ -292,8 +300,6 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           const message = JSON.parse(event.data);
           if (message.type === 'new_trace') {
             setSelectedEpisode((prev: Episode | null) => {
-              if (!prev || prev.id !== selectedEpisode.id) return prev;
-              
               // Map payload to TraceResponse structure
               const newTrace = {
                 id: message.id,
@@ -305,6 +311,10 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                 created_at: message.created_at
               };
 
+              // T026: Only update if the message is for the currently selected episode
+              // AND this connection matches the message's origin (implicit in connectionEpisodeId)
+              if (!prev || prev.id !== connectionEpisodeId || prev.id !== selectedEpisodeIdRef.current) return prev;
+
               const currentTraces = prev.traces || [];
 
               // Avoid duplicates
@@ -312,24 +322,28 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
               
               return {
                 ...prev,
+                last_trace_id: newTrace.id,
                 traces: [...currentTraces, newTrace]
               };
             });
           } else if (message.type === 'status_update') {
             setSelectedEpisode((prev: Episode | null) => {
-              if (!prev || prev.id !== selectedEpisode.id) return prev;
+              if (!prev || prev.id !== connectionEpisodeId || prev.id !== selectedEpisodeIdRef.current) return prev;
               return { 
                 ...prev, 
                 status: message.status,
                 metadata_vars: message.metadata_vars || prev.metadata_vars
               };
             });
-            if (message.status !== EpisodeStatus.RUNNING) {
-              setRunning(false);
+            // Only set running state if this update is for the ACTIVE episode
+            if (connectionEpisodeId === selectedEpisodeIdRef.current) {
+                if (message.status !== EpisodeStatus.RUNNING) {
+                  setRunning(false);
+                }
             }
           } else if (message.type === 'file_update') {
             setSelectedEpisode((prev: Episode | null) => {
-                if (!prev || prev.id !== selectedEpisode.id) return prev;
+                if (!prev || prev.id !== connectionEpisodeId || prev.id !== selectedEpisodeIdRef.current) return prev;
                 
                 // Real-time plan updates
                 const path = message.data.path || '';
@@ -361,6 +375,19 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                 return { ...prev, assets: updatedAssets };
             });
           }
+          
+          // Also update the episode in the sidebar list if it's the connected one
+          setEpisodes(prev => prev.map(ep => {
+            if (ep.id === connectionEpisodeId) {
+              const newTraceId = message.type === 'new_trace' ? message.id : ep.last_trace_id;
+              return {
+                ...ep,
+                status: message.type === 'status_update' ? message.status : ep.status,
+                last_trace_id: newTraceId
+              };
+            }
+            return ep;
+          }));
         } catch (e) {
           console.error("WS message parse failed", e);
         }

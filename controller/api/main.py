@@ -83,6 +83,7 @@ from controller.api.schemas import (
     EpisodeCreateResponse,
 )
 from controller.api.tasks import execute_agent_task
+from controller.utils import get_episode_id
 
 
 @app.post("/api/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
@@ -93,11 +94,16 @@ async def create_test_episode(request: AgentRunRequest):
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:
+        # Ensure session_id is preserved in metadata
+        metadata = request.metadata_vars or {}
+        if "worker_session_id" not in metadata:
+            metadata["worker_session_id"] = request.session_id
+
         episode = Episode(
-            id=uuid.uuid4(),
+            id=get_episode_id(request.session_id),
             task=request.task,
             status=EpisodeStatus.RUNNING,
-            metadata_vars=request.metadata_vars,
+            metadata_vars=metadata,
             skill_git_hash=request.skill_git_hash,
         )
         db.add(episode)
@@ -130,7 +136,7 @@ async def run_agent(request: AgentRunRequest):
 
     async with session_factory() as db:
         episode = Episode(
-            id=uuid.uuid4(),
+            id=get_episode_id(request.session_id),
             task=request.task,
             status=EpisodeStatus.RUNNING,
             metadata_vars=metadata.model_dump(),

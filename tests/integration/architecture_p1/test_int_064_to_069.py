@@ -9,9 +9,9 @@ from controller.api.schemas import (
     CotsMetadataResponse,
     CotsSearchItem,
     EpisodeCreateResponse,
-    SchematicItem,
 )
 from shared.enums import FailureReason as SimulationFailureMode
+from shared.models.schemas import SchematicItem
 from shared.models.steerability import (
     GeometricSelection,
     SelectionLevel,
@@ -34,8 +34,29 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 async def test_int_064_cots_metadata():
     """INT-064: COTS reproducibility metadata persistence."""
     async with httpx.AsyncClient(timeout=300.0) as client:
+        # Seed a part first to ensure search works
+        import sqlite3
+        import json
+
+        conn = sqlite3.connect("parts.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO parts (part_id, name, category, unit_cost, weight_g, import_recipe, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "M3_BOLT",
+                "M3 Bolt",
+                "Fastener",
+                0.5,
+                1.2,
+                "recipe",
+                json.dumps({"manufacturer": "Generic"}),
+            ),
+        )
+        conn.commit()
+        conn.close()
+
         # 1. Fetch metadata
-        resp = await client.get(f"{CONTROLLER_URL}/cots/metadata")
+        resp = await client.get(f"{CONTROLLER_URL}/api/cots/metadata")
         assert resp.status_code == 200
         # Validate COTS metadata structure
         data = CotsMetadataResponse.model_validate(resp.json())
@@ -46,7 +67,7 @@ async def test_int_064_cots_metadata():
         # We'll just verify the endpoint exists and returns data as a proxy for persistence.
         # Ideally we'd check Langfuse/DB for the COTSSearchEvent fields.
         search_resp = await client.get(
-            f"{CONTROLLER_URL}/cots/search", params={"q": "M3"}
+            f"{CONTROLLER_URL}/api/cots/search", params={"q": "M3"}
         )
         assert search_resp.status_code == 200
         results = [CotsSearchItem.model_validate(item) for item in search_resp.json()]
@@ -84,11 +105,11 @@ physics:
   backend: "{SimulatorBackendType.GENESIS}"
 objectives:
   goal_zone: {{min: [0.5,0.5,0.5], max: [0.6,0.6,0.6]}}
-  build_zone: {min: [-1,-1,-1], max: [1,1,1]}
-simulation_bounds: {min: [-1,-1,-1], max: [1,1,1]}
-moved_object: {label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}
+  build_zone: {{min: [-1,-1,-1], max: [1,1,1]}}
+simulation_bounds: {{min: [-1,-1,-1], max: [1,1,1]}}
+moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
 
-constraints: {max_unit_cost: 100, max_weight_g: 1000}
+constraints: {{max_unit_cost: 100, max_weight_g: 1000}}
 """
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
@@ -201,7 +222,7 @@ async def test_int_067_068_steerability():
         task = "Test steerability"
         request = AgentRunRequest(task=task, session_id="test-steer-123")
         resp = await client.post(
-            f"{CONTROLLER_URL}/test/episodes",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=request.model_dump(),
         )
         assert resp.status_code == 201
@@ -247,15 +268,14 @@ async def test_int_069_frontend_contract():
         task = "Test frontend contract"
         request = AgentRunRequest(task=task, session_id="test-fe-contract")
         resp = await client.post(
-            f"{CONTROLLER_URL}/test/episodes",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=request.model_dump(),
         )
         assert resp.status_code == 201
         episode_id = EpisodeCreateResponse.model_validate(resp.json()).episode_id
 
         # 2. Write assembly_definition.yaml to worker for schematic
-        assembly_content = """
-version: "1.0"
+        assembly_content = """version: "1.0"
 constraints:
   benchmark_max_unit_cost_usd: 100
   benchmark_max_weight_g: 1000
@@ -264,7 +284,7 @@ constraints:
 electronics:
   power_supply: {voltage_dc: 12, max_current_a: 10}
   components:
-    - {component_id: "m1", type: "motor", assembly_part_ref: "motor1"}
+    - {component_id: "m1", type: "MOTOR", assembly_part_ref: "motor1"}
   wiring:
     - {wire_id: "w1", from: {component: "m1", terminal: "v+"}, to: {component: "m1", terminal: "v-"}, gauge_awg: 22, length_mm: 100}
 totals:
@@ -272,6 +292,7 @@ totals:
   estimated_weight_g: 100
   estimate_confidence: "high"
 """
+        print(f"DEBUG: episode_id={episode_id}")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
@@ -282,7 +303,7 @@ totals:
 
         # 3. Test schematic endpoint
         schematic_resp = await client.get(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/electronics/schematic"
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/electronics/schematic"
         )
         assert schematic_resp.status_code == 200
         # Schematic is a list of typed items
@@ -302,7 +323,7 @@ totals:
         )
 
         asset_resp = await client.get(
-            f"{CONTROLLER_URL}/episodes/{episode_id}/assets/renders/test.png"
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/assets/renders/test.png"
         )
         assert asset_resp.status_code == 200
         assert asset_resp.content == b"dummy-binary-content"
