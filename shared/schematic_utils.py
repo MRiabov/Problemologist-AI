@@ -41,6 +41,20 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[SchematicItem]
 
     soup = []
 
+    # Determine the pins for each component from the wiring
+    comp_pins: dict[str, set[str]] = {}
+    for comp in assembly.electronics.components:
+        comp_pins[comp.component_id] = set(["1", "2"]) # Default fallback
+
+    for wire in assembly.electronics.wiring:
+        src_pin_idx = get_schematic_pin_index(wire.from_terminal.terminal)
+        if wire.from_terminal.component in comp_pins:
+            comp_pins[wire.from_terminal.component].add(src_pin_idx)
+
+        dst_pin_idx = get_schematic_pin_index(wire.to_terminal.terminal)
+        if wire.to_terminal.component in comp_pins:
+            comp_pins[wire.to_terminal.component].add(dst_pin_idx)
+
     # 1. Add components
     for i, comp in enumerate(assembly.electronics.components):
         # Determine symbol
@@ -69,26 +83,23 @@ def generate_schematic_soup(assembly: AssemblyDefinition) -> list[SchematicItem]
             )
         )
 
-        # Add standard pins (1 and 2)
-        # TODO: support more pins for connectors/relays if needed
-        soup.append(
-            SchematicItem(
-                type="schematic_pin",
-                id=f"{comp_id}_p1",
-                component_id=comp_id,
-                name="1",
-                center={"x": 10 + i * 40 - 10, "y": 10},
+        # Add all discovered pins for this component
+        # We sort them to ensure consistent ordering in the output
+        for p_idx, pin_name in enumerate(sorted(comp_pins.get(comp.component_id, ["1", "2"]))):
+            # Try to distribute pins nicely. This is a very rough heuristic
+            # but better than having them all stacked.
+            offset_x = (p_idx % 2 == 0) * -10 + (p_idx % 2 == 1) * 10
+            offset_y = (p_idx // 2) * 10
+
+            soup.append(
+                SchematicItem(
+                    type="schematic_pin",
+                    id=f"{comp_id}_p{pin_name}",
+                    component_id=comp_id,
+                    name=pin_name,
+                    center={"x": 10 + i * 40 + offset_x, "y": 10 + offset_y},
+                )
             )
-        )
-        soup.append(
-            SchematicItem(
-                type="schematic_pin",
-                id=f"{comp_id}_p2",
-                component_id=comp_id,
-                name="2",
-                center={"x": 10 + i * 40 + 10, "y": 10},
-            )
-        )
 
     # 2. Add traces
     for wire in assembly.electronics.wiring:

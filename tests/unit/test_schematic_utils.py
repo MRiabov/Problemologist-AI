@@ -93,7 +93,7 @@ def test_generate_schematic_soup_components_and_wiring():
         electronics=electronics,
     )
 
-    soup = generate_schematic_soup(assembly)
+    soup = [item.model_dump() for item in generate_schematic_soup(assembly)]
 
     # 1. Verify components exist
     motor = next(
