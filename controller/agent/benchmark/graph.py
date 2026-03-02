@@ -9,6 +9,7 @@ import structlog
 from langgraph.graph import END, START, StateGraph
 from opentelemetry import trace
 
+from controller.agent.initialization import initialize_agent_files
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.graph.steerability_node import check_steering, steerability_node
@@ -378,6 +379,31 @@ async def run_generation_session(
         plan=None,
         messages=[],
     )
+
+    # 2.5. Initialize benchmark workspace templates before planner validation.
+    # This guarantees required baseline files like objectives.yaml exist.
+    try:
+        from controller.config.settings import settings as global_settings
+
+        worker_client = WorkerClient(
+            base_url=global_settings.worker_light_url,
+            session_id=str(session_id),
+            heavy_url=global_settings.worker_heavy_url,
+        )
+        try:
+            middleware = RemoteFilesystemMiddleware(
+                worker_client, agent_role="benchmark_planner"
+            )
+            backend = RemoteFilesystemBackend(middleware)
+            await initialize_agent_files(backend, agent_name="benchmark_planner")
+        finally:
+            await worker_client.aclose()
+    except Exception as e:
+        logger.warning(
+            "benchmark_workspace_initialization_failed",
+            session_id=session_id,
+            error=str(e),
+        )
 
     app = define_graph()
 
