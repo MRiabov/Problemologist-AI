@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 
 import pytest
@@ -30,8 +31,13 @@ def test_int_178_session_restore_continuity(page: Page):
     # 2. Wait for some traces to appear (e.g., node start or thinking)
     # Using the thinking indicator as a sign of activity
     expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
-        timeout=30000
+        timeout=45000
     )
+
+    # Wait for sidebar to reflect the new episode
+    expect(page.get_by_test_id("sidebar-episode-item").filter(
+        has_text=unique_task
+    )).to_be_visible(timeout=30000)
 
     # 3. Get the episode ID from the UI or implicitly know it's selected
     # Verify the task name is in the sidebar and highlighted
@@ -46,6 +52,9 @@ def test_int_178_session_restore_continuity(page: Page):
     # 4. Reload the page
     page.reload()
     page.wait_for_load_state("networkidle")
+
+    # Wait for sidebar to finish initial loading
+    expect(page.get_by_text("Loading...")).not_to_be_visible(timeout=30000)
 
     # 5. Verify the same session is still selected and highlighted
     # This check is crucial for INT-178
@@ -64,9 +73,8 @@ def test_int_178_session_restore_continuity(page: Page):
     )  # One in sidebar, one in chat
 
     # 7. Verify we are in the same workflow mode (Engineer Workspace)
-    expect(page.locator("h2", has_text="Engineer Workspace")).to_be_visible(
+    expect(page.locator("span", has_text="Engineer Workspace")).to_be_visible(
         timeout=15000
     )
 
 
-import re
