@@ -35,7 +35,7 @@ class WorkbenchMetadata(BaseModel):
 
     cost_breakdown: CostBreakdown | None = None
     dof_count: int | None = None
-    dof_warning: str | None = None
+    dof_warning: bool | str | None = None
     undercut_count: int | None = None
     gate_count: int | None = None
     additional_info: dict[str, Any] = Field(default_factory=dict)

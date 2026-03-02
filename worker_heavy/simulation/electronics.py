@@ -41,26 +41,32 @@ class ElectronicsManager:
             if validation.valid:
                 self.validation_error = None
                 # Map voltages to power status.
-                # A component is powered if the voltage across its terminals is sufficient.
-                # For simplicity in this integration, we'll check if the component's '+' or 'in'
-                # node has a significant voltage relative to ground.
+                # A component is powered if the differential voltage across its terminals is sufficient.
+                supply_v = self.electronics.power_supply.voltage_dc
+
                 for comp in self.electronics.components:
                     # Power supply itself is always 'powered' if present
                     if comp.type == "power_supply":
-                        self.is_powered_map[comp.component_id] = 1.0
-                        continue
+                        power_scale = 1.0
+                    else:
+                        # Determine terminal nodes for the component
+                        if comp.type in ["switch", "relay"]:
+                            n1 = f"{comp.component_id}_in"
+                            n2 = f"{comp.component_id}_out"
+                        else:
+                            n1 = f"{comp.component_id}_+"
+                            n2 = f"{comp.component_id}_-"
 
-                    # Determine primary input node for the component
-                    node_name = f"{comp.component_id}_+"
-                    if comp.type in ["switch", "relay"]:
-                        node_name = f"{comp.component_id}_in"
+                        v1 = validation.node_voltages.get(n1, 0.0)
+                        v2 = validation.node_voltages.get(n2, 0.0)
+                        v_diff = abs(v1 - v2)
 
-                    voltage = validation.node_voltages.get(node_name, 0.0)
-                    # Normalize power scale (0.0 to 1.0) based on supply voltage
-                    supply_v = self.electronics.power_supply.voltage_dc
-                    self.is_powered_map[comp.component_id] = (
-                        min(1.0, max(0.0, voltage / supply_v)) if supply_v > 0 else 0.0
-                    )
+                        # Normalize power scale (0.0 to 1.0) based on supply voltage
+                        power_scale = min(1.0, max(0.0, v_diff / supply_v)) if supply_v > 0 else 0.0
+
+                    self.is_powered_map[comp.component_id] = power_scale
+                    if comp.assembly_part_ref:
+                        self.is_powered_map[comp.assembly_part_ref] = power_scale
             else:
                 self.validation_error = (
                     validation.failures[0]
@@ -112,4 +118,7 @@ class ElectronicsManager:
                     queue.append(v)
 
         for comp in self.electronics.components:
-            self.is_powered_map[comp.component_id] = comp.component_id in powered
+            is_powered = comp.component_id in powered
+            self.is_powered_map[comp.component_id] = 1.0 if is_powered else 0.0
+            if comp.assembly_part_ref:
+                self.is_powered_map[comp.assembly_part_ref] = 1.0 if is_powered else 0.0

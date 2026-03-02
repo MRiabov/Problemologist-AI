@@ -1016,8 +1016,17 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         # 3. Add moving parts (Motors)
         scene_data["motors"] = []
         if moving_parts:
+            from shared.cots.parts.motors import retrieve_cots_physics
+
             for mp in moving_parts:
-                scene_data["motors"].append(mp.model_dump())
+                mp_data = mp.model_dump()
+                # T011: Retrieve COTS physics for Genesis motors
+                cots_id = cots_lookup.get(mp.part_name)
+                if cots_id:
+                    physics = retrieve_cots_physics(cots_id)
+                    if physics:
+                        mp_data["physics"] = physics
+                scene_data["motors"].append(mp_data)
         if objectives and hasattr(objectives, "fluids") and objectives.fluids:
             for fluid in objectives.fluids:
                 scene_data["fluids"].append(fluid.model_dump())

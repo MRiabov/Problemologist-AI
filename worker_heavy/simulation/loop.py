@@ -135,23 +135,58 @@ class SimulationLoop:
                     else False
                 )
 
-                # Resolve manufacturing method from component metadata
-                mfg_method = ManufacturingMethod.CNC
+                # T011: Perform per-part validation to support mixed methods (INT-126)
                 children = getattr(self.component, "children", [])
                 if not children:
                     children = [self.component]
 
-                for child in children:
-                    meta = getattr(child, "metadata", None)
-                    if meta and getattr(meta, "manufacturing_method", None):
-                        mfg_method = meta.manufacturing_method
-                        break
+                all_violations = []
+                total_cost = 0.0
+                total_weight = 0.0
+                dof_count = 0
+                dof_warning = False
 
-                self.validation_report = validate_and_price(
-                    self.component,
-                    mfg_method,
-                    self.config,
-                    fem_required=fem_required,
+                for child in children:
+                    label = getattr(child, "label", "")
+                    if label.startswith("zone_"):
+                        continue
+
+                    # Resolve method for this specific part
+                    meta = getattr(child, "metadata", None)
+                    part_method = (
+                        getattr(meta, "manufacturing_method", None)
+                        or ManufacturingMethod.CNC
+                    )
+
+                    part_report = validate_and_price(
+                        child,
+                        part_method,
+                        self.config,
+                        build_zone=self.objectives.objectives.build_zone
+                        if self.objectives and self.objectives.objectives
+                        else None,
+                        fem_required=fem_required,
+                    )
+                    all_violations.extend(part_report.violations)
+                    total_cost += part_report.unit_cost
+                    total_weight += part_report.weight_g
+                    if part_report.metadata:
+                        dof_count += getattr(part_report.metadata, "dof_count", 0)
+                        if getattr(part_report.metadata, "dof_warning", False):
+                            dof_warning = True
+
+                # Create aggregate validation report
+                from shared.workers.workbench_models import WorkbenchMetadata, WorkbenchResult
+
+                self.validation_report = WorkbenchResult(
+                    is_manufacturable=len(all_violations) == 0,
+                    unit_cost=total_cost,
+                    weight_g=total_weight,
+                    violations=list(set(all_violations)),
+                    metadata=WorkbenchMetadata(
+                        dof_count=dof_count,
+                        dof_warning=dof_warning,
+                    ),
                 )
 
                 # Build material lookup

@@ -105,6 +105,7 @@ class FailureReason(UppercaseStrEnum):
     # Electronics failures
     SHORT_CIRCUIT = "SHORT_CIRCUIT"
     OVERCURRENT = "OVERCURRENT"
+    OVERVOLTAGE = "OVERVOLTAGE"
     WIRE_TORN = "WIRE_TORN"
     OPEN_CIRCUIT = "OPEN_CIRCUIT"
 

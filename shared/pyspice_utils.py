@@ -198,6 +198,7 @@ def validate_circuit(
 
         if section:
             for comp in section.components:
+                # 1. Check Component Overcurrent
                 if comp.type == ElectronicComponentType.POWER_SUPPLY:
                     v_name = f"v{comp.component_id}".lower()
                     if v_name in sources_draw:
@@ -211,6 +212,35 @@ def validate_circuit(
                                     detail=f"Battery {comp.component_id} draw {draw:.2f}A exceeds limit {limit:.2f}A",
                                 )
                             )
+
+                # 2. Check Component Overvoltage (INT-125)
+                if comp.rated_voltage:
+                    # Determine terminals
+                    if comp.type in [
+                        ElectronicComponentType.SWITCH,
+                        ElectronicComponentType.RELAY,
+                    ]:
+                        n1 = f"{comp.component_id}_in"
+                        n2 = f"{comp.component_id}_out"
+                    else:
+                        n1 = f"{comp.component_id}_+"
+                        n2 = f"{comp.component_id}_-"
+
+                    v1 = node_voltages.get(n1, 0.0)
+                    v2 = node_voltages.get(n2, 0.0)
+                    v_diff = abs(v1 - v2)
+
+                    if v_diff > comp.rated_voltage * 1.2:  # 20% tolerance
+                        failures.append(
+                            SimulationFailure(
+                                reason=FailureReason.OVERVOLTAGE,
+                                detail=(
+                                    f"Component {comp.component_id} "
+                                    f"voltage {v_diff:.2f}V exceeds "
+                                    f"rating {comp.rated_voltage:.2f}V"
+                                ),
+                            )
+                        )
 
         # T007: Per-wire overcurrent check (INT-123)
         if section and section.wiring:
@@ -339,11 +369,15 @@ def calculate_static_power_budget(section: ElectronicsSection) -> dict:
     }
 
 
-def calculate_power_budget(circuit: Circuit, psu_config: PowerSupplyConfig) -> dict:
+def calculate_power_budget(
+    circuit: Circuit,
+    psu_config: PowerSupplyConfig,
+    section: ElectronicsSection | None = None,
+) -> dict:
     """
     Calculate the power budget for the circuit using SPICE simulation (dynamic check).
     """
-    res = validate_circuit(circuit, psu_config)
+    res = validate_circuit(circuit, psu_config, section=section)
 
     total_draw = res.total_draw_a
     capacity = psu_config.max_current_a

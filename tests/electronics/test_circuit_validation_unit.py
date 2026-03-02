@@ -132,6 +132,44 @@ def test_validate_circuit_overcurrent():
     assert any("OVERCURRENT" in e for e in result.errors)
 
 
+def test_validate_circuit_overvoltage():
+    """T009: Test an overvoltage case."""
+    psu_config = PowerSupplyConfig(voltage_dc=24.0, max_current_a=10.0)
+    components = [
+        ElectronicComponent(
+            component_id="m1",
+            type="motor",
+            rated_voltage=12.0,  # 12V rated motor on 24V supply
+            stall_current_a=2.0,
+        )
+    ]
+    wiring = [
+        WireConfig(
+            wire_id="w1",
+            from_terminal=WireTerminal(component="supply", terminal="v+"),
+            to_terminal=WireTerminal(component="m1", terminal="+"),
+            gauge_awg=22,
+            length_mm=100.0,
+        ),
+        WireConfig(
+            wire_id="w2",
+            from_terminal=WireTerminal(component="m1", terminal="-"),
+            to_terminal=WireTerminal(component="supply", terminal="0"),
+            gauge_awg=22,
+            length_mm=100.0,
+        ),
+    ]
+    section = ElectronicsSection(
+        power_supply=psu_config, components=components, wiring=wiring
+    )
+
+    circuit = build_circuit_from_section(section)
+    result = validate_circuit(circuit, psu_config, section=section)
+
+    assert result.valid is False
+    assert any("OVERVOLTAGE" in e for e in result.errors)
+
+
 def test_static_power_budget():
     """T008: Test static power budget calculation."""
     psu_config = PowerSupplyConfig(voltage_dc=12.0, max_current_a=5.0)
