@@ -1100,7 +1100,10 @@ class GenesisBackend(PhysicsBackend):
                             idx = joint.dof_start
                             # We need to set all DOFs or use specific indices
                             forces = entity.get_dofs_force()
-                            forces[idx] = val
+                            # Clamp control to force range for stability
+                            fr = info["force_range"]
+                            clamped_val = np.clip(val, fr[0], fr[1])
+                            forces[idx] = clamped_val
                             self._set_entity_dofs_force(entity, forces)
                     except Exception as e:
                         logger.debug("mjcf_apply_control_failed", error=str(e))
