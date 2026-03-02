@@ -275,13 +275,98 @@ unset EXTRA_DEBUG_LOG
 # Start Frontend if Playwright tests are requested
 FRONTEND_PID=""
 if [ "$RUN_PLAYWRIGHT" = true ]; then
-  echo "Building and Starting Frontend (Production Mode for Stability)..."
-  # Generate fresh OpenAPI specs to ensure the build is up-to-date with current models
-  PYTHONPATH=. uv run python scripts/generate_openapi.py
-  (cd frontend && npm run gen:api)
-  echo "VITE_API_URL=http://localhost:18000" > frontend/.env.production
-  echo "VITE_IS_INTEGRATION_TEST=true" >> frontend/.env.production
-  (cd frontend && rm -rf dist && npm run build)
+  GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || true)
+  FRONTEND_BUILD_STATE_FILE=""
+  if [ -n "$GIT_DIR" ]; then
+    FRONTEND_BUILD_STATE_FILE="$GIT_DIR/problemologist_integration_frontend_build_commit"
+  fi
+
+  is_non_test_frontend_source_file() {
+    local file="$1"
+    case "$file" in
+      frontend/*)
+        case "$file" in
+          *".test."*|*".spec."*|*/__tests__/*|*/tests/*)
+            return 1
+            ;;
+          *)
+            return 0
+            ;;
+        esac
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  }
+
+  has_non_test_frontend_changes() {
+    local files="$1"
+    local file
+    while IFS= read -r file; do
+      [ -z "$file" ] && continue
+      if is_non_test_frontend_source_file "$file"; then
+        return 0
+      fi
+    done <<< "$files"
+    return 1
+  }
+
+  should_rebuild_frontend() {
+    if [ ! -d frontend/dist ]; then
+      return 0
+    fi
+
+    local working_tree_changes
+    working_tree_changes=$(
+      {
+        git diff --name-only -- frontend
+        git diff --cached --name-only -- frontend
+        git ls-files --others --exclude-standard -- frontend
+      } | sort -u
+    )
+    if has_non_test_frontend_changes "$working_tree_changes"; then
+      return 0
+    fi
+
+    if [ -z "$FRONTEND_BUILD_STATE_FILE" ] || [ ! -f "$FRONTEND_BUILD_STATE_FILE" ]; then
+      return 0
+    fi
+
+    local last_built_commit
+    last_built_commit=$(cat "$FRONTEND_BUILD_STATE_FILE")
+    if [ -z "$last_built_commit" ] || ! git cat-file -e "$last_built_commit^{commit}" 2>/dev/null; then
+      return 0
+    fi
+
+    local committed_changes_since_last_build
+    committed_changes_since_last_build=$(git diff --name-only "$last_built_commit"..HEAD -- frontend)
+    if has_non_test_frontend_changes "$committed_changes_since_last_build"; then
+      return 0
+    fi
+
+    return 1
+  }
+
+  SHOULD_REBUILD_FRONTEND=false
+  if should_rebuild_frontend; then
+    SHOULD_REBUILD_FRONTEND=true
+  fi
+
+  if [ "$SHOULD_REBUILD_FRONTEND" = true ]; then
+    echo "Building frontend (detected non-test frontend changes since last integration build or missing dist)..."
+    # Generate fresh OpenAPI specs to ensure the build is up-to-date with current models
+    PYTHONPATH=. uv run python scripts/generate_openapi.py
+    (cd frontend && npm run gen:api)
+    echo "VITE_API_URL=http://localhost:18000" > frontend/.env.production
+    echo "VITE_IS_INTEGRATION_TEST=true" >> frontend/.env.production
+    (cd frontend && rm -rf dist && npm run build)
+    if [ -n "$FRONTEND_BUILD_STATE_FILE" ]; then
+      git rev-parse HEAD > "$FRONTEND_BUILD_STATE_FILE"
+    fi
+  else
+    echo "Skipping frontend build (no non-test frontend changes since last integration build)."
+  fi
   
   # Start serving on port 15173 with proxy to controller
   (cd frontend/dist && npx http-server -p 15173 --proxy http://localhost:18000? > "../../$LOG_DIR/frontend.log" 2>&1) &
