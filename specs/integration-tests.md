@@ -3,7 +3,7 @@
 ## **CRITICAL NOTE TO IMPLEMENTATION AGENTS**
 
 These workflows are integration workflows. Do **not** satisfy them with unit tests disguised as integration tests.
-Use mocks only when they are strictly unavoidable, and document each mock with a justification in the test docstring.
+Do not mock project/runtime boundaries in integration tests; only unavoidable third-party instability may be isolated, and each such case must be justified in the test docstring.
 
 **CONTROL THE TEST EXECUTION *ONLY* BY HTTP REQUESTS IN EVERY TEST. DO NOT DO TESTS THAT ARE EFFECTIVELY UNIT TESTS**
 **FILE CREATION SHOULD BE MADE VIA TOOL CALLS. EXECUTION LOGIC SHOULD BE MADE VIA TOOL CALLS. EVERYTHING SHOULD BE MADE VIA HTTP REQUESTS, NOT VIA MOCKS AND UNIT TESTS!**
@@ -107,6 +107,10 @@ Priorities:
 | INT-061 | Asset serving security + session isolation contract | `GET /assets/{path}` serves only session-scoped files, returns expected MIME types for supported formats, and rejects stale/broken Python source assets with `422 Unprocessable Entity` when syntax heuristic fails. |
 | INT-062 | Split-worker OpenAPI artifact contract | Generated worker API schema is either (a) merged light+heavy `worker_openapi.json` or (b) separate `worker_light_openapi.json` + `worker_heavy_openapi.json`; benchmark/simulation endpoints must not disappear from generated artifacts. |
 | INT-063 | Mounted path compatibility/read-only contract | `/utils`, `/skills`, `/reviews`, `/config` mounts are present and read-only across light/heavy worker surfaces; write attempts fail while workspace root remains writable. |
+| INT-070 | Mounted path traversal protection | Path traversal attempts against mounted/read-only paths are rejected deterministically (`403`) and do not allow escaping mount boundaries. |
+| INT-071 | Agent filesystem policy precedence + reviewer write scope | `agents_config.yaml` enforcement matches policy precedence (`deny` > `allow`, unmatched => deny, agent override over defaults) and reviewer write/edit is restricted to `reviews/review-round-*/review.md` only. |
+| INT-072 | `plan_refusal.md` validation + reviewer routing | Plan refusal requires valid `plan_refusal.md` frontmatter, role-specific reason enums, non-empty evidence body, supports multi-reason lists, and reviewer `confirm_plan_refusal` / `reject_plan_refusal` routes deterministically. |
+| INT-073 | Session/episode/child-ID observability linkage | Persisted records/events expose joinable linkage `user_session_id -> episode_id -> (simulation_run_id, cots_query_id, review_id)` without conflating IDs. |
 | INT-101 | Physics backend selection contract | Setting `physics.backend: "mujoco"` in config selects the MuJoCo backend; `"genesis"` selects Genesis. Default (`genesis`) is used when not specified. `simulation_backend_selected` event emitted. |
 | INT-102 | FEM material config validation | When `fem_enabled: true`, all manufactured parts must have FEM fields (`youngs_modulus_pa`, `poissons_ratio`, `yield_stress_pa`, `ultimate_stress_pa`) in `manufacturing_config.yaml`; missing fields rejected with clear error before simulation. |
 | INT-103 | Part breakage detection | Simulation with a part exceeding `ultimate_stress_pa` stops immediately with `failure_reason: PART_BREAKAGE`; result contains part label, stress value, location; `part_breakage` event emitted. |
@@ -152,7 +156,7 @@ Priorities:
 | INT-058 | Cross-system correlation IDs | A single episode/trace can be correlated across controller logs/events, Temporal records, and S3 asset metadata. |
 | INT-059 | Langfuse trace linkage in live runs | With valid `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`, live episode execution emits trace records linked by non-empty `langfuse_trace_id`; tool/LLM/event traces are correlated to the same run-level trace identity. |
 | INT-060 | Langfuse feedback forwarding contract | `POST /episodes/{episode_id}/traces/{trace_id}/feedback` forwards score/comment to Langfuse and persists local feedback fields; missing Langfuse client returns `503`, missing `langfuse_trace_id` returns `400`. |
-| INT-064 | COTS reproducibility metadata persistence | COTS queries/selection persist reproducibility metadata (`catalog_version`, `bd_warehouse_commit`, `generated_at`) and expose it in downstream artifacts/events used for replayable evaluation. |
+| INT-064 | COTS reproducibility metadata persistence | COTS queries/selection persist reproducibility metadata (`catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`) plus normalized query snapshot, ordered candidates, and final selected `part_id`s; all are exposed in downstream artifacts/events used for replayable evaluation, and handoff is invalid when selected parts exist without this metadata. |
 | INT-065 | Skill safety toggle enforcement | Skill-writer flow blocks or reverts sessions that overwrite/delete more than configured threshold lines (15), records safety event, and preserves prior skill content when guard trips. |
 | INT-066 | Fluid-on-electronics failure coupling | In electromechanical simulations with fluids enabled, fluid contact with powered electrical components triggers electrical failure state and benchmark failure/penalty path. |
 | INT-067 | Steerability exact-pointing + mention payload contract | Face/edge/vertex/part/subassembly selections and `@`-mentions are accepted over API/UI boundary, preserved in prompt payload, and observable in run traces/events used by the agent. |
@@ -290,7 +294,11 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-061 | Request assets via live `GET /assets/{path}` with `X-Session-ID`; assert MIME behavior, cross-session denial, and `422` rejection for syntactically broken Python source. | Calling asset-serving helper directly or checking filesystem paths without HTTP boundary. |
 | INT-062 | Generate/fetch worker OpenAPI artifact(s) in CI/integration environment and assert light+heavy endpoint coverage is present. | Linting a stale committed schema file without runtime generation. |
 | INT-063 | Attempt writes to mounted paths and writes to workspace root via live file APIs; assert read-only mounts and writable workspace behavior across worker surfaces. | Asserting config constants for mount paths without exercising container mounts. |
-| INT-064 | Execute COTS lookup and artifact handoff via APIs; assert persisted `catalog_version`, `bd_warehouse_commit`, and `generated_at` in events/records/artifacts. | Unit-testing metadata dataclass construction only. |
+| INT-064 | Execute COTS lookup and artifact handoff via APIs; assert persisted `catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`, normalized query snapshot, ordered candidates, and selected `part_id`s in events/records/artifacts. | Unit-testing metadata dataclass construction only. |
+| INT-070 | Attempt mounted-path traversal via live file APIs (e.g., `/utils/../...`); assert deterministic `403` and no cross-boundary access. | Path-normalization unit checks without exercising worker HTTP/file boundary. |
+| INT-071 | Execute per-agent file operations via live file APIs and assert `agents_config.yaml` precedence (`deny` > `allow`, unmatched deny, agent override) and reviewer-only write scope (`reviews/review-round-*/review.md`). | In-process path policy matcher and precedence helpers only. |
+| INT-072 | Submit refusal artifacts through real planner/reviewer flow; assert invalid/missing `plan_refusal.md`, invalid role reasons, or empty evidence are rejected; assert `confirm_plan_refusal`/`reject_plan_refusal` transitions. | Frontmatter parser-only tests without exercising orchestration route/state transitions. |
+| INT-073 | Execute real episode runs and assert persisted traces/events expose `user_session_id`, `episode_id`, `simulation_run_id`, `cots_query_id`, and `review_id` with joinable linkage. | Checking schema fields exist without runtime persistence assertions. |
 | INT-065 | Run skill-update path through live workflow; attempt >15-line overwrite/delete and assert safety guard (block/revert) + persisted safety event. | Git diff unit test with mocked repository state. |
 | INT-066 | Run fluid-enabled electromechanical scenario via API where fluid contacts powered electronics; assert electrical failure reason and benchmark fail/penalty output. | Manually setting electrical failure enum without simulation path. |
 | INT-067 | Submit steerability request with topology selections and `@` part mentions through public API/UI contract; assert serialized payload reaches run trace/events and is consumed in agent prompt context. | Unit-testing prompt formatter with handcrafted input only. |
@@ -361,7 +369,7 @@ This section exists to force implementation as true integration tests, not unit 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
-- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-101..INT-112, INT-120..INT-128.
+- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-073, INT-101..INT-112, INT-120..INT-128.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 - `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177.
