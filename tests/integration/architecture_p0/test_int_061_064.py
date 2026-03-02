@@ -153,10 +153,10 @@ async def test_int_063_mounted_path_read_only():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_064_path_traversal_protection():
-    """INT-064: Path traversal protection for mounted directories."""
+async def test_int_070_mounted_path_traversal_protection():
+    """INT-070: Mounted path traversal protection."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-64-{int(time.time())}"
+        session_id = f"INT-070-{int(time.time())}"
 
         # Attempt to escape /utils mount point via path traversal.
         # We use /fs/read because GET /assets/... might be normalized by the HTTP client.

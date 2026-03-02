@@ -35,7 +35,7 @@ def test_cots_search_event():
     # We might need to mock create_engine or just provide a dummy db
     # To keep it simple, I'll just verify the emission logic exists.
     try:
-        search_parts(query, "non_existent.db")
+        results, _ = search_parts(query, "non_existent.db")
     except Exception:
         pass
 
@@ -46,6 +46,6 @@ def test_cots_search_event():
     from unittest.mock import patch
 
     with patch("shared.cots.runtime.Session"):
-        search_parts(query, "dummy.db")
+        results, _ = search_parts(query, "dummy.db")
 
     assert_event_emitted("cots_search", query="motor")

@@ -14,26 +14,29 @@ def mock_search_parts():
 
 def test_search_cots_catalog_success(mock_search_parts):
     # Setup mock return data
-    mock_search_parts.return_value = [
-        COTSItem(
-            part_id="M3-10",
-            name="M3 Bolt 10mm",
-            category="fastener",
-            unit_cost=0.10,
-            weight_g=1.5,
-            import_recipe="Box(3)",
-            metadata={"material": "steel"},
-        ),
-        COTSItem(
-            part_id="M3-12",
-            name="M3 Bolt 12mm",
-            category="fastener",
-            unit_cost=0.12,
-            weight_g=1.7,
-            import_recipe="Box(3)",
-            metadata={"material": "steel"},
-        ),
-    ]
+    mock_search_parts.return_value = (
+        [
+            COTSItem(
+                part_id="M3-10",
+                name="M3 Bolt 10mm",
+                category="fastener",
+                unit_cost=0.10,
+                weight_g=1.5,
+                import_recipe="Box(3)",
+                metadata={"material": "steel"},
+            ),
+            COTSItem(
+                part_id="M3-12",
+                name="M3 Bolt 12mm",
+                category="fastener",
+                unit_cost=0.12,
+                weight_g=1.7,
+                import_recipe="Box(3)",
+                metadata={"material": "steel"},
+            ),
+        ],
+        {"catalog_version": "v1.0", "cots_query_id": "test-query-id"},
+    )
 
     # Invoke tool with correct arguments dict
     result = search_cots_catalog.invoke({"query": "M3 bolts", "max_cost": 0.20})
@@ -52,7 +55,7 @@ def test_search_cots_catalog_success(mock_search_parts):
 
 
 def test_search_cots_catalog_no_results(mock_search_parts):
-    mock_search_parts.return_value = []
+    mock_search_parts.return_value = ([], {})
 
     result = search_cots_catalog.invoke({"query": "Unobtainium"})
 
@@ -60,7 +63,7 @@ def test_search_cots_catalog_no_results(mock_search_parts):
 
 
 def test_search_cots_catalog_all_args(mock_search_parts):
-    mock_search_parts.return_value = []
+    mock_search_parts.return_value = ([], {})
 
     search_cots_catalog.invoke(
         {
