@@ -6,22 +6,32 @@ interface ThoughtBlockProps {
   duration?: number;
   content?: string;
   className?: string;
+  title?: string;
+  testId?: string;
 }
 
-export const ThoughtBlock = memo(({ duration = 0, content, className }: ThoughtBlockProps) => {
+export const ThoughtBlock = memo(({
+  duration = 0,
+  content,
+  className,
+  title,
+  testId = "thought-block"
+}: ThoughtBlockProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   if (!content && duration === 0) return null;
 
+  const label = title || `Thought for ${duration}s`;
+
   return (
     <div className={cn("space-y-1 mb-2", className)}>
       <button 
-        data-testid="thought-block"
+        data-testid={testId}
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 text-[12px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-0.5"
       >
         {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        <span className="font-medium tracking-tight">Thought for {duration}s</span>
+        <span className="font-medium tracking-tight">{label}</span>
       </button>
       
       {isOpen && content && (

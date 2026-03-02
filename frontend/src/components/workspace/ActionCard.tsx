@@ -70,6 +70,7 @@ export const ActionCard = memo(({ trace, resultCount, className, assets, setActi
 
   return (
     <div 
+      data-testid="tool-activity-row"
       onClick={handleActionClick}
       className={cn(
         "flex items-center gap-2 py-0.5 transition-colors cursor-pointer group/action text-[11px] leading-tight",

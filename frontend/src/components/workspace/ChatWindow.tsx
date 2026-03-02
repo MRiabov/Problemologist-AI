@@ -15,6 +15,7 @@ import { Button } from "../ui/button";
 import { ContextCards } from "./ContextCards";
 import { useEpisodes } from "../../context/EpisodeContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useUISettings } from "../../context/UISettingsContext";
 import type { TopologyNode } from "../visualization/ModelBrowser";
 import { ChatInput } from "../Chat/ChatInput";
 import { TraceList } from "./TraceList";
@@ -51,6 +52,7 @@ export default function ChatWindow({
       setFeedbackState
   } = useEpisodes();
   const { theme } = useTheme();
+  const { viewReasoning, setViewReasoning } = useUISettings();
 
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
@@ -133,6 +135,14 @@ export default function ChatWindow({
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-[11px] font-bold tracking-tight opacity-70">Engineer Workspace</span>
           </div>
+          <button
+            data-testid="view-reasoning-toggle"
+            type="button"
+            onClick={() => setViewReasoning(!viewReasoning)}
+            className="text-[10px] font-semibold px-2 py-1 rounded-md border border-border hover:bg-muted transition-colors"
+          >
+            View reasoning: {viewReasoning ? "On" : "Off"}
+          </button>
       </div>
 
       {/* Main Content Area */}
@@ -181,6 +191,7 @@ export default function ChatWindow({
                     traces={traces}
                     assets={stableAssets}
                     theme={theme}
+                    showReasoning={viewReasoning}
                     onAssetClick={handleAssetClick}
                     addToContext={addToContext}
                     onShowFeedback={handleShowFeedback}
