@@ -149,16 +149,6 @@ async def coder_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        worker_client=state.worker_client,
-        fs=state.fs,
     )
     node = CoderNode(context=ctx)
-    new_state = await node(state)
-
-    # Persist clients in state for reuse by subsequent nodes
-    return new_state.model_copy(
-        update={
-            "worker_client": ctx.worker_client,
-            "fs": ctx.fs,
-        }
-    )
+    return await node(state)
