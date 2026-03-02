@@ -24,7 +24,7 @@ bolt = HexBolt(size='M6')""",
 
 def test_search_cots_catalog_tool(mock_parts):
     with patch("shared.cots.agent.search_parts") as mock_search:
-        mock_search.return_value = mock_parts
+        mock_search.return_value = (mock_parts, {"catalog_version": "v1.0"})
 
         # Tools in LangChain are invoked via .invoke()
         result = search_cots_catalog.invoke({"query": "bolt", "max_weight_g": 20.0})
@@ -42,7 +42,7 @@ def test_search_cots_catalog_tool(mock_parts):
 
 def test_search_cots_catalog_no_results():
     with patch("shared.cots.agent.search_parts") as mock_search:
-        mock_search.return_value = []
+        mock_search.return_value = ([], {})
 
         result = search_cots_catalog.invoke({"query": "nonexistent"})
 
@@ -50,6 +50,5 @@ def test_search_cots_catalog_no_results():
 
 
 def test_create_cots_search_agent():
-    with patch("shared.cots.agent.ChatOpenAI") as mock_chat:
-        agent = create_cots_search_agent("gpt-4o")
-        assert agent is not None
+    agent = create_cots_search_agent("gpt-4o")
+    assert agent is not None

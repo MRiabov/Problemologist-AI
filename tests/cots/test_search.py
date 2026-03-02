@@ -43,14 +43,14 @@ def test_db(tmp_path):
 
 def test_search_by_name(test_db):
     query = SearchQuery(query="bolt")
-    results = search_parts(query, test_db)
+    results, _ = search_parts(query, test_db)
     assert len(results) == 1
     assert results[0].part_id == "test_bolt_m6"
 
 
 def test_search_by_category(test_db):
     query = SearchQuery(query="motor")
-    results = search_parts(query, test_db)
+    results, _ = search_parts(query, test_db)
     assert len(results) == 1
     assert results[0].category == "motor"
 
@@ -58,22 +58,22 @@ def test_search_by_category(test_db):
 def test_search_with_constraints(test_db):
     # Weight constraint
     query = SearchQuery(query="", constraints={"max_weight_g": 100})
-    results = search_parts(query, test_db)
+    results, _ = search_parts(query, test_db)
     assert len(results) == 1
     assert results[0].part_id == "test_bolt_m6"
 
     # Cost constraint
     query = SearchQuery(query="", constraints={"max_cost": 20})
-    results = search_parts(query, test_db)
+    results, _ = search_parts(query, test_db)
     assert len(results) == 2
 
     query = SearchQuery(query="", constraints={"max_cost": 1})
-    results = search_parts(query, test_db)
+    results, _ = search_parts(query, test_db)
     assert len(results) == 1
     assert results[0].part_id == "test_bolt_m6"
 
 
 def test_search_limit(test_db):
     query = SearchQuery(query="", limit=1)
-    results = search_parts(query, test_db)
+    results, _ = search_parts(query, test_db)
     assert len(results) == 1
