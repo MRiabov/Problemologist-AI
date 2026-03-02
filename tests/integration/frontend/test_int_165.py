@@ -8,6 +8,28 @@ from playwright.sync_api import Page, expect
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
+def _ensure_viewport_assets(page: Page) -> None:
+    assets_overlay = page.get_by_test_id("no-assets-overlay")
+    if not assets_overlay.is_visible():
+        return
+
+    for _ in range(3):
+        if not assets_overlay.is_visible():
+            return
+        rebuild_assets_button = page.get_by_test_id("rebuild-assets-button")
+        expect(rebuild_assets_button).to_be_visible(timeout=30000)
+        try:
+            rebuild_assets_button.click(force=True, timeout=10000)
+        except Exception:
+            pass
+        page.wait_for_load_state("networkidle", timeout=60000)
+        page.wait_for_timeout(800)
+
+    assert not assets_overlay.is_visible(), (
+        "Viewport assets remained unavailable after rebuild retries"
+    )
+
+
 @pytest.mark.integration_frontend
 def test_cad_topology_selection_and_browser(page: Page):
     # 1. Navigate to the local development server
@@ -50,17 +72,12 @@ def test_cad_topology_selection_and_browser(page: Page):
     expect(confirm_button).to_be_visible()
     confirm_button.click()
 
-    # 7. Wait for either generated assets or fallback rebuild affordance.
-    assets_overlay = page.get_by_test_id("no-assets-overlay")
-    if assets_overlay.is_visible():
-        expect(page.get_by_test_id("rebuild-assets-button")).to_be_visible(
-            timeout=30000
-        )
+    # 7. Ensure assets are loaded for topology interactions.
+    _ensure_viewport_assets(page)
 
-    # 8. Test Topology Browser availability and toggle where available.
+    # 8. Test Topology Browser availability and toggle.
     topology_toggle = page.get_by_test_id("model-browser-toggle")
-    if topology_toggle.count() == 0:
-        pytest.skip("Topology toggle unavailable in this integration run")
+    assert topology_toggle.count() > 0, "Topology toggle is missing"
     topology_toggle_button = topology_toggle.first
     expect(topology_toggle_button).to_be_visible(timeout=30000)
 
@@ -68,8 +85,13 @@ def test_cad_topology_selection_and_browser(page: Page):
     model_browser = page.get_by_test_id("model-browser-panel")
     expect(model_browser).to_be_visible(timeout=30000)
 
-    if page.get_by_test_id("no-model-overlay").is_visible():
-        pytest.skip("Model asset overlay active; topology interaction unavailable")
+    model_overlay = page.get_by_test_id("no-model-overlay")
+    if model_overlay.is_visible():
+        rebuild_model_button = page.get_by_test_id("rebuild-model-button")
+        expect(rebuild_model_button).to_be_visible(timeout=30000)
+        rebuild_model_button.click(force=True)
+        page.wait_for_load_state("networkidle", timeout=60000)
+        expect(model_overlay).not_to_be_visible(timeout=60000)
 
     # 9. Test Selection Modes
     face_selection = page.get_by_title("Face Selection")
