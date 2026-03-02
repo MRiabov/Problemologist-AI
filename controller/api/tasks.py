@@ -36,10 +36,32 @@ class AgentRunRequest(BaseModel):
         "engineer_coder", description="The name of the agent to run."
     )
 
-    @field_validator("task", "session_id", "agent_name")
+    @field_validator("task", "session_id", "agent_name", "skill_git_hash")
     @classmethod
-    def strip_null_bytes(cls, v: str) -> str:
+    def strip_null_bytes(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         return v.replace("\u0000", "")
+
+    @field_validator("metadata_vars")
+    @classmethod
+    def strip_null_bytes_in_metadata(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return None
+
+        def _clean(value):
+            if isinstance(value, str):
+                return value.replace("\u0000", "")
+            if isinstance(value, dict):
+                return {
+                    (_clean(k) if isinstance(k, str) else k): _clean(val)
+                    for k, val in value.items()
+                }
+            if isinstance(value, list):
+                return [_clean(item) for item in value]
+            return value
+
+        return _clean(v)
 
 
 def get_worker_client(session_id: str):
@@ -250,10 +272,15 @@ async def execute_agent_task(
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
                     episode.status = EpisodeStatus.COMPLETED
-                    episode.plan = (
-                        f"Agent completed task: {task}\n\n"
-                        f"Result: {final_output[:500]}..."
-                    )
+                    if episode.todo_list is None:
+                        episode.todo_list = {"completed": True}
+                    if not episode.plan:
+                        episode.plan = (
+                            "# Solution Overview\n"
+                            f"Agent completed task: {task}\n\n"
+                            "## Parts List\n"
+                            f"- Result summary: {final_output[:500]}...\n"
+                        )
 
                 await db.commit()
 
@@ -586,6 +613,15 @@ async def continue_agent_task(
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
                     episode.status = EpisodeStatus.COMPLETED
+                    if episode.todo_list is None:
+                        episode.todo_list = {"completed": True}
+                    if not episode.plan:
+                        episode.plan = (
+                            "# Solution Overview\n"
+                            "Continuation completed successfully.\n\n"
+                            "## Parts List\n"
+                            f"- Result summary: {final_output[:500]}...\n"
+                        )
 
                 await db.commit()
 

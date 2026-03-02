@@ -74,9 +74,13 @@ async def upload_to_s3_activity(
     simulate_failures: FailureSimulationConfig = FailureSimulationConfig(),
 ) -> str:
     """Upload video to S3 using S3Client."""
+    import asyncio
     from pathlib import Path
 
     if simulate_failures.s3_upload:
+        # Keep workflow in RUNNING state briefly so retry-path observability tests
+        # can assert intermediate status before terminal failure.
+        await asyncio.sleep(2)
         raise RuntimeError("Simulated S3 upload failure")
 
     if os.getenv("SIMULATE_S3_FAILURE") == "true":

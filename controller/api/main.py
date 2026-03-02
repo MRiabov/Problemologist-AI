@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 from temporalio.client import Client
 
 from controller.api import ops
@@ -11,7 +13,7 @@ from controller.api.routes import benchmark, cots, episodes, skills
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Episode
+from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger, log_marker_middleware
 
@@ -71,9 +73,17 @@ app.include_router(benchmark.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
 app.include_router(ops.router, prefix="/api")
 app.include_router(cots.router, prefix="/api")
+# Backward compatibility for integration tests and legacy clients that use
+# unprefixed controller routes.
+app.include_router(episodes.router)
+app.include_router(benchmark.router)
+app.include_router(skills.router)
+app.include_router(ops.router)
+app.include_router(cots.router)
 from controller.api.routes import simulation, steerability
 
 app.include_router(simulation.router, prefix="/api")
+app.include_router(simulation.router)
 app.include_router(steerability.router, prefix="/api/v1")
 
 
@@ -87,6 +97,7 @@ from controller.utils import get_episode_id
 
 
 @app.post("/api/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
+@app.post("/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
 async def create_test_episode(request: AgentRunRequest):
     """Create a dummy episode for testing purposes (no agent run)."""
     if not settings.is_integration_test:
@@ -99,15 +110,38 @@ async def create_test_episode(request: AgentRunRequest):
         if "worker_session_id" not in metadata:
             metadata["worker_session_id"] = request.session_id
 
+        episode_id = get_episode_id(request.session_id)
+        existing = await db.get(Episode, episode_id)
+        if existing:
+            # Reset deterministic test episodes so repeated runs start cleanly.
+            await db.execute(delete(Trace).where(Trace.episode_id == episode_id))
+            await db.execute(delete(Asset).where(Asset.episode_id == episode_id))
+            existing.task = request.task
+            existing.status = EpisodeStatus.RUNNING
+            existing.metadata_vars = metadata
+            existing.skill_git_hash = request.skill_git_hash
+            existing.todo_list = None
+            existing.journal = None
+            existing.plan = None
+            await db.commit()
+            return EpisodeCreateResponse(episode_id=existing.id)
+
         episode = Episode(
-            id=get_episode_id(request.session_id),
+            id=episode_id,
             task=request.task,
             status=EpisodeStatus.RUNNING,
             metadata_vars=metadata,
             skill_git_hash=request.skill_git_hash,
         )
         db.add(episode)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            existing = await db.get(Episode, episode_id)
+            if existing:
+                return EpisodeCreateResponse(episode_id=existing.id)
+            raise
         await db.refresh(episode)
         return EpisodeCreateResponse(episode_id=episode.id)
 
@@ -123,6 +157,7 @@ async def health_check():
 
 
 @app.post("/api/agent/run", status_code=202, response_model=AgentRunResponse)
+@app.post("/agent/run", status_code=202, response_model=AgentRunResponse)
 async def run_agent(request: AgentRunRequest):
     # Note: We removed BackgroundTasks - we use asyncio.create_task for granular control
     session_factory = get_sessionmaker()

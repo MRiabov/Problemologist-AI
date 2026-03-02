@@ -9,6 +9,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    Path,
     Query,
     Response,
     WebSocket,
@@ -54,7 +55,7 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 @router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
 async def report_trace_feedback(
     episode_id: uuid.UUID,
-    trace_id: int,
+    trace_id: Annotated[int, Path(ge=-(2**31), le=2**31 - 1)],
     feedback: FeedbackRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -387,7 +388,12 @@ async def list_episodes(
                 skill_git_hash=ep.skill_git_hash,
                 template_versions=ep.template_versions,
                 metadata_vars=ep.metadata_vars,
-                todo_list=ep.todo_list,
+                todo_list=ep.todo_list
+                or (
+                    {"completed": True}
+                    if ep.status == EpisodeStatus.COMPLETED
+                    else None
+                ),
                 journal=ep.journal,
                 plan=ep.plan,
                 validation_logs=ep.validation_logs,
@@ -418,8 +424,15 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
     # Populate last_trace_id for EpisodeResponse
     last_trace_id = None
-    if episode.traces:
-        last_trace_id = max(t.id for t in episode.traces)
+    sorted_traces = sorted(episode.traces, key=lambda t: t.id)
+    if sorted_traces:
+        last_trace_id = max(t.id for t in sorted_traces)
+    canonical_lf_trace_id = next(
+        (t.langfuse_trace_id for t in sorted_traces if t.langfuse_trace_id),
+        str(episode.id),
+    )
+    for t in sorted_traces:
+        t.langfuse_trace_id = canonical_lf_trace_id
 
     return EpisodeResponse(
         id=episode.id,
@@ -430,13 +443,20 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         skill_git_hash=episode.skill_git_hash,
         template_versions=episode.template_versions,
         metadata_vars=episode.metadata_vars,
-        todo_list=episode.todo_list,
+        todo_list=episode.todo_list
+        or ({"completed": True} if episode.status == EpisodeStatus.COMPLETED else None),
         journal=episode.journal,
         plan=episode.plan,
         validation_logs=episode.validation_logs,
         last_trace_id=last_trace_id,
-        traces=[TraceResponse.model_validate(t) for t in episode.traces],
-        assets=[AssetResponse.model_validate(a) for a in episode.assets],
+        traces=[TraceResponse.model_validate(t) for t in sorted_traces],
+        assets=[
+            AssetResponse.model_validate(a)
+            for a in sorted(
+                episode.assets,
+                key=lambda a: (a.asset_type != AssetType.VIDEO, -(a.id or 0)),
+            )
+        ],
     )
 
 

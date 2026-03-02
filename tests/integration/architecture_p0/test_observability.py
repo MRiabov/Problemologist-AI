@@ -4,7 +4,7 @@ import uuid
 
 import httpx
 import pytest
-from temporalio.client import Client
+from temporalio.client import Client, WorkflowFailureError
 
 from controller.api.schemas import (
     AgentRunResponse,
@@ -136,7 +136,7 @@ async def test_int_054_temporal_failure_path():
         )
 
         # 3. Wait for workflow failure (it should fail after 3 attempts)
-        with pytest.raises(RuntimeError):
+        with pytest.raises((RuntimeError, WorkflowFailureError)):
             await handle.result()
 
         # 4. Verify episode status is FAILED in DB

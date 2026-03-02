@@ -193,10 +193,32 @@ class AgentRunRequest(BaseModel):
         "engineer_coder", description="The name of the agent to run."
     )
 
-    @field_validator("task", "session_id", "agent_name")
+    @field_validator("task", "session_id", "agent_name", "skill_git_hash")
     @classmethod
-    def strip_null_bytes(cls, v: str) -> str:
+    def strip_null_bytes(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         return v.replace("\u0000", "")
+
+    @field_validator("metadata_vars")
+    @classmethod
+    def strip_null_bytes_in_metadata(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return None
+
+        def _clean(value):
+            if isinstance(value, str):
+                return value.replace("\u0000", "")
+            if isinstance(value, dict):
+                return {
+                    (_clean(k) if isinstance(k, str) else k): _clean(val)
+                    for k, val in value.items()
+                }
+            if isinstance(value, list):
+                return [_clean(item) for item in value]
+            return value
+
+        return _clean(v)
 
 
 class BenchmarkGenerateRequest(BaseModel):

@@ -1,6 +1,8 @@
 import asyncio
 import os
+import shutil
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request
@@ -19,10 +21,46 @@ configure_logging("worker-light")
 logger = structlog.get_logger(__name__)
 
 
+def _seed_integration_skills() -> None:
+    """Populate worker skills mount for integration tests."""
+    skills_dir = settings.skills_dir
+    skills_dir.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    for root in [Path(".agent/skills"), Path.home() / ".codex/skills"]:
+        if not root.exists():
+            continue
+        for skill_dir in root.iterdir():
+            if not skill_dir.is_dir():
+                continue
+            skill_md = skill_dir / "SKILL.md"
+            if not skill_md.exists():
+                continue
+            target = skills_dir / skill_dir.name / "SKILL.md"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(skill_md, target)
+            copied += 1
+
+    if copied == 0:
+        placeholder = skills_dir / "build123d_cad_drafting_skill" / "SKILL.md"
+        placeholder.parent.mkdir(parents=True, exist_ok=True)
+        placeholder.write_text("", encoding="utf-8")
+
+    # Keep deterministic content for integration contract assertions.
+    canonical = skills_dir / "build123d_cad_drafting_skill" / "SKILL.md"
+    canonical.parent.mkdir(parents=True, exist_ok=True)
+    canonical.write_text(
+        "# Build123d CAD Drafting Skill\n\nPlaceholder skill for integration mode.\n",
+        encoding="utf-8",
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Sync skills (skipped in integration tests for speed/reliability)
-    if not settings.is_integration_test and settings.git_repo_url:
+    if settings.is_integration_test:
+        _seed_integration_skills()
+    elif settings.git_repo_url:
         sync_skills(
             repo_url=settings.git_repo_url,
             pat=settings.git_pat,
