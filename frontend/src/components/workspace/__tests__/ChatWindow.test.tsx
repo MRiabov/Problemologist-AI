@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ChatWindow from '../ChatWindow';
 import { useEpisodes } from '../../../context/EpisodeContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useUISettings } from '../../../context/UISettingsContext';
 import { MemoryRouter } from 'react-router-dom';
 import { EpisodeStatus } from '../../../api/generated/models/EpisodeStatus';
 import { TraceType } from '../../../api/generated/models/TraceType';
@@ -21,6 +22,14 @@ vi.mock('../../../context/ThemeContext', async () => {
     return {
         ...actual,
         useTheme: vi.fn(),
+    };
+});
+
+vi.mock('../../../context/UISettingsContext', async () => {
+    const actual = await vi.importActual('../../../context/UISettingsContext');
+    return {
+        ...actual,
+        useUISettings: vi.fn(),
     };
 });
 
@@ -55,6 +64,7 @@ describe('ChatWindow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (useTheme as any).mockReturnValue({ theme: 'dark' });
+        (useUISettings as any).mockReturnValue({ viewReasoning: false, setViewReasoning: vi.fn() });
         (useEpisodes as any).mockReturnValue(defaultEpisodeContext);
     });
 
@@ -107,6 +117,7 @@ describe('ChatWindow', () => {
             { id: '1', trace_type: 'thought', content: 'I am thinking' },
             { id: '2', trace_type: TraceType.TOOL_START, name: 'view_file', content: '{"path": "test.py"}' },
         ];
+        (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
 
         render(
             <MemoryRouter>
@@ -117,6 +128,24 @@ describe('ChatWindow', () => {
         expect(screen.getByText(/Thought for/i)).toBeInTheDocument();
         expect(screen.getByText(/Read/i)).toBeInTheDocument();
         expect(screen.getByText(/test.py/i)).toBeInTheDocument();
+    });
+
+    it('renders phase logs as reasoning when view reasoning is enabled', () => {
+        const traces = [
+            { id: '10', trace_type: TraceType.LOG, name: 'planner', content: "Completed task phase: planner. Result: Prediction(trajectory={'thought_0': 'First thought', 'thought_1': 'Second thought'})" },
+        ];
+        (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
+
+        render(
+            <MemoryRouter>
+                <ChatWindow traces={traces as any} />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByText(/Reasoning around planner/i)).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('reasoning-span'));
+        expect(screen.getByText(/First thought/i)).toBeInTheDocument();
+        expect(screen.getByText(/Second thought/i)).toBeInTheDocument();
     });
 
     it('renders failure message when episode failed', () => {
