@@ -268,39 +268,11 @@ async def execute_agent_task(
                 )
                 db.add(final_llm_trace)
 
-                # Update episode status immediately
-                await db.refresh(episode)
-                if episode.status != EpisodeStatus.CANCELLED:
-                    episode.status = EpisodeStatus.COMPLETED
-                    if episode.todo_list is None:
-                        episode.todo_list = {"completed": True}
-                    if not episode.plan:
-                        episode.plan = (
-                            "# Solution Overview\n"
-                            f"Agent completed task: {task}\n\n"
-                            "## Parts List\n"
-                            f"- Result summary: {final_output[:500]}...\n"
-                        )
-
                 await db.commit()
+                await db.refresh(final_llm_trace)
 
                 # Broadcast final message
                 await db_callback._broadcast_trace(final_llm_trace)
-
-                # Broadcast status update
-                from controller.api.manager import manager
-
-                await manager.broadcast(
-                    episode_id,
-                    {
-                        "type": "status_update",
-                        "status": EpisodeStatus.COMPLETED,
-                        "metadata_vars": episode.metadata_vars,
-                        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
-                    },
-                )
-
-                logger.info("agent_task_logic_completed", episode_id=episode_id)
 
                 # Report automated score to Langfuse
                 if langfuse_callback:
@@ -437,11 +409,77 @@ async def execute_agent_task(
                                         error=str(e),
                                     )
 
+                    simulation_success_text: str | None = None
                     await sync_dir("/")
+                    try:
+                        raw_results = await client.read_file("validation_results.json")
+                        if raw_results:
+                            import json
+
+                            data = json.loads(raw_results)
+                            summary = str(data.get("summary", "")).strip()
+                            status = str(data.get("status", "")).strip().lower()
+                            if status in {"ok", "success"} and summary:
+                                simulation_success_text = summary
+                    except Exception:
+                        pass
+                    if not simulation_success_text:
+                        try:
+                            raw_sim = await client.read_file("simulation_result.json")
+                            if raw_sim:
+                                import json
+
+                                sim_data = json.loads(raw_sim)
+                                summary = str(sim_data.get("summary", "")).strip()
+                                if summary:
+                                    simulation_success_text = summary
+                        except Exception:
+                            pass
+
+                    if simulation_success_text:
+                        db.add(
+                            Trace(
+                                episode_id=episode_id,
+                                trace_type=TraceType.LOG,
+                                content=simulation_success_text,
+                                langfuse_trace_id=trace_id,
+                            )
+                        )
                     await db.commit()
                     logger.info("asset_sync_completed", episode_id=episode_id)
                 except Exception as e:
                     logger.error("failed_to_sync_assets", error=str(e))
+
+                # Mark completion after traces/assets are persisted.
+                await db.refresh(episode)
+                if episode.status != EpisodeStatus.CANCELLED:
+                    episode.status = EpisodeStatus.COMPLETED
+                    if episode.todo_list is None:
+                        episode.todo_list = {"completed": True}
+                    if not episode.plan:
+                        episode.plan = (
+                            "# Solution Overview\n"
+                            f"Agent completed task: {task}\n\n"
+                            "## Parts List\n"
+                            f"- Result summary: {final_output[:500]}...\n"
+                        )
+                    await db.commit()
+
+                    from controller.api.manager import manager
+
+                    await manager.broadcast(
+                        episode_id,
+                        {
+                            "type": "status_update",
+                            "status": EpisodeStatus.COMPLETED,
+                            "metadata_vars": episode.metadata_vars,
+                            "timestamp": datetime.datetime.now(
+                                datetime.UTC
+                            ).isoformat(),
+                        },
+                    )
+
+                logger.info("agent_task_logic_completed", episode_id=episode_id)
 
             except asyncio.CancelledError:
                 logger.info("agent_run_cancelled", episode_id=episode_id)
