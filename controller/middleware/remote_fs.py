@@ -117,6 +117,49 @@ class RemoteFilesystemMiddleware:
         )
         return await self.client.list_files(str(path))
 
+    async def glob_info(
+        self, pattern: str, path: str | Path | None = None
+    ) -> list[FileInfo]:
+        """List files matching a glob pattern via the Worker client."""
+        # Check permission for the base path
+        base_path = path or "."
+        self._check_perm("read", base_path)
+        # We don't have a direct glob_info on worker, so we use grep with glob
+        # but grep returns GrepMatch, not FileInfo.
+        # Actually, let's just use list_files if path is provided, or implement glob on worker.
+        # For now, we'll use grep to find files and then list_files for metadata if needed.
+        # Alternatively, we can just use grep with a pattern that matches everything.
+        matches = await self.client.grep(".*", path=str(base_path) if path else None, glob=pattern)
+        # Convert GrepMatch to FileInfo (roughly)
+        files = {}
+        for m in matches:
+            if m.path not in files:
+                files[m.path] = FileInfo(
+                    name=os.path.basename(m.path),
+                    path=m.path,
+                    type="file",
+                    size=0, # Unknown without another call
+                    mtime=0,
+                )
+        return list(files.values())
+
+    async def upload_files(self, files: dict[str, str | bytes]) -> bool:
+        """Upload multiple files to the worker."""
+        for path, content in files.items():
+            self._check_perm("write", path)
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+            await self.client.upload_file(path, content)
+        return True
+
+    async def download_files(self, paths: list[str]) -> dict[str, bytes]:
+        """Download multiple files from the worker."""
+        results = {}
+        for path in paths:
+            self._check_perm("read", path)
+            results[path] = await self.client.read_file_binary(path)
+        return results
+
     async def inspect_topology(
         self, target_id: str, script_path: str | Path = "script.py"
     ) -> InspectTopologyResponse:

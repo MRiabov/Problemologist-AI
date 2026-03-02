@@ -36,6 +36,30 @@ class SharedNodeContext:
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
     main_loop: asyncio.AbstractEventLoop
+    _interpreter: Any = None
+    _db_callback: Any = None
+
+    @property
+    def interpreter(self):
+        """Lazy-loaded WorkerInterpreter."""
+        if self._interpreter is None:
+            from controller.agent.dspy_utils import WorkerInterpreter
+
+            self._interpreter = WorkerInterpreter(
+                worker_client=self.worker_client, session_id=self.session_id
+            )
+        return self._interpreter
+
+    @property
+    def db_callback(self):
+        """Lazy-loaded DatabaseCallbackHandler."""
+        if self._db_callback is None:
+            from controller.observability.database import DatabaseCallbackHandler
+
+            self._db_callback = DatabaseCallbackHandler(
+                episode_id=self.episode_id, loop=self.main_loop
+            )
+        return self._db_callback
 
     @classmethod
     def create(
@@ -248,13 +272,17 @@ class BaseNode:
 
         if code_refs:
             lines.append("Code References:")
+            file_cache = {}
             for ref in code_refs:
                 file_path = ref.file_path
                 start = ref.start_line
                 end = ref.end_line
                 try:
-                    # Resolve snippet from worker
-                    file_content = await self.ctx.fs.read_file(file_path)
+                    # Resolve snippet from worker, caching file content locally
+                    if file_path not in file_cache:
+                        file_cache[file_path] = await self.ctx.fs.read_file(file_path)
+
+                    file_content = file_cache[file_path]
                     file_lines = file_content.splitlines()
                     if start < 1 or end > len(file_lines) or start > end:
                         lines.append(
@@ -295,30 +323,12 @@ class BaseNode:
         if max_retries is None:
             max_retries = 1 if settings.is_integration_test else 3
 
-        from controller.agent.dspy_utils import WorkerInterpreter
         from worker_heavy.utils.file_validation import validate_node_output
 
-        # Prepare explicit DB logger for UI events
-        db_callback = None
-        episode_id = getattr(state, "episode_id", None)
+        # Use shared context for interpreter and db_callback to avoid recreation overhead
+        db_callback = self.ctx.db_callback
+        interpreter = self.ctx.interpreter
 
-        if not episode_id:
-            # Try session.session_id (BenchmarkGeneratorState) or self.ctx.episode_id
-            session = getattr(state, "session", None)
-            if session:
-                episode_id = getattr(session, "session_id", None)
-
-            if not episode_id:
-                episode_id = self.ctx.episode_id
-
-        if episode_id and str(episode_id).strip():
-            db_callback = DatabaseCallbackHandler(
-                episode_id=str(episode_id), loop=self.ctx.main_loop
-            )
-
-        interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=self.ctx.session_id
-        )
         tool_fns = self._get_tool_functions(tool_factory, db_callback=db_callback)
 
         # WP07: Inject system instructions from prompts.yaml into signature

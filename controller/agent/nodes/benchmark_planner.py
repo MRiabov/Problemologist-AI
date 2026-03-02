@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
-from controller.agent.tools import get_engineer_tools, get_planner_tools
+from controller.agent.tools import get_benchmark_tools
 from controller.observability.tracing import record_worker_events
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
@@ -16,58 +16,44 @@ from .base import BaseNode, SharedNodeContext
 logger = structlog.get_logger(__name__)
 
 
-class ElectronicsPlannerSignature(dspy.Signature):
+class BenchmarkPlannerSignature(dspy.Signature):
     """
-    Electronics Planner node: Designs the electrical system and power budget.
-    You must use the provided tools to update 'plan.md' and 'todo.md' with electronics tasks.
-    When done, use SUBMIT to provide a summary of your electrical plan.
+    Benchmark Planner node: Designs a new benchmark challenge.
+    You must create 'plan.md', 'todo.md', and 'objectives.yaml'.
+    The plan must detail the learning objective and geometry.
+    When done, use SUBMIT to provide a summary of your benchmark plan.
     """
 
     task = dspy.InputField()
-    objectives = dspy.InputField()
     skills = dspy.InputField()
-    mechanical_plan = dspy.InputField()
     feedback = dspy.InputField()
-    summary = dspy.OutputField(desc="A summary of the electrical plan created")
+    summary = dspy.OutputField(desc="A summary of the benchmark plan created")
 
 
 @type_check
-class ElectronicsPlannerNode(BaseNode):
-    """
-    Electronics Planner node: Specialized electrical system planning.
-    """
-
+class BenchmarkPlannerNode(BaseNode):
     async def __call__(self, state: AgentState) -> AgentState:
-        """Execute the electronics planner node logic."""
         skills_context = self._get_skills_context()
-
-        # Read objectives for context
-        objectives = "# No objectives.yaml found."
-        with suppress(Exception):
-            if await self.ctx.worker_client.exists("objectives.yaml"):
-                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
 
         inputs = {
             "task": state.task,
-            "objectives": objectives,
             "skills": skills_context,
-            "mechanical_plan": state.plan,
             "feedback": (
                 state.feedback
                 if state.status == AgentStatus.PLAN_REJECTED
-                else "New electronics planning. No rejection feedback."
+                else "New benchmark planning."
             ),
         }
-        validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
+        validate_files = ["plan.md", "todo.md", "objectives.yaml"]
 
         prediction, artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.ReAct,
-            signature_cls=ElectronicsPlannerSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_planner_tools,
-            validate_files=validate_files,
-            node_type="electronics_planner",
+            dspy.ReAct,
+            BenchmarkPlannerSignature,
+            state,
+            inputs,
+            get_benchmark_tools,
+            validate_files,
+            "benchmark_planner",
         )
 
         if not prediction:
@@ -79,7 +65,6 @@ class ElectronicsPlannerNode(BaseNode):
                 }
             )
 
-        # Success
         await record_worker_events(
             episode_id=state.episode_id,
             events=[
@@ -95,28 +80,26 @@ class ElectronicsPlannerNode(BaseNode):
         summary = getattr(prediction, "summary", "No summary provided.")
         return state.model_copy(
             update={
-                "plan": artifacts.get("plan.md", state.plan),
-                "todo": artifacts.get("todo.md", state.todo),
-                "journal": state.journal
-                + f"\n[Electronics Planner] {summary}"
-                + journal_entry,
+                "plan": artifacts.get("plan.md", ""),
+                "todo": artifacts.get("todo.md", ""),
+                "status": AgentStatus.EXECUTING,
+                "journal": state.journal + f"\n[Benchmark Planner] {summary}" + journal_entry,
                 "messages": state.messages
-                + [AIMessage(content=f"Electronics Plan summary: {summary}")],
+                + [AIMessage(content=f"Benchmark Plan summary: {summary}")],
                 "turn_count": state.turn_count + 1,
             }
         )
 
 
-# Factory function for LangGraph
 @type_check
-async def electronics_planner_node(state: AgentState) -> AgentState:
+async def benchmark_planner_node(state: AgentState) -> AgentState:
     session_id = state.session_id or settings.default_session_id
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="engineering_planner",
+        agent_role="benchmark_planner",
     )
-    node = ElectronicsPlannerNode(context=ctx)
+    node = BenchmarkPlannerNode(context=ctx)
     return await node(state)

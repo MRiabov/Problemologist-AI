@@ -337,6 +337,14 @@ def validate_node_output(
             ],
         }.get(node_type, [])
 
+    # Always require journal.md
+    if "journal.md" not in required_files:
+        required_files.append("journal.md")
+
+    # For coders, always require script.py
+    if "coder" in node_type and "script.py" not in required_files:
+        required_files.append("script.py")
+
     for req_file in required_files:
         if req_file not in files_content_map or not files_content_map[req_file].strip():
             errors.append(f"Missing required file: {req_file}")
