@@ -27,8 +27,8 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_004_episode_artifact_persistence():
-    """INT-004: Verify artifacts are persisted and accessible via API."""
+async def test_int_084_episode_artifact_persistence():
+    """INT-084: Verify artifacts are persisted and accessible via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-p0-{uuid.uuid4().hex[:8]}"
 
@@ -63,8 +63,8 @@ async def test_int_004_episode_artifact_persistence():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_005_trace_realtime_broadcast():
-    """INT-005: Verify traces are broadcasted via DB/API."""
+async def test_int_085_trace_realtime_broadcast():
+    """INT-085: Verify traces are broadcasted via DB/API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-trace-{uuid.uuid4().hex[:8]}"
 
@@ -88,8 +88,8 @@ async def test_int_005_trace_realtime_broadcast():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_011_planner_target_caps_validation():
-    """INT-011: Verify planner target caps must be <= benchmark caps."""
+async def test_int_081_planner_target_caps_validation():
+    """INT-081: Verify planner target caps must be <= benchmark caps."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
 

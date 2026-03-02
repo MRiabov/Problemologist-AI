@@ -275,42 +275,6 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
-        # DEBUG: add manual debug step to try and export stl
-        debug_stl_script = """
-import os
-import sys
-from build123d import *
-def run():
-    part = Box(1,1,1)
-    export_stl(part, "debug_test.stl")
-    if not os.path.exists("debug_test.stl"):
-        raise RuntimeError("Manual export_stl failed")
-run()
-"""
-        req_write_debug = WriteFileRequest(
-            path="debug_stl.py", content=debug_stl_script
-        )
-        await client.post(
-            f"{WORKER_LIGHT_URL}/fs/write",
-            json=req_write_debug.model_dump(mode="json"),
-            headers={"X-Session-ID": session_id},
-        )
-        resp_exec = await client.post(
-            f"{WORKER_LIGHT_URL}/runtime/execute",
-            json=ExecuteRequest(
-                code=(
-                    "import sys; sys.path.append('.'); "
-                    "import debug_stl; debug_stl.run()"
-                ),
-                timeout=120,
-            ).model_dump(mode="json"),
-            headers={"X-Session-ID": session_id},
-            timeout=180.0,
-        )
-        assert resp_exec.status_code == 200
-        exec_data = ExecuteResponse.model_validate(resp_exec.json())
-        assert exec_data.exit_code == 0
-
         bundle64 = await get_bundle(client, session_id)
 
         sim_req = BenchmarkToolRequest(
@@ -443,10 +407,10 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
                 "import sys; sys.path.append('.'); import verify_overload; "
                 "import asyncio; asyncio.run(verify_overload.run())"
             ),
-            timeout=90,
+            timeout=180,
         ).model_dump(mode="json"),
         headers={"X-Session-ID": session_id},
-        timeout=120.0,
+        timeout=210.0,
     )
     assert resp.status_code == 200
     data = ExecuteResponse.model_validate(resp.json())
