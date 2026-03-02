@@ -511,12 +511,21 @@ async def _persist_session_assets(
                     final_state.mjcf_content or "<!-- MJCF content missing in state -->"
                 )
 
+                from shared.models.schemas import AssetMetadata
+
+                metadata = AssetMetadata()
+                difficulty_score = 0.0
+                if final_state.plan:
+                    metadata.theme = final_state.plan.theme
+                    difficulty_score = final_state.plan.difficulty_score
+
                 await storage.save_asset(
                     benchmark_id=session_id,
                     script=final_state.current_script,
                     mjcf=mjcf_content,
                     images=render_data,
-                    metadata=final_state.plan.model_dump() if final_state.plan else {},
+                    metadata=metadata,
+                    difficulty_score=difficulty_score,
                     db=db,
                 )
                 logger.info("asset_persisted", session_id=session_id)

@@ -335,6 +335,20 @@ class CompoundMetadata(BaseModel):
 
 
 # =============================================================================
+# Asset Metadata Models
+# =============================================================================
+
+
+class AssetMetadata(BaseModel):
+    """Metadata for a benchmark asset."""
+
+    theme: str | None = None
+    complexity: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    additional_info: dict[str, Any] = Field(default_factory=dict)
+
+
+# =============================================================================
 # COTS Catalog Models
 # =============================================================================
 

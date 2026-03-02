@@ -57,10 +57,3 @@ class ValidationResult(BaseModel):
     render_data: list[bytes] | None = None
 
 
-class AssetMetadata(BaseModel):
-    """Metadata for a benchmark asset."""
-
-    theme: str | None = None
-    complexity: str | None = None
-    tags: list[str] = []
-    additional_info: dict[str, Any] = {}

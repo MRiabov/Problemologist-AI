@@ -3,8 +3,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field, HttpUrl
 
 from shared.enums import SessionStatus
+from shared.models.schemas import AssetMetadata
 from shared.simulation.schemas import (
-    AssetMetadata,
     CustomObjectives,
     SimulatorBackendType,
 )
