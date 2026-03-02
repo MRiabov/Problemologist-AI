@@ -11,7 +11,7 @@ defaults:
 agents:
   engineering_planner:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+      allow: ["/", ".", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md"]
       deny: []
     write:
       allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
@@ -51,7 +51,7 @@ agents:
 
   benchmark_planner:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "plan.md", "todo.md", "journal.md", "assets/**", "renders/**", "reviews/**"]
+      allow: ["/", ".", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md", "assets/**", "renders/**", "reviews/**"]
       deny: []
     write:
       allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
