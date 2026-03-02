@@ -7,6 +7,28 @@ from playwright.sync_api import Page, expect
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
+def _ensure_viewport_assets(page: Page) -> None:
+    assets_overlay = page.get_by_test_id("no-assets-overlay")
+    if not assets_overlay.is_visible():
+        return
+
+    for _ in range(3):
+        if not assets_overlay.is_visible():
+            return
+        rebuild_assets_button = page.get_by_test_id("rebuild-assets-button")
+        expect(rebuild_assets_button).to_be_visible(timeout=30000)
+        try:
+            rebuild_assets_button.click(force=True, timeout=10000)
+        except Exception:
+            pass
+        page.wait_for_load_state("networkidle", timeout=60000)
+        page.wait_for_timeout(800)
+
+    assert not assets_overlay.is_visible(), (
+        "Viewport assets remained unavailable after rebuild retries"
+    )
+
+
 @pytest.mark.integration_frontend
 def test_simulation_navigation_timeline(page: Page):
     # 1. Navigate to the local development server
@@ -49,9 +71,8 @@ def test_simulation_navigation_timeline(page: Page):
     expect(confirm_button).to_be_visible()
     confirm_button.click()
 
-    # 7. Test Simulation Controls (available even when viewport assets are still loading)
-    if page.get_by_test_id("no-assets-overlay").is_visible():
-        pytest.skip("Viewport assets unavailable; simulation controls are blocked")
+    # 7. Ensure assets are loaded for simulation controls.
+    _ensure_viewport_assets(page)
 
     play_button = page.get_by_test_id("simulation-play-toggle")
     expect(play_button).to_be_visible(timeout=30000)
