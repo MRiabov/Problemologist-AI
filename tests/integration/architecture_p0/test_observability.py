@@ -4,7 +4,7 @@ import uuid
 
 import httpx
 import pytest
-from temporalio.client import Client
+from temporalio.client import Client, WorkflowFailureError
 
 from controller.api.schemas import (
     AgentRunResponse,
@@ -97,8 +97,10 @@ async def test_int_055_s3_artifact_upload_logging():
         episode_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
         ep_data = EpisodeResponse.model_validate(episode_resp.json())
 
-        assert len(ep_data.assets) > 0
-        asset = ep_data.assets[0]
+        # Filter assets for type VIDEO since agent initialization might have created MARKDOWN assets
+        video_assets = [a for a in ep_data.assets if a.asset_type == AssetType.VIDEO]
+        assert len(video_assets) > 0
+        asset = video_assets[0]
         assert asset.asset_type == AssetType.VIDEO
         assert asset.s3_path.startswith("videos/")
         assert asset.created_at is not None
@@ -110,7 +112,10 @@ async def test_int_054_temporal_failure_path():
     """INT-054: Verify Temporal outage/failure logging path (via failure injection)."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Create episode via API
-        req = AgentRunRequest(task="Test Failure Injection", session_id="INT-054-fail")
+        req = AgentRunRequest(
+            task="Test Failure Injection",
+            session_id=f"INT-054-fail-{uuid.uuid4().hex[:8]}",
+        )
         resp = await client.post(
             f"{CONTROLLER_URL}/api/test/episodes",
             json=req.model_dump(mode="json"),
@@ -136,7 +141,7 @@ async def test_int_054_temporal_failure_path():
         )
 
         # 3. Wait for workflow failure (it should fail after 3 attempts)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(WorkflowFailureError):
             await handle.result()
 
         # 4. Verify episode status is FAILED in DB
@@ -157,7 +162,9 @@ async def test_int_056_s3_upload_failure_retry():
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Create episode via test endpoint (no agent task interference)
-        req = AgentRunRequest(task="Test S3 Retry", session_id="INT-056-retry")
+        req = AgentRunRequest(
+            task="Test S3 Retry", session_id=f"INT-056-retry-{uuid.uuid4().hex[:8]}"
+        )
         resp = await client.post(
             f"{CONTROLLER_URL}/api/test/episodes",
             json=req.model_dump(mode="json"),
