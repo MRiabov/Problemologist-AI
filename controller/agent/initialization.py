@@ -86,50 +86,21 @@ async def initialize_agent_files(
     if tasks:
         await asyncio.gather(*tasks)
 
-    # Mirror available local skills into worker /skills for integration checks.
-    # We only copy SKILL.md to keep this lightweight.
-    copied_skills = 0
-    for root in [Path(".agent/skills"), Path.home() / ".codex/skills"]:
-        if not root.exists():
-            continue
-        for skill_dir in root.iterdir():
-            if not skill_dir.is_dir():
-                continue
-            skill_md = skill_dir / "SKILL.md"
-            if not skill_md.exists():
-                continue
-            try:
-                content = skill_md.read_text(encoding="utf-8")
-                write_res = await backend.awrite(
-                    f"/skills/{skill_dir.name}/SKILL.md", content
-                )
-                if not write_res.error:
-                    copied_skills += 1
-                else:
-                    logger.warning(
-                        "failed_to_copy_skill",
-                        skill=str(skill_dir.name),
-                        error=write_res.error,
-                    )
-            except Exception as e:
-                logger.warning(
-                    "failed_to_copy_skill",
-                    skill=str(skill_dir.name),
-                    error=str(e),
-                )
-
-    # Ensure at least one canonical skill exists for integration tests.
-    if copied_skills == 0:
-        write_res = await backend.awrite(
-            "/skills/build123d_cad_drafting_skill/SKILL.md",
-            "# Build123d CAD Drafting Skill\n\nPlaceholder skill for integration mode.\n",
-        )
-        if not write_res.error:
-            copied_skills = 1
+    # Skills are mounted read-only at /skills on worker side; initialization must not
+    # attempt to write there through normal agent permissions.
+    available_skills = 0
+    if hasattr(backend, "als_info"):
+        try:
+            entries = await backend.als_info("/skills")
+            available_skills = len(
+                [entry for entry in entries if entry.get("is_dir", False)]
+            )
+        except Exception as e:
+            logger.warning("failed_to_list_skills_mount", error=str(e))
 
     logger.info(
         "agent_files_initialized",
         agent_name=agent_name,
         file_count=len(tasks),
-        skills_copied=copied_skills,
+        skills_available=available_skills,
     )
