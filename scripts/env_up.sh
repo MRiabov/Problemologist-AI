@@ -43,9 +43,18 @@ if [ -f .env ]; then
       fi
     fi
     clean_line=$(echo "$line" | sed -E 's/[[:space:]]*=[[:space:]]*/=/')
-    if [[ "$clean_line" =~ ^[A-Za-z_][A-Za-z0-0_]*=.*$ ]]; then
+    if [[ "$clean_line" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
       clean_line=$(echo "$clean_line" | sed -e 's/[[:space:]]*$//')
-      export "$clean_line"
+      key="${clean_line%%=*}"
+      value="${clean_line#*=}"
+      # If the value is wrapped in matching quotes, strip one layer so env vars
+      # contain the raw value (e.g. https://... instead of \"https://...\").
+      if [[ "$value" =~ ^\".*\"$ ]]; then
+        value="${value:1:-1}"
+      elif [[ "$value" =~ ^\'.*\'$ ]]; then
+        value="${value:1:-1}"
+      fi
+      export "$key=$value"
     fi
   done < .env
 fi
