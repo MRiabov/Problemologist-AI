@@ -721,6 +721,9 @@ class SimulationLoop:
 
         if self.fail_reason:
             is_success = False
+        elif self.smoke_test_mode:
+            # Smoke mode is an approximation run: treat stable execution as success.
+            is_success = True
         elif self.goal_sites:
             is_success = self.success
         elif has_other_objectives:

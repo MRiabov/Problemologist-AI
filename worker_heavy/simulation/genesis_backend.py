@@ -284,10 +284,29 @@ class GenesisBackend(PhysicsBackend):
             )
             # Add some safety margin as Genesis MPM boundaries are strict
             margin = 5.0
+            lower = np.array(bounds["min"]) - margin
+            upper = np.array(bounds["max"]) + margin
+            span = np.maximum(upper - lower, 1e-6)
+            # Keep MPM grid size bounded for very large simulation bounds.
+            base_density = 16
+            max_cells = 5e7 if is_smoke else 1e8
+            estimated_cells = float(np.prod(span * base_density))
+            if estimated_cells > max_cells:
+                density = int((max_cells / float(np.prod(span))) ** (1.0 / 3.0))
+                grid_density = max(1, min(base_density, density))
+                logger.warning(
+                    "genesis_mpm_grid_density_reduced",
+                    estimated_cells=estimated_cells,
+                    max_cells=max_cells,
+                    chosen_density=grid_density,
+                    span=span.tolist(),
+                )
+            else:
+                grid_density = base_density
             mpm_options = gs.options.MPMOptions(
-                lower_bound=tuple(np.array(bounds["min"]) - margin),
-                upper_bound=tuple(np.array(bounds["max"]) + margin),
-                grid_density=16,
+                lower_bound=tuple(lower),
+                upper_bound=tuple(upper),
+                grid_density=grid_density,
                 use_sparse_grid=True,
             )
 

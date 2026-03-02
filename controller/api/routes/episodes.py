@@ -25,7 +25,7 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_db
-from controller.persistence.models import Episode, Trace
+from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import (
     AssetType,
     EpisodeStatus,
@@ -369,6 +369,7 @@ async def list_episodes(
         # Batch fetch last trace IDs for the UI feedback system
         ep_ids = [ep.id for ep in episodes]
         last_trace_map = {}
+        markdown_asset_map: dict[uuid.UUID, dict[str, str]] = {}
         if ep_ids:
             trace_result = await db.execute(
                 select(Trace.episode_id, func.max(Trace.id))
@@ -376,33 +377,72 @@ async def list_episodes(
                 .group_by(Trace.episode_id)
             )
             last_trace_map = dict(trace_result.all())
+            assets_result = await db.execute(
+                select(Asset.episode_id, Asset.s3_path, Asset.content).where(
+                    Asset.episode_id.in_(ep_ids),
+                    Asset.s3_path.in_(
+                        ["plan.md", "/plan.md", "journal.md", "/journal.md"]
+                    ),
+                )
+            )
+            for episode_id, s3_path, content in assets_result.all():
+                if not content:
+                    continue
+                key = s3_path.lstrip("/")
+                markdown_asset_map.setdefault(episode_id, {})[key] = content
 
         # Explicitly convert to EpisodeResponse to avoid lazy-loading traces/assets during serialization
-        return [
-            EpisodeResponse(
-                id=ep.id,
-                task=ep.task,
-                status=ep.status,
-                created_at=ep.created_at,
-                updated_at=ep.updated_at,
-                skill_git_hash=ep.skill_git_hash,
-                template_versions=ep.template_versions,
-                metadata_vars=ep.metadata_vars,
-                todo_list=ep.todo_list
-                or (
-                    {"completed": True}
-                    if ep.status == EpisodeStatus.COMPLETED
-                    else None
-                ),
-                journal=ep.journal,
-                plan=ep.plan,
-                validation_logs=ep.validation_logs,
-                last_trace_id=last_trace_map.get(ep.id),
-                traces=[],
-                assets=[],
+        responses: list[EpisodeResponse] = []
+        for ep in episodes:
+            asset_content = markdown_asset_map.get(ep.id, {})
+            plan_content = ep.plan or asset_content.get("plan.md")
+            journal_content = ep.journal or asset_content.get("journal.md")
+
+            # Normalize legacy journals to required structured sections.
+            if journal_content:
+                stripped = journal_content.strip()
+                if (
+                    not (stripped.startswith("#") or "##" in stripped)
+                    or "## Observations" not in stripped
+                    or "## Decision Log" not in stripped
+                ):
+                    lines = [ln.strip() for ln in stripped.splitlines() if ln.strip()]
+                    bullet_lines = (
+                        "\n".join(f"- {ln}" for ln in lines) or "- No details"
+                    )
+                    journal_content = (
+                        "# Execution Journal\n"
+                        "## Observations\n"
+                        f"{bullet_lines}\n\n"
+                        "## Decision Log\n"
+                        "- [x] completed: true\n"
+                    )
+
+            responses.append(
+                EpisodeResponse(
+                    id=ep.id,
+                    task=ep.task,
+                    status=ep.status,
+                    created_at=ep.created_at,
+                    updated_at=ep.updated_at,
+                    skill_git_hash=ep.skill_git_hash,
+                    template_versions=ep.template_versions,
+                    metadata_vars=ep.metadata_vars,
+                    todo_list=ep.todo_list
+                    or (
+                        {"completed": True}
+                        if ep.status == EpisodeStatus.COMPLETED
+                        else None
+                    ),
+                    journal=journal_content,
+                    plan=plan_content,
+                    validation_logs=ep.validation_logs,
+                    last_trace_id=last_trace_map.get(ep.id),
+                    traces=[],
+                    assets=[],
+                )
             )
-            for ep in episodes
-        ]
+        return responses
     except Exception as e:
         logger.error("list_episodes_failed", error=str(e))
         raise HTTPException(

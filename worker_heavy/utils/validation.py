@@ -564,6 +564,45 @@ def simulate(
         smoke_test_mode=smoke_test_mode,
     )
 
+    # Fast preflight: if a fluid spawn volume intersects an electronics part's bounding
+    # box, classify as electronics fluid damage immediately.
+    if objectives and objectives.fluids and electronics:
+        try:
+            children = getattr(component, "children", []) or [component]
+            by_label = {
+                getattr(child, "label", ""): child
+                for child in children
+                if getattr(child, "label", None)
+            }
+
+            def _point_in_bbox(point, bb) -> bool:
+                return (
+                    bb.min.X <= point[0] <= bb.max.X
+                    and bb.min.Y <= point[1] <= bb.max.Y
+                    and bb.min.Z <= point[2] <= bb.max.Z
+                )
+
+            for fluid in objectives.fluids:
+                center = fluid.initial_volume.center
+                for ecomp in electronics.components:
+                    part_ref = ecomp.assembly_part_ref or ecomp.component_id
+                    part = by_label.get(part_ref)
+                    if not part:
+                        continue
+                    bb = part.bounding_box()
+                    if _point_in_bbox(center, bb):
+                        return SimulationResult(
+                            success=False,
+                            summary="Electronics fluid damage detected.",
+                            failure=SimulationFailure(
+                                reason=FailureReason.ELECTRONICS_FLUID_DAMAGE,
+                                detail=part_ref,
+                            ),
+                            confidence="high",
+                        )
+        except Exception as e:
+            logger.warning("fluid_electronics_preflight_skipped", error=str(e))
+
     loop = SimulationLoop(
         str(scene_path),
         component=component,

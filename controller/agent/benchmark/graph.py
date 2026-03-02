@@ -34,6 +34,46 @@ from .storage import BenchmarkStorage
 logger = structlog.get_logger(__name__)
 
 
+async def _read_session_markdown(
+    session_id: uuid.UUID, relative_path: str
+) -> str | None:
+    """Read markdown/text artifacts directly from the worker session."""
+    try:
+        from controller.config.settings import settings as global_settings
+
+        client = WorkerClient(
+            base_url=global_settings.worker_light_url,
+            heavy_url=global_settings.worker_heavy_url,
+            session_id=str(session_id),
+        )
+        try:
+            if not await client.exists(relative_path):
+                return None
+            content = (await client.read_file(relative_path)).strip()
+            if not content or content.startswith("Error:"):
+                return None
+            return content
+        finally:
+            await client.aclose()
+    except Exception:
+        return None
+
+
+async def _auto_continue_planned_session(
+    session_id: uuid.UUID, delay_seconds: int = 20
+):
+    """Auto-continue benchmark sessions that remain in PLANNED state."""
+    await asyncio.sleep(delay_seconds)
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, session_id)
+        if not episode or episode.status != EpisodeStatus.PLANNED:
+            return
+
+    await continue_generation_session(session_id)
+
+
 def define_graph():
     """
     Constructs the LangGraph for benchmark scenario generation.
@@ -359,6 +399,12 @@ async def run_generation_session(
                 await db.commit()
         return initial_state
 
+    if final_state.session.status == SessionStatus.PLANNED:
+        from controller.config.settings import settings
+
+        if settings.is_integration_test:
+            asyncio.create_task(_auto_continue_planned_session(session_id))
+
     # 4. Final Asset Persistence
     await _persist_session_assets(final_state, session_id)
 
@@ -474,16 +520,6 @@ async def _persist_session_assets(
                 broadcast_file_update,
             )
 
-            # Ensure key handoff artifacts exist for integration visibility.
-            # Some mock benchmark paths do not emit these by default.
-            if not await client.exists("validation_results.json"):
-                await backend.awrite(
-                    "validation_results.json",
-                    '{"status":"ok","summary":"Simulation stable. Goal achieved."}',
-                )
-            if not await client.exists("renders/preview.png"):
-                await backend.awrite("renders/preview.png", "PNG_PLACEHOLDER")
-
             # Only sync top-level files and critical directories to avoid hangs
             # We sync /assets, /renders, and /reviews for benchmark artifacts.
             for dir_to_sync in ["/", "/assets/", "/renders/", "/reviews/"]:
@@ -573,28 +609,22 @@ async def _update_episode_persistence(
             metadata.prompt = prompt
             metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan
             episode.metadata_vars = metadata.model_dump()
-            if plan and not episode.plan:
-                if isinstance(plan, dict):
-                    theme = plan.get("theme", "benchmark")
-                    episode.plan = (
-                        "# Solution Overview\n"
-                        f"Generated benchmark theme: {theme}\n\n"
-                        "## Parts List\n"
-                        "- Benchmark environment\n"
-                    )
-                else:
-                    episode.plan = str(plan)
-            if journal:
+            # Prefer real persisted session files when available.
+            plan_md = await _read_session_markdown(session_id, "plan.md")
+            journal_md = await _read_session_markdown(session_id, "journal.md")
+
+            if plan_md:
+                episode.plan = plan_md
+            elif plan and not episode.plan:
+                p = str(plan).strip()
+                if p.startswith("#") and ("\n" in p):
+                    episode.plan = p
+
+            if journal_md:
+                episode.journal = journal_md
+            elif journal:
                 j = journal.strip()
-                if "## Observations" not in j or "## Decision Log" not in j:
-                    episode.journal = (
-                        "# Execution Journal\n"
-                        "## Observations\n"
-                        f"- observation: {j or 'benchmark execution completed'}\n\n"
-                        "## Decision Log\n"
-                        "- [x] completed: true\n"
-                    )
-                else:
+                if j:
                     episode.journal = j
 
             # Use episode.status which was just updated above

@@ -1,4 +1,5 @@
 from contextlib import suppress
+import json
 
 import dspy
 import structlog
@@ -42,6 +43,10 @@ class ExecutionReviewerNode(BaseNode):
 
     async def __call__(self, state: AgentState) -> AgentState:
         # T015: Use DSPy to evaluate success
+        simulation_journal = ""
+        if await self._should_run_simulation(state):
+            simulation_journal = await self._run_simulation_review_step()
+
         # Read objectives if possible for context
         objectives = "# No objectives.yaml found."
         with suppress(Exception):
@@ -61,7 +66,7 @@ class ExecutionReviewerNode(BaseNode):
             "todo": state.todo,
             "assembly_definition": assembly_definition,
             "objectives": objectives,
-            "journal": state.journal,
+            "journal": state.journal + simulation_journal,
         }
 
         # Validate existence of key reports
@@ -82,7 +87,7 @@ class ExecutionReviewerNode(BaseNode):
                 update={
                     "status": AgentStatus.CODE_REJECTED,
                     "feedback": f"Execution Reviewer failed to complete: {journal_entry}",
-                    "journal": state.journal + journal_entry,
+                    "journal": state.journal + simulation_journal + journal_entry,
                     "turn_count": state.turn_count + 1,
                 }
             )
@@ -123,7 +128,7 @@ class ExecutionReviewerNode(BaseNode):
             update={
                 "status": status_map.get(decision, AgentStatus.CODE_REJECTED),
                 "feedback": feedback,
-                "journal": state.journal + journal_entry,
+                "journal": state.journal + simulation_journal + journal_entry,
                 "messages": [
                     *state.messages,
                     AIMessage(content=f"Review decision: {decision.value}"),
@@ -131,6 +136,54 @@ class ExecutionReviewerNode(BaseNode):
                 "turn_count": state.turn_count + 1,
             }
         )
+
+    async def _should_run_simulation(self, state: AgentState) -> bool:
+        task_lower = state.task.lower()
+        needs_simulation = any(
+            token in task_lower
+            for token in ("simulate", "simulation", "controller", "oscillat")
+        )
+        if not needs_simulation:
+            return False
+        return await self.ctx.worker_client.exists("script.py")
+
+    async def _run_simulation_review_step(self) -> str:
+        try:
+            sim_result = await self.ctx.worker_client.simulate(script_path="script.py")
+            await self._persist_simulation_artifacts(sim_result)
+            message = (sim_result.message or "").strip()
+            if message:
+                return f"\n[Simulation] {message}"
+            if sim_result.success:
+                return "\n[Simulation] Goal achieved."
+            return "\n[Simulation] Simulation failed."
+        except Exception as e:
+            logger.warning("execution_reviewer_simulation_failed", error=str(e))
+            return f"\n[Simulation] Simulation failed: {e}"
+
+    async def _persist_simulation_artifacts(self, sim_result) -> None:
+        """Persist real simulation outputs for downstream asset/tracing sync."""
+        try:
+            sim_payload = {
+                "success": bool(getattr(sim_result, "success", False)),
+                "summary": str(getattr(sim_result, "message", "") or ""),
+                "confidence": str(getattr(sim_result, "confidence", "") or ""),
+            }
+            await self.ctx.worker_client.write_file(
+                "simulation_result.json",
+                json.dumps(sim_payload),
+                overwrite=True,
+            )
+            status = "ok" if sim_payload["success"] else "error"
+            await self.ctx.worker_client.write_file(
+                "validation_results.json",
+                json.dumps({"status": status, "summary": sim_payload["summary"]}),
+                overwrite=True,
+            )
+        except Exception as e:
+            logger.warning(
+                "execution_reviewer_persist_simulation_artifacts_failed", error=str(e)
+            )
 
 
 # Factory function for LangGraph
