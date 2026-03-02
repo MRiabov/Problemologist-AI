@@ -207,9 +207,12 @@ class Indexer:
                 logger.info(f"Indexed {count} items for {class_name}")
 
             # Add catalog metadata for reproducibility
+            import uuid
+
             metadata_record = CatalogMetadataORM(
                 catalog_version="1.0.0",
                 bd_warehouse_commit="a048a73",  # Placeholder from current repo
+                catalog_snapshot_id=uuid.uuid4().hex,
             )
             session.merge(metadata_record)
             session.commit()

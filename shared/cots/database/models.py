@@ -20,6 +20,7 @@ class CatalogMetadataORM(Base):
     id = Column(Integer, primary_key=True)
     catalog_version = Column(String, nullable=False)
     bd_warehouse_commit = Column(String, nullable=False)
+    catalog_snapshot_id = Column(String, nullable=False, index=True)
     generated_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
 

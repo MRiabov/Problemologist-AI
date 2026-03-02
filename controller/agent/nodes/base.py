@@ -45,6 +45,7 @@ class SharedNodeContext:
         episode_id: str | None = None,
         worker_client: WorkerClient | None = None,
         fs: RemoteFilesystemMiddleware | None = None,
+        agent_role: str = "engineering_mechanical_coder",
     ) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
         # Fallback for episode_id if not provided
@@ -58,7 +59,7 @@ class SharedNodeContext:
             )
 
         if not fs:
-            fs = RemoteFilesystemMiddleware(worker_client)
+            fs = RemoteFilesystemMiddleware(worker_client, agent_role=agent_role)
 
         # WP05: Support mock LLMs for integration tests
         if settings.is_integration_test:

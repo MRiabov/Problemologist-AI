@@ -36,6 +36,9 @@ class AgentRunResponse(StandardResponse):
 class TraceResponse(BaseModel):
     id: int
     langfuse_trace_id: str | None
+    simulation_run_id: str | None = None
+    cots_query_id: str | None = None
+    review_id: str | None = None
     trace_type: TraceType
     name: str | None
     content: str | None
@@ -68,6 +71,7 @@ class BenchmarkObjectivesResponse(StandardResponse):
 
 class EpisodeResponse(BaseModel):
     id: uuid.UUID
+    user_session_id: uuid.UUID | None = None
     task: StrictStr
     status: EpisodeStatus
     created_at: datetime
@@ -116,6 +120,7 @@ class EpisodeListItem(BaseModel):
     """A lightweight episode entry from the GET /episodes/ list endpoint."""
 
     id: uuid.UUID
+    user_session_id: uuid.UUID | None = None
     task: str
     status: EpisodeStatus
     created_at: datetime
@@ -183,6 +188,9 @@ class OpenAPISchema(BaseModel):
 class AgentRunRequest(BaseModel):
     task: StrictStr = Field(..., description="The task for the agent to perform.")
     session_id: StrictStr = Field(..., description="Session ID for the worker.")
+    user_session_id: uuid.UUID | None = Field(
+        None, description="UI conversation scope session ID."
+    )
     metadata_vars: dict | None = Field(
         None, description="Additional metadata for the episode."
     )

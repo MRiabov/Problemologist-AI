@@ -73,10 +73,15 @@ async def test_full_workflow_end_to_end():
         # 4. Trigger Engineer Agent
         # Generate a unique session ID for the engineer run
         engineer_session_id = f"INT-033-full-{uuid.uuid4().hex[:8]}"
+        user_session_id = uuid.uuid4()
 
-        req_run = AgentRunRequest(task=engineer_task, session_id=engineer_session_id)
+        req_run = AgentRunRequest(
+            task=engineer_task,
+            session_id=engineer_session_id,
+            user_session_id=user_session_id,
+        )
 
-        run_resp = await client.post("/agent/run", json=req_run.model_dump())
+        run_resp = await client.post("/agent/run", json=req_run.model_dump(mode="json"))
         assert run_resp.status_code == 202, (
             f"Failed to trigger engineer: {run_resp.text}"
         )
@@ -90,6 +95,9 @@ async def test_full_workflow_end_to_end():
             ep_resp = await client.get(f"/episodes/{episode_id}")
             if ep_resp.status_code == 200:
                 ep_data = EpisodeResponse.model_validate(ep_resp.json())
+                assert ep_data.user_session_id == user_session_id, (
+                    "user_session_id mismatch"
+                )
                 last_engineer_status = ep_data.status
 
                 if last_engineer_status == EpisodeStatus.COMPLETED:

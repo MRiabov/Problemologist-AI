@@ -164,6 +164,7 @@ class SimulationResultEvent(BaseEvent):
     failure: Any | None = None  # Structured SimulationFailure
     time_elapsed_s: float
     compute_time_ms: float
+    simulation_run_id: str | None = None
     metadata: SimulationMetadata = Field(default_factory=SimulationMetadata)
 
 
@@ -174,6 +175,10 @@ class COTSSearchEvent(BaseEvent):
     catalog_version: str | None = None
     bd_warehouse_commit: str | None = None
     generated_at: str | None = None
+    cots_query_id: str | None = None
+    catalog_snapshot_id: str | None = None
+    candidates: list[str] = Field(default_factory=list)  # Ordered part_ids
+    selected_part_ids: list[str] = Field(default_factory=list)
 
 
 class PlanSubmissionBenchmarkEvent(BaseEvent):
@@ -332,6 +337,7 @@ class ReviewEvent(BaseEvent):
     episode_id: str
     decision: ReviewDecision
     comments: list[str] = Field(default_factory=list)
+    review_id: str | None = None
 
 
 # =============================================================================

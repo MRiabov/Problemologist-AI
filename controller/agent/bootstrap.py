@@ -33,7 +33,7 @@ class AgentModule(dspy.Module):
             session_id=self.session_id,
             heavy_url=settings.worker_heavy_url,
         )
-        self.fs = RemoteFilesystemMiddleware(self.worker_client)
+        self.fs = RemoteFilesystemMiddleware(self.worker_client, agent_role=agent_name)
         self.interpreter = WorkerInterpreter(
             worker_client=self.worker_client, session_id=self.session_id
         )

@@ -121,6 +121,7 @@ async def planner_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
+        agent_role="engineering_planner",
     )
     node = PlannerNode(context=ctx)
     return await node(state)

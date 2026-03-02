@@ -21,6 +21,7 @@ from pydantic import ValidationError
 from shared.models.schemas import (
     AssemblyDefinition,
     ObjectivesYaml,
+    PlanRefusalFrontmatter,
     ReviewFrontmatter,
 )
 from shared.observability.events import emit_event
@@ -136,7 +137,13 @@ def validate_assembly_definition_yaml(
 
         estimation = AssemblyDefinition(**data)
 
-        # T003 (WP01): Cross-reference electronics component references
+        # Task 3.3: Enforce COTS reproducibility metadata
+        for cots_part in estimation.cots_parts:
+            if not cots_part.reproducibility:
+                return False, [
+                    f"COTS part '{cots_part.part_id}' is missing reproducibility metadata "
+                    "(catalog_version, catalog_snapshot_id, etc.)"
+                ]
         if estimation.electronics:
             from shared.models.schemas import PartConfig, SubassemblyEstimate
 
@@ -228,6 +235,41 @@ def validate_review_frontmatter(
         return False, errors
 
 
+def validate_plan_refusal(
+    content: str,
+) -> tuple[bool, PlanRefusalFrontmatter | list[str]]:
+    """
+    Parse and validate plan_refusal.md content.
+    Requires structured frontmatter and evidence in the body.
+    """
+    # Extract YAML frontmatter
+    frontmatter_match = re.search(r"^---\s*\n(.*?)\n---\s*\n", content, re.DOTALL)
+    if not frontmatter_match:
+        return False, ["Missing YAML frontmatter in plan_refusal.md"]
+
+    body = content[frontmatter_match.end() :].strip()
+    if not body:
+        return False, ["plan_refusal.md must include evidence in the body"]
+
+    try:
+        data = yaml.safe_load(frontmatter_match.group(1))
+        if data is None:
+            return False, ["Empty frontmatter in plan_refusal.md"]
+
+        frontmatter = PlanRefusalFrontmatter(**data)
+        logger.info(
+            "plan_refusal_valid", role=frontmatter.role, reasons=frontmatter.reasons
+        )
+        return True, frontmatter
+    except yaml.YAMLError as e:
+        logger.error("plan_refusal_parse_error", error=str(e))
+        return False, [f"YAML parse error: {e}"]
+    except ValidationError as e:
+        errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
+        logger.error("plan_refusal_validation_error", errors=errors)
+        return False, errors
+
+
 def validate_node_output(
     node_type: str, files_content_map: dict[str, str]
 ) -> tuple[bool, list[str]]:
@@ -245,25 +287,55 @@ def validate_node_output(
     errors = []
 
     # 1. Required files check
-    required_files = {
-        "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
-        "benchmark_planner": ["plan.md", "todo.md", "objectives.yaml"],
-        "coder": [
-            "plan.md",
-            "todo.md",
-            "objectives.yaml",
-        ],  # Coder should maintain these
-        "benchmark_coder": [
-            "plan.md",
-            "todo.md",
-            "objectives.yaml",
-        ],
-        "electronics_engineer": [
-            "plan.md",
-            "todo.md",
-            "assembly_definition.yaml",
-        ],
-    }.get(node_type, [])
+    # If plan_refusal.md is present and valid, skip regular required files check
+    if "plan_refusal.md" in files_content_map:
+        is_refusal_valid, _ = validate_plan_refusal(
+            files_content_map["plan_refusal.md"]
+        )
+        if is_refusal_valid:
+            # Only validate plan_refusal.md and skip others
+            required_files = ["plan_refusal.md"]
+        else:
+            # If refusal is invalid, we still want regular files or a better refusal
+            required_files = {
+                "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
+                "benchmark_planner": ["plan.md", "todo.md", "objectives.yaml"],
+                "coder": [
+                    "plan.md",
+                    "todo.md",
+                    "objectives.yaml",
+                ],
+                "benchmark_coder": [
+                    "plan.md",
+                    "todo.md",
+                    "objectives.yaml",
+                ],
+                "electronics_engineer": [
+                    "plan.md",
+                    "todo.md",
+                    "assembly_definition.yaml",
+                ],
+            }.get(node_type, [])
+    else:
+        required_files = {
+            "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
+            "benchmark_planner": ["plan.md", "todo.md", "objectives.yaml"],
+            "coder": [
+                "plan.md",
+                "todo.md",
+                "objectives.yaml",
+            ],
+            "benchmark_coder": [
+                "plan.md",
+                "todo.md",
+                "objectives.yaml",
+            ],
+            "electronics_engineer": [
+                "plan.md",
+                "todo.md",
+                "assembly_definition.yaml",
+            ],
+        }.get(node_type, [])
 
     for req_file in required_files:
         if req_file not in files_content_map or not files_content_map[req_file].strip():
@@ -304,6 +376,14 @@ def validate_node_output(
             if not is_valid:
                 # asm_res is list[str] on failure
                 errors.extend([f"assembly_definition.yaml: {e}" for e in asm_res])
+        elif filename == "plan_refusal.md":
+            is_valid, refusal_res = validate_plan_refusal(content)
+            if not is_valid:
+                if isinstance(refusal_res, list):
+                    errors.extend([f"plan_refusal.md: {e}" for e in refusal_res])
+                else:
+                    # Should not happen based on validate_plan_refusal return type
+                    errors.append(f"plan_refusal.md: Invalid structure")
 
     return len(errors) == 0, errors
 

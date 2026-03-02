@@ -51,6 +51,9 @@ class Episode(Base):
     __tablename__ = "episodes"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_session_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.UUID, index=True
+    )  # UI conversation scope
     task: Mapped[str] = mapped_column(String)
     status: Mapped[EpisodeStatus] = mapped_column(
         SQLEnum(EpisodeStatus, values_callable=lambda x: [e.value for e in x]),
@@ -91,6 +94,11 @@ class Trace(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
     langfuse_trace_id: Mapped[str | None] = mapped_column(String)
+
+    # Specific IDs for child artifacts
+    simulation_run_id: Mapped[str | None] = mapped_column(String)
+    cots_query_id: Mapped[str | None] = mapped_column(String)
+    review_id: Mapped[str | None] = mapped_column(String)
 
     trace_type: Mapped[TraceType] = mapped_column(
         SQLEnum(TraceType, values_callable=lambda x: [e.value for e in x])

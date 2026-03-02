@@ -12,6 +12,10 @@ export type AgentRunRequest = {
      */
     session_id: string;
     /**
+     * UI conversation scope session ID.
+     */
+    user_session_id?: (string | null);
+    /**
      * Additional metadata for the episode.
      */
     metadata_vars?: (Record<string, any> | null);

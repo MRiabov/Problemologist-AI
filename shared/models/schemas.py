@@ -18,11 +18,14 @@ from pydantic import (
 )
 
 from shared.enums import (
+    BenchmarkRefusalReason,
     ElectronicComponentType,
+    ElectricalRefusalReason,
     FluidEvalAt,
     FluidObjectiveType,
     FluidShapeType,
     ManufacturingMethod,
+    MechanicalRefusalReason,
     MotorControlMode,
     MovingPartType,
     ReviewDecision,
@@ -432,6 +435,44 @@ class ReviewFrontmatter(BaseModel):
         return v
 
 
+class PlanRefusalFrontmatter(BaseModel):
+    """
+    YAML frontmatter for plan_refusal.md.
+    Refusal logic must be structured, role-specific, and machine-validated.
+    """
+
+    reasons: list[
+        MechanicalRefusalReason | ElectricalRefusalReason | BenchmarkRefusalReason
+    ]
+    role: str
+
+    @model_validator(mode="after")
+    def validate_role_reasons(self) -> "PlanRefusalFrontmatter":
+        """Validate that reasons match the role."""
+        if self.role == "engineering_mechanical_coder":
+            if not all(
+                isinstance(r, MechanicalRefusalReason)
+                or str(r) in MechanicalRefusalReason.__members__
+                for r in self.reasons
+            ):
+                raise ValueError(f"Invalid reasons for {self.role}")
+        elif self.role == "engineering_electrical_coder":
+            if not all(
+                isinstance(r, ElectricalRefusalReason)
+                or str(r) in ElectricalRefusalReason.__members__
+                for r in self.reasons
+            ):
+                raise ValueError(f"Invalid reasons for {self.role}")
+        elif self.role == "benchmark_cad_coder":
+            if not all(
+                isinstance(r, BenchmarkRefusalReason)
+                or str(r) in BenchmarkRefusalReason.__members__
+                for r in self.reasons
+            ):
+                raise ValueError(f"Invalid reasons for {self.role}")
+        return self
+
+
 # =============================================================================
 # assembly_definition.yaml Schema
 # =============================================================================
@@ -472,6 +513,16 @@ class ManufacturedPartEstimate(BaseModel):
     dfm_suggestions: list[str] = Field(default_factory=list)
 
 
+class CotsReproducibility(BaseModel):
+    """Metadata for COTS reproducibility."""
+
+    catalog_version: str
+    bd_warehouse_commit: str
+    catalog_snapshot_id: str
+    generated_at: str
+    cots_query_id: str | None = None
+
+
 class CotsPartEstimate(BaseModel):
     """Assembly estimate for a COTS part."""
 
@@ -480,6 +531,7 @@ class CotsPartEstimate(BaseModel):
     unit_cost_usd: float
     quantity: int
     source: str
+    reproducibility: CotsReproducibility | None = None
 
 
 class AssemblyPartConfig(BaseModel):

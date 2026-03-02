@@ -151,6 +151,7 @@ async def coder_node(state: AgentState) -> AgentState:
         episode_id=episode_id,
         worker_client=state.worker_client,
         fs=state.fs,
+        agent_role="engineer_coder",
     )
     node = CoderNode(context=ctx)
     return await node(state)

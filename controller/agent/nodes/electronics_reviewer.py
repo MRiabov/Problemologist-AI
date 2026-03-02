@@ -30,6 +30,7 @@ class ElectronicsReviewerSignature(dspy.Signature):
     plan = dspy.InputField()
     todo = dspy.InputField()
     assembly_definition = dspy.InputField()
+    plan_refusal = dspy.InputField(default="")
     objectives = dspy.InputField()
     journal = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
@@ -55,11 +56,17 @@ class ElectronicsReviewerNode(BaseNode):
                     "assembly_definition.yaml"
                 )
 
+        plan_refusal = ""
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("plan_refusal.md"):
+                plan_refusal = await self.ctx.worker_client.read_file("plan_refusal.md")
+
         inputs = {
             "task": state.task,
             "plan": state.plan,
             "todo": state.todo,
             "assembly_definition": assembly_definition,
+            "plan_refusal": plan_refusal,
             "objectives": objectives,
             "journal": state.journal,
         }
@@ -104,6 +111,8 @@ class ElectronicsReviewerNode(BaseNode):
             ReviewDecision.REJECTED: AgentStatus.CODE_REJECTED,
             ReviewDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
             ReviewDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
+            ReviewDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.FAILED,
+            ReviewDecision.REJECT_PLAN_REFUSAL: AgentStatus.CODE_REJECTED,
         }
 
         # Emit ReviewDecisionEvent
@@ -143,6 +152,7 @@ async def electronics_reviewer_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
+        agent_role="engineering_reviewer",
     )
     node = ElectronicsReviewerNode(context=ctx)
     return await node(state)
