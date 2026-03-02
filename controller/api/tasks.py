@@ -96,7 +96,7 @@ async def execute_agent_task(
                 trace_id = uuid.uuid4().hex
 
                 client = get_worker_client(session_id)
-                middleware = RemoteFilesystemMiddleware(client)
+                middleware = RemoteFilesystemMiddleware(client, agent_role=agent_name)
                 backend = RemoteFilesystemBackend(middleware)
 
                 # Initialize agent files (templates, directories)

@@ -6,6 +6,9 @@ import type { TraceType } from './TraceType';
 export type TraceResponse = {
     id: number;
     langfuse_trace_id: (string | null);
+    simulation_run_id?: (string | null);
+    cots_query_id?: (string | null);
+    review_id?: (string | null);
     trace_type: TraceType;
     name: (string | null);
     content: (string | null);

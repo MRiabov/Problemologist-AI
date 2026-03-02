@@ -147,6 +147,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
+        agent_role="benchmark_planner",
     )
     node = BenchmarkPlannerNode(context=ctx)
     return await node(state)
@@ -342,6 +343,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
+        agent_role="benchmark_cad_coder",
     )
     node = BenchmarkCoderNode(context=ctx)
     return await node(state)
@@ -390,6 +392,7 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
+        agent_role="benchmark_cad_coder",
     )
     node = BenchmarkCOTSSearchNode(context=ctx)
     return await node(state)
@@ -456,6 +459,7 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
+        agent_role="benchmark_planner",
     )
     node = BenchmarkSummarizerNode(context=ctx)
     return await node(state)
@@ -571,6 +575,7 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
+        agent_role="engineering_reviewer",
     )
     node = BenchmarkReviewerNode(context=ctx)
     return await node(state)

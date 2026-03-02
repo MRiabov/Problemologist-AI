@@ -127,8 +127,12 @@ def define_graph():
         if state.review_decision:
             if state.review_decision == ReviewDecision.APPROVED:
                 return "skills"
+            if state.review_decision == ReviewDecision.CONFIRM_PLAN_REFUSAL:
+                return "skills"
             if state.review_decision == ReviewDecision.REJECT_PLAN:
                 return "planner"
+            if state.review_decision == ReviewDecision.REJECT_PLAN_REFUSAL:
+                return "coder"
             return "coder"
 
         # Fallback for legacy behavior
@@ -513,7 +517,9 @@ async def _persist_session_assets(
                 http_client=http_client,
                 heavy_url=global_settings.worker_heavy_url,
             )
-            middleware = RemoteFilesystemMiddleware(client)
+            middleware = RemoteFilesystemMiddleware(
+                client, agent_role="benchmark_planner"
+            )
             backend = RemoteFilesystemBackend(middleware)
 
             from controller.observability.middleware_helper import (

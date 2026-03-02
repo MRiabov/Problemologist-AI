@@ -75,6 +75,7 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
     # Fetch catalog metadata for reproducibility
     catalog_version = None
     bd_warehouse_commit = None
+    catalog_snapshot_id = None
     generated_at = None
 
     with Session(engine) as session:
@@ -87,6 +88,7 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
         if meta_result:
             catalog_version = meta_result.catalog_version
             bd_warehouse_commit = meta_result.bd_warehouse_commit
+            catalog_snapshot_id = getattr(meta_result, "catalog_snapshot_id", None)
             generated_at = (
                 meta_result.generated_at.isoformat()
                 if meta_result.generated_at
@@ -94,13 +96,18 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
             )
 
     # Emit search event
+    import uuid
+
     emit_event(
         COTSSearchEvent(
             query=query.query or str(query.constraints),
             results_count=len(results),
             catalog_version=catalog_version,
             bd_warehouse_commit=bd_warehouse_commit,
+            catalog_snapshot_id=catalog_snapshot_id,
             generated_at=generated_at,
+            cots_query_id=uuid.uuid4().hex,
+            candidates=[p.part_id for p in results],
         )
     )
 

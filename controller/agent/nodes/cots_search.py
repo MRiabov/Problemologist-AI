@@ -77,6 +77,7 @@ async def cots_search_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
+        agent_role="engineer_planner",
     )
     node = COTSSearchNode(context=ctx)
     return await node(state)

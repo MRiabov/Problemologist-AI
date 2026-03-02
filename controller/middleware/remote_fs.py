@@ -1,5 +1,7 @@
 import logging
+import os
 from pathlib import Path
+from typing import Literal
 
 from temporalio.client import Client
 
@@ -31,6 +33,7 @@ from shared.observability.schemas import (
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.filesystem.backend import FileInfo
+from shared.workers.filesystem.policy import FilesystemPolicy
 from shared.workers.schema import (
     BenchmarkToolResponse,
     EditOp,
@@ -49,24 +52,65 @@ from shared.workers.schema import (
 logger = logging.getLogger(__name__)
 
 
+# Global policy instance (cached)
+_fs_policy: FilesystemPolicy | None = None
+
+
+def get_fs_policy() -> FilesystemPolicy:
+    global _fs_policy
+    if _fs_policy is None:
+        # Resolve config path relative to the project root or the current file.
+        potential_paths = [
+            Path("config/agents_config.yaml"),
+            Path(__file__).parents[2] / "config" / "agents_config.yaml",
+            Path("/app/config/agents_config.yaml"),
+        ]
+
+        config_path = next((p for p in potential_paths if p.exists()), None)
+
+        if config_path is None:
+            # Fallback for development if repo root is different
+            logger.warning("agents_config_not_found_searching_repo")
+            # Try finding it in the project root
+            root = Path(__file__).parents[2]
+            config_path = root / "config" / "agents_config.yaml"
+
+        _fs_policy = FilesystemPolicy(config_path)
+    return _fs_policy
+
+
 class RemoteFilesystemMiddleware:
     """
     Middleware that proxies filesystem operations to a remote Worker,
     with durable execution via Temporal.
     """
 
-    def __init__(self, client: WorkerClient, temporal_client: Client | None = None):
+    def __init__(
+        self,
+        client: WorkerClient,
+        temporal_client: Client | None = None,
+        agent_role: str = "engineering_mechanical_coder",
+    ):
         self.client = client
         self.temporal_client = temporal_client
-        self.read_only_paths = ["skills/", "utils/", "reviews/"]
+        self.agent_role = agent_role
+        self.policy = get_fs_policy()
 
-    def _is_read_only(self, path: str | Path) -> bool:
-        """Check if a path is in a read-only directory."""
-        p = Path(path).as_posix().lstrip("/")
-        return any(p.startswith(ro_path) for ro_path in self.read_only_paths)
+    def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
+        """Check if action is allowed by policy."""
+        if not self.policy.check_permission(self.agent_role, action, path):
+            msg = f"Permission denied for {self.agent_role} to {action} '{path}'"
+            logger.error(
+                "filesystem_permission_denied",
+                agent=self.agent_role,
+                action=action,
+                path=str(path),
+            )
+            raise PermissionError(msg)
 
     async def list_files(self, path: str | Path = "/") -> list[FileInfo]:
         """List files via the Worker client."""
+        self._check_perm("read", path)
         await record_events(
             episode_id=self.client.session_id,
             events=[LsFilesToolEvent(path=str(path))],
@@ -77,15 +121,18 @@ class RemoteFilesystemMiddleware:
         self, target_id: str, script_path: str | Path = "script.py"
     ) -> InspectTopologyResponse:
         """Inspect topological features via the Worker client."""
+        self._check_perm("read", script_path)
         # We could add a specific event type for this if needed
         return await self.client.inspect_topology(target_id, str(script_path))
 
     async def exists(self, path: str | Path) -> bool:
         """Check if a file exists via the Worker client."""
+        self._check_perm("read", path)
         return await self.client.exists(str(path))
 
     async def read_file(self, path: str | Path) -> str:
         """Read file via the Worker client."""
+        self._check_perm("read", path)
         p_str = str(path).lstrip("/")
         events = [ReadFileToolEvent(path=p_str)]
         if p_str.startswith("skills/"):
@@ -115,9 +162,8 @@ class RemoteFilesystemMiddleware:
         self, path: str | Path, content: str, overwrite: bool = True
     ) -> bool:
         """Write file via the Worker client, enforcing read-only constraints."""
+        self._check_perm("write", path)
         p_str = str(path)
-        if self._is_read_only(p_str):
-            raise PermissionError(f"Path '{p_str}' is read-only.")
 
         await record_events(
             episode_id=self.client.session_id,
@@ -153,9 +199,8 @@ class RemoteFilesystemMiddleware:
 
     async def edit_file(self, path: str | Path, edits: list[EditOp]) -> bool:
         """Edit a file via the Worker client."""
+        self._check_perm("write", path)
         p_str = str(path)
-        if self._is_read_only(p_str):
-            raise PermissionError(f"Path '{p_str}' is read-only.")
 
         await record_events(
             episode_id=self.client.session_id,
@@ -205,6 +250,11 @@ class RemoteFilesystemMiddleware:
         self, pattern: str, path: str | Path | None = None, glob: str | None = None
     ) -> list[GrepMatch]:
         """Search for a pattern in files via the Worker client."""
+        if path:
+            self._check_perm("read", path)
+        else:
+            self._check_perm("read", ".")
+
         p_str = str(path) if path else None
         await record_events(
             episode_id=self.client.session_id,

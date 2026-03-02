@@ -1995,6 +1995,19 @@
             "title": "Session Id",
             "description": "Session ID for the worker."
           },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id",
+            "description": "UI conversation scope session ID."
+          },
           "metadata_vars": {
             "anyOf": [
               {
@@ -2720,6 +2733,39 @@
             ],
             "title": "Langfuse Trace Id"
           },
+          "simulation_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulation Run Id"
+          },
+          "cots_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cots Query Id"
+          },
+          "review_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Id"
+          },
           "trace_type": {
             "$ref": "#/components/schemas/TraceType"
           },
@@ -2896,6 +2942,18 @@
             "format": "uuid",
             "title": "Id"
           },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
+          },
           "task": {
             "type": "string",
             "title": "Task"
@@ -3052,6 +3110,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
           },
           "task": {
             "type": "string",

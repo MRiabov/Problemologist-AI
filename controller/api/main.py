@@ -120,6 +120,7 @@ async def create_test_episode(request: AgentRunRequest):
             existing.status = EpisodeStatus.RUNNING
             existing.metadata_vars = metadata
             existing.skill_git_hash = request.skill_git_hash
+            existing.user_session_id = request.user_session_id
             existing.todo_list = None
             existing.journal = None
             existing.plan = None
@@ -132,6 +133,7 @@ async def create_test_episode(request: AgentRunRequest):
             status=EpisodeStatus.RUNNING,
             metadata_vars=metadata,
             skill_git_hash=request.skill_git_hash,
+            user_session_id=request.user_session_id,
         )
         db.add(episode)
         try:
@@ -176,6 +178,7 @@ async def run_agent(request: AgentRunRequest):
             status=EpisodeStatus.RUNNING,
             metadata_vars=metadata.model_dump(),
             skill_git_hash=request.skill_git_hash,
+            user_session_id=request.user_session_id,
         )
         db.add(episode)
         await db.commit()

@@ -307,6 +307,9 @@ async def get_episode_schematic(
 class TraceResponse(BaseModel):
     id: int
     langfuse_trace_id: str | None
+    simulation_run_id: str | None = None
+    cots_query_id: str | None = None
+    review_id: str | None = None
     trace_type: TraceType
     name: str | None
     content: str | None
@@ -330,6 +333,7 @@ class AssetResponse(BaseModel):
 
 class EpisodeResponse(BaseModel):
     id: uuid.UUID
+    user_session_id: uuid.UUID | None = None
     task: StrictStr
     status: EpisodeStatus
     created_at: datetime
@@ -421,6 +425,7 @@ async def list_episodes(
             responses.append(
                 EpisodeResponse(
                     id=ep.id,
+                    user_session_id=ep.user_session_id,
                     task=ep.task,
                     status=ep.status,
                     created_at=ep.created_at,
@@ -476,6 +481,7 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
     return EpisodeResponse(
         id=episode.id,
+        user_session_id=episode.user_session_id,
         task=episode.task,
         status=episode.status,
         created_at=episode.created_at,

@@ -7,6 +7,7 @@ import type { EpisodeStatus } from './EpisodeStatus';
 import type { TraceResponse } from './TraceResponse';
 export type controller__api__schemas__EpisodeResponse = {
     id: string;
+    user_session_id?: (string | null);
     task: string;
     status: EpisodeStatus;
     created_at: string;
