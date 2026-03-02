@@ -78,6 +78,31 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             pass
         return None
 
+    def _extract_reasoning_text(self, output_data: str) -> str | None:
+        """Extract concise reasoning text from node output payloads."""
+        import re
+
+        if not output_data:
+            return None
+
+        thought_matches = [
+            m.strip()
+            for m in re.findall(
+                r"thought_\d+['\"]?\s*:\s*['\"]([^'\"]+)['\"]", output_data
+            )
+            if m and m.strip()
+        ]
+        if thought_matches:
+            return "\n".join(thought_matches)
+
+        reasoning_match = re.search(
+            r"reasoning['\"]?\s*[:=]\s*['\"]([^'\"]+)['\"]", output_data, re.IGNORECASE
+        )
+        if reasoning_match and reasoning_match.group(1).strip():
+            return reasoning_match.group(1).strip()
+
+        return None
+
     async def record_node_start(self, node_name: str, input_data: str = "") -> None:
         """Explicitly log the start of an agent node (e.g., Planner, Coder)."""
         logger.info("node_start", name=node_name, episode_id=str(self.episode_id))
@@ -115,6 +140,21 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 await db.commit()
                 await db.refresh(trace_obj)
                 await self._broadcast_trace(trace_obj)
+
+                # Emit a dedicated reasoning trace when structured thought/reasoning is present.
+                reasoning_text = self._extract_reasoning_text(output_data)
+                if reasoning_text:
+                    reasoning_trace = Trace(
+                        episode_id=self.episode_id,
+                        trace_type=TraceType.LLM_END,
+                        name=node_name,
+                        content=reasoning_text,
+                        langfuse_trace_id=self._get_langfuse_id(),
+                    )
+                    db.add(reasoning_trace)
+                    await db.commit()
+                    await db.refresh(reasoning_trace)
+                    await self._broadcast_trace(reasoning_trace)
         except Exception as e:
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
