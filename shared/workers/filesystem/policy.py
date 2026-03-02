@@ -33,13 +33,16 @@ class FilesystemPolicy:
 
     def _match_path(self, path: str, patterns: list[str]) -> bool:
         """Check if path matches any of the gitignore-style glob patterns."""
+        if not patterns:
+            return False
+
         p_str = Path(path).as_posix().lstrip("/")
 
         for pattern in patterns:
             pat = pattern.lstrip("/")
 
-            # 1. Exact match or wildcard match using fnmatch
-            if fnmatch.fnmatch(p_str, pat):
+            # 1. Exact match
+            if p_str == pat:
                 return True
 
             # 2. Directory match: if pattern is 'dir/', match 'dir/file'
@@ -47,18 +50,31 @@ class FilesystemPolicy:
                 if p_str.startswith(pat):
                     return True
 
-            # 3. Recursive directory match: if pattern is 'dir/**', match 'dir/file' and 'dir/subdir/file'
+            # 3. Recursive directory match: if pattern is 'dir/**', match 'dir/file'
             if pat.endswith("/**"):
                 base = pat[:-3]
                 if p_str == base or p_str.startswith(base + "/"):
                     return True
 
-            # 4. Folder prefix (implied recursion in some systems): if pattern is 'dir', match 'dir/file'
-            if "/" not in pat:  # simple folder name
-                # If path starts with pat and a slash, or is exactly pat
-                if p_str == pat or p_str.startswith(pat + "/"):
+            # 4. Wildcard match using fnmatch (handles * and ? correctly)
+            # fnmatch doesn't handle ** correctly for recursion across path separators,
+            # but we've handled the common 'dir/**' case above.
+            # For deeper '**/file.py', we can use a simpler regex or improved logic.
+            if "**" in pat:
+                # Simple conversion of ** to .* in regex
+                import re
+
+                # Escape special regex chars but keep * and **
+                regex_pat = (
+                    re.escape(pat).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
+                )
+                if re.match(f"^{regex_pat}$", p_str):
                     return True
-            elif not any(c in pat for c in "*?[]"):  # path without wildcards
+            elif fnmatch.fnmatch(p_str, pat):
+                return True
+
+            # 5. Folder prefix: if pattern is 'dir', match 'dir/file'
+            if "/" not in pat:
                 if p_str == pat or p_str.startswith(pat + "/"):
                     return True
 

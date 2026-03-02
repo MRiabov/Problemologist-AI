@@ -101,7 +101,11 @@ class FilesystemRouter:
         Returns:
             True if path is read-only, False otherwise.
         """
-        normalized = path if path.startswith("/") else f"/{path}"
+        # Mounted paths are addressed as absolute virtual paths (e.g. /reviews/...).
+        # Relative paths should remain in the session workspace.
+        if not path.startswith("/"):
+            return False
+        normalized = path
         return any(normalized.startswith(prefix) for prefix in self.READ_ONLY_PREFIXES)
 
     def _get_mount_point(self, path: str) -> MountPoint | None:
