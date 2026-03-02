@@ -41,6 +41,7 @@ Commonly, these models and enums would be in `shared/` folder.
 The integration suite is designed for high-velocity local execution and CI parity.
 
 - **`IS_INTEGRATION_TEST=true`**: This environment variable is automatically exported by the runner. It enables "smoke test mode" in simulation kernels, significantly reducing particle counts and simulation time for faster feedback.
+- **`tests/integration/mock_responses.yaml`**: Integration mode uses `MockDSPyLM` for agent-node LLM responses, and scenarios are loaded from this file. When `INT-xxx` behavior depends on deterministic mock outputs, keep the corresponding scenario entries current.
 - **`scripts/run_integration_tests.sh`**: The central entry point for the integration suite. It manages infrastructure spin-up (Docker), local service lifecycle, and `pytest` execution.
 - **`logs/integration_tests/`**: All service logs (Controller, Worker Light, Worker Heavy, Temporal Worker) and debug traces are persisted here for every run. Previous runs are archived in `logs/archives/`.
 - **`test_output/`**: Stores JUnit XML results and the persisted test history used for trend analysis.
