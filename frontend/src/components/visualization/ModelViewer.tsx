@@ -320,6 +320,19 @@ export default function ModelViewer({
   const [isElectronicsView, setIsElectronicsView] = useState(false)
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('PART')
 
+  const addCadContext = (targetId: string, level: SelectionMode, metadata?: Record<string, unknown>) => {
+    addToContext({
+      id: `cad-${level}-${targetId}`,
+      type: 'cad',
+      label: targetId,
+      metadata: {
+        part: targetId,
+        level,
+        ...(metadata || {})
+      }
+    });
+  };
+
   const urls = useMemo(() => {
     const all = [...assetUrls];
     if (assetUrl && !all.includes(assetUrl)) {
@@ -349,6 +362,13 @@ export default function ModelViewer({
           setHiddenParts(prev => 
               prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
           )
+        }}
+        onSelectNode={(node) => {
+          addCadContext(node.name || node.id, selectionMode, {
+            uuid: node.id,
+            topology_type: node.type,
+            center: [0, 0, 0]
+          });
         }}
         className={cn(
           "w-72 shrink-0 z-20 transition-all duration-150",
@@ -401,16 +421,7 @@ export default function ModelViewer({
                                 isElectronicsView={isElectronicsView}
                                 onStructureParsed={onTopologyChange}
                                 onSelect={(name, level, metadata) => {
-                                    addToContext({
-                                        id: `cad-${name}`,
-                                        type: 'cad',
-                                        label: name,
-                                        metadata: { 
-                                            part: name,
-                                            level: level,
-                                            ...metadata
-                                        }
-                                    });
+                                    addCadContext(name, level, metadata);
                                 }}
                             />
                         </ModelErrorBoundary>

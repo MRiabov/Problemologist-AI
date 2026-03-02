@@ -28,10 +28,11 @@ interface ModelBrowserProps {
   nodes: TopologyNode[];
   hiddenParts: string[];
   onToggleVisibility: (id: string) => void;
+  onSelectNode?: (node: TopologyNode) => void;
   className?: string;
 }
 
-export function ModelBrowser({ nodes, hiddenParts, onToggleVisibility, className }: ModelBrowserProps) {
+export function ModelBrowser({ nodes, hiddenParts, onToggleVisibility, onSelectNode, className }: ModelBrowserProps) {
   const [filter, setFilter] = useState('');
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'root': true });
 
@@ -53,12 +54,16 @@ export function ModelBrowser({ nodes, hiddenParts, onToggleVisibility, className
     return (
       <div key={node.id} className="select-none">
         <div 
+          data-testid="topology-node-row"
+          data-node-type={node.type}
+          data-node-name={node.name || ""}
           className={cn(
             "flex items-center py-1 px-2 border-l-2 transition-colors cursor-pointer group/node text-[12px]",
             "hover:bg-primary/10 border-transparent",
             !isHidden && "text-slate-200",
             isHidden && "text-slate-500"
           )}
+          onClick={() => onSelectNode?.(node)}
         >
           {/* Indent */}
           <div style={{ width: `${level * 12}px` }} className="shrink-0" />
