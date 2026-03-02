@@ -547,7 +547,13 @@ Database:
 
 - Artifact: `parts.db` (SQLite; local on worker, read-only).
 - Build-time indexer extracts metadata and usage snippets from `bd_warehouse`.
-- Store reproducibility metadata: `catalog_version`, `bd_warehouse_commit`, `generated_at`.
+- Store reproducibility metadata: `catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`.
+- `catalog_snapshot_id` is a deterministic snapshot fingerprint created at catalog build time (prefer hash of canonical exported catalog content; acceptable fallback is hash of `parts.db` bytes).
+- Every COTS handoff artifact must persist:
+  - catalog metadata (`catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`)
+  - query snapshot (normalized intent + constraints + limit/sort)
+  - selection snapshot (ordered returned candidates + final selected `part_id`s used by planner/engineer)
+- COTS reproducibility is invalid if selected parts are persisted without the snapshot metadata above.
 
 <!-- TODO move details away from this section into CAD section... -->
 
@@ -588,16 +594,37 @@ Both of the agents "live" directly in the filesystem of the container that they 
 
 Each agent starts with a template, roughly defined in [Starting folder structure for various agents](#starting-folder-structure-for-various-agents).  It is predefined for each agent and we will test it.
 
-##### Initial files for each agent
+##### Initial files for each agent and read-write permissions
 
-- Engineer Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (read), `assembly_definition.yaml` (draft/write)
-- Engineer CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml` (read), `assembly_definition.yaml` (read), `script.py`, `journal.md`, `renders/`
-- Engineer Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `assembly_definition.yaml`)
-- Benchmark Planner: `skills/`, `utils/`, `plan.md`, `todo.md`, `objectives.yaml` (draft), `assembly_definition.yaml` (draft, local only), `journal.md`
-- Benchmark CAD: `skills/`, `utils/`, `plan.md` (read), `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `script.py`, `journal.md`, `renders/`
-- Benchmark Reviewer: read-only all agent files, plus write access to `reviews/` (uses `renders/`, `plan.md`, `objectives.yaml`, `assembly_definition.yaml`)
-- COTS Search: read-only COTS catalog DB/CLI, `journal.md` (queries + results)
-- Skill Creator: `skill-creator/SKILL.md` (read), `skills/` (read/write), `journal.md`, git metadata
+- Engineering planner:
+  - read: `skills/**`, `utils/**`, `objectives.yaml` (benchmark-owned constraints), `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `objectives.yaml` (only planner-owned fields: internal max targets under benchmark caps)
+- Engineering CAD implementer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
+- Engineering reviewer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - write: `reviews/review-round-*/review.md` only
+- Benchmark planner:
+  - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
+  - write: `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (benchmark-owned), `assembly_definition.yaml` (benchmark-local draft, not handed to engineering)
+- Benchmark CAD implementer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
+- Benchmark reviewer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - write: `reviews/review-round-*/review.md` only
+- COTS search subagent:
+  - read: `parts.db` (read-only), COTS query helpers/CLI, constraints from caller, optional prior `journal.md`
+  - write: `journal.md` (optional), structured COTS result payload returned to caller
+- Skill creator/learner:
+  - read: `skill-creator/SKILL.md`, existing `skills/**`, relevant journals/reviews/traces, git metadata
+  - write: `skills/**` (subject to safety limits), `journal.md`, git commit metadata
+
+Locking rule:
+
+- Before planner submission: planner may edit planner-owned files above.
+- After planner submission accepted: `objectives.yaml` and `assembly_definition.yaml` become read-only for implementer/reviewer; only replanning can mutate them.
 
 Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
 
@@ -611,9 +638,105 @@ Another important note: files in e.g. Engineer CAD agent or reviewer aren't crea
 
 Where possible, templates would have a validation schema. E.g. (in particular) for YAML files, we would define a validation schema
 
+#### `agents_config.yaml` (path permissions policy)
+
+To prevent permission drift between "initial files" docs and runtime behavior, we define a centralized policy file at `config/agents_config.yaml`.
+
+The policy uses gitignore-style glob patterns (`*`, `**`, path prefixes) for filesystem access control.
+
+Rules:
+
+1. Every read/write/edit/upload/download operation is checked against this policy in `FilesystemMiddleware`.
+2. `deny` takes precedence over `allow`.
+3. If a path is not matched by `allow`, access is denied by default.
+4. Agent-specific rules override `defaults` (defaults are fallback only).
+5. Tool availability can be broad, but path permissions are enforced per role by this file.
+6. Reviewer role gets `write/edit` tools, but policy only allows writes under `reviews/review-round-*/`.
+
+Example (`config/agents_config.yaml`):
+
+```yaml
+version: "1.0"
+
+defaults:
+  read:
+    allow: []
+    deny: []
+  write:
+    allow: []
+    deny: []
+
+agents:
+  engineering_planner:
+    read:
+      allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+      deny: []
+    write:
+      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
+      deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+
+  engineering_cad_implementer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      deny: []
+    write:
+      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
+      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+
+  engineering_reviewer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      deny: []
+    write:
+      allow: ["reviews/review-round-*/review.md"]
+      deny: []
+
+  benchmark_planner:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "journal.md"]
+      deny: []
+    write:
+      allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
+      deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+
+  benchmark_cad_implementer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      deny: []
+    write:
+      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
+      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+
+  benchmark_reviewer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      deny: []
+    write:
+      allow: ["reviews/review-round-*/review.md"]
+      deny: []
+
+  cots_search_subagent:
+    read:
+      allow: ["parts.db", "journal.md", "skills/**", "utils/**"]
+      deny: []
+    write:
+      allow: ["journal.md"]
+      deny: []
+
+  skill_creator_learner:
+    read:
+      allow: ["skill-creator/**", "skills/**", "journal.md", "reviews/**"]
+      deny: []
+    write:
+      allow: ["skills/**", "journal.md"]
+      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "script.py", "reviews/**"]
+```
+
 #### Immutability validation
 
-We assert that files (especially "control" files like `objectives.yaml` and `assembly_definition.yaml`) are not edited by the agent. We use git-based hash assertions for such files where they must be immutable.
+We assert that files (especially "control" files like `objectives.yaml` and `assembly_definition.yaml`) are not edited by coder agents, however they are edited by planner agents. We use git-based hash assertions for such files where they must be immutable.
+
+Essentially, the goal is a clear separation of concerns: planner files are edited by the planner, review files are edited by the reviewer, coder edits coder files; skill subagents modify only skill files, etc.
 
 #### File updates
 
@@ -763,6 +886,38 @@ The agents will delimit their reasoning with markdown headings, which would allo
 
 The Planner will build a list of TODOs for the agent to do. The critic will verify against the plan and the list of TODOs.
 
+#### Plan refusal artifact (`plan_refusal.md`)
+
+If an implementer/coder refuses a planner handoff, refusal is only valid with a structured `plan_refusal.md` file.
+
+Rules:
+
+1. `plan_refusal.md` is optional and only created when refusing.
+2. The YAML frontmatter contains `reasons` as an array and allows multiple reasons.
+3. Reasons are agent-specific and validated by role.
+4. The markdown body below frontmatter explains the concrete evidence and what was attempted.
+
+Base frontmatter shape:
+
+```yaml
+agent_role: engineering_mechanical_coder # or engineering_electrical_coder / benchmark_cad_coder
+reasons: [cost, weight] # one or more reasons
+summary: "Why the current plan cannot be implemented as written"
+evidence:
+  - "validator output or simulation/log evidence"
+  - "which constraint is violated and by how much"
+attempted_fixes:
+  - "what was tried before refusal"
+requested_planner_changes:
+  - "specific, actionable changes required to proceed"
+```
+
+Allowed reasons by agent role:
+
+- Engineering mechanical coder: `cost`, `weight`, `underspecification`, `incorrect_specification`, `build_zone_violation`, `kinematic_infeasibility`, `manufacturability_conflict`, `cots_unavailable`
+- Engineering electrical coder: `underspecification`, `incorrect_specification`, `schema_inconsistency`, `wiring_infeasibility`, `power_budget_violation`, `component_incompatibility`, `cots_unavailable`
+- Benchmark CAD coder: `underspecification`, `incorrect_specification`, `geometry_conflict`, `objective_conflict`, `invalid_randomization`, `unsolvable_benchmark`, `simulation_invalid`
+
 #### Reviews by reviewers
 
 Reviews will be written by a markdown document and stored in `/reviews/` folder, to be able to access it later.
@@ -909,7 +1064,7 @@ Lead engineer <-> CAD modelling engineer <-> Engineering Reviewer
 
 The lead engineer will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info, build zones).
 CAD modelling engineer can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
-In this case, the Engineering Reviewer must agree and confirm that in fact, the price or weight was set too low, and will pass the plan back to the lead engineer for replanning.
+In this case, the CAD modelling engineer must provide `plan_refusal.md` (with role-specific reasons + evidence). The Engineering Reviewer validates that refusal and either confirms (`confirm_plan_refusal`) and routes back to planner, or rejects (`reject_plan_refusal`) and routes back to implementation.
 
 The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
 
@@ -961,9 +1116,9 @@ The positions of objectives (including a build zone) and runtime randomization a
 
 Notably, the benchmarks are randomized and reused multiple times under different variations. The Engineering agent only receives a "runtime" randomization - (as in the list of the relevant heading) currently only a (relatively) small jitter in the environment.
 
-##### What if the benchmark agent set the price too low?
+##### What if the benchmark (planner/coder) agent set the price too low?
 
-For now, nothing. I'll filter it out via SQL or similar later and make a "price discussion" between agents - probably. Or human-in-the-loop.
+For now, nothing. I'll filter it out via SQL or similar later and make a "price discussion" between agents - probably. Or a human-in-the-loop method. Anyway, this is a non-priority item for now.
 
 #### Engineer Planner and "Coder" interaction
 
@@ -1219,7 +1374,7 @@ Notably the Engineer will at this point already have passed the manufacturabilit
 The reviews will also come with the following YAML frontmatter:
 
 ```yaml
-decision: approved # [approved, rejected, confirm_plan_refusal, confirm_plan_refusal]
+decision: approved # [approved, rejected, confirm_plan_refusal, reject_plan_refusal]
 comments: [
    # short commentary on issues, as a array.
    # Up to 100 chars per issue.
@@ -2155,6 +2310,23 @@ Langfuse is deployed locally/on Railway.
 
 For deeper observability, e.g. requirements like "fasteners were used in at least 70% of cases", store fastener usage in the application database.
 
+#### ID model and linkage
+
+Use explicit IDs and link all observability data to them:
+
+1. `user_session_id`: one user conversation/session.
+2. `episode_id`: one agent workflow execution attempt within a user session.
+3. `simulation_run_id`: one simulation invocation within an episode.
+4. `cots_query_id`: one COTS query invocation within an episode.
+5. `review_id`: one reviewer decision artifact.
+6. `trace_id`: one observability trace record (with optional `langfuse_trace_id` linkage).
+
+Current implementation note (explicit bug):
+
+- We currently conflate `session_id` and `episode_id` in parts of the runtime/observability flow.
+- This is a bug, because user session scope and workflow execution scope are different concerns.
+- Required fix direction: keep `episode_id` as workflow-run identity, introduce/propagate `user_session_id`, and store both on traces/events/assets for deterministic joins.
+
 #### All collected events
 
 We track the following structured domain events to compute the evaluation metrics defined in the [Agent Evaluations](#agent-evaluations) section:
@@ -2193,7 +2365,7 @@ We track the following structured domain events to compute the evaluation metric
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
 21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
-22. Plan refusal events with an explicit refusal reason and proof-of-impossibility evidence (note: no agent currently for plan refusal)
+22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
 
 <!-- 20. Metric for "Jamming Rate"
@@ -2310,7 +2482,9 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 
 #### "Agent-native" tools (callable by DSPy.ReAct runtime)
 
-The following agents have the exact same set of tools: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`.
+The following agents can expose the same tool API surface: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`.
+
+Actual read/write/edit access is enforced per-role via `config/agents_config.yaml` path rules. A tool call targeting a forbidden path is rejected by policy (deterministic permission error).
 
 1. Benchmark Planner: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
 2. Benchmark Generator: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
