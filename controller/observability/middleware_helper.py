@@ -115,6 +115,7 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
 async def record_simulation_result(episode_id: str, res_dict: dict[str, Any]):
     """Records simulation result and instability events."""
     failure_reason = map_simulation_failure_reason(res_dict)
+    simulation_run_id = uuid.uuid4().hex
 
     await record_worker_events(
         episode_id=episode_id,
@@ -125,6 +126,7 @@ async def record_simulation_result(episode_id: str, res_dict: dict[str, Any]):
                 failure=res_dict.get("failure"),
                 time_elapsed_s=res_dict.get("time_elapsed_s", 0.0),
                 compute_time_ms=res_dict.get("compute_time_ms", 0.0),
+                simulation_run_id=simulation_run_id,
                 metadata=res_dict,
             )
         ],

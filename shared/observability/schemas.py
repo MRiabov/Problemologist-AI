@@ -33,6 +33,7 @@ class ObservabilityEventType(StrEnum):
     SIMULATION_RESULT = "simulation_result"
     # 9. COTS search (engineer/planner?)
     COTS_SEARCH = "cots_search"
+    COTS_SELECTION = "cots_selection"
     # 10. Plan submission (benchmark)
     PLAN_SUBMISSION_BENCHMARK = "plan_submission_benchmark"
     # 11. Plan submission (Engineer)
@@ -101,6 +102,8 @@ class BaseEvent(BaseModel):
     event_type: ObservabilityEventType
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     agent_id: str | None = None
+    user_session_id: str | None = None
+    episode_id: str | None = None
 
 
 class ComponentUsageEvent(BaseEvent):
@@ -179,6 +182,12 @@ class COTSSearchEvent(BaseEvent):
     catalog_snapshot_id: str | None = None
     candidates: list[str] = Field(default_factory=list)  # Ordered part_ids
     selected_part_ids: list[str] = Field(default_factory=list)
+
+
+class COTSSelectionEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.COTS_SELECTION
+    selected_part_ids: list[str]
+    query_ids: list[str] = Field(default_factory=list)
 
 
 class PlanSubmissionBenchmarkEvent(BaseEvent):

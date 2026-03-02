@@ -101,10 +101,10 @@ class RemoteFilesystemMiddleware:
         if not self.policy.check_permission(self.agent_role, action, path):
             msg = f"Permission denied for {self.agent_role} to {action} '{path}'"
             logger.error(
-                "filesystem_permission_denied",
-                agent=self.agent_role,
-                action=action,
-                path=str(path),
+                "filesystem_permission_denied agent=%s action=%s path=%s",
+                self.agent_role,
+                action,
+                str(path),
             )
             raise PermissionError(msg)
 
@@ -183,6 +183,8 @@ class RemoteFilesystemMiddleware:
                     if "/" in path.lstrip("/")[7:]
                     else path.lstrip("/")[7:]
                 )
+                from shared.observability.schemas import LibraryUsageEvent
+
                 await record_events(
                     episode_id=self.client.session_id,
                     events=[
@@ -191,6 +193,36 @@ class RemoteFilesystemMiddleware:
                         )
                     ],
                 )
+            # WP06: Detect COTS selections in assembly_definition.yaml
+            if p_str == "assembly_definition.yaml":
+                try:
+                    import yaml
+
+                    data = yaml.safe_load(content)
+                    if data and "cots_parts" in data:
+                        from shared.observability.schemas import COTSSelectionEvent
+
+                        selected_ids = [
+                            p["part_id"] for p in data["cots_parts"] if "part_id" in p
+                        ]
+                        query_ids = [
+                            p["reproducibility"]["cots_query_id"]
+                            for p in data["cots_parts"]
+                            if "reproducibility" in p
+                            and p["reproducibility"]
+                            and "cots_query_id" in p["reproducibility"]
+                        ]
+
+                        await record_events(
+                            episode_id=self.client.session_id,
+                            events=[
+                                COTSSelectionEvent(
+                                    selected_part_ids=selected_ids, query_ids=query_ids
+                                )
+                            ],
+                        )
+                except Exception as e:
+                    logger.warning("failed_to_emit_cots_selection_event", error=str(e))
 
             # Broadcast update and sync asset via helper
             await broadcast_file_update(self.client.session_id, p_str, content)

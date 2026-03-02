@@ -6,7 +6,7 @@ import structlog
 from sqlalchemy import select
 
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Asset, Trace
+from controller.persistence.models import Asset, Episode, Trace
 from controller.utils import get_episode_id
 from shared.enums import AssetType, TraceType
 from shared.observability.schemas import BaseEvent
@@ -34,6 +34,20 @@ async def record_worker_events(
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:
+        # Fetch user_session_id for denormalized storage
+        episode_res = await db.execute(
+            select(Episode).where(Episode.id == episode_uuid)
+        )
+        episode = episode_res.scalar_one_or_none()
+        user_session_id = episode.user_session_id if episode else None
+
+        logger.info(
+            "recording_events",
+            count=len(events),
+            episode_id=str(episode_uuid),
+            user_session_id=str(user_session_id),
+        )
+
         for event in events:
             if isinstance(event, BaseEvent):
                 # Serialize model
@@ -42,10 +56,32 @@ async def record_worker_events(
                 # content can be a string representation for searchability
                 content = str(event_dict.get("data", event_dict))
                 metadata = event_dict
+                # Use user_session_id from event if present, otherwise from episode
+                event_user_session_id = (
+                    uuid.UUID(event.user_session_id)
+                    if event.user_session_id
+                    else user_session_id
+                )
+                logger.info(
+                    "event_ids",
+                    name=name,
+                    event_user_session_id=str(event_user_session_id),
+                )
+                simulation_run_id = event_dict.get("simulation_run_id")
+                cots_query_id = event_dict.get("cots_query_id")
+                review_id = event_dict.get("review_id")
             else:
                 name = event.get("event_type", "generic_event")
                 content = str(event.get("data", {}))
                 metadata = event
+                event_user_session_id = (
+                    uuid.UUID(event.get("user_session_id"))
+                    if event.get("user_session_id")
+                    else user_session_id
+                )
+                simulation_run_id = event.get("simulation_run_id")
+                cots_query_id = event.get("cots_query_id")
+                review_id = event.get("review_id")
 
             if isinstance(metadata, dict) and "episode_id" not in metadata:
                 metadata = dict(metadata)
@@ -53,11 +89,15 @@ async def record_worker_events(
 
             trace = Trace(
                 episode_id=episode_uuid,
+                user_session_id=event_user_session_id,
                 trace_type=TraceType.EVENT,
                 name=name,
                 content=content,
                 metadata_vars=metadata,
                 langfuse_trace_id=langfuse_trace_id,
+                simulation_run_id=simulation_run_id,
+                cots_query_id=cots_query_id,
+                review_id=review_id,
             )
             db.add(trace)
 
@@ -107,6 +147,13 @@ async def sync_asset(
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:
+        # Fetch user_session_id for denormalized storage
+        episode_res = await db.execute(
+            select(Episode).where(Episode.id == episode_uuid)
+        )
+        episode = episode_res.scalar_one_or_none()
+        user_session_id = episode.user_session_id if episode else None
+
         # Check if asset already exists
         stmt = select(Asset).where(
             Asset.episode_id == episode_uuid, Asset.s3_path == path
@@ -117,6 +164,7 @@ async def sync_asset(
         if asset:
             asset.content = content
             asset.asset_type = asset_type
+            asset.user_session_id = user_session_id
             logger.info(
                 "sync_asset_updated",
                 episode_id=str(episode_uuid),
@@ -126,6 +174,7 @@ async def sync_asset(
         else:
             asset = Asset(
                 episode_id=episode_uuid,
+                user_session_id=user_session_id,
                 s3_path=str(path),
                 content=content,
                 asset_type=asset_type,
