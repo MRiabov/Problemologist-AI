@@ -648,8 +648,8 @@ scenarios:
                   min: [-10, -10, -10]
                   max: [10, 10, 10]
               simulation_bounds:
-                min: [-20, -20, -20]
-                max: [20, 20, 20]
+                min: [-30, -30, -30]
+                max: [30, 30, 30]
               moved_object:
                 label: "projectile_ball"
                 shape: "sphere"
@@ -670,8 +670,10 @@ scenarios:
       tool_calls:
         - name: "execute_command"
           input: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+        - name: "execute_command"
+          input: { command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)" }
         - name: "write_file"
-          input: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.label = \"box\"\n    b.metadata = PartMetadata(material_id=\"abs\", fixed=True)\n    return b", overwrite: true }
+          input: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
 
 
   # Default fallback

@@ -81,18 +81,18 @@ def test_benchmark_creation_flow(page: Page):
     plan_button.click()
 
     # 9. Verify the plan is non-template and contains objective-specific language.
-    # The content is rendered in a SyntaxHighlighter viewport.
-    content_area = page.locator(".flex-1.min-w-0.bg-background\\/50")
-    expect(
-        content_area.get_by_text(
-            re.compile("learning objective|solution overview", re.IGNORECASE)
-        ).first
-    ).to_be_visible(timeout=30000)
-    expect(
-        content_area.get_by_text(re.compile("goal", re.IGNORECASE)).first
-    ).to_be_visible(timeout=30000)
+    # Use stable code-line test IDs instead of style-class selectors.
+    first_line = page.get_by_test_id("code-line-1")
+    expect(first_line).to_be_visible(timeout=30000)
+    code_lines = page.locator('[data-testid^="code-line-"]')
+    plan_text = "\n".join(code_lines.all_inner_texts())
 
-    # Final check: ensure the moved object context is present.
-    expect(
-        content_area.get_by_text(re.compile("steel ball|sphere", re.IGNORECASE)).first
-    ).to_be_visible(timeout=30000)
+    assert re.search(
+        r"learning objective|solution overview", plan_text, re.IGNORECASE
+    ), f"plan.md missing expected structure. Content:\n{plan_text}"
+    assert re.search(r"goal", plan_text, re.IGNORECASE), (
+        f"plan.md missing goal context. Content:\n{plan_text}"
+    )
+    assert re.search(r"steel ball|sphere", plan_text, re.IGNORECASE), (
+        f"plan.md missing moved object context. Content:\n{plan_text}"
+    )
