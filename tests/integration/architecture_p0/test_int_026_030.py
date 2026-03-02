@@ -30,7 +30,7 @@ from shared.workers.schema import (
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 def _event_get(event, key: str, default=None):
@@ -228,18 +228,18 @@ async def test_int_029_api_key_enforcement(controller_client):
     client = controller_client
 
     # No key
-    resp = await client.post("/ops/backup")
+    resp = await client.post("ops/backup")
     assert resp.status_code == 403
 
     # Invalid auth
     resp = await client.post(
-        "/ops/backup",
+        "ops/backup",
         headers={"X-Backup-Secret": "invalid-auth-val"},
     )
     assert resp.status_code == 403
 
     valid_auth = os.getenv("BACKUP_SECRET", "change-me-in-production")
-    resp = await client.post("/ops/backup", headers={"X-Backup-Secret": valid_auth})
+    resp = await client.post("ops/backup", headers={"X-Backup-Secret": valid_auth})
     assert resp.status_code in [202, 500]
     if resp.status_code == 500:
         assert (

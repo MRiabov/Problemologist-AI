@@ -17,7 +17,7 @@ from shared.workers.schema import FsFileEntry
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 @pytest.fixture
@@ -32,49 +32,46 @@ def base_headers(session_id):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_headers):
+async def test_int_012_013_cots_search_contract_and_readonly(
+    session_id, base_headers, controller_client, worker_light_client
+):
     """INT-012, INT-013: Verify COTS search output contract and read-only behavior."""
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        # COTS subagent or tool is usually invoked via a runtime script or endpoint.
-        # Let's test via the COTS indexer/search endpoint if available,
-        # or via a subagent call if the controller exposes it.
+    # Scenario: Query for a common part
+    query = "M3 screw"
+    resp = await controller_client.get("cots/search", params={"q": query})
 
-        # Scenario: Query for a common part
-        query = "M3 screw"
-        resp = await client.get(f"{CONTROLLER_URL}/cots/search", params={"q": query})
+    # If the endpoint doesn't exist yet, we might need to trigger it via an agent run
+    # but for a targeted integration test, we prefer direct API if it exists.
+    if resp.status_code == 404:
+        pytest.skip("COTS search endpoint not implemented on controller")
 
-        # If the endpoint doesn't exist yet, we might need to trigger it via an agent run
-        # but for a targeted integration test, we prefer direct API if it exists.
-        if resp.status_code == 404:
-            pytest.skip("COTS search endpoint not implemented on controller")
+    assert resp.status_code == 200
+    search_results = TypeAdapter(list[CotsSearchItem]).validate_python(resp.json())
+    assert isinstance(search_results, list)
 
-        assert resp.status_code == 200
-        search_results = TypeAdapter(list[CotsSearchItem]).validate_python(resp.json())
-        assert isinstance(search_results, list)
+    if len(search_results) > 0:
+        part = search_results[0]
+        # INT-013: Required fields — validate via model
+        assert part.part_id is not None
+        assert part.manufacturer is not None
+        assert part.price is not None
+        assert part.source is not None
 
-        if len(search_results) > 0:
-            part = search_results[0]
-            # INT-013: Required fields — validate via model
-            assert part.part_id is not None
-            assert part.manufacturer is not None
-            assert part.price is not None
-            assert part.source is not None
-
-        # INT-012: Read-only check
-        # Verify that after search, no new files are created in a dummy session
-        # (beyond journal entries which are allowed)
-        ls_resp = await client.post(
-            f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
+    # INT-012: Read-only check
+    # Verify that after search, no new files are created in a dummy session
+    # (beyond journal entries which are allowed)
+    ls_resp = await worker_light_client.post(
+        "fs/ls", json={"path": "."}, headers=base_headers
+    )
+    fs_entries = [FsFileEntry.model_validate(e) for e in ls_resp.json()]
+    # Allow only journals or nothing
+    for entry in fs_entries:
+        assert (
+            entry.name.startswith("journal")
+            or entry.name == "objectives.yaml"
+            or entry.name == "plan.md"
+            or entry.name == "."
         )
-        fs_entries = [FsFileEntry.model_validate(e) for e in ls_resp.json()]
-        # Allow only journals or nothing
-        for entry in fs_entries:
-            assert (
-                entry.name.startswith("journal")
-                or entry.name == "objectives.yaml"
-                or entry.name == "plan.md"
-                or entry.name == "."
-            )
 
 
 @pytest.mark.integration_p0
@@ -90,7 +87,7 @@ async def test_int_016_reviewer_decision_schema_gate(
     session_id = f"INT-016-{uuid.uuid4().hex[:8]}"
     req = AgentRunRequest(task="Test Review Schema", session_id=session_id)
     run_resp = await client.post(
-        "/agent/run",
+        "agent/run",
         json=req.model_dump(mode="json"),
     )
     assert run_resp.status_code == 202
@@ -106,7 +103,7 @@ This should be rejected.
 """
     # Reviewer output usually goes to a specific path or endpoint
     resp = await client.post(
-        f"/episodes/{episode_id}/review",
+        f"episodes/{episode_id}/review",
         json={"review_content": malformed_review},
     )
 
@@ -114,7 +111,7 @@ This should be rejected.
         # Fallback: Maybe it's a worker-side tool?
         # Use worker_heavy_client
         resp = await worker_heavy_client.post(
-            "/benchmark/review",
+            "benchmark/review",
             json={"content": malformed_review},
             headers=base_headers,
         )
@@ -134,7 +131,7 @@ async def test_int_017_plan_refusal_loop(session_id, base_headers, controller_cl
     session_id = f"INT-017-{uuid.uuid4().hex[:8]}"
     req = AgentRunRequest(task="Test Refusal Loop", session_id=session_id)
     run_resp = await client.post(
-        "/agent/run",
+        "agent/run",
         json=req.model_dump(mode="json"),
     )
     assert run_resp.status_code == 202
@@ -151,7 +148,7 @@ evidence:
 Refusing this plan.
 """
     resp = await client.post(
-        f"/episodes/{episode_id}/review",
+        f"episodes/{episode_id}/review",
         json={"review_content": review_content},
     )
     assert resp.status_code == 200
@@ -161,7 +158,7 @@ Refusing this plan.
 
     # 3. Verify the agent/episode status is FAILED
     # (Architecture might eventually require a loop/retry, but current impl fails it)
-    status_resp = await client.get(f"/episodes/{episode_id}")
+    status_resp = await client.get(f"episodes/{episode_id}")
     assert status_resp.status_code == 200
     ep_data = EpisodeResponse.model_validate(status_resp.json())
     assert ep_data.status.value == "FAILED"
