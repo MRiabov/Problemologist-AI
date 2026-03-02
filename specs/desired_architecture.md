@@ -2773,6 +2773,10 @@ For both frontend and for backend, the workers will run async, with a parallel e
 
 Frontend specs now live in the sibling `frontend-specs.md` file. It serves as a central point of reference for frotend.
 
+Frontend observability requirements (mandatory):
+- Reasoning visibility in chat (`View reasoning`) must be backed by persisted backend traces that are queryable via episode APIs (for example, dedicated reasoning traces per node); frontend must not rely on placeholder-only phase labels.
+- Tool activity rows shown in chat must map directly to backend tool-call traces for that run (no synthetic-only rows).
+
 ## Inputs to the system
 
 ### Inputs to the Benchmark generator
