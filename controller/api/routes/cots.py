@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import create_engine, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from controller.api.schemas import CotsMetadataResponse, CotsSearchItem
@@ -75,7 +76,15 @@ def get_catalog_metadata(db: Session = Depends(get_db)):
     Get the catalog metadata (version, commit, etc.).
     """
     stmt = select(CatalogMetadataORM).order_by(CatalogMetadataORM.id.desc()).limit(1)
-    result = db.scalar(stmt)
+    try:
+        result = db.scalar(stmt)
+    except SQLAlchemyError:
+        # Backward-compatible fallback for older parts.db schemas.
+        return CotsMetadataResponse(
+            catalog_version="unknown",
+            bd_warehouse_commit="unknown",
+            generated_at=None,
+        )
 
     if not result:
         return CotsMetadataResponse(
