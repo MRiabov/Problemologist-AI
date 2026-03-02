@@ -9,6 +9,7 @@ from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
@@ -43,12 +44,24 @@ async def test_manufacturing_methods_and_materials():
         benchmark_session_id = str(benchmark_resp.session_id)
 
         # Wait for benchmark
+        confirmed = False
         for _ in range(150):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
                 bench_ep = EpisodeResponse.model_validate(status_resp.json())
+                if bench_ep.status == EpisodeStatus.PLANNED and not confirmed:
+                    await client.post(
+                        f"/benchmark/{benchmark_session_id}/confirm",
+                        json=ConfirmRequest(comment="Proceed").model_dump(),
+                    )
+                    confirmed = True
                 if bench_ep.status == EpisodeStatus.COMPLETED:
                     break
+                if bench_ep.status == EpisodeStatus.FAILED:
+                    pytest.fail(
+                        "Benchmark generation failed during setup "
+                        f"(session_id={benchmark_session_id})."
+                    )
             await asyncio.sleep(2)
         else:
             pytest.fail("Benchmark generation timed out.")

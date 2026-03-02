@@ -53,18 +53,25 @@ async def test_engineering_full_loop():
 
         # Wait for benchmark
         max_retries = 150
+        confirmed = False
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
             if status_resp.status_code == 200:
                 sess_data = EpisodeResponse.model_validate(status_resp.json())
                 status = sess_data.status
-                if status == EpisodeStatus.PLANNED:
+                if status == EpisodeStatus.PLANNED and not confirmed:
                     await client.post(
                         f"/benchmark/{benchmark_session_id}/confirm",
                         json=ConfirmRequest(comment="Proceed").model_dump(),
                     )
+                    confirmed = True
                 elif status == EpisodeStatus.COMPLETED:
                     break
+                elif status == EpisodeStatus.FAILED:
+                    pytest.fail(
+                        "Benchmark generation failed during setup "
+                        f"(session_id={benchmark_session_id})."
+                    )
             await asyncio.sleep(2)
         else:
             pytest.fail("Benchmark generation failed or timed out during setup.")
