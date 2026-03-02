@@ -100,7 +100,7 @@ def test_generate_schematic_soup_components_and_wiring():
         (
             c
             for c in soup
-            if c["type"] == "schematic_component" and c["name"] == "motor1"
+            if c.type == "schematic_component" and getattr(c, "name", None) == "motor1"
         ),
         None,
     )
@@ -108,22 +108,22 @@ def test_generate_schematic_soup_components_and_wiring():
         (
             c
             for c in soup
-            if c["type"] == "schematic_component" and c["name"] == "switch1"
+            if c.type == "schematic_component" and getattr(c, "name", None) == "switch1"
         ),
         None,
     )
 
     assert motor is not None
-    assert motor["symbol_name"] == "resistor"
+    assert getattr(motor, "symbol_name", None) == "resistor"
 
     assert switch is not None
-    assert switch["symbol_name"] == "spst_switch"
+    assert getattr(switch, "symbol_name", None) == "spst_switch"
 
     # 2. Verify pins exist
-    assert any(c["id"] == "comp_motor1_p1" for c in soup)
-    assert any(c["id"] == "comp_motor1_p2" for c in soup)
-    assert any(c["id"] == "comp_switch1_p1" for c in soup)
-    assert any(c["id"] == "comp_switch1_p2" for c in soup)
+    assert any(getattr(c, "id", None) == "comp_motor1_p1" for c in soup)
+    assert any(getattr(c, "id", None) == "comp_motor1_p2" for c in soup)
+    assert any(getattr(c, "id", None) == "comp_switch1_p1" for c in soup)
+    assert any(getattr(c, "id", None) == "comp_switch1_p2" for c in soup)
 
     # 3. Verify trace logic (The Critical Fix)
     # motor1(-) should map to pin 2
@@ -131,10 +131,10 @@ def test_generate_schematic_soup_components_and_wiring():
     # So trace should go from comp_motor1_p2 to comp_switch1_p1
 
     trace = next(
-        (c for c in soup if c["type"] == "schematic_trace" and c["id"] == "trace_w1"),
+        (c for c in soup if c.type == "schematic_trace" and getattr(c, "id", None) == "trace_w1"),
         None,
     )
     assert trace is not None
 
-    assert trace["source"] == "comp_motor1_p2"
-    assert trace["target"] == "comp_switch1_p1"
+    assert getattr(trace, "source", None) == "comp_motor1_p2"
+    assert getattr(trace, "target", None) == "comp_switch1_p1"
