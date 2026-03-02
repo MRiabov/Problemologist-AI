@@ -32,9 +32,9 @@ async def should_continue(state: AgentState) -> str:
     if state.turn_count >= settings.max_agent_turns:
         return "skills"
 
-    if state.status == AgentStatus.APPROVED:
+    if state.status == AgentStatus.APPROVED or state.status == AgentStatus.FAILED:
         # T010: Check if there are more steps in TODO before finishing
-        if "- [ ]" in state.todo:
+        if state.status == AgentStatus.APPROVED and "- [ ]" in state.todo:
             logger.info("step_approved_continuing_to_next", todo=state.todo)
             return "coder"
         return "skills"
