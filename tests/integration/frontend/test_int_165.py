@@ -50,7 +50,25 @@ def test_cad_topology_selection_and_browser(page: Page):
     expect(confirm_button).to_be_visible()
     confirm_button.click()
 
-    # 7. Wait for either generated assets or fallback rebuild affordance.
+    # Wait for completion (status changes to COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
+    # 7. Ensure we are in 3D Model view (it might default to video if a simulation video was generated)
+    three_d_model_button = page.get_by_role("button", name="3D Model")
+    if three_d_model_button.is_visible():
+        three_d_model_button.click()
+
+    # Wait for either generated assets or fallback rebuild affordance.
     assets_overlay = page.get_by_test_id("no-assets-overlay")
     if assets_overlay.is_visible():
         expect(page.get_by_test_id("rebuild-assets-button")).to_be_visible(
@@ -58,10 +76,11 @@ def test_cad_topology_selection_and_browser(page: Page):
         )
 
     # 8. Test Topology Browser availability and toggle where available.
-    topology_toggle = page.get_by_test_id("model-browser-toggle")
+    # We use visible=True because there are multiple toggle buttons in ModelViewer.tsx
+    topology_toggle = page.get_by_test_id("model-browser-toggle").filter(visible=True)
     if topology_toggle.count() == 0:
         pytest.skip("Topology toggle unavailable in this integration run")
-    topology_toggle_button = topology_toggle.first
+    topology_toggle_button = topology_toggle
     expect(topology_toggle_button).to_be_visible(timeout=30000)
 
     # Check if Model Browser is visible (it should be by default)
