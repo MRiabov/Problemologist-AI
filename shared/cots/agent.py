@@ -34,7 +34,7 @@ def search_cots_catalog(
     )
 
     sq = SearchQuery(query=query, constraints=constraints, limit=limit)
-    parts = search_parts(sq, DEFAULT_DB_PATH)
+    parts, meta = search_parts(sq, DEFAULT_DB_PATH)
 
     if not parts:
         return "No parts found matching the criteria."
@@ -44,7 +44,8 @@ def search_cots_catalog(
         item_str = (
             f"- {p.name} (ID: {p.part_id})\n"
             f"  Category: {p.category}, Weight: {p.weight_g:.2f}g, Cost: ${p.unit_cost}\n"
-            f"  Recipe: {p.import_recipe}"
+            f"  Recipe: {p.import_recipe}\n"
+            f"  Reproducibility Metadata: {meta}"
         )
         output.append(item_str)
 

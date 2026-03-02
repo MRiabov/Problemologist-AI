@@ -2070,6 +2070,57 @@
         ],
         "title": "AgentRunResponse"
       },
+      "AssetResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
+          },
+          "asset_type": {
+            "$ref": "#/components/schemas/AssetType"
+          },
+          "s3_path": {
+            "type": "string",
+            "title": "S3 Path"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "asset_type",
+          "s3_path",
+          "created_at"
+        ],
+        "title": "AssetResponse"
+      },
       "AssetType": {
         "type": "string",
         "enum": [
@@ -2677,6 +2728,144 @@
         ],
         "title": "SteerablePrompt"
       },
+      "TraceResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
+          },
+          "langfuse_trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Langfuse Trace Id"
+          },
+          "simulation_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulation Run Id"
+          },
+          "cots_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cots Query Id"
+          },
+          "review_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Id"
+          },
+          "trace_type": {
+            "$ref": "#/components/schemas/TraceType"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "metadata_vars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata Vars"
+          },
+          "feedback_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Score"
+          },
+          "feedback_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Comment"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "langfuse_trace_id",
+          "trace_type",
+          "name",
+          "content",
+          "created_at"
+        ],
+        "title": "TraceResponse"
+      },
       "TraceType": {
         "type": "string",
         "enum": [
@@ -2769,45 +2958,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "controller__api__routes__episodes__AssetResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "asset_type": {
-            "$ref": "#/components/schemas/AssetType"
-          },
-          "s3_path": {
-            "type": "string",
-            "title": "S3 Path"
-          },
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "asset_type",
-          "s3_path",
-          "created_at"
-        ],
-        "title": "AssetResponse"
       },
       "controller__api__routes__episodes__EpisodeResponse": {
         "properties": {
@@ -2943,7 +3093,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/controller__api__routes__episodes__TraceResponse"
+                  "$ref": "#/components/schemas/TraceResponse"
                 },
                 "type": "array"
               },
@@ -2957,7 +3107,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/controller__api__routes__episodes__AssetResponse"
+                  "$ref": "#/components/schemas/AssetResponse"
                 },
                 "type": "array"
               },
@@ -2977,183 +3127,6 @@
           "updated_at"
         ],
         "title": "EpisodeResponse"
-      },
-      "controller__api__routes__episodes__TraceResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "langfuse_trace_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Langfuse Trace Id"
-          },
-          "simulation_run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Simulation Run Id"
-          },
-          "cots_query_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cots Query Id"
-          },
-          "review_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Id"
-          },
-          "trace_type": {
-            "$ref": "#/components/schemas/TraceType"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "metadata_vars": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata Vars"
-          },
-          "feedback_score": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feedback Score"
-          },
-          "feedback_comment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feedback Comment"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "langfuse_trace_id",
-          "trace_type",
-          "name",
-          "content",
-          "created_at"
-        ],
-        "title": "TraceResponse"
-      },
-      "controller__api__schemas__AssetResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "user_session_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Session Id"
-          },
-          "asset_type": {
-            "$ref": "#/components/schemas/AssetType"
-          },
-          "s3_path": {
-            "type": "string",
-            "title": "S3 Path"
-          },
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "asset_type",
-          "s3_path",
-          "created_at"
-        ],
-        "title": "AssetResponse"
       },
       "controller__api__schemas__EpisodeResponse": {
         "properties": {
@@ -3287,7 +3260,7 @@
           },
           "traces": {
             "items": {
-              "$ref": "#/components/schemas/controller__api__schemas__TraceResponse"
+              "$ref": "#/components/schemas/TraceResponse"
             },
             "type": "array",
             "title": "Traces",
@@ -3295,7 +3268,7 @@
           },
           "assets": {
             "items": {
-              "$ref": "#/components/schemas/controller__api__schemas__AssetResponse"
+              "$ref": "#/components/schemas/AssetResponse"
             },
             "type": "array",
             "title": "Assets",
@@ -3311,144 +3284,6 @@
           "updated_at"
         ],
         "title": "EpisodeResponse"
-      },
-      "controller__api__schemas__TraceResponse": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "user_session_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Session Id"
-          },
-          "langfuse_trace_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Langfuse Trace Id"
-          },
-          "simulation_run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Simulation Run Id"
-          },
-          "cots_query_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cots Query Id"
-          },
-          "review_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Review Id"
-          },
-          "trace_type": {
-            "$ref": "#/components/schemas/TraceType"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "metadata_vars": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Metadata Vars"
-          },
-          "feedback_score": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feedback Score"
-          },
-          "feedback_comment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Feedback Comment"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "langfuse_trace_id",
-          "trace_type",
-          "name",
-          "content",
-          "created_at"
-        ],
-        "title": "TraceResponse"
       }
     }
   }

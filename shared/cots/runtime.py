@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import Session
 
@@ -8,9 +10,10 @@ from .database.models import CatalogMetadataORM, COTSItemORM
 from .models import COTSItem, SearchQuery
 
 
-def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
+def search_parts(query: SearchQuery, db_path: str) -> tuple[list[COTSItem], dict]:
     """
     Search for COTS parts in the database based on a query and constraints.
+    Returns (list of items, catalog metadata dict).
     """
     engine = create_engine(f"sqlite:///{db_path}")
     results = []
@@ -95,9 +98,16 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
                 else None
             )
 
-    # Emit search event
-    import uuid
+    cots_query_id = uuid.uuid4().hex
+    metadata = {
+        "catalog_version": catalog_version,
+        "bd_warehouse_commit": bd_warehouse_commit,
+        "catalog_snapshot_id": catalog_snapshot_id,
+        "generated_at": generated_at,
+        "cots_query_id": cots_query_id,
+    }
 
+    # Emit search event
     emit_event(
         COTSSearchEvent(
             query=query.query or str(query.constraints),
@@ -106,9 +116,9 @@ def search_parts(query: SearchQuery, db_path: str) -> list[COTSItem]:
             bd_warehouse_commit=bd_warehouse_commit,
             catalog_snapshot_id=catalog_snapshot_id,
             generated_at=generated_at,
-            cots_query_id=uuid.uuid4().hex,
+            cots_query_id=cots_query_id,
             candidates=[p.part_id for p in results],
         )
     )
 
-    return results
+    return results, metadata
