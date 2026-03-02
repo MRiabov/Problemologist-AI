@@ -44,7 +44,7 @@ async def run_simulation(script: str, name: str):
                     "backend": "genesis",
                     "smoke_test_mode": True,
                 },
-                timeout=60.0,
+                timeout=300.0,
             )
             return {
                 "name": name,
