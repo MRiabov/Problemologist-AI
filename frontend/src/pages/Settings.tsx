@@ -3,9 +3,11 @@ import { Moon, Sun, Settings as SettingsIcon, ChevronLeft } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
+import { useUISettings } from "../context/UISettingsContext";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
+  const { viewReasoning, setViewReasoning } = useUISettings();
   const navigate = useNavigate();
 
   const themeOptions = [
@@ -61,6 +63,41 @@ export default function Settings() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Workspace</h2>
+            <p className="text-sm text-muted-foreground">Control trace visibility in chat.</p>
+          </div>
+
+          <button
+            data-testid="settings-view-reasoning-toggle"
+            onClick={() => setViewReasoning(!viewReasoning)}
+            className={cn(
+              "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+              viewReasoning
+                ? "border-primary bg-primary/5"
+                : "border-border hover:border-muted-foreground/30 bg-card"
+            )}
+          >
+            <div>
+              <div className="text-sm font-medium">View reasoning</div>
+              <div className="text-xs text-muted-foreground">
+                Show collapsible reasoning spans between steps.
+              </div>
+            </div>
+            <span
+              className={cn(
+                "text-xs font-semibold px-2 py-1 rounded-md",
+                viewReasoning
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {viewReasoning ? "On" : "Off"}
+            </span>
+          </button>
         </section>
       </div>
     </div>

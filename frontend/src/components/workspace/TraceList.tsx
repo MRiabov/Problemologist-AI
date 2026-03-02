@@ -12,15 +12,34 @@ interface TraceListProps {
   traces: TraceResponse[] | undefined;
   assets: AssetResponse[] | undefined;
   theme: string;
+  showReasoning: boolean;
   onAssetClick: (id: string | null) => void;
   addToContext: (item: ContextItem) => void;
   onShowFeedback: (traceId: number, score: number) => void;
+}
+
+function extractReasoningFromPhaseLog(content: string): string {
+  const thoughtMatches = [...content.matchAll(/thought_\d+['"]?\s*:\s*['"]([^'"]+)['"]/g)]
+    .map((m) => m[1]?.trim())
+    .filter(Boolean) as string[];
+  if (thoughtMatches.length > 0) {
+    return thoughtMatches.join("\n");
+  }
+
+  const reasoningMatch = content.match(/reasoning['"]?\s*[:=]\s*['"]([^'"]+)['"]/i);
+  if (reasoningMatch?.[1]) {
+    return reasoningMatch[1].trim();
+  }
+
+  // Fallback: keep original text when no structured thought/reasoning is found.
+  return content;
 }
 
 export const TraceList = memo(({
   traces,
   assets,
   theme,
+  showReasoning,
   onAssetClick,
   addToContext,
   onShowFeedback
@@ -37,11 +56,35 @@ export const TraceList = memo(({
 
   return (
     <>
-      {traces.map(trace => {
+      {traces.map((trace, index) => {
           const type = trace.trace_type as string;
-          if (type === 'llm_thought' || type === 'thought') {
+          const isLegacyThought = type === "llm_thought" || type === "thought";
+          const isReasoningSpan =
+            trace.trace_type === TraceType.LLM_END && !!trace.name;
+          if (isLegacyThought || isReasoningSpan) {
+            if (!showReasoning || !trace.content) {
+              return null;
+            }
             const stableDuration = (String(trace.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 5) + 1;
-            return <ThoughtBlock key={trace.id} duration={stableDuration} content={trace.content || ""} />;
+            let title = `Thought for ${stableDuration}s`;
+            if (isReasoningSpan) {
+              const nextTool = traces
+                .slice(index + 1)
+                .find((t) => t.trace_type === TraceType.TOOL_START);
+              const nodeName = trace.name || "step";
+              title = nextTool?.name
+                ? `Reasoning after ${nodeName} before ${nextTool.name}`
+                : `Reasoning after ${nodeName}`;
+            }
+            return (
+              <ThoughtBlock
+                key={trace.id}
+                duration={stableDuration}
+                content={trace.content}
+                title={title}
+                testId="reasoning-span"
+              />
+            );
           }
           if (trace.trace_type === TraceType.TOOL_START) {
               return (
@@ -77,10 +120,32 @@ export const TraceList = memo(({
                     </div>
                   );
               }
-              // Normal log - skip or show small
+              // Render node transition logs as reasoning when explicitly enabled.
+              const isPhaseLog =
+                !!trace.name &&
+                (trace.content.includes("Starting task phase:")
+                  || trace.content.includes("Completed task phase:"));
+              if (showReasoning && isPhaseLog) {
+                const stableDuration = (String(trace.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 5) + 1;
+                const title = `Reasoning around ${trace.name}`;
+                const reasoningContent = extractReasoningFromPhaseLog(trace.content);
+                return (
+                  <ThoughtBlock
+                    key={trace.id}
+                    duration={stableDuration}
+                    content={reasoningContent}
+                    title={title}
+                    testId="reasoning-span"
+                  />
+                );
+              }
+              // Other logs are intentionally not shown in the chat timeline.
               return null;
           }
           if (trace.trace_type === TraceType.LLM_END && trace.content) {
+            if (trace.name) {
+              return null;
+            }
             const isLastLlmEnd = traces && traces.filter(t => t.trace_type === TraceType.LLM_END).pop()?.id === trace.id;
 
             return (

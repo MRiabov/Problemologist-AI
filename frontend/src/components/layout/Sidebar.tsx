@@ -155,9 +155,24 @@ export default function Sidebar() {
                                 
                                 {/* Hover Feedback Actions */}
                                 <div className="absolute right-2 bottom-2 hidden group-hover:flex items-center gap-1.5 animate-in fade-in slide-in-from-right-1">
-                                    <button
+                                    <span
                                         data-testid="sidebar-thumbs-up"
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={(e) => {
+                                            e.stopPropagation();
+                                            const isSelected = selectedEpisode?.id === ep.id;
+                                            let lastTraceId = ep.last_trace_id;
+                                            if (!lastTraceId && isSelected && selectedEpisode?.traces?.length) {
+                                                lastTraceId = selectedEpisode.traces[selectedEpisode.traces.length - 1].id;
+                                            } else if (!lastTraceId && ep.traces?.length) {
+                                                lastTraceId = ep.traces[ep.traces.length - 1].id;
+                                            }
+                                            setFeedbackState({ traceId: lastTraceId || 0, score: 1 });
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key !== "Enter" && e.key !== " ") return;
+                                            e.preventDefault();
                                             e.stopPropagation();
                                             const isSelected = selectedEpisode?.id === ep.id;
                                             let lastTraceId = ep.last_trace_id;
@@ -171,10 +186,25 @@ export default function Sidebar() {
                                         className="p-1 rounded-md bg-background/80 backdrop-blur shadow-sm border border-border/50 hover:text-green-500 transition-colors"
                                     >
                                         <ThumbsUp className="h-3 w-3" />
-                                    </button>
-                                    <button
+                                    </span>
+                                    <span
                                         data-testid="sidebar-thumbs-down"
+                                        role="button"
+                                        tabIndex={0}
                                         onClick={(e) => {
+                                            e.stopPropagation();
+                                            const isSelected = selectedEpisode?.id === ep.id;
+                                            let lastTraceId = ep.last_trace_id;
+                                            if (!lastTraceId && isSelected && selectedEpisode?.traces?.length) {
+                                                lastTraceId = selectedEpisode.traces[selectedEpisode.traces.length - 1].id;
+                                            } else if (!lastTraceId && ep.traces?.length) {
+                                                lastTraceId = ep.traces[ep.traces.length - 1].id;
+                                            }
+                                            setFeedbackState({ traceId: lastTraceId || 0, score: 0 });
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key !== "Enter" && e.key !== " ") return;
+                                            e.preventDefault();
                                             e.stopPropagation();
                                             const isSelected = selectedEpisode?.id === ep.id;
                                             let lastTraceId = ep.last_trace_id;
@@ -188,7 +218,7 @@ export default function Sidebar() {
                                         className="p-1 rounded-md bg-background/80 backdrop-blur shadow-sm border border-border/50 hover:text-red-500 transition-colors"
                                     >
                                         <ThumbsDown className="h-3 w-3" />
-                                    </button>
+                                    </span>
                                 </div>
                             </button>
                         ))
