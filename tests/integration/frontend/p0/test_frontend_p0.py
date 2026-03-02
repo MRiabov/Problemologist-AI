@@ -157,17 +157,30 @@ def test_int_158_workflow_parity(page: Page):
     )
     expect(page.get_by_label("Stop Agent")).to_be_visible()
 
-    # Benchmark workflow pauses at PLANNED for user confirmation
+    # Benchmark workflow pauses at PLANNED for user confirmation.
+    # In mock integration mode, benchmark generation can terminate FAILED.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return data.episodeStatus === 'PLANNED';
+                return ['PLANNED', 'FAILED'].includes(data.episodeStatus);
             } catch (e) { return false; }
         }""",
         timeout=120000,
+    )
+    benchmark_status = page.evaluate(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return null;
+            try {
+                return JSON.parse(el.textContent).episodeStatus ?? null;
+            } catch (e) { return null; }
+        }"""
+    )
+    assert benchmark_status == "PLANNED", (
+        f"Benchmark did not reach PLANNED before confirmation (status={benchmark_status})"
     )
 
     # Confirm the plan to proceed to execution
@@ -211,17 +224,29 @@ def test_int_159_plan_approval_comment(page: Page):
     )
     page.get_by_label("Send Message").click()
 
-    # 2. Wait for the planner to finish (indicator: status changes to PLANNED)
+    # 2. Wait for planner phase result.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return data.episodeStatus === 'PLANNED';
+                return ['PLANNED', 'FAILED'].includes(data.episodeStatus);
             } catch (e) { return false; }
         }""",
         timeout=180000,
+    )
+    benchmark_status = page.evaluate(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return null;
+            try {
+                return JSON.parse(el.textContent).episodeStatus ?? null;
+            } catch (e) { return null; }
+        }"""
+    )
+    assert benchmark_status == "PLANNED", (
+        f"Benchmark did not reach PLANNED in approval flow (status={benchmark_status})"
     )
     expect(page.get_by_text("Execution Plan Ready")).to_be_visible()
 

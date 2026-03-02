@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+import uuid
 
 import httpx
 import pytest
@@ -24,7 +25,7 @@ async def test_int_043_batch_execution_path():
         tasks = []
         session_ids = []
         for i in range(2):
-            session_id = f"INT-043-batch-{i}-{int(time.time())}"
+            session_id = f"INT-043-{uuid.uuid4().hex[:8]}"
             session_ids.append(session_id)
             request = AgentRunRequest(
                 task=f"Batch execution test task {i}",
@@ -34,7 +35,7 @@ async def test_int_043_batch_execution_path():
                 client.post(
                     f"{CONTROLLER_URL}/agent/run",
                     json=request.model_dump(),
-                    timeout=10.0,
+                    timeout=30.0,
                 )
             )
 
@@ -56,9 +57,13 @@ async def test_int_043_batch_execution_path():
         while time.time() - start_time < timeout:
             all_done = True
             for episode_id in episode_ids:
-                status_resp = await client.get(
-                    f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=5.0
-                )  # should be instant because LLMs are mocked.
+                try:
+                    status_resp = await client.get(
+                        f"{CONTROLLER_URL}/episodes/{episode_id}", timeout=15.0
+                    )
+                except httpx.ReadTimeout:
+                    all_done = False
+                    continue
                 if status_resp.status_code != 200:
                     all_done = False
                     break

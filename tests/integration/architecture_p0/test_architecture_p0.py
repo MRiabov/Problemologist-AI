@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+import uuid
 from pathlib import Path
 
 import httpx
@@ -76,7 +77,7 @@ async def test_int_001_compose_boot_health_contract():
 @pytest.mark.asyncio
 async def test_int_002_controller_worker_execution_boundary():
     """INT-002: Verify controller-worker handoff and execution status."""
-    session_id = f"INT-002-{int(time.time())}"
+    session_id = f"INT-002-{uuid.uuid4().hex[:8]}"
     task = "Build a simple box of 10x10x10mm."
 
     async with httpx.AsyncClient(timeout=300.0) as client:
