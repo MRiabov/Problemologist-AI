@@ -1,5 +1,6 @@
 import asyncio
 import os
+import urllib.parse
 import uuid
 
 import httpx
@@ -30,7 +31,7 @@ from shared.workers.schema import (
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
-CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000/api")
 
 
 def _event_get(event, key: str, default=None):
@@ -182,7 +183,8 @@ async def test_int_028_strict_api_schema_contract():
     """INT-028: Verify OpenAPI schema validity and live responses."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Controller OpenAPI
-        resp = await client.get(f"{CONTROLLER_URL}/openapi.json")
+        openapi_url = urllib.parse.urljoin(CONTROLLER_URL, "/openapi.json")
+        resp = await client.get(openapi_url)
         assert resp.status_code == 200
         schema_data = resp.json()
         OpenAPISchema.model_validate(schema_data)
