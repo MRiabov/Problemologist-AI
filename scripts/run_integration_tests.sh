@@ -151,44 +151,13 @@ echo "Spinning up infrastructure (Postgres, Temporal, Minio)..."
 docker compose -f docker-compose.test.yaml up -d
 
 echo "Waiting for infra to be ready..."
-MAX_INFRA_RETRIES=60
-
-# Wait for Postgres
-INFRA_COUNT=0
-until docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
-  echo "Waiting for Postgres... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
-  sleep 2
-  INFRA_COUNT=$((INFRA_COUNT + 1))
-done
-if [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; then
-  echo "Postgres failed to start in time."
-  exit 1
-fi
-
-# Wait for Minio
-INFRA_COUNT=0
-until curl -s http://127.0.0.1:19000/minio/health/live > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
-  echo "Waiting for Minio... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
-  sleep 2
-  INFRA_COUNT=$((INFRA_COUNT + 1))
-done
-if [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; then
-  echo "Minio failed to start in time."
-  exit 1
-fi
-
-# Wait for Temporal (port only, auto-setup might still be running migrations)
-INFRA_COUNT=0
-# Using python3 instead of nc for portability as nc is missing in some environments
-until python3 -c "import socket; socket.create_connection(('127.0.0.1', 17233), timeout=1)" > /dev/null 2>&1 || [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; do
-  echo "Waiting for Temporal... ($INFRA_COUNT/$MAX_INFRA_RETRIES)"
-  sleep 2
-  INFRA_COUNT=$((INFRA_COUNT + 1))
-done
-if [ $INFRA_COUNT -eq $MAX_INFRA_RETRIES ]; then
-  echo "Temporal failed to start in time."
-  exit 1
-fi
+python3 scripts/internal/integration_runner.py wait \
+  --cmd-check "postgres|docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres" \
+  --http-check "minio|http://127.0.0.1:19000/minio/health/live" \
+  --tcp-check "temporal|127.0.0.1:17233" \
+  --timeout 120 \
+  --interval 0.5 \
+  --probe-timeout 1.0
 
 # Give Temporal auto-setup a bit more time to finish migrations
 echo "Infrastructure is up. Giving Temporal a few seconds to settle..."
@@ -435,46 +404,20 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 echo "Waiting for servers to be healthy..."
-MAX_HEALTH_RETRIES=60
-HEALTH_COUNT=0
-while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-  if ! kill -0 $CONTROLLER_PID 2>/dev/null; then
-    echo "Controller process (PID: $CONTROLLER_PID) died unexpectedly!"
-    echo "--- LAST 20 LINES OF CONTROLLER LOG ---"
-    tail -n 20 "$LOG_DIR/controller.log"
-    exit 1
-  fi
-  if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
-    echo "Controller is healthy!"
-    break
-  fi
-  echo "Waiting for controller... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
-  sleep 2
-  HEALTH_COUNT=$((HEALTH_COUNT + 1))
-done
+SERVER_HEALTH_ARGS=(
+  --http-check "controller|http://127.0.0.1:18000/health|healthy"
+  --http-check "worker-light|http://127.0.0.1:18001/health|healthy"
+  --http-check "worker-heavy|http://127.0.0.1:18002/health|healthy"
+  --timeout 120
+  --interval 0.5
+  --probe-timeout 1.0
+)
 
-# Wait for Workers to be healthy
-HEALTH_COUNT=0
-while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-  if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
-    echo "Worker Light is healthy!"
-    break
-  fi
-  echo "Waiting for worker light... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
-  sleep 2
-  HEALTH_COUNT=$((HEALTH_COUNT + 1))
-done
+if [ "$RUN_PLAYWRIGHT" = true ]; then
+  SERVER_HEALTH_ARGS+=(--http-check "frontend|http://127.0.0.1:15173")
+fi
 
-HEALTH_COUNT=0
-while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-  if curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
-    echo "Worker Heavy is healthy!"
-    break
-  fi
-  echo "Waiting for worker heavy... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
-  sleep 2
-  HEALTH_COUNT=$((HEALTH_COUNT + 1))
-done
+python3 scripts/internal/integration_runner.py wait "${SERVER_HEALTH_ARGS[@]}"
 
 # Final check that all processes are still alive
 if ! kill -0 $CONTROLLER_PID 2>/dev/null; then echo "Controller died!"; exit 1; fi
@@ -484,31 +427,6 @@ if ! kill -0 $TEMP_WORKER_PID 2>/dev/null; then
   echo "Temporal Worker (PID: $TEMP_WORKER_PID) died unexpectedly!"
   echo "--- LAST 20 LINES OF TEMPORAL WORKER LOG ---"
   tail -n 20 "$LOG_DIR/temporal_worker.log"
-  exit 1
-fi
-
-# Wait for Frontend to be healthy if started
-if [ "$RUN_PLAYWRIGHT" = true ]; then
-  HEALTH_COUNT=0
-  while [ $HEALTH_COUNT -lt $MAX_HEALTH_RETRIES ]; do
-    if curl -s http://127.0.0.1:15173 > /dev/null; then
-      echo "Frontend is healthy on :15173!"
-      break
-    fi
-    echo "Waiting for frontend... ($HEALTH_COUNT/$MAX_HEALTH_RETRIES)"
-    sleep 2
-    HEALTH_COUNT=$((HEALTH_COUNT + 1))
-  done
-  if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
-    echo "Frontend failed to start in time."
-    exit 1
-  fi
-fi
-
-if [ $HEALTH_COUNT -eq $MAX_HEALTH_RETRIES ]; then
-  echo "Timeout waiting for services to be healthy."
-  echo "--- LAST 20 LINES OF CONTROLLER LOG ---"
-  tail -n 20 "$LOG_DIR/controller.log"
   exit 1
 fi
 
@@ -522,7 +440,12 @@ mkdir -p test_output
 # We override addopts to clear the default 'not integration' markers from pyproject.toml
 # We capture exit code to ensure we can persist results even on failure
 set +e
-uv run pytest -v -o "addopts=-n0" --maxfail=3 -s $REVERSE_FLAG "${PYTEST_ARGS[@]}" --junitxml=test_output/junit.xml
+PYTEST_CMD=(python3 scripts/internal/integration_runner.py run-pytest --junit-xml test_output/junit.xml)
+if [ -n "$REVERSE_FLAG" ]; then
+  PYTEST_CMD+=(--reverse)
+fi
+PYTEST_CMD+=(-- "${PYTEST_ARGS[@]}")
+"${PYTEST_CMD[@]}"
 PYTEST_EXIT_CODE=$?
 set -e
 

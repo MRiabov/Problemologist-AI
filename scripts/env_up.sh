@@ -11,11 +11,12 @@ cd "$(dirname "$0")/.."
 # Stop any existing environment first to ensure a clean start
 ./scripts/env_down.sh
 
-# Networking for local services (infra is still in Docker but exposed on host)
-export IS_INTEGRATION_TEST=true
+# Networking for local services (infra is still in Docker but exposed on host).
+# Default to real/manual mode unless explicitly overridden by caller.
+export IS_INTEGRATION_TEST="${IS_INTEGRATION_TEST:-false}"
 export LOG_LEVEL=${LOG_LEVEL:-INFO}
 export PYTHONUNBUFFERED=1
-export WORKER_SESSIONS_DIR="/tmp/pb-sessions-integration"
+export WORKER_SESSIONS_DIR="${WORKER_SESSIONS_DIR:-/tmp/pb-sessions-dev}"
 mkdir -p "$WORKER_SESSIONS_DIR"
 
 # DB points to the exposed port in docker-compose.test.yaml
@@ -93,7 +94,7 @@ uv run alembic upgrade head
 echo "Starting Application Servers..."
 
 # Ensure log directory exists and manage log history
-LOG_DIR="logs/integration_tests"
+LOG_DIR="logs/manual_run"
 ARCHIVE_DIR="logs/archives"
 mkdir -p "$LOG_DIR"
 mkdir -p "$ARCHIVE_DIR"
@@ -138,26 +139,50 @@ TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
+# Start Frontend dev server if default port is available
+FRONTEND_PORT=15173
+FRONTEND_STARTED=false
+if python3 - "$FRONTEND_PORT" <<'PY'
+import socket, sys
+port = int(sys.argv[1])
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.settimeout(0.2)
+    sys.exit(0 if s.connect_ex(("127.0.0.1", port)) == 0 else 1)
+PY
+then
+  echo "Frontend port ${FRONTEND_PORT} is already in use; skipping npm dev server startup."
+else
+  echo "Starting Frontend dev server on port ${FRONTEND_PORT}..."
+  (
+    cd frontend
+    nohup npm run dev > "../$LOG_DIR/frontend.log" 2>&1 &
+    echo $! > ../logs/frontend.pid
+  )
+  FRONTEND_STARTED=true
+  echo "Frontend dev server started (PID: $(cat logs/frontend.pid))"
+fi
+
 # Create convenience symlinks in the logs/ root for the current environment
-ln -sf "integration_tests/controller.log" logs/controller.log
-ln -sf "integration_tests/worker_light.log" logs/worker_light.log
-ln -sf "integration_tests/worker_light_debug.log" logs/worker_light_debug.log
-ln -sf "integration_tests/worker_heavy.log" logs/worker_heavy.log
-ln -sf "integration_tests/worker_heavy_debug.log" logs/worker_heavy_debug.log
-ln -sf "integration_tests/temporal_worker.log" logs/temporal_worker.log
+ln -sf "manual_run/controller.log" logs/controller.log
+ln -sf "manual_run/worker_light.log" logs/worker_light.log
+ln -sf "manual_run/worker_light_debug.log" logs/worker_light_debug.log
+ln -sf "manual_run/worker_heavy.log" logs/worker_heavy.log
+ln -sf "manual_run/worker_heavy_debug.log" logs/worker_heavy_debug.log
+ln -sf "manual_run/temporal_worker.log" logs/temporal_worker.log
+ln -sf "manual_run/frontend.log" logs/frontend.log
 
 echo "Waiting for services to be healthy..."
 sleep 5
 if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
   echo "Worker Light is healthy!"
 else
-  echo "Worker Light health check failed (see logs/integration_tests/worker_light.log)"
+  echo "Worker Light health check failed (see logs/manual_run/worker_light.log)"
 fi
 
 if curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
   echo "Worker Heavy is healthy!"
 else
-  echo "Worker Heavy health check failed (see logs/integration_tests/worker_heavy.log)"
+  echo "Worker Heavy health check failed (see logs/manual_run/worker_heavy.log)"
 fi
 
 if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
@@ -166,4 +191,14 @@ else
   echo "Controller health check failed (see logs/controller.log)"
 fi
 
+if [ "$FRONTEND_STARTED" = true ]; then
+  sleep 2
+  if curl -sf "http://127.0.0.1:${FRONTEND_PORT}" > /dev/null 2>&1; then
+    echo "Frontend is healthy on http://127.0.0.1:${FRONTEND_PORT}!"
+  else
+    echo "Frontend health check failed (see logs/manual_run/frontend.log)"
+  fi
+fi
+
 echo "Environment is UP. Use 'scripts/env_down.sh' to stop."
+echo "Mode: IS_INTEGRATION_TEST=$IS_INTEGRATION_TEST"

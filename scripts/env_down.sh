@@ -35,6 +35,13 @@ if [ -f logs/temporal_worker.pid ]; then
   rm logs/temporal_worker.pid
 fi
 
+if [ -f logs/frontend.pid ]; then
+  PID=$(cat logs/frontend.pid)
+  echo "Stopping Frontend dev server (PID: $PID)..."
+  kill $PID 2>/dev/null || true
+  rm logs/frontend.pid
+fi
+
 # Also kill any leftover FastAPI/Uvicorn processes just in case
 pkill -9 -f "uvicorn.*18000" || true
 pkill -9 -f "uvicorn.*18001" || true
