@@ -365,6 +365,7 @@ def _start_process(
     cmd: list[str],
     *,
     log_file: Path,
+    cwd: Path | None = None,
     env_updates: dict[str, str] | None = None,
     pid_file: Path | None = None,
 ) -> StartedProcess:
@@ -375,7 +376,11 @@ def _start_process(
     log_file.parent.mkdir(parents=True, exist_ok=True)
     handle = open(log_file, "ab")
     process = subprocess.Popen(
-        cmd, cwd=_repo_root(), env=env, stdout=handle, stderr=subprocess.STDOUT
+        cmd,
+        cwd=cwd or _repo_root(),
+        env=env,
+        stdout=handle,
+        stderr=subprocess.STDOUT,
     )
     handle.close()
 
@@ -774,6 +779,7 @@ def _run_integration_command(
                         "--proxy",
                         "http://localhost:18000?",
                     ],
+                    cwd=repo_root / "frontend" / "dist",
                     log_file=log_dir / "frontend.log",
                     pid_file=frontend_pid_path,
                 )
