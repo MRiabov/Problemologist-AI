@@ -203,13 +203,16 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                         if isinstance(data, (dict, list))
                         else str(data)
                     )
+                    metadata = dict(event_data)
+                    if "episode_id" not in metadata:
+                        metadata["episode_id"] = str(self.episode_id)
 
                     trace_obj = Trace(
                         episode_id=self.episode_id,
                         trace_type=TraceType.EVENT,
                         name=event_data.get("event_type", "generic_event"),
                         content=content,
-                        metadata_vars=event_data,
+                        metadata_vars=metadata,
                         langfuse_trace_id=self._get_langfuse_id(),
                     )
                     db.add(trace_obj)

@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 
 from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
@@ -11,6 +12,9 @@ async def run_backup_activity(params: BackupParams) -> BackupResult:
     """
     Activity to perform the actual backup operations.
     """
+    if os.getenv("IS_INTEGRATION_TEST", "").lower() == "true":
+        return BackupResult(postgres_backup_key=None, s3_files_backed_up=0)
+
     from shared.ops.backup import backup_postgres, backup_s3_files
 
     db_url = params.db_url

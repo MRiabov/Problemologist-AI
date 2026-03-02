@@ -61,7 +61,7 @@ async def trigger_backup(request: Request, _=Depends(verify_backup_secret)):
         BackupWorkflow.run,
         params,
         id=workflow_id,
-        task_queue="ops-tasks",
+        task_queue="simulation-task-queue",
     )
 
     return BackupTriggerResponse(

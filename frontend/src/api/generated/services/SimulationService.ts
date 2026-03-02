@@ -29,4 +29,26 @@ export class SimulationService {
             },
         });
     }
+    /**
+     * Run Simulation
+     * Trigger a benchmark generation session (simulation pipeline).
+     * This endpoint reuses the benchmark generation graph but is called 'simulation'
+     * in the frontend for historical reasons.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static runSimulationSimulationRunPost(
+        requestBody: RunSimulationRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/simulation/run',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
 }

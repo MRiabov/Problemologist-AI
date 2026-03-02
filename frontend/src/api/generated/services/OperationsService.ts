@@ -28,4 +28,25 @@ export class OperationsService {
             },
         });
     }
+    /**
+     * Trigger Backup
+     * Trigger the automated backup workflow.
+     * @param xBackupSecret
+     * @returns BackupTriggerResponse Successful Response
+     * @throws ApiError
+     */
+    public static triggerBackupOpsBackupPost(
+        xBackupSecret?: string,
+    ): CancelablePromise<BackupTriggerResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/ops/backup',
+            headers: {
+                'x-backup-secret': xBackupSecret,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
 }

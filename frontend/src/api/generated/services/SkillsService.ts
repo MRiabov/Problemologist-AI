@@ -19,4 +19,16 @@ export class SkillsService {
             url: '/api/skills/',
         });
     }
+    /**
+     * List Skills
+     * List available skills.
+     * @returns Skill Successful Response
+     * @throws ApiError
+     */
+    public static listSkillsSkillsGet(): CancelablePromise<Array<Skill>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/skills/',
+        });
+    }
 }

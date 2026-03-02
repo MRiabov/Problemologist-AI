@@ -103,4 +103,94 @@ export class BenchmarkService {
             },
         });
     }
+    /**
+     * Generate Benchmark
+     * Trigger a new benchmark generation session.
+     * @param requestBody
+     * @returns BenchmarkGenerateResponse Successful Response
+     * @throws ApiError
+     */
+    public static generateBenchmarkBenchmarkGeneratePost(
+        requestBody: BenchmarkGenerateRequest,
+    ): CancelablePromise<BenchmarkGenerateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/benchmark/generate',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Confirm Benchmark
+     * Confirm and continue benchmark generation after planning.
+     * @param sessionId
+     * @param requestBody
+     * @returns BenchmarkConfirmResponse Successful Response
+     * @throws ApiError
+     */
+    public static confirmBenchmarkBenchmarkSessionIdConfirmPost(
+        sessionId: string,
+        requestBody: ConfirmRequest,
+    ): CancelablePromise<BenchmarkConfirmResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/benchmark/{session_id}/confirm',
+            path: {
+                'session_id': sessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Session
+     * @param sessionId
+     * @returns controller__api__schemas__EpisodeResponse Successful Response
+     * @throws ApiError
+     */
+    public static getSessionBenchmarkSessionIdGet(
+        sessionId: string,
+    ): CancelablePromise<controller__api__schemas__EpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/benchmark/{session_id}',
+            path: {
+                'session_id': sessionId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Update Objectives
+     * Update objectives.yaml for a specific session.
+     * @param sessionId
+     * @param requestBody
+     * @returns BenchmarkObjectivesResponse Successful Response
+     * @throws ApiError
+     */
+    public static updateObjectivesBenchmarkSessionIdObjectivesPost(
+        sessionId: string,
+        requestBody: UpdateObjectivesRequest,
+    ): CancelablePromise<BenchmarkObjectivesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/benchmark/{session_id}/objectives',
+            path: {
+                'session_id': sessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
 }

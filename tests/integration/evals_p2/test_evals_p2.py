@@ -208,7 +208,7 @@ async def test_journal_quality_integration_int_051():
 
             # Robust assertions: Observation and Thought separation (INT-051)
             assert "## Observations" in journal
-            assert re.search(r"obs-|observation|measured", journal, re.IGNORE_CASE)
+            assert re.search(r"obs-|observation|measured", journal, re.IGNORECASE)
 
 
 @pytest.mark.integration_p2

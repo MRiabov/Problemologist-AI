@@ -44,4 +44,40 @@ export class CotsService {
             url: '/api/cots/metadata',
         });
     }
+    /**
+     * Search Cots
+     * Search for COTS parts by name or category.
+     * @param q Search query
+     * @param limit
+     * @returns CotsSearchItem Successful Response
+     * @throws ApiError
+     */
+    public static searchCotsCotsSearchGet(
+        q: string,
+        limit: number = 20,
+    ): CancelablePromise<Array<CotsSearchItem>> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/cots/search',
+            query: {
+                'q': q,
+                'limit': limit,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Get Catalog Metadata
+     * Get the catalog metadata (version, commit, etc.).
+     * @returns CotsMetadataResponse Successful Response
+     * @throws ApiError
+     */
+    public static getCatalogMetadataCotsMetadataGet(): CancelablePromise<CotsMetadataResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/cots/metadata',
+        });
+    }
 }

@@ -47,6 +47,10 @@ async def record_worker_events(
                 content = str(event.get("data", {}))
                 metadata = event
 
+            if isinstance(metadata, dict) and "episode_id" not in metadata:
+                metadata = dict(metadata)
+                metadata["episode_id"] = str(episode_uuid)
+
             trace = Trace(
                 episode_id=episode_uuid,
                 trace_type=TraceType.EVENT,

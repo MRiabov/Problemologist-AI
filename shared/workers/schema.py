@@ -193,6 +193,13 @@ class BenchmarkToolRequest(BaseModel):
         description="Optional particle budget override.",
     )
 
+    @field_validator("backend", mode="before")
+    @classmethod
+    def normalize_backend(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.upper()
+        return value
+
 
 class AnalyzeRequest(BenchmarkToolRequest):
     """Request to run manufacturing analysis."""

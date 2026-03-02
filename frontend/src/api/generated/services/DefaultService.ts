@@ -28,6 +28,26 @@ export class DefaultService {
      * @returns EpisodeCreateResponse Successful Response
      * @throws ApiError
      */
+    public static createTestEpisodeTestEpisodesPost(
+        requestBody: AgentRunRequest,
+    ): CancelablePromise<EpisodeCreateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/test/episodes',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Create Test Episode
+     * Create a dummy episode for testing purposes (no agent run).
+     * @param requestBody
+     * @returns EpisodeCreateResponse Successful Response
+     * @throws ApiError
+     */
     public static createTestEpisodeApiTestEpisodesPost(
         requestBody: AgentRunRequest,
     ): CancelablePromise<EpisodeCreateResponse> {
@@ -63,6 +83,25 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/health',
+        });
+    }
+    /**
+     * Run Agent
+     * @param requestBody
+     * @returns AgentRunResponse Successful Response
+     * @throws ApiError
+     */
+    public static runAgentAgentRunPost(
+        requestBody: AgentRunRequest,
+    ): CancelablePromise<AgentRunResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/agent/run',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
         });
     }
     /**
