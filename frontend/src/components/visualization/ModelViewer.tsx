@@ -10,7 +10,9 @@ import {
   RotateCcw, 
   FastForward, 
   Rewind,
-  MousePointer2,
+  Square,
+  Minus,
+  Circle,
   Box,
   Component,
   Zap
@@ -39,7 +41,7 @@ class ModelErrorBoundary extends React.Component<{children: React.ReactNode, url
   }
 }
 
-export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY'
+export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY' | 'VERTEX' | 'EDGE'
 
 function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronicsView = false, onSelect, onStructureParsed }: { 
     url: string, 
@@ -162,8 +164,8 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
 
   // Handle Selection Traversal
   const findTarget = (mesh: THREE.Mesh): { object: THREE.Object3D, id: string, type: SelectionMode } => {
-    if (selectionMode === 'FACE') {
-        return { object: mesh, id: mesh.name || mesh.uuid, type: 'FACE' };
+    if (selectionMode === 'FACE' || selectionMode === 'VERTEX' || selectionMode === 'EDGE') {
+        return { object: mesh, id: mesh.name || mesh.uuid, type: selectionMode };
     }
 
     if (selectionMode === 'PART') {
@@ -527,7 +529,25 @@ export default function ModelViewer({
                     className={cn("h-7 w-7 rounded-full", selectionMode === 'FACE' && "bg-primary text-primary-foreground")}
                     onClick={() => setSelectionMode('FACE')}
                 >
-                    <MousePointer2 className="h-3.5 w-3.5" />
+                    <Square className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Edge Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'EDGE' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('EDGE')}
+                >
+                    <Minus className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Vertex Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'VERTEX' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('VERTEX')}
+                >
+                    <Circle className="h-3.5 w-3.5" />
                 </Button>
                 <Button 
                     variant="ghost" 

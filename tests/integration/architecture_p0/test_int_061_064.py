@@ -26,7 +26,12 @@ async def test_int_061_asset_serving_security():
         # 1. Setup session A with a valid python file and an asset
         write_py_a = WriteFileRequest(
             path="part.py",
-            content="import build123d\ndef build(): return None",
+            content="""from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1,1,1)
+    p.metadata = PartMetadata(material_id="steel")
+    return p""",
         )
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",

@@ -43,6 +43,7 @@ from worker_heavy.utils import (
     validate,
 )
 from worker_heavy.utils.preview import preview_design
+from shared.type_checking import type_check
 from worker_heavy.utils.topology import analyze_component
 from worker_heavy.utils.validation import validate_fem_manufacturability
 
@@ -286,6 +287,7 @@ async def api_verify(
 
 
 @heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
+@type_check
 async def api_simulate(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
@@ -360,6 +362,7 @@ async def api_simulate(
 
 
 @heavy_router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
+@type_check
 async def api_validate(
     request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
@@ -473,6 +476,7 @@ async def api_validate_circuit(
 
 
 @heavy_router.post("/benchmark/analyze", response_model=WorkbenchResult)
+@type_check
 async def api_analyze(
     request: AnalyzeRequest,
     x_session_id: str = Header(...),

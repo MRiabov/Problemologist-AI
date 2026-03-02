@@ -17,6 +17,7 @@ from controller.observability.langfuse import init_tracing
 from controller.persistence.models import Trace
 from shared.enums import TraceType
 from shared.models.schemas import CodeReference
+from shared.type_checking import type_check
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -38,6 +39,7 @@ class SharedNodeContext:
     main_loop: asyncio.AbstractEventLoop
 
     @classmethod
+    @type_check
     def create(
         cls,
         worker_light_url: str,
@@ -277,11 +279,12 @@ class BaseNode:
 
         return "\n".join(lines)
 
+    @type_check
     async def _run_program(
         self,
-        program_cls: type[dspy.Module],
-        signature_cls: type[dspy.Signature],
-        state: "AgentState",
+        program_cls: Any,  # type[dspy.Module]
+        signature_cls: Any,  # type[dspy.Signature]
+        state: Any,  # "AgentState"
         inputs: dict[str, Any],
         tool_factory: Callable,
         validate_files: list[str],

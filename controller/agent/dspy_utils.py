@@ -127,21 +127,65 @@ class WorkerInterpreter:
 
 
 def evaluate_formula(formula: str, context: dict) -> float:
-    """Safely eval a math formula with a provided context."""
+    """Safely evaluate a mathematical formula using AST parsing."""
+    import ast
+    import operator
+
+    # Whitelist of allowed operators
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+
+    # Whitelist of allowed functions
+    functions = {
+        "max": max,
+        "min": min,
+        "abs": abs,
+        "pow": pow,
+        "round": round,
+    }
+
+    # Combined context for evaluation
+    safe_context = {
+        "n_valid_candidates": context.get("n_valid_candidates", 0),
+        "n_returned_candidates": context.get("n_returned_candidates", 1),
+        "n_queries": context.get("n_queries", 0),
+        "delta_success_rate": context.get("delta_success_rate", 0.0),
+    }
+    safe_context.update(
+        {k: v for k, v in context.items() if isinstance(v, (int, float, bool))}
+    )
+
+    def _eval(node):
+        if isinstance(node, ast.Num):  # < Python 3.8
+            return node.n
+        if isinstance(node, ast.Constant):  # Python 3.8+
+            return node.value
+        if isinstance(node, ast.BinOp):
+            return operators[type(node.op)](_eval(node.left), _eval(node.right))
+        if isinstance(node, ast.UnaryOp):
+            return operators[type(node.op)](_eval(node.operand))
+        if isinstance(node, ast.Call):
+            func_name = node.func.id if isinstance(node.func, ast.Name) else None
+            if func_name in functions:
+                args = [_eval(arg) for arg in node.args]
+                return functions[func_name](*args)
+            raise ValueError(f"Function {func_name} not allowed")
+        if isinstance(node, ast.Name):
+            if node.id in safe_context:
+                return safe_context[node.id]
+            raise ValueError(f"Variable {node.id} not allowed")
+        raise TypeError(f"Unsupported AST node: {type(node)}")
+
     try:
-        allowed_names = {
-            "max": max,
-            "min": min,
-            "abs": abs,
-            "pow": pow,
-            "round": round,
-            "n_valid_candidates": context.get("n_valid_candidates", 0),
-            "n_returned_candidates": context.get("n_returned_candidates", 1),
-            "n_queries": context.get("n_queries", 0),
-            "delta_success_rate": context.get("delta_success_rate", 0.0),
-        }
-        allowed_names.update(context)
-        return float(eval(formula, {"__builtins__": {}}, allowed_names))
+        tree = ast.parse(formula, mode="eval")
+        return float(_eval(tree.body))
     except Exception as e:
         logger.error("formula_eval_failed", formula=formula, error=str(e))
         return 0.0
