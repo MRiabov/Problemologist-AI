@@ -35,6 +35,7 @@ class AgentRunResponse(StandardResponse):
 
 class TraceResponse(BaseModel):
     id: int
+    user_session_id: uuid.UUID | None = None
     langfuse_trace_id: str | None
     simulation_run_id: str | None = None
     cots_query_id: str | None = None
@@ -57,6 +58,7 @@ class TraceResponse(BaseModel):
 
 class AssetResponse(BaseModel):
     id: int
+    user_session_id: uuid.UUID | None = None
     asset_type: AssetType
     s3_path: str
     content: str | None = None

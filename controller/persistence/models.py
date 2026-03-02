@@ -93,6 +93,7 @@ class Trace(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
+    user_session_id: Mapped[uuid.UUID | None] = mapped_column(sa.UUID, index=True)
     langfuse_trace_id: Mapped[str | None] = mapped_column(String)
 
     # Specific IDs for child artifacts
@@ -123,6 +124,7 @@ class Asset(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     episode_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("episodes.id"))
+    user_session_id: Mapped[uuid.UUID | None] = mapped_column(sa.UUID, index=True)
     asset_type: Mapped[AssetType] = mapped_column(
         SQLEnum(AssetType, values_callable=lambda x: [e.value for e in x])
     )
