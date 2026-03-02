@@ -66,7 +66,7 @@ async def test_int_001_compose_boot_health_contract():
         assert heavy_health.status.value == "HEALTHY"
 
         # Controller health
-        resp = await client.get(f"{CONTROLLER_URL}/health", timeout=5.0)
+        resp = await client.get(f"{CONTROLLER_URL}/api/health", timeout=5.0)
         assert resp.status_code == 200
         controller_health = HealthResponse.model_validate(resp.json())
         assert controller_health.status.value == "HEALTHY"
