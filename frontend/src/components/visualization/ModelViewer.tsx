@@ -13,7 +13,9 @@ import {
   MousePointer2,
   Box,
   Component,
-  Zap
+  Zap,
+  Minus,
+  Circle
 } from "lucide-react"
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -39,7 +41,7 @@ class ModelErrorBoundary extends React.Component<{children: React.ReactNode, url
   }
 }
 
-export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY'
+export type SelectionMode = 'VERTEX' | 'EDGE' | 'FACE' | 'PART' | 'SUBASSEMBLY'
 
 function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronicsView = false, onSelect, onStructureParsed }: { 
     url: string, 
@@ -162,8 +164,29 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
 
   // Handle Selection Traversal
   const findTarget = (mesh: THREE.Mesh): { object: THREE.Object3D, id: string, type: SelectionMode } => {
+    if (selectionMode === 'VERTEX') {
+        let p: THREE.Object3D = mesh;
+        while (p.parent && p.parent !== gltf.scene && !p.name.startsWith('vertex_')) {
+            p = p.parent;
+        }
+        return { object: p, id: p.name || p.uuid, type: 'VERTEX' };
+    }
+
+    if (selectionMode === 'EDGE') {
+        let p: THREE.Object3D = mesh;
+        while (p.parent && p.parent !== gltf.scene && !p.name.startsWith('edge_')) {
+            p = p.parent;
+        }
+        return { object: p, id: p.name || p.uuid, type: 'EDGE' };
+    }
+
     if (selectionMode === 'FACE') {
-        return { object: mesh, id: mesh.name || mesh.uuid, type: 'FACE' };
+        let p: THREE.Object3D = mesh;
+        while (p.parent && p.parent !== gltf.scene && !p.name.startsWith('face_')) {
+            p = p.parent;
+        }
+        // Fallback to mesh if face_ isn't in hierarchy
+        return { object: p.name.startsWith('face_') ? p : mesh, id: p.name.startsWith('face_') ? p.name : (mesh.name || mesh.uuid), type: 'FACE' };
     }
 
     if (selectionMode === 'PART') {
@@ -520,6 +543,24 @@ export default function ModelViewer({
             </Button>
 
             <div className="flex flex-col gap-1 bg-slate-900/80 backdrop-blur border border-slate-700 p-1 rounded-full shadow-xl mt-2">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Vertex Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'VERTEX' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('VERTEX')}
+                >
+                    <Circle className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Edge Selection"
+                    className={cn("h-7 w-7 rounded-full", selectionMode === 'EDGE' && "bg-primary text-primary-foreground")}
+                    onClick={() => setSelectionMode('EDGE')}
+                >
+                    <Minus className="h-3.5 w-3.5" />
+                </Button>
                 <Button 
                     variant="ghost" 
                     size="icon" 
