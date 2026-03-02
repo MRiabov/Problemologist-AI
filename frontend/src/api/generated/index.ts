@@ -9,6 +9,7 @@ export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { AgentRunRequest } from './models/AgentRunRequest';
 export type { AgentRunResponse } from './models/AgentRunResponse';
+export type { AssetResponse } from './models/AssetResponse';
 export { AssetType } from './models/AssetType';
 export type { BackupTriggerResponse } from './models/BackupTriggerResponse';
 export type { BenchmarkConfirmResponse } from './models/BenchmarkConfirmResponse';
@@ -17,12 +18,8 @@ export type { BenchmarkGenerateResponse } from './models/BenchmarkGenerateRespon
 export type { BenchmarkObjectivesResponse } from './models/BenchmarkObjectivesResponse';
 export type { CodeReference } from './models/CodeReference';
 export type { ConfirmRequest } from './models/ConfirmRequest';
-export type { controller__api__routes__episodes__AssetResponse } from './models/controller__api__routes__episodes__AssetResponse';
 export type { controller__api__routes__episodes__EpisodeResponse } from './models/controller__api__routes__episodes__EpisodeResponse';
-export type { controller__api__routes__episodes__TraceResponse } from './models/controller__api__routes__episodes__TraceResponse';
-export type { controller__api__schemas__AssetResponse } from './models/controller__api__schemas__AssetResponse';
 export type { controller__api__schemas__EpisodeResponse } from './models/controller__api__schemas__EpisodeResponse';
-export type { controller__api__schemas__TraceResponse } from './models/controller__api__schemas__TraceResponse';
 export type { CotsMetadataResponse } from './models/CotsMetadataResponse';
 export type { CotsSearchItem } from './models/CotsSearchItem';
 export type { EpisodeCreateResponse } from './models/EpisodeCreateResponse';
@@ -39,6 +36,7 @@ export { SimulatorBackendType } from './models/SimulatorBackendType';
 export type { Skill } from './models/Skill';
 export type { SteerablePrompt_Input } from './models/SteerablePrompt_Input';
 export type { SteerablePrompt_Output } from './models/SteerablePrompt_Output';
+export type { TraceResponse } from './models/TraceResponse';
 export { TraceType } from './models/TraceType';
 export type { UpdateObjectivesRequest } from './models/UpdateObjectivesRequest';
 export type { ValidationError } from './models/ValidationError';

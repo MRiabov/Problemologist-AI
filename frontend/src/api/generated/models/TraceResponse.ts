@@ -3,8 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { TraceType } from './TraceType';
-export type controller__api__routes__episodes__TraceResponse = {
+export type TraceResponse = {
     id: number;
+    user_session_id?: (string | null);
     langfuse_trace_id: (string | null);
     simulation_run_id?: (string | null);
     cots_query_id?: (string | null);

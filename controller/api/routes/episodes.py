@@ -203,7 +203,11 @@ async def review_episode(
         raise HTTPException(status_code=404, detail="Episode not found")
 
     # Validate the review frontmatter
-    is_valid, review_data = validate_review_frontmatter(request.review_content)
+    # Routing checks for refusal decisions are handled below with concrete
+    # plan_refusal.md validation and deterministic status codes.
+    is_valid, review_data = validate_review_frontmatter(
+        request.review_content, cad_agent_refused=True
+    )
     if not is_valid:
         raise HTTPException(status_code=422, detail=f"Invalid review: {review_data}")
 
@@ -215,17 +219,61 @@ async def review_episode(
         ReviewDecision.REJECTED,
         ReviewDecision.REJECT_PLAN,
         ReviewDecision.REJECT_CODE,
-        ReviewDecision.CONFIRM_PLAN_REFUSAL,
     ):
         episode.status = EpisodeStatus.FAILED
+    elif decision == ReviewDecision.CONFIRM_PLAN_REFUSAL:
+        # WP06: Validate plan_refusal.md existence and content
+        worker_session_id = str(episode_id)
+        if episode.metadata_vars:
+            worker_session_id = (
+                episode.metadata_vars.get("worker_session_id") or worker_session_id
+            )
 
-    # Emit review event
-    emit_event(
-        ReviewEvent(
-            episode_id=str(episode_id),
-            decision=decision,
-            comments=review_data.comments,
+        client = WorkerClient(
+            base_url=settings.worker_light_url,
+            session_id=worker_session_id,
+            heavy_url=settings.worker_heavy_url,
         )
+        try:
+            refusal_content = await client.read_file("plan_refusal.md")
+            from worker_heavy.utils.file_validation import validate_plan_refusal
+
+            is_valid_refusal, refusal_errs = validate_plan_refusal(refusal_content)
+            if not is_valid_refusal:
+                raise HTTPException(
+                    status_code=422, detail=f"Invalid plan_refusal.md: {refusal_errs}"
+                )
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=422,
+                detail="plan_refusal.md not found but required for CONFIRM_PLAN_REFUSAL",
+            )
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise
+            raise HTTPException(
+                status_code=500, detail=f"Failed to validate plan_refusal.md: {e!s}"
+            )
+
+        episode.status = EpisodeStatus.FAILED
+
+    # Record review event to DB
+    from controller.observability.tracing import record_worker_events
+    from shared.observability.schemas import ReviewEvent
+    import uuid as uuid_lib
+
+    review_id = uuid_lib.uuid4().hex
+
+    await record_worker_events(
+        episode_id=episode_id,
+        events=[
+            ReviewEvent(
+                episode_id=str(episode_id),
+                decision=decision,
+                comments=review_data.comments,
+                review_id=review_id,
+            )
+        ],
     )
 
     await db.commit()
@@ -306,6 +354,7 @@ async def get_episode_schematic(
 
 class TraceResponse(BaseModel):
     id: int
+    user_session_id: uuid.UUID | None = None
     langfuse_trace_id: str | None
     simulation_run_id: str | None = None
     cots_query_id: str | None = None
@@ -323,6 +372,7 @@ class TraceResponse(BaseModel):
 
 class AssetResponse(BaseModel):
     id: int
+    user_session_id: uuid.UUID | None = None
     asset_type: AssetType
     s3_path: str
     content: str | None = None

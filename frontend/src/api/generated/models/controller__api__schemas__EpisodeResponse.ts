@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { controller__api__schemas__AssetResponse } from './controller__api__schemas__AssetResponse';
-import type { controller__api__schemas__TraceResponse } from './controller__api__schemas__TraceResponse';
+import type { AssetResponse } from './AssetResponse';
 import type { EpisodeStatus } from './EpisodeStatus';
+import type { TraceResponse } from './TraceResponse';
 export type controller__api__schemas__EpisodeResponse = {
     id: string;
     user_session_id?: (string | null);
@@ -20,7 +20,7 @@ export type controller__api__schemas__EpisodeResponse = {
     plan?: (string | null);
     validation_logs?: (Array<string> | null);
     last_trace_id?: (number | null);
-    traces?: Array<controller__api__schemas__TraceResponse>;
-    assets?: Array<controller__api__schemas__AssetResponse>;
+    traces?: Array<TraceResponse>;
+    assets?: Array<AssetResponse>;
 };
 
