@@ -158,7 +158,7 @@ def run_pytest_subprocess(
         env.update(extra_env)
 
     # Ensure log directory exists
-    log_file = _repo_root() / "logs" / "integration_test" / "full_test_output.log"
+    log_file = _repo_root() / "logs" / "integration_tests" / "full_test_output.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Use a shell string to pipe output to tee for both console and file logging
@@ -528,6 +528,7 @@ def _link_current_logs(run_playwright: bool) -> None:
         ("integration_tests/temporal_worker.log", "temporal_worker.log"),
         ("integration_tests/temporal_worker_debug.log", "temporal_worker_debug.log"),
         ("integration_tests/temporal_worker_errors.log", "temporal_worker_errors.log"),
+        ("integration_tests/full_test_output.log", "full_test_output.log"),
     ]
     if run_playwright:
         links.extend(
@@ -654,7 +655,17 @@ def _run_integration_command(
         _run(["uv", "run", "python", "-m", "shared.cots.indexer"], env=env)
 
     print("Spinning up infrastructure (Postgres, Temporal, Minio)...")
-    _run(["docker", "compose", "-f", "docker-compose.test.yaml", "up", "-d"])
+    _run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "docker-compose.test.yaml",
+            "up",
+            "-d",
+            "--remove-orphans",
+        ]
+    )
 
     print("Waiting for infra to be ready...")
     infra_checks = [
@@ -946,7 +957,7 @@ def _run_integration_command(
         compose_cmd = ["docker", "compose", "-f", "docker-compose.test.yaml"]
         if args.down:
             print("Bringing down infrastructure containers (--down flag provided)...")
-            _run(compose_cmd + ["down"], check=False)
+            _run(compose_cmd + ["down", "--remove-orphans"], check=False)
         else:
             print("Stopping infrastructure containers...")
             _run(compose_cmd + ["stop"], check=False)
