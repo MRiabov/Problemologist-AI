@@ -139,6 +139,14 @@ class GrepRequest(BaseModel):
     glob: StrictStr | None = None
 
 
+class EventRecord(BaseModel):
+    """A single emitted observability event."""
+
+    event_type: str
+
+    model_config = {"extra": "allow"}
+
+
 class ExecuteRequest(BaseModel):
     """Request to execute Python code."""
 
@@ -153,8 +161,7 @@ class ExecuteResponse(BaseModel):
     stderr: str
     exit_code: int
     timed_out: bool = False
-    events: list[dict[str, Any]] = Field(default_factory=list)
-    # fixme: don't events have a model?
+    events: list[EventRecord] = Field(default_factory=list)
 
 
 class ScriptExecutionRequest(BaseModel):
@@ -250,14 +257,6 @@ class SimulationArtifacts(BaseModel):
     model_config = {"extra": "allow"}
 
 
-class EventRecord(BaseModel):
-    """A single emitted observability event."""
-
-    event_type: str
-
-    model_config = {"extra": "allow"}
-
-
 class BenchmarkToolResponse(BaseModel):
     """Response from a benchmark tool."""
 
@@ -344,7 +343,7 @@ class PreviewDesignResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     image_path: StrictStr | None = None
-    events: list[dict[str, Any]] = Field(default_factory=list)
+    events: list[EventRecord] = Field(default_factory=list)
 
 
 class HeavySimulationParams(BaseModel):
