@@ -131,6 +131,9 @@ class MockDSPyLM(dspy.LM):
         elif node_key == "benchmark_reviewer":
             lookup_key = "reviewer"
             sig_lookup = "reviewer"
+        elif node_key in {"plan_reviewer", "execution_reviewer"}:
+            lookup_key = "reviewer"
+            sig_lookup = "reviewer"
 
         node_data = scenario.get(lookup_key, {})
         logger.info(
@@ -153,6 +156,25 @@ class MockDSPyLM(dspy.LM):
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(lookup_key, 0)
         self._call_counts[lookup_key] = count + 1
+        call_index = count + 1
+
+        # Optional assertions for integration hardening.
+        self._validate_expected_llm_inputs(
+            node_key=lookup_key,
+            node_data=node_data,
+            full_text=full_text,
+            call_index=call_index,
+        )
+        self._validate_expected_tool_calls(
+            node_key=lookup_key,
+            node_data=node_data,
+            full_text=full_text,
+        )
+        self._validate_expected_tool_outputs(
+            node_key=lookup_key,
+            node_data=node_data,
+            full_text=full_text,
+        )
 
         # For scripted tool sequences, only force-finish once tools are exhausted.
         # DSPy may invoke LM multiple times between tool executions.
@@ -532,3 +554,172 @@ class MockDSPyLM(dspy.LM):
         return [
             f"Thought: {thought}\nReasoning: {reasoning}\nFinal Answer: Task complete."
         ]
+
+    @staticmethod
+    def _normalize_text_list(value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, list):
+            return [str(v) for v in value]
+        return [str(value)]
+
+    def _assert_text_expectations(
+        self,
+        *,
+        context: str,
+        text: str,
+        contains: list[str],
+        not_contains: list[str],
+    ) -> None:
+        for token in contains:
+            if token not in text:
+                raise AssertionError(
+                    f"{context}: expected token not found in LM input/trajectory: {token!r}"
+                )
+        for token in not_contains:
+            if token in text:
+                raise AssertionError(
+                    f"{context}: unexpected token found in LM input/trajectory: {token!r}"
+                )
+
+    def _validate_expected_llm_inputs(
+        self,
+        *,
+        node_key: str,
+        node_data: dict[str, Any],
+        full_text: str,
+        call_index: int,
+    ) -> None:
+        expected = node_data.get("expected_llm_inputs")
+        if not expected:
+            return
+
+        if isinstance(expected, dict):
+            contains = self._normalize_text_list(expected.get("contains"))
+            not_contains = self._normalize_text_list(expected.get("not_contains"))
+            self._assert_text_expectations(
+                context=f"{node_key} call {call_index} expected_llm_inputs",
+                text=full_text,
+                contains=contains,
+                not_contains=not_contains,
+            )
+            for rule in expected.get("per_call", []):
+                if int(rule.get("call_index", -1)) != call_index:
+                    continue
+                self._assert_text_expectations(
+                    context=f"{node_key} call {call_index} expected_llm_inputs.per_call",
+                    text=full_text,
+                    contains=self._normalize_text_list(rule.get("contains")),
+                    not_contains=self._normalize_text_list(rule.get("not_contains")),
+                )
+            return
+
+        if isinstance(expected, list):
+            # If entries are strings, all are required for every call.
+            if all(isinstance(item, str) for item in expected):
+                self._assert_text_expectations(
+                    context=f"{node_key} call {call_index} expected_llm_inputs",
+                    text=full_text,
+                    contains=[str(item) for item in expected],
+                    not_contains=[],
+                )
+                return
+
+            for rule in expected:
+                if not isinstance(rule, dict):
+                    continue
+                expected_call = rule.get("call_index")
+                if expected_call is not None and int(expected_call) != call_index:
+                    continue
+                self._assert_text_expectations(
+                    context=f"{node_key} call {call_index} expected_llm_inputs",
+                    text=full_text,
+                    contains=self._normalize_text_list(rule.get("contains")),
+                    not_contains=self._normalize_text_list(rule.get("not_contains")),
+                )
+
+    def _extract_indexed_fields(
+        self, full_text: str, field_prefix: str
+    ) -> dict[int, str]:
+        out: dict[int, str] = {}
+
+        marker_pattern = re.compile(
+            rf"\[\[\s*##\s*{re.escape(field_prefix)}_(\d+)\s*##\s*\]\]\s*(.*?)(?=\n\s*\[\[\s*##|\Z)",
+            re.IGNORECASE | re.DOTALL,
+        )
+        for match in marker_pattern.finditer(full_text):
+            idx = int(match.group(1))
+            value = match.group(2).strip()
+            out[idx] = value
+
+        # Fallback parser for non-marker prompt formats.
+        kv_pattern = re.compile(
+            rf"[\"']?{re.escape(field_prefix)}_(\d+)[\"']?\s*[:=]\s*([^\n]+)",
+            re.IGNORECASE,
+        )
+        for match in kv_pattern.finditer(full_text):
+            idx = int(match.group(1))
+            out.setdefault(idx, match.group(2).strip().strip(","))
+
+        return out
+
+    def _validate_expected_tool_calls(
+        self, *, node_key: str, node_data: dict[str, Any], full_text: str
+    ) -> None:
+        expected_calls = node_data.get("expected_tool_calls")
+        if not expected_calls:
+            return
+
+        observed_names = self._extract_indexed_fields(full_text, "tool_name")
+        observed_args = self._extract_indexed_fields(full_text, "tool_args")
+        max_observed_idx = max(observed_names.keys(), default=-1)
+
+        for idx in range(min(len(expected_calls), max_observed_idx + 1)):
+            rule = expected_calls[idx]
+            if not isinstance(rule, dict):
+                continue
+
+            expected_name = rule.get("name")
+            observed_name = observed_names.get(idx)
+            if expected_name and observed_name and expected_name != observed_name:
+                raise AssertionError(
+                    f"{node_key} tool {idx}: expected name {expected_name!r}, got {observed_name!r}"
+                )
+
+            args_text = observed_args.get(idx, "")
+            self._assert_text_expectations(
+                context=f"{node_key} tool {idx} expected_tool_calls",
+                text=args_text,
+                contains=self._normalize_text_list(rule.get("args_contains")),
+                not_contains=self._normalize_text_list(rule.get("args_not_contains")),
+            )
+
+    def _validate_expected_tool_outputs(
+        self, *, node_key: str, node_data: dict[str, Any], full_text: str
+    ) -> None:
+        expected_outputs = node_data.get("expected_tool_outputs")
+        if not expected_outputs:
+            return
+
+        observed_outputs = self._extract_indexed_fields(full_text, "observation")
+        max_observed_idx = max(observed_outputs.keys(), default=-1)
+
+        for idx in range(min(len(expected_outputs), max_observed_idx + 1)):
+            rule = expected_outputs[idx]
+            if isinstance(rule, str):
+                contains = [rule]
+                not_contains: list[str] = []
+            elif isinstance(rule, dict):
+                contains = self._normalize_text_list(rule.get("contains"))
+                not_contains = self._normalize_text_list(rule.get("not_contains"))
+            else:
+                continue
+
+            self._assert_text_expectations(
+                context=f"{node_key} observation {idx} expected_tool_outputs",
+                text=observed_outputs.get(idx, ""),
+                contains=contains,
+                not_contains=not_contains,
+            )
