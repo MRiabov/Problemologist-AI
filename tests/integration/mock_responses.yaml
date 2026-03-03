@@ -18,1159 +18,1321 @@ scenarios:
   # INT-011: Planner target caps validation (No specific mock needed as it's a validation test)
 
   INT-014:
-    planner:
-      summary: "Plan with MOCK-MOTOR-ID generated."
-      thought: "I will design a mechanism with a servo motor using MOCK-MOTOR-ID."
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Mechanism with MOCK-MOTOR-ID.
-              ## 2. Parts List
-              - MOCK-MOTOR-ID (Servo Motor)
-              ## 3. Assembly Strategy
-              1. Attach motor.
-              ## 4. Cost & Weight Budget
-              - $20
-              ## 5. Risk Assessment
-              - Low.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Design with MOCK-MOTOR-ID", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts:
-                - part_id: "MOCK-MOTOR-ID"
-                  manufacturer: "Mock Motors Inc."
-                  unit_cost_usd: 10.0
-                  quantity: 1
-                  source: "internal"
-                  reproducibility:
-                    catalog_version: "test-v1"
-                    bd_warehouse_commit: "mock-commit"
-                    catalog_snapshot_id: "snapshot-int-014"
-                    generated_at: "2026-01-01T00:00:00Z"
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [5,5,5], max: [10,10,10]}
-                build_zone: {min: [-50,-50,0], max: [50,50,50]}
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                start_position: [0,0,20]
-                runtime_jitter: [1,1,1]
-              simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics needed."
-      thought: "No electronics needed."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-    coder:
-      journal: "Implemented mechanism with MOCK-MOTOR-ID."
-      thought: "Implementing the design."
-      generated_code: |
-        from build123d import *
-        import os
-        import trimesh
-        os.makedirs('assets', exist_ok=True)
-        b = Box(10,10,10)
-        export_stl(b, 'assets/box.stl')
-        mesh = trimesh.load('assets/box.stl')
-        mesh.export('assets/box.glb', file_type='glb')
-        with open('script.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "I will design a mechanism with a servo motor using MOCK-MOTOR-ID."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Mechanism with MOCK-MOTOR-ID.
+                ## 2. Parts List
+                - MOCK-MOTOR-ID (Servo Motor)
+                ## 3. Assembly Strategy
+                1. Attach motor.
+                ## 4. Cost & Weight Budget
+                - $20
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Design with MOCK-MOTOR-ID", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts:
+                  - part_id: "MOCK-MOTOR-ID"
+                    manufacturer: "Mock Motors Inc."
+                    unit_cost_usd: 10.0
+                    quantity: 1
+                    source: "internal"
+                    reproducibility:
+                      catalog_version: "test-v1"
+                      bd_warehouse_commit: "mock-commit"
+                      catalog_snapshot_id: "snapshot-int-014"
+                      generated_at: "2026-01-01T00:00:00Z"
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan with MOCK-MOTOR-ID generated."
+            thought: "Plan is complete."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics needed."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics needed."
+      - node: coder
+        steps:
+          - thought: "Implementing the design."
+            finished: true
+            journal: "Implemented mechanism with MOCK-MOTOR-ID."
+            generated_code: |
+              from build123d import *
+              import os
+              import trimesh
+              os.makedirs('assets', exist_ok=True)
+              b = Box(10,10,10)
+              export_stl(b, 'assets/box.stl')
+              mesh = trimesh.load('assets/box.stl')
+              mesh.export('assets/box.glb', file_type='glb')
+              with open('script.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
   # INT-002: Engineering execution boundary
   test-exec:
-    planner:
-      summary: "Plan for 10x10x10mm box generated."
-      thought: "I will generate the engineering plan for the 10x10x10mm box."
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Build a box.
-              ## 2. Parts List
-              - Box (manufactured, abs)
-              ## 3. Assembly Strategy
-              1. Connect.
-              ## 4. Cost & Weight Budget
-              - $10
-              ## 5. Risk Assessment
-              - Low.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Step 1", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics needed."
-      thought: "No electronics needed."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-    coder:
-      journal: "Implemented box and ran simulation."
-      thought: "I will implement the box in build123d and run simulation."
-      generated_code: |
-        from build123d import *
-        import os
-        import trimesh
-        # Create GLB
-        os.makedirs('assets', exist_ok=True)
-        b = Box(10,10,10)
-        export_stl(b, 'assets/box.stl')
-        mesh = trimesh.load('assets/box.stl')
-        mesh.export('assets/box.glb', file_type='glb')
-        with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
-        with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "I will generate the engineering plan for the 10x10x10mm box."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Build a box.
+                ## 2. Parts List
+                - Box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Connect.
+                ## 4. Cost & Weight Budget
+                - $10
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Step 1", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan for 10x10x10mm box generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics needed."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics needed."
+      - node: coder
+        steps:
+          - thought: "I will implement the box in build123d and run simulation."
+            finished: true
+            journal: "Implemented box and ran simulation."
+            generated_code: |
+              from build123d import *
+              import os
+              import trimesh
+              # Create GLB
+              os.makedirs('assets', exist_ok=True)
+              b = Box(10,10,10)
+              export_stl(b, 'assets/box.stl')
+              mesh = trimesh.load('assets/box.stl')
+              mesh.export('assets/box.glb', file_type='glb')
+              with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+              with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
   INT-173:
-    planner:
-      summary: "Plan for cube generated."
-      thought: "Planning for INT-173."
-      plan: { theme: "cube", difficulty_score: 0.1 }
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## Learning Objective
-              - Test payload with cube.
-              ## Geometry
-              - Simple cube.
-              ## Objectives
-              - Validate payload.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Create cube", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [5,5,5], max: [10,10,10]}
-                build_zone: {min: [-50,-50,0], max: [50,50,50]}
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                start_position: [0,0,20]
-                runtime_jitter: [1,1,1]
-              simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    coder:
-      journal: "Created cube GLB."
-      thought: "Creating cube GLB."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
-        - name: "write_file"
-          input: { path: "script.py", content: "from build123d import *\ndef build(): return Box(10,10,10)", overwrite: true }
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Planning for INT-173."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Test payload with cube.
+                ## Geometry
+                - Simple cube.
+                ## Objectives
+                - Validate payload.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Create cube", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan for cube generated."
+            plan: { theme: "cube", difficulty_score: 0.1 }
+      - node: coder
+        steps:
+          - thought: "Creating cube GLB."
+            tool_name: "execute_command"
+            tool_args: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "script.py", content: "from build123d import *\ndef build(): return Box(10,10,10)", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            journal: "Created cube GLB."
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
   INT-174:
-    planner:
-      summary: "Plan for two parts generated."
-      thought: "Planning for INT-174."
-      plan: { theme: "multi-part", difficulty_score: 0.2 }
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## Learning Objective
-              - Test two parts.
-              ## Geometry
-              - Two cubes.
-              ## Objectives
-              - Validate selection.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Create parts", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [5,5,5], max: [10,10,10]}
-                build_zone: {min: [-50,-50,0], max: [50,50,50]}
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                start_position: [0,0,20]
-                runtime_jitter: [1,1,1]
-              simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    coder:
-      journal: "Created two parts GLB."
-      thought: "Creating two parts GLB."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b1 = Box(10,10,10); b1.label = 'part1'; b2 = Box(5,5,5).translate((20,0,0)); b2.label = 'part2'; c = b1 + b2; export_stl(c, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
-        - name: "write_file"
-          input: { path: "script.py", content: "from build123d import *\ndef build():\n    b1 = Box(10,10,10)\n    b1.label = 'part1'\n    b2 = Box(5,5,5).translate((20,0,0))\n    b2.label = 'part2'\n    return b1 + b2", overwrite: true }
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Planning for INT-174."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Test two parts.
+                ## Geometry
+                - Two cubes.
+                ## Objectives
+                - Validate selection.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Create parts", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan for two parts generated."
+            plan: { theme: "multi-part", difficulty_score: 0.2 }
+      - node: coder
+        steps:
+          - thought: "Creating two parts GLB."
+            tool_name: "execute_command"
+            tool_args: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b1 = Box(10,10,10); b1.label = 'part1'; b2 = Box(5,5,5).translate((20,0,0)); b2.label = 'part2'; c = b1 + b2; export_stl(c, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "script.py", content: "from build123d import *\ndef build():\n    b1 = Box(10,10,10)\n    b1.label = 'part1'\n    b2 = Box(5,5,5).translate((20,0,0))\n    b2.label = 'part2'\n    return b1 + b2", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            journal: "Created two parts GLB."
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
 
   INT-176:
-    planner:
-      summary: "Plan for failure test generated."
-      thought: "Testing tool failure recovery."
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Fail test.
-              ## 2. Parts List
-              - Test part
-              ## 3. Assembly Strategy
-              1. Test step
-              ## 4. Cost & Weight Budget
-              - Test budget
-              ## 5. Risk Assessment
-              - Test risk
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Fail a tool\n- [ ] Continue", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [5,5,5], max: [10,10,10]}
-                build_zone: {min: [-50,-50,0], max: [50,50,50]}
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                start_position: [0,0,20]
-                runtime_jitter: [1,1,1]
-              simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics needed."
-      thought: "No electronics needed."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-    coder:
-      journal: "Observed failure but continued work."
-      thought: "I will call a command that fails, then continue."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
-        - name: "execute_command"
-          input: { command: "ls /non_existent_path_to_fail" }
-          thought: "Attempting to list non-existent path."
-        - name: "write_file"
-          input: { path: "script.py", content: "# Recovered", overwrite: true }
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Testing tool failure recovery."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Fail test.
+                ## 2. Parts List
+                - Test part
+                ## 3. Assembly Strategy
+                1. Test step
+                ## 4. Cost & Weight Budget
+                - Test budget
+                ## 5. Risk Assessment
+                - Test risk
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Fail a tool\n- [ ] Continue", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan for failure test generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics needed."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics needed."
+      - node: coder
+        steps:
+          - thought: "I will call a command that fails, then continue."
+            tool_name: "execute_command"
+            tool_args: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
+            expected_observation: "success"
+          - thought: "Attempting to list non-existent path."
+            tool_name: "execute_command"
+            tool_args: { command: "ls /non_existent_path_to_fail" }
+            expected_observation: "ls: cannot access"
+          - tool_name: "write_file"
+            tool_args: { path: "script.py", content: "# Recovered", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            journal: "Observed failure but continued work."
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
   INT-177:
-    planner:
-      summary: "Plan for INT-177 generated."
-      thought: "Planning for INT-177."
-      tool_calls:
-        - name: "write_file"
-          input:
-            path: "plan.md"
-            content: |
-              ## Learning Objective
-              - Test feedback.
-              ## Geometry
-              - Test geometry.
-              ## Objectives
-              - Validate feedback.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Test", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [5,5,5], max: [10,10,10]}
-                build_zone: {min: [-50,-50,0], max: [50,50,50]}
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                start_position: [0,0,20]
-                runtime_jitter: [1,1,1]
-              simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics needed."
-      thought: "No electronics needed."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Test feedback.
-              ## 2. Parts List
-              - Test part
-              ## 3. Assembly Strategy
-              1. Test step
-              ## 4. Cost & Weight Budget
-              - Test budget
-              ## 5. Risk Assessment
-              - Test risk
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-    coder:
-      journal: "Coding for INT-177 complete."
-      thought: "Coding for INT-177."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
-        - name: "write_file"
-          input: { path: "script.py", content: "# Test script", overwrite: true }
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Planning for INT-177."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Test feedback.
+                ## Geometry
+                - Test geometry.
+                ## Objectives
+                - Validate feedback.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Test", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan for INT-177 generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics needed."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Test feedback.
+                ## 2. Parts List
+                - Test part
+                ## 3. Assembly Strategy
+                1. Test step
+                ## 4. Cost & Weight Budget
+                - Test budget
+                ## 5. Risk Assessment
+                - Test risk
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics needed."
+      - node: coder
+        steps:
+          - thought: "Coding for INT-177."
+            tool_name: "execute_command"
+            tool_args: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "script.py", content: "# Test script", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            journal: "Coding for INT-177 complete."
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
   INT-179:
-    planner:
-      summary: "Plan for INT-179 generated."
-      thought: "Planning for INT-179."
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## Learning Objective
-              - Test mentions.
-              ## Geometry
-              - Test geometry.
-              ## Objectives
-              - Validate mentions.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Test", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [5,5,5], max: [10,10,10]}
-                build_zone: {min: [-50,-50,0], max: [50,50,50]}
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                start_position: [0,0,20]
-                runtime_jitter: [1,1,1]
-              simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics needed."
-      thought: "No electronics needed."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Test mentions.
-              ## 2. Parts List
-              - Test part
-              ## 3. Assembly Strategy
-              1. Test step
-              ## 4. Cost & Weight Budget
-              - Test budget
-              ## 5. Risk Assessment
-              - Test risk
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-    coder:
-      journal: "Coding for INT-179 complete."
-      thought: "Coding for INT-179."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
-        - name: "write_file"
-          input: { path: "script.py", content: "# Test script for mentions\nfrom shared.models.schemas import PartMetadata\n# line 3\n# line 4\n# line 5\n# line 6\n# line 7\n# line 8\n# line 9\n# line 10", overwrite: true }
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Planning for INT-179."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Test mentions.
+                ## Geometry
+                - Test geometry.
+                ## Objectives
+                - Validate mentions.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Test", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Plan for INT-179 generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics needed."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Test mentions.
+                ## 2. Parts List
+                - Test part
+                ## 3. Assembly Strategy
+                1. Test step
+                ## 4. Cost & Weight Budget
+                - Test budget
+                ## 5. Risk Assessment
+                - Test risk
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics needed."
+      - node: coder
+        steps:
+          - thought: "Coding for INT-179."
+            tool_name: "execute_command"
+            tool_args: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "script.py", content: "# Test script for mentions\nfrom shared.models.schemas import PartMetadata\n# line 3\n# line 4\n# line 5\n# line 6\n# line 7\n# line 8\n# line 9\n# line 10", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            journal: "Coding for INT-179 complete."
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
   # Benchmark workflow (detected by prompt or UUID session_id)
   benchmark:
-    planner:
-      thought: "Designing benchmark scenario."
-      plan:
-        theme: "benchmark_test"
-        reasoning: "Creating a simple path planning task."
-        params: { wall_height: 5, goal_pos: [10, 10, 0] }
-      reasoning: "Creating a simple benchmark."
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## Learning Objective
-              - Move a sphere into the goal zone.
-              ## Geometry
-              - Simple box environment around origin.
-              ## Objectives
-              - Reach goal while avoiding forbid zone.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Test benchmark", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 50
-                benchmark_max_weight_g: 1200
-                planner_target_max_unit_cost_usd: 25
-                planner_target_max_weight_g: 600
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone:
-                  min: [6, -2, 0]
-                  max: [10, 2, 4]
-                forbid_zones:
-                  - name: "obstacle_collision_zone"
-                    min: [2, -3, 0]
-                    max: [4, 3, 4]
-                build_zone:
-                  min: [-10, -10, -10]
-                  max: [10, 10, 10]
-              simulation_bounds:
-                min: [-30, -30, -30]
-                max: [30, 30, 30]
-              moved_object:
-                label: "projectile_ball"
-                shape: "sphere"
-                static_randomization:
-                  radius: [1, 2]
-                start_position: [0, 0, 0]
-                runtime_jitter: [0.5, 0.5, 0.5]
-              constraints:
-                max_unit_cost: 50.0
-                max_weight_g: 1200.0
-              randomization:
-                static_variation_id: "v1.0"
-                runtime_jitter_enabled: true
-            overwrite: true
-    coder:
-      journal: "Work completed."
-      thought: "Implementing benchmark script and setting up mandatory files."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
-        - name: "execute_command"
-          input: { command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)" }
-        - name: "write_file"
-          input: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Designing benchmark scenario."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Move a sphere into the goal zone.
+                ## Geometry
+                - Simple box environment around origin.
+                ## Objectives
+                - Reach goal while avoiding forbid zone.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Test benchmark", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 50
+                  benchmark_max_weight_g: 1200
+                  planner_target_max_unit_cost_usd: 25
+                  planner_target_max_weight_g: 600
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  forbid_zones:
+                    - name: "obstacle_collision_zone"
+                      min: [2, -3, 0]
+                      max: [4, 3, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  static_randomization:
+                    radius: [1, 2]
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0.5, 0.5, 0.5]
+                constraints:
+                  max_unit_cost: 50.0
+                  max_weight_g: 1200.0
+                randomization:
+                  static_variation_id: "v1.0"
+                  runtime_jitter_enabled: true
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Creating a simple benchmark."
+            plan:
+              theme: "benchmark_test"
+              reasoning: "Creating a simple path planning task."
+              params: { wall_height: 5, goal_pos: [10, 10, 0] }
+      - node: coder
+        steps:
+          - thought: "Implementing benchmark script and setting up mandatory files."
+            tool_name: "execute_command"
+            tool_args: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+            expected_observation: "success"
+          - tool_name: "execute_command"
+            tool_args: { command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            journal: "Work completed."
 
   INT-180:
-    planner:
-      summary: "INT-180 planning artifacts generated."
-      thought: "Create required planner files through multiple tool turns."
-      tool_calls:
-        - name: "list_files"
-          input: { path: "/" }
-        - name: "write_file"
-          input:
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Compact-context regression scenario.
-              ## 2. Parts List
-              - Box (manufactured, abs)
-              ## 3. Assembly Strategy
-              1. Build a simple part.
-              ## 4. Cost & Weight Budget
-              - $10
-              ## 5. Risk Assessment
-              - Low.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Build part", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input:
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [0,0,0], max: [1,1,1]}
-                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
-              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics required."
-      thought: "Mark electronics planning complete."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Build part\n- [x] Electronics N/A", overwrite: true }
-    coder:
-      journal: "Implemented placeholder geometry for INT-180."
-      thought: "Emit a simple script."
-      generated_code: |
-        from build123d import *
-        from shared.models.schemas import PartMetadata
-        def build():
-            p = Box(10,10,10)
-            p.label = "box"
-            p.metadata = PartMetadata(material_id="abs", fixed=True)
-            return p
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "Artifacts are complete and valid."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Create required planner files through multiple tool turns."
+            tool_name: "list_files"
+            tool_args: { path: "/" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Compact-context regression scenario.
+                ## 2. Parts List
+                - Box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build a simple part.
+                ## 4. Cost & Weight Budget
+                - $10
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build part", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "INT-180 planning artifacts generated."
+      - node: electronics_planner
+        steps:
+          - thought: "Mark electronics planning complete."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Build part\n- [x] Electronics N/A", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics required."
+      - node: coder
+        steps:
+          - thought: "Emit a simple script."
+            finished: true
+            journal: "Implemented placeholder geometry for INT-180."
+            generated_code: |
+              from build123d import *
+              from shared.models.schemas import PartMetadata
+              def build():
+                  p = Box(10,10,10)
+                  p.label = "box"
+                  p.metadata = PartMetadata(material_id="abs", fixed=True)
+                  return p
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Artifacts are complete and valid."
+              required_fixes: []
 
   INT-181:
-    planner:
-      summary: "INT-181 ordering scenario generated."
-      thought: "Execute list and ordered write probe before planner docs."
-      tool_calls:
-        - name: "list_files"
-          input: { path: "/" }
-        - name: "write_file"
-          input: { path: "journal.md", content: "ordered write marker", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Ordering contract scenario.
-              ## 2. Parts List
-              - Box (manufactured, abs)
-              ## 3. Assembly Strategy
-              1. Build.
-              ## 4. Cost & Weight Budget
-              - $10
-              ## 5. Risk Assessment
-              - Low.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Build", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input:
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [0,0,0], max: [1,1,1]}
-                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
-              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics required."
-      thought: "No electronics steps."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
-    coder:
-      journal: "INT-181 coder output generated."
-      thought: "Emit simple script."
-      generated_code: |
-        from build123d import *
-        from shared.models.schemas import PartMetadata
-        def build():
-            p = Box(8,8,8)
-            p.label = "box"
-            p.metadata = PartMetadata(material_id="abs", fixed=True)
-            return p
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "Ordering scenario artifacts validated."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Execute list and ordered write probe before planner docs."
+            tool_name: "list_files"
+            tool_args: { path: "/" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "journal.md", content: "ordered write marker", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Ordering contract scenario.
+                ## 2. Parts List
+                - Box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build.
+                ## 4. Cost & Weight Budget
+                - $10
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "INT-181 ordering scenario generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics steps."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics required."
+      - node: coder
+        steps:
+          - thought: "Emit simple script."
+            finished: true
+            journal: "INT-181 coder output generated."
+            generated_code: |
+              from build123d import *
+              from shared.models.schemas import PartMetadata
+              def build():
+                  p = Box(8,8,8)
+                  p.label = "box"
+                  p.metadata = PartMetadata(material_id="abs", fixed=True)
+                  return p
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Ordering scenario artifacts validated."
+              required_fixes: []
 
   INT-182:
-    planner:
-      summary: "INT-182 concurrent-isolation scenario generated."
-      thought: "Write deterministic planner artifacts."
-      tool_calls:
-        - name: "write_file"
-          input:
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Concurrency isolation scenario.
-              ## 2. Parts List
-              - Box (manufactured, abs)
-              ## 3. Assembly Strategy
-              1. Build.
-              ## 4. Cost & Weight Budget
-              - $10
-              ## 5. Risk Assessment
-              - Low.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Build", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input:
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [0,0,0], max: [1,1,1]}
-                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
-              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics required."
-      thought: "No electronics steps."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
-    coder:
-      journal: "INT-182 coder output generated."
-      thought: "Emit simple script."
-      generated_code: |
-        from build123d import *
-        from shared.models.schemas import PartMetadata
-        def build():
-            p = Box(7,7,7)
-            p.label = "box"
-            p.metadata = PartMetadata(material_id="abs", fixed=True)
-            return p
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "Isolation scenario artifacts validated."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Write deterministic planner artifacts."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Concurrency isolation scenario.
+                ## 2. Parts List
+                - Box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build.
+                ## 4. Cost & Weight Budget
+                - $10
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "INT-182 concurrent-isolation scenario generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics steps."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics required."
+      - node: coder
+        steps:
+          - thought: "Emit simple script."
+            finished: true
+            journal: "INT-182 coder output generated."
+            generated_code: |
+              from build123d import *
+              from shared.models.schemas import PartMetadata
+              def build():
+                  p = Box(7,7,7)
+                  p.label = "box"
+                  p.metadata = PartMetadata(material_id="abs", fixed=True)
+                  return p
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Isolation scenario artifacts validated."
+              required_fixes: []
 
   INT-183:
-    planner:
-      summary: "INT-183 steerability queue scenario generated."
-      thought: "Run a short command so steering can queue mid-run."
-      tool_calls:
-        - name: "execute_command"
-          input: { command: "python -c \"import time; time.sleep(1.0)\"" }
-        - name: "write_file"
-          input:
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Steerability queue scenario.
-              ## 2. Parts List
-              - Box (manufactured, abs)
-              ## 3. Assembly Strategy
-              1. Build.
-              ## 4. Cost & Weight Budget
-              - $10
-              ## 5. Risk Assessment
-              - Low.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Build", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input:
-            path: "objectives.yaml"
-            content: |
-              objectives:
-                goal_zone: {min: [0,0,0], max: [1,1,1]}
-                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
-              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
-            overwrite: true
-    electronics_planner:
-      summary: "No electronics required."
-      thought: "No electronics steps."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
-    coder:
-      journal: "INT-183 coder output generated."
-      thought: "Emit simple script."
-      generated_code: |
-        from build123d import *
-        from shared.models.schemas import PartMetadata
-        def build():
-            p = Box(6,6,6)
-            p.label = "box"
-            p.metadata = PartMetadata(material_id="abs", fixed=True)
-            return p
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "Steerability scenario artifacts validated."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Run a short command so steering can queue mid-run."
+            tool_name: "execute_command"
+            tool_args: { command: "python -c \"import time; time.sleep(1.0)\"" }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Steerability queue scenario.
+                ## 2. Parts List
+                - Box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build.
+                ## 4. Cost & Weight Budget
+                - $10
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "INT-183 steerability queue scenario generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics steps."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics required."
+      - node: coder
+        steps:
+          - thought: "Emit simple script."
+            finished: true
+            journal: "INT-183 coder output generated."
+            generated_code: |
+              from build123d import *
+              from shared.models.schemas import PartMetadata
+              def build():
+                  p = Box(6,6,6)
+                  p.label = "box"
+                  p.metadata = PartMetadata(material_id="abs", fixed=True)
+                  return p
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Steerability scenario artifacts validated."
+              required_fixes: []
 
   EVAL-EE:
-    planner:
-      summary: "Electronics-eval plan generated."
-      thought: "Preparing a task that requires electronics implementation."
-      tool_calls:
-        - name: "write_file"
-          input:
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Build a simple powered mechanism.
-              ## 2. Parts List
-              - Frame
-              - Motor
-              - PSU
-              ## 3. Assembly Strategy
-              1. Build frame.
-              2. Route wiring.
-              ## 4. Cost & Weight Budget
-              - Within limits
-              ## 5. Risk Assessment
-              - Wire routing clashes
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Build frame", overwrite: true }
-        - name: "write_file"
-          input:
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-    electronics_planner:
-      summary: "Electronics wiring task added."
-      thought: "Add an explicit unchecked electronics task for handoff."
-      tool_calls:
-        - name: "write_file"
-          input:
-            path: "todo.md"
-            content: |
-              - [x] Build frame
-              - [ ] Route wiring harness for motor power
-            overwrite: true
-    electronics_engineer:
-      journal: "Completed electronics wiring path for motor and PSU."
-      thought: "Implementing electronics wiring."
-    coder:
-      journal: "Mechanical implementation completed."
-      thought: "Implementing basic geometry."
-      generated_code: |
-        from build123d import *
-        def build():
-            return Box(10,10,10)
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Preparing a task that requires electronics implementation."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Build a simple powered mechanism.
+                ## 2. Parts List
+                - Frame
+                - Motor
+                - PSU
+                ## 3. Assembly Strategy
+                1. Build frame.
+                2. Route wiring.
+                ## 4. Cost & Weight Budget
+                - Within limits
+                ## 5. Risk Assessment
+                - Wire routing clashes
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build frame", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Electronics-eval plan generated."
+      - node: electronics_planner
+        steps:
+          - thought: "Add an explicit unchecked electronics task for handoff."
+            tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build frame
+                - [ ] Route wiring harness for motor power
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "Electronics wiring task added."
+      - node: electronics_engineer
+        steps:
+          - thought: "Implementing electronics wiring."
+            finished: true
+            journal: "Completed electronics wiring path for motor and PSU."
+      - node: coder
+        steps:
+          - thought: "Implementing basic geometry."
+            finished: true
+            journal: "Mechanical implementation completed."
+            generated_code: |
+              from build123d import *
+              def build():
+                  return Box(10,10,10)
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
 
 
   # Default fallback
   default:
-    planner:
-      summary: "Default plan generated."
-      thought: "Default planner response."
-      tool_calls:
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## Learning Objective
-              - Default.
-              ## Geometry
-              - Default.
-              ## Objectives
-              - Default.
-            overwrite: true
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Done", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-        - name: "write_file"
-          input: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
-    electronics_planner:
-      summary: "No electronics needed."
-      thought: "No electronics needed."
-      tool_calls:
-        - name: "write_file"
-          input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-        - name: "write_file"
-          input: 
-            path: "plan.md"
-            content: |
-              ## 1. Solution Overview
-              Default.
-              ## 2. Parts List
-              - Default
-              ## 3. Assembly Strategy
-              1. Default
-              ## 4. Cost & Weight Budget
-              - Default
-              ## 5. Risk Assessment
-              - Default
-            overwrite: true
-        - name: "write_file"
-          input: 
-            path: "assembly_definition.yaml"
-            content: |
-              version: '1.0'
-              constraints:
-                benchmark_max_unit_cost_usd: 100
-                benchmark_max_weight_g: 1000
-                planner_target_max_unit_cost_usd: 50
-                planner_target_max_weight_g: 500
-              totals:
-                estimated_unit_cost_usd: 10
-                estimated_weight_g: 100
-                estimate_confidence: high
-              manufactured_parts: []
-              cots_parts: []
-              final_assembly: []
-            overwrite: true
-    coder:
-      journal: "Work completed."
-      thought: "Default coder response."
-      generated_code: |
-        from build123d import *
-        from shared.models.schemas import PartMetadata
-        import os
-        import trimesh
-        
-        # Create GLB
-        os.makedirs('assets', exist_ok=True)
-        b = Box(10,10,10)
-        export_stl(b, 'assets/box.stl')
-        mesh = trimesh.load('assets/box.stl')
-        mesh.export('assets/box.glb', file_type='glb')
+    transcript:
+      - node: planner
+        steps:
+          - thought: "Default planner response."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Default.
+                ## Geometry
+                - Default.
+                ## Objectives
+                - Default.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Done", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
+            expected_observation: "success"
+          - finished: true
+            summary: "Default plan generated."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics needed."
+            tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Default.
+                ## 2. Parts List
+                - Default
+                ## 3. Assembly Strategy
+                1. Default
+                ## 4. Cost & Weight Budget
+                - Default
+                ## 5. Risk Assessment
+                - Default
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            summary: "No electronics needed."
+      - node: coder
+        steps:
+          - thought: "Default coder response."
+            finished: true
+            journal: "Work completed."
+            generated_code: |
+              from build123d import *
+              from shared.models.schemas import PartMetadata
+              import os
+              import trimesh
 
-        with open('script.py', 'w') as f:
-            f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.label = "box"\n    b.metadata = PartMetadata(material_id="abs", fixed=True)\n    return b')
-    reviewer:
-      review:
-        decision: "APPROVED"
-        reason: "The design satisfies all requirements."
-        required_fixes: []
+              # Create GLB
+              os.makedirs('assets', exist_ok=True)
+              b = Box(10,10,10)
+              export_stl(b, 'assets/box.stl')
+              mesh = trimesh.load('assets/box.stl')
+              mesh.export('assets/box.glb', file_type='glb')
+
+              with open('script.py', 'w') as f:
+                  f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.label = "box"\n    b.metadata = PartMetadata(material_id="abs", fixed=True)\n    return b')
+      - node: reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "The design satisfies all requirements."
+              required_fixes: []
