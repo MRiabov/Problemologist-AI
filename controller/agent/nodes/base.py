@@ -80,7 +80,8 @@ class SharedNodeContext:
                 f"openai/{settings.llm_model}",
                 api_key=api_key,
                 cache=False,
-                timeout=600,
+                timeout=settings.llm_timeout_seconds,
+                max_tokens=settings.llm_max_tokens,
             )
 
         return cls(
@@ -327,7 +328,15 @@ class BaseNode:
         if instructions:
             signature_cls = signature_cls.with_instructions(instructions)
 
-        program = program_cls(signature_cls, tools=list(tool_fns.values()))
+        if program_cls is dspy.ReAct:
+            max_iters = settings.react_max_iters
+            if "planner" in node_type:
+                max_iters = settings.react_planner_max_iters
+            program = program_cls(
+                signature_cls, tools=list(tool_fns.values()), max_iters=max_iters
+            )
+        else:
+            program = program_cls(signature_cls, tools=list(tool_fns.values()))
 
         # WP07: Try to load compiled prompt if available
         self.ctx.pm.load_compiled_program(node_type, program)
@@ -341,7 +350,7 @@ class BaseNode:
         prediction = None
         artifacts = {}
 
-        dspy_timeout = 300.0
+        dspy_timeout = float(settings.dspy_program_timeout_seconds)
 
         try:
             while retry_count < max_retries:

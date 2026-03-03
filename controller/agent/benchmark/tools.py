@@ -5,6 +5,33 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.simulation.schemas import SimulatorBackendType
 
 
+def get_benchmark_planner_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """Planner-only filesystem toolset to keep planning loops focused."""
+
+    async def list_files(path: str = "/"):
+        return await fs.list_files(path)
+
+    async def read_file(path: str):
+        return await fs.read_file(path)
+
+    async def write_file(path: str, content: str, overwrite: bool = False):
+        return await fs.write_file(path, content, overwrite=overwrite)
+
+    async def edit_file(path: str, old_string: str, new_string: str):
+        from controller.middleware.remote_fs import EditOp
+
+        return await fs.edit_file(
+            path, [EditOp(old_string=old_string, new_string=new_string)]
+        )
+
+    async def grep(pattern: str, path: str | None = None, glob: str | None = None):
+        return await fs.grep(pattern, path, glob)
+
+    return [list_files, read_file, write_file, edit_file, grep]
+
+
 def get_benchmark_tools(
     fs: RemoteFilesystemMiddleware, session_id: str
 ) -> list[Callable]:
