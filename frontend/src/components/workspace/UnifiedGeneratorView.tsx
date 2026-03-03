@@ -215,6 +215,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                   <div data-testid="unified-debug-info" className="hidden">
                       {JSON.stringify({ 
                           modelUrlsCount: modelUrls.length, 
+                          assetsCount: selectedEpisode?.assets?.length || 0,
                           hasVideoAsset: !!videoAsset, 
                           videoAssetType: videoAsset?.asset_type,
                           episodeId: selectedEpisode?.id,

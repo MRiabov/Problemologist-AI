@@ -44,14 +44,14 @@ def test_int_179_manual_at_mention_contract(page: Page):
     chat_input.fill(unique_task)
     page.get_by_label("Send Message").click()
 
-    # Wait for completion (status becomes COMPLETED)
+    # Wait for completion (status becomes COMPLETED) and assets to be loaded
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return data.episodeStatus === 'COMPLETED';
+                return data.episodeStatus === 'COMPLETED' && data.assetsCount > 0;
             } catch (e) { return false; }
         }""",
         timeout=120000,
@@ -93,16 +93,13 @@ def test_int_179_manual_at_mention_contract(page: Page):
     # First, trigger suggestions to ensure frontend has loaded the assets
     chat_input.fill("@")
     suggestion_menu = page.locator(".absolute.bottom-\\[calc\\(100\\%\\+8px\\)\\]")
-    try:
-        expect(suggestion_menu).to_be_visible(timeout=30000)
-        suggestion = (
-            suggestion_menu.get_by_role("button").filter(has_text="plan.md").first
-        )
-        expect(suggestion).to_be_visible(timeout=10000)
-        print("\nDEBUG: plan.md visible in suggestions")
-    except Exception as e:
-        print(f"\nDEBUG: Suggestions wait failed: {e}")
-        # Continue anyway, maybe it just loaded
+
+    expect(suggestion_menu).to_be_visible(timeout=30000)
+    suggestion = (
+        suggestion_menu.get_by_role("button").filter(has_text="plan.md").first
+    )
+    expect(suggestion).to_be_visible(timeout=10000)
+    print("\nDEBUG: plan.md visible in suggestions")
 
     chat_input.fill("Explain @plan.md")
     page.wait_for_timeout(3000)  # Wait for highlighter to catch up
