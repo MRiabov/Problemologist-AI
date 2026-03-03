@@ -103,8 +103,8 @@ uv run alembic upgrade head
 echo "Starting Application Servers..."
 
 # Ensure log directory exists and manage log history
-LOG_DIR="logs/manual_run"
-ARCHIVE_DIR="logs/archives"
+LOG_DIR="${LOG_DIR:-logs/manual_run}"
+ARCHIVE_DIR="${ARCHIVE_DIR:-logs/archives}"
 mkdir -p "$LOG_DIR"
 mkdir -p "$ARCHIVE_DIR"
 
@@ -172,13 +172,15 @@ else
 fi
 
 # Create convenience symlinks in the logs/ root for the current environment
-ln -sf "manual_run/controller.log" logs/controller.log
-ln -sf "manual_run/worker_light.log" logs/worker_light.log
-ln -sf "manual_run/worker_light_debug.log" logs/worker_light_debug.log
-ln -sf "manual_run/worker_heavy.log" logs/worker_heavy.log
-ln -sf "manual_run/worker_heavy_debug.log" logs/worker_heavy_debug.log
-ln -sf "manual_run/temporal_worker.log" logs/temporal_worker.log
-ln -sf "manual_run/frontend.log" logs/frontend.log
+# We strip the logs/ prefix from LOG_DIR to get the relative target
+REL_LOG_DIR="${LOG_DIR#logs/}"
+ln -sf "$REL_LOG_DIR/controller.log" logs/controller.log
+ln -sf "$REL_LOG_DIR/worker_light.log" logs/worker_light.log
+ln -sf "$REL_LOG_DIR/worker_light_debug.log" logs/worker_light_debug.log
+ln -sf "$REL_LOG_DIR/worker_heavy.log" logs/worker_heavy.log
+ln -sf "$REL_LOG_DIR/worker_heavy_debug.log" logs/worker_heavy_debug.log
+ln -sf "$REL_LOG_DIR/temporal_worker.log" logs/temporal_worker.log
+ln -sf "$REL_LOG_DIR/frontend.log" logs/frontend.log
 
 echo "Waiting for services to be healthy..."
 sleep 5
