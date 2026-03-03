@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr, field_v
 
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 from shared.models.schemas import ElectronicsSection
+from shared.observability.schemas import BaseEvent
 from shared.models.simulation import (
     FluidMetricResult,
     MultiRunResult,
@@ -139,14 +140,6 @@ class GrepRequest(BaseModel):
     glob: StrictStr | None = None
 
 
-class EventRecord(BaseModel):
-    """A single emitted observability event."""
-
-    event_type: str
-
-    model_config = {"extra": "allow"}
-
-
 class ExecuteRequest(BaseModel):
     """Request to execute Python code."""
 
@@ -161,7 +154,7 @@ class ExecuteResponse(BaseModel):
     stderr: str
     exit_code: int
     timed_out: bool = False
-    events: list[EventRecord] = Field(default_factory=list)
+    events: list[BaseEvent] = Field(default_factory=list)
 
 
 class ScriptExecutionRequest(BaseModel):
@@ -264,7 +257,7 @@ class BenchmarkToolResponse(BaseModel):
     message: str
     confidence: str = "high"
     artifacts: SimulationArtifacts | None = None
-    events: list[EventRecord] = Field(default_factory=list)
+    events: list[BaseEvent] = Field(default_factory=list)
 
 
 class GitCommitRequest(BaseModel):
@@ -343,7 +336,7 @@ class PreviewDesignResponse(BaseModel):
     success: StrictBool
     message: StrictStr
     image_path: StrictStr | None = None
-    events: list[EventRecord] = Field(default_factory=list)
+    events: list[BaseEvent] = Field(default_factory=list)
 
 
 class HeavySimulationParams(BaseModel):
