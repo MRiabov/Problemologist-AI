@@ -1,8 +1,6 @@
 import datetime
 import os
 import re
-import shutil
-import subprocess
 from pathlib import Path
 
 import httpx
@@ -26,24 +24,12 @@ DEFAULT_BROWSER_ERROR_ALLOWLIST = [
     r"WebSocket error Event",
 ]
 
-BACKEND_LOG_FILES = {
-    "controller": Path("logs/integration_tests/controller.log"),
-    "worker_light": Path("logs/integration_tests/worker_light.log"),
-    "worker_heavy": Path("logs/integration_tests/worker_heavy.log"),
-    "temporal_worker": Path("logs/integration_tests/temporal_worker.log"),
+BACKEND_ERROR_LOG_FILES = {
+    "controller": Path("logs/integration_tests/controller_errors.log"),
+    "worker_light": Path("logs/integration_tests/worker_light_errors.log"),
+    "worker_heavy": Path("logs/integration_tests/worker_heavy_errors.log"),
+    "temporal_worker": Path("logs/integration_tests/temporal_worker_errors.log"),
 }
-
-# High-signal backend failure patterns; keep narrowly scoped to avoid false positives.
-DEFAULT_BACKEND_ERROR_PATTERNS = [
-    r"Traceback \(most recent call last\):",
-    r"Exception in ASGI application",
-    r"\bERROR:\s",
-    r"\bCRITICAL\b",
-    r"\[\s*error\s*\]",
-    r'"level"\s*:\s*"error"',
-    r"\blevel=error\b",
-    r"\bunhandled exception\b",
-]
 
 
 def _is_integration_test(request: pytest.FixtureRequest) -> bool:
@@ -57,16 +43,6 @@ def _strip_ansi(text: str) -> str:
     return re.sub(r"\x1B\[[0-?]*[ -/]*[@-~]", "", text)
 
 
-def _compile_backend_error_patterns() -> list[re.Pattern[str]]:
-    raw_patterns = [*DEFAULT_BACKEND_ERROR_PATTERNS]
-    raw_patterns.extend(
-        p.strip()
-        for p in os.getenv("BACKEND_ERROR_PATTERNS_REGEXES", "").split(";;")
-        if p.strip()
-    )
-    return [re.compile(pattern, re.IGNORECASE) for pattern in raw_patterns]
-
-
 def _compile_backend_error_allowlist() -> list[re.Pattern[str]]:
     raw_patterns = [
         p.strip()
@@ -76,71 +52,13 @@ def _compile_backend_error_allowlist() -> list[re.Pattern[str]]:
     return [re.compile(pattern, re.IGNORECASE) for pattern in raw_patterns]
 
 
-def _match_backend_issue(
-    line: str,
-    issue_patterns: list[re.Pattern[str]],
-    allowlist: list[re.Pattern[str]],
-) -> str | None:
+def _match_backend_issue(line: str, allowlist: list[re.Pattern[str]]) -> str | None:
     normalized = _strip_ansi(line).strip()
     if not normalized:
         return None
     if any(pattern.search(normalized) for pattern in allowlist):
         return None
-    if any(pattern.search(normalized) for pattern in issue_patterns):
-        return normalized
-    return None
-
-
-def _build_rg_pattern(issue_patterns: list[re.Pattern[str]]) -> str:
-    return "|".join(f"(?:{pattern.pattern})" for pattern in issue_patterns)
-
-
-def _scan_backend_issues_with_rg(
-    path: Path,
-    start_offset: int,
-    issue_patterns: list[re.Pattern[str]],
-    allowlist: list[re.Pattern[str]],
-) -> list[str]:
-    rg_path = shutil.which("rg")
-    if not rg_path or not path.exists():
-        return []
-
-    with path.open("rb") as handle:
-        handle.seek(start_offset)
-        chunk = handle.read()
-    if not chunk:
-        return []
-
-    result = subprocess.run(
-        [
-            rg_path,
-            "--line-number",
-            "--no-heading",
-            "--color",
-            "never",
-            "--ignore-case",
-            "--pcre2",
-            "--text",
-            _build_rg_pattern(issue_patterns),
-        ],
-        input=chunk,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    if result.returncode not in (0, 1):
-        return []
-
-    matches: list[str] = []
-    for raw_line in result.stdout.decode("utf-8", errors="ignore").splitlines():
-        _, _, content = raw_line.partition(":")
-        normalized = _strip_ansi(content).strip()
-        if not normalized:
-            continue
-        if any(pattern.search(normalized) for pattern in allowlist):
-            continue
-        matches.append(normalized)
-    return matches
+    return normalized
 
 
 def _compile_browser_error_allowlist() -> list[re.Pattern[str]]:
@@ -247,8 +165,8 @@ def capture_frontend_logs(request):
 @pytest.fixture(autouse=True)
 def capture_backend_errors(request):
     """
-    For backend integration tests, fail when new backend log lines include
-    unallowlisted error/exception signals.
+    For backend integration tests, fail when new lines appear in dedicated
+    service error logs (ERROR+), unless explicitly allowlisted.
     """
     if not _is_integration_test(request):
         yield
@@ -260,11 +178,10 @@ def capture_backend_errors(request):
 
     strict_mode = os.getenv("STRICT_BACKEND_ERRORS", "1") == "1"
     allow_backend_errors = request.node.get_closest_marker("allow_backend_errors")
-    issue_patterns = _compile_backend_error_patterns()
     allowlist = _compile_backend_error_allowlist()
     start_offsets: dict[str, int] = {}
 
-    for service, path in BACKEND_LOG_FILES.items():
+    for service, path in BACKEND_ERROR_LOG_FILES.items():
         try:
             start_offsets[service] = path.stat().st_size
         except FileNotFoundError:
@@ -278,20 +195,14 @@ def capture_backend_errors(request):
         return
 
     issues: list[str] = []
-    for service, path in BACKEND_LOG_FILES.items():
+    for service, path in BACKEND_ERROR_LOG_FILES.items():
         if not path.exists():
             continue
         start_offset = start_offsets.get(service, 0)
-        rg_matches = _scan_backend_issues_with_rg(
-            path, start_offset, issue_patterns, allowlist
-        )
-        if rg_matches:
-            issues.extend(f"{service}: {matched}" for matched in rg_matches)
-            continue
         with path.open("r", encoding="utf-8", errors="ignore") as handle:
             handle.seek(start_offset)
             for raw_line in handle:
-                matched = _match_backend_issue(raw_line, issue_patterns, allowlist)
+                matched = _match_backend_issue(raw_line, allowlist)
                 if matched:
                     issues.append(f"{service}: {matched}")
 
@@ -300,9 +211,9 @@ def capture_backend_errors(request):
         overflow = len(issues) - 12
         suffix = f"\n- ... and {overflow} more" if overflow > 0 else ""
         pytest.fail(
-            "Unexpected backend errors/exceptions detected in integration logs.\n"
+            "Unexpected backend errors/exceptions detected in dedicated service error logs.\n"
             f"{sample}{suffix}\n"
-            "See logs/integration_tests/{controller,worker_light,worker_heavy,temporal_worker}.log.\n"
+            "See logs/integration_tests/{controller,worker_light,worker_heavy,temporal_worker}_errors.log.\n"
             "To allow expected noise, use marker @pytest.mark.allow_backend_errors "
             "or set BACKEND_ERROR_ALLOWLIST_REGEXES."
         )
