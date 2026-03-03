@@ -10,6 +10,11 @@ class AgentSettings(BaseSettings):
     openai_api_key: str | None = None
     openai_api_base: str | None = None  # For OpenRouter or custom endpoints
     anthropic_api_key: str | None = None
+    llm_timeout_seconds: int = 120
+    llm_max_tokens: int = 16384
+    dspy_program_timeout_seconds: int = 180
+    react_max_iters: int = 8
+    react_planner_max_iters: int = 6
 
     # URL for the Spec 001 Worker API
     spec_001_api_url: str = global_settings.worker_light_url
