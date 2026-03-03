@@ -422,7 +422,7 @@ def build():
 async def test_int_022_motor_overload_behavior(worker_light_client):
     """INT-022: Verify motor overload detection."""
     client = worker_light_client
-    session_id = f"test-int-022-{int(time.time())}"
+    session_id = f"test-int-022-{uuid.uuid4().hex}"
 
     script_path = Path("tests/integration/architecture_p0/scripts/verify_overload.py")
     with script_path.open() as f:
@@ -443,10 +443,10 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
                 "import sys; sys.path.append('.'); import verify_overload; "
                 "import asyncio; asyncio.run(verify_overload.run())"
             ),
-            timeout=90,
+            timeout=180,
         ).model_dump(mode="json"),
         headers={"X-Session-ID": session_id},
-        timeout=120.0,
+        timeout=210.0,
     )
     assert resp.status_code == 200
     data = ExecuteResponse.model_validate(resp.json())

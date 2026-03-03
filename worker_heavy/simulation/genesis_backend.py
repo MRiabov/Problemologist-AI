@@ -1117,9 +1117,12 @@ class GenesisBackend(PhysicsBackend):
 
                         if joint:
                             idx = joint.dof_start
+                            # WP2: Clamp control input to MJCF forcerange for realism
+                            f_min, f_max = info.get("force_range", (-1000.0, 1000.0))
+                            clamped_val = np.clip(val, f_min, f_max)
                             # We need to set all DOFs or use specific indices
                             forces = entity.get_dofs_force()
-                            forces[idx] = val
+                            forces[idx] = clamped_val
                             self._set_entity_dofs_force(entity, forces)
                     except Exception as e:
                         logger.debug("mjcf_apply_control_failed", error=str(e))
