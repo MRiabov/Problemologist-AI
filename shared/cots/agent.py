@@ -2,6 +2,8 @@ import os
 
 import dspy
 
+from controller.agent.react_runtime import FirstTurnFullInputReAct
+
 from .models import SearchConstraints, SearchQuery
 from .runtime import search_parts
 
@@ -97,5 +99,5 @@ def create_cots_search_agent(_model_name: str):
     Create a specialized agent for part lookup using DSPy.
     Returns a wrapped DSPy module for LangGraph compatibility.
     """
-    program = dspy.ReAct(COTSSearchSignature, tools=[search_cots_catalog])
+    program = FirstTurnFullInputReAct(COTSSearchSignature, tools=[search_cots_catalog])
     return DSPyLangGraphWrapper(program)

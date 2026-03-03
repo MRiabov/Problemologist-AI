@@ -7,6 +7,7 @@ from controller.agent.config import settings
 from controller.agent.dspy_utils import WorkerInterpreter
 from controller.agent.nodes.coder import CoderSignature
 from controller.agent.prompt_manager import PromptManager
+from controller.agent.react_runtime import FirstTurnFullInputReAct
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -72,7 +73,7 @@ class AgentModule(dspy.Module):
             if func:
                 self.tool_fns[t.name] = func
 
-        self.program = dspy.ReAct(
+        self.program = FirstTurnFullInputReAct(
             self.signature,
             tools=list(self.tool_fns.values()),
         )

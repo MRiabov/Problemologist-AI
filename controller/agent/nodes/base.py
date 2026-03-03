@@ -10,6 +10,7 @@ import structlog
 
 from controller.agent.config import settings
 from controller.agent.prompt_manager import PromptManager
+from controller.agent.react_runtime import FirstTurnFullInputReAct
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
@@ -332,8 +333,14 @@ class BaseNode:
             max_iters = settings.react_max_iters
             if "planner" in node_type:
                 max_iters = settings.react_planner_max_iters
-            program = program_cls(
+            program = FirstTurnFullInputReAct(
                 signature_cls, tools=list(tool_fns.values()), max_iters=max_iters
+            )
+            logger.info(
+                "react_runtime_selected",
+                node_type=node_type,
+                runtime=type(program).__name__,
+                max_iters=max_iters,
             )
         else:
             program = program_cls(signature_cls, tools=list(tool_fns.values()))

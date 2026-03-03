@@ -9,6 +9,7 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.agent.react_runtime import FirstTurnFullInputReAct
 from shared.enums import SessionStatus
 from shared.models.schemas import ReviewResult
 from shared.simulation.schemas import (
@@ -514,7 +515,7 @@ class BenchmarkSummarizerNode(BaseNode):
         )
 
         inputs = {"journal": state.journal}
-        program = dspy.ReAct(SummarizerSignature, tools=[])
+        program = FirstTurnFullInputReAct(SummarizerSignature, tools=[])
 
         with dspy.settings.context(lm=self.ctx.dspy_lm):
             prediction = await asyncio.to_thread(program, **inputs)
