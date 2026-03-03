@@ -163,16 +163,25 @@ async def calculate_and_report_automated_score(
         res = await db.execute(stmt)
         episode = res.scalar_one_or_none()
 
+        max_unit_cost = 1000.0
+        max_weight = 10.0
+
+        if episode and episode.metadata_vars:
+            from shared.models.schemas import EpisodeMetadata
+
+            metadata = EpisodeMetadata.model_validate(episode.metadata_vars)
+            if metadata.custom_objectives:
+                if metadata.custom_objectives.max_unit_cost is not None:
+                    max_unit_cost = metadata.custom_objectives.max_unit_cost
+                if metadata.custom_objectives.max_weight is not None:
+                    max_weight = metadata.custom_objectives.max_weight
+
         gold = Prediction(
             agent_name=agent_name,
             objectives=objectives_data,
             # Provide basic data if objectives.yaml is missing
-            max_unit_cost=episode.metadata_vars.get("max_unit_cost")
-            if episode and episode.metadata_vars
-            else 1000.0,
-            max_weight=episode.metadata_vars.get("max_weight")
-            if episode and episode.metadata_vars
-            else 10.0,
+            max_unit_cost=max_unit_cost,
+            max_weight=max_weight,
         )
         prediction = Prediction(**pred_dict)
 

@@ -107,8 +107,11 @@ async def execute_agent_task(
                 await initialize_agent_files(backend, agent_name=agent_name)
 
                 # If benchmark_id is present, copy benchmark assets to the session
-                if episode.metadata_vars and "benchmark_id" in episode.metadata_vars:
-                    benchmark_id_str = episode.metadata_vars["benchmark_id"]
+                from shared.models.schemas import EpisodeMetadata
+
+                metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+                if metadata.benchmark_id:
+                    benchmark_id_str = metadata.benchmark_id
                     try:
                         benchmark_id = uuid.UUID(benchmark_id_str)
                         async with session_factory() as db_inner:
@@ -585,7 +588,12 @@ async def continue_agent_task(
                 trace_id = uuid.uuid4().hex
                 session_id = None
                 if episode.metadata_vars:
-                    session_id = episode.metadata_vars.get("worker_session_id")
+                    from shared.models.schemas import EpisodeMetadata
+
+                    metadata_typed = EpisodeMetadata.model_validate(
+                        episode.metadata_vars
+                    )
+                    session_id = metadata_typed.worker_session_id
 
                 if not session_id:
                     # Fallback

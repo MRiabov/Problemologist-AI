@@ -193,12 +193,17 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                     # For now, we update the existing TOOL_START trace with results
                     # to keep the UI simple (ActionCard can show output).
                     # Alternatively, we could create a TOOL_END trace.
-                    meta = dict(trace_obj.metadata_vars or {})
+                    from shared.models.schemas import TraceMetadata
+
+                    metadata = TraceMetadata.model_validate(
+                        trace_obj.metadata_vars or {}
+                    )
                     if is_error:
-                        meta["error"] = output_data
+                        metadata.error = output_data
                     else:
-                        meta["output"] = output_data
-                    trace_obj.metadata_vars = meta
+                        metadata.observation = output_data
+
+                    trace_obj.metadata_vars = metadata.model_dump()
                     await db.commit()
                     await self._broadcast_trace(trace_obj)
         except Exception as e:

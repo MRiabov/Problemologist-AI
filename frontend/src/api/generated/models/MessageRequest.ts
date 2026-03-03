@@ -2,11 +2,12 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { EpisodeMetadata } from './EpisodeMetadata';
 export type MessageRequest = {
     message: string;
     /**
      * Additional metadata for the message.
      */
-    metadata_vars?: (Record<string, any> | null);
+    metadata_vars?: (EpisodeMetadata | null);
 };
 

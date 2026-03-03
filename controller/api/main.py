@@ -1,7 +1,7 @@
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
@@ -62,6 +62,20 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def log_unhandled_http_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception(
+            "unhandled_http_exception",
+            method=request.method,
+            path=request.url.path,
+            query=str(request.url.query),
+        )
+        raise
+
+
 @app.get("/")
 async def read_root():
     """Root endpoint for service discovery."""
@@ -106,9 +120,10 @@ async def create_test_episode(request: AgentRunRequest):
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         # Ensure session_id is preserved in metadata
-        metadata = request.metadata_vars or {}
-        if "worker_session_id" not in metadata:
-            metadata["worker_session_id"] = request.session_id
+        from shared.models.schemas import EpisodeMetadata
+
+        metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
+        metadata.worker_session_id = request.session_id
 
         episode_id = get_episode_id(request.session_id)
         existing = await db.get(Episode, episode_id)
@@ -118,7 +133,7 @@ async def create_test_episode(request: AgentRunRequest):
             await db.execute(delete(Asset).where(Asset.episode_id == episode_id))
             existing.task = request.task
             existing.status = EpisodeStatus.RUNNING
-            existing.metadata_vars = metadata
+            existing.metadata_vars = metadata.model_dump()
             existing.skill_git_hash = request.skill_git_hash
             existing.user_session_id = request.user_session_id
             existing.todo_list = None
@@ -131,7 +146,7 @@ async def create_test_episode(request: AgentRunRequest):
             id=episode_id,
             task=request.task,
             status=EpisodeStatus.RUNNING,
-            metadata_vars=metadata,
+            metadata_vars=metadata.model_dump(),
             skill_git_hash=request.skill_git_hash,
             user_session_id=request.user_session_id,
         )

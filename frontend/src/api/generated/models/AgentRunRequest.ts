@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { EpisodeMetadata } from './EpisodeMetadata';
 export type AgentRunRequest = {
     /**
      * The task for the agent to perform.
@@ -18,7 +19,7 @@ export type AgentRunRequest = {
     /**
      * Additional metadata for the episode.
      */
-    metadata_vars?: (Record<string, any> | null);
+    metadata_vars?: (EpisodeMetadata | null);
     /**
      * Git hash of the skills used for this run.
      */

@@ -12,6 +12,7 @@ from shared.enums import (
     TraceType,
 )
 from shared.models.steerability import CodeReference, GeometricSelection
+from shared.models.schemas import EpisodeMetadata, TraceMetadata
 from shared.simulation.schemas import SimulatorBackendType
 
 
@@ -43,7 +44,7 @@ class TraceResponse(BaseModel):
     trace_type: TraceType
     name: str | None
     content: str | None
-    metadata_vars: dict | None = None
+    metadata_vars: TraceMetadata | None = None
     feedback_score: int | None = None
     feedback_comment: str | None = None
     created_at: datetime
@@ -51,7 +52,7 @@ class TraceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     @property
-    def metadata(self) -> dict | None:
+    def metadata(self) -> TraceMetadata | None:
         """Backward-compatible alias for clients using `metadata`."""
         return self.metadata_vars
 
@@ -80,7 +81,7 @@ class EpisodeResponse(BaseModel):
     updated_at: datetime
     skill_git_hash: str | None = None
     template_versions: dict | None = None
-    metadata_vars: dict | None = None
+    metadata_vars: EpisodeMetadata | None = None
     todo_list: dict | None = None
     journal: str | None = None
     plan: str | None = None
@@ -92,7 +93,7 @@ class EpisodeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     @property
-    def metadata(self) -> dict | None:
+    def metadata(self) -> EpisodeMetadata | None:
         """Backward-compatible alias for clients using `metadata`."""
         return self.metadata_vars
 
@@ -128,7 +129,7 @@ class EpisodeListItem(BaseModel):
     created_at: datetime
     updated_at: datetime
     skill_git_hash: str | None = None
-    metadata_vars: dict | None = None
+    metadata_vars: EpisodeMetadata | None = None
     journal: str | None = None
     plan: str | None = None
     todo_list: dict | None = None
@@ -193,7 +194,7 @@ class AgentRunRequest(BaseModel):
     user_session_id: uuid.UUID | None = Field(
         None, description="UI conversation scope session ID."
     )
-    metadata_vars: dict | None = Field(
+    metadata_vars: EpisodeMetadata | None = Field(
         None, description="Additional metadata for the episode."
     )
     skill_git_hash: str | None = Field(
@@ -210,9 +211,9 @@ class AgentRunRequest(BaseModel):
             return None
         return v.replace("\u0000", "")
 
-    @field_validator("metadata_vars")
+    @field_validator("metadata_vars", mode="before")
     @classmethod
-    def strip_null_bytes_in_metadata(cls, v: dict | None) -> dict | None:
+    def strip_null_bytes_in_metadata(cls, v: Any) -> Any:
         if v is None:
             return None
 
@@ -283,7 +284,7 @@ class ReviewRequest(BaseModel):
 
 class MessageRequest(BaseModel):
     message: StrictStr
-    metadata_vars: dict | None = Field(
+    metadata_vars: EpisodeMetadata | None = Field(
         None, description="Additional metadata for the message."
     )
 

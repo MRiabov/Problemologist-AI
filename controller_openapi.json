@@ -2011,14 +2011,12 @@
           "metadata_vars": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/EpisodeMetadata"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Metadata Vars",
             "description": "Additional metadata for the episode."
           },
           "skill_git_hash": {
@@ -2402,6 +2400,52 @@
         "title": "CotsSearchItem",
         "description": "A single COTS part returned from search."
       },
+      "CustomObjectives": {
+        "properties": {
+          "max_unit_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Unit Cost"
+          },
+          "max_weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Weight"
+          },
+          "target_quantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Quantity"
+          },
+          "additional_constraints": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Additional Constraints",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "title": "CustomObjectives",
+        "description": "User-defined objectives/constraints for the benchmark."
+      },
       "EpisodeCreateResponse": {
         "properties": {
           "episode_id": {
@@ -2416,6 +2460,194 @@
         ],
         "title": "EpisodeCreateResponse",
         "description": "Response from the /test/episodes endpoint (used in integration tests)."
+      },
+      "EpisodeMetadata": {
+        "properties": {
+          "worker_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Session Id"
+          },
+          "benchmark_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Id"
+          },
+          "custom_objectives": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomObjectives"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detailed_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detailed Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "prior_episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prior Episode Id"
+          },
+          "is_optimality_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Optimality Check"
+          },
+          "fidelity_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fidelity Check"
+          },
+          "tolerance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tolerance"
+          },
+          "is_reused": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Reused"
+          },
+          "episode_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "benchmark",
+                  "engineer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Type"
+          },
+          "validation_logs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Logs"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "additional_info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Additional Info"
+          }
+        },
+        "type": "object",
+        "title": "EpisodeMetadata",
+        "description": "Structured metadata for episodes and benchmark sessions."
       },
       "EpisodeStatus": {
         "type": "string",
@@ -2558,14 +2790,12 @@
           "metadata_vars": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/EpisodeMetadata"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Metadata Vars",
             "description": "Additional metadata for the message."
           }
         },
@@ -2587,6 +2817,19 @@
         ],
         "title": "ResponseStatus",
         "description": "Standard API response status values."
+      },
+      "ReviewDecision": {
+        "type": "string",
+        "enum": [
+          "APPROVED",
+          "REJECTED",
+          "REJECT_PLAN",
+          "REJECT_CODE",
+          "CONFIRM_PLAN_REFUSAL",
+          "REJECT_PLAN_REFUSAL"
+        ],
+        "title": "ReviewDecision",
+        "description": "Decision values for reviewer nodes."
       },
       "ReviewRequest": {
         "properties": {
@@ -2728,6 +2971,127 @@
         ],
         "title": "SteerablePrompt"
       },
+      "TraceMetadata": {
+        "properties": {
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Name"
+          },
+          "tool_args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Args"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation"
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "simulation_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulation Run Id"
+          },
+          "backend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulatorBackendType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cots_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cots Query Id"
+          },
+          "review_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Id"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "additional_info": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Additional Info"
+          }
+        },
+        "type": "object",
+        "title": "TraceMetadata",
+        "description": "Structured metadata for individual traces (tool calls, nodes, etc.)."
+      },
       "TraceResponse": {
         "properties": {
           "id": {
@@ -2818,14 +3182,12 @@
           "metadata_vars": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/TraceMetadata"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Metadata Vars"
+            ]
           },
           "feedback_score": {
             "anyOf": [
@@ -3021,14 +3383,12 @@
           "metadata_vars": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/EpisodeMetadata"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Metadata Vars"
+            ]
           },
           "todo_list": {
             "anyOf": [
@@ -3190,14 +3550,12 @@
           "metadata_vars": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/EpisodeMetadata"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Metadata Vars"
+            ]
           },
           "todo_list": {
             "anyOf": [

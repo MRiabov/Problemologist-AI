@@ -33,6 +33,7 @@ from shared.enums import (
     ReviewDecision,
     TraceType,
 )
+from shared.models.schemas import EpisodeMetadata, TraceMetadata
 
 logger = structlog.get_logger(__name__)
 
@@ -127,7 +128,8 @@ async def get_episode_asset(
 
     worker_session_id = None
     if episode.metadata_vars:
-        worker_session_id = episode.metadata_vars.get("worker_session_id")
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars)
+        worker_session_id = metadata.worker_session_id
 
     if not worker_session_id:
         # Fallback for older episodes or benchmarks where session_id might be the id itself
@@ -175,7 +177,7 @@ class ReviewRequest(BaseModel):
 
 class MessageRequest(BaseModel):
     message: StrictStr
-    metadata_vars: dict | None = Field(
+    metadata_vars: EpisodeMetadata | None = Field(
         None, description="Additional metadata for the message."
     )
 
@@ -225,9 +227,8 @@ async def review_episode(
         # WP06: Validate plan_refusal.md existence and content
         worker_session_id = str(episode_id)
         if episode.metadata_vars:
-            worker_session_id = (
-                episode.metadata_vars.get("worker_session_id") or worker_session_id
-            )
+            metadata = EpisodeMetadata.model_validate(episode.metadata_vars)
+            worker_session_id = metadata.worker_session_id or worker_session_id
 
         client = WorkerClient(
             base_url=settings.worker_light_url,
@@ -302,7 +303,9 @@ async def continue_episode(
         continue_agent_task(
             episode_id,
             request.message,
-            metadata=request.metadata_vars,
+            metadata=request.metadata_vars.model_dump()
+            if request.metadata_vars
+            else None,
         )
     )
     task_tracker.register_task(episode_id, task)
@@ -324,9 +327,8 @@ async def get_episode_schematic(
 
     worker_session_id = str(episode_id)
     if episode.metadata_vars:
-        worker_session_id = (
-            episode.metadata_vars.get("worker_session_id") or worker_session_id
-        )
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars)
+        worker_session_id = metadata.worker_session_id or worker_session_id
 
     worker_light_url = settings.worker_light_url
     client = WorkerClient(
@@ -362,12 +364,17 @@ class TraceResponse(BaseModel):
     trace_type: TraceType
     name: str | None
     content: str | None
-    metadata: dict | None = Field(None, alias="metadata_vars")
+    metadata_vars: TraceMetadata | None = None
     feedback_score: int | None = None
     feedback_comment: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @property
+    def metadata(self) -> TraceMetadata | None:
+        """Backward-compatible alias for clients using `metadata`."""
+        return self.metadata_vars
 
 
 class AssetResponse(BaseModel):
@@ -390,7 +397,7 @@ class EpisodeResponse(BaseModel):
     updated_at: datetime
     skill_git_hash: str | None = None
     template_versions: dict | None = None
-    metadata_vars: dict | None = None
+    metadata_vars: EpisodeMetadata | None = None
     todo_list: dict | None = None
     journal: str | None = None
     plan: str | None = None
@@ -399,7 +406,12 @@ class EpisodeResponse(BaseModel):
     traces: list[TraceResponse] | None = None
     assets: list[AssetResponse] | None = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @property
+    def metadata(self) -> EpisodeMetadata | None:
+        """Backward-compatible alias for clients using `metadata`."""
+        return self.metadata_vars
 
 
 @router.get("/", response_model=list[EpisodeResponse])
@@ -482,7 +494,9 @@ async def list_episodes(
                     updated_at=ep.updated_at,
                     skill_git_hash=ep.skill_git_hash,
                     template_versions=ep.template_versions,
-                    metadata_vars=ep.metadata_vars,
+                    metadata_vars=EpisodeMetadata.model_validate(ep.metadata_vars)
+                    if ep.metadata_vars
+                    else None,
                     todo_list=ep.todo_list
                     or (
                         {"completed": True}
@@ -538,7 +552,9 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
         updated_at=episode.updated_at,
         skill_git_hash=episode.skill_git_hash,
         template_versions=episode.template_versions,
-        metadata_vars=episode.metadata_vars,
+        metadata_vars=EpisodeMetadata.model_validate(episode.metadata_vars)
+        if episode.metadata_vars
+        else None,
         todo_list=episode.todo_list
         or ({"completed": True} if episode.status == EpisodeStatus.COMPLETED else None),
         journal=episode.journal,
