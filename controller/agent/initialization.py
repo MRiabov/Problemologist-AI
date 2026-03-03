@@ -14,6 +14,20 @@ SHARED_ASSETS_PATH = (
 )
 
 
+def _normalize_remote_path(path: str) -> str:
+    """Normalize worker paths so '/a/b.md' and 'a/b.md' compare equally."""
+    return path.strip().lstrip("/").rstrip("/")
+
+
+def _extract_entry_path(entry: object) -> str | None:
+    """Extract a path string from ls entry payloads (dict or model-like)."""
+    if isinstance(entry, dict):
+        value = entry.get("path")
+        return str(value) if value is not None else None
+    value = getattr(entry, "path", None)
+    return str(value) if value is not None else None
+
+
 async def _write_template(
     backend: RemoteFilesystemBackend,
     template_path: Path,
@@ -40,21 +54,42 @@ async def _write_template(
 
 
 async def initialize_agent_files(
-    backend: RemoteFilesystemBackend, agent_name: str
+    backend: RemoteFilesystemBackend, agent_name: str, overwrite: bool = False
 ) -> None:
     """
     Initializes the file system for a given agent with templates and directories.
+    If overwrite=False (default), it skips files that already exist.
     """
     logger.info("initializing_agent_files", agent_name=agent_name)
+
+    # 1. Check existing files to avoid overwriting pre-seeded evaluation data
+    existing_files = set()
+    try:
+        # als_info(".") should list the root directory where these files go
+        info = await backend.als_info(".")
+        existing_files = {
+            normalized
+            for item in info
+            if (path := _extract_entry_path(item))
+            and (normalized := _normalize_remote_path(path))
+        }
+        logger.info("found_existing_files", count=len(existing_files))
+    except Exception as e:
+        logger.warning("failed_to_list_existing_files", error=str(e))
 
     # Define agent-specific file mappings
     # Format: local_template_subpath -> remote_path
     file_mappings = {}
 
     # Engineer Agents
-    if agent_name in ["engineer_planner", "engineer_coder"]:
+    if agent_name == "engineer_planner":
         file_mappings = {
             "engineer/plan.md": "plan.md",
+            "engineer/todo.md": "todo.md",
+            "shared/journal.md": "journal.md",
+        }
+    elif agent_name == "engineer_coder":
+        file_mappings = {
             "engineer/todo.md": "todo.md",
             "shared/journal.md": "journal.md",
         }
@@ -64,9 +99,6 @@ async def initialize_agent_files(
         file_mappings = {
             "benchmark_generator/plan.md": "plan.md",
             "benchmark_generator/todo.md": "todo.md",
-            # Only planner gets objectives from template?
-            # Or coder too? Coder needs to read it.
-            # Planner generates it, but template might be useful as starting point.
             "benchmark_generator/objectives.yaml": "objectives.yaml",
             "shared/journal.md": "journal.md",
         }
@@ -80,6 +112,10 @@ async def initialize_agent_files(
     tasks = []
 
     for template_subpath, remote_name in file_mappings.items():
+        if not overwrite and _normalize_remote_path(remote_name) in existing_files:
+            logger.info("skipping_existing_file", path=remote_name)
+            continue
+
         template_path = SHARED_ASSETS_PATH / template_subpath
         tasks.append(_write_template(backend, template_path, remote_name))
 

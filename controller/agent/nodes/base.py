@@ -326,7 +326,16 @@ class BaseNode:
         # Template names are now standardized to match node_type or explicit mappings
         instructions = self.ctx.pm.render(node_type)
         if instructions:
-            signature_cls = signature_cls.with_instructions(instructions)
+            # If using ReAct, prepend our instructions to the existing ones
+            # to preserve the "Action: tool_name(args)" structural prompt.
+            current_instr = getattr(signature_cls, "instructions", "")
+            if program_cls is dspy.ReAct:
+                # Prepend for context, but keep structural instructions at the end
+                signature_cls = signature_cls.with_instructions(
+                    f"{instructions}\n\n{current_instr}"
+                )
+            else:
+                signature_cls = signature_cls.with_instructions(instructions)
 
         if program_cls is dspy.ReAct:
             max_iters = settings.react_max_iters

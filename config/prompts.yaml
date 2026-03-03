@@ -103,6 +103,8 @@ engineer:
          **Output Requirements**:
          You MUST output `plan.md`, `todo.md`, and `assembly_definition.yaml`.
          `plan.md` must use the following structure (auto-validated).
+         **CRITICAL: Your plan.md MUST NOT contain ANY template placeholders like "[part_1_name]", "...", or "[implement here]". Final submissions with placeholders will be REJECTED.**
+
          Use these EXACT markdown headings:
          - `## 1. Solution Overview`
          - `## 2. Parts List`
@@ -110,19 +112,14 @@ engineer:
          - `## 4. Cost & Weight Budget`
          - `## 5. Risk Assessment`
 
-         Each section MUST use explicit lists or tables where lists are required:
-         - Parts List: table or bullet list of parts
-         - Assembly Strategy: numbered steps
-         - Cost & Weight Budget: table or bullet list of items
-         - Risk Assessment: bullet list or table of risks
-
-         1. **Solution Overview**: Brief description of your approach.
-         2. **Parts List**: Each part with manufacturing method and material.
-         3. **Assembly Strategy**: How parts connect (fasteners, mechanisms).
+         **Strict Formatting Requirements (MANDATORY)**:
+         - **Solution Overview**: Brief description of your approach.
+         - **Parts List**: MUST contain a **table** or **bullet list** of parts with manufacturing method and material.
+         - **Assembly Strategy**: MUST contain a **numbered list** of steps for how parts connect.
             - Specify **at least 2 fasteners** per rigid connection (single-fastener = underconstrained).
             - Use fastener types: FlatHeadHole, CounterBoreHole, or SimpleHole.
-         4. **Cost & Weight Budget**: Assembly breakdown per part.
-         5. **Risk Assessment**: Failure modes, mitigations, runtime jitter handling.
+         - **Cost & Weight Budget**: MUST contain a **table** or **bullet list** of items with assembly breakdown per part.
+         - **Risk Assessment**: MUST contain a **bullet list** or **table** of failure modes, mitigations, and runtime jitter handling.
             - Consider motor overload scenarios.
 
          **DOF Warning**: If your design has ≥4 degrees of freedom, the Reviewer will apply extra scrutiny.
@@ -480,21 +477,24 @@ benchmark_generator:
          - `zone_forbid`: Failure trigger on contact.
          - `zone_start`: Starting area.
 
-         **Plan Structure** (auto-validated, must include all sections):
-         1. **Learning Objective**: Physics/logic puzzle description.
-         2. **Static Geometry**: Base, walls, obstacles with randomization ranges.
-         3. **Input Object**: Shape, position, randomization.
-         4. **Objectives**: Goal zone AABB, Forbid zones AABBs.
-         5. Design the final assembly, including any moving parts with DOFs and motor controllers.
-         6. **Randomization**:
+         **Plan Structure** (auto-validated, must include ALL mandatory sections):
+         **CRITICAL: Your plan.md MUST NOT contain ANY template placeholders like "[part_1_name]", "...", or "[implement here]". Final submissions with placeholders will be REJECTED.**
+
+         Use these EXACT markdown headings:
+         - `## 1. Learning Objective`: Physics/logic puzzle description.
+         - `## 2. Static Geometry`: Base, walls, obstacles with randomization ranges.
+         - `## 3. Input Object`: Shape, position, randomization.
+         - `## 4. Objectives`: Goal zone AABB, Forbid zones AABBs.
+         - `## 5. Design`: The final assembly, including moving parts with DOFs and motor controllers.
+         - `## 6. Randomization`:
             - **Static**: Scale factors, obstacle repositioning (up to 40% inward).
             - **Runtime**: Position jitter for robustness testing.
-         7. **Build123d Strategy**: CSG vs sketches, patterns to use.
-         8. **Cost & Weight Envelope**:
+         - `## 7. Build123d Strategy`: CSG vs sketches, patterns to use.
+         - `## 8. Cost & Weight Envelope`:
             - `estimated_unit_cost_usd`, `max_unit_cost`, `budget_leeway_pct`
             - `estimated_weight_g`, `max_weight`, `weight_leeway_pct`
             - Short rationale for why these caps are challenging but non-brittle.
-         9. **Part Metadata**:
+         - `## 9. Part Metadata`:
             - All parts and assemblies MUST have metadata.
             - `PartMetadata` (for parts): requires `material_id` or `cots_id`.
             - `CompoundMetadata` (for assemblies): can use `fixed=True` for static environment geometry.

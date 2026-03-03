@@ -99,7 +99,21 @@ class RemoteFilesystemMiddleware:
     def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
         """Check if action is allowed by policy."""
         if not self.policy.check_permission(self.agent_role, action, path):
-            msg = f"Permission denied for {self.agent_role} to {action} '{path}'"
+            role = self.policy.ROLE_MAPPING.get(self.agent_role, self.agent_role)
+            agent_rules = self.policy.agents.get(role, {})
+            action_rules = agent_rules.get(action, {})
+            allowed = action_rules.get("allow", [])
+            denied = action_rules.get("deny", [])
+
+            msg = (
+                f"Permission denied for role '{self.agent_role}' (mapped to '{role}') "
+                f"to {action} '{path}'.\n"
+                f"Policy for '{role}' {action} access:\n"
+                f"  Allowed patterns: {allowed}\n"
+                f"  Denied patterns: {denied}\n"
+                "Please check your current objective and only attempt to access "
+                "files allowed by your role's policy."
+            )
             logger.error(
                 "filesystem_permission_denied agent=%s action=%s path=%s",
                 self.agent_role,
@@ -108,6 +122,19 @@ class RemoteFilesystemMiddleware:
             )
             raise PermissionError(msg)
 
+    @staticmethod
+    def _entry_path(entry: object) -> str | None:
+        """Extract path from list_files entry payloads (dict or model-like)."""
+        if isinstance(entry, dict):
+            value = entry.get("path")
+            return str(value) if value is not None else None
+        value = getattr(entry, "path", None)
+        return str(value) if value is not None else None
+
+    def _can_read(self, path: str | Path) -> bool:
+        """Boolean read check helper to avoid raising during result filtering."""
+        return self.policy.check_permission(self.agent_role, "read", path)
+
     async def list_files(self, path: str | Path = "/") -> list[FileInfo]:
         """List files via the Worker client."""
         self._check_perm("read", path)
@@ -115,7 +142,16 @@ class RemoteFilesystemMiddleware:
             episode_id=self.client.session_id,
             events=[LsFilesToolEvent(path=str(path))],
         )
-        return await self.client.list_files(str(path))
+        entries = await self.client.list_files(str(path))
+
+        # Enforce policy per returned entry to prevent metadata leaks when workers
+        # return broader directory listings than the role can actually read.
+        filtered: list[FileInfo] = []
+        for entry in entries:
+            entry_path = self._entry_path(entry)
+            if not entry_path or self._can_read(entry_path):
+                filtered.append(entry)
+        return filtered
 
     async def inspect_topology(
         self, target_id: str, script_path: str | Path = "script.py"
@@ -292,7 +328,10 @@ class RemoteFilesystemMiddleware:
             episode_id=self.client.session_id,
             events=[GrepToolEvent(pattern=pattern, path=p_str, glob=glob)],
         )
-        return await self.client.grep(pattern, path=p_str, glob=glob)
+        matches = await self.client.grep(pattern, path=p_str, glob=glob)
+        # Defense in depth: even if worker grep searches too broadly, only return
+        # matches for files this role can read.
+        return [match for match in matches if self._can_read(match.path)]
 
     async def simulate(
         self,
