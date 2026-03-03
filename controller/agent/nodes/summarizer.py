@@ -2,7 +2,6 @@ import dspy
 import structlog
 
 from controller.agent.config import settings
-from controller.agent.react_runtime import FirstTurnFullInputReAct
 from controller.agent.state import AgentState
 from shared.type_checking import type_check
 
@@ -43,7 +42,7 @@ class SummarizerNode(BaseNode):
         inputs = {"journal": state.journal}
 
         # Use a simple chain of thought or basic program for summarization
-        program = FirstTurnFullInputReAct(SummarizerSignature, tools=[])
+        program = dspy.ReAct(SummarizerSignature, tools=[])
 
         import asyncio
 
