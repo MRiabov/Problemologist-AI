@@ -266,7 +266,7 @@ def validate_plan_refusal(
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("plan_refusal_validation_error", errors=errors)
+        logger.warning("plan_refusal_validation_error", errors=errors)
         return False, errors
 
 
