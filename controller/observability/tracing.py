@@ -83,7 +83,7 @@ async def record_worker_events(
                 cots_query_id = event.get("cots_query_id")
                 review_id = event.get("review_id")
 
-            if isinstance(metadata, dict) and "episode_id" not in metadata:
+            if isinstance(metadata, dict) and not metadata.get("episode_id"):
                 metadata = dict(metadata)
                 metadata["episode_id"] = str(episode_uuid)
 
