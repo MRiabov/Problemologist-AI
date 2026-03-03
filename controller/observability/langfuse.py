@@ -1,4 +1,5 @@
 import os
+from contextlib import AbstractContextManager, nullcontext
 from typing import Any
 
 from langfuse import Langfuse
@@ -62,6 +63,59 @@ def report_score(
             client.score(trace_id=trace_id, name=name, value=value, comment=comment)
     except Exception as e:
         logger.warning(f"Failed to report score to Langfuse: {e}")
+
+
+def start_root_span(
+    *,
+    name: str,
+    trace_id: str | None = None,
+    input_payload: Any | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> AbstractContextManager[Any]:
+    """Start a Langfuse root span for the current workflow when available."""
+    client = get_langfuse_client()
+    if not client:
+        return nullcontext(None)
+
+    trace_context = {"trace_id": trace_id} if trace_id else None
+    try:
+        return client.start_as_current_span(
+            name=name,
+            trace_context=trace_context,
+            input=input_payload,
+            metadata=metadata,
+        )
+    except Exception as e:
+        logger.warning("failed_to_start_langfuse_root_span", error=str(e), name=name)
+        return nullcontext(None)
+
+
+def attach_session_to_current_trace(
+    session_id: str | None,
+    *,
+    trace_name: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Attach a session ID to the active Langfuse trace."""
+    if not session_id:
+        return
+
+    client = get_langfuse_client()
+    if not client:
+        return
+
+    try:
+        client.update_current_trace(
+            session_id=session_id,
+            name=trace_name,
+            metadata=metadata,
+        )
+    except Exception as e:
+        logger.warning(
+            "failed_to_attach_langfuse_session",
+            error=str(e),
+            session_id=session_id,
+        )
 
 
 async def calculate_and_report_automated_score(

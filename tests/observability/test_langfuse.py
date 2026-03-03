@@ -53,6 +53,36 @@ def test_get_langfuse_client_returns_none_in_integration_test():
         assert client is None
 
 
+def test_attach_session_to_current_trace_updates_session():
+    from controller.observability.langfuse import attach_session_to_current_trace
+
+    mock_client = MagicMock()
+    with patch(
+        "controller.observability.langfuse.get_langfuse_client",
+        return_value=mock_client,
+    ):
+        attach_session_to_current_trace("session-123", trace_name="engineer_coder")
+
+    mock_client.update_current_trace.assert_called_once_with(
+        session_id="session-123",
+        name="engineer_coder",
+        metadata=None,
+    )
+
+
+def test_start_root_span_returns_noop_without_client():
+    from contextlib import nullcontext
+
+    from controller.observability.langfuse import start_root_span
+
+    with patch(
+        "controller.observability.langfuse.get_langfuse_client", return_value=None
+    ):
+        cm = start_root_span(name="engineer_coder", trace_id="abc123")
+
+    assert isinstance(cm, type(nullcontext()))
+
+
 @pytest.mark.asyncio
 async def test_calculate_and_report_automated_score():
     """Test that automated score is calculated from events and reported."""
