@@ -85,8 +85,7 @@ async def report_trace_feedback(
                 status_code=404,
                 detail=f"Trace {trace_id} belongs to episode {diag_trace.episode_id}, not {episode_id}",
             )
-        else:
-            logger.warning("trace_not_found_even_by_id", trace_id=trace_id)
+        logger.warning("trace_not_found_even_by_id", trace_id=trace_id)
 
         logger.warning("trace_not_found", episode_id=str(episode_id), trace_id=trace_id)
         raise HTTPException(status_code=404, detail="Trace not found")
@@ -194,7 +193,6 @@ async def review_episode(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a review for an episode."""
-    from shared.observability.events import emit_event
     from shared.observability.schemas import ReviewEvent
     from worker_heavy.utils.file_validation import validate_review_frontmatter
 
@@ -259,9 +257,9 @@ async def review_episode(
         episode.status = EpisodeStatus.FAILED
 
     # Record review event to DB
-    from controller.observability.tracing import record_worker_events
-    from shared.observability.schemas import ReviewEvent
     import uuid as uuid_lib
+
+    from controller.observability.tracing import record_worker_events
 
     review_id = uuid_lib.uuid4().hex
 

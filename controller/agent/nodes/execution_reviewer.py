@@ -1,5 +1,5 @@
-from contextlib import suppress
 import json
+from contextlib import suppress
 
 import dspy
 import structlog

@@ -7,6 +7,24 @@ import yaml
 PolicyAction = Literal["read", "write"]
 
 
+from pydantic import BaseModel, Field
+
+
+class PathPolicy(BaseModel):
+    allow: list[str] = Field(default_factory=list)
+    deny: list[str] = Field(default_factory=list)
+
+
+class AgentPolicy(BaseModel):
+    read: PathPolicy = Field(default_factory=PathPolicy)
+    write: PathPolicy = Field(default_factory=PathPolicy)
+
+
+class FilesystemConfig(BaseModel):
+    defaults: AgentPolicy = Field(default_factory=AgentPolicy)
+    agents: dict[str, AgentPolicy] = Field(default_factory=dict)
+
+
 class FilesystemPolicy:
     # Maps internal agent names/node names to canonical policy roles
     ROLE_MAPPING = {
@@ -27,9 +45,8 @@ class FilesystemPolicy:
 
     def __init__(self, config_path: str | Path):
         with open(config_path) as f:
-            self.config = yaml.safe_load(f)
-        self.defaults = self.config.get("defaults", {})
-        self.agents = self.config.get("agents", {})
+            data = yaml.safe_load(f)
+            self.config = FilesystemConfig(**data)
 
     def _match_path(self, path: str, patterns: list[str]) -> bool:
         """Check if path matches any of the gitignore-style glob patterns."""
@@ -94,15 +111,16 @@ class FilesystemPolicy:
         p_str = Path(path).as_posix().lstrip("/")
 
         # Get rules for agent, fallback to defaults
-        agent_rules = self.agents.get(role, {})
-        action_rules = agent_rules.get(action)
+        agent_rules = self.config.agents.get(role)
 
-        if action_rules is None:
+        if agent_rules:
+            action_rules = getattr(agent_rules, action)
+        else:
             # Fallback to defaults
-            action_rules = self.defaults.get(action, {})
+            action_rules = getattr(self.config.defaults, action)
 
-        allow_patterns = action_rules.get("allow", [])
-        deny_patterns = action_rules.get("deny", [])
+        allow_patterns = action_rules.allow
+        deny_patterns = action_rules.deny
 
         # 1. Deny takes precedence
         if self._match_path(p_str, deny_patterns):

@@ -182,19 +182,19 @@ async def update_objectives(
         )
 
         try:
+            from shared.models.schemas import ObjectivesYaml
+
             # Read existing
             content = await client.read_file("objectives.yaml")
-            obj_data = yaml.safe_load(content) or {}
-
-            if "constraints" not in obj_data:
-                obj_data["constraints"] = {}
+            obj_data_raw = yaml.safe_load(content) or {}
+            obj_data = ObjectivesYaml(**obj_data_raw)
 
             if request.max_cost is not None:
-                obj_data["constraints"]["max_unit_cost"] = request.max_cost
+                obj_data.constraints.max_unit_cost = request.max_cost
             if request.max_weight is not None:
-                obj_data["constraints"]["max_weight"] = request.max_weight
+                obj_data.constraints.max_weight_g = request.max_weight
             if request.target_quantity is not None:
-                obj_data["constraints"]["target_quantity"] = request.target_quantity
+                obj_data.constraints.target_quantity = request.target_quantity
 
             # Actually, we need to MERGE metadata_vars to avoid losing objectives.
             # Update the episode's metadata_vars as well to persist it locally
@@ -214,13 +214,13 @@ async def update_objectives(
             session.metadata_vars = metadata.model_dump()
 
             # Write back
-            new_content = yaml.dump(obj_data, sort_keys=False)
+            new_content = yaml.dump(obj_data.model_dump(mode="json"), sort_keys=False)
             await client.write_file("objectives.yaml", new_content)
 
             return BenchmarkObjectivesResponse(
                 status=ResponseStatus.SUCCESS,
                 message="Objectives updated",
-                objectives=obj_data["constraints"],
+                objectives=obj_data.constraints.model_dump(),
             )
 
         except Exception as e:

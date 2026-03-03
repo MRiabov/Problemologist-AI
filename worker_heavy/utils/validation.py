@@ -801,13 +801,11 @@ def validate(
                 if lines and "[TEMPLATE]" in lines[0]:
                     effective_build_zone = None
                 else:
+                    from shared.models.schemas import ObjectivesYaml
+
                     data = yaml.safe_load(content)
-                    if (
-                        data
-                        and "objectives" in data
-                        and "build_zone" in data["objectives"]
-                    ):
-                        effective_build_zone = data["objectives"]["build_zone"]
+                    obj_model = ObjectivesYaml(**data)
+                    effective_build_zone = obj_model.objectives.build_zone.model_dump()
             except Exception:
                 pass
 

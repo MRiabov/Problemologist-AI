@@ -8,8 +8,8 @@ from sqlalchemy import engine_from_config, pool
 # Add project root to sys.path
 sys.path.insert(0, os.getcwd())
 
-from controller.persistence.db import Base
 import controller.persistence.models  # noqa
+from controller.persistence.db import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

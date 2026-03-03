@@ -1,10 +1,13 @@
 import os
 import threading
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import numpy as np
 import structlog
+
+if TYPE_CHECKING:
+    pass
 
 # Force headless mode for pyglet (used by genesis/pyrender)
 os.environ["PYGLET_HEADLESS"] = "1"
@@ -245,7 +248,8 @@ class GenesisBackend(PhysicsBackend):
             return self.scene.sim_options.dt
         return 0.002
 
-    def _get_mat_props(self, material_id: str) -> Optional["MaterialDefinition"]:
+    def _get_mat_props(self, material_id: str) -> Any | None:
+
         if not self.mfg_config:
             return None
         res = self.mfg_config.materials.get(material_id)
@@ -367,25 +371,28 @@ class GenesisBackend(PhysicsBackend):
             import json
             from pathlib import Path
 
+            from shared.models.schemas import SceneDefinition
+
             scene_dir = Path(scene.scene_path).parent
             try:
                 with Path(scene.scene_path).open() as f:
-                    data = json.load(f)
+                    raw_data = json.load(f)
+                    data = SceneDefinition(**raw_data)
 
                     # 1. Add Entities
-                    for ent_cfg in data.get("entities", []):
-                        name = ent_cfg["name"]
-                        self.entity_configs[name] = ent_cfg
+                    for ent_cfg in data.entities:
+                        name = ent_cfg.name
+                        self.entity_configs[name] = ent_cfg.model_dump(exclude_none=True)
 
-                        if ent_cfg.get("is_zone"):
+                        if ent_cfg.is_zone:
                             continue
 
-                        material_id = ent_cfg.get("material_id", "aluminum_6061")
+                        material_id = ent_cfg.material_id
                         # WP2 Fix: Robust material lookup across all methods
                         mat_props = self._get_mat_props(material_id)
 
                         # Genesis Material
-                        if ent_cfg["type"] == "soft_mesh":
+                        if ent_cfg.type == "soft_mesh":
                             # FEM Material
                             if mat_props and mat_props.material_class in [
                                 "soft",
@@ -428,12 +435,14 @@ class GenesisBackend(PhysicsBackend):
                                     else 2700,
                                 )
                             # Load MSH or OBJ (Genesis can tetrahedralize OBJ)
-                            file_path = scene_dir / ent_cfg["file"]
+                            if not ent_cfg.file:
+                                continue
+                            file_path = scene_dir / ent_cfg.file
                             entity = self.scene.add_entity(
                                 gs.morphs.Mesh(
                                     file=str(file_path),
-                                    pos=ent_cfg["pos"],
-                                    euler=ent_cfg["euler"],
+                                    pos=ent_cfg.pos,
+                                    euler=ent_cfg.euler,
                                 ),
                                 material=material,
                             )
@@ -453,12 +462,14 @@ class GenesisBackend(PhysicsBackend):
                                 ),
                             )
                             # Load OBJ
-                            obj_path = scene_dir / ent_cfg["file"]
+                            if not ent_cfg.file:
+                                continue
+                            obj_path = scene_dir / ent_cfg.file
                             entity = self.scene.add_entity(
                                 gs.morphs.Mesh(
                                     file=str(obj_path),
-                                    pos=ent_cfg["pos"],
-                                    euler=ent_cfg["euler"],
+                                    pos=ent_cfg.pos,
+                                    euler=ent_cfg.euler,
                                 ),
                                 material=material,
                             )
@@ -466,28 +477,28 @@ class GenesisBackend(PhysicsBackend):
                         self.entities[name] = entity
 
                     # 3. Add Motors / Controls
-                    self.motors = data.get("motors", [])
+                    self.motors = [m.model_dump() for m in data.motors]
                     self.cables = {}  # Keep as dict, but we'll populate from data
 
                     # 4. Add Cables (Wiring)
-                    for cable_cfg in data.get("cables", []):
-                        name = cable_cfg["wire_id"]
+                    for cable_cfg in data.cables:
+                        name = cable_cfg.wire_id
                         material = gs.materials.Rigid(rho=8960)  # Copper density
 
                         cable = self.scene.add_entity(
                             gs.morphs.Cable(
-                                points=cable_cfg["points"],
-                                radius=cable_cfg["radius"],
+                                points=cable_cfg.points,
+                                radius=cable_cfg.radius,
                             ),
                             material=material,
                         )
                         self.cables[name] = cable
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
-                    for fluid_cfg in data.get("fluids", []):
-                        props = fluid_cfg.get("properties", {})
-                        vol = fluid_cfg["initial_volume"]
-                        color = fluid_cfg.get("color", [0, 0, 200])
+                    for fluid_cfg in data.fluids:
+                        props = fluid_cfg.properties
+                        vol = fluid_cfg.initial_volume
+                        color = fluid_cfg.color
                         # Convert 0-255 to 0-1 and add alpha for transparency
                         color_f = tuple([c / 255.0 for c in color] + [0.8])
 
@@ -500,8 +511,8 @@ class GenesisBackend(PhysicsBackend):
 
                         # MPM Material based on FluidDefinition
                         material = gs.materials.MPM.Liquid(
-                            rho=props.get("density_kg_m3", 1000),
-                            mu=props.get("viscosity_cp", 1.0)
+                            rho=props.density_kg_m3 if props.density_kg_m3 else 1000,
+                            mu=(props.viscosity_cp if props.viscosity_cp else 1.0)
                             * 0.001,  # Convert cP to Pa.s
                             viscous=True,
                             sampler=f"pbs-{n_particles}",
@@ -512,12 +523,12 @@ class GenesisBackend(PhysicsBackend):
                             opacity=color_f[3] if len(color_f) > 3 else 0.8,
                         )
 
-                        vol_type = vol["type"].lower()
+                        vol_type = vol.type.lower()
                         if vol_type == "box":
                             self.scene.add_entity(
                                 gs.morphs.Box(
-                                    pos=vol["center"],
-                                    size=vol.get("size", [0.1, 0.1, 0.1]),
+                                    pos=vol.center,
+                                    size=vol.size if vol.size else [0.1, 0.1, 0.1],
                                 ),
                                 material=material,
                                 surface=surface,
@@ -525,18 +536,19 @@ class GenesisBackend(PhysicsBackend):
                         elif vol_type == "sphere":
                             self.scene.add_entity(
                                 gs.morphs.Sphere(
-                                    pos=vol["center"],
-                                    radius=vol.get("radius", 0.05),
+                                    pos=vol.center,
+                                    radius=vol.radius if vol.radius else 0.05,
                                 ),
                                 material=material,
                                 surface=surface,
                             )
+
                         elif vol_type == "cylinder":
                             self.scene.add_entity(
                                 gs.morphs.Cylinder(
-                                    pos=vol["center"],
-                                    radius=vol.get("radius", 0.05),
-                                    height=vol.get("height", 0.1),
+                                    pos=vol.center,
+                                    radius=vol.radius if vol.radius else 0.05,
+                                    height=vol.height if vol.height else 0.1,
                                     axis="z",
                                 ),
                                 material=material,

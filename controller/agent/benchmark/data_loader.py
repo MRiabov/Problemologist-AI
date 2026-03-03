@@ -23,10 +23,15 @@ def load_benchmark_dataset(agent_type: str) -> list[dspy.Example]:
     with dataset_path.open("r") as f:
         data = json.load(f)
 
+    from .models import BenchmarkItem
+
     examples = []
-    for item in data:
+    for item_raw in data:
+        item = BenchmarkItem(**item_raw)
         inputs = {}
-        for k, v in item.items():
+        # Convert model back to dict for dspy.Example, but validated
+        item_dict = item.model_dump()
+        for k, v in item_dict.items():
             if k in ["task", "prompt", "context", "expected_criteria"]:
                 inputs[k] = v
             elif k in ["objectives", "goals", "constraints"]:

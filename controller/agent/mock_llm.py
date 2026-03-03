@@ -130,10 +130,7 @@ class MockDSPyLM(dspy.LM):
         elif node_key == "benchmark_coder":
             lookup_key = "coder"
             sig_lookup = "coder"
-        elif node_key == "benchmark_reviewer":
-            lookup_key = "reviewer"
-            sig_lookup = "reviewer"
-        elif node_key in {
+        elif node_key == "benchmark_reviewer" or node_key in {
             "plan_reviewer",
             "execution_reviewer",
             "electronics_reviewer",
