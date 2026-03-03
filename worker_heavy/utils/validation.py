@@ -777,8 +777,20 @@ def validate(
     )
     solids = component.solids()
     if len(solids) > 1:
+        bboxes = [s.bounding_box() for s in solids]
         for i in range(len(solids)):
             for j in range(i + 1, len(solids)):
+                # Bounding box pre-check (O(1) vs expensive boolean intersection)
+                if (
+                    bboxes[i].min.X > bboxes[j].max.X
+                    or bboxes[i].max.X < bboxes[j].min.X
+                    or bboxes[i].min.Y > bboxes[j].max.Y
+                    or bboxes[i].max.Y < bboxes[j].min.Y
+                    or bboxes[i].min.Z > bboxes[j].max.Z
+                    or bboxes[i].max.Z < bboxes[j].min.Z
+                ):
+                    continue
+
                 intersection = solids[i].intersect(solids[j])
                 if intersection and intersection.volume > 0.1:
                     msg = (
