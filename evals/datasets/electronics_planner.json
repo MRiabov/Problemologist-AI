@@ -1,0 +1,7 @@
+[
+  {
+    "id": "epl-001-motor-wiring-plan",
+    "task": "Create the electronics planning portion for a mechanism using one 12V PSU and one DC motor. Add concrete electronics TODO items and update plan artifacts so wiring and power checks can be implemented.",
+    "expected_criteria": "Electronics planner step is executed and artifacts include explicit electronics tasks."
+  }
+]
