@@ -9,7 +9,9 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.observability.tracing import record_worker_events
 from shared.enums import SessionStatus
+from shared.observability.schemas import PlanSubmissionBenchmarkEvent
 from shared.models.schemas import ReviewResult
 from shared.simulation.schemas import (
     RandomizationStrategy,
@@ -216,6 +218,16 @@ physics:
         state.messages.append(
             HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
+
+        await record_worker_events(
+            episode_id=state.episode_id,
+            events=[
+                PlanSubmissionBenchmarkEvent(
+                    plan_path="plan.md",
+                )
+            ],
+        )
+
         return state
 
 
