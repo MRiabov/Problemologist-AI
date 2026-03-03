@@ -43,6 +43,11 @@ async def test_record_worker_events():
             events = [
                 {"event_type": "test_event_1", "data": {"key": "val1"}},
                 {"event_type": "test_event_2", "data": {"key": "val2"}},
+                {
+                    "event_type": "test_event_with_null_episode",
+                    "episode_id": None,
+                    "data": {"key": "val3"},
+                },
             ]
 
             await record_worker_events(episode_id, events)
@@ -57,16 +62,19 @@ async def test_record_worker_events():
                 result = await db.execute(stmt)
                 traces = result.scalars().all()
 
-                assert len(traces) == 2, f"Expected 2 traces, found {len(traces)}"
+                assert len(traces) == 3, f"Expected 3 traces, found {len(traces)}"
                 names = [t.name for t in traces]
                 assert "test_event_1" in names
                 assert "test_event_2" in names
+                assert "test_event_with_null_episode" in names
 
                 # Check metadata
                 for t in traces:
+                    assert t.metadata_vars.get("episode_id") == str(episode_id)
                     assert t.metadata_vars["event_type"] in [
                         "test_event_1",
                         "test_event_2",
+                        "test_event_with_null_episode",
                     ]
         finally:
             await engine.dispose()
