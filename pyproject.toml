@@ -99,10 +99,11 @@ markers = [
     "integration_agent: agent orchestration and behavior integration tests",
     "integration_frontend: end-to-end frontend tests",
     "allow_browser_errors: allow console.error/pageerror for tests that intentionally exercise error paths",
-    "allow_backend_errors: allow backend log errors/exceptions for tests that intentionally exercise error paths",
+    "allow_backend_errors: allow backend log errors/exceptions; no-arg marker allows all, marker args/regexes/patterns kwargs allow only matching lines",
     "unit: marks tests as unit tests", # FIXME: remove
     "benchmark: marks tests related to the benchmark generator",
     "debug_fuzz: manual debugging for schemathesis tests",
+    "worker_heavy_fuzz: marks heavy-worker fuzzing tests",
     "dev_automations: marks tests for internal automation scripts (orchestrators)",
 ]
 

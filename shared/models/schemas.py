@@ -376,6 +376,8 @@ class EpisodeMetadata(BaseModel):
     validation_logs: list[str] = Field(default_factory=list)
     prompt: str | None = None
     plan: dict[str, Any] | None = None
+    cost: float | None = None
+    weight: float | None = None
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
