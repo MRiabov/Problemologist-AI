@@ -23,6 +23,8 @@ export type EpisodeMetadata = {
     validation_logs?: Array<string>;
     prompt?: (string | null);
     plan?: (Record<string, any> | null);
+    cost?: (number | null);
+    weight?: (number | null);
     additional_info?: Record<string, any>;
 };
 
