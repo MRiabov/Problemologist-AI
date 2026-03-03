@@ -96,6 +96,22 @@ class ElectronicsManager:
 
         while queue:
             u = queue.pop(0)
+
+            # Find if current component 'u' is a switch and if it's OPEN
+            # If u is an open switch, it doesn't propagate power from 'in' to 'out'.
+            # Note: BFS here treats components as nodes. Wires connect components.
+            # For switches, we usually have 'in' and 'out' terminals.
+            # If the switch is open, the path is broken.
+            is_open_switch = False
+            for comp in self.electronics.components:
+                if comp.component_id == u and comp.type in ["switch", "relay"]:
+                    if not self.switch_states.get(u, True):
+                        is_open_switch = True
+                    break
+
+            if is_open_switch:
+                continue
+
             # Find neighbors in wiring
             for wire in self.electronics.wiring:
                 v = None
@@ -105,8 +121,6 @@ class ElectronicsManager:
                     v = wire.from_terminal.component
 
                 if v and v not in visited:
-                    # Check if connection is closed (if it involves a switch)
-                    # This is simplified logic
                     visited.add(v)
                     powered.add(v)
                     queue.append(v)

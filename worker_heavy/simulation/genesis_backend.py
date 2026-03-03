@@ -680,20 +680,41 @@ class GenesisBackend(PhysicsBackend):
             if not entity:
                 continue
 
-            # Get center of the entity
+            # T017: Use bounding box for more precise collision detection
             try:
+                # For Genesis entities, we can get current positions of all nodes/elements
                 state = entity.get_state()
                 if hasattr(state, "pos"):
-                    # state.pos is [1, n_nodes, 3] for soft/MPM, or [n_envs, 3] for rigid?
-                    # Genesis RigidEntity.get_pos() returns [n_envs, 3]
-                    pos = entity.get_pos().cpu().numpy()
-                    if pos.ndim > 1:
-                        center = pos[0]
+                    # [n_envs, n_nodes, 3] or [n_envs, 3]
+                    pos = state.pos.cpu().numpy()
+                    if pos.ndim == 3:
+                        # soft_mesh: compute bbox of all nodes
+                        nodes = pos[0]
+                        b_min = np.min(nodes, axis=0)
+                        b_max = np.max(nodes, axis=0)
                     else:
-                        center = pos
+                        # rigid: use pos and estimated size if available, or fallback
+                        center = pos[0]
+                        # Heuristic: if we don't have exact size, use a small radius
+                        # but check against the entity config if it was a box/sphere
+                        cfg = self.entity_configs.get(name, {})
+                        if "size" in cfg:
+                            # half-extents
+                            size = np.array(cfg["size"])
+                            b_min = center - size
+                            b_max = center + size
+                        else:
+                            # fallback to 5cm radius box if unknown
+                            b_min = center - 0.05
+                            b_max = center + 0.05
 
-                    dist = np.linalg.norm(particles - center, axis=1)
-                    if np.any(dist < 0.05):  # 5cm threshold
+                    # Check if any particles are within the bounding box (with 1cm margin)
+                    margin = 0.01
+                    in_box = np.all(
+                        (particles >= b_min - margin) & (particles <= b_max + margin),
+                        axis=1,
+                    )
+                    if np.any(in_box):
                         logger.info("electronics_fluid_damage", part=name)
                         return SimulationFailure(
                             reason=FailureReason.ELECTRONICS_FLUID_DAMAGE, detail=name

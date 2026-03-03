@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import Session
 
+from shared.models.schemas import COTSItem
 from shared.observability.events import emit_event
 from shared.observability.schemas import COTSSearchEvent
 
@@ -122,3 +123,30 @@ def search_parts(query: SearchQuery, db_path: str) -> tuple[list[COTSItem], dict
     )
 
     return results, metadata
+
+
+def get_part_by_id(part_id: str, db_path: str) -> COTSItem | None:
+    """
+    Fetch a single COTS part by its unique ID.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from .database.models import COTSItemORM
+
+    engine = create_engine(f"sqlite:///{db_path}")
+
+    with Session(engine) as session:
+        item = session.query(COTSItemORM).filter(COTSItemORM.part_id == part_id).first()
+        if not item:
+            return None
+
+        return COTSItem(
+            part_id=item.part_id,
+            name=item.name,
+            category=item.category,
+            unit_cost=item.unit_cost,
+            weight_g=item.weight_g,
+            import_recipe=item.import_recipe,
+            metadata=item.metadata_dict,
+        )

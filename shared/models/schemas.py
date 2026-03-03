@@ -145,6 +145,11 @@ class MaxStressObjective(BaseModel):
     max_von_mises_mpa: float
 
 
+class MaxEnergyObjective(BaseModel):
+    type: Literal["max_energy"] = "max_energy"
+    max_energy_j: float
+
+
 # =============================================================================
 # objectives.yaml Schema
 # =============================================================================
@@ -166,6 +171,7 @@ class ObjectivesSection(BaseModel):
     build_zone: BoundingBox
     fluid_objectives: list[FluidContainmentObjective | FlowRateObjective] = []
     stress_objectives: list[MaxStressObjective] = []
+    energy_objectives: list[MaxEnergyObjective] = []
 
 
 class StaticRandomization(BaseModel):

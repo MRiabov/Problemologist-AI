@@ -563,8 +563,10 @@ class SimulationLoop:
         actuator_states = {
             n: self.backend.get_actuator_state(n) for n in self.actuator_names
         }
-        energy = sum(
-            abs(state.ctrl * state.velocity) for state in actuator_states.values()
+        # T011: Energy is Joules (Watt-seconds) = Force * Velocity * dt
+        energy = (
+            sum(abs(state.force * state.velocity) for state in actuator_states.values())
+            * dt_interval
         )
 
         target_vel = 0.0
@@ -581,6 +583,7 @@ class SimulationLoop:
             current_time,
             dt_interval,
             getattr(self, "current_step_idx", 0),
+            energy_this_step=energy,
         )
         if fail_sim:
             self.fail_reason = fail_sim

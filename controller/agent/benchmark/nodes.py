@@ -1,6 +1,9 @@
 import asyncio
+import os
 import re
+import uuid
 from contextlib import suppress
+from pathlib import Path
 
 import dspy
 import httpx
@@ -9,8 +12,11 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.observability.tracing import record_worker_events, sync_asset
+from controller.utils.git import GitManager
 from shared.enums import SessionStatus
 from shared.models.schemas import ReviewResult
+from shared.observability.schemas import SkillEditEvent
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -480,9 +486,150 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
     return await node(state)
 
 
+class BenchmarkSkillsSignature(dspy.Signature):
+    """
+    Skills node: Analyzes the benchmark generation journal to suggest new skills.
+    You must use the provided tools to analyze the work and save new skills.
+    If you identify a valuable benchmark pattern or physics setup, use the `save_suggested_skill` tool to record it.
+    When done, use SUBMIT to provide a summary of your work.
+    """
+
+    prompt = dspy.InputField()
+    journal = dspy.InputField()
+    summary = dspy.OutputField(desc="A summary of the skills identified and saved")
+
+
+@type_check
+class BenchmarkSkillsNode(BaseNode):
+    """
+    Benchmark Skills node: Analyzes the journal to suggest new skills for benchmark generation.
+    """
+
+    def __init__(
+        self,
+        context: SharedNodeContext,
+        suggested_skills_dir: str = "suggested_skills/benchmark",
+    ):
+        super().__init__(context)
+        self.suggested_skills_dir = Path(suggested_skills_dir)
+        self.suggested_skills_dir.mkdir(parents=True, exist_ok=True)
+        self.git = GitManager(
+            repo_path=self.suggested_skills_dir,
+            repo_url=os.getenv("GIT_REPO_URL"),
+            pat=os.getenv("GIT_PAT"),
+        )
+        self.git.ensure_repo()
+
+    async def _sync_git(self, commit_message: str):
+        """Sync changes with git."""
+        await self.git.sync_changes(commit_message, lm=self.ctx.dspy_lm)
+
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        """Execute the skills learner logic."""
+
+        async def save_suggested_skill(title: str, content: str) -> str:
+            """
+            Saves a new suggested skill to the repository.
+            """
+            clean_title = title.strip().lower().replace(" ", "_").replace(".md", "")
+            file_path = self.suggested_skills_dir / f"{clean_title}.md"
+
+            # Safety toggle for deletions (from T030)
+            if file_path.exists():
+                import difflib
+
+                old_lines = file_path.read_text().splitlines()
+                new_lines = content.splitlines()
+                diff = list(difflib.unified_diff(old_lines, new_lines, n=0))
+                deletions = sum(
+                    1
+                    for line in diff
+                    if line.startswith("-") and not line.startswith("---")
+                )
+                if deletions > 15:
+                    logger.warning(
+                        "skill_update_blocked_too_many_deletions", deletions=deletions
+                    )
+                    await record_worker_events(
+                        episode_id=self.ctx.session_id,
+                        events=[
+                            SkillEditEvent(
+                                skill_name=clean_title,
+                                action="update_blocked",
+                                lines_changed=deletions,
+                            )
+                        ],
+                    )
+                    return f"Error: Update blocked. You deleted {deletions} lines."
+
+            try:
+                with file_path.open("w") as f:
+                    f.write(content)
+
+                # Sync to Database as Asset
+                try:
+                    episode_uuid = uuid.UUID(self.ctx.session_id)
+                    await sync_asset(
+                        episode_uuid,
+                        f"suggested_skills/benchmark/{clean_title}.md",
+                        content,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to sync skill asset: {e}")
+
+                # Sync to Git
+                await self._sync_git(f"Add benchmark skill: {clean_title}")
+
+                return f"Benchmark skill '{clean_title}' saved and synced successfully."
+            except Exception as e:
+                return f"Error saving skill: {e}"
+
+        def get_skills_tools(_fs, _session_id):
+            # BaseNode._run_program passes (fs, session_id) to the tool_factory
+            # We wrap the local save_suggested_skill into the toolset
+            tools = get_benchmark_tools(self.ctx.fs, self.ctx.session_id)
+            tools.append(save_suggested_skill)
+            return tools
+
+        inputs = {
+            "prompt": state.session.prompt,
+            "journal": state.journal,
+        }
+
+        prediction, _, journal_entry = await self._run_program(
+            dspy.ReAct,
+            BenchmarkSkillsSignature,
+            state,
+            inputs,
+            get_skills_tools,
+            [],
+            "benchmark_skill_learner",
+        )
+
+        if not prediction:
+            state.journal += f"\n[Skills] Failed: {journal_entry}"
+            return state
+
+        summary = getattr(prediction, "summary", "No summary provided.")
+        state.journal += f"\n[Skills] {summary}" + journal_entry
+        state.messages.append(AIMessage(content=f"Benchmark skills update: {summary}"))
+        return state
+
+
+@type_check
 async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    # No changes needed
-    return state
+    session_id = str(state.session.session_id)
+    from controller.config.settings import settings as global_settings
+
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
+        agent_role="benchmark_planner",
+    )
+    node = BenchmarkSkillsNode(context=ctx)
+    return await node(state)
 
 
 class SummarizerSignature(dspy.Signature):

@@ -29,6 +29,7 @@ class ObjectiveEvaluator:
         self.fluid_metrics = []
         self.fail_reason: SimulationFailure | None = None
         self.stress_summaries = []
+        self.total_energy_j = 0.0
 
     def initialize_flow_rate(self, backend):
         """Initial capture of distances for flow rate objectives."""
@@ -44,11 +45,27 @@ class ObjectiveEvaluator:
                         self.prev_particle_distances[obj_id] = distances
 
     def update(
-        self, backend, current_time, dt_interval, current_step_idx=0
+        self,
+        backend,
+        current_time,
+        dt_interval,
+        current_step_idx=0,
+        energy_this_step=0.0,
     ) -> SimulationFailure | None:
         """Update metrics and check for objective violations during simulation."""
         if not self.objectives or not self.objectives.objectives:
             return None
+
+        # 0. Track Energy Consumption
+        self.total_energy_j += energy_this_step
+        if hasattr(self.objectives.objectives, "energy_objectives"):
+            for eo in self.objectives.objectives.energy_objectives:
+                if self.total_energy_j > eo.max_energy_j:
+                    self.fail_reason = SimulationFailure(
+                        reason=FailureReason.ENERGY_EXCEEDED,
+                        detail=f"{self.total_energy_j:.2f}J > {eo.max_energy_j:.2f}J",
+                    )
+                    return self.fail_reason
 
         # 1. Check Stress Objectives
         self.stress_summaries = backend.get_stress_summaries()
