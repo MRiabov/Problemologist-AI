@@ -164,7 +164,10 @@ async def test_int_027_seed_variant_tracking():
                 )
                 if status_resp.status_code == 200:
                     ep_data = EpisodeResponse.model_validate(status_resp.json())
-                    if ep_data.metadata_vars.get("variant_id") == variant_id:
+                    if (
+                        ep_data.metadata_vars
+                        and ep_data.metadata_vars.variant_id == variant_id
+                    ):
                         data = ep_data
                         break
             except (httpx.ReadTimeout, httpx.ConnectError):
@@ -172,8 +175,8 @@ async def test_int_027_seed_variant_tracking():
             await asyncio.sleep(1)
 
         assert data is not None
-        assert data.metadata_vars.get("variant_id") == variant_id
-        assert data.metadata_vars.get("seed") == seed
+        assert data.metadata_vars.variant_id == variant_id
+        assert data.metadata_vars.seed == seed
 
 
 @pytest.mark.integration_p0

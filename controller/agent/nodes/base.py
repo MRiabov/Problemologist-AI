@@ -478,7 +478,7 @@ class BaseNode:
                     return prediction, artifacts, journal_entry
 
                 except Exception as err:
-                    logger.error(f"{node_type}_dspy_failed", error=str(err))
+                    logger.warning(f"{node_type}_dspy_failed", error=str(err))
                     journal_entry += f"\n[System Error] {err}"
                     retry_count += 1
                     await asyncio.sleep(1)  # Backoff to prevent log explosion
