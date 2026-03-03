@@ -141,6 +141,47 @@ async def get_session(
     return session
 
 
+class BuildRequest(BaseModel):
+    script_path: str
+
+
+@router.post("/{session_id}/build")
+async def build_benchmark_assets(
+    session_id: uuid.UUID,
+    request: BuildRequest,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Manually trigger asset rebuilding for a benchmark session.
+    """
+    from controller.agent.benchmark.graph import sync_benchmark_assets
+    from controller.config.settings import settings as global_settings
+
+    url = f"{global_settings.worker_heavy_url}/benchmark/build"
+    async with httpx.AsyncClient() as http_client:
+        try:
+            resp = await http_client.post(
+                url,
+                json={
+                    "script_path": request.script_path,
+                    "smoke_test_mode": True,
+                },
+                headers={"X-Session-ID": str(session_id)},
+                timeout=120.0,
+            )
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+
+            # Sync newly built assets back to DB so frontend sees them
+            await sync_benchmark_assets(session_id)
+
+            return resp.json()
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            raise HTTPException(status_code=500, detail=str(e))
+
+
 class UpdateObjectivesRequest(BaseModel):
     max_cost: float | None = None
     max_weight: float | None = None

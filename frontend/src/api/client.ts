@@ -130,10 +130,10 @@ export async function continueEpisode(id: string, message: string, metadata?: Re
     });
 }
 
-export async function rebuildModel(scriptPath: string): Promise<any> {
+export async function rebuildModel(episodeId: string, scriptPath: string): Promise<any> {
     return __request(OpenAPI, {
         method: 'POST',
-        url: '/api/benchmark/build',
+        url: `/api/benchmark/${episodeId}/build`,
         body: {
             script_path: scriptPath
         },

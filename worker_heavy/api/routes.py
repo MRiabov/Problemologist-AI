@@ -557,7 +557,7 @@ async def api_preview(
 
 @heavy_router.post("/benchmark/build", response_model=BenchmarkToolResponse)
 async def api_build(
-    request: PreviewDesignRequest,
+    request: BenchmarkToolRequest,
     x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):

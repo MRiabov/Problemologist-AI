@@ -609,6 +609,58 @@
         }
       }
     },
+    "/api/benchmark/{session_id}/build": {
+      "post": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Build Benchmark Assets",
+        "description": "Manually trigger asset rebuilding for a benchmark session.",
+        "operationId": "build_benchmark_assets_api_benchmark__session_id__build_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/benchmark/{session_id}/objectives": {
       "post": {
         "tags": [
@@ -1387,6 +1439,58 @@
                 "schema": {
                   "$ref": "#/components/schemas/controller__api__schemas__EpisodeResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmark/{session_id}/build": {
+      "post": {
+        "tags": [
+          "benchmark"
+        ],
+        "summary": "Build Benchmark Assets",
+        "description": "Manually trigger asset rebuilding for a benchmark session.",
+        "operationId": "build_benchmark_assets_benchmark__session_id__build_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -2270,6 +2374,19 @@
           "objectives"
         ],
         "title": "BenchmarkObjectivesResponse"
+      },
+      "BuildRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "script_path"
+        ],
+        "title": "BuildRequest"
       },
       "CodeReference": {
         "properties": {

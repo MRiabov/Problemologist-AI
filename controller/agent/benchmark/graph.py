@@ -486,54 +486,16 @@ async def run_generation_session(
     return final_state
 
 
-async def _persist_session_assets(
-    final_state: BenchmarkGeneratorState, session_id: uuid.UUID
-):
+async def sync_benchmark_assets(session_id: uuid.UUID):
     """
-    Helper to persist assets.
-    - Final artifacts (BenchmarkAsset) are only saved if status is ACCEPTED.
-    - Real-time assets (Asset table + Broadcast) are synced if status is
-      PLANNED or ACCEPTED.
+    Syncs assets from the worker session to the Asset table and broadcasts them.
+    Useful for real-time updates and manual rebuilds.
     """
-    from shared.enums import SessionStatus
-
-    # 1. Final artifact persistence (BenchmarkAsset table)
-    if final_state.session.status == SessionStatus.ACCEPTED:
-        session_factory = get_sessionmaker()
-        try:
-            async with session_factory() as db:
-                storage = BenchmarkStorage()
-
-                sim_result = final_state.simulation_result
-                render_data = sim_result.render_data if sim_result else []
-
-                mjcf_content = (
-                    final_state.mjcf_content or "<!-- MJCF content missing in state -->"
-                )
-
-                await storage.save_asset(
-                    benchmark_id=session_id,
-                    script=final_state.current_script,
-                    mjcf=mjcf_content,
-                    images=render_data,
-                    metadata=final_state.plan.model_dump() if final_state.plan else {},
-                    db=db,
-                )
-                logger.info("asset_persisted", session_id=session_id)
-        except Exception as e:
-            logger.error("final_asset_persistence_failed", error=str(e))
-
-    # 2. Real-time file sync (Asset table + Broadcast)
-    # Allow this during PLANNED (pause) or ACCEPTED (completion)
-    if final_state.session.status not in (
-        SessionStatus.ACCEPTED,
-        SessionStatus.PLANNED,
-    ):
-        return
-
-    # Sync assets to the Asset table
     try:
         from controller.config.settings import settings as global_settings
+        from controller.observability.middleware_helper import (
+            broadcast_file_update,
+        )
 
         worker_light_url = global_settings.worker_light_url
         async with httpx.AsyncClient() as http_client:
@@ -547,10 +509,6 @@ async def _persist_session_assets(
                 client, agent_role="benchmark_planner"
             )
             backend = RemoteFilesystemBackend(middleware)
-
-            from controller.observability.middleware_helper import (
-                broadcast_file_update,
-            )
 
             # Only sync top-level files and critical directories to avoid hangs
             # We sync /assets, /renders, and /reviews for benchmark artifacts.
@@ -605,6 +563,54 @@ async def _persist_session_assets(
                     continue
     except Exception as e:
         logger.error("failed_to_sync_assets_to_db", error=str(e))
+
+
+async def _persist_session_assets(
+    final_state: BenchmarkGeneratorState, session_id: uuid.UUID
+):
+    """
+    Helper to persist assets.
+    - Final artifacts (BenchmarkAsset) are only saved if status is ACCEPTED.
+    - Real-time assets (Asset table + Broadcast) are synced if status is
+      PLANNED or ACCEPTED.
+    """
+    from shared.enums import SessionStatus
+
+    # 1. Final artifact persistence (BenchmarkAsset table)
+    if final_state.session.status == SessionStatus.ACCEPTED:
+        session_factory = get_sessionmaker()
+        try:
+            async with session_factory() as db:
+                storage = BenchmarkStorage()
+
+                sim_result = final_state.simulation_result
+                render_data = sim_result.render_data if sim_result else []
+
+                mjcf_content = (
+                    final_state.mjcf_content or "<!-- MJCF content missing in state -->"
+                )
+
+                await storage.save_asset(
+                    benchmark_id=session_id,
+                    script=final_state.current_script,
+                    mjcf=mjcf_content,
+                    images=render_data,
+                    metadata=final_state.plan.model_dump() if final_state.plan else {},
+                    db=db,
+                )
+                logger.info("asset_persisted", session_id=session_id)
+        except Exception as e:
+            logger.error("final_asset_persistence_failed", error=str(e))
+
+    # 2. Real-time file sync (Asset table + Broadcast)
+    # Allow this during PLANNED (pause) or ACCEPTED (completion)
+    if final_state.session.status not in (
+        SessionStatus.ACCEPTED,
+        SessionStatus.PLANNED,
+    ):
+        return
+
+    await sync_benchmark_assets(session_id)
 
 
 async def _update_episode_persistence(

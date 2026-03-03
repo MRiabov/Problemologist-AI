@@ -72,7 +72,34 @@ def test_cad_topology_selection_and_browser(page: Page):
     expect(confirm_button).to_be_visible()
     confirm_button.click()
 
+    # Wait for the status to transition away from PLANNED to ensure coder has started
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus !== 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=60000,
+    )
+
     # 7. Ensure assets are loaded for topology interactions.
+    # WP10: Wait for the coder node to actually produce assets.
+    # The coder node runs integrated validation which generates GLBs.
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.modelUrlsCount > 0;
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
     _ensure_viewport_assets(page)
 
     # 8. Test Topology Browser availability and toggle.

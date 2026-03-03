@@ -16,6 +16,7 @@ export type { BenchmarkConfirmResponse } from './models/BenchmarkConfirmResponse
 export type { BenchmarkGenerateRequest } from './models/BenchmarkGenerateRequest';
 export type { BenchmarkGenerateResponse } from './models/BenchmarkGenerateResponse';
 export type { BenchmarkObjectivesResponse } from './models/BenchmarkObjectivesResponse';
+export type { BuildRequest } from './models/BuildRequest';
 export type { CodeReference } from './models/CodeReference';
 export type { ConfirmRequest } from './models/ConfirmRequest';
 export type { controller__api__routes__episodes__EpisodeResponse } from './models/controller__api__routes__episodes__EpisodeResponse';

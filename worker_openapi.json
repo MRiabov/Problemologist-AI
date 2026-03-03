@@ -1403,7 +1403,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PreviewDesignRequest"
+                "$ref": "#/components/schemas/BenchmarkToolRequest"
               }
             }
           }

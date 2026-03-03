@@ -6,6 +6,7 @@ import type { BenchmarkConfirmResponse } from '../models/BenchmarkConfirmRespons
 import type { BenchmarkGenerateRequest } from '../models/BenchmarkGenerateRequest';
 import type { BenchmarkGenerateResponse } from '../models/BenchmarkGenerateResponse';
 import type { BenchmarkObjectivesResponse } from '../models/BenchmarkObjectivesResponse';
+import type { BuildRequest } from '../models/BuildRequest';
 import type { ConfirmRequest } from '../models/ConfirmRequest';
 import type { controller__api__schemas__EpisodeResponse } from '../models/controller__api__schemas__EpisodeResponse';
 import type { UpdateObjectivesRequest } from '../models/UpdateObjectivesRequest';
@@ -73,6 +74,31 @@ export class BenchmarkService {
             path: {
                 'session_id': sessionId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Build Benchmark Assets
+     * Manually trigger asset rebuilding for a benchmark session.
+     * @param sessionId
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static buildBenchmarkAssetsApiBenchmarkSessionIdBuildPost(
+        sessionId: string,
+        requestBody: BuildRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/benchmark/{session_id}/build',
+            path: {
+                'session_id': sessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
@@ -163,6 +189,31 @@ export class BenchmarkService {
             path: {
                 'session_id': sessionId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Build Benchmark Assets
+     * Manually trigger asset rebuilding for a benchmark session.
+     * @param sessionId
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static buildBenchmarkAssetsBenchmarkSessionIdBuildPost(
+        sessionId: string,
+        requestBody: BuildRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/benchmark/{session_id}/build',
+            path: {
+                'session_id': sessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

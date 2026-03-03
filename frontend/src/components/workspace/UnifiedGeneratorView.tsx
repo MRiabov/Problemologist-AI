@@ -237,9 +237,10 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                     topologyNodes={topologyNodes}
                     onTopologyChange={setTopologyNodes}
                     onRebuildModel={async () => {
+                        if (!selectedEpisode) return;
+                        const scriptPath = (selectedEpisode.metadata_vars as any)?.episode_type === 'benchmark' ? 'script.py' : 'solution.py';
                         try {
-                            await rebuildModel("solution.py");
-                            window.location.reload(); 
+                            await rebuildModel(selectedEpisode.id, scriptPath);
                         } catch (e) {
                             console.error(e);
                             alert("Failed to rebuild model: " + e);
@@ -259,9 +260,10 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                                 size="sm" 
                                 variant="outline" 
                                 onClick={async () => {
+                                    if (!selectedEpisode) return;
+                                    const scriptPath = (selectedEpisode.metadata_vars as any)?.episode_type === 'benchmark' ? 'script.py' : 'solution.py';
                                     try {
-                                        await rebuildModel("solution.py");
-                                        window.location.reload(); 
+                                        await rebuildModel(selectedEpisode.id, scriptPath);
                                     } catch (e) {
                                         console.error(e);
                                         alert("Failed to rebuild model: " + e);
