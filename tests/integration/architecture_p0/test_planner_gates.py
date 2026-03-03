@@ -147,6 +147,13 @@ async def setup_workspace(client, headers, files):
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "plan_md_missing",
+        "todo_md_missing",
+        "assembly_definition_yaml_missing",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_005_mandatory_artifacts_gate(
     session_id,
@@ -229,6 +236,7 @@ async def test_int_005_mandatory_artifacts_gate(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors("plan_md_invalid")
 @pytest.mark.asyncio
 async def test_int_006_plan_structure_validation(
     session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
@@ -282,6 +290,7 @@ Just some text here, no list or table.
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors("todo_md_invalid")
 @pytest.mark.asyncio
 async def test_int_007_todo_integrity(
     session_id, base_headers, valid_plan, valid_objectives, valid_cost, minimal_script
@@ -325,6 +334,9 @@ async def test_int_007_todo_integrity(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=["objectives_yaml_invalid", "objectives_yaml_validation_error"]
+)
 @pytest.mark.asyncio
 async def test_int_008_objectives_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_cost, minimal_script
@@ -367,6 +379,12 @@ async def test_int_008_objectives_validation(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "assembly_definition_yaml_invalid",
+        "cost_estimation_yaml_validation_error",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_009_cost_estimation_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
@@ -416,6 +434,12 @@ async def test_int_009_cost_estimation_validation(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "assembly_definition_yaml_invalid",
+        "cost_estimation_yaml_validation_error",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_011_planner_caps_enforcement(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
@@ -467,6 +491,9 @@ async def test_int_011_planner_caps_enforcement(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=["immutability_violation", "objectives_yaml_modified"]
+)
 @pytest.mark.asyncio
 async def test_int_015_engineer_handover_immutability(
     session_id,
@@ -577,6 +604,12 @@ def build():
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "assembly_definition_yaml_invalid",
+        "cost_estimation_yaml_validation_error",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_010_planner_pricing_script_integration(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
@@ -626,6 +659,7 @@ async def test_int_010_planner_pricing_script_integration(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors("prior_validation_missing")
 @pytest.mark.asyncio
 async def test_int_018_validate_and_price_integration_gate(
     session_id,
