@@ -150,7 +150,7 @@ class BaseFilesystemBackend(BackendProtocol, ABC):
         matches: list[GrepMatch] = []
         for line_num, line in enumerate(content.splitlines(), 1):
             if regex.search(line):
-                matches.append({"path": virtual_path, "line": line_num, "text": line})
+                matches.append(GrepMatch(path=virtual_path, line=line_num, text=line))
         return matches
 
 
@@ -294,14 +294,12 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             files = self.glob_info(glob or "**/*", path=base_virt)
             matches: list[GrepMatch] = []
             for f_info in files:
-                if f_info["is_dir"]:
+                if f_info.is_dir:
                     continue
                 try:
-                    content = self._read_raw(f_info["path"])
-                    matches.extend(
-                        self._grep_in_content(content, pattern, f_info["path"])
-                    )
-                except:
+                    content = self._read_raw(f_info.path)
+                    matches.extend(self._grep_in_content(content, pattern, f_info.path))
+                except Exception:
                     continue
             return matches
         except Exception as e:
