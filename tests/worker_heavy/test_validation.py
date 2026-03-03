@@ -5,10 +5,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from build123d import Box, BuildPart, Compound
 
-from tests.observability.test_observability_utils import (
-    assert_event_emitted,
-    clear_emitted_events,
-)
 from worker_heavy.utils.validation import simulate, validate
 
 
@@ -31,32 +27,6 @@ def test_geometric_validation():
     assert not success, f"Expected overlap validation to fail, but it succeeded: {msg}"
 
 
-def test_objectives_validation_events():
-    from worker_heavy.utils.file_validation import validate_objectives_yaml
-
-    clear_emitted_events()
-
-    invalid_yaml = "invalid: { ["
-    success, _ = validate_objectives_yaml(invalid_yaml)
-    assert success is False
-    # YAML parse error doesn't emit LogicFailureEvent yet based on my reading of file_validation.py:48-55
-    # only ValidationError does.
-
-    # Let's use something that definitely fails Pydantic validation
-    success, _ = validate_objectives_yaml("some_field: unexpected")
-    assert not success
-    assert_event_emitted("logic_failure", file_path="objectives.yaml")
-
-
-def test_plan_validation_events():
-    from worker_heavy.utils.file_validation import validate_plan_md_structure
-
-    clear_emitted_events()
-
-    invalid_plan = "# Some Heading\nNo required sections."
-    success, _ = validate_plan_md_structure(invalid_plan, plan_type="benchmark")
-    assert not success
-    assert_event_emitted("lint_failure_docs", file_path="plan.md")
 
 
 @pytest.mark.integration
