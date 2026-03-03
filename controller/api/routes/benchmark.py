@@ -93,12 +93,15 @@ async def confirm_benchmark(
 
     # Record user comment if provided
     if request.comment:
+        from shared.models.schemas import TraceMetadata
+
+        metadata = TraceMetadata(additional_info={"comment": request.comment})
         trace_record = Trace(
             episode_id=session_id,
             trace_type=TraceType.LOG,
             content=f"User confirmation comment: {request.comment}",
             name="user_confirmation",
-            metadata_vars={"comment": request.comment},
+            metadata_vars=metadata.model_dump(),
         )
         db.add(trace_record)
         await db.commit()

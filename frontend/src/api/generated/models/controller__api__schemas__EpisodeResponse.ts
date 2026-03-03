@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { AssetResponse } from './AssetResponse';
+import type { EpisodeMetadata } from './EpisodeMetadata';
 import type { EpisodeStatus } from './EpisodeStatus';
 import type { TraceResponse } from './TraceResponse';
 export type controller__api__schemas__EpisodeResponse = {
@@ -14,7 +15,7 @@ export type controller__api__schemas__EpisodeResponse = {
     updated_at: string;
     skill_git_hash?: (string | null);
     template_versions?: (Record<string, any> | null);
-    metadata_vars?: (Record<string, any> | null);
+    metadata_vars?: (EpisodeMetadata | null);
     todo_list?: (Record<string, any> | null);
     journal?: (string | null);
     plan?: (string | null);

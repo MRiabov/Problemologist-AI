@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { TraceMetadata } from './TraceMetadata';
 import type { TraceType } from './TraceType';
 export type TraceResponse = {
     id: number;
@@ -13,7 +14,7 @@ export type TraceResponse = {
     trace_type: TraceType;
     name: (string | null);
     content: (string | null);
-    metadata_vars?: (Record<string, any> | null);
+    metadata_vars?: (TraceMetadata | null);
     feedback_score?: (number | null);
     feedback_comment?: (string | null);
     created_at: string;
