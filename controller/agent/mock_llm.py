@@ -13,6 +13,8 @@ logger = structlog.get_logger(__name__)
 class MockDSPyLM(dspy.LM):
     """Mock DSPy LM using YAML scenarios keyed by session_id prefixes."""
 
+    _transcript_states: dict[str, int] = {}  # session_id -> entry_idx
+
     def __init__(
         self, session_id: str | None = None, node_type: str | None = None, **kwargs
     ):
@@ -65,6 +67,10 @@ class MockDSPyLM(dspy.LM):
             if detected:
                 scenario_id = detected
 
+        # Final check if session_id is a direct match but was missed by _get_scenario_id
+        if scenario_id not in self.scenarios and self.session_id in self.scenarios:
+            scenario_id = self.session_id
+
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
 
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
@@ -79,6 +85,9 @@ class MockDSPyLM(dspy.LM):
 
         # Extract expected fields for ReAct compatibility
         expected_fields = []
+
+        if "next_tool_name" in full_text or "next_thought" in full_text:
+            expected_fields.extend(["next_thought", "next_tool_name", "next_tool_args"])
 
         # Always try to detect fields from text if they exist
         match = re.search(
@@ -161,8 +170,17 @@ class MockDSPyLM(dspy.LM):
 
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(lookup_key, 0)
-        self._call_counts[lookup_key] = count + 1
-        call_index = count + 1
+        # Idempotency check: if prompt is identical to last call for this node, don't increment
+        last_prompt = getattr(self, "_last_prompt", {}).get(lookup_key)
+        if last_prompt == full_text:
+            logger.info("mock_dspy_lm_idempotent_call", node=lookup_key)
+        else:
+            self._call_counts[lookup_key] = count + 1
+            if not hasattr(self, "_last_prompt"):
+                self._last_prompt = {}
+            self._last_prompt[lookup_key] = full_text
+
+        call_index = self._call_counts.get(lookup_key, 0)
 
         # Optional assertions for integration hardening.
         self._validate_expected_llm_inputs(
@@ -209,6 +227,15 @@ class MockDSPyLM(dspy.LM):
                 f"(completed_tools={completed_tools}, expected_tool_calls={len(tool_calls)})."
             )
 
+        # 3. Handle Transcript mode if present in scenario
+        if "transcript" in scenario:
+            transcript_resp = self._handle_transcript(
+                scenario, lookup_key, full_text, is_json, expected_fields
+            )
+            if transcript_resp:
+                return transcript_resp
+
+        # 4. Handle legacy multi-turn state and loop protection
         # Only force finish on observation when explicit tool calls are exhausted.
         tool_calls = node_data.get("tool_calls", [])
         tool_progress = self._tool_progress.get(lookup_key, 0)
@@ -218,6 +245,101 @@ class MockDSPyLM(dspy.LM):
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
         return self._handle_action(sig_lookup, node_data, is_json, expected_fields)
+
+    def _handle_transcript(
+        self,
+        scenario: dict,
+        node_key: str,
+        full_text: str,
+        is_json: bool,
+        expected_fields: list[str],
+    ) -> list[str] | None:
+        transcript = scenario.get("transcript", [])
+        entry_idx = self._transcript_states.get(self.session_id, 0)
+
+        # Find the next matching entry in transcript starting from current state
+        found_idx = -1
+        for i in range(entry_idx, len(transcript)):
+            if transcript[i].get("node") == node_key:
+                found_idx = i
+                break
+
+        if found_idx == -1:
+            logger.info(
+                "mock_transcript_node_not_found", node=node_key, entry_idx=entry_idx
+            )
+            return None
+
+        # Reset states if we are starting a new session/scenario entry to ensure idempotency
+        # However, entry_idx is class-level. We should probably use (session_id, node_key) if we want multi-node turns.
+        # But for now, entry_idx is enough for sequential node turns.
+
+        self._transcript_states[self.session_id] = found_idx
+        entry = transcript[found_idx]
+        steps = entry.get("steps", [])
+
+        # Step selection by counting observations in history
+        custom_markers = re.findall(r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text)
+        standard_markers = re.findall(r"Observation:", full_text, re.IGNORECASE)
+        completed_tools = len(custom_markers) + len(standard_markers)
+
+        step_idx = min(completed_tools, len(steps) - 1)
+        step_data = steps[step_idx]
+
+        logger.info(
+            "mock_transcript_step",
+            node=node_key,
+            entry_idx=found_idx,
+            step_idx=step_idx,
+            completed_tools=completed_tools,
+        )
+
+        # Validate observation if previous step had expected_observation
+        if step_idx > 0:
+            prev_step = steps[step_idx - 1]
+            expected_obs = prev_step.get("expected_observation")
+            if expected_obs:
+                # Regex to find observations. Handles both [[ ## observation_N ## ]] and Observation:
+                obs_matches = re.findall(
+                    r"(?:Observation:|\[\[\s*##\s*observation_\d+\s*##\s*\]\])\s*(.*?)(?=\n\s*\[\[\s*##|\Z)",
+                    full_text,
+                    re.DOTALL | re.IGNORECASE,
+                )
+                if obs_matches:
+                    actual_obs = obs_matches[-1].strip()
+
+                    # Normalize common observation values for easier matching
+                    if actual_obs.startswith("True"):
+                        actual_obs = "success"
+
+                    if expected_obs not in actual_obs:
+                        logger.warning(
+                            "mock_transcript_observation_mismatch",
+                            node=node_key,
+                            step=step_idx - 1,
+                            expected=expected_obs,
+                            actual=actual_obs,
+                        )
+
+        # If this step is 'finished', we prepare to move to next entry on NEXT call
+        if step_data.get("finished"):
+            self._transcript_states[self.session_id] = found_idx + 1
+
+        # Use tool_override if it's a tool-calling step
+        tool_override = None
+        if not step_data.get("finished"):
+            tool_name = step_data.get("tool_name")
+            if tool_name:
+                tool_override = (tool_name, step_data.get("tool_args", {}))
+
+        return self._generate_response(
+            node_key,
+            step_data,
+            is_json,
+            finished=step_data.get("finished", False),
+            expected_fields=expected_fields,
+            tool_override=tool_override,
+        )
 
     def _detect_expected_fields_from_json(self, text: str) -> list[str]:
         """Detect expected JSON keys from a template in the prompt."""
@@ -409,6 +531,7 @@ class MockDSPyLM(dspy.LM):
         is_json: bool,
         finished: bool,
         expected_fields: list[str] | None = None,
+        tool_override: tuple[str, dict] | None = None,
     ):
         """Unified response generator ensures all required fields are present."""
         logger.info("mock_dspy_lm_generate", node=node_key, finished=finished)
@@ -417,31 +540,32 @@ class MockDSPyLM(dspy.LM):
         reasoning = node_data.get("reasoning", "Verified all requirements.")
         expected_fields = expected_fields or []
 
-        # WP10: Support explicit tool calls in scenarios
-        # We use call_count to track which tool we are on
-        count = self._call_counts.get(node_key, 0)
-        tool_progress = self._tool_progress.get(node_key, 0)
-        tool_calls = node_data.get("tool_calls", [])
-
         tool_name = None
         tool_args = {}
 
         if not finished:
-            if tool_progress < len(tool_calls) and len(tool_calls) > 0:
-                # Still have explicit tools to call.
-                tc = tool_calls[tool_progress]
-                thought = tc.get("thought", thought)
-                tool_name = tc.get("name")
-                tool_args = tc.get("input", {})
+            if tool_override:
+                tool_name, tool_args = tool_override
             else:
-                # Explicit tools exhausted, use generated_code if present
-                code = node_data.get("generated_code")
-                if code:
-                    tool_name = "execute_command"
-                    tool_args = {"command": code}
+                # WP10: Support explicit tool calls in scenarios (legacy mode)
+                tool_progress = self._tool_progress.get(node_key, 0)
+                tool_calls = node_data.get("tool_calls", [])
+
+                if tool_progress < len(tool_calls) and len(tool_calls) > 0:
+                    # Still have explicit tools to call.
+                    tc = tool_calls[tool_progress]
+                    thought = tc.get("thought", thought)
+                    tool_name = tc.get("name")
+                    tool_args = tc.get("input", {})
                 else:
-                    tool_name = "finish"
-                    tool_args = {}
+                    # Explicit tools exhausted, use generated_code if present
+                    code = node_data.get("generated_code")
+                    if code:
+                        tool_name = "execute_command"
+                        tool_args = {"command": code}
+                    else:
+                        tool_name = "finish"
+                        tool_args = {}
 
         # Base schema for DSPy JSONAdapter
         resp = {
@@ -521,13 +645,13 @@ class MockDSPyLM(dspy.LM):
                 sig_lookup = "reviewer"
 
             sig_fields = {
-                "planner": ["reasoning", "plan", "summary"],
-                "coder": ["journal"],
-                "reviewer": ["review"],
-                "summarizer": ["summarized_journal"],
-                "skill_learner": ["summary", "journal"],
-                "cots_search": ["search_summary"],
-                "electronics_planner": ["reasoning", "summary"],
+                "planner": ["thought", "reasoning", "plan", "summary"],
+                "coder": ["thought", "journal"],
+                "reviewer": ["thought", "review"],
+                "summarizer": ["thought", "summarized_journal"],
+                "skill_learner": ["thought", "summary", "journal"],
+                "cots_search": ["thought", "search_summary"],
+                "electronics_planner": ["thought", "reasoning", "summary"],
             }.get(sig_lookup, [])
 
             # For ReAct tool-call turns, return only the explicitly requested fields.
@@ -536,6 +660,9 @@ class MockDSPyLM(dspy.LM):
                 all_fields = list(dict.fromkeys(expected_fields))
             else:
                 all_fields = list(dict.fromkeys(expected_fields + sig_fields))
+
+            if finished and "finished" not in all_fields:
+                all_fields.append("finished")
 
             # WP10: Force plan inclusion for planner nodes to ensure state transitions work
             if sig_lookup == "planner" and "plan" not in all_fields:
