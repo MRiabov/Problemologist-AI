@@ -162,8 +162,10 @@ def capture_frontend_logs(request):
             "Unexpected browser errors detected.\n"
             f"{sample}{suffix}\n"
             f"See detailed browser logs in {log_file}.\n"
-            "To allow expected noise, use marker @pytest.mark.allow_browser_errors "
-            "or set BROWSER_ERROR_ALLOWLIST_REGEXES."
+            "If this test explicitly expects this particular error by it's definition in "
+            "`specs/integration_tests.md`, you can suppress the exception by "
+            '@pytest.mark.allow_browser_errors("long_error_substring_or_regex")'
+            "or set BROWSER_ERROR_ALLOWLIST_REGEXES for global patterns."
         )
 
 
