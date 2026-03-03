@@ -24,6 +24,8 @@ class MockDSPyLM(dspy.LM):
         self.scenarios = self._load_scenarios()
         self._call_counts = {}  # Tracks calls per node key to detect loops
         self._tool_progress = {}  # Tracks completed tool steps from trajectory text
+        # Tracks repeated LM invocations without tool-observation progress.
+        self._stall_counts = {}
 
     def _load_scenarios(self) -> dict:
         if not self.responses_path.exists():
@@ -180,12 +182,32 @@ class MockDSPyLM(dspy.LM):
             full_text=full_text,
         )
 
-        # For scripted tool sequences, only force-finish once tools are exhausted.
-        # DSPy may invoke LM multiple times between tool executions.
+        # For scripted tool sequences, detect true no-progress stalls.
+        # DSPy can invoke LM multiple times per step, so raw call count is insufficient.
         tool_calls = node_data.get("tool_calls", [])
-        if count > 5 and (not tool_calls or completed_tools >= len(tool_calls)):
-            logger.error("mock_dspy_lm_loop_detected", node=lookup_key, count=count)
-            return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
+        prev_progress = self._tool_progress.get(f"{lookup_key}__prev", -1)
+        stalled_calls = self._stall_counts.get(lookup_key, 0)
+        if completed_tools > prev_progress:
+            stalled_calls = 0
+        else:
+            stalled_calls += 1
+        self._stall_counts[lookup_key] = stalled_calls
+        self._tool_progress[f"{lookup_key}__prev"] = completed_tools
+
+        if stalled_calls > 5 and (not tool_calls or completed_tools >= len(tool_calls)):
+            logger.error(
+                "mock_dspy_lm_loop_detected",
+                node=lookup_key,
+                stalled_calls=stalled_calls,
+                call_count=call_index,
+                completed_tools=completed_tools,
+                expected_tool_calls=len(tool_calls),
+            )
+            raise ValueError(
+                f"MockDSPyLM loop detected for node={lookup_key}: "
+                f"no tool-progress for {stalled_calls} calls "
+                f"(completed_tools={completed_tools}, expected_tool_calls={len(tool_calls)})."
+            )
 
         # Only force finish on observation when explicit tool calls are exhausted.
         tool_calls = node_data.get("tool_calls", [])
