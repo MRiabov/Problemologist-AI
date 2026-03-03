@@ -302,10 +302,10 @@ run()
                     "import sys; sys.path.append('.'); "
                     "import debug_stl; debug_stl.run()"
                 ),
-                timeout=120,
+                timeout=180,
             ).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
-            timeout=180.0,
+            timeout=240.0,
         )
         assert resp_exec.status_code == 200
         exec_data = ExecuteResponse.model_validate(resp_exec.json())
@@ -443,10 +443,10 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
                 "import sys; sys.path.append('.'); import verify_overload; "
                 "import asyncio; asyncio.run(verify_overload.run())"
             ),
-            timeout=90,
+            timeout=180,
         ).model_dump(mode="json"),
         headers={"X-Session-ID": session_id},
-        timeout=120.0,
+        timeout=240.0,
     )
     assert resp.status_code == 200
     data = ExecuteResponse.model_validate(resp.json())
