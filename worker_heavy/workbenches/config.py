@@ -1,3 +1,4 @@
+import functools
 from pathlib import Path
 
 import structlog
@@ -8,6 +9,7 @@ from shared.workers.workbench_models import ManufacturingConfig
 logger = structlog.get_logger()
 
 
+@functools.lru_cache()
 def load_config(config_path: str | None = None) -> ManufacturingConfig:
     """
     Loads and validates the manufacturing configuration from a YAML file.
