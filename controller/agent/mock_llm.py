@@ -184,7 +184,7 @@ class MockDSPyLM(dspy.LM):
         # DSPy may invoke LM multiple times between tool executions.
         tool_calls = node_data.get("tool_calls", [])
         if count > 5 and (not tool_calls or completed_tools >= len(tool_calls)):
-            logger.error("mock_dspy_lm_loop_detected", node=lookup_key, count=count)
+            logger.warning("mock_dspy_lm_loop_detected", node=lookup_key, count=count)
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
         # Only force finish on observation when explicit tool calls are exhausted.
