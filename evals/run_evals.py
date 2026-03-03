@@ -1,26 +1,35 @@
 import argparse
 import asyncio
 import json
+import logging
 import os
+import shutil
+import subprocess
 import sys
+import time
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import httpx
 from dotenv import load_dotenv
+from pyrate_limiter import Duration, Limiter, Rate
 
 # Ensure repository root is importable when script is executed as a file.
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from controller.clients.worker import WorkerClient
-from shared.enums import EpisodeStatus
-from shared.utils.evaluation import analyze_electronics_metrics
+from controller.clients.worker import WorkerClient  # noqa: E402
+from shared.enums import EpisodeStatus  # noqa: E402
+from shared.logging import configure_logging, get_logger  # noqa: E402
+from shared.utils.evaluation import analyze_electronics_metrics  # noqa: E402
 
 load_dotenv()
+# Logging will be configured in main() to support redirection to logs/evals
+logger = get_logger(__name__)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
@@ -139,7 +148,8 @@ def _missing_required_traces(
 
 async def _run_git_eval(item: dict[str, Any], stats: dict[str, Any], agent_name: str):
     task_id = item["id"]
-    print(f"Running eval: {task_id} for agent: {agent_name}")
+    log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode="git")
+    log.info("eval_start")
 
     session_id = f"eval-git-{task_id}-{uuid.uuid4().hex[:8]}"
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
@@ -165,12 +175,12 @@ async def _run_git_eval(item: dict[str, Any], stats: dict[str, Any], agent_name:
             failure_reason = f"git status returned error: {status.error}"
         else:
             success = True
-            print(f"  [{task_id}] COMPLETED")
+            log.info("eval_completed", session_id=session_id)
     except Exception as exc:
         failure_reason = str(exc)
 
     if not success:
-        print(f"  [{task_id}] FAILED: {failure_reason}")
+        log.error("eval_failed", reason=failure_reason, session_id=session_id)
 
     agent_stats = stats[agent_name]
     agent_stats["total"] += 1
@@ -193,7 +203,12 @@ async def run_single_eval(
     task_id = item["id"]
     task_description = item["task"]
 
-    print(f"Running eval: {task_id} for agent: {agent_name}")
+    log = logger.bind(
+        task_id=task_id,
+        agent_name=agent_name,
+        eval_mode=spec.mode,
+    )
+    log.info("eval_start")
 
     success = False
     session_id = ""
@@ -255,9 +270,10 @@ electronics_requirements:
         try:
             resp = await client.post(url, json=payload)
             if resp.status_code >= 400:
-                print(
-                    f"Error: Failed to trigger eval for {task_id}: "
-                    f"{resp.status_code} - {resp.text}"
+                log.error(
+                    "eval_trigger_failed",
+                    status_code=resp.status_code,
+                    response_text=resp.text,
                 )
                 stats[agent_name]["total"] += 1
                 return
@@ -266,8 +282,8 @@ electronics_requirements:
             session_id = str(
                 data.get(session_id_key) or data.get("session_id") or episode_id
             )
-        except Exception as e:
-            print(f"Error connecting to controller: {e}")
+        except Exception:
+            log.exception("controller_request_failed")
             stats[agent_name]["total"] += 1
             return
 
@@ -288,13 +304,25 @@ electronics_requirements:
                     status_data = status_resp.json()
                     status = status_data.get("status")
 
-                    if verbose:
-                        traces = status_data.get("traces", [])
-                        for trace in sorted(traces, key=lambda t: t.get("id", 0)):
-                            trace_id = trace.get("id")
-                            if trace_id not in seen_trace_ids:
-                                print(f"    [{task_id}] LOG: {trace.get('content')}")
-                                seen_trace_ids.add(trace_id)
+                    traces = status_data.get("traces", [])
+                    for trace in sorted(traces, key=lambda t: t.get("id", 0)):
+                        trace_id = trace.get("id")
+                        if trace_id not in seen_trace_ids:
+                            # Restate traces at DEBUG level so they go to the log file.
+                            # They will also appear on console if --log-level DEBUG is used.
+                            log.debug(
+                                "trace_log",
+                                trace_id=trace_id,
+                                content=trace.get("content"),
+                            )
+                            # If verbose is set, log at INFO so they show up on console regardless of log level.
+                            if verbose:
+                                log.info(
+                                    "trace_log",
+                                    trace_id=trace_id,
+                                    content=trace.get("content"),
+                                )
+                            seen_trace_ids.add(trace_id)
 
                     if status == EpisodeStatus.PLANNED and spec.mode == "benchmark":
                         if agent_name == "benchmark_planner":
@@ -303,15 +331,16 @@ electronics_requirements:
                                 spec.required_trace_names, episode
                             )
                             if missing_traces:
-                                print(
-                                    f"  [{task_id}] FAILED - missing traces: {', '.join(missing_traces)}"
+                                log.error(
+                                    "eval_failed_missing_traces",
+                                    missing_traces=missing_traces,
                                 )
                             else:
-                                print(f"  [{task_id}] PLANNED")
+                                log.info("eval_planned")
                                 success = True
                             break
 
-                        print(f"  [{task_id}] PLANNED. Confirming...")
+                        log.info("eval_planned_confirming")
                         confirm_url = f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
                         await client.post(confirm_url)
 
@@ -321,34 +350,35 @@ electronics_requirements:
                             spec.required_trace_names, episode
                         )
                         if missing_traces:
-                            print(
-                                f"  [{task_id}] FAILED - missing traces: {', '.join(missing_traces)}"
+                            log.error(
+                                "eval_failed_missing_traces",
+                                missing_traces=missing_traces,
                             )
                         else:
-                            print(f"  [{task_id}] COMPLETED")
+                            log.info("eval_completed")
                             success = True
                         break
 
                     if status == EpisodeStatus.FAILED:
-                        print(f"  [{task_id}] FAILED")
+                        log.error("eval_failed")
                         break
 
                     if status == EpisodeStatus.CANCELLED:
-                        print(f"  [{task_id}] CANCELLED")
+                        log.warning("eval_cancelled")
                         break
 
                     if attempt % 6 == 0:
-                        print(f"  [{task_id}] Still running (status: {status})...")
+                        log.info("eval_still_running", status=status, attempt=attempt)
                 else:
-                    print(
-                        f"  [{task_id}] Warning: Error checking status: "
-                        f"{status_resp.status_code}"
+                    log.warning(
+                        "eval_status_check_failed",
+                        status_code=status_resp.status_code,
                     )
-            except Exception as e:
-                print(f"  [{task_id}] Warning: Exception during status check: {e}")
+            except Exception:
+                log.exception("eval_status_check_exception")
 
         if attempt >= max_attempts:
-            print(f"  [{task_id}] TIMEOUT")
+            log.warning("eval_timeout", max_attempts=max_attempts)
 
         agent_stats = stats[agent_name]
         agent_stats["total"] += 1
@@ -385,19 +415,133 @@ async def main():
         "--concurrency",
         type=int,
         default=1,
-        help="Max number of eval tasks to run concurrently (default: 1 for real-LLM stability)",
+        help=(
+            "Max number of eval tasks to run concurrently "
+            "(default: 1 for real-LLM stability)"
+        ),
+    )
+    parser.add_argument(
+        "--no-rate-limit", action="store_true", help="Disable the 50 RPM rate limit"
+    )
+    parser.add_argument(
+        "--skip-env-up", action="store_true", help="Skip running scripts/env_up.sh"
+    )
+    parser.add_argument(
+        "--log-level",
+        "--log_level",
+        type=str,
+        default="DEBUG",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Log level for the console output (default: DEBUG)",
     )
     args = parser.parse_args()
 
+    # Configure logging to directory (logs/evals)
+    log_dir = ROOT / "logs" / "evals"
+    archive_dir = ROOT / "logs" / "archives"
+
+    # Archive previous logs if they exist
+    if log_dir.exists() and any(log_dir.iterdir()):
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        archive_target = archive_dir / f"eval_run_{ts}"
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.move(str(log_dir), str(archive_target))
+        except Exception:
+            # Fallback if move fails (e.g. across filesystems)
+            shutil.copytree(str(log_dir), str(archive_target))
+            shutil.rmtree(str(log_dir))
+
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "run_evals.log"
+
+    # Symlink for run_evals.log (latest.log in logs/evals/)
+    latest_log = log_dir / "latest.log"
+    if latest_log.exists():
+        try:
+            latest_log.unlink()
+        except Exception:
+            pass
+    try:
+        latest_log.symlink_to(log_file.name)
+    except Exception:
+        pass
+
+    os.environ["LOG_DIR"] = str(log_dir)
+    os.environ["EXTRA_DEBUG_LOG"] = str(log_file)
+    os.environ["LOG_LEVEL"] = args.log_level
+    configure_logging("evals")
+
+    global logger
+    logger = get_logger(__name__)
+
+    print(f"Logging to: {log_file} (and symlinked at {latest_log})")
+    logger.info("eval_run_start", log_dir=str(log_dir))
+
+    start_time = time.time()
+    print(f"Agent Evals Started at: {time.ctime(start_time)}")
+
+    # Run env_up.sh before checking health or starting evaluations
+    if not args.skip_env_up:
+        logger.info("env_up_start")
+        try:
+            env_up_path = ROOT / "scripts" / "env_up.sh"
+            # Set LOG_DIR relative to ROOT for env_up.sh
+            env_up_log_dir = log_dir.relative_to(ROOT)
+            result = subprocess.run(
+                [str(env_up_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+                env={**os.environ, "LOG_DIR": str(env_up_log_dir)},
+            )
+            # Dump output into the log file at DEBUG level
+            for line in result.stdout.splitlines():
+                if line.strip():
+                    logger.debug("env_up_output", line=line)
+            logger.info("env_up_completed")
+
+            # Update symlinks in logs/ root to point to eval logs instead of manual_run
+            logs_root = ROOT / "logs"
+            links = [
+                ("evals/controller.log", "controller.log"),
+                ("evals/worker_light.log", "worker_light.log"),
+                ("evals/worker_heavy.log", "worker_heavy.log"),
+                ("evals/temporal_worker.log", "temporal_worker.log"),
+                ("evals/frontend.log", "frontend.log"),
+                ("evals/run_evals.log", "run_evals.log"),
+            ]
+            for target, link_name in links:
+                link_path = logs_root / link_name
+                try:
+                    if link_path.exists() or link_path.is_symlink():
+                        link_path.unlink()
+                    link_path.symlink_to(target)
+                except Exception:
+                    pass
+
+        except subprocess.CalledProcessError as e:
+            logger.error("env_up_failed", stdout=e.stdout, stderr=e.stderr)
+            print(f"ERROR: env_up.sh failed with exit code {e.returncode}")
+            print(f"Check logs for details: {log_file}")
+            sys.exit(1)
+        except Exception:
+            logger.exception("env_up_exception")
+            sys.exit(1)
+
+    # Rate limiter setup (50 RPM)
+    rate = Rate(50, Duration.MINUTE)
+    limiter = Limiter(rate)
+
     if args.agent != "all" and args.agent not in AGENT_SPECS:
-        print(f"Error: Unknown agent '{args.agent}'.")
-        print("Available agents:")
+        logger.error("unknown_agent", agent=args.agent)
+        logger.info("available_agents")
         for name in available_agents:
-            print(f"  - {name}")
+            logger.info("agent", name=name)
         sys.exit(1)
 
     # Check health
-    print(f"Checking controller health at {CONTROLLER_URL}...")
+    logger.info("controller_health_check_start", url=CONTROLLER_URL)
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             health_resp = await client.get(f"{CONTROLLER_URL}/health")
@@ -405,21 +549,21 @@ async def main():
                 health_resp.status_code != 200
                 or health_resp.json().get("status") != "healthy"
             ):
-                print(f"Error: Controller is unhealthy: {health_resp.text}")
+                logger.error("controller_unhealthy", response_text=health_resp.text)
                 sys.exit(1)
-        except Exception as e:
-            print(f"Error: Could not connect to controller at {CONTROLLER_URL}: {e}")
+        except Exception:
+            logger.exception("controller_unreachable", url=CONTROLLER_URL)
             sys.exit(1)
 
-    print(f"Checking worker health at {WORKER_LIGHT_URL}...")
+    logger.info("worker_health_check_start", url=WORKER_LIGHT_URL)
     temp_client = WorkerClient(base_url=WORKER_LIGHT_URL, session_id="healthcheck")
     try:
         health = await temp_client.get_health()
         if health.get("status") != "healthy":
-            print(f"Error: Worker is unhealthy: {health}")
+            logger.error("worker_unhealthy", health=health)
             sys.exit(1)
-    except Exception as e:
-        print(f"Error: Could not connect to worker at {WORKER_LIGHT_URL}: {e}")
+    except Exception:
+        logger.exception("worker_unreachable", url=WORKER_LIGHT_URL)
         sys.exit(1)
 
     evals_root = Path(__file__).parent / "datasets"
@@ -449,13 +593,13 @@ async def main():
                         data = [item for item in data if item["id"] == args.task_id]
                     datasets[agent] = data
                 except json.JSONDecodeError:
-                    print(f"Error: Could not decode JSON at {json_path}")
+                    logger.error("dataset_json_decode_failed", path=str(json_path))
         else:
-            print(f"Warning: No dataset found for {agent} at {json_path}")
+            logger.warning("dataset_missing", agent=agent, path=str(json_path))
 
     tasks = []
     for agent, dataset in datasets.items():
-        print(f"Starting evals for {agent}. Count: {len(dataset)}")
+        logger.info("agent_evals_start", agent=agent, count=len(dataset))
         for item in dataset:
             tasks.append((item, agent))
 
@@ -464,15 +608,15 @@ async def main():
 
         async def _guarded(item: dict[str, Any], agent: str):
             async with semaphore:
+                if not args.no_rate_limit:
+                    await asyncio.to_thread(limiter.delay_or_raise, "eval")
                 await run_single_eval(item, agent, stats, verbose=args.verbose)
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))
     else:
-        print("No tasks to run.")
+        logger.warning("no_tasks_to_run")
 
-    print("\n" + "=" * 40)
-    print("ARCHITECTURE EVALUATION REPORT")
-    print("=" * 40)
+    logger.info("evaluation_report_start")
 
     total_pass = 0
     total_count = 0
@@ -484,26 +628,41 @@ async def main():
         total_pass += s["success"]
         total_count += s["total"]
 
-        print(f"\nAgent: {agent}")
-        print(f"  Task Success Rate: {success_rate:.1f}% ({s['success']}/{s['total']})")
+        log_report = logger.bind(agent=agent)
+        log_report.info(
+            "agent_summary",
+            task_success_rate_pct=round(success_rate, 1),
+            successful_tasks=s["success"],
+            total_tasks=s["total"],
+        )
 
         if agent in METRIC_HANDLERS and s["success"] > 0:
-            print(
-                "  Electrical Validity Rate: "
-                f"{(s['electrical_validity_rate'] / s['success']) * 100:.1f}%"
-            )
-            print(
-                "  Wire Integrity Rate: "
-                f"{(s['wire_integrity_rate'] / s['success']) * 100:.1f}%"
-            )
-            print(
-                "  Avg. Power Efficiency Score: "
-                f"{(s['power_efficiency_score'] / s['success']):.2f}"
+            log_report.info(
+                "agent_electronics_metrics",
+                electrical_validity_rate_pct=round(
+                    (s["electrical_validity_rate"] / s["success"]) * 100, 1
+                ),
+                wire_integrity_rate_pct=round(
+                    (s["wire_integrity_rate"] / s["success"]) * 100, 1
+                ),
+                avg_power_efficiency_score=round(
+                    s["power_efficiency_score"] / s["success"], 2
+                ),
             )
 
     overall = (total_pass / total_count * 100) if total_count else 0.0
-    print("\n" + "-" * 40)
-    print(f"Overall pass rate: {overall:.1f}% ({total_pass}/{total_count})")
+    logger.info(
+        "overall_summary",
+        overall_pass_rate_pct=round(overall, 1),
+        passed_tasks=total_pass,
+        total_tasks=total_count,
+    )
+
+    finish_time = time.time()
+    duration = finish_time - start_time
+    print(f"Agent Evals Finished at: {time.ctime(finish_time)}")
+    print(f"Total Duration: {duration:.2f}s")
+    logger.info("eval_run_finished", duration_s=round(duration, 2))
 
 
 if __name__ == "__main__":

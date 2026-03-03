@@ -443,6 +443,50 @@ def _final_force_cleanup() -> None:
         _run(["pkill", "-9", "-f", pattern], check=False)
 
 
+def _kill_port_occupants(ports: list[int]) -> None:
+    """Terminate any local processes that are listening on the given TCP ports."""
+    unique_ports = sorted(set(ports))
+    if not unique_ports:
+        return
+
+    pids: set[int] = set()
+    lsof_path = shutil.which("lsof")
+    if lsof_path:
+        for port in unique_ports:
+            result = _run(
+                [lsof_path, "-t", f"-iTCP:{port}", "-sTCP:LISTEN"],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+            if result.returncode != 0:
+                continue
+            for line in result.stdout.decode("utf-8", errors="ignore").splitlines():
+                line = line.strip()
+                if line.isdigit():
+                    pids.add(int(line))
+
+    if pids:
+        print(
+            "Freeing occupied integration ports "
+            f"{', '.join(str(port) for port in unique_ports)} "
+            f"(PIDs: {', '.join(str(pid) for pid in sorted(pids))})"
+        )
+        for pid in sorted(pids):
+            _run(["kill", str(pid)], check=False)
+        time.sleep(1)
+        for pid in sorted(pids):
+            _run(["kill", "-9", str(pid)], check=False)
+
+    fuser_path = shutil.which("fuser")
+    if fuser_path:
+        for port in unique_ports:
+            _run([fuser_path, "-k", "-TERM", f"{port}/tcp"], check=False)
+        time.sleep(0.5)
+        for port in unique_ports:
+            _run([fuser_path, "-k", "-KILL", f"{port}/tcp"], check=False)
+
+
 def _stop_processes(processes: list[StartedProcess]) -> None:
     for started in processes:
         if started.process.poll() is None:
@@ -581,6 +625,8 @@ def _run_integration_command(
 
     pytest_args, _, _ = _normalize_pytest_args(passthrough_pytest_args)
     run_playwright = _should_run_playwright(pytest_args)
+
+    _kill_port_occupants([15173, 18000, 18001, 18002, 15432, 17233, 19000])
 
     _run(["bash", "scripts/ensure_docker_vfs.sh"])
     _run(["bash", "scripts/ensure_ngspice.sh"])
