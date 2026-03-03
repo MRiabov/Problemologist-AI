@@ -146,6 +146,7 @@ def run_pytest_subprocess(
         "addopts=-n0",
         "--maxfail=3",
         "-s",
+        "--color=yes",
     ]
     if reverse:
         cmd.append("--reverse")
