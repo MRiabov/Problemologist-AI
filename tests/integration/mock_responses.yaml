@@ -675,6 +675,76 @@ scenarios:
         - name: "write_file"
           input: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
 
+  EVAL-EE:
+    planner:
+      summary: "Electronics-eval plan generated."
+      thought: "Preparing a task that requires electronics implementation."
+      tool_calls:
+        - name: "write_file"
+          input:
+            path: "plan.md"
+            content: |
+              ## 1. Solution Overview
+              Build a simple powered mechanism.
+              ## 2. Parts List
+              - Frame
+              - Motor
+              - PSU
+              ## 3. Assembly Strategy
+              1. Build frame.
+              2. Route wiring.
+              ## 4. Cost & Weight Budget
+              - Within limits
+              ## 5. Risk Assessment
+              - Wire routing clashes
+            overwrite: true
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [ ] Build frame", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
+    electronics_planner:
+      summary: "Electronics wiring task added."
+      thought: "Add an explicit unchecked electronics task for handoff."
+      tool_calls:
+        - name: "write_file"
+          input:
+            path: "todo.md"
+            content: |
+              - [x] Build frame
+              - [ ] Route wiring harness for motor power
+            overwrite: true
+    electronics_engineer:
+      journal: "Completed electronics wiring path for motor and PSU."
+      thought: "Implementing electronics wiring."
+    coder:
+      journal: "Mechanical implementation completed."
+      thought: "Implementing basic geometry."
+      generated_code: |
+        from build123d import *
+        def build():
+            return Box(10,10,10)
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "The design satisfies all requirements."
+        required_fixes: []
+
 
   # Default fallback
   default:

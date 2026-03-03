@@ -1,0 +1,7 @@
+[
+  {
+    "id": "git-001-baseline",
+    "task": "Initialize a workspace repository, commit one deterministic change, and verify repository status can be retrieved.",
+    "expected_criteria": "Git workflow succeeds with init, commit, and status operations."
+  }
+]

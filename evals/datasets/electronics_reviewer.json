@@ -1,0 +1,7 @@
+[
+  {
+    "id": "erv-001-electronics-review",
+    "task": "Run an electronics review pass for a single-motor 12V design. Ensure reviewer checks for power-path validity, gross wiring issues, and clear approval/rejection output.",
+    "expected_criteria": "Electronics reviewer node runs and returns a structured review decision."
+  }
+]
