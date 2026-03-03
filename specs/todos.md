@@ -71,3 +71,54 @@ overhead and improve end-to-end tool latency (noted estimate: ~20-40% from OpenA
 1. WebSocket transport passes existing integration contracts for tool execution.
 2. Observability parity is maintained (tool start/end/error traces and IDs).
 3. Controlled rollout path exists with fallback to HTTP.
+
+## TODO: no silent fallbacks pattern
+
+As per conversation:
+```md
+specs/integration-tests.md; specs/desired_architecture.md
+
+  Are there any "meta" requirements we want to tighten in integration tests as related to desired_architecture? Basically, I've
+  found many bugs in integration tests by enforcing no errors logged in the console (as per integration test spec). I'm now
+  wondering - anything else I'm missing?
+  
+[... skipped ... an unsuccessful review; prompted again with higher reasoning model, one of the answers was:]
+  
+ 1. No silent fallback / degraded-success
+
+  - Rule: any fallback/degradation path must be explicit (event + machine-readable flag/reason), never hidden behind 200 OK.
+  - Why high value: catches the nastiest production bugs.
+  - Cost: low-medium (one shared assertion helper + log/event pattern checks).
+
+  [... another result filtered ...]
+  <!--prompted the model on how to actually implement this:-->
+Actual implementation: 
+• For #1 (“no silent fallback / degraded-success”), the theory is simple:
+
+  1. Define a tiny degradation contract
+
+  - Every endpoint/tool run can return either normal or degraded.
+  - If degraded, response must include degraded: true and degradation_reason (enum).
+  - No degraded path is allowed to look like a normal success.
+
+  2. Require a matching observability signal
+
+  - Any degraded response must emit one structured event, same IDs (user_session_id, episode_id), same reason.
+  - This makes degradation queryable and auditable.
+
+  3. Write integration tests only for forced-degradation scenarios
+
+  - Intentionally trigger known fallback paths (example: GPU OOM retry, external service unavailable, parser fallback).
+  - Assert:
+      - request still returns expected status (maybe 200, maybe 503, whatever contract says),
+      - degraded flag/reason is present when fallback happened,
+      - matching degradation event exists,
+      - terminal state is not mislabeled as clean success.
+
+  4. Add one global anti-silent assertion
+  
+  - If a known fallback condition is triggered in test setup, test fails unless degraded flag/event appears.
+  - This is the “tripwire” that catches silent regressions.
+
+  That’s it. Minimal surface area, high bug-catching value, and no heavy deterministic/orchestration machinery.
+```
