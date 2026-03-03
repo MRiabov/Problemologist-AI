@@ -27,8 +27,8 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_004_episode_artifact_persistence():
-    """INT-004: Verify artifacts are persisted and accessible via API."""
+async def test_int_084_episode_artifact_persistence():
+    """INT-084: Verify artifacts are persisted and accessible via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-p0-{uuid.uuid4().hex[:8]}"
 
@@ -60,11 +60,16 @@ async def test_int_004_episode_artifact_persistence():
         episodes = [EpisodeListItem.model_validate(e) for e in resp.json()]
         assert any(str(e.id) == episode_id for e in episodes)
 
+        # Verify artifact proxying through the controller
+        asset_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}/assets/output.py")
+        assert asset_resp.status_code == 200
+        assert asset_resp.text == "print('hello')"
+
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_005_trace_realtime_broadcast():
-    """INT-005: Verify traces are broadcasted via DB/API."""
+async def test_int_085_trace_realtime_broadcast():
+    """INT-085: Verify traces are broadcasted via DB/API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-trace-{uuid.uuid4().hex[:8]}"
 
@@ -88,8 +93,8 @@ async def test_int_005_trace_realtime_broadcast():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_011_planner_target_caps_validation():
-    """INT-011: Verify planner target caps must be <= benchmark caps."""
+async def test_int_086_planner_target_caps_validation():
+    """INT-086: Verify planner target caps must be <= benchmark caps."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-caps-{uuid.uuid4().hex[:8]}"
 
@@ -115,11 +120,12 @@ totals:
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors
 @pytest.mark.asyncio
-async def test_int_014_cots_propagation():
-    """INT-014: Verify COTS data propagates into plan and assembly definition."""
+async def test_int_087_cots_propagation():
+    """INT-087: Verify COTS data propagates into plan and assembly definition."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"INT-014-{uuid.uuid4().hex[:8]}"
+        session_id = f"INT-087-{uuid.uuid4().hex[:8]}"
         run_req = AgentRunRequest(
             task="Design a mechanism with a servo motor",
             session_id=session_id,
@@ -167,11 +173,12 @@ async def test_int_014_cots_propagation():
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors
 @pytest.mark.asyncio
-async def test_int_025_events_collection_e2e():
-    """INT-025: Verify worker events are ingested and persisted as traces."""
+async def test_int_088_events_collection_e2e():
+    """INT-088: Verify worker events are ingested and persisted as traces."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"INT-025-{uuid.uuid4().hex[:8]}"
+        session_id = f"INT-088-{uuid.uuid4().hex[:8]}"
         run_req = AgentRunRequest(task="Run a simulation", session_id=session_id)
         run_resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",

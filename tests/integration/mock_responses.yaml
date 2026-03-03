@@ -15,9 +15,9 @@ scenarios:
   #       not_contains: ["error"]
   # All keys are optional and only enforced when present.
 
-  # INT-011: Planner target caps validation (No specific mock needed as it's a validation test)
+  # INT-086: Planner target caps validation (No specific mock needed as it's a validation test)
 
-  INT-014:
+  INT-087:
     planner:
       summary: "Plan with MOCK-MOTOR-ID generated."
       thought: "I will design a mechanism with a servo motor using MOCK-MOTOR-ID."
@@ -55,9 +55,16 @@ scenarios:
                 estimate_confidence: high
               manufactured_parts: []
               cots_parts:
-                - part_number: "MOCK-MOTOR-ID"
-                  category: "motor"
+                - part_id: "MOCK-MOTOR-ID"
+                  manufacturer: "MockCorp"
+                  unit_cost_usd: 15.0
                   quantity: 1
+                  source: "catalog"
+                  reproducibility:
+                    catalog_version: "v1"
+                    bd_warehouse_commit: "abc"
+                    catalog_snapshot_id: "snap1"
+                    generated_at: "2024-01-01"
               final_assembly: []
             overwrite: true
         - name: "write_file"
