@@ -68,6 +68,28 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     with pytest.raises(PermissionError):
         await coder_fs.write_file("unmatched.txt", "denied")
 
+    # Defense-in-depth filtering: list_files should not leak unreadable entry names.
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        seed_allowed = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": "plan.md", "content": "visible", "overwrite": True},
+            headers={"X-Session-ID": session_id},
+        )
+        assert seed_allowed.status_code == 200
+        seed_blocked = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json={"path": "unmatched.txt", "content": "hidden", "overwrite": True},
+            headers={"X-Session-ID": session_id},
+        )
+        assert seed_blocked.status_code == 200
+
+    listed_paths = {entry.path for entry in await coder_fs.list_files("/")}
+    assert "/plan.md" in listed_paths
+    assert "/unmatched.txt" not in listed_paths
+
+    grep_matches = await coder_fs.grep("hidden", path="/")
+    assert all(match.path != "/unmatched.txt" for match in grep_matches)
+
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio

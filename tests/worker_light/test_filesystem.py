@@ -111,3 +111,15 @@ def test_router_ls_merged(tmp_path):
     names = [f.name for f in root_files]
     assert "utils" in names
     assert "main.py" in names
+
+
+def test_local_backend_grep_raw_uses_fileinfo_model(tmp_path):
+    session_dir = tmp_path / "sessions"
+    backend = LocalFilesystemBackend.create("sess-grep", base_dir=session_dir)
+    backend.write("script.py", "print('hello')", overwrite=True)
+
+    matches = backend.grep_raw(pattern="hello", path="/")
+
+    assert isinstance(matches, list)
+    assert len(matches) == 1
+    assert matches[0].path == "/script.py"

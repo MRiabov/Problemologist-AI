@@ -6,9 +6,10 @@ from controller.agent.initialization import initialize_agent_files
 
 
 @pytest.mark.asyncio
-async def test_initialize_agent_files_engineer():
+async def test_initialize_agent_files_engineer_coder():
     # Setup
     mock_backend = MagicMock()
+    mock_backend.als_info = AsyncMock(return_value=[])
     mock_backend.awrite = AsyncMock()
 
     # Execute
@@ -16,12 +17,26 @@ async def test_initialize_agent_files_engineer():
 
     # Assert
     # Verify specific files are written
-    # plan.md, todo.md, journal.md
+    # todo.md, journal.md
 
     # We can't easily check the content without reading the actual files,
     # but we can check the target paths.
 
     # Check that awrite was called for expected files
+    written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
+    assert "todo.md" in written_files
+    assert "journal.md" in written_files
+    assert "plan.md" not in written_files
+
+
+@pytest.mark.asyncio
+async def test_initialize_agent_files_engineer_planner():
+    mock_backend = MagicMock()
+    mock_backend.als_info = AsyncMock(return_value=[])
+    mock_backend.awrite = AsyncMock()
+
+    await initialize_agent_files(mock_backend, "engineer_planner")
+
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
     assert "plan.md" in written_files
     assert "todo.md" in written_files
@@ -32,6 +47,7 @@ async def test_initialize_agent_files_engineer():
 async def test_initialize_agent_files_benchmark():
     # Setup
     mock_backend = MagicMock()
+    mock_backend.als_info = AsyncMock(return_value=[])
     mock_backend.awrite = AsyncMock()
 
     # Execute
@@ -49,6 +65,7 @@ async def test_initialize_agent_files_benchmark():
 async def test_initialize_agent_files_support():
     # Setup
     mock_backend = MagicMock()
+    mock_backend.als_info = AsyncMock(return_value=[])
     mock_backend.awrite = AsyncMock()
 
     # Execute
@@ -58,3 +75,21 @@ async def test_initialize_agent_files_support():
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
     assert "journal.md" in written_files
     assert "plan.md" not in written_files
+
+
+@pytest.mark.asyncio
+async def test_initialize_agent_files_respects_existing_paths_with_leading_slash():
+    mock_backend = MagicMock()
+    mock_backend.als_info = AsyncMock(
+        side_effect=[
+            [{"path": "/objectives.yaml", "is_dir": False}],
+            [],
+        ]
+    )
+    mock_backend.awrite = AsyncMock()
+
+    await initialize_agent_files(mock_backend, "benchmark_planner", overwrite=False)
+
+    written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
+    assert "objectives.yaml" not in written_files
+    assert "plan.md" in written_files
