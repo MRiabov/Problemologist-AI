@@ -428,7 +428,7 @@ class FilesystemRouter:
         results = self.local_backend.grep_raw(pattern, path, glob)
         if isinstance(results, str):
             # Error from local backend, but we might still want to search mounts
-            logger.error("local_grep_failed", error=results)
+            logger.warning("local_grep_failed", error=results)
             results = []
 
         # 2. Search mounted directories

@@ -153,7 +153,7 @@ def analyze_3dp(
         cost_breakdown = calculate_3dp_cost(part, config, quantity=quantity)
         unit_cost = cost_breakdown.unit_cost
     except Exception as e:
-        logger.error("3dp_cost_calculation_failed", error=str(e))
+        logger.warning("3dp_cost_calculation_failed", error=str(e))
         unit_cost = 0.0
         cost_breakdown = None
 

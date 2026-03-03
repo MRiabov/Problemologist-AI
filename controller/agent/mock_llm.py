@@ -36,7 +36,7 @@ class MockDSPyLM(dspy.LM):
                 data = yaml.safe_load(f)
                 return data.get("scenarios", {})
         except Exception as e:
-            logger.error("mock_responses_yaml_load_failed", error=str(e))
+            logger.warning("mock_responses_yaml_load_failed", error=str(e))
             return {}
 
     def __call__(
@@ -131,7 +131,11 @@ class MockDSPyLM(dspy.LM):
         elif node_key == "benchmark_reviewer":
             lookup_key = "reviewer"
             sig_lookup = "reviewer"
-        elif node_key in {"plan_reviewer", "execution_reviewer"}:
+        elif node_key in {
+            "plan_reviewer",
+            "execution_reviewer",
+            "electronics_reviewer",
+        }:
             lookup_key = "reviewer"
             sig_lookup = "reviewer"
 
@@ -180,7 +184,7 @@ class MockDSPyLM(dspy.LM):
         # DSPy may invoke LM multiple times between tool executions.
         tool_calls = node_data.get("tool_calls", [])
         if count > 5 and (not tool_calls or completed_tools >= len(tool_calls)):
-            logger.warning("mock_dspy_lm_loop_detected", node=lookup_key, count=count)
+            logger.error("mock_dspy_lm_loop_detected", node=lookup_key, count=count)
             return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
 
         # Only force finish on observation when explicit tool calls are exhausted.
@@ -449,6 +453,7 @@ class MockDSPyLM(dspy.LM):
             node_key == "reviewer"
             or node_key == "plan_reviewer"
             or node_key == "execution_reviewer"
+            or node_key == "electronics_reviewer"
         ):
             resp["review"] = node_data.get(
                 "review",

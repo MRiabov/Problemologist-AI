@@ -96,7 +96,7 @@ class GenesisBackend(PhysicsBackend):
                         continue
 
                     if backend == gs.gpu:
-                        logger.warning(
+                        logger.error(
                             "genesis_gpu_init_failed_falling_back_to_cpu", error=str(e)
                         )
                         backend = gs.cpu
@@ -110,10 +110,10 @@ class GenesisBackend(PhysicsBackend):
                             )
                             break
                         except Exception as e2:
-                            logger.error("genesis_init_failed", error=str(e2))
+                            logger.warning("genesis_init_failed", error=str(e2))
                             raise
                     else:
-                        logger.error("genesis_init_failed", error=str(e))
+                        logger.warning("genesis_init_failed", error=str(e))
                         raise
 
     def _load_mfg_config(self, config_dir: Optional["Path"] = None):
@@ -569,7 +569,7 @@ class GenesisBackend(PhysicsBackend):
                 self.scene.build(n_envs=1)
             except Exception as e:
                 if "already built" not in str(e).lower():
-                    logger.error("genesis_build_failed", error=str(e))
+                    logger.warning("genesis_build_failed", error=str(e))
                     raise
             self._is_built = True
 
@@ -655,7 +655,7 @@ class GenesisBackend(PhysicsBackend):
                 )
 
         except Exception as e:
-            logger.error("genesis_step_failed", error=str(e))
+            logger.warning("genesis_step_failed", error=str(e))
             return StepResult(
                 time=self.current_time, success=False, failure_reason=str(e)
             )
@@ -1094,7 +1094,7 @@ class GenesisBackend(PhysicsBackend):
         elif hasattr(entity, "set_dofs_force"):
             entity.set_dofs_force(forces)
         else:
-            logger.warning("entity_missing_force_control_method", entity=str(entity))
+            logger.error("entity_missing_force_control_method", entity=str(entity))
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value

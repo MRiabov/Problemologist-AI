@@ -56,7 +56,7 @@ class ConnectionManager:
                     break
 
             if found_as_str:
-                logger.warning(
+                logger.error(
                     "broadcast_id_type_mismatch_detected",
                     episode_id=str(episode_id),
                     id_type=type(episode_id).__name__,
@@ -77,7 +77,7 @@ class ConnectionManager:
             try:
                 await connection.send_json(message)
             except Exception as e:
-                logger.error(
+                logger.warning(
                     "broadcast_failed", error=str(e), episode_id=str(episode_id)
                 )
                 dead_connections.append(connection)

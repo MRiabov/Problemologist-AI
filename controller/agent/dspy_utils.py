@@ -143,7 +143,7 @@ def evaluate_formula(formula: str, context: dict) -> float:
         allowed_names.update(context)
         return float(eval(formula, {"__builtins__": {}}, allowed_names))
     except Exception as e:
-        logger.error("formula_eval_failed", formula=formula, error=str(e))
+        logger.warning("formula_eval_failed", formula=formula, error=str(e))
         return 0.0
 
 

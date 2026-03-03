@@ -44,5 +44,5 @@ def commit_all(path: Path, message: str) -> str | None:
         commit = repo.index.commit(message)
         return commit.hexsha
     except Exception as e:
-        logger.error("git_commit_failed", error=str(e))
+        logger.warning("git_commit_failed", error=str(e))
         return None

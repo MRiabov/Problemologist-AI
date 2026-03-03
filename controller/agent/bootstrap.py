@@ -59,7 +59,7 @@ class AgentModule(dspy.Module):
             self.tools = get_engineer_tools(self.fs, self.session_id)
         else:
             # Default fallback
-            logger.warning("unknown_agent_type_fallback_coder", agent_name=agent_name)
+            logger.error("unknown_agent_type_fallback_coder", agent_name=agent_name)
             self.signature = CoderSignature.with_instructions(
                 self.pm.render("engineer")
             )

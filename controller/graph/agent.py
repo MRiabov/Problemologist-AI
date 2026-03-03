@@ -30,5 +30,5 @@ def create_agent_graph(
         # Specialized COTS search agent
         return create_cots_search_agent(settings.llm_model), None
 
-    logger.warning("unknown_agent_name_falling_back_to_engineer", agent_name=agent_name)
+    logger.error("unknown_agent_name_falling_back_to_engineer", agent_name=agent_name)
     return engineering_graph, None

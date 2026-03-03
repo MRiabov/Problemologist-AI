@@ -413,7 +413,7 @@ async def run_generation_session(
             app, initial_state, session_id, prompt
         )
     except Exception as e:
-        logger.error("generation_session_failed", session_id=session_id, error=str(e))
+        logger.warning("generation_session_failed", session_id=session_id, error=str(e))
         initial_state.session.status = SessionStatus.FAILED
         # Update DB (Episode) to failed
         async with session_factory() as db:
@@ -521,7 +521,7 @@ async def _persist_session_assets(
                 )
                 logger.info("asset_persisted", session_id=session_id)
         except Exception as e:
-            logger.error("final_asset_persistence_failed", error=str(e))
+            logger.warning("final_asset_persistence_failed", error=str(e))
 
     # 2. Real-time file sync (Asset table + Broadcast)
     # Allow this during PLANNED (pause) or ACCEPTED (completion)
@@ -795,6 +795,6 @@ async def continue_generation_session(
 
         return final_state
     except Exception as e:
-        logger.error("resume_failed", error=str(e))
+        logger.warning("resume_failed", error=str(e))
 
     return None

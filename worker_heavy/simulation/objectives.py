@@ -253,7 +253,7 @@ class ObjectiveEvaluator:
             if mat_def and mat_def.ultimate_stress_pa:
                 is_broken = False
                 if np.isnan(summary.max_von_mises_pa):
-                    logger.warning("part_breakage_nan_detected", part=label)
+                    logger.error("part_breakage_nan_detected", part=label)
                     is_broken = True
                 elif summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
                     is_broken = True

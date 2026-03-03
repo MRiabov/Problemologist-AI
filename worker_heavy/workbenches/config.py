@@ -35,7 +35,7 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
         with config_path.open() as f:
             data = yaml.safe_load(f)
     except Exception as e:
-        logger.error("config_load_failed", error=str(e))
+        logger.warning("config_load_failed", error=str(e))
         raise
 
     try:
@@ -48,5 +48,5 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
         logger.info("manufacturing_config_loaded", methods=methods)
         return config
     except Exception as e:
-        logger.error("config_validation_failed", error=str(e))
+        logger.warning("config_validation_failed", error=str(e))
         raise

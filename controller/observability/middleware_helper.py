@@ -61,7 +61,7 @@ async def broadcast_file_update(episode_id_str: str, path: str, content: str):
         # If session_id is not a UUID, we can't broadcast (standard in some dev/test setups)
         pass
     except Exception as e:
-        logger.error("broadcast_file_update_failed", error=str(e), path=path)
+        logger.warning("broadcast_file_update_failed", error=str(e), path=path)
         # Don't fail the write operation if broadcast fails
         pass
 

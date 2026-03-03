@@ -68,7 +68,7 @@ async def get_router(x_session_id: str = Header(...)):
             session_id=x_session_id, base_dir=settings.sessions_dir
         )
     except Exception as e:
-        logger.error("router_creation_failed", error=str(e))
+        logger.warning("router_creation_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
@@ -90,7 +90,7 @@ async def api_inspect_topology(
         props = inspect_topology(target_id=request.target_id, script_path=str(local_p))
         return InspectTopologyResponse(success=True, properties=props)
     except Exception as e:
-        logger.error("api_inspect_topology_failed", error=str(e))
+        logger.warning("api_inspect_topology_failed", error=str(e))
         return InspectTopologyResponse(success=False, message=str(e))
 
 
@@ -109,7 +109,7 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logger.error("api_ls_failed", path=request.path, error=str(e))
+        logger.warning("api_ls_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -122,7 +122,7 @@ async def file_exists(request: ReadFileRequest, fs_router=Depends(get_router)):
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logger.error("api_exists_failed", path=request.path, error=str(e))
+        logger.warning("api_exists_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -137,7 +137,7 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logger.error("api_read_failed", path=request.path, error=str(e))
+        logger.warning("api_read_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -150,7 +150,7 @@ async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
     except (WritePermissionError, PermissionError) as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logger.error("api_write_failed", path=request.path, error=str(e))
+        logger.warning("api_write_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -177,7 +177,7 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("api_edit_failed", path=request.path, error=str(e))
+        logger.warning("api_edit_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -199,7 +199,7 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("api_upload_file_failed", path=path, error=str(e))
+        logger.warning("api_upload_file_failed", path=path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -214,7 +214,7 @@ async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logger.error("api_read_blob_failed", path=request.path, error=str(e))
+        logger.warning("api_read_blob_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -233,7 +233,7 @@ async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("api_grep_failed", pattern=request.pattern, error=str(e))
+        logger.warning("api_grep_failed", pattern=request.pattern, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -275,7 +275,7 @@ async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router))
     except (WritePermissionError, PermissionError) as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
-        logger.error("api_delete_failed", path=request.path, error=str(e))
+        logger.warning("api_delete_failed", path=request.path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -286,7 +286,7 @@ async def git_init(fs_router=Depends(get_router)):
         init_workspace_repo(fs_router.local_backend.root)
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except Exception as e:
-        logger.error("api_git_init_failed", error=str(e))
+        logger.warning("api_git_init_failed", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -308,7 +308,7 @@ async def git_commit(request: GitCommitRequest, fs_router=Depends(get_router)):
             message="No changes to commit",
         )
     except Exception as e:
-        logger.error("api_git_commit_failed", error=str(e))
+        logger.warning("api_git_commit_failed", error=str(e))
         return GitCommitResponse(success=False, message=str(e))
 
 
@@ -397,7 +397,7 @@ async def get_asset(path: str, fs_router=Depends(get_router)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("api_asset_failed", path=path, error=str(e))
+        logger.warning("api_asset_failed", path=path, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -478,7 +478,7 @@ async def api_lint(
             errors=[{"message": f"File not found: {request.path}"}],
         )
     except Exception as e:
-        logger.error("api_lint_failed", error=str(e))
+        logger.warning("api_lint_failed", error=str(e))
         return LintResponse(
             success=False,
             errors=[{"message": str(e)}],

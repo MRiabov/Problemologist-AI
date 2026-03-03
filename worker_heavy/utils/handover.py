@@ -126,7 +126,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     )
 
     if not validation_result.is_manufacturable:
-        logger.error("submission_dfm_failed", violations=validation_result.violations)
+        logger.warning("submission_dfm_failed", violations=validation_result.violations)
         raise ValueError(f"Submission rejected (DFM): {validation_result.violations}")
 
     if constraints:
