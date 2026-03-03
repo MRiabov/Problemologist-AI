@@ -361,6 +361,7 @@ class EpisodeMetadata(BaseModel):
     """Structured metadata for episodes and benchmark sessions."""
 
     worker_session_id: str | None = None
+    benchmark_id: str | None = None
     custom_objectives: CustomObjectives | None = None
     detailed_status: str | None = None  # Using str to avoid circular deps if needed
     error: str | None = None
@@ -375,6 +376,29 @@ class EpisodeMetadata(BaseModel):
     validation_logs: list[str] = Field(default_factory=list)
     prompt: str | None = None
     plan: dict[str, Any] | None = None
+    additional_info: dict[str, Any] = Field(default_factory=dict)
+
+
+class TraceMetadata(BaseModel):
+    """Structured metadata for individual traces (tool calls, nodes, etc.)."""
+
+    tool_name: str | None = None
+    tool_args: dict[str, Any] | None = None
+    observation: str | None = None
+    prediction: str | None = None
+    error: str | None = None
+
+    # Simulation specific
+    simulation_run_id: str | None = None
+    backend: SimulatorBackendType | None = None
+
+    # COTS specific
+    cots_query_id: str | None = None
+
+    # Review specific
+    review_id: str | None = None
+    decision: ReviewDecision | None = None
+
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
