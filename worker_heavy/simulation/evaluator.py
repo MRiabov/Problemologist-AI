@@ -94,6 +94,10 @@ class SuccessEvaluator:
                 self.motor_overload_timer[name] = 0
         return False
 
+    def reset(self):
+        """Reset internal timers and state."""
+        self.motor_overload_timer = {}
+
     def is_in_zone(
         self, pos: np.ndarray, zone_pos: np.ndarray, zone_size: np.ndarray
     ) -> bool:
