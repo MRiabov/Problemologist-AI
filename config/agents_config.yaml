@@ -11,7 +11,7 @@ defaults:
 agents:
   engineering_planner:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md"]
       deny: []
     write:
       allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
@@ -19,7 +19,7 @@ agents:
 
   engineering_mechanical_coder:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: []
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
@@ -27,7 +27,7 @@ agents:
 
   engineering_electrical_coder:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: []
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md", "schematic_*.png", "schematic_*.pdf", "wiring_*.png"]
@@ -35,7 +35,7 @@ agents:
 
   benchmark_cad_coder:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: []
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
@@ -43,7 +43,7 @@ agents:
 
   engineering_reviewer:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: []
     write:
       allow: ["reviews/review-round-*/review.md"]
@@ -51,7 +51,7 @@ agents:
 
   benchmark_planner:
     read:
-      allow: ["/", ".", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md", "assets/**", "renders/**", "reviews/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md", "assets/**", "renders/**", "reviews/**"]
       deny: []
     write:
       allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
