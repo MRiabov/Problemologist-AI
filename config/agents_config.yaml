@@ -25,7 +25,23 @@ agents:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
 
+  engineer_coder:
+    read:
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      deny: []
+    write:
+      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
+      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+
   engineering_electrical_coder:
+    read:
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      deny: []
+    write:
+      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md", "schematic_*.png", "schematic_*.pdf", "wiring_*.png"]
+      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+
+  electronics_engineer:
     read:
       allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: []
