@@ -198,6 +198,7 @@ These are end-to-end frontend integration tests (browser + real APIs + real arti
 This category is functional-only: do not add pixel-perfect or visual-style assertions.
 To ensure stability and prevent Hot Module Replacement (HMR) reloads from interfering with tests, the frontend must be built and served as a static distribution on port **15173** (using `npx serve -s dist -p 15173`). All frontend service integration tests must standardize on this port.
 Additionally, we use test selectors for robust and easy frontend visibility testing like `data-testid="sidebar-resizer"`.
+Frontend integration tests run in strict browser-error mode: any significant unexpected `console.error` or `pageerror` event fails the test run. Known benign noise must be explicitly allowlisted (for example with test markers or configured regex allowlists), not ignored by default.
 
 | ID | Priority | Test | Required assertions |
 |---|---|---|---|
