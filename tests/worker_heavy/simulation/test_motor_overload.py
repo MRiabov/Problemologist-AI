@@ -3,8 +3,8 @@
 import pytest
 
 from shared.simulation.schemas import SimulatorBackendType
+from shared.config.simulation import simulation_settings
 from worker_heavy.simulation.loop import (
-    MOTOR_OVERLOAD_THRESHOLD_SECONDS,
     SimulationLoop,
 )
 
@@ -102,4 +102,4 @@ class TestMotorOverload:
 
     def test_threshold_constant_is_2_seconds(self):
         """Verify the overload threshold matches architecture spec."""
-        assert MOTOR_OVERLOAD_THRESHOLD_SECONDS == 2.0
+        assert simulation_settings.motor_overload_threshold_seconds == 2.0
