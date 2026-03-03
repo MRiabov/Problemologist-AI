@@ -49,7 +49,7 @@ AGENT_SPECS: dict[str, AgentEvalSpec] = {
     # Mechanical engineering roles
     "engineer_planner": AgentEvalSpec(
         mode="agent",
-        request_agent_name="engineer_coder",
+        request_agent_name="engineer_planner",
         required_trace_names=("planner",),
     ),
     "engineer_coder": AgentEvalSpec(
@@ -65,7 +65,7 @@ AGENT_SPECS: dict[str, AgentEvalSpec] = {
     # Electrical engineering roles inside the unified engineer graph
     "electronics_planner": AgentEvalSpec(
         mode="agent",
-        request_agent_name="engineer_coder",
+        request_agent_name="engineer_planner",
         required_trace_names=("electronics_planner",),
     ),
     "electronics_engineer": AgentEvalSpec(
@@ -297,6 +297,20 @@ electronics_requirements:
                                 seen_trace_ids.add(trace_id)
 
                     if status == EpisodeStatus.PLANNED and spec.mode == "benchmark":
+                        if agent_name == "benchmark_planner":
+                            episode = await _fetch_episode(client, episode_id)
+                            missing_traces = _missing_required_traces(
+                                spec.required_trace_names, episode
+                            )
+                            if missing_traces:
+                                print(
+                                    f"  [{task_id}] FAILED - missing traces: {', '.join(missing_traces)}"
+                                )
+                            else:
+                                print(f"  [{task_id}] PLANNED")
+                                success = True
+                            break
+
                         print(f"  [{task_id}] PLANNED. Confirming...")
                         confirm_url = f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
                         await client.post(confirm_url)
@@ -366,6 +380,12 @@ async def main():
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Print backend traces during polling"
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=1,
+        help="Max number of eval tasks to run concurrently (default: 1 for real-LLM stability)",
     )
     args = parser.parse_args()
 
@@ -437,10 +457,16 @@ async def main():
     for agent, dataset in datasets.items():
         print(f"Starting evals for {agent}. Count: {len(dataset)}")
         for item in dataset:
-            tasks.append(run_single_eval(item, agent, stats, verbose=args.verbose))
+            tasks.append((item, agent))
 
     if tasks:
-        await asyncio.gather(*tasks)
+        semaphore = asyncio.Semaphore(max(1, args.concurrency))
+
+        async def _guarded(item: dict[str, Any], agent: str):
+            async with semaphore:
+                await run_single_eval(item, agent, stats, verbose=args.verbose)
+
+        await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))
     else:
         print("No tasks to run.")
 

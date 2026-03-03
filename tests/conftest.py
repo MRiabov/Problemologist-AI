@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 
 import httpx
 import pytest
@@ -9,6 +10,44 @@ SERVICES = [
     "http://127.0.0.1:18001",  # Worker Light
     "http://127.0.0.1:18002",  # Worker Heavy
 ]
+
+# Temporary baseline allowlist for known frontend noise.
+# Goal: keep strict mode actionable while we iteratively eliminate existing issues.
+DEFAULT_BROWSER_ERROR_ALLOWLIST = [
+    r"Failed to parse assembly definition for electronics kb",
+    r"Failed to fetch episodes",
+    r"Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    r"Connection check failed: TypeError: Failed to fetch",
+    r"Polling failed TypeError: Failed to fetch",
+    r"WebSocket connection to .+ failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED",
+    r"WebSocket error Event",
+]
+
+
+def _compile_browser_error_allowlist() -> list[re.Pattern[str]]:
+    """
+    Build an allowlist of browser error regexes.
+    Add custom patterns with BROWSER_ERROR_ALLOWLIST_REGEXES separated by `;;`.
+    """
+    raw_patterns = [*DEFAULT_BROWSER_ERROR_ALLOWLIST]
+    raw_patterns.extend(
+        p.strip()
+        for p in os.getenv("BROWSER_ERROR_ALLOWLIST_REGEXES", "").split(";;")
+        if p.strip()
+    )
+    return [re.compile(pattern, re.IGNORECASE) for pattern in raw_patterns]
+
+
+def _is_allowed_browser_error(text: str, allowlist: list[re.Pattern[str]]) -> bool:
+    return any(pattern.search(text) for pattern in allowlist)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Expose test call outcome on node so fixtures can adjust teardown behavior."""
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, f"rep_{rep.when}", rep)
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +66,10 @@ def capture_frontend_logs(request):
     test_id = request.node.nodeid
     log_dir = "logs/integration_tests"
     log_file = os.path.join(log_dir, "browser_console.log")
+    allow_browser_errors = request.node.get_closest_marker("allow_browser_errors")
+    strict_mode = os.getenv("STRICT_BROWSER_ERRORS", "1") == "1"
+    allowlist = _compile_browser_error_allowlist()
+    unexpected_browser_errors: list[str] = []
 
     # Ensure log directory exists
     os.makedirs(log_dir, exist_ok=True)
@@ -37,11 +80,18 @@ def capture_frontend_logs(request):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         with open(log_file, "a") as f:
             f.write(f"[{timestamp}] [{test_id}] [{msg.type.upper()}] {msg.text}\n")
+        if msg.type == "error":
+            text = msg.text or ""
+            if not _is_allowed_browser_error(text, allowlist):
+                unexpected_browser_errors.append(f"console.error: {text}")
 
     def handle_error(exc):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        error_text = str(exc)
         with open(log_file, "a") as f:
-            f.write(f"[{timestamp}] [{test_id}] [BROWSER_EXCEPTION] {exc}\n")
+            f.write(f"[{timestamp}] [{test_id}] [BROWSER_EXCEPTION] {error_text}\n")
+        if not _is_allowed_browser_error(error_text, allowlist):
+            unexpected_browser_errors.append(f"pageerror: {error_text}")
 
     page.on("console", handle_console)
     page.on("pageerror", handle_error)
@@ -54,6 +104,25 @@ def capture_frontend_logs(request):
 
     with open(log_file, "a") as f:
         f.write(f"--- FINISH TEST BROWSER LOG: {test_id} ---\n")
+
+    rep_call = getattr(request.node, "rep_call", None)
+    test_call_failed = bool(rep_call and rep_call.failed)
+    if (
+        strict_mode
+        and not allow_browser_errors
+        and not test_call_failed
+        and unexpected_browser_errors
+    ):
+        sample = "\n".join(f"- {line}" for line in unexpected_browser_errors[:10])
+        overflow = len(unexpected_browser_errors) - 10
+        suffix = f"\n- ... and {overflow} more" if overflow > 0 else ""
+        pytest.fail(
+            "Unexpected browser errors detected.\n"
+            f"{sample}{suffix}\n"
+            f"See detailed browser logs in {log_file}.\n"
+            "To allow expected noise, use marker @pytest.mark.allow_browser_errors "
+            "or set BROWSER_ERROR_ALLOWLIST_REGEXES."
+        )
 
 
 @pytest.fixture(autouse=True)
