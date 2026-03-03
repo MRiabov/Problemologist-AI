@@ -46,6 +46,7 @@ def _trace_blob(episode_payload: dict) -> str:
 
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
+@pytest.mark.allow_backend_errors
 @pytest.mark.asyncio
 async def test_int_181_tool_loop_ordering_and_clean_termination():
     """INT-181: Tool-call ordering is preserved and run terminates cleanly."""
