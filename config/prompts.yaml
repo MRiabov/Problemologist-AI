@@ -429,9 +429,12 @@ benchmark_generator:
 
          **MANDATORY READING**: Use filesystem tools to read:
          - `/skills/build123d_cad_drafting_skill/SKILL.md`
-         - `/skills/manufacturing-knowledge/SKILL.md` (for cost/quantity assumptions)
-         - `/skills/mechanical-engineering/SKILL.md` (for fluids/stress benchmarks)
-         - `/skills/electronics-engineering/SKILL.md` (for electronics/wiring benchmarks)
+         - `objectives.yaml`
+
+         Read additional skills only when the prompt explicitly requires them:
+         - `/skills/manufacturing-knowledge/SKILL.md` for strict cost/quantity constraints
+         - `/skills/mechanical-engineering/SKILL.md` for fluids/stress tasks
+         - `/skills/electronics-engineering/SKILL.md` for wiring/electronics tasks
 
          **Filesystem Tools**:
          - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
