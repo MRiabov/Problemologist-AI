@@ -94,11 +94,11 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
         logger.info("objectives_yaml_valid")
         return True, objectives
     except yaml.YAMLError as e:
-        logger.error("objectives_yaml_parse_error", error=str(e))
+        logger.warning("objectives_yaml_parse_error", error=str(e))
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("objectives_yaml_validation_error", errors=errors)
+        logger.warning("objectives_yaml_validation_error", errors=errors)
         for error in errors:
             emit_event(
                 LogicFailureEvent(
@@ -162,17 +162,17 @@ def validate_assembly_definition_yaml(
                     and comp.assembly_part_ref not in all_part_names
                 ):
                     msg = f"Electronic component '{comp.component_id}' references unknown part '{comp.assembly_part_ref}'"
-                    logger.error("electronics_reference_error", error=msg)
+                    logger.warning("electronics_reference_error", error=msg)
                     return False, [msg]
 
         logger.info("cost_estimation_yaml_valid")
         return True, estimation
     except yaml.YAMLError as e:
-        logger.error("cost_estimation_yaml_parse_error", error=str(e))
+        logger.warning("cost_estimation_yaml_parse_error", error=str(e))
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("cost_estimation_yaml_validation_error", errors=errors)
+        logger.warning("cost_estimation_yaml_validation_error", errors=errors)
         for error in errors:
             emit_event(
                 LogicFailureEvent(
@@ -227,11 +227,11 @@ def validate_review_frontmatter(
         logger.info("review_frontmatter_valid", decision=frontmatter.decision)
         return True, frontmatter
     except yaml.YAMLError as e:
-        logger.error("review_frontmatter_parse_error", error=str(e))
+        logger.warning("review_frontmatter_parse_error", error=str(e))
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("review_frontmatter_validation_error", errors=errors)
+        logger.warning("review_frontmatter_validation_error", errors=errors)
         return False, errors
 
 
@@ -262,11 +262,11 @@ def validate_plan_refusal(
         )
         return True, frontmatter
     except yaml.YAMLError as e:
-        logger.error("plan_refusal_parse_error", error=str(e))
+        logger.warning("plan_refusal_parse_error", error=str(e))
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("plan_refusal_validation_error", errors=errors)
+        logger.warning("plan_refusal_validation_error", errors=errors)
         return False, errors
 
 
@@ -407,7 +407,7 @@ def validate_plan_md_structure(
 
         result = validate_plan_md(content)
         if not result.is_valid:
-            logger.error("plan_md_missing_sections", missing=result.violations)
+            logger.warning("plan_md_missing_sections", missing=result.violations)
             for error in result.violations:
                 emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
             return False, result.violations
@@ -429,7 +429,7 @@ def validate_plan_md_structure(
             missing.append(section)
 
     if missing:
-        logger.error("plan_md_missing_sections", missing=missing)
+        logger.warning("plan_md_missing_sections", missing=missing)
         errors = [f"Missing required section: {s}" for s in missing]
         for error in errors:
             emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
@@ -501,7 +501,7 @@ def validate_immutability(path: Path) -> tuple[bool, str | None]:
                     f"Immutability violation: {path.name} has been modified "
                     "from the benchmark baseline."
                 )
-                logger.error("immutability_violation", path=str(path))
+                logger.warning("immutability_violation", path=str(path))
                 emit_event(
                     LogicFailureEvent(
                         file_path=path.name,
@@ -521,6 +521,6 @@ def validate_immutability(path: Path) -> tuple[bool, str | None]:
         # Git not installed or not a repo, skip check
         pass
     except Exception as e:
-        logger.error("immutability_check_failed_internal", error=str(e))
+        logger.warning("immutability_check_failed_internal", error=str(e))
 
     return True, None
