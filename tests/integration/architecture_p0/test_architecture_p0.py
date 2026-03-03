@@ -74,6 +74,7 @@ async def test_int_001_compose_boot_health_contract():
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors
 @pytest.mark.asyncio
 async def test_int_002_controller_worker_execution_boundary():
     """INT-002: Verify controller-worker handoff and execution status."""

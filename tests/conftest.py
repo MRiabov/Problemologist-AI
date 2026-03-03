@@ -79,6 +79,11 @@ def _is_allowed_browser_error(text: str, allowlist: list[re.Pattern[str]]) -> bo
     return any(pattern.search(text) for pattern in allowlist)
 
 
+def _has_marker(request: pytest.FixtureRequest, marker_name: str) -> bool:
+    """Robust marker presence check for fixture gating."""
+    return any(marker.name == marker_name for marker in request.node.iter_markers())
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """Expose test call outcome on node so fixtures can adjust teardown behavior."""
@@ -103,7 +108,7 @@ def capture_frontend_logs(request):
     test_id = request.node.nodeid
     log_dir = "logs/integration_tests"
     log_file = os.path.join(log_dir, "browser_console.log")
-    allow_browser_errors = request.node.get_closest_marker("allow_browser_errors")
+    allow_browser_errors = _has_marker(request, "allow_browser_errors")
     strict_mode = os.getenv("STRICT_BROWSER_ERRORS", "1") == "1"
     allowlist = _compile_browser_error_allowlist()
     unexpected_browser_errors: list[str] = []
@@ -177,7 +182,7 @@ def capture_backend_errors(request):
         return
 
     strict_mode = os.getenv("STRICT_BACKEND_ERRORS", "1") == "1"
-    allow_backend_errors = request.node.get_closest_marker("allow_backend_errors")
+    allow_backend_errors = _has_marker(request, "allow_backend_errors")
     allowlist = _compile_backend_error_allowlist()
     start_offsets: dict[str, int] = {}
 
