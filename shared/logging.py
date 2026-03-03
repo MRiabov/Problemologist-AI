@@ -22,6 +22,7 @@ def configure_logging(service_name: str):
 
     # Extra debug log file
     extra_debug_log = os.getenv("EXTRA_DEBUG_LOG")
+    extra_error_log = os.getenv("EXTRA_ERROR_LOG")
 
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -88,6 +89,16 @@ def configure_logging(service_name: str):
         root_logger.setLevel(logging.DEBUG)
     else:
         root_logger.setLevel(log_level_num)
+
+    # Optional dedicated file handler for ERROR+ logs only.
+    # This provides a high-signal stream for integration test gating.
+    if extra_error_log:
+        extra_error_log_abs = os.path.abspath(extra_error_log)
+        os.makedirs(os.path.dirname(extra_error_log_abs), exist_ok=True)
+        error_handler = logging.FileHandler(extra_error_log_abs)
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(logging.Formatter("%(message)s"))
+        root_logger.addHandler(error_handler)
 
     # Ensure uvicorn loggers follow the global level and propagate to root
     for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):

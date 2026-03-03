@@ -509,12 +509,16 @@ def _link_current_logs(run_playwright: bool) -> None:
     links = [
         ("integration_tests/controller.log", "controller.log"),
         ("integration_tests/controller_debug.log", "controller_debug.log"),
+        ("integration_tests/controller_errors.log", "controller_errors.log"),
         ("integration_tests/worker_light.log", "worker_light.log"),
         ("integration_tests/worker_light_debug.log", "worker_light_debug.log"),
+        ("integration_tests/worker_light_errors.log", "worker_light_errors.log"),
         ("integration_tests/worker_heavy.log", "worker_heavy.log"),
         ("integration_tests/worker_heavy_debug.log", "worker_heavy_debug.log"),
+        ("integration_tests/worker_heavy_errors.log", "worker_heavy_errors.log"),
         ("integration_tests/temporal_worker.log", "temporal_worker.log"),
         ("integration_tests/temporal_worker_debug.log", "temporal_worker_debug.log"),
+        ("integration_tests/temporal_worker_errors.log", "temporal_worker_errors.log"),
     ]
     if run_playwright:
         links.extend(
@@ -719,6 +723,7 @@ def _run_integration_command(
                 env_updates={
                     "WORKER_TYPE": "light",
                     "EXTRA_DEBUG_LOG": str(log_dir / "worker_light_debug.log"),
+                    "EXTRA_ERROR_LOG": str(log_dir / "worker_light_errors.log"),
                 },
                 pid_file=repo_root / "logs" / "worker_light.pid",
             )
@@ -741,6 +746,7 @@ def _run_integration_command(
                 env_updates={
                     "WORKER_TYPE": "heavy",
                     "EXTRA_DEBUG_LOG": str(log_dir / "worker_heavy_debug.log"),
+                    "EXTRA_ERROR_LOG": str(log_dir / "worker_heavy_errors.log"),
                 },
                 pid_file=repo_root / "logs" / "worker_heavy.pid",
             )
@@ -760,7 +766,10 @@ def _run_integration_command(
                     "18000",
                 ],
                 log_file=log_dir / "controller.log",
-                env_updates={"EXTRA_DEBUG_LOG": str(log_dir / "controller_debug.log")},
+                env_updates={
+                    "EXTRA_DEBUG_LOG": str(log_dir / "controller_debug.log"),
+                    "EXTRA_ERROR_LOG": str(log_dir / "controller_errors.log"),
+                },
                 pid_file=repo_root / "logs" / "controller.pid",
             )
         )
@@ -775,6 +784,7 @@ def _run_integration_command(
                 env_updates={
                     "PYTHONPATH": combined_pythonpath,
                     "EXTRA_DEBUG_LOG": str(log_dir / "temporal_worker_debug.log"),
+                    "EXTRA_ERROR_LOG": str(log_dir / "temporal_worker_errors.log"),
                 },
                 pid_file=repo_root / "logs" / "temporal_worker.pid",
             )
