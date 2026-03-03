@@ -1,3 +1,10 @@
+import os
+
+# Set headless environment variables before importing genesis
+os.environ["PYGLET_HEADLESS"] = "1"
+if "PYOPENGL_PLATFORM" not in os.environ:
+    os.environ["PYOPENGL_PLATFORM"] = "egl"
+
 import asyncio
 import tempfile
 from pathlib import Path
