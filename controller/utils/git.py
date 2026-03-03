@@ -109,7 +109,7 @@ class GitManager:
             with dspy.settings.context(lm=lm):
                 resolver = dspy.ReAct(
                     GitResolver, tools=[]
-                )  # FIXME should have all engineering tools. Else how would it edit?
+                )
                 prediction = resolver(conflict_content=content)
                 resolved_content = prediction.resolved_content
 

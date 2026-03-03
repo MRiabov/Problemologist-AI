@@ -55,13 +55,16 @@ async def test_architect_node_logic(
     mock_fs.read_file = AsyncMock(side_effect=mock_read_file)
     mock_fs.write_file = AsyncMock(return_value=True)
 
+    import asyncio
     mock_ctx = SharedNodeContext(
         worker_light_url="http://worker",
         session_id="test-session",
+        episode_id="test-session",
         pm=mock_pm,
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
+        main_loop=asyncio.get_event_loop(),
     )
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
@@ -97,13 +100,16 @@ async def test_architect_node_fallback(
     mock_fs.read_file = AsyncMock(return_value="")
     mock_fs.write_file = AsyncMock(return_value=True)
 
+    import asyncio
     mock_ctx = SharedNodeContext(
         worker_light_url="http://worker",
         session_id="test-session",
+        episode_id="test-session",
         pm=mock_pm,
         dspy_lm=MagicMock(),
         worker_client=MagicMock(),
         fs=mock_fs,
+        main_loop=asyncio.get_event_loop(),
     )
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
