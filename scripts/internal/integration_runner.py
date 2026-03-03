@@ -156,7 +156,15 @@ def run_pytest_subprocess(
     if extra_env:
         env.update(extra_env)
 
-    process = subprocess.Popen(cmd, cwd=_repo_root(), env=env)
+    # Ensure log directory exists
+    log_file = _repo_root() / "logs" / "integration_test" / "full_test_output.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Use a shell string to pipe output to tee for both console and file logging
+    cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
+    full_cmd = f"{cmd_str} 2>&1 | tee {shlex.quote(str(log_file))}"
+
+    process = subprocess.Popen(full_cmd, cwd=_repo_root(), env=env, shell=True)
 
     def _forward_signal(sig: int, _: object) -> None:
         if process.poll() is None:
