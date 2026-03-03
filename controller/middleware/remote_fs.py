@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 from typing import Literal
 
@@ -100,10 +99,14 @@ class RemoteFilesystemMiddleware:
         """Check if action is allowed by policy."""
         if not self.policy.check_permission(self.agent_role, action, path):
             role = self.policy.ROLE_MAPPING.get(self.agent_role, self.agent_role)
-            agent_rules = self.policy.agents.get(role, {})
-            action_rules = agent_rules.get(action, {})
-            allowed = action_rules.get("allow", [])
-            denied = action_rules.get("deny", [])
+            agent_rules = self.policy.config.agents.get(role)
+            if agent_rules:
+                action_rules = getattr(agent_rules, action)
+            else:
+                action_rules = getattr(self.policy.config.defaults, action)
+
+            allowed = action_rules.allow
+            denied = action_rules.deny
 
             msg = (
                 f"Permission denied for role '{self.agent_role}' (mapped to '{role}') "
@@ -234,19 +237,18 @@ class RemoteFilesystemMiddleware:
                 try:
                     import yaml
 
-                    data = yaml.safe_load(content)
-                    if data and "cots_parts" in data:
+                    from shared.models.schemas import AssemblyDefinition
+
+                    data_raw = yaml.safe_load(content)
+                    data = AssemblyDefinition(**data_raw)
+                    if data.cots_parts:
                         from shared.observability.schemas import COTSSelectionEvent
 
-                        selected_ids = [
-                            p["part_id"] for p in data["cots_parts"] if "part_id" in p
-                        ]
+                        selected_ids = [p.part_id for p in data.cots_parts]
                         query_ids = [
-                            p["reproducibility"]["cots_query_id"]
-                            for p in data["cots_parts"]
-                            if "reproducibility" in p
-                            and p["reproducibility"]
-                            and "cots_query_id" in p["reproducibility"]
+                            p.reproducibility.cots_query_id
+                            for p in data.cots_parts
+                            if p.reproducibility and p.reproducibility.cots_query_id
                         ]
 
                         await record_events(

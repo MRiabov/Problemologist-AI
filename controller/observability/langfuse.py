@@ -150,8 +150,12 @@ async def calculate_and_report_automated_score(
         # 2. Get objectives for context if possible
         objectives_data = None
         try:
+            from shared.models.schemas import ObjectivesYaml
+
             content = await worker_client.read_file("objectives.yaml")
-            objectives_data = yaml.safe_load(content)
+            raw_data = yaml.safe_load(content)
+            obj_model = ObjectivesYaml(**raw_data)
+            objectives_data = obj_model.model_dump()
         except Exception:
             pass
 

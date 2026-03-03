@@ -11,8 +11,8 @@ from shared.enums import (
     ReviewDecision,
     TraceType,
 )
-from shared.models.steerability import CodeReference, GeometricSelection
 from shared.models.schemas import EpisodeMetadata, TraceMetadata
+from shared.models.steerability import CodeReference, GeometricSelection
 from shared.simulation.schemas import SimulatorBackendType
 
 

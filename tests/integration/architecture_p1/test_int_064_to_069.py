@@ -35,8 +35,8 @@ async def test_int_064_cots_metadata():
     """INT-064: COTS reproducibility metadata persistence."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Seed a part first to ensure search works
-        import sqlite3
         import json
+        import sqlite3
 
         conn = sqlite3.connect("parts.db")
         cursor = conn.cursor()

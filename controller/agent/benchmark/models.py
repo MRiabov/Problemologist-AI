@@ -1,6 +1,7 @@
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from shared.enums import SessionStatus
 from shared.simulation.schemas import (
@@ -19,6 +20,18 @@ class BenchmarkAsset(BaseModel):
     random_variants: list[UUID] = Field(default_factory=list)
     difficulty_score: float = 0.0
     metadata: AssetMetadata = Field(default_factory=AssetMetadata)
+
+
+class BenchmarkItem(BaseModel):
+    task: str | None = None
+    prompt: str | None = None
+    context: str | None = None
+    expected_criteria: str | list[str] | None = None
+    objectives: dict[str, Any] = Field(default_factory=dict)
+    goals: str | None = None
+    constraints: dict[str, Any] | None = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 class GenerationSession(BaseModel):

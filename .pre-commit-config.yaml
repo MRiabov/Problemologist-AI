@@ -3,7 +3,7 @@ repos:
     rev: v0.15.1
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --select=E9]
+        args: [--fix, --exit-non-zero-on-fix, "--select=E9,F,I"]
         files: \.py$
       - id: ruff-format
         files: \.py$

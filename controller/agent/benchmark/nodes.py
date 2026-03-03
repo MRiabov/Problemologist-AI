@@ -146,29 +146,32 @@ physics:
             )
             if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
                 try:
+                    from shared.models.schemas import ObjectivesYaml
+
                     obj_content = await self.ctx.worker_client.read_file(
                         OBJECTIVES_FILE
                     )
-                    obj_data = yaml.safe_load(obj_content)
-                    if not isinstance(obj_data, dict):
-                        obj_data = {}
-                    if "constraints" not in obj_data:
-                        obj_data["constraints"] = {}
+                    obj_data_raw = yaml.safe_load(obj_content)
+                    if not isinstance(obj_data_raw, dict):
+                        obj_data_raw = {}
+
+                    obj_data = ObjectivesYaml(**obj_data_raw)
+
                     # Update constraints based on custom objectives
                     if custom_objectives.max_unit_cost is not None:
-                        obj_data["constraints"]["max_unit_cost"] = (
+                        obj_data.constraints.max_unit_cost = (
                             custom_objectives.max_unit_cost
                         )
                     if custom_objectives.max_weight is not None:
-                        obj_data["constraints"]["max_weight"] = (
-                            custom_objectives.max_weight
-                        )
+                        obj_data.constraints.max_weight_g = custom_objectives.max_weight
                     if custom_objectives.target_quantity is not None:
-                        obj_data["constraints"]["target_quantity"] = (
+                        obj_data.constraints.target_quantity = (
                             custom_objectives.target_quantity
                         )
 
-                    new_content = yaml.dump(obj_data, sort_keys=False)
+                    new_content = yaml.dump(
+                        obj_data.model_dump(mode="json"), sort_keys=False
+                    )
                     await self.ctx.worker_client.write_file(
                         OBJECTIVES_FILE, new_content
                     )

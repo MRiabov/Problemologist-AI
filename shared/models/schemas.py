@@ -19,8 +19,8 @@ from pydantic import (
 
 from shared.enums import (
     BenchmarkRefusalReason,
-    ElectronicComponentType,
     ElectricalRefusalReason,
+    ElectronicComponentType,
     FluidEvalAt,
     FluidObjectiveType,
     FluidShapeType,
@@ -216,6 +216,56 @@ class RandomizationMeta(BaseModel):
 
     static_variation_id: str | None = None
     runtime_jitter_enabled: bool = True
+
+
+# =============================================================================
+# Simulation Scene Definition Models (Input)
+# =============================================================================
+
+
+class EntityDefinition(BaseModel):
+    name: str
+    type: str = "rigid"  # "rigid", "soft_mesh", "zone", etc.
+    file: str | None = None
+    pos: CoercedTuple3D = (0.0, 0.0, 0.0)
+    euler: CoercedTuple3D = (0.0, 0.0, 0.0)
+    material_id: str = "aluminum_6061"
+    is_zone: bool = False
+
+    # For zones
+    min: CoercedTuple3D | None = None
+    max: CoercedTuple3D | None = None
+    size: CoercedTuple3D | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+
+class MotorDefinition(BaseModel):
+    name: str | None = None
+    part_name: str | None = None
+    joint: str | None = None
+    type: str = "servo"
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="allow")
+
+
+class CableDefinition(BaseModel):
+    wire_id: str
+    points: list[CoercedTuple3D]
+    radius: float = 0.001
+    material_id: str = "copper"
+
+    model_config = ConfigDict(extra="allow")
+
+
+class SceneDefinition(BaseModel):
+    entities: list[EntityDefinition] = Field(default_factory=list)
+    motors: list[MotorDefinition] = Field(default_factory=list)
+    cables: list[CableDefinition] = Field(default_factory=list)
+    fluids: list[FluidDefinition] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="allow")
 
 
 # =============================================================================

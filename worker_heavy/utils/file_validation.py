@@ -383,7 +383,7 @@ def validate_node_output(
                     errors.extend([f"plan_refusal.md: {e}" for e in refusal_res])
                 else:
                     # Should not happen based on validate_plan_refusal return type
-                    errors.append(f"plan_refusal.md: Invalid structure")
+                    errors.append("plan_refusal.md: Invalid structure")
 
     return len(errors) == 0, errors
 
