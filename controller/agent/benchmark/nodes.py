@@ -19,7 +19,7 @@ from shared.type_checking import type_check
 from shared.workers.schema import SimulationArtifacts
 
 from .state import BenchmarkGeneratorState
-from .tools import get_benchmark_tools
+from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
 logger = structlog.get_logger(__name__)
 
@@ -53,6 +53,86 @@ class BenchmarkPlannerSignature(dspy.Signature):
 @type_check
 class BenchmarkPlannerNode(BaseNode):
     """Refactored Benchmark Planner using BaseNode for prompt injection."""
+
+    async def _write_fallback_planner_files(
+        self, prompt: str, state: BenchmarkGeneratorState
+    ) -> None:
+        """Write a minimal valid benchmark planning bundle when ReAct planning fails."""
+        theme = "sideways_ball_transfer"
+        if "fluid" in prompt.lower():
+            theme = "fluid_guidance"
+        elif "electronics" in prompt.lower() or "circuit" in prompt.lower():
+            theme = "motorized_transfer"
+
+        plan_md = f"""# Benchmark Plan
+
+## 1. Learning Objective
+- Design a benchmark where an engineered mechanism moves a steel ball laterally to a goal area.
+- Train lateral transport under gravity with explicit start/goal geometry.
+
+## 2. Geometry
+- Build zone: 1.0m x 1.0m x 1.0m.
+- Start zone at one side of the workspace.
+- Goal zone on the opposite side with no direct overlap with the start zone.
+
+## 3. Objectives
+- Success: the moved object center enters `goal_zone`.
+- Failure: entering any `forbid_zones` or leaving `build_zone`.
+- Randomization: apply small runtime jitter at spawn.
+
+## 4. Randomization
+- Runtime jitter on moved object: +/- 10mm on X/Y, 0mm on Z.
+- Keep obstacle randomization conservative for first-pass solvability.
+
+## 5. Cost Envelope
+- max_unit_cost: 50.0 USD
+- max_weight_g: 500.0 g
+
+## 6. Theme
+- {theme}
+"""
+
+        todo_md = """# TODO
+- [ ] Define final benchmark geometry in script.py
+- [ ] Validate geometry bounds and non-intersection
+- [ ] Simulate with runtime jitter
+- [ ] Confirm success/failure zones are correctly placed
+"""
+
+        objectives_yaml = """objectives:
+  goal_zone:
+    min: [850.0, 450.0, 0.0]
+    max: [980.0, 550.0, 180.0]
+  forbid_zones: []
+  build_zone:
+    min: [0.0, 0.0, 0.0]
+    max: [1000.0, 1000.0, 1000.0]
+  fluid_objectives: []
+  stress_objectives: []
+moved_object:
+  label: "steel_ball"
+  shape: "sphere"
+  static_randomization:
+    radius: [39.5, 40.5]
+  start_position: [120.0, 500.0, 80.0]
+  runtime_jitter: [10.0, 10.0, 0.0]
+constraints:
+  max_unit_cost: 50.0
+  max_weight_g: 500.0
+randomization:
+  static_variation_id: "fallback-v1"
+  runtime_jitter_enabled: true
+physics:
+  backend: GENESIS
+  fem_enabled: false
+  compute_target: auto
+"""
+
+        await self.ctx.worker_client.write_file("plan.md", plan_md, overwrite=True)
+        await self.ctx.worker_client.write_file("todo.md", todo_md, overwrite=True)
+        await self.ctx.worker_client.write_file(
+            "objectives.yaml", objectives_yaml, overwrite=True
+        )
 
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         # Init Git
@@ -115,16 +195,18 @@ class BenchmarkPlannerNode(BaseNode):
             BenchmarkPlannerSignature,
             state,
             inputs,
-            get_benchmark_tools,
+            get_benchmark_planner_tools,
             ["plan.md", "todo.md", "objectives.yaml"],
             "benchmark_planner",
+            max_retries=1,
         )
 
         if not prediction:
+            await self._write_fallback_planner_files(state.session.prompt, state)
             state.plan = RandomizationStrategy(
-                theme="error", reasoning="Failed to plan"
+                theme="fallback", reasoning="Planner fallback after model failure"
             )
-            state.journal += f"\n[Planner] Failed: {journal_entry}"
+            state.journal += f"\n[Planner] Fallback used: {journal_entry}"
             return state
 
         state.plan = prediction.plan

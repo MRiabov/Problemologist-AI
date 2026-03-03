@@ -250,7 +250,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                         else str(data)
                     )
                     metadata = dict(event_data)
-                    if "episode_id" not in metadata:
+                    if not metadata.get("episode_id"):
                         metadata["episode_id"] = str(self.episode_id)
 
                     trace_obj = Trace(
