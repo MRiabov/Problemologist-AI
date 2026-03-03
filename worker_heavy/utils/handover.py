@@ -35,10 +35,10 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         plan_content = plan_path.read_text(encoding="utf-8")
         plan_result = validate_plan_md(plan_content)
         if not plan_result.is_valid:
-            logger.error("plan_md_invalid", violations=plan_result.violations)
+            logger.warning("plan_md_invalid", violations=plan_result.violations)
             raise ValueError(f"plan.md invalid: {plan_result.violations}")
     else:
-        logger.error("plan_md_missing")
+        logger.warning("plan_md_missing")
         raise ValueError("plan.md is missing (required for submission)")
 
     # todo.md
@@ -49,10 +49,10 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         todo_content = todo_path.read_text(encoding="utf-8")
         todo_result = validate_todo_md(todo_content, require_completion=True)
         if not todo_result.is_valid:
-            logger.error("todo_md_invalid", violations=todo_result.violations)
+            logger.warning("todo_md_invalid", violations=todo_result.violations)
             raise ValueError(f"todo.md invalid: {todo_result.violations}")
     else:
-        logger.error("todo_md_missing")
+        logger.warning("todo_md_missing")
         raise ValueError("todo.md is missing (required for submission)")
 
     # objectives.yaml
@@ -63,7 +63,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         objectives_content = objectives_path.read_text(encoding="utf-8")
         is_valid, result = validate_objectives_yaml(objectives_content)
         if not is_valid:
-            logger.error("objectives_yaml_invalid", errors=result)
+            logger.warning("objectives_yaml_invalid", errors=result)
             raise ValueError(f"objectives.yaml invalid: {result}")
 
         # INT-015: Verify immutability
@@ -71,10 +71,10 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
 
         is_immutable, error_msg = validate_immutability(objectives_path)
         if not is_immutable:
-            logger.error("objectives_yaml_modified")
+            logger.warning("objectives_yaml_modified")
             raise ValueError(f"objectives.yaml violation: {error_msg}")
     else:
-        logger.error("objectives_yaml_missing")
+        logger.warning("objectives_yaml_missing")
         raise ValueError("objectives.yaml is missing (required for submission)")
 
     # assembly_definition.yaml
@@ -85,10 +85,10 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         cost_content = cost_path.read_text(encoding="utf-8")
         is_valid, estimation = validate_assembly_definition_yaml(cost_content)
         if not is_valid:
-            logger.error("assembly_definition_yaml_invalid", errors=estimation)
+            logger.warning("assembly_definition_yaml_invalid", errors=estimation)
             raise ValueError(f"assembly_definition.yaml invalid: {estimation}")
     else:
-        logger.error("assembly_definition_yaml_missing")
+        logger.warning("assembly_definition_yaml_missing")
         raise ValueError(
             "assembly_definition.yaml is missing (required for submission)"
         )
@@ -96,7 +96,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     # 2. Verify prior validation (INT-018)
     validation_results_path = cwd / "validation_results.json"
     if not validation_results_path.exists():
-        logger.error("prior_validation_missing")
+        logger.warning("prior_validation_missing")
         raise ValueError(
             "Prior validation missing. Call /benchmark/validate before submission."
         )
@@ -126,7 +126,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     )
 
     if not validation_result.is_manufacturable:
-        logger.error("submission_dfm_failed", violations=validation_result.violations)
+        logger.warning("submission_dfm_failed", violations=validation_result.violations)
         raise ValueError(f"Submission rejected (DFM): {validation_result.violations}")
 
     if constraints:
@@ -135,7 +135,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             and validation_result.unit_cost > constraints.max_unit_cost
         ):
             msg = f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit ${constraints.max_unit_cost:.2f}"
-            logger.error(
+            logger.warning(
                 "submission_cost_limit_exceeded",
                 cost=validation_result.unit_cost,
                 limit=constraints.max_unit_cost,
@@ -148,7 +148,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             msg = (
                 f"Weight {weight_g:.1f}g exceeds limit {constraints.max_weight_g:.1f}g"
             )
-            logger.error(
+            logger.warning(
                 "submission_weight_limit_exceeded",
                 weight=weight_g,
                 limit=constraints.max_weight_g,

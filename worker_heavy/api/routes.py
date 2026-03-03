@@ -629,6 +629,9 @@ async def api_submit(
                 events=events,
             )
 
+    except ValueError as e:
+        logger.warning("api_benchmark_submit_validation_failed", error=str(e))
+        return BenchmarkToolResponse(success=False, message=str(e))
     except Exception as e:
         logger.error("api_benchmark_submit_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))

@@ -512,7 +512,7 @@ def simulate(
 
                 print(f"FAILED TO LOAD OBJECTIVES: {e}")
                 traceback.print_exc()
-                logger.error("failed_to_load_objectives", error=str(e))
+                logger.warning("failed_to_load_objectives", error=str(e))
 
     cost_est_path = working_dir / "assembly_definition.yaml"
     if cost_est_path.exists():
@@ -520,7 +520,7 @@ def simulate(
             data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
             assembly_definition = AssemblyDefinition(**data)
         except Exception as e:
-            logger.error("failed_to_load_assembly_definition", error=str(e))
+            logger.warning("failed_to_load_assembly_definition", error=str(e))
 
     backend_type = backend
     if backend_type is None:
@@ -543,7 +543,7 @@ def simulate(
             )
             if not cv_res.valid:
                 error_msg = "; ".join(cv_res.errors)
-                logger.error("electronics_validation_failed_gate", errors=error_msg)
+                logger.warning("electronics_validation_failed_gate", errors=error_msg)
                 return SimulationResult(
                     success=False,
                     summary=error_msg,
