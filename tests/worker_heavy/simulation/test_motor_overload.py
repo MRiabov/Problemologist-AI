@@ -2,8 +2,8 @@
 
 import pytest
 
-from shared.simulation.schemas import SimulatorBackendType
 from shared.config.simulation import simulation_settings
+from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import (
     SimulationLoop,
 )

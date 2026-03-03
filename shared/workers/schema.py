@@ -4,13 +4,13 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr, field_v
 
 from shared.enums import AssetType, EpisodeStatus, ResponseStatus
 from shared.models.schemas import ElectronicsSection
-from shared.observability.schemas import BaseEvent
 from shared.models.simulation import (
     FluidMetricResult,
     MultiRunResult,
     SimulationFailure,
     StressSummary,
 )
+from shared.observability.schemas import BaseEvent
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingMethod
 

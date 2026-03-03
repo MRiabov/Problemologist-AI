@@ -382,7 +382,9 @@ class GenesisBackend(PhysicsBackend):
                     # 1. Add Entities
                     for ent_cfg in data.entities:
                         name = ent_cfg.name
-                        self.entity_configs[name] = ent_cfg.model_dump(exclude_none=True)
+                        self.entity_configs[name] = ent_cfg.model_dump(
+                            exclude_none=True
+                        )
 
                         if ent_cfg.is_zone:
                             continue
