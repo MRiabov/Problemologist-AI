@@ -1,4 +1,4 @@
-import React, { useState, useRef, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
+import React, { useState, useRef, useMemo, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { 
   Zap,
   Rocket,
@@ -77,7 +77,44 @@ export function ChatInput({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+
   const sessionAssets = selectedEpisode?.assets || [];
+
+  // ⚡ Bolt: Memoize all possible suggestions to avoid rebuilding the list on every keystroke
+  // Impact: Reduces O(N) traversal of DOM nodes and assets on every keypress to O(1) lookup + O(N) filter.
+  const allSuggestions = useMemo(() => {
+    const items: Suggestion[] = [];
+    const seenIds = new Set<string>();
+
+    // Add Assets (Files)
+    if (selectedEpisode?.assets) {
+      selectedEpisode.assets.forEach(asset => {
+        const name = asset.s3_path.split('/').pop() || asset.s3_path;
+        const id = `file-${asset.id}`;
+        if (!seenIds.has(id)) {
+          seenIds.add(id);
+          const iconInfo = getFileIconInfo(name, asset.asset_type);
+          items.push({ id, name, type: 'file', icon: iconInfo.icon, original: asset });
+        }
+      });
+    }
+
+    // Add BOM Nodes (Parts)
+    const collectParts = (nodes: TopologyNode[]) => {
+      nodes.forEach(node => {
+        const id = `part-${node.id}`;
+        if (!seenIds.has(id)) {
+          seenIds.add(id);
+          items.push({ id, name: node.name, type: 'part', icon: Zap, original: node });
+        }
+        if (node.children) collectParts(node.children);
+      });
+    };
+    collectParts(topologyNodes);
+
+    return items;
+  }, [selectedEpisode?.assets, topologyNodes]);
+
 
   const handleSubmit = async (e?: FormEvent | KeyboardEvent) => {
     if (e) e.preventDefault();
@@ -195,30 +232,10 @@ export function ChatInput({
     if (lastAt !== -1 && isAtStartOrAfterSpace && !/\s/.test(filter)) {
         setShowSuggestions(true);
         
-        // Populate suggestions from BOM and Assets
-        const items: Suggestion[] = [];
+        const filterLower = filter.toLowerCase();
+        const filteredItems = allSuggestions.filter(s => s.name.toLowerCase().includes(filterLower));
         
-        // Add Assets (Files)
-        sessionAssets.forEach(asset => {
-            const name = asset.s3_path.split('/').pop() || asset.s3_path;
-            if (name.toLowerCase().includes(filter.toLowerCase())) {
-                const iconInfo = getFileIconInfo(name, asset.asset_type);
-                items.push({ id: `file-${asset.id}`, name, type: 'file', icon: iconInfo.icon, original: asset });
-            }
-        });
-
-        // Add BOM Nodes (Parts)
-        const collectParts = (nodes: TopologyNode[]) => {
-            nodes.forEach(node => {
-                if (node.name.toLowerCase().includes(filter.toLowerCase())) {
-                    items.push({ id: `part-${node.id}`, name: node.name, type: 'part', icon: Zap, original: node });
-                }
-                if (node.children) collectParts(node.children);
-            });
-        };
-        collectParts(topologyNodes);
-
-        setSuggestions(items.slice(0, 10)); // Limit to 10
+        setSuggestions(filteredItems.slice(0, 50)); // Limit to 50
         setSelectedIndex(0);
     } else {
         setShowSuggestions(false);
