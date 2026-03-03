@@ -38,7 +38,9 @@ async def run(_ctx=None):
         except ImportError:
             backend = SimulatorBackendType.MUJOCO
 
-        loop = SimulationLoop(str(tmp_path), backend_type=backend)
+        loop = SimulationLoop(
+            str(tmp_path), backend_type=backend, smoke_test_mode=True
+        )
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
