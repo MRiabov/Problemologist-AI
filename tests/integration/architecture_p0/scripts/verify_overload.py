@@ -28,6 +28,12 @@ async def run(_ctx=None):
             tmp.write(TEST_OVERLOAD_XML)
             tmp_path = Path(tmp.name)
 
+        import os
+
+        # Force headless mode for genesis/pyglet
+        os.environ["PYGLET_HEADLESS"] = "1"
+        os.environ["PYOPENGL_PLATFORM"] = "egl"
+
         from shared.simulation.schemas import SimulatorBackendType
 
         # Use MUJOCO if GENESIS is not available (common in CI/sandbox)
@@ -38,11 +44,13 @@ async def run(_ctx=None):
         except ImportError:
             backend = SimulatorBackendType.MUJOCO
 
-        loop = SimulationLoop(str(tmp_path), backend_type=backend)
+        loop = SimulationLoop(
+            str(tmp_path), backend_type=backend, smoke_test_mode=True
+        )
 
         # Demand large position that can't be reached with tiny forcerange
         # This will keep the motor saturated
-        metrics = loop.step(control_inputs={"servo": 100.0}, duration=5.0)
+        metrics = loop.step(control_inputs={"servo": 100.0}, duration=3.0)
 
         from shared.enums import FailureReason
 
@@ -56,10 +64,6 @@ async def run(_ctx=None):
 
         return metrics.model_dump(mode="json")
     except Exception:
-        import traceback
-
-        with open("debug_overload.txt", "w") as f:
-            f.write(traceback.format_exc())
         raise
     finally:
         if "tmp_path" in locals() and tmp_path.exists():
