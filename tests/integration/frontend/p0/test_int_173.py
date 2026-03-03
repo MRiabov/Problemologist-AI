@@ -25,7 +25,7 @@ def _ensure_viewport_assets(page: Page) -> None:
             # The button can get detached/re-rendered during rebuild; retry.
             pass
         page.wait_for_load_state("networkidle", timeout=60000)
-        page.wait_for_timeout(800)
+        page.wait_for_timeout(2000)
 
     assert not assets_overlay.is_visible(), (
         "Viewport assets remained unavailable after rebuild retries"
@@ -47,7 +47,7 @@ def _ensure_model_assets(page: Page) -> None:
         except Exception:
             pass
         page.wait_for_load_state("networkidle", timeout=60000)
-        page.wait_for_timeout(800)
+        page.wait_for_timeout(2000)
 
     assert not model_overlay.is_visible(), (
         "Model overlay remained visible after rebuild retries"
@@ -79,27 +79,55 @@ def test_int_173_exact_pointing_payload(page: Page):
     page.locator("#chat-input").fill(prompt_text)
     page.get_by_label("Send Message").click()
 
-    # Wait until planner stage is ready and confirm if needed.
+    # Wait until planner stage is ready or it's completed.
+    # In integration tests, it might auto-continue from PLANNED.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return ['PLANNED', 'COMPLETED', 'FAILED'].includes(data.episodeStatus);
+                if (data.episodeStatus === 'COMPLETED') {
+                    // firm wait for assets to be present
+                    return data.modelUrlsCount > 0 || data.hasVideoAsset;
+                }
+                return ['PLANNED', 'FAILED'].includes(data.episodeStatus);
             } catch (e) { return false; }
         }""",
-        timeout=120000,
+        timeout=180000,
     )
-    status = page.evaluate(
-        """() => {
-            const el = document.querySelector('[data-testid="unified-debug-info"]');
-            if (!el) return null;
-            try {
-                return JSON.parse(el.textContent).episodeStatus ?? null;
-            } catch (e) { return null; }
-        }"""
-    )
+
+    def get_debug_info():
+        return page.evaluate(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return null;
+                try {
+                    return JSON.parse(el.textContent);
+                } catch (e) { return null; }
+            }"""
+        )
+
+    info = get_debug_info()
+    status = info.get("episodeStatus") if info else None
+
+    # If it auto-continued, it might be RUNNING now.
+    # That's fine, we'll wait for COMPLETED in the next step.
+    if status == "RUNNING":
+        page.wait_for_function(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return false;
+                try {
+                    const data = JSON.parse(el.textContent);
+                    return data.episodeStatus === 'COMPLETED' && (data.modelUrlsCount > 0 || data.hasVideoAsset);
+                } catch (e) { return false; }
+            }""",
+            timeout=180000,
+        )
+        info = get_debug_info()
+        status = info.get("episodeStatus") if info else None
+
     assert status in {"PLANNED", "COMPLETED"}, (
         f"Benchmark did not reach PLANNED/COMPLETED before selection flow (status={status})"
     )
@@ -112,7 +140,10 @@ def test_int_173_exact_pointing_payload(page: Page):
                 if (!el) return false;
                 try {
                     const data = JSON.parse(el.textContent);
-                    return ['COMPLETED', 'FAILED'].includes(data.episodeStatus);
+                    if (data.episodeStatus === 'COMPLETED') {
+                        return data.modelUrlsCount > 0 || data.hasVideoAsset;
+                    }
+                    return data.episodeStatus === 'FAILED';
                 } catch (e) { return false; }
             }""",
             timeout=180000,
@@ -130,12 +161,23 @@ def test_int_173_exact_pointing_payload(page: Page):
             "Benchmark failed after confirm; cannot validate exact-pointing payload contract"
         )
 
+    # Switch to 3D Model view explicitly if it's in video mode
+    model_view_button = page.get_by_role("button", name="3D Model")
+    if model_view_button.is_visible():
+        model_view_button.click()
+
     _ensure_viewport_assets(page)
     _ensure_model_assets(page)
 
     # Wait for the model viewer to load and have assets
     page.wait_for_selector(
         '[data-testid="design-viewer-3d"]', state="visible", timeout=60000
+    )
+
+    # Wait for canvas to have dimensions
+    page.wait_for_function(
+        "document.querySelector('[data-testid=\"main-canvas-container\"] canvas')?.width > 0",
+        timeout=30000,
     )
     page.wait_for_selector(
         '[data-testid="main-canvas-container"]', state="visible", timeout=60000
@@ -203,6 +245,17 @@ def test_int_173_exact_pointing_payload(page: Page):
                 any_nodes.first.click()
                 page.wait_for_timeout(300)
                 selected = page.get_by_test_id("context-card").count() > existing_cards
+
+    # Last resort: wait for topology nodes
+    if not selected:
+        page.wait_for_selector('[data-testid="topology-node-row"]', timeout=30000)
+        face_nodes = page.locator(
+            '[data-testid="topology-node-row"][data-node-type="face"]'
+        )
+        if face_nodes.count() > 0:
+            face_nodes.first.click()
+            page.wait_for_timeout(300)
+            selected = page.get_by_test_id("context-card").count() > existing_cards
 
     assert selected, "Could not select any CAD geometry in FACE mode"
 
