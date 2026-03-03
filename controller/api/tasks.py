@@ -14,6 +14,10 @@ from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
+from controller.observability.langfuse import (
+    attach_session_to_current_trace,
+    start_root_span,
+)
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import AssetType, EpisodeStatus, TraceType
@@ -212,19 +216,41 @@ async def execute_agent_task(
                 # Use episode_id as thread_id to allow resuming.
                 # But LangGraph might expect string.
                 thread_id = str(episode_id)
-
-                result = await agent.ainvoke(
-                    initial_input,
-                    config={
-                        "callbacks": callbacks,
-                        "metadata": {
-                            "episode_id": str(episode_id),
-                            "langfuse_trace_id": trace_id,
-                        },
-                        "run_name": agent_name,
-                        "configurable": {"thread_id": thread_id},
-                    },
+                langfuse_session_id = (
+                    str(episode.user_session_id)
+                    if episode.user_session_id
+                    else session_id
                 )
+                langfuse_metadata = {
+                    "episode_id": str(episode_id),
+                    "worker_session_id": session_id,
+                    "agent_name": agent_name,
+                }
+
+                with start_root_span(
+                    name=agent_name,
+                    trace_id=trace_id,
+                    input_payload={"task": task, "session_id": session_id},
+                    metadata=langfuse_metadata,
+                ):
+                    attach_session_to_current_trace(
+                        langfuse_session_id,
+                        trace_name=agent_name,
+                        metadata=langfuse_metadata,
+                    )
+                    result = await agent.ainvoke(
+                        initial_input,
+                        config={
+                            "callbacks": callbacks,
+                            "metadata": {
+                                "episode_id": str(episode_id),
+                                "langfuse_trace_id": trace_id,
+                                "langfuse_session_id": langfuse_session_id,
+                            },
+                            "run_name": agent_name,
+                            "configurable": {"thread_id": thread_id},
+                        },
+                    )
                 if isinstance(result, dict):
                     msgs = result.get("messages", [])
                     logger.info(
@@ -604,6 +630,16 @@ async def continue_agent_task(
 
                 # Invoke agent with new message
                 thread_id = str(episode_id)
+                langfuse_session_id = (
+                    str(episode.user_session_id)
+                    if episode.user_session_id
+                    else session_id
+                )
+                langfuse_metadata = {
+                    "episode_id": str(episode_id),
+                    "worker_session_id": session_id,
+                    "agent_name": agent_name,
+                }
 
                 # Support steerability metadata in additional_kwargs
                 human_message = HumanMessage(
@@ -615,18 +651,30 @@ async def continue_agent_task(
                     "episode_id": str(episode_id),
                 }
 
-                result = await agent.ainvoke(
-                    input_update,
-                    config={
-                        "callbacks": callbacks,
-                        "metadata": {
-                            "episode_id": str(episode_id),
-                            "langfuse_trace_id": trace_id,
+                with start_root_span(
+                    name=agent_name,
+                    trace_id=trace_id,
+                    input_payload={"message": message, "session_id": session_id},
+                    metadata=langfuse_metadata,
+                ):
+                    attach_session_to_current_trace(
+                        langfuse_session_id,
+                        trace_name=agent_name,
+                        metadata=langfuse_metadata,
+                    )
+                    result = await agent.ainvoke(
+                        input_update,
+                        config={
+                            "callbacks": callbacks,
+                            "metadata": {
+                                "episode_id": str(episode_id),
+                                "langfuse_trace_id": trace_id,
+                                "langfuse_session_id": langfuse_session_id,
+                            },
+                            "run_name": agent_name,
+                            "configurable": {"thread_id": thread_id},
                         },
-                        "run_name": agent_name,
-                        "configurable": {"thread_id": thread_id},
-                    },
-                )
+                    )
 
                 # Final trace
                 if isinstance(result, dict):
