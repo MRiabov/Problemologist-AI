@@ -84,6 +84,47 @@ def _has_marker(request: pytest.FixtureRequest, marker_name: str) -> bool:
     return any(marker.name == marker_name for marker in request.node.iter_markers())
 
 
+def _compile_marker_regex_allowlist(
+    request: pytest.FixtureRequest, marker_name: str
+) -> tuple[bool, list[re.Pattern[str]]]:
+    """
+    Parse marker-provided regex allowlist.
+    - No-arg marker means "allow all" (legacy behavior).
+    - Marker args/kwargs define scoped regex allowlist.
+    """
+    patterns: list[str] = []
+    has_allow_all = False
+
+    for marker in request.node.iter_markers(name=marker_name):
+        if not marker.args and not marker.kwargs:
+            has_allow_all = True
+            continue
+
+        for arg in marker.args:
+            if isinstance(arg, str) and arg.strip():
+                patterns.append(arg.strip())
+
+        for key in ("regexes", "patterns", "pattern"):
+            value = marker.kwargs.get(key)
+            if isinstance(value, str) and value.strip():
+                patterns.append(value.strip())
+            elif isinstance(value, (list, tuple, set)):
+                patterns.extend(
+                    str(item).strip() for item in value if str(item).strip()
+                )
+
+    compiled: list[re.Pattern[str]] = []
+    for pattern in patterns:
+        try:
+            compiled.append(re.compile(pattern, re.IGNORECASE))
+        except re.error as exc:
+            raise pytest.UsageError(
+                f"Invalid regex in @{marker_name}: {pattern!r} ({exc})"
+            ) from exc
+
+    return has_allow_all, compiled
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     """Expose test call outcome on node so fixtures can adjust teardown behavior."""
@@ -184,8 +225,10 @@ def capture_backend_errors(request):
         return
 
     strict_mode = os.getenv("STRICT_BACKEND_ERRORS", "1") == "1"
-    allow_backend_errors = _has_marker(request, "allow_backend_errors")
-    allowlist = _compile_backend_error_allowlist()
+    allow_all_backend_errors, marker_allowlist = _compile_marker_regex_allowlist(
+        request, "allow_backend_errors"
+    )
+    allowlist = [*_compile_backend_error_allowlist(), *marker_allowlist]
     start_offsets: dict[str, int] = {}
 
     for service, path in BACKEND_ERROR_LOG_FILES.items():
@@ -198,7 +241,7 @@ def capture_backend_errors(request):
 
     rep_call = getattr(request.node, "rep_call", None)
     test_call_failed = bool(rep_call and rep_call.failed)
-    if not strict_mode or allow_backend_errors or test_call_failed:
+    if not strict_mode or allow_all_backend_errors or test_call_failed:
         return
 
     issues: list[str] = []
@@ -221,8 +264,10 @@ def capture_backend_errors(request):
             "Unexpected backend errors/exceptions detected in dedicated service error logs.\n"
             f"{sample}{suffix}\n"
             "See logs/integration_tests/{controller,worker_light,worker_heavy,temporal_worker}_errors.log.\n"
-            "To allow expected noise, use marker @pytest.mark.allow_backend_errors "
-            "or set BACKEND_ERROR_ALLOWLIST_REGEXES."
+            "If this test explicitly expects this particular error by it's definition in "
+            "`specs/integration_tests.md`, you can suppress the exception by "
+            '@pytest.mark.allow_backend_errors("long_error_substring_or_regex") '
+            "or set BACKEND_ERROR_ALLOWLIST_REGEXES for global patterns."
         )
 
 
