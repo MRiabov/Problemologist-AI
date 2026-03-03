@@ -3,7 +3,7 @@ import os
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from shared.logging import configure_logging, log_marker_middleware
@@ -71,6 +71,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_unhandled_http_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception(
+            "unhandled_http_exception",
+            method=request.method,
+            path=request.url.path,
+            query=str(request.url.query),
+        )
+        raise
+
 
 app.include_router(heavy_router, tags=["worker-heavy"])
 

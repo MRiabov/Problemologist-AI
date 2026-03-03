@@ -110,6 +110,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def log_unhandled_http_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception(
+            "unhandled_http_exception",
+            method=request.method,
+            path=request.url.path,
+            query=str(request.url.query),
+        )
+        raise
+
+
 app.include_router(light_router, tags=["worker-light"])
 
 # Support unified mode for integration tests
