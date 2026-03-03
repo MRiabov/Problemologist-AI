@@ -19,7 +19,7 @@ agents:
 
   engineering_mechanical_coder:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "script.py", "**/*.py", "reviews/**", "renders/**"]
       deny: []
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
@@ -27,7 +27,7 @@ agents:
 
   engineer_coder:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "script.py", "**/*.py", "reviews/**", "renders/**"]
       deny: []
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
@@ -59,7 +59,7 @@ agents:
 
   engineering_reviewer:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "simulation_result.json", "validation_results.json", "workbench_report.md", "renders/**", "journal.md"]
       deny: []
     write:
       allow: ["reviews/review-round-*/review.md"]
