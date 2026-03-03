@@ -640,7 +640,7 @@ class BenchmarkReviewerNode(BaseNode):
             if review.required_fixes:
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
         except Exception as e:
-            logger.error("benchmark_reviewer_node_failed", error=str(e))
+            logger.warning("benchmark_reviewer_node_failed", error=str(e))
             state.review_feedback = "Rejected: Internal error"
             await asyncio.sleep(2)
 

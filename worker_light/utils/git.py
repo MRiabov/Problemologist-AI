@@ -44,7 +44,7 @@ def commit_all(path: Path, message: str) -> str | None:
         commit = repo.index.commit(message)
         return commit.hexsha
     except Exception as e:
-        logger.error("git_commit_failed", error=str(e))
+        logger.warning("git_commit_failed", error=str(e))
         return None
 
 
@@ -62,7 +62,7 @@ def has_merge_conflicts(path: Path) -> bool:
         return len(unmerged) > 0
 
     except Exception as e:
-        logger.error("merge_conflict_check_failed", error=str(e))
+        logger.warning("merge_conflict_check_failed", error=str(e))
         return False
 
 
@@ -79,7 +79,7 @@ def get_conflicted_files(path: Path) -> list[str]:
         # unmerged_blobs() returns dict of path -> list of (stage, blob) tuples
         return list(unmerged.keys())
     except Exception as e:
-        logger.error("get_conflicted_files_failed", error=str(e))
+        logger.warning("get_conflicted_files_failed", error=str(e))
         return []
 
 
@@ -102,7 +102,7 @@ def resolve_conflict_ours(path: Path, file_path: str) -> bool:
         logger.info("resolved_conflict_ours", file=file_path)
         return True
     except Exception as e:
-        logger.error("resolve_conflict_ours_failed", file=file_path, error=str(e))
+        logger.warning("resolve_conflict_ours_failed", file=file_path, error=str(e))
         return False
 
 
@@ -125,7 +125,7 @@ def resolve_conflict_theirs(path: Path, file_path: str) -> bool:
         logger.info("resolved_conflict_theirs", file=file_path)
         return True
     except Exception as e:
-        logger.error("resolve_conflict_theirs_failed", file=file_path, error=str(e))
+        logger.warning("resolve_conflict_theirs_failed", file=file_path, error=str(e))
         return False
 
 
@@ -142,7 +142,7 @@ def abort_merge(path: Path) -> bool:
         logger.info("merge_aborted", path=str(path))
         return True
     except Exception as e:
-        logger.error("abort_merge_failed", error=str(e))
+        logger.warning("abort_merge_failed", error=str(e))
         return False
 
 
@@ -180,7 +180,7 @@ def complete_merge(path: Path, message: str | None = None) -> str | None:
         return None
 
     except Exception as e:
-        logger.error("complete_merge_failed", error=str(e))
+        logger.warning("complete_merge_failed", error=str(e))
         return None
 
 
@@ -207,7 +207,7 @@ def get_repo_status(path: Path) -> dict:
             "conflicts": conflicts,
         }
     except Exception as e:
-        logger.error("get_repo_status_failed", error=str(e))
+        logger.warning("get_repo_status_failed", error=str(e))
         return {
             "branch": "unknown",
             "is_dirty": False,

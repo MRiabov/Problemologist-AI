@@ -57,7 +57,7 @@ def load_langfuse_traces(agent_name: str, limit: int = 20) -> list[dspy.Example]
     try:
         traces = client.get_traces(name=agent_name, limit=limit).data
     except Exception as e:
-        logger.error("langfuse_fetch_failed", agent_name=agent_name, error=str(e))
+        logger.warning("langfuse_fetch_failed", agent_name=agent_name, error=str(e))
         return []
 
     examples = []

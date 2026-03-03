@@ -72,7 +72,7 @@ class ElectronicsManager:
 
         except Exception as e:
             self.validation_error = str(e)
-            logger.warning("spice_sim_failed_falling_back", error=str(e))
+            logger.error("spice_sim_failed_falling_back", error=str(e))
             self._fallback_update()
 
     def _fallback_update(self):

@@ -513,7 +513,7 @@ async def list_episodes(
             )
         return responses
     except Exception as e:
-        logger.error("list_episodes_failed", error=str(e))
+        logger.warning("list_episodes_failed", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Internal Server Error: {e!s}"
         ) from e
@@ -584,7 +584,9 @@ async def delete_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_d
         await db.delete(episode)
         await db.commit()
     except Exception as e:
-        logger.error("delete_episode_failed", episode_id=str(episode_id), error=str(e))
+        logger.warning(
+            "delete_episode_failed", episode_id=str(episode_id), error=str(e)
+        )
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete episode: {e!s}")
 

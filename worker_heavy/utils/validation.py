@@ -104,7 +104,7 @@ def get_stress_report(
             break
 
     if res is None:
-        logger.warning("get_stress_report_called_before_simulation")
+        logger.error("get_stress_report_called_before_simulation")
         return None
 
     worst_summary = None
@@ -118,7 +118,7 @@ def get_stress_report(
     if worst_summary:
         return worst_summary
 
-    logger.warning("stress_report_part_not_found", part_label=part_label)
+    logger.error("stress_report_part_not_found", part_label=part_label)
     return None
 
 
@@ -140,7 +140,7 @@ def preview_stress(
             break
 
     if res is None:
-        logger.warning("preview_stress_called_before_simulation")
+        logger.error("preview_stress_called_before_simulation")
         return []
 
     logger.info("rendering_stress_heatmaps", count=len(res.stress_fields))
@@ -214,7 +214,7 @@ def define_fluid(
             objs.fluids.append(fluid)
         obj_path.write_text(yaml.dump(objs.model_dump(mode="json")), encoding="utf-8")
     else:
-        logger.warning("define_fluid_objectives_not_found", path=str(obj_path))
+        logger.error("define_fluid_objectives_not_found", path=str(obj_path))
 
     return fluid
 
@@ -240,7 +240,7 @@ def set_soft_mesh(
             logger.info("set_soft_mesh_enabled", part_id=part_id, fem_enabled=enabled)
             return True
         except Exception as e:
-            logger.error("set_soft_mesh_failed", error=str(e))
+            logger.warning("set_soft_mesh_failed", error=str(e))
             return False
     return False
 
@@ -554,7 +554,7 @@ def simulate(
                     confidence="high",
                 )
         except Exception as e:
-            logger.warning("electronics_pre_validation_skipped", error=str(e))
+            logger.error("electronics_pre_validation_skipped", error=str(e))
 
     scene_path = builder.build_from_assembly(
         component,
@@ -601,7 +601,7 @@ def simulate(
                             confidence="high",
                         )
         except Exception as e:
-            logger.warning("fluid_electronics_preflight_skipped", error=str(e))
+            logger.error("fluid_electronics_preflight_skipped", error=str(e))
 
     loop = SimulationLoop(
         str(scene_path),
@@ -655,7 +655,7 @@ def simulate(
             from shared.observability.events import emit_event
             from shared.observability.schemas import GpuOomRetryEvent
 
-            logger.warning("gpu_oom_detected_retrying_smoke_mode")
+            logger.error("gpu_oom_detected_retrying_smoke_mode")
 
             # Emit event for observability
             emit_event(
@@ -961,7 +961,7 @@ def validate_fem_manufacturability(
                 )
                 return False, msg
     except Exception as e:
-        logger.error("fem_manufacturability_check_failed", error=str(e))
+        logger.warning("fem_manufacturability_check_failed", error=str(e))
         return False, f"FEM manufacturability check failed: {e!s}"
 
     return True, None

@@ -42,7 +42,7 @@ async def start_temporal_worker():
         logger.info("temporal_worker_started", queue="heavy-tasks-queue")
         await worker.run()
     except Exception as e:
-        logger.error("temporal_worker_failed", error=str(e))
+        logger.warning("temporal_worker_failed", error=str(e))
 
 
 @asynccontextmanager

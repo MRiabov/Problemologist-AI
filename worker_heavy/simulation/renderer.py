@@ -77,7 +77,7 @@ class Renderer:
             self._encode_video(video_path, fps)
             logger.info("video_saved", path=str(video_path), frames=len(self.frames))
         else:
-            logger.warning("no_frames_to_save")
+            logger.error("no_frames_to_save")
 
         # 2. Save 24-View Bundle
         views = self.render_24_views()

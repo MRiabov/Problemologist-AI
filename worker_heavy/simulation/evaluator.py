@@ -48,7 +48,7 @@ class SuccessEvaluator:
 
             # Extreme values (explosion)
             if np.any(np.abs(qpos) > 10000.0):
-                logger.warning("physics_explosion_detected", pos=list(qpos))
+                logger.error("physics_explosion_detected", pos=list(qpos))
                 return SimulationFailureMode.PHYSICS_INSTABILITY
 
         # 3. Fell off world / Out of Bounds

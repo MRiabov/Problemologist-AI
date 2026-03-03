@@ -63,7 +63,7 @@ async def get_router(x_session_id: str = Header(...)):
             session_id=x_session_id, base_dir=settings.sessions_dir
         )
     except Exception as e:
-        logger.error("router_creation_failed", error=str(e))
+        logger.warning("router_creation_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
@@ -101,7 +101,7 @@ def bundle_context(bundle_base64: str | None, default_root: Path):
                     text=True,
                 )
             except subprocess.CalledProcessError as spe:
-                logger.error("tar_subprocess_failed", stderr=spe.stderr)
+                logger.warning("tar_subprocess_failed", stderr=spe.stderr)
                 raise RuntimeError(f"tar extraction failed: {spe.stderr}")
             finally:
                 if Path(tf_path).exists():
@@ -114,7 +114,7 @@ def bundle_context(bundle_base64: str | None, default_root: Path):
             import traceback
 
             tb = traceback.format_exc()
-            logger.error("bundle_extraction_failed", error=str(e), traceback=tb)
+            logger.warning("bundle_extraction_failed", error=str(e), traceback=tb)
             raise HTTPException(
                 status_code=400, detail=f"Failed to extract bundle: {e}"
             ) from e
@@ -271,7 +271,7 @@ async def api_verify(
                 )
 
     except Exception as e:
-        logger.error("api_benchmark_verify_failed", error=str(e))
+        logger.warning("api_benchmark_verify_failed", error=str(e))
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
@@ -345,7 +345,7 @@ async def api_simulate(
                 )
 
     except Exception as e:
-        logger.error("api_benchmark_simulate_failed", error=str(e))
+        logger.warning("api_benchmark_simulate_failed", error=str(e))
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
@@ -416,7 +416,7 @@ async def api_validate(
                 )
 
     except Exception as e:
-        logger.error("api_benchmark_validate_failed", error=str(e))
+        logger.warning("api_benchmark_validate_failed", error=str(e))
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
@@ -460,7 +460,7 @@ async def api_validate_circuit(
             artifacts=artifacts,
         )
     except Exception as e:
-        logger.error("api_validate_circuit_failed", error=str(e))
+        logger.warning("api_validate_circuit_failed", error=str(e))
         return BenchmarkToolResponse(
             success=False,
             message=str(e),
@@ -502,7 +502,7 @@ async def api_analyze(
                 )
                 return result
     except Exception as e:
-        logger.error("api_benchmark_analyze_failed", error=str(e))
+        logger.warning("api_benchmark_analyze_failed", error=str(e))
         return WorkbenchResult(
             is_manufacturable=False, unit_cost=0.0, violations=[str(e)]
         )
@@ -549,7 +549,7 @@ async def api_preview(
                 )
 
     except Exception as e:
-        logger.error("api_benchmark_preview_failed", error=str(e))
+        logger.warning("api_benchmark_preview_failed", error=str(e))
         return PreviewDesignResponse(success=False, message=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
@@ -598,7 +598,7 @@ async def api_build(
                 )
 
     except Exception as e:
-        logger.error("api_benchmark_build_failed", error=str(e))
+        logger.warning("api_benchmark_build_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
     finally:
         SIMULATION_QUEUE_DEPTH -= 1
@@ -630,5 +630,5 @@ async def api_submit(
             )
 
     except Exception as e:
-        logger.error("api_benchmark_submit_failed", error=str(e))
+        logger.warning("api_benchmark_submit_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))

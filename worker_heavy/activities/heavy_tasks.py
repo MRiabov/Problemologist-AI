@@ -36,7 +36,7 @@ def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
             text=True,
         )
     except subprocess.CalledProcessError as spe:
-        logger.error("tar_subprocess_failed", stderr=spe.stderr)
+        logger.warning("tar_subprocess_failed", stderr=spe.stderr)
         raise RuntimeError(f"tar extraction failed: {spe.stderr}")
     finally:
         if Path(tf_path).exists():

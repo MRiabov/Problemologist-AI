@@ -166,7 +166,7 @@ def prerender_24_views(
     except Exception as e:
         import traceback
 
-        logger.error("prerender_failed", error=str(e), stack=traceback.format_exc())
+        logger.warning("prerender_failed", error=str(e), stack=traceback.format_exc())
         raise
 
 
@@ -217,7 +217,7 @@ def render_stress_heatmap(
 
         return output_path
     except Exception as e:
-        logger.error("render_stress_heatmap_failed", error=str(e))
+        logger.warning("render_stress_heatmap_failed", error=str(e))
         # Create a blank error image
         img = Image.new("RGB", (width, height), color=(255, 0, 0))
         img.save(output_path)
@@ -247,7 +247,7 @@ class VideoRenderer:
     def save(self):
         """Saves the frames as an MP4 video."""
         if not self.frames:
-            logger.warning("video_render_no_frames")
+            logger.error("video_render_no_frames")
             return
 
         import cv2

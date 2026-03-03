@@ -19,7 +19,7 @@ async def verify_backup_secret(x_backup_secret: str = Header(None)):
     Simple header-based secret verification.
     """
     if not x_backup_secret or x_backup_secret != BACKUP_SECRET:
-        logger.warning("Unauthorized backup attempt")
+        logger.error("Unauthorized backup attempt")
         raise HTTPException(status_code=403, detail="Invalid backup secret")
 
 
