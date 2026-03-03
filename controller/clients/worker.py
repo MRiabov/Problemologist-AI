@@ -103,7 +103,7 @@ class WorkerClient:
                 f"{self.base_url}/topology/inspect",
                 json={"target_id": target_id, "script_path": script_path},
                 headers=self.headers,
-                timeout=10.0,
+                timeout=60.0,
             )
             response.raise_for_status()
             return InspectTopologyResponse.model_validate(response.json())
@@ -273,7 +273,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/preview",
                 json=payload,
                 headers=self.headers,
-                timeout=30.0,
+                timeout=300.0,
             )
             response.raise_for_status()
             return response.json()
@@ -354,7 +354,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/validate",
                 json=payload,
                 headers=self.headers,
-                timeout=30.0,
+                timeout=300.0,
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
@@ -385,7 +385,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/analyze",
                 json=payload,
                 headers=self.headers,
-                timeout=60.0,
+                timeout=300.0,
             )
             response.raise_for_status()
             return WorkbenchResult.model_validate(response.json())
@@ -408,7 +408,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/submit",
                 json=payload,
                 headers=self.headers,
-                timeout=30.0,
+                timeout=300.0,
             )
             response.raise_for_status()
             return BenchmarkToolResponse.model_validate(response.json())
