@@ -192,6 +192,24 @@ Priorities:
 | INT-155 | Wire routing survival under jitter | Wire routing survives runtime jitter (no tears across 5 seeds) in 70% of successful solutions. |
 | INT-156 | Circuit-gates-motor correctness | Circuit state correctly gates motor behaviour in 95% of simulations — motors don't spin without power. |
 
+### Agent category: orchestration/trace contract (overlay suite)
+
+These tests verify agent behavior contracts (turn handling, tool-loop semantics, and session isolation) while still running as true integration tests over HTTP boundaries.
+This category is an overlay on priorities (`P0/P1/P2`), not a replacement.
+Tag these tests with both a priority marker and `integration_agent`.
+
+Determinism rule for this category:
+- Use `tests/integration/mock_responses.yaml` scenarios to force multi-turn/tool-call paths.
+- Assertions must target HTTP responses, persisted traces/events/assets, and service logs only.
+- Do not assert by importing agent internals.
+
+| ID | Priority | Test | Required assertions |
+|---|---|---|---|
+| INT-180 | P0 | ReAct first-turn full context + follow-up compaction | In a run with >=2 tool calls, first LLM turn contains full sentinel context; follow-up turns do not replay full sentinel and show compact/elided context behavior. |
+| INT-181 | P1 | Tool-loop ordering + termination contract | Trace/event order is consistent (`LLM` -> `TOOL_START` -> tool result -> next `LLM` ... -> finish), and the run terminates cleanly once scripted tools are exhausted. |
+| INT-182 | P1 | Concurrent agent-run isolation (files + traces + context) | Parallel runs with different `X-Session-ID` do not leak files, steering context, or traces across sessions. |
+| INT-183 | P1 | Steerability queue single-consumption contract | Queued steering prompt is consumed once, affects subsequent node context in-run, and does not replay unexpectedly in later turns. |
+
 ### Frontend category: UI integration and delivery contract
 
 These are end-to-end frontend integration tests (browser + real APIs + real artifacts). They must run against the same compose stack and must not mock controller/worker API responses.
@@ -366,6 +384,10 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-177 | Submit feedback in live UI after editing score/topics/comment before final submit; assert persisted record equals final edited values, not intermediate draft. | Unit-testing modal form reducer only. |
 | INT-178 | Reload browser mid-episode in live stack; assert same episode/workflow opens and chat/artifact panes repopulate from API state. | Snapshot-testing initial page layout without backend state restoration. |
 | INT-179 | Type valid and invalid `@` mentions directly in live chat input; assert valid structured payload creation and explicit validation errors for invalid mention syntax/ranges. | Parsing `@` tokens in an isolated helper test only. |
+| INT-180 | Run a deterministic multi-tool scenario via `/agent/run` (session `INT-180-xxxxxxxx`) and assert persisted LLM/tool traces show first-turn full context but compacted follow-up turns (no full sentinel replay). | Unit-testing prompt compaction helpers or ReAct wrapper methods in-process only. |
+| INT-181 | Execute a scripted multi-tool scenario through live APIs and assert persisted trace/event ordering and clean finish once tool list is exhausted. | Asserting mocked node transitions/tool arrays without runtime orchestration. |
+| INT-182 | Start parallel live agent runs with distinct sessions and assert no cross-session reads/writes/traces/context leakage. | Unit-testing session-keyed maps/locks without HTTP/system boundaries. |
+| INT-183 | Enqueue steering via live steerability endpoints during active run; assert single dequeue/consumption and downstream trace evidence in same episode. | Isolated queue unit test with mocked state transitions. |
 
 ## Recommended suite organization
 
@@ -373,6 +395,8 @@ This section exists to force implementation as true integration tests, not unit 
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-073, INT-101..INT-112, INT-120..INT-128.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
+- `tests/integration/agent/p0/`: INT-180.
+- `tests/integration/agent/p1/`: INT-181, INT-182, INT-183.
 - `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177.
 - `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171, INT-175, INT-176, INT-178, INT-179.
 - `tests/integration/frontend/p2/`: INT-169.
@@ -382,12 +406,15 @@ Marker recommendation:
 - `@pytest.mark.integration_p0`
 - `@pytest.mark.integration_p1`
 - `@pytest.mark.integration_p2`
+- `@pytest.mark.integration_agent`
 - `@pytest.mark.integration_frontend`
 
 CI gates recommendation:
 
 - PR gate: run `integration_p0`.
+- Optional PR fast-regression slice: run `integration_agent and integration_p0`.
 - Nightly: run `integration_p0 or integration_p1`.
+- Nightly agent slice: run `integration_agent and integration_p1`.
 - Weekly or pre-release: run full `integration_p0 or integration_p1 or integration_p2`.
 
 ## Notes

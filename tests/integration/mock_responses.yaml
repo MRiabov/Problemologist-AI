@@ -1,4 +1,20 @@
 scenarios:
+  # Optional hardening keys for any node scenario entry:
+  # - expected_llm_inputs:
+  #     contains: ["must appear in every LM input"]
+  #     not_contains: ["must never appear"]
+  #     per_call:
+  #       - call_index: 2
+  #         contains: ["only required on call 2"]
+  # - expected_tool_calls:
+  #     - name: "write_file"
+  #       args_contains: ["plan.md"]
+  #       args_not_contains: ["forbidden/path"]
+  # - expected_tool_outputs:
+  #     - contains: ["success"]
+  #       not_contains: ["error"]
+  # All keys are optional and only enforced when present.
+
   # INT-011: Planner target caps validation (No specific mock needed as it's a validation test)
 
   INT-014:
@@ -674,6 +690,310 @@ scenarios:
           input: { command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)" }
         - name: "write_file"
           input: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
+
+  INT-180:
+    planner:
+      summary: "INT-180 planning artifacts generated."
+      thought: "Create required planner files through multiple tool turns."
+      tool_calls:
+        - name: "list_files"
+          input: { path: "/" }
+        - name: "write_file"
+          input:
+            path: "plan.md"
+            content: |
+              ## 1. Solution Overview
+              Compact-context regression scenario.
+              ## 2. Parts List
+              - Box (manufactured, abs)
+              ## 3. Assembly Strategy
+              1. Build a simple part.
+              ## 4. Cost & Weight Budget
+              - $10
+              ## 5. Risk Assessment
+              - Low.
+            overwrite: true
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [ ] Build part", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
+        - name: "write_file"
+          input:
+            path: "objectives.yaml"
+            content: |
+              objectives:
+                goal_zone: {min: [0,0,0], max: [1,1,1]}
+                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+            overwrite: true
+    electronics_planner:
+      summary: "No electronics required."
+      thought: "Mark electronics planning complete."
+      tool_calls:
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [x] Build part\n- [x] Electronics N/A", overwrite: true }
+    coder:
+      journal: "Implemented placeholder geometry for INT-180."
+      thought: "Emit a simple script."
+      generated_code: |
+        from build123d import *
+        from shared.models.schemas import PartMetadata
+        def build():
+            p = Box(10,10,10)
+            p.label = "box"
+            p.metadata = PartMetadata(material_id="abs", fixed=True)
+            return p
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "Artifacts are complete and valid."
+        required_fixes: []
+
+  INT-181:
+    planner:
+      summary: "INT-181 ordering scenario generated."
+      thought: "Execute list and ordered write probe before planner docs."
+      tool_calls:
+        - name: "list_files"
+          input: { path: "/" }
+        - name: "write_file"
+          input: { path: "order_probe.txt", content: "ordered write marker", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "plan.md"
+            content: |
+              ## 1. Solution Overview
+              Ordering contract scenario.
+              ## 2. Parts List
+              - Box (manufactured, abs)
+              ## 3. Assembly Strategy
+              1. Build.
+              ## 4. Cost & Weight Budget
+              - $10
+              ## 5. Risk Assessment
+              - Low.
+            overwrite: true
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
+        - name: "write_file"
+          input:
+            path: "objectives.yaml"
+            content: |
+              objectives:
+                goal_zone: {min: [0,0,0], max: [1,1,1]}
+                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+            overwrite: true
+    electronics_planner:
+      summary: "No electronics required."
+      thought: "No electronics steps."
+      tool_calls:
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+    coder:
+      journal: "INT-181 coder output generated."
+      thought: "Emit simple script."
+      generated_code: |
+        from build123d import *
+        from shared.models.schemas import PartMetadata
+        def build():
+            p = Box(8,8,8)
+            p.label = "box"
+            p.metadata = PartMetadata(material_id="abs", fixed=True)
+            return p
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "Ordering scenario artifacts validated."
+        required_fixes: []
+
+  INT-182:
+    planner:
+      summary: "INT-182 concurrent-isolation scenario generated."
+      thought: "Write deterministic planner artifacts."
+      tool_calls:
+        - name: "write_file"
+          input:
+            path: "plan.md"
+            content: |
+              ## 1. Solution Overview
+              Concurrency isolation scenario.
+              ## 2. Parts List
+              - Box (manufactured, abs)
+              ## 3. Assembly Strategy
+              1. Build.
+              ## 4. Cost & Weight Budget
+              - $10
+              ## 5. Risk Assessment
+              - Low.
+            overwrite: true
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
+        - name: "write_file"
+          input:
+            path: "objectives.yaml"
+            content: |
+              objectives:
+                goal_zone: {min: [0,0,0], max: [1,1,1]}
+                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+            overwrite: true
+    electronics_planner:
+      summary: "No electronics required."
+      thought: "No electronics steps."
+      tool_calls:
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+    coder:
+      journal: "INT-182 coder output generated."
+      thought: "Emit simple script."
+      generated_code: |
+        from build123d import *
+        from shared.models.schemas import PartMetadata
+        def build():
+            p = Box(7,7,7)
+            p.label = "box"
+            p.metadata = PartMetadata(material_id="abs", fixed=True)
+            return p
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "Isolation scenario artifacts validated."
+        required_fixes: []
+
+  INT-183:
+    planner:
+      summary: "INT-183 steerability queue scenario generated."
+      thought: "Run a short command so steering can queue mid-run."
+      tool_calls:
+        - name: "execute_command"
+          input: { command: "python -c \"import time; time.sleep(1.0)\"" }
+        - name: "write_file"
+          input:
+            path: "plan.md"
+            content: |
+              ## 1. Solution Overview
+              Steerability queue scenario.
+              ## 2. Parts List
+              - Box (manufactured, abs)
+              ## 3. Assembly Strategy
+              1. Build.
+              ## 4. Cost & Weight Budget
+              - $10
+              ## 5. Risk Assessment
+              - Low.
+            overwrite: true
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+        - name: "write_file"
+          input:
+            path: "assembly_definition.yaml"
+            content: |
+              version: '1.0'
+              constraints:
+                benchmark_max_unit_cost_usd: 100
+                benchmark_max_weight_g: 1000
+                planner_target_max_unit_cost_usd: 50
+                planner_target_max_weight_g: 500
+              totals:
+                estimated_unit_cost_usd: 10
+                estimated_weight_g: 100
+                estimate_confidence: high
+              manufactured_parts: []
+              cots_parts: []
+              final_assembly: []
+            overwrite: true
+        - name: "write_file"
+          input:
+            path: "objectives.yaml"
+            content: |
+              objectives:
+                goal_zone: {min: [0,0,0], max: [1,1,1]}
+                build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+              simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+              moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+              constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+            overwrite: true
+    electronics_planner:
+      summary: "No electronics required."
+      thought: "No electronics steps."
+      tool_calls:
+        - name: "write_file"
+          input: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+    coder:
+      journal: "INT-183 coder output generated."
+      thought: "Emit simple script."
+      generated_code: |
+        from build123d import *
+        from shared.models.schemas import PartMetadata
+        def build():
+            p = Box(6,6,6)
+            p.label = "box"
+            p.metadata = PartMetadata(material_id="abs", fixed=True)
+            return p
+    reviewer:
+      review:
+        decision: "APPROVED"
+        reason: "Steerability scenario artifacts validated."
+        required_fixes: []
 
   EVAL-EE:
     planner:

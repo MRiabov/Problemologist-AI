@@ -96,6 +96,7 @@ markers = [
     "integration_p0: PR gate integration tests",
     "integration_p1: Nightly integration tests",
     "integration_p2: Weekly/manual integration tests",
+    "integration_agent: agent orchestration and behavior integration tests",
     "integration_frontend: end-to-end frontend tests",
     "allow_browser_errors: allow console.error/pageerror for tests that intentionally exercise error paths",
     "unit: marks tests as unit tests", # FIXME: remove
