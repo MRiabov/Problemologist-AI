@@ -4,8 +4,6 @@ from pathlib import Path
 import dspy
 from git import GitCommandError, Repo
 
-from controller.agent.react_runtime import FirstTurnFullInputReAct
-
 logger = logging.getLogger(__name__)
 
 
@@ -109,7 +107,7 @@ class GitManager:
             logger.info(f"Resolving conflict in {file_path}...")
 
             with dspy.settings.context(lm=lm):
-                resolver = FirstTurnFullInputReAct(
+                resolver = dspy.ReAct(
                     GitResolver, tools=[]
                 )  # FIXME should have all engineering tools. Else how would it edit?
                 prediction = resolver(conflict_content=content)
