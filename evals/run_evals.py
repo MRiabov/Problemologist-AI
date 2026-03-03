@@ -521,7 +521,7 @@ async def main():
                     pass
 
         except subprocess.CalledProcessError as e:
-            logger.error("env_up_failed", stdout=e.stdout, stderr=e.stderr)
+            logger.warning("env_up_failed", stdout=e.stdout, stderr=e.stderr)
             print(f"ERROR: env_up.sh failed with exit code {e.returncode}")
             print(f"Check logs for details: {log_file}")
             sys.exit(1)
@@ -593,7 +593,7 @@ async def main():
                         data = [item for item in data if item["id"] == args.task_id]
                     datasets[agent] = data
                 except json.JSONDecodeError:
-                    logger.error("dataset_json_decode_failed", path=str(json_path))
+                    logger.warning("dataset_json_decode_failed", path=str(json_path))
         else:
             logger.warning("dataset_missing", agent=agent, path=str(json_path))
 

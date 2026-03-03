@@ -46,7 +46,6 @@ def _trace_blob(episode_payload: dict) -> str:
 
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
-@pytest.mark.allow_backend_errors
 @pytest.mark.asyncio
 async def test_int_181_tool_loop_ordering_and_clean_termination():
     """INT-181: Tool-call ordering is preserved and run terminates cleanly."""
@@ -66,15 +65,15 @@ async def test_int_181_tool_loop_ordering_and_clean_termination():
     order_probe_write_idxs = _tool_trace_indexes(
         traces,
         name="write_file",
-        content_substring="order_probe.txt",
+        content_substring="journal.md",
     )
 
     assert list_files_idxs, "Expected at least one list_files TOOL_START trace."
     assert len(order_probe_write_idxs) == 1, (
-        "Expected exactly one write_file TOOL_START trace for order_probe.txt."
+        "Expected exactly one write_file TOOL_START trace for journal.md."
     )
     assert list_files_idxs[0] < order_probe_write_idxs[0], (
-        "Expected list_files to occur before write_file(order_probe.txt)."
+        "Expected list_files to occur before write_file(journal.md)."
     )
     assert any(
         (trace.get("content") or "").startswith("Agent finished execution")

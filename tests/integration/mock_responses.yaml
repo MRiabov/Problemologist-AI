@@ -775,7 +775,7 @@ scenarios:
         - name: "list_files"
           input: { path: "/" }
         - name: "write_file"
-          input: { path: "order_probe.txt", content: "ordered write marker", overwrite: true }
+          input: { path: "journal.md", content: "ordered write marker", overwrite: true }
         - name: "write_file"
           input:
             path: "plan.md"
