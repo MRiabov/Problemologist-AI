@@ -113,7 +113,8 @@ def test_trigger_backup_success(mock_workflow, mock_getenv):
         assert response.json()["status"] == "Accepted"
 
 
-def test_websocket_manager():
+@pytest.mark.asyncio
+async def test_websocket_manager():
     from controller.api.manager import ConnectionManager
 
     manager = ConnectionManager()
@@ -122,15 +123,12 @@ def test_websocket_manager():
     episode_id = uuid.uuid4()
 
     # Test connect
-    # manager.connect(episode_id, mock_ws) is async
-    import asyncio
-
-    asyncio.run(manager.connect(episode_id, mock_ws))
+    await manager.connect(episode_id, mock_ws)
     assert episode_id in manager.active_connections
     assert mock_ws in manager.active_connections[episode_id]
 
     # Test broadcast
-    asyncio.run(manager.broadcast(episode_id, {"type": "test"}))
+    await manager.broadcast(episode_id, {"type": "test"})
     mock_ws.send_json.assert_called_with({"type": "test"})
 
     # Test disconnect
@@ -138,7 +136,8 @@ def test_websocket_manager():
     assert episode_id not in manager.active_connections
 
 
-def test_websocket_broadcast_failure():
+@pytest.mark.asyncio
+async def test_websocket_broadcast_failure():
     from controller.api.manager import ConnectionManager
 
     manager = ConnectionManager()
@@ -147,10 +146,8 @@ def test_websocket_broadcast_failure():
     mock_ws.send_json.side_effect = Exception("Send failed")
     episode_id = uuid.uuid4()
 
-    import asyncio
-
-    asyncio.run(manager.connect(episode_id, mock_ws))
+    await manager.connect(episode_id, mock_ws)
 
     # Should handle failure and disconnect
-    asyncio.run(manager.broadcast(episode_id, {"type": "fail"}))
+    await manager.broadcast(episode_id, {"type": "fail"})
     assert episode_id not in manager.active_connections

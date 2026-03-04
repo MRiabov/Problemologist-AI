@@ -6,6 +6,7 @@ from worker_heavy.workbenches.config import load_config
 
 
 def test_load_config():
+    load_config.cache_clear()
     with capture_logs() as captured:
         config = load_config()
         assert any(log["event"] == "loading_manufacturing_config" for log in captured)

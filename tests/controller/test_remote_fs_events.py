@@ -40,32 +40,34 @@ def mock_worker_client():
 
 @pytest.mark.asyncio
 async def test_simulate_emits_events(mock_worker_client):
-    middleware = RemoteFilesystemMiddleware(mock_worker_client)
+    mock_temporal = AsyncMock()
+    middleware = RemoteFilesystemMiddleware(mock_worker_client, temporal_client=mock_temporal)
 
-    mock_worker_client.simulate.return_value = MagicMock(
-        model_dump=lambda: {
-            "success": True,
-            "time_elapsed_s": 1.5,
-            "compute_time_ms": 100,
-        }
-    )
+    mock_worker_client.bundle_session.return_value = b"bundle"
+    mock_temporal.execute_workflow.return_value = {
+        "success": True,
+        "time_elapsed_s": 1.5,
+        "compute_time_ms": 100,
+    }
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
-    ) as mock_record:
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
+    ) as mock_record, patch(
+        "controller.middleware.remote_fs.record_simulation_result",
+        new_callable=AsyncMock,
+    ) as mock_record_res:
         await middleware.simulate("test_plan.py")
 
         # Check request event
-        calls = mock_record.call_args_list
-        assert len(calls) == 2
-
-        # Keyword arguments check
-        assert isinstance(calls[0].kwargs["events"][0], SimulationRequestEvent)
-        assert calls[0].kwargs["events"][0].script_path == "test_plan.py"
+        mock_record.assert_called_once()
+        assert isinstance(
+            mock_record.call_args.kwargs["events"][0], SimulationRequestEvent
+        )
+        assert mock_record.call_args.kwargs["events"][0].script_path == "test_plan.py"
 
         # Check result event
-        assert isinstance(calls[1].kwargs["events"][0], SimulationResultEvent)
-        assert calls[1].kwargs["events"][0].success is True
+        mock_record_res.assert_called_once()
+        assert mock_record_res.call_args.args[1]["success"] is True
 
 
 @pytest.mark.asyncio
@@ -77,7 +79,7 @@ async def test_validate_emits_events(mock_worker_client):
     )
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
         await middleware.validate("test_plan.py")
 
@@ -97,7 +99,7 @@ async def test_submit_emits_events(mock_worker_client):
     )
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
         await middleware.submit("test_plan.py")
 
@@ -110,34 +112,34 @@ async def test_submit_emits_events(mock_worker_client):
 
 @pytest.mark.asyncio
 async def test_ls_files_emits_event(mock_worker_client):
-    middleware = RemoteFilesystemMiddleware(mock_worker_client)
+    middleware = RemoteFilesystemMiddleware(mock_worker_client, agent_role="engineering_mechanical_coder")
     mock_worker_client.list_files.return_value = []
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
-        await middleware.list_files("/test")
+        await middleware.list_files("script.py")
         mock_record.assert_called_once()
         assert isinstance(mock_record.call_args.kwargs["events"][0], LsFilesToolEvent)
-        assert mock_record.call_args.kwargs["events"][0].path == "/test"
+        assert mock_record.call_args.kwargs["events"][0].path == "script.py"
 
 
 @pytest.mark.asyncio
 async def test_read_file_emits_events(mock_worker_client):
-    middleware = RemoteFilesystemMiddleware(mock_worker_client)
+    middleware = RemoteFilesystemMiddleware(mock_worker_client, agent_role="engineering_mechanical_coder")
     mock_worker_client.read_file.return_value = "content"
 
     # Test regular file
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
-        await middleware.read_file("test.txt")
+        await middleware.read_file("script.py")
         mock_record.assert_called_once()
         assert isinstance(mock_record.call_args.kwargs["events"][0], ReadFileToolEvent)
 
     # Test skill file
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
         await middleware.read_file("skills/my_skill/SKILL.md")
 
@@ -159,13 +161,13 @@ async def test_read_file_emits_events(mock_worker_client):
 
 @pytest.mark.asyncio
 async def test_write_file_emits_event(mock_worker_client):
-    middleware = RemoteFilesystemMiddleware(mock_worker_client)
+    middleware = RemoteFilesystemMiddleware(mock_worker_client, agent_role="engineering_mechanical_coder")
     mock_worker_client.write_file.return_value = True
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
-        await middleware.write_file("test.txt", "new content")
+        await middleware.write_file("script.py", "new content")
         mock_record.assert_called_once()
         assert isinstance(mock_record.call_args.kwargs["events"][0], WriteFileToolEvent)
         assert (
@@ -175,13 +177,13 @@ async def test_write_file_emits_event(mock_worker_client):
 
 @pytest.mark.asyncio
 async def test_edit_file_emits_event(mock_worker_client):
-    middleware = RemoteFilesystemMiddleware(mock_worker_client)
+    middleware = RemoteFilesystemMiddleware(mock_worker_client, agent_role="engineering_mechanical_coder")
     mock_worker_client.edit_file.return_value = True
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
-        await middleware.edit_file("test.txt", [EditOp(old_string="a", new_string="b")])
+        await middleware.edit_file("script.py", [EditOp(old_string="a", new_string="b")])
         mock_record.assert_called_once()
         assert isinstance(mock_record.call_args.kwargs["events"][0], EditFileToolEvent)
         assert mock_record.call_args.kwargs["events"][0].num_edits == 1
@@ -193,7 +195,7 @@ async def test_grep_emits_event(mock_worker_client):
     mock_worker_client.grep.return_value = []
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
         await middleware.grep("pattern", path="/", glob="*.py")
         mock_record.assert_called_once()
@@ -207,7 +209,7 @@ async def test_run_command_emits_event(mock_worker_client):
     mock_worker_client.execute_python.return_value = MagicMock(model_dump=lambda: {})
 
     with patch(
-        "controller.middleware.remote_fs.record_worker_events", new_callable=AsyncMock
+        "controller.middleware.remote_fs.record_events", new_callable=AsyncMock
     ) as mock_record:
         await middleware.run_command("print('test')")
         mock_record.assert_called_once()

@@ -17,6 +17,8 @@ def genesis_backend():
 
 def test_apply_control(genesis_backend):
     mock_entity = MagicMock()
+    # Ensure it doesn't have the other method to be unambiguous
+    del mock_entity.control_dofs_force
     genesis_backend.entities = {"motor1": mock_entity}
     genesis_backend.motors = [{"part_name": "motor1"}]
 

@@ -140,6 +140,7 @@ class ManufacturingMethod(UppercaseStrEnum):
     CNC = "CNC"
     THREE_DP = "3DP"
     INJECTION_MOLDING = "IM"
+    AUTO_GEOMETRIC = "AUTO_GEOMETRIC"
 
 
 class MotorControlMode(UppercaseStrEnum):

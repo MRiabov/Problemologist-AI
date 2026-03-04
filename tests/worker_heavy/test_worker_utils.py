@@ -139,7 +139,7 @@ def test_prerender_24_views(mock_get_backend, mock_get_builder, tmp_path):
     mock_component = p.part
 
     # Execute
-    renders = prerender_24_views(mock_component, output_dir=str(tmp_path))
+    renders = prerender_24_views(mock_component, output_dir=str(tmp_path), smoke_test_mode=False)
 
     # Assert
     assert len(renders) == 24

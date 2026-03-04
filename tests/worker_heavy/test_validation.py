@@ -62,9 +62,12 @@ def test_plan_validation_events():
 @pytest.mark.integration
 @pytest.mark.xdist_group(name="physics_sims")
 def test_simulation():
+    from shared.models.schemas import PartMetadata
+
     # Valid stable box
     with BuildPart() as p:
         Box(10, 10, 10)
+    p.part.metadata = PartMetadata(material_id="aluminum_6061")
 
     res = simulate(p.part)
     assert res.success, f"Simulation failed: {res.summary}"
