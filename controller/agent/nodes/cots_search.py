@@ -2,6 +2,7 @@ import dspy
 import structlog
 from langchain_core.messages import AIMessage
 
+from shared.enums import AgentName
 from shared.type_checking import type_check
 
 from ..config import settings
@@ -46,7 +47,7 @@ class COTSSearchNode(BaseNode):
             inputs,
             get_engineer_tools,
             [],
-            "cots_search",
+            AgentName.COTS_SEARCH,
         )
 
         if not prediction:
@@ -77,7 +78,7 @@ async def cots_search_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="engineer_planner",
+        agent_role=AgentName.COTS_SEARCH,
     )
     node = COTSSearchNode(context=ctx)
     return await node(state)

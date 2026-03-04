@@ -16,6 +16,7 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
 )
+from shared.enums import AgentName, SimulatorBackendType
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -30,7 +31,6 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
-from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.policy import FilesystemPolicy
 from shared.workers.schema import (
@@ -88,7 +88,7 @@ class RemoteFilesystemMiddleware:
         self,
         client: WorkerClient,
         temporal_client: Client | None = None,
-        agent_role: str = "engineering_mechanical_coder",
+        agent_role: AgentName = AgentName.ENGINEER_CODER,
     ):
         self.client = client
         self.temporal_client = temporal_client
@@ -98,7 +98,11 @@ class RemoteFilesystemMiddleware:
     def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
         """Check if action is allowed by policy."""
         if not self.policy.check_permission(self.agent_role, action, path):
-            role = self.policy.ROLE_MAPPING.get(self.agent_role, self.agent_role)
+            role = (
+                self.agent_role.value
+                if isinstance(self.agent_role, AgentName)
+                else self.agent_role
+            )
             agent_rules = self.policy.config.agents.get(role)
             if agent_rules:
                 action_rules = getattr(agent_rules, action)
@@ -109,7 +113,7 @@ class RemoteFilesystemMiddleware:
             denied = action_rules.deny
 
             msg = (
-                f"Permission denied for role '{self.agent_role}' (mapped to '{role}') "
+                f"Permission denied for role '{self.agent_role}' "
                 f"to {action} '{path}'.\n"
                 f"Policy for '{role}' {action} access:\n"
                 f"  Allowed patterns: {allowed}\n"

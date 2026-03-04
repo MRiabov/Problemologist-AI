@@ -9,7 +9,7 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
-from shared.enums import ReviewDecision
+from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
@@ -86,7 +86,7 @@ class ExecutionReviewerNode(BaseNode):
             inputs=inputs,
             tool_factory=get_engineer_tools,
             validate_files=validate_files,
-            node_type="execution_reviewer",
+            node_type=AgentName.ENGINEER_REVIEWER,
         )
 
         if not prediction:
@@ -205,7 +205,7 @@ async def execution_reviewer_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="engineering_reviewer",
+        agent_role=AgentName.ENGINEER_REVIEWER,
     )
     node = ExecutionReviewerNode(context=ctx)
     return await node(state)

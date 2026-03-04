@@ -21,20 +21,27 @@ class PromptManager:
         # Mapping from our template names to prompts.yaml paths
         templates = {
             # Engineer Agent
-            "planner": data["engineer"]["planner"]["system"],
-            "electronics_planner": data["engineer"]["electronics_planner"]["system"],
-            "coder": data["engineer"]["engineer"]["system"],
-            "electronics_engineer": data["engineer"]["electronics_engineer"]["system"],
-            "plan_reviewer": data["engineer"]["critic"]["system"],
-            "execution_reviewer": data["engineer"]["critic"]["system"],
-            "electronics_reviewer": data["engineer"]["critic"]["system"],
+            AgentName.ENGINEER_PLANNER: data["engineer"]["planner"]["system"],
+            AgentName.ELECTRONICS_PLANNER: data["engineer"]["electronics_planner"][
+                "system"
+            ],
+            AgentName.ENGINEER_CODER: data["engineer"]["engineer"]["system"],
+            AgentName.ELECTRONICS_ENGINEER: data["engineer"]["electronics_engineer"][
+                "system"
+            ],
+            AgentName.ENGINEER_REVIEWER: data["engineer"]["critic"]["system"],
+            AgentName.ELECTRONICS_REVIEWER: data["engineer"]["critic"]["system"],
             # Benchmark Generator
-            "benchmark_planner": data["benchmark_generator"]["planner"]["system"],
-            "benchmark_coder": data["benchmark_generator"]["coder"]["system"],
-            "benchmark_reviewer": data["benchmark_generator"]["reviewer"]["system"],
+            AgentName.BENCHMARK_PLANNER: data["benchmark_generator"]["planner"][
+                "system"
+            ],
+            AgentName.BENCHMARK_CODER: data["benchmark_generator"]["coder"]["system"],
+            AgentName.BENCHMARK_REVIEWER: data["benchmark_generator"]["reviewer"][
+                "system"
+            ],
             # Subagents
-            "cots_search": data["subagents"]["cots_search"]["system"],
-            "skill_learner": data["subagents"]["skill_learner"]["system"],
+            AgentName.COTS_SEARCH: data["subagents"]["cots_search"]["system"],
+            AgentName.SKILL_AGENT: data["subagents"]["skill_learner"]["system"],
             "documentation": data["subagents"]["documentation"]["system"],
         }
 

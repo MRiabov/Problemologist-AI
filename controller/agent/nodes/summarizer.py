@@ -3,6 +3,7 @@ import structlog
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState
+from shared.enums import AgentName
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -73,7 +74,7 @@ async def summarizer_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="engineering_planner",
+        agent_role=AgentName.ENGINEER_PLANNER,
     )
     node = SummarizerNode(context=ctx)
     return await node(state)

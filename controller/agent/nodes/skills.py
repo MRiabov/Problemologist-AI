@@ -12,6 +12,7 @@ from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events, sync_asset
 from controller.utils.git import GitManager
+from shared.enums import AgentName
 from shared.observability.schemas import SkillEditEvent
 from shared.type_checking import type_check
 
@@ -141,7 +142,7 @@ class SkillsNode(BaseNode):
             inputs,
             get_skills_tools,
             validate_files,
-            "skill_learner",
+            AgentName.SKILL_AGENT,
         )
 
         if not prediction:
@@ -172,7 +173,7 @@ async def skills_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="engineering_planner",
+        agent_role=AgentName.ENGINEER_PLANNER,
     )
     node = SkillsNode(context=ctx)
     return await node(state)

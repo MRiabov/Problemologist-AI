@@ -174,8 +174,13 @@ async def execute_agent_task(
 
                 # Prepare initial state based on agent type
                 if (
-                    agent_name.startswith("engineer")
-                    or agent_name == "electronics_engineer"
+                    agent_name
+                    in [
+                        AgentName.ENGINEER_PLANNER,
+                        AgentName.ENGINEER_CODER,
+                        AgentName.ENGINEER_REVIEWER,
+                    ]
+                    or agent_name == AgentName.ELECTRONICS_ENGINEER
                 ):
                     initial_input = {
                         "task": task,
@@ -183,7 +188,11 @@ async def execute_agent_task(
                         "episode_id": str(episode_id),
                         "messages": [HumanMessage(content=task)],
                     }
-                elif agent_name.startswith("benchmark"):
+                elif agent_name in [
+                    AgentName.BENCHMARK_PLANNER,
+                    AgentName.BENCHMARK_CODER,
+                    AgentName.BENCHMARK_REVIEWER,
+                ]:
                     from controller.agent.benchmark.models import (
                         GenerationSession,
                         SessionStatus,
@@ -601,8 +610,19 @@ async def continue_agent_task(
 
                 client = get_worker_client(session_id)
 
-                # Check if agent name is stored, otherwise default check
-                agent_name = "engineer_coder"
+                # Try to retrieve agent_name from metadata if available
+                agent_name = AgentName.ENGINEER_CODER
+                if episode.metadata_vars:
+                    from shared.models.schemas import EpisodeMetadata
+
+                    try:
+                        # Assuming AgentName might be in metadata_vars or we can infer it
+                        # For now, we use metadata to get the original name if stored
+                        meta = EpisodeMetadata.model_validate(episode.metadata_vars)
+                        # We need a field in metadata for agent_name.
+                        # If not present, default to ENGINEER_CODER for continuation.
+                    except Exception:
+                        pass
 
                 agent, langfuse_callback = create_agent_graph(
                     agent_name=agent_name,

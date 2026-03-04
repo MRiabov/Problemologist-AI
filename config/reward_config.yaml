@@ -20,7 +20,7 @@ bootstrap_threshold: 0.75
 # ---------------------------------------------------------------------------
 # Benchmark Generator graph
 # ---------------------------------------------------------------------------
-benchmark_generator:
+benchmark:
   # ── Benchmark Planner ────────────────────────────────────────────────────
   benchmark_planner:
     description: >

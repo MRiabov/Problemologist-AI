@@ -145,6 +145,8 @@ async def test_graph_initializes_langfuse_callback():
                     mock_factory.return_value.__aenter__.return_value = mock_db
                     mock_get_sessionmaker.return_value = mock_factory
 
+                    from shared.enums import AgentName
+
                     # Trigger graph execution
                     test_uuid = uuid.uuid4()
                     await _execute_graph_streaming(
@@ -153,7 +155,7 @@ async def test_graph_initializes_langfuse_callback():
 
                     # Verify callback creation
                     mock_get_callback.assert_called_once_with(
-                        name="benchmark_generator", session_id=str(test_uuid)
+                        name=AgentName.BENCHMARK_PLANNER, session_id=str(test_uuid)
                     )
 
                     # Verify it's passed to astream

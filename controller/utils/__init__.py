@@ -9,8 +9,6 @@ from .integration import infer_integration_test_id as infer_integration_test_id
 
 logger = structlog.get_logger(__name__)
 
-from .integration import apply_integration_test_metadata, infer_integration_test_id
-
 
 def get_episode_id(session_id: str | uuid.UUID) -> uuid.UUID:
     """

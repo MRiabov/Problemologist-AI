@@ -164,7 +164,7 @@ def cad_simulation_metric(
 
     # Find the agent config in the hierarchy
     cfg = None
-    for category in ["engineer", "benchmark_generator", "shared"]:
+    for category in ["engineer", "benchmark", "shared"]:
         cat_cfg = getattr(full_cfg, category, {})
         if agent_name in cat_cfg:
             cfg = cat_cfg[agent_name]

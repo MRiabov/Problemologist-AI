@@ -8,7 +8,7 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
-from shared.enums import ReviewDecision
+from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
@@ -80,7 +80,7 @@ class PlanReviewerNode(BaseNode):
             inputs=inputs,
             tool_factory=get_engineer_tools,
             validate_files=validate_files,
-            node_type="plan_reviewer",
+            node_type=AgentName.ENGINEER_REVIEWER,
         )
 
         if not prediction:
@@ -148,9 +148,9 @@ async def plan_reviewer_node(state: AgentState) -> AgentState:
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url,
-        session_id=session_id,
-        episode_id=episode_id,
-        agent_role="engineering_reviewer",
+        session_id=state["session_id"],
+        episode_id=state.get("episode_id"),
+        agent_role=AgentName.ENGINEER_REVIEWER,
     )
     node = PlanReviewerNode(context=ctx)
     return await node(state)

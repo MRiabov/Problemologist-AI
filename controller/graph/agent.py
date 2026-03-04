@@ -20,13 +20,22 @@ def create_agent_graph(
     # WP10: Remove LangChain-based Langfuse callbacks
 
     if (
-        agent_name.startswith("engineer")
+        agent_name
+        in [
+            AgentName.ENGINEER_PLANNER,
+            AgentName.ENGINEER_CODER,
+            AgentName.ENGINEER_REVIEWER,
+        ]
         or agent_name == AgentName.ELECTRONICS_ENGINEER
     ):
         # Unified engineering graph (Architect -> Engineer -> Critic)
         return engineering_graph, None
 
-    if agent_name.startswith("benchmark"):
+    if agent_name in [
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    ]:
         # Unified benchmark generation graph (Planner -> Coder -> Reviewer)
         return define_graph(), None
 

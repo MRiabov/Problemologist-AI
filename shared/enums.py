@@ -244,7 +244,7 @@ class ReviewDecision(UppercaseStrEnum):
 
 
 class MechanicalRefusalReason(UppercaseStrEnum):
-    """Refusal reasons for engineering_mechanical_coder."""
+    """Refusal reasons for engineer_coder."""
 
     PHYSICALLY_IMPOSSIBLE = "PHYSICALLY_IMPOSSIBLE"
     BUDGET_EXCEEDED = "BUDGET_EXCEEDED"
@@ -255,7 +255,7 @@ class MechanicalRefusalReason(UppercaseStrEnum):
 
 
 class ElectricalRefusalReason(UppercaseStrEnum):
-    """Refusal reasons for engineering_electrical_coder."""
+    """Refusal reasons for electronics_engineer."""
 
     INVALID_NETLIST = "INVALID_NETLIST"
     POWER_INSUFFICIENT = "POWER_INSUFFICIENT"
@@ -265,7 +265,7 @@ class ElectricalRefusalReason(UppercaseStrEnum):
 
 
 class BenchmarkRefusalReason(UppercaseStrEnum):
-    """Refusal reasons for benchmark_cad_coder."""
+    """Refusal reasons for benchmark_coder."""
 
     INVALID_OBJECTIVES = "INVALID_OBJECTIVES"
     CONTRADICTORY_CONSTRAINTS = "CONTRADICTORY_CONSTRAINTS"

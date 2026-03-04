@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage
 from controller.agent.config import settings
 from controller.agent.state import AgentState
 from controller.agent.tools import get_engineer_tools
+from shared.enums import AgentName
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -92,7 +93,7 @@ class CoderNode(BaseNode):
             inputs,
             get_engineer_tools,
             validate_files,
-            "coder",
+            AgentName.ENGINEER_CODER,
         )
 
         if not prediction:
@@ -151,7 +152,7 @@ async def coder_node(state: AgentState) -> AgentState:
         episode_id=episode_id,
         worker_client=state.worker_client,
         fs=state.fs,
-        agent_role="engineer_coder",
+        agent_role=AgentName.ENGINEER_CODER,
     )
     node = CoderNode(context=ctx)
     return await node(state)

@@ -8,6 +8,7 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
+from shared.enums import AgentName
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
 
@@ -67,7 +68,7 @@ class ElectronicsPlannerNode(BaseNode):
             inputs=inputs,
             tool_factory=get_engineer_tools,
             validate_files=validate_files,
-            node_type="electronics_planner",
+            node_type=AgentName.ELECTRONICS_PLANNER,
         )
 
         if not prediction:
@@ -116,7 +117,7 @@ async def electronics_planner_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="engineering_planner",
+        agent_role=AgentName.ELECTRONICS_PLANNER,
     )
     node = ElectronicsPlannerNode(context=ctx)
     return await node(state)

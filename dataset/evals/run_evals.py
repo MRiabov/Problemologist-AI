@@ -24,7 +24,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from controller.clients.worker import WorkerClient  # noqa: E402
-from shared.enums import AgentName, EpisodeStatus, EvalMode, SeedMatchMethod, GenerationKind  # noqa: E402
+from shared.enums import (  # noqa: E402
+    AgentName,
+    EpisodeStatus,
+    EvalMode,
+    GenerationKind,
+    SeedMatchMethod,
+)
 from shared.logging import configure_logging, get_logger  # noqa: E402
 from shared.models.schemas import EpisodeMetadata  # noqa: E402
 from shared.utils.evaluation import analyze_electronics_metrics  # noqa: E402
@@ -51,7 +57,7 @@ class AgentEvalSpec(BaseModel):
 
     mode: EvalMode  # benchmark | agent | git
     request_agent_name: AgentName | None = None
-    required_trace_names: tuple[str, ...] = ()
+    required_trace_names: tuple[AgentName, ...] = ()
 
 
 class EvalDatasetItem(BaseModel):
@@ -62,62 +68,62 @@ class EvalDatasetItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-AGENT_SPECS: dict[str, AgentEvalSpec] = {
+AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
     # Benchmark graph roles
-    "benchmark_planner": AgentEvalSpec(
+    AgentName.BENCHMARK_PLANNER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_PLANNER,
-        required_trace_names=("benchmark_planner",),
+        required_trace_names=(AgentName.BENCHMARK_PLANNER,),
     ),
-    "benchmark_coder": AgentEvalSpec(
+    AgentName.BENCHMARK_CODER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_CODER,
-        required_trace_names=("benchmark_coder",),
+        required_trace_names=(AgentName.BENCHMARK_CODER,),
     ),
-    "benchmark_reviewer": AgentEvalSpec(
+    AgentName.BENCHMARK_REVIEWER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_REVIEWER,
-        required_trace_names=("benchmark_reviewer",),
+        required_trace_names=(AgentName.BENCHMARK_REVIEWER,),
     ),
     # Mechanical engineering roles
-    "engineer_planner": AgentEvalSpec(
+    AgentName.ENGINEER_PLANNER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_PLANNER,
-        required_trace_names=("planner",),
+        required_trace_names=(AgentName.ENGINEER_PLANNER,),
     ),
-    "engineer_coder": AgentEvalSpec(
+    AgentName.ENGINEER_CODER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
-        required_trace_names=("coder",),
+        required_trace_names=(AgentName.ENGINEER_CODER,),
     ),
-    "engineer_reviewer": AgentEvalSpec(
+    AgentName.ENGINEER_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
-        required_trace_names=("execution_reviewer",),
+        required_trace_names=(AgentName.ENGINEER_REVIEWER,),
     ),
     # Electrical engineering roles inside the unified engineer graph
-    "electronics_planner": AgentEvalSpec(
+    AgentName.ELECTRONICS_PLANNER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_PLANNER,
-        required_trace_names=("electronics_planner",),
+        required_trace_names=(AgentName.ELECTRONICS_PLANNER,),
     ),
-    "electronics_engineer": AgentEvalSpec(
+    AgentName.ELECTRONICS_ENGINEER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
-        required_trace_names=("electronics_engineer",),
+        required_trace_names=(AgentName.ELECTRONICS_ENGINEER,),
     ),
-    "electronics_reviewer": AgentEvalSpec(
+    AgentName.ELECTRONICS_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
-        required_trace_names=("electronics_reviewer",),
+        required_trace_names=(AgentName.ELECTRONICS_REVIEWER,),
     ),
     # Sidecars
-    "skill_agent": AgentEvalSpec(
+    AgentName.SKILL_AGENT: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.SKILL_AGENT,
-        required_trace_names=("skill_learner",),
+        required_trace_names=(AgentName.SKILL_AGENT,),
     ),
-    "git_agent": AgentEvalSpec(
+    AgentName.GIT_AGENT: AgentEvalSpec(
         mode=EvalMode.GIT, request_agent_name=AgentName.GIT_AGENT
     ),
 }
@@ -135,7 +141,7 @@ async def _handle_electronics_metrics(
 
 # Mapping of agent names to their specific metric handlers
 METRIC_HANDLERS = {
-    "electronics_engineer": _handle_electronics_metrics,
+    AgentName.ELECTRONICS_ENGINEER: _handle_electronics_metrics,
 }
 
 
@@ -229,13 +235,15 @@ def _trace_names_lower(episode: dict[str, Any]) -> set[str]:
 
 
 def _missing_required_traces(
-    required: tuple[str, ...], episode: dict[str, Any]
+    required: tuple[AgentName, ...], episode: dict[str, Any]
 ) -> list[str]:
     names = _trace_names_lower(episode)
-    return [trace for trace in required if trace.lower() not in names]
+    return [trace.value for trace in required if trace.value.lower() not in names]
 
 
-async def _run_git_eval(item: EvalDatasetItem, stats: dict[str, Any], agent_name: str):
+async def _run_git_eval(
+    item: EvalDatasetItem, stats: dict[str, Any], agent_name: AgentName
+):
     task_id = item.id
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
     log.info("eval_start")
@@ -278,7 +286,10 @@ async def _run_git_eval(item: EvalDatasetItem, stats: dict[str, Any], agent_name
 
 
 async def run_single_eval(
-    item: EvalDatasetItem, agent_name: str, stats: dict[str, Any], verbose: bool = False
+    item: EvalDatasetItem,
+    agent_name: AgentName,
+    stats: dict[str, Any],
+    verbose: bool = False,
 ):
     """
     Runs a single evaluation task for a specific agent type.
@@ -322,14 +333,14 @@ async def run_single_eval(
             episode_id_key = "episode_id"
             session_id_key = "session_id"
         else:
-            if agent_name == "electronics_engineer":
+            if agent_name == AgentName.ELECTRONICS_ENGINEER:
                 session_id = f"EVAL-EE-{uuid.uuid4().hex[:8]}"
             else:
                 session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
 
             # Force electronics-engineer path to execute in integration-mode runs by
             # seeding explicit electronics requirements in objectives.yaml.
-            if agent_name == "electronics_engineer":
+            if agent_name == AgentName.ELECTRONICS_ENGINEER:
                 worker_for_seed = WorkerClient(
                     base_url=WORKER_LIGHT_URL, session_id=session_id
                 )
@@ -426,8 +437,11 @@ electronics_requirements:
                                 )
                             seen_trace_ids.add(trace_id)
 
-                    if status == EpisodeStatus.PLANNED and spec.mode == EvalMode.BENCHMARK:
-                        if agent_name == "benchmark_planner":
+                    if (
+                        status == EpisodeStatus.PLANNED
+                        and spec.mode == EvalMode.BENCHMARK
+                    ):
+                        if agent_name == AgentName.BENCHMARK_PLANNER:
                             episode = await _fetch_episode(client, episode_id)
                             missing_traces = _missing_required_traces(
                                 spec.required_trace_names, episode
@@ -643,11 +657,19 @@ async def main():
     rate = Rate(50, Duration.MINUTE)
     limiter = Limiter(rate)
 
-    if args.agent != "all" and args.agent not in AGENT_SPECS:
-        logger.error("unknown_agent", agent=args.agent)
-        logger.info("available_agents")
-        for name in available_agents:
-            logger.info("agent", name=name)
+    requested_agent = args.agent
+    if requested_agent != "all":
+        try:
+            requested_agent = AgentName(requested_agent)
+        except ValueError:
+            logger.error("unknown_agent", agent=requested_agent)
+            logger.info("available_agents")
+            for name in available_agents:
+                logger.info("agent", name=name)
+            sys.exit(1)
+
+    if requested_agent != "all" and requested_agent not in AGENT_SPECS:
+        logger.error("agent_not_in_specs", agent=requested_agent)
         sys.exit(1)
 
     # Check health
@@ -667,7 +689,7 @@ async def main():
 
     evals_root = Path(__file__).parent / "datasets"
     datasets = {}
-    agents_to_run = available_agents if args.agent == "all" else [args.agent]
+    agents_to_run = available_agents if requested_agent == "all" else [requested_agent]
 
     stats = {
         agent: {
@@ -681,7 +703,8 @@ async def main():
     }
 
     for agent in agents_to_run:
-        json_path = evals_root / f"{agent}.json"
+        agent_val = agent.value if isinstance(agent, AgentName) else agent
+        json_path = evals_root / f"{agent_val}.json"
         if json_path.exists():
             with json_path.open() as f:
                 try:
@@ -711,7 +734,7 @@ async def main():
     if tasks:
         semaphore = asyncio.Semaphore(max(1, args.concurrency))
 
-        async def _guarded(item: EvalDatasetItem, agent: str):
+        async def _guarded(item: EvalDatasetItem, agent: AgentName):
             async with semaphore:
                 if not args.no_rate_limit:
                     await asyncio.to_thread(limiter.try_acquire, "eval")

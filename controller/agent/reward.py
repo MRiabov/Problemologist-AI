@@ -37,7 +37,7 @@ class RewardConfig(BaseModel):
     """Top-level reward configuration for DSPy optimization."""
 
     bootstrap_threshold: float
-    benchmark_generator: dict[str, AgentRewardConfig]
+    benchmark: dict[str, AgentRewardConfig]
     engineer: dict[str, AgentRewardConfig]
     shared: dict[str, AgentRewardConfig]
 

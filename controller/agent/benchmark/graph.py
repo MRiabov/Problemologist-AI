@@ -289,10 +289,6 @@ async def _execute_graph_streaming(
 
     # Report automated score to Langfuse
     try:
-        from controller.observability.langfuse import (
-            calculate_and_report_automated_score,
-        )
-
         # Get trace_id from OpenTelemetry context
         trace_id = None
         span = trace.get_current_span()
@@ -396,10 +392,12 @@ async def run_generation_session(
         )
         try:
             middleware = RemoteFilesystemMiddleware(
-                worker_client, agent_role="benchmark_planner"
+                worker_client, agent_role=AgentName.BENCHMARK_PLANNER
             )
             backend = RemoteFilesystemBackend(middleware)
-            await initialize_agent_files(backend, agent_name="benchmark_planner")
+            await initialize_agent_files(
+                backend, agent_name=AgentName.BENCHMARK_PLANNER
+            )
         finally:
             await worker_client.aclose()
     except Exception as e:
@@ -551,7 +549,7 @@ async def _persist_session_assets(
                 heavy_url=global_settings.worker_heavy_url,
             )
             middleware = RemoteFilesystemMiddleware(
-                client, agent_role="benchmark_planner"
+                client, agent_role=AgentName.BENCHMARK_PLANNER
             )
             backend = RemoteFilesystemBackend(middleware)
 

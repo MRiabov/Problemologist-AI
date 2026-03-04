@@ -18,6 +18,7 @@ from pydantic import (
 )
 
 from shared.enums import (
+    AgentName,
     BenchmarkRefusalReason,
     ElectricalRefusalReason,
     ElectronicComponentType,
@@ -530,26 +531,26 @@ class PlanRefusalFrontmatter(BaseModel):
     reasons: list[
         MechanicalRefusalReason | ElectricalRefusalReason | BenchmarkRefusalReason
     ]
-    role: str
+    role: AgentName
 
     @model_validator(mode="after")
     def validate_role_reasons(self) -> "PlanRefusalFrontmatter":
         """Validate that reasons match the role."""
-        if self.role == "engineering_mechanical_coder":
+        if self.role == AgentName.ENGINEER_CODER:
             if not all(
                 isinstance(r, MechanicalRefusalReason)
                 or str(r) in MechanicalRefusalReason.__members__
                 for r in self.reasons
             ):
                 raise ValueError(f"Invalid reasons for {self.role}")
-        elif self.role == "engineering_electrical_coder":
+        elif self.role == AgentName.ELECTRONICS_ENGINEER:
             if not all(
                 isinstance(r, ElectricalRefusalReason)
                 or str(r) in ElectricalRefusalReason.__members__
                 for r in self.reasons
             ):
                 raise ValueError(f"Invalid reasons for {self.role}")
-        elif self.role == "benchmark_cad_coder":
+        elif self.role == AgentName.BENCHMARK_CODER:
             if not all(
                 isinstance(r, BenchmarkRefusalReason)
                 or str(r) in BenchmarkRefusalReason.__members__

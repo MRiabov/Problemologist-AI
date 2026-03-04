@@ -9,7 +9,7 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
-from shared.enums import SessionStatus
+from shared.enums import AgentName, SessionStatus
 from shared.models.schemas import ReviewResult
 from shared.simulation.schemas import (
     RandomizationStrategy,
@@ -200,7 +200,7 @@ physics:
             inputs,
             get_benchmark_planner_tools,
             ["plan.md", "todo.md", "objectives.yaml"],
-            "benchmark_planner",
+            AgentName.BENCHMARK_PLANNER,
             max_retries=1,
         )
 
@@ -232,7 +232,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role="benchmark_planner",
+        agent_role=AgentName.BENCHMARK_PLANNER,
     )
     node = BenchmarkPlannerNode(context=ctx)
     return await node(state)
@@ -293,7 +293,7 @@ class BenchmarkCoderNode(BaseNode):
             inputs,
             get_benchmark_tools,
             [SCRIPT_FILE, "plan.md", "todo.md", "objectives.yaml"],
-            "benchmark_coder",
+            AgentName.BENCHMARK_CODER,
         )
 
         if not prediction and not artifacts:
@@ -428,7 +428,7 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role="benchmark_cad_coder",
+        agent_role=AgentName.BENCHMARK_CODER,
     )
     node = BenchmarkCoderNode(context=ctx)
     return await node(state)
@@ -459,7 +459,7 @@ class BenchmarkCOTSSearchNode(BaseNode):
             inputs,
             get_benchmark_tools,
             [],
-            "cots_search",
+            AgentName.COTS_SEARCH,
         )
 
         summary = getattr(prediction, "search_summary", "No summary provided.")
@@ -477,7 +477,7 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role="benchmark_cad_coder",
+        agent_role=AgentName.BENCHMARK_CODER,
     )
     node = BenchmarkCOTSSearchNode(context=ctx)
     return await node(state)
@@ -544,7 +544,7 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role="benchmark_planner",
+        agent_role=AgentName.BENCHMARK_PLANNER,
     )
     node = BenchmarkSummarizerNode(context=ctx)
     return await node(state)
@@ -628,7 +628,7 @@ class BenchmarkReviewerNode(BaseNode):
                 inputs,
                 get_reviewer_tools,
                 [],
-                "benchmark_reviewer",
+                AgentName.BENCHMARK_REVIEWER,
             )
 
             if not prediction:
@@ -660,7 +660,7 @@ async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorSta
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role="engineering_reviewer",
+        agent_role=AgentName.BENCHMARK_REVIEWER,
     )
     node = BenchmarkReviewerNode(context=ctx)
     return await node(state)

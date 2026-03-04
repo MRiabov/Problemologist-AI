@@ -44,25 +44,25 @@ class AgentModule(dspy.Module):
 
         if agent_name == AgentName.BENCHMARK_PLANNER:
             self.signature = BenchmarkPlannerSignature.with_instructions(
-                self.pm.render("benchmark_planner")
+                self.pm.render(AgentName.BENCHMARK_PLANNER)
             )
             self.tools = get_benchmark_tools(self.fs, self.session_id)
         elif agent_name == AgentName.BENCHMARK_CODER:
             self.signature = BenchmarkCoderSignature.with_instructions(
-                self.pm.render("benchmark_coder")
+                self.pm.render(AgentName.BENCHMARK_CODER)
             )
             self.tools = get_benchmark_tools(self.fs, self.session_id)
         elif agent_name in [AgentName.ENGINEER_CODER, "coder", "engineer"]:
             # "engineer" template corresponds to the coder role in prompts.yaml
             self.signature = CoderSignature.with_instructions(
-                self.pm.render("engineer")
+                self.pm.render(AgentName.ENGINEER_CODER)
             )
             self.tools = get_engineer_tools(self.fs, self.session_id)
         else:
             # Default fallback
             logger.error("unknown_agent_type_fallback_coder", agent_name=agent_name)
             self.signature = CoderSignature.with_instructions(
-                self.pm.render("engineer")
+                self.pm.render(AgentName.ENGINEER_CODER)
             )
             self.tools = get_engineer_tools(self.fs, self.session_id)
 

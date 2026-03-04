@@ -111,7 +111,7 @@ async def test_int_072_plan_refusal_validation_and_routing():
         invalid_refusal = (
             "---\n"
             "reasons: [INVALID_REASON]\n"
-            "role: engineering_mechanical_coder\n"
+            f"role: {AgentName.ENGINEER_CODER.value}\n"
             "---\n"
             "Evidence body\n"
         )
@@ -139,7 +139,7 @@ async def test_int_072_plan_refusal_validation_and_routing():
         valid_refusal = (
             "---\n"
             "reasons: [PHYSICALLY_IMPOSSIBLE]\n"
-            "role: engineering_mechanical_coder\n"
+            f"role: {AgentName.ENGINEER_CODER.value}\n"
             "---\n"
             "Detailed geometric evidence\n"
         )

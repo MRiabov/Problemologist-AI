@@ -8,6 +8,7 @@ from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
+from shared.enums import AgentName
 from shared.observability.schemas import ElecAgentHandoverEvent
 from shared.type_checking import type_check
 
@@ -100,7 +101,7 @@ class ElectronicsEngineerNode(BaseNode):
             inputs,
             get_engineer_tools,
             validate_files,
-            "electronics_engineer",
+            AgentName.ELECTRONICS_ENGINEER,
         )
 
         if not prediction:
@@ -153,7 +154,7 @@ async def electronics_engineer_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role="electronics_engineer",
+        agent_role=AgentName.ELECTRONICS_ENGINEER,
     )
     node = ElectronicsEngineerNode(context=ctx)
     return await node(state)

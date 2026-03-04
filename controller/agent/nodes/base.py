@@ -15,7 +15,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import init_tracing
 from controller.persistence.models import Trace
-from shared.enums import TraceType
+from shared.enums import AgentName, TraceType
 from shared.models.schemas import CodeReference
 
 if TYPE_CHECKING:
@@ -35,18 +35,18 @@ class SharedNodeContext:
     dspy_lm: dspy.LM
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
-    main_loop: asyncio.AbstractEventLoop
-
-    @classmethod
-    def create(
-        cls,
-        worker_light_url: str,
-        session_id: str,
-        episode_id: str | None = None,
-        worker_client: WorkerClient | None = None,
-        fs: RemoteFilesystemMiddleware | None = None,
-        agent_role: str = "engineering_mechanical_coder",
-    ) -> "SharedNodeContext":
+    from shared.enums import AgentName, TraceType
+    ...
+        @classmethod
+        def create(
+            cls,
+            worker_light_url: str,
+            session_id: str,
+            episode_id: str | None = None,
+            worker_client: WorkerClient | None = None,
+            fs: RemoteFilesystemMiddleware | None = None,
+            agent_role: AgentName = AgentName.ENGINEER_CODER,
+        ) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
         # Fallback for episode_id if not provided
         eid = episode_id or session_id

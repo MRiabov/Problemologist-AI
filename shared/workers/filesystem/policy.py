@@ -85,22 +85,13 @@ class FilesystemPolicy:
         Precedence: deny > allow.
         Unmatched => deny.
         """
-        # Normalize agent role to string value if it's an enum
-        role = agent_role.value if isinstance(agent_role, AgentName) else agent_role
+        # Strictly enforce AgentName enum
+        if isinstance(agent_role, str):
+            role_enum = AgentName(agent_role)
+        else:
+            role_enum = agent_role
 
-        # Mapping for legacy/node-specific names that don't match AgentName enum directly
-        # but should share the same policy.
-        LEGACY_MAPPING = {
-            "engineering_mechanical_coder": AgentName.ENGINEER_CODER.value,
-            "engineering_electrical_coder": AgentName.ELECTRONICS_ENGINEER.value,
-            "benchmark_cad_coder": AgentName.BENCHMARK_CODER.value,
-            "engineering_reviewer": AgentName.ENGINEER_REVIEWER.value,
-            "reviewer": AgentName.ENGINEER_REVIEWER.value,
-            "engineer_critic": AgentName.ENGINEER_REVIEWER.value,
-            "planner": AgentName.ENGINEER_PLANNER.value,
-            "coder": AgentName.ENGINEER_CODER.value,
-        }
-        role = LEGACY_MAPPING.get(role, role)
+        role = role_enum.value
 
         p_str = Path(path).as_posix().lstrip("/")
 

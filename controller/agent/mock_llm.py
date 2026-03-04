@@ -7,6 +7,8 @@ import dspy
 import structlog
 import yaml
 
+from shared.enums import AgentName
+
 logger = structlog.get_logger(__name__)
 
 
@@ -124,16 +126,16 @@ class MockDSPyLM(dspy.LM):
         # Normalize benchmark_planner -> planner, but keep electronics_planner as is
         lookup_key = node_key
         sig_lookup = node_key
-        if node_key == "benchmark_planner":
+        if node_key == AgentName.BENCHMARK_PLANNER:
             lookup_key = "planner"
             sig_lookup = "planner"
-        elif node_key == "benchmark_coder":
+        elif node_key == AgentName.BENCHMARK_CODER:
             lookup_key = "coder"
             sig_lookup = "coder"
-        elif node_key == "benchmark_reviewer" or node_key in {
+        elif node_key == AgentName.BENCHMARK_REVIEWER or node_key in {
             "plan_reviewer",
             "execution_reviewer",
-            "electronics_reviewer",
+            AgentName.ELECTRONICS_REVIEWER,
         }:
             lookup_key = "reviewer"
             sig_lookup = "reviewer"
@@ -306,7 +308,7 @@ class MockDSPyLM(dspy.LM):
         if "summarizer node" in low_text:
             return "summarizer"
         if "sidecar learner" in low_text:
-            return "skill_learner"
+            return AgentName.SKILL_AGENT
         if "expert designer of spatial" in low_text:
             return "planner"
         if "lead mechanical engineer (planner)" in low_text:
@@ -316,9 +318,9 @@ class MockDSPyLM(dspy.LM):
         if "design reviewer" in low_text or "benchmark auditor" in low_text:
             return "reviewer"
         if "commercial off-the-shelf" in low_text or "cots search" in low_text:
-            return "cots_search"
+            return AgentName.COTS_SEARCH
         if "electrical strategy" in low_text or "electronics engineer" in low_text:
-            return "electronics_planner"
+            return AgentName.ELECTRONICS_PLANNER
 
         # 2. Field-based detection (DSPy standard prompts)
         if "journal" in low_text and (
@@ -341,15 +343,15 @@ class MockDSPyLM(dspy.LM):
         if "search_summary" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
-            return "cots_search"
+            return AgentName.COTS_SEARCH
 
         # 3. Fallbacks by loose role keywords
         if any(kw in low_text for kw in ["skill", "sidecar", "learner"]):
-            return "skill_learner"
+            return AgentName.SKILL_AGENT
         if any(kw in low_text for kw in ["reviewer", "critic", "auditor"]):
             return "reviewer"
         if "cots" in low_text or "search" in low_text:
-            return "cots_search"
+            return AgentName.COTS_SEARCH
         if any(
             kw in low_text for kw in ["cad engineer", "build123d", "coder", "implement"]
         ):
@@ -493,9 +495,9 @@ class MockDSPyLM(dspy.LM):
         elif node_key == "skill_learner":
             resp["summary"] = node_data.get("summary", "Skills identified.")
             resp["journal"] = node_data.get("journal", "Learning complete.")
-        elif node_key == "cots_search":
+        elif node_key == AgentName.COTS_SEARCH:
             resp["search_summary"] = node_data.get("search_summary", "Search complete.")
-        elif node_key == "electronics_planner":
+        elif node_key == AgentName.ELECTRONICS_PLANNER:
             resp["reasoning"] = reasoning
             resp["summary"] = node_data.get("summary", "Electronics plan added.")
 

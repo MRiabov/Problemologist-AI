@@ -4,6 +4,7 @@ from langgraph.graph import END, START, StateGraph
 
 from controller.config.settings import settings
 from controller.graph.steerability_node import check_steering, steerability_node
+from shared.enums import AgentName
 
 from .nodes.coder import coder_node
 from .nodes.cots_search import cots_search_node
@@ -36,14 +37,14 @@ async def should_continue(state: AgentState) -> str:
         # T010: Check if there are more steps in TODO before finishing
         if state.status == AgentStatus.APPROVED and "- [ ]" in state.todo:
             logger.info("step_approved_continuing_to_next", todo=state.todo)
-            return "coder"
+            return AgentName.ENGINEER_CODER
         return "skills"
 
     # If rejected and we haven't looped too many times
     if state.iteration < 5:
         if state.status == AgentStatus.PLAN_REJECTED:
-            return "planner"
-        return "coder"
+            return AgentName.ENGINEER_PLANNER
+        return AgentName.ENGINEER_CODER
 
     return "skills"
 
@@ -52,29 +53,29 @@ async def should_continue(state: AgentState) -> str:
 builder = StateGraph(AgentState)
 
 # Add nodes
-builder.add_node("planner", planner_node)
-builder.add_node("electronics_planner", electronics_planner_node)
-builder.add_node("plan_reviewer", plan_reviewer_node)
-builder.add_node("coder", coder_node)
-builder.add_node("electronics_engineer", electronics_engineer_node)
-builder.add_node("electronics_reviewer", electronics_reviewer_node)
+builder.add_node(AgentName.ENGINEER_PLANNER, planner_node)
+builder.add_node(AgentName.ELECTRONICS_PLANNER, electronics_planner_node)
+builder.add_node(AgentName.ENGINEER_REVIEWER, plan_reviewer_node)
+builder.add_node(AgentName.ENGINEER_CODER, coder_node)
+builder.add_node(AgentName.ELECTRONICS_ENGINEER, electronics_engineer_node)
+builder.add_node(AgentName.ELECTRONICS_REVIEWER, electronics_reviewer_node)
 builder.add_node("execution_reviewer", execution_reviewer_node)
-builder.add_node("cots_search", cots_search_node)
+builder.add_node(AgentName.COTS_SEARCH, cots_search_node)
 builder.add_node("skills", skills_node)
 builder.add_node("summarizer", summarizer_node)
 builder.add_node("steer", steerability_node)
 
 # Set the entry point and edges
-builder.add_edge(START, "planner")
-builder.add_edge("planner", "electronics_planner")
-builder.add_edge("electronics_planner", "plan_reviewer")
+builder.add_edge(START, AgentName.ENGINEER_PLANNER)
+builder.add_edge(AgentName.ENGINEER_PLANNER, AgentName.ELECTRONICS_PLANNER)
+builder.add_edge(AgentName.ELECTRONICS_PLANNER, AgentName.ENGINEER_REVIEWER)
 
 builder.add_conditional_edges(
-    "plan_reviewer",
+    AgentName.ENGINEER_REVIEWER,
     should_continue,
     {
-        "coder": "coder",
-        "planner": "planner",
+        AgentName.ENGINEER_CODER: AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_PLANNER: AgentName.ENGINEER_PLANNER,
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
@@ -82,19 +83,19 @@ builder.add_conditional_edges(
 )
 
 builder.add_conditional_edges(
-    "coder",
+    AgentName.ENGINEER_CODER,
     check_steering,
-    {"steer": "steer", "next": "electronics_engineer"},
+    {"steer": "steer", "next": AgentName.ELECTRONICS_ENGINEER},
 )
 
 builder.add_conditional_edges(
-    "electronics_engineer",
+    AgentName.ELECTRONICS_ENGINEER,
     check_steering,
-    {"steer": "steer", "next": "electronics_reviewer"},
+    {"steer": "steer", "next": AgentName.ELECTRONICS_REVIEWER},
 )
 
 builder.add_conditional_edges(
-    "electronics_reviewer",
+    AgentName.ELECTRONICS_REVIEWER,
     check_steering,
     {"steer": "steer", "next": "execution_reviewer"},
 )
@@ -104,19 +105,19 @@ builder.add_conditional_edges(
     "execution_reviewer",
     should_continue,
     {
-        "coder": "coder",
-        "planner": "planner",
+        AgentName.ENGINEER_CODER: AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_PLANNER: AgentName.ENGINEER_PLANNER,
         "skills": "skills",
         "steer": "steer",
         "summarizer": "summarizer",
     },
 )
 
-builder.add_edge("steer", "planner")
+builder.add_edge("steer", AgentName.ENGINEER_PLANNER)
 
 builder.add_edge("skills", END)
-builder.add_edge("summarizer", "planner")
-builder.add_edge("cots_search", "planner")
+builder.add_edge("summarizer", AgentName.ENGINEER_PLANNER)
+builder.add_edge(AgentName.COTS_SEARCH, AgentName.ENGINEER_PLANNER)
 
 # T026: Implement Checkpointing
 memory = MemorySaver()
