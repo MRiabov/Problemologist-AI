@@ -6,7 +6,7 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from shared.enums import AssetType, EpisodeStatus, TraceType
+from shared.enums import AssetType, EpisodeStatus, GenerationKind, SeedMatchMethod, TraceType
 
 from .db import Base
 
@@ -70,8 +70,12 @@ class Episode(Base):
     metadata_vars: Mapped[dict | None] = mapped_column(JSON)
     seed_id: Mapped[str | None] = mapped_column(String, index=True)
     seed_dataset: Mapped[str | None] = mapped_column(String)
-    seed_match_method: Mapped[str | None] = mapped_column(String)
-    generation_kind: Mapped[str | None] = mapped_column(String)
+    seed_match_method: Mapped[SeedMatchMethod | None] = mapped_column(
+        SQLEnum(SeedMatchMethod, values_callable=lambda x: [e.value for e in x])
+    )
+    generation_kind: Mapped[GenerationKind | None] = mapped_column(
+        SQLEnum(GenerationKind, values_callable=lambda x: [e.value for e in x])
+    )
     parent_seed_id: Mapped[str | None] = mapped_column(String)
 
     # Agent state

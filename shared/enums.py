@@ -106,6 +106,33 @@ class AgentName(StrEnum):
     GIT_AGENT = "git_agent"
 
 
+class EpisodeType(StrEnum):
+    """High-level episode workflow family."""
+
+    BENCHMARK = "benchmark"
+    ENGINEER = "engineer"
+
+
+class SeedMatchMethod(StrEnum):
+    """How a seed linkage was determined for an episode/dataset row."""
+
+    RUNTIME_EXPLICIT = "runtime_explicit"
+    EXACT_TASK = "exact_task"
+    NO_EXACT_TASK_MATCH = "no_exact_task_match"
+    AMBIGUOUS_EXACT_TASK = "ambiguous_exact_task"
+
+
+class GenerationKind(StrEnum):
+    """Origin category for generated episodes/dataset rows."""
+
+    SEEDED = "seeded"
+    DERIVED = "derived"
+    SEEDED_EVAL = "seeded_eval"
+    INTEGRATION_TEST = "integration_test"
+    CAD_ENGINEER = "cad_engineer"
+    BENCHMARK_GENERATOR = "benchmark_generator"
+
+
 class FailureReason(UppercaseStrEnum):
     """Unified failure modes for physics and electronics simulation."""
 
@@ -234,3 +261,36 @@ class BenchmarkRefusalReason(UppercaseStrEnum):
     CONTRADICTORY_CONSTRAINTS = "CONTRADICTORY_CONSTRAINTS"
     UNSOLVABLE_SCENARIO = "UNSOLVABLE_SCENARIO"
     AMBIGUOUS_TASK = "AMBIGUOUS_TASK"
+
+
+class SeedMatchMethod(StrEnum):
+    """Method used to match an episode to a seed in the dataset."""
+
+    RUNTIME_EXPLICIT = "runtime_explicit"
+    EXACT_TASK = "exact_task"
+    NO_EXACT_TASK_MATCH = "no_exact_task_match"
+    AMBIGUOUS_EXACT_TASK = "ambiguous_exact_task"
+
+
+class GenerationKind(StrEnum):
+    """The context/purpose of the episode generation."""
+
+    SEEDED_EVAL = "seeded_eval"
+    SEEDED = "seeded"
+    DERIVED = "derived"
+    INTEGRATION_TEST = "integration_test"
+
+
+class EpisodeType(StrEnum):
+    """The high-level category of an episode."""
+
+    BENCHMARK = "benchmark"
+    ENGINEER = "engineer"
+
+
+class EvalMode(StrEnum):
+    """The mode for running evaluations."""
+
+    BENCHMARK = "benchmark"
+    AGENT = "agent"
+    GIT = "git"

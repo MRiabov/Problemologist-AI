@@ -343,6 +343,8 @@ async def run_generation_session(
     )
 
     # 1. Create DB entry (Episode)
+    from controller.config.settings import settings
+    from controller.utils.integration import apply_integration_test_metadata
     from shared.models.schemas import EpisodeMetadata
 
     session_factory = get_sessionmaker()
@@ -358,6 +360,12 @@ async def run_generation_session(
             seed_match_method="runtime_explicit" if seed_id else None,
             generation_kind=generation_kind,
             parent_seed_id=seed_id,
+        )
+        metadata = apply_integration_test_metadata(
+            metadata,
+            is_integration_test=settings.is_integration_test,
+            task=prompt,
+            session_id=str(session_id),
         )
         episode = Episode(
             id=session_id,

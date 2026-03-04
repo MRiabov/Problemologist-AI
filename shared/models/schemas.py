@@ -21,14 +21,17 @@ from shared.enums import (
     BenchmarkRefusalReason,
     ElectricalRefusalReason,
     ElectronicComponentType,
+    EpisodeType,
     FluidEvalAt,
     FluidObjectiveType,
     FluidShapeType,
+    GenerationKind,
     ManufacturingMethod,
     MechanicalRefusalReason,
     MotorControlMode,
     MovingPartType,
     ReviewDecision,
+    SeedMatchMethod,
 )
 from shared.models.simulation import SimulationFailure
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
@@ -422,7 +425,7 @@ class EpisodeMetadata(BaseModel):
     fidelity_check: bool | None = None
     tolerance: float | None = None
     is_reused: bool | None = None
-    episode_type: Literal["benchmark", "engineer"] | None = None
+    episode_type: EpisodeType | None = None
     validation_logs: list[str] = Field(default_factory=list)
     prompt: str | None = None
     plan: dict[str, Any] | None = None
@@ -430,9 +433,11 @@ class EpisodeMetadata(BaseModel):
     weight: float | None = None
     seed_id: str | None = None
     seed_dataset: str | None = None
-    seed_match_method: str | None = None
-    generation_kind: str | None = None
+    seed_match_method: SeedMatchMethod | None = None
+    generation_kind: GenerationKind | None = None
     parent_seed_id: str | None = None
+    is_integration_test: bool | None = None
+    integration_test_id: str | None = None
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
