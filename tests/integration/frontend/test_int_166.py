@@ -45,7 +45,7 @@ def test_simulation_navigation_timeline(page: Page):
     create_new_button.click()
 
     # 4. Enter the prompt
-    prompt_text = "Create a simple cube benchmark."
+    prompt_text = "Create a simple cube benchmark INT-166"
     prompt_input = page.locator("#chat-input")
     expect(prompt_input).to_be_visible(timeout=30000)
     prompt_input.fill(prompt_text)
@@ -70,6 +70,19 @@ def test_simulation_navigation_timeline(page: Page):
     confirm_button = page.get_by_test_id("chat-confirm-button")
     expect(confirm_button).to_be_visible()
     confirm_button.click()
+
+    # Wait for completion (status becomes COMPLETED)
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'COMPLETED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
 
     # 7. Ensure assets are loaded for simulation controls.
     _ensure_viewport_assets(page)
