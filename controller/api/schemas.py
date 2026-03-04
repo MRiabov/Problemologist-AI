@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 
 from shared.enums import (
+    AgentName,
     AssetType,
     EpisodeStatus,
     ResponseStatus,
@@ -200,11 +201,11 @@ class AgentRunRequest(BaseModel):
     skill_git_hash: str | None = Field(
         None, description="Git hash of the skills used for this run."
     )
-    agent_name: str = Field(
-        "engineer_coder", description="The name of the agent to run."
+    agent_name: AgentName = Field(
+        AgentName.ENGINEER_CODER, description="The name of the agent to run."
     )
 
-    @field_validator("task", "session_id", "agent_name", "skill_git_hash")
+    @field_validator("task", "session_id", "skill_git_hash")
     @classmethod
     def strip_null_bytes(cls, v: str | None) -> str | None:
         if v is None:
@@ -237,6 +238,9 @@ class BenchmarkGenerateRequest(BaseModel):
     max_cost: float | None = None
     max_weight: float | None = None
     target_quantity: int | None = None
+    seed_id: str | None = None
+    seed_dataset: str | None = None
+    generation_kind: str | None = None
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS
 
     @field_validator("prompt")

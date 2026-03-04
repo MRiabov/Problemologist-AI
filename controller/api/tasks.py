@@ -20,7 +20,7 @@ from controller.observability.langfuse import (
 )
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
-from shared.enums import AssetType, EpisodeStatus, TraceType
+from shared.enums import AgentName, AssetType, EpisodeStatus, TraceType
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -36,11 +36,11 @@ class AgentRunRequest(BaseModel):
     skill_git_hash: str | None = Field(
         None, description="Git hash of the skills used for this run."
     )
-    agent_name: str = Field(
-        "engineer_coder", description="The name of the agent to run."
+    agent_name: AgentName = Field(
+        AgentName.ENGINEER_CODER, description="The name of the agent to run."
     )
 
-    @field_validator("task", "session_id", "agent_name", "skill_git_hash")
+    @field_validator("task", "session_id", "skill_git_hash")
     @classmethod
     def strip_null_bytes(cls, v: str | None) -> str | None:
         if v is None:
@@ -82,7 +82,7 @@ async def execute_agent_task(
     episode_id: uuid.UUID,
     task: str,
     session_id: str,
-    agent_name: str = "engineer_coder",
+    agent_name: AgentName | str = AgentName.ENGINEER_CODER,
 ):
     session_factory = get_sessionmaker()
 
