@@ -1983,6 +1983,24 @@
   },
   "components": {
     "schemas": {
+      "AgentName": {
+        "type": "string",
+        "enum": [
+          "benchmark_planner",
+          "benchmark_coder",
+          "benchmark_reviewer",
+          "engineer_planner",
+          "engineer_coder",
+          "engineer_reviewer",
+          "electronics_planner",
+          "electronics_engineer",
+          "electronics_reviewer",
+          "skill_agent",
+          "git_agent"
+        ],
+        "title": "AgentName",
+        "description": "Canonical agent identifiers used across API, evals, and orchestration."
+      },
       "AgentRunRequest": {
         "properties": {
           "task": {
@@ -2032,8 +2050,7 @@
             "description": "Git hash of the skills used for this run."
           },
           "agent_name": {
-            "type": "string",
-            "title": "Agent Name",
+            "$ref": "#/components/schemas/AgentName",
             "description": "The name of the agent to run.",
             "default": "engineer_coder"
           }
@@ -2217,6 +2234,39 @@
               }
             ],
             "title": "Target Quantity"
+          },
+          "seed_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Id"
+          },
+          "seed_dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Dataset"
+          },
+          "generation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Kind"
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
@@ -2660,6 +2710,61 @@
               }
             ],
             "title": "Weight"
+          },
+          "seed_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Id"
+          },
+          "seed_dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Dataset"
+          },
+          "seed_match_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Match Method"
+          },
+          "generation_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Kind"
+          },
+          "parent_seed_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Seed Id"
           },
           "additional_info": {
             "additionalProperties": true,

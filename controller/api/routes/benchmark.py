@@ -31,6 +31,9 @@ class BenchmarkGenerateRequest(BaseModel):
     max_cost: float | None = None
     max_weight: float | None = None
     target_quantity: int | None = None
+    seed_id: str | None = None
+    seed_dataset: str | None = None
+    generation_kind: str | None = None
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS
 
     @field_validator("prompt")
@@ -62,6 +65,9 @@ async def generate_benchmark(
         request.prompt,
         session_id=session_id,
         custom_objectives=custom_objectives,
+        seed_id=request.seed_id,
+        seed_dataset=request.seed_dataset,
+        generation_kind=request.generation_kind,
         backend=request.backend,
     )
 

@@ -25,6 +25,11 @@ export type EpisodeMetadata = {
     plan?: (Record<string, any> | null);
     cost?: (number | null);
     weight?: (number | null);
+    seed_id?: (string | null);
+    seed_dataset?: (string | null);
+    seed_match_method?: (string | null);
+    generation_kind?: (string | null);
+    parent_seed_id?: (string | null);
     additional_info?: Record<string, any>;
 };
 

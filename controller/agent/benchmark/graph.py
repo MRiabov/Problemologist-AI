@@ -326,6 +326,9 @@ async def run_generation_session(
     prompt: str,
     session_id: uuid.UUID | None = None,
     custom_objectives: CustomObjectives | None = None,
+    seed_id: str | None = None,
+    seed_dataset: str | None = None,
+    generation_kind: str | None = None,
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
 ) -> BenchmarkGeneratorState:
     """
@@ -350,6 +353,11 @@ async def run_generation_session(
             prompt=prompt,
             custom_objectives=custom_objectives,
             episode_type="benchmark",
+            seed_id=seed_id,
+            seed_dataset=seed_dataset,
+            seed_match_method="runtime_explicit" if seed_id else None,
+            generation_kind=generation_kind,
+            parent_seed_id=seed_id,
         )
         episode = Episode(
             id=session_id,

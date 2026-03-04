@@ -428,6 +428,11 @@ class EpisodeMetadata(BaseModel):
     plan: dict[str, Any] | None = None
     cost: float | None = None
     weight: float | None = None
+    seed_id: str | None = None
+    seed_dataset: str | None = None
+    seed_match_method: str | None = None
+    generation_kind: str | None = None
+    parent_seed_id: str | None = None
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 

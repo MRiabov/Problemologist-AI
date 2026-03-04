@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AgentName } from './AgentName';
 import type { EpisodeMetadata } from './EpisodeMetadata';
 export type AgentRunRequest = {
     /**
@@ -27,6 +28,6 @@ export type AgentRunRequest = {
     /**
      * The name of the agent to run.
      */
-    agent_name?: string;
+    agent_name?: AgentName;
 };
 

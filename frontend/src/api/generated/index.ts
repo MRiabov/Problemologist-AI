@@ -7,6 +7,7 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export { AgentName } from './models/AgentName';
 export type { AgentRunRequest } from './models/AgentRunRequest';
 export type { AgentRunResponse } from './models/AgentRunResponse';
 export type { AssetResponse } from './models/AssetResponse';

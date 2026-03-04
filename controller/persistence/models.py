@@ -68,6 +68,11 @@ class Episode(Base):
     skill_git_hash: Mapped[str | None] = mapped_column(String)
     template_versions: Mapped[dict | None] = mapped_column(JSON)
     metadata_vars: Mapped[dict | None] = mapped_column(JSON)
+    seed_id: Mapped[str | None] = mapped_column(String, index=True)
+    seed_dataset: Mapped[str | None] = mapped_column(String)
+    seed_match_method: Mapped[str | None] = mapped_column(String)
+    generation_kind: Mapped[str | None] = mapped_column(String)
+    parent_seed_id: Mapped[str | None] = mapped_column(String)
 
     # Agent state
     todo_list: Mapped[dict | None] = mapped_column(JSON)
@@ -86,6 +91,27 @@ class Episode(Base):
         if self.metadata_vars:
             return self.metadata_vars.get("validation_logs")
         return None
+
+
+def _sync_episode_lineage_fields(target: Episode) -> None:
+    from shared.models.schemas import EpisodeMetadata
+
+    metadata = EpisodeMetadata.model_validate(target.metadata_vars or {})
+    target.seed_id = metadata.seed_id
+    target.seed_dataset = metadata.seed_dataset
+    target.seed_match_method = metadata.seed_match_method
+    target.generation_kind = metadata.generation_kind
+    target.parent_seed_id = metadata.parent_seed_id
+
+
+@sa.event.listens_for(Episode, "before_insert")
+def _episode_before_insert(_, __, target: Episode) -> None:
+    _sync_episode_lineage_fields(target)
+
+
+@sa.event.listens_for(Episode, "before_update")
+def _episode_before_update(_, __, target: Episode) -> None:
+    _sync_episode_lineage_fields(target)
 
 
 class Trace(Base):

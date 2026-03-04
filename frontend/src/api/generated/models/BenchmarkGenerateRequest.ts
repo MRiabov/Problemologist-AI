@@ -8,6 +8,9 @@ export type BenchmarkGenerateRequest = {
     max_cost?: (number | null);
     max_weight?: (number | null);
     target_quantity?: (number | null);
+    seed_id?: (string | null);
+    seed_dataset?: (string | null);
+    generation_kind?: (string | null);
     backend?: SimulatorBackendType;
 };
 
