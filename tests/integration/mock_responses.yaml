@@ -108,8 +108,8 @@ scenarios:
         required_fixes: []
 
   # INT-002: Engineering execution boundary
-  test-exec:
-    planner:
+  test-exec: &test_exec
+    engineer_planner:
       summary: "Plan for 10x10x10mm box generated."
       thought: "I will generate the engineering plan for the 10x10x10mm box."
       tool_calls:
@@ -174,7 +174,7 @@ scenarios:
       tool_calls:
         - name: "write_file"
           input: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
-    coder:
+    engineer_coder:
       journal: "Implemented box and ran simulation."
       thought: "I will implement the box in build123d and run simulation."
       generated_code: |
@@ -189,11 +189,16 @@ scenarios:
         mesh.export('assets/box.glb', file_type='glb')
         with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
         with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
-    reviewer:
+    engineer_reviewer:
       review:
         decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
+    skill_agent:
+      summary: "No reusable skills identified."
+      journal: "No skill updates."
+
+  INT-002: *test_exec
 
   INT-173:
     planner:
@@ -616,7 +621,7 @@ scenarios:
 
   # Benchmark workflow (detected by prompt or UUID session_id)
   benchmark:
-    planner:
+    benchmark_planner:
       thought: "Designing benchmark scenario."
       plan:
         theme: "benchmark_test"
@@ -687,7 +692,7 @@ scenarios:
                 static_variation_id: "v1.0"
                 runtime_jitter_enabled: true
             overwrite: true
-    coder:
+    benchmark_coder:
       journal: "Work completed."
       thought: "Implementing benchmark script and setting up mandatory files."
       tool_calls:
@@ -1075,7 +1080,7 @@ scenarios:
 
   # Default fallback
   default:
-    planner:
+    engineer_planner:
       summary: "Default plan generated."
       thought: "Default planner response."
       tool_calls:
@@ -1083,15 +1088,20 @@ scenarios:
           input: 
             path: "plan.md"
             content: |
-              ## Learning Objective
-              - Default.
-              ## Geometry
-              - Default.
-              ## Objectives
-              - Default.
+              ## 1. Solution Overview
+              Default implementation plan.
+              ## 2. Parts List
+              - Default box (manufactured, abs)
+              ## 3. Assembly Strategy
+              1. Build one part.
+              ## 4. Cost & Weight Budget
+              - Estimated cost: $10
+              - Estimated weight: 100g
+              ## 5. Risk Assessment
+              - Low risk.
             overwrite: true
         - name: "write_file"
-          input: { path: "todo.md", content: "- [ ] Done", overwrite: true }
+          input: { path: "todo.md", content: "- [x] Plan written\n- [x] Assembly defined", overwrite: true }
         - name: "write_file"
           input: 
             path: "assembly_definition.yaml"
@@ -1151,7 +1161,7 @@ scenarios:
               cots_parts: []
               final_assembly: []
             overwrite: true
-    coder:
+    engineer_coder:
       journal: "Work completed."
       thought: "Default coder response."
       generated_code: |
@@ -1169,8 +1179,11 @@ scenarios:
 
         with open('script.py', 'w') as f:
             f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.label = "box"\n    b.metadata = PartMetadata(material_id="abs", fixed=True)\n    return b')
-    reviewer:
+    engineer_reviewer:
       review:
         decision: "APPROVED"
         reason: "The design satisfies all requirements."
         required_fixes: []
+    skill_agent:
+      summary: "No reusable skills identified."
+      journal: "No skill updates."

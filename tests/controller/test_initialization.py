@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from controller.agent.initialization import initialize_agent_files
+from shared.enums import AgentName
 
 
 @pytest.mark.asyncio
@@ -13,7 +14,7 @@ async def test_initialize_agent_files_engineer_coder():
     mock_backend.awrite = AsyncMock()
 
     # Execute
-    await initialize_agent_files(mock_backend, "engineer_coder")
+    await initialize_agent_files(mock_backend, AgentName.ENGINEER_CODER)
 
     # Assert
     # Verify specific files are written
@@ -35,7 +36,7 @@ async def test_initialize_agent_files_engineer_planner():
     mock_backend.als_info = AsyncMock(return_value=[])
     mock_backend.awrite = AsyncMock()
 
-    await initialize_agent_files(mock_backend, "engineer_planner")
+    await initialize_agent_files(mock_backend, AgentName.ENGINEER_PLANNER)
 
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
     assert "plan.md" in written_files
@@ -51,7 +52,7 @@ async def test_initialize_agent_files_benchmark():
     mock_backend.awrite = AsyncMock()
 
     # Execute
-    await initialize_agent_files(mock_backend, "benchmark_planner")
+    await initialize_agent_files(mock_backend, AgentName.BENCHMARK_PLANNER)
 
     # Assert
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
@@ -69,7 +70,7 @@ async def test_initialize_agent_files_support():
     mock_backend.awrite = AsyncMock()
 
     # Execute
-    await initialize_agent_files(mock_backend, "cots_search")
+    await initialize_agent_files(mock_backend, AgentName.COTS_SEARCH)
 
     # Assert
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
@@ -88,7 +89,9 @@ async def test_initialize_agent_files_respects_existing_paths_with_leading_slash
     )
     mock_backend.awrite = AsyncMock()
 
-    await initialize_agent_files(mock_backend, "benchmark_planner", overwrite=False)
+    await initialize_agent_files(
+        mock_backend, AgentName.BENCHMARK_PLANNER, overwrite=False
+    )
 
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
     assert "objectives.yaml" not in written_files

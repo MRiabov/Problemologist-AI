@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage
 from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.planner import planner_node
 from controller.agent.state import AgentState
+from shared.enums import AgentName
 
 
 @pytest.fixture
@@ -55,14 +56,12 @@ async def test_architect_node_logic(
     mock_fs.read_file = AsyncMock(side_effect=mock_read_file)
     mock_fs.write_file = AsyncMock(return_value=True)
 
-    mock_ctx = SharedNodeContext(
+    mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker",
         session_id="test-session",
-        pm=mock_pm,
-        dspy_lm=MagicMock(),
-        worker_client=MagicMock(),
-        fs=mock_fs,
+        agent_role=AgentName.ENGINEER_PLANNER,
     )
+    mock_ctx.pm = mock_pm
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
     mock_ctx_cls.create.return_value = mock_ctx
@@ -97,14 +96,12 @@ async def test_architect_node_fallback(
     mock_fs.read_file = AsyncMock(return_value="")
     mock_fs.write_file = AsyncMock(return_value=True)
 
-    mock_ctx = SharedNodeContext(
+    mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker",
         session_id="test-session",
-        pm=mock_pm,
-        dspy_lm=MagicMock(),
-        worker_client=MagicMock(),
-        fs=mock_fs,
+        agent_role=AgentName.ENGINEER_PLANNER,
     )
+    mock_ctx.pm = mock_pm
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
     mock_ctx_cls.create.return_value = mock_ctx

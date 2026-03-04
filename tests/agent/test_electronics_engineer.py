@@ -5,6 +5,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.electronics_engineer import electronics_engineer_node
 from controller.agent.state import AgentState
+from shared.enums import AgentName
 
 
 @pytest.fixture
@@ -34,14 +35,12 @@ async def test_electronics_engineer_node_success(
 
     from controller.agent.nodes.base import SharedNodeContext
 
-    mock_ctx = SharedNodeContext(
+    mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker",
         session_id="test-session",
-        pm=mock_pm,
-        dspy_lm=MagicMock(),
-        worker_client=MagicMock(),
-        fs=mock_fs,
+        agent_role=AgentName.ELECTRONICS_ENGINEER,
     )
+    mock_ctx.pm = mock_pm
     mock_ctx_cls.create.return_value = mock_ctx
 
     # Mock _run_program return value: (prediction, artifacts, journal_entry)
@@ -84,14 +83,12 @@ async def test_electronics_engineer_node_failure(
 
     from controller.agent.nodes.base import SharedNodeContext
 
-    mock_ctx = SharedNodeContext(
+    mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker",
         session_id="test-session",
-        pm=mock_pm,
-        dspy_lm=MagicMock(),
-        worker_client=MagicMock(),
-        fs=MagicMock(),
+        agent_role=AgentName.ELECTRONICS_ENGINEER,
     )
+    mock_ctx.pm = mock_pm
     mock_ctx_cls.create.return_value = mock_ctx
 
     # Mock _run_program return value: (None, {}, journal_entry)

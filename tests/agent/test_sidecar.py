@@ -6,6 +6,7 @@ import pytest
 
 from controller.agent.nodes.skills import SkillsNode
 from controller.agent.state import AgentState
+from shared.enums import AgentName
 from shared.type_checking import type_check
 
 
@@ -22,13 +23,10 @@ async def test_sidecar_node_suggest_skill(mock_ctx_cls, mock_git, mock_run_progr
     # Mock SharedNodeContext
     from controller.agent.nodes.base import SharedNodeContext
 
-    mock_ctx = SharedNodeContext(
+    mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker",
         session_id="test-session",
-        pm=MagicMock(),
-        dspy_lm=MagicMock(),
-        worker_client=MagicMock(),
-        fs=MagicMock(),
+        agent_role=AgentName.SKILL_AGENT,
     )
     mock_ctx_cls.create.return_value = mock_ctx
 
@@ -70,13 +68,10 @@ async def test_sidecar_node_no_skill(mock_ctx_cls, mock_git, mock_run_program):
     # Mock SharedNodeContext
     from controller.agent.nodes.base import SharedNodeContext
 
-    mock_ctx = SharedNodeContext(
+    mock_ctx = SharedNodeContext.create(
         worker_light_url="http://worker",
         session_id="test-session",
-        pm=MagicMock(),
-        dspy_lm=MagicMock(),
-        worker_client=MagicMock(),
-        fs=MagicMock(),
+        agent_role=AgentName.SKILL_AGENT,
     )
     mock_ctx_cls.create.return_value = mock_ctx
 
