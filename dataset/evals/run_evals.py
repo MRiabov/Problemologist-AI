@@ -15,6 +15,7 @@ from typing import Any
 
 import httpx
 from dotenv import load_dotenv
+from pydantic import BaseModel, ConfigDict
 from pyrate_limiter import Duration, Limiter, Rate
 
 # Ensure repository root is importable when script is executed as a file.
@@ -25,6 +26,7 @@ if str(ROOT) not in sys.path:
 from controller.clients.worker import WorkerClient  # noqa: E402
 from shared.enums import EpisodeStatus  # noqa: E402
 from shared.logging import configure_logging, get_logger  # noqa: E402
+from shared.models.schemas import EpisodeMetadata  # noqa: E402
 from shared.utils.evaluation import analyze_electronics_metrics  # noqa: E402
 
 load_dotenv()
@@ -50,6 +52,14 @@ class AgentEvalSpec:
     mode: str  # benchmark | agent | git
     request_agent_name: str | None = None
     required_trace_names: tuple[str, ...] = ()
+
+
+class EvalDatasetItem(BaseModel):
+    id: str
+    task: str
+    seed_dataset: Path | None = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 AGENT_SPECS: dict[str, AgentEvalSpec] = {
@@ -217,8 +227,8 @@ def _missing_required_traces(
     return [trace for trace in required if trace.lower() not in names]
 
 
-async def _run_git_eval(item: dict[str, Any], stats: dict[str, Any], agent_name: str):
-    task_id = item["id"]
+async def _run_git_eval(item: EvalDatasetItem, stats: dict[str, Any], agent_name: str):
+    task_id = item.id
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode="git")
     log.info("eval_start")
 
@@ -232,7 +242,7 @@ async def _run_git_eval(item: dict[str, Any], stats: dict[str, Any], agent_name:
         await worker.git_init()
         await worker.write_file(
             "git_eval_note.md",
-            f"# Git Eval {task_id}\n\n{item.get('task', '').strip()}\n",
+            f"# Git Eval {task_id}\n\n{item.task.strip()}\n",
             overwrite=True,
         )
         commit = await worker.git_commit(message=f"eval({task_id}): git agent baseline")
@@ -260,7 +270,7 @@ async def _run_git_eval(item: dict[str, Any], stats: dict[str, Any], agent_name:
 
 
 async def run_single_eval(
-    item: dict[str, Any], agent_name: str, stats: dict[str, Any], verbose: bool = False
+    item: EvalDatasetItem, agent_name: str, stats: dict[str, Any], verbose: bool = False
 ):
     """
     Runs a single evaluation task for a specific agent type.
@@ -271,8 +281,15 @@ async def run_single_eval(
         await _run_git_eval(item, stats, agent_name)
         return
 
-    task_id = item["id"]
-    task_description = item["task"]
+    task_id = item.id
+    task_description = item.task
+    lineage = EpisodeMetadata(
+        seed_id=task_id,
+        seed_dataset=str(item.seed_dataset) if item.seed_dataset else None,
+        seed_match_method="runtime_explicit",
+        generation_kind="seeded_eval",
+        parent_seed_id=task_id,
+    )
 
     log = logger.bind(
         task_id=task_id,
@@ -287,7 +304,12 @@ async def run_single_eval(
     async with httpx.AsyncClient(timeout=60.0) as client:
         if spec.mode == "benchmark":
             url = f"{CONTROLLER_URL}/benchmark/generate"
-            payload = {"prompt": task_description}
+            payload = {
+                "prompt": task_description,
+                "seed_id": lineage.seed_id,
+                "seed_dataset": lineage.seed_dataset,
+                "generation_kind": lineage.generation_kind,
+            }
             status_url_template = f"{CONTROLLER_URL}/benchmark/{{session_id}}"
             episode_id_key = "episode_id"
             session_id_key = "session_id"
@@ -333,6 +355,7 @@ electronics_requirements:
                 "task": task_description,
                 "agent_name": spec.request_agent_name or agent_name,
                 "session_id": session_id,
+                "metadata_vars": lineage.model_dump(exclude_none=True),
             }
             status_url_template = f"{CONTROLLER_URL}/episodes/{{episode_id}}"
             episode_id_key = "episode_id"
@@ -659,7 +682,13 @@ async def main():
                         data = data[: args.limit]
                     if args.task_id:
                         data = [item for item in data if item["id"] == args.task_id]
-                    datasets[agent] = data
+                    seed_dataset = json_path.relative_to(ROOT)
+                    datasets[agent] = [
+                        EvalDatasetItem.model_validate(
+                            {**item_raw, "seed_dataset": seed_dataset}
+                        )
+                        for item_raw in data
+                    ]
                 except json.JSONDecodeError:
                     logger.warning("dataset_json_decode_failed", path=str(json_path))
         else:
@@ -674,7 +703,7 @@ async def main():
     if tasks:
         semaphore = asyncio.Semaphore(max(1, args.concurrency))
 
-        async def _guarded(item: dict[str, Any], agent: str):
+        async def _guarded(item: EvalDatasetItem, agent: str):
             async with semaphore:
                 if not args.no_rate_limit:
                     await asyncio.to_thread(limiter.try_acquire, "eval")
