@@ -61,6 +61,79 @@ async def _read_session_markdown(
         return None
 
 
+async def _validate_planner_handoff(
+    session_id: uuid.UUID, prompt: str, plan: Any | None
+) -> list[str]:
+    """
+    Validate benchmark planner output before allowing PLANNED state.
+
+    Enforces:
+    - Required planner files are present and structurally valid.
+    - Planner output is semantically aligned with prompt requirements.
+    """
+    from shared.models.schemas import ObjectivesYaml
+    from worker_heavy.utils.file_validation import validate_node_output
+
+    errors: list[str] = []
+    if plan is None:
+        errors.append(
+            "planner_execution: benchmark planner produced no structured plan output"
+        )
+    files_to_check = ("plan.md", "todo.md", "objectives.yaml")
+    artifacts: dict[str, str] = {}
+
+    for rel_path in files_to_check:
+        content = await _read_session_markdown(session_id, rel_path)
+        if content is None:
+            errors.append(f"Missing planner artifact: {rel_path}")
+            continue
+        artifacts[rel_path] = content
+
+    if artifacts:
+        is_valid, structural_errors = validate_node_output(
+            AgentName.BENCHMARK_PLANNER, artifacts
+        )
+        if not is_valid:
+            errors.extend([f"planner_structural: {msg}" for msg in structural_errors])
+
+    prompt_lower = prompt.lower()
+
+    objectives_text = artifacts.get("objectives.yaml")
+    if objectives_text:
+        try:
+            import yaml
+
+            parsed = yaml.safe_load(objectives_text)
+            objectives = ObjectivesYaml.model_validate(parsed or {})
+
+            forbid_required = "forbid" in prompt_lower or "obstacle" in prompt_lower
+            if forbid_required and not objectives.objectives.forbid_zones:
+                errors.append(
+                    "planner_semantic: Prompt requires forbid zone, but objectives.yaml has no forbid_zones"
+                )
+
+            fluid_required = "fluid" in prompt_lower
+            if fluid_required and not (
+                objectives.objectives.fluid_objectives or objectives.fluids
+            ):
+                errors.append(
+                    "planner_semantic: Prompt requires fluid behavior, but no fluid objectives/config provided"
+                )
+
+            electronics_required = any(
+                token in prompt_lower
+                for token in ("electronics", "circuit", "wire", "power supply")
+            )
+            if electronics_required and objectives.electronics_requirements is None:
+                errors.append(
+                    "planner_semantic: Prompt requires electronics behavior, but electronics_requirements is missing"
+                )
+        except Exception as exc:
+            errors.append(f"planner_semantic: Failed to parse objectives.yaml ({exc})")
+
+    return errors
+
+
 async def _auto_continue_planned_session(
     session_id: uuid.UUID, delay_seconds: int = 20
 ):
@@ -250,23 +323,23 @@ async def _execute_graph_streaming(
 
             if normalized_node_name == AgentName.BENCHMARK_PLANNER:
                 # Handle both object and dict types for the plan
-                plan_theme = None
                 logger.info(
                     "checking_planner_output",
                     node=node_name,
                     plan=str(final_state.plan),
                 )
-                if final_state.plan:
-                    if isinstance(final_state.plan, dict):
-                        plan_theme = final_state.plan.get("theme")
-                    else:
-                        plan_theme = getattr(final_state.plan, "theme", None)
-
-                logger.info("detected_plan_theme", theme=plan_theme)
-
-                # WP10: Be more permissive. If the node finished successfully, we should
-                # usually proceed to PLANNED unless explicitly told it's an error.
-                if plan_theme == "error":
+                planner_errors = await _validate_planner_handoff(
+                    session_id=session_id,
+                    prompt=prompt,
+                    plan=final_state.plan,
+                )
+                if planner_errors:
+                    logger.error(
+                        "planner_handoff_validation_failed",
+                        session_id=session_id,
+                        errors=planner_errors,
+                    )
+                    final_state.session.validation_logs.extend(planner_errors)
                     new_status = SessionStatus.FAILED
                 else:
                     new_status = SessionStatus.PLANNED
@@ -279,11 +352,15 @@ async def _execute_graph_streaming(
                 elif final_state.review_decision:
                     new_status = SessionStatus.REJECTED
                 else:
-                    feedback = final_state.review_feedback or ""
-                    if "APPROVED" in feedback.upper():
-                        new_status = SessionStatus.ACCEPTED
-                    else:
-                        new_status = SessionStatus.REJECTED
+                    logger.error(
+                        "benchmark_reviewer_missing_structured_decision",
+                        session_id=session_id,
+                        feedback=final_state.review_feedback,
+                    )
+                    final_state.session.validation_logs.append(
+                        "benchmark_reviewer failed: missing structured review_decision"
+                    )
+                    new_status = SessionStatus.FAILED
             elif (
                 normalized_node_name == AgentName.SKILL_AGENT
                 and final_state.session.status == SessionStatus.ACCEPTED

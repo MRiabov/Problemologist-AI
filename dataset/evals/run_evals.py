@@ -8,7 +8,6 @@ import subprocess
 import sys
 import time
 import uuid
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,7 +18,7 @@ from pydantic import BaseModel, ConfigDict
 from pyrate_limiter import Duration, Limiter, Rate
 
 # Ensure repository root is importable when script is executed as a file.
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -51,7 +50,6 @@ def _quiet_http_transport_logs() -> None:
         noisy_logger.propagate = True
 
 
-@dataclass(frozen=True)
 class AgentEvalSpec(BaseModel):
     """Runtime details for an eval agent type."""
 
@@ -537,10 +535,10 @@ async def main():
     parser.add_argument(
         "--concurrency",
         type=int,
-        default=1,
+        default=5,
         help=(
             "Max number of eval tasks to run concurrently "
-            "(default: 1 for real-LLM stability)"
+            "(default: 5 for parallel performance)"
         ),
     )
     parser.add_argument(
@@ -687,7 +685,10 @@ async def main():
         logger.exception("worker_unreachable", url=WORKER_LIGHT_URL)
         sys.exit(1)
 
-    evals_root = Path(__file__).parent / "datasets"
+    dataset_roots = [
+        Path(__file__).parent / "datasets",
+        ROOT / "dataset" / "data" / "seed" / "role_based",
+    ]
     datasets = {}
     agents_to_run = available_agents if requested_agent == "all" else [requested_agent]
 
@@ -704,8 +705,15 @@ async def main():
 
     for agent in agents_to_run:
         agent_val = agent.value if isinstance(agent, AgentName) else agent
-        json_path = evals_root / f"{agent_val}.json"
-        if json_path.exists():
+        json_path = next(
+            (
+                root / f"{agent_val}.json"
+                for root in dataset_roots
+                if (root / f"{agent_val}.json").exists()
+            ),
+            None,
+        )
+        if json_path is not None:
             with json_path.open() as f:
                 try:
                     data = json.load(f)
@@ -723,7 +731,11 @@ async def main():
                 except json.JSONDecodeError:
                     logger.warning("dataset_json_decode_failed", path=str(json_path))
         else:
-            logger.warning("dataset_missing", agent=agent, path=str(json_path))
+            logger.warning(
+                "dataset_missing",
+                agent=agent,
+                searched_roots=[str(p) for p in dataset_roots],
+            )
 
     tasks = []
     for agent, dataset in datasets.items():
