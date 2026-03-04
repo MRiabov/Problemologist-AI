@@ -49,6 +49,14 @@ agents:
       allow: ["reviews/review-round-*/review.md"]
       deny: []
 
+  execution_reviewer:
+    read:
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "simulation_result.json", "validation_results.json", "workbench_report.md", "renders/**", "journal.md"]
+      deny: []
+    write:
+      allow: ["reviews/review-round-*/review.md"]
+      deny: []
+
   benchmark_planner:
     read:
       allow: ["/", ".", "config/**", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md", "assets/**", "renders/**", "reviews/**"]
@@ -79,4 +87,20 @@ agents:
       deny: []
     write:
       allow: ["reviews/review-round-*/review.md"]
+      deny: []
+
+  journalling_agent:
+    read:
+      allow: ["**"]
+      deny: [".git/**", ".env", "**/secrets/**"]
+    write:
+      allow: ["journal.md"]
+      deny: ["**"]
+
+  skill_agent:
+    read:
+      allow: ["**"]
+      deny: [".git/**", ".env", "**/secrets/**"]
+    write:
+      allow: ["suggested_skills/**", "journal.md"]
       deny: []

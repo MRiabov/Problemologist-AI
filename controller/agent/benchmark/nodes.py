@@ -517,10 +517,16 @@ class BenchmarkSummarizerNode(BaseNode):
         )
 
         inputs = {"journal": state.journal}
-        program = dspy.ReAct(SummarizerSignature, tools=[])
 
-        with dspy.settings.context(lm=self.ctx.dspy_lm):
-            prediction = await asyncio.to_thread(program, **inputs)
+        prediction, _, _ = await self._run_program(
+            dspy.ReAct,
+            SummarizerSignature,
+            state,
+            inputs,
+            lambda fs, sid: [],
+            [],
+            AgentName.JOURNALLING_AGENT,
+        )
 
         summarized = getattr(prediction, "summarized_journal", state.journal)
 
@@ -544,7 +550,7 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role=AgentName.BENCHMARK_PLANNER,
+        agent_role=AgentName.JOURNALLING_AGENT,
     )
     node = BenchmarkSummarizerNode(context=ctx)
     return await node(state)

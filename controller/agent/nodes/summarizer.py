@@ -42,13 +42,15 @@ class SummarizerNode(BaseNode):
 
         inputs = {"journal": state.journal}
 
-        # Use a simple chain of thought or basic program for summarization
-        program = dspy.ReAct(SummarizerSignature, tools=[])
-
-        import asyncio
-
-        with dspy.settings.context(lm=self.ctx.dspy_lm):
-            prediction = await asyncio.to_thread(program, **inputs)
+        prediction, _, _ = await self._run_program(
+            dspy.ReAct,
+            SummarizerSignature,
+            state,
+            inputs,
+            lambda fs, sid: [],
+            [],
+            AgentName.JOURNALLING_AGENT,
+        )
 
         summarized = getattr(prediction, "summarized_journal", state.journal)
 
@@ -74,7 +76,7 @@ async def summarizer_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role=AgentName.ENGINEER_PLANNER,
+        agent_role=AgentName.JOURNALLING_AGENT,
     )
     node = SummarizerNode(context=ctx)
     return await node(state)

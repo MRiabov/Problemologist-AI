@@ -105,7 +105,7 @@ async def initialize_agent_files(
         }
 
     # Support Agents
-    elif agent_name in [AgentName.COTS_SEARCH, AgentName.SKILL_CREATOR]:
+    elif agent_name in [AgentName.COTS_SEARCH, AgentName.SKILL_AGENT]:
         file_mappings = {
             "shared/journal.md": "journal.md",
         }

@@ -1995,10 +1995,12 @@
           "electronics_planner",
           "electronics_engineer",
           "electronics_reviewer",
+          "execution_reviewer",
           "skill_agent",
           "git_agent",
           "cots_search",
-          "skill_creator"
+          "journalling_agent",
+          "steer"
         ],
         "title": "AgentName",
         "description": "Canonical agent identifiers used across API, evals, and orchestration."
@@ -2845,7 +2847,7 @@
           "seeded_eval",
           "integration_test",
           "cots_search",
-          "skill_creator"
+          "skill_agent"
         ],
         "title": "GenerationKind",
         "description": "Origin category for generated episodes/dataset rows."

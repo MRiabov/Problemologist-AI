@@ -23,22 +23,22 @@ logger = structlog.get_logger(__name__)
 
 async def should_continue(state: AgentState) -> str:
     """Route after reviewer based on approval status."""
-    if await check_steering(state) == "steer":
-        return "steer"
+    if await check_steering(state) == AgentName.STEER:
+        return AgentName.STEER
 
     # Check for summarization need if journal is long
     if len(state.journal) > 5000:
-        return "summarizer"
+        return AgentName.JOURNALLING_AGENT
 
     if state.turn_count >= settings.max_agent_turns:
-        return "skills"
+        return AgentName.SKILL_AGENT
 
     if state.status == AgentStatus.APPROVED or state.status == AgentStatus.FAILED:
         # T010: Check if there are more steps in TODO before finishing
         if state.status == AgentStatus.APPROVED and "- [ ]" in state.todo:
             logger.info("step_approved_continuing_to_next", todo=state.todo)
             return AgentName.ENGINEER_CODER
-        return "skills"
+        return AgentName.SKILL_AGENT
 
     # If rejected and we haven't looped too many times
     if state.iteration < 5:
@@ -46,7 +46,7 @@ async def should_continue(state: AgentState) -> str:
             return AgentName.ENGINEER_PLANNER
         return AgentName.ENGINEER_CODER
 
-    return "skills"
+    return AgentName.SKILL_AGENT
 
 
 # Initialize the StateGraph with our AgentState
@@ -59,11 +59,11 @@ builder.add_node(AgentName.ENGINEER_REVIEWER, plan_reviewer_node)
 builder.add_node(AgentName.ENGINEER_CODER, coder_node)
 builder.add_node(AgentName.ELECTRONICS_ENGINEER, electronics_engineer_node)
 builder.add_node(AgentName.ELECTRONICS_REVIEWER, electronics_reviewer_node)
-builder.add_node("execution_reviewer", execution_reviewer_node)
+builder.add_node(AgentName.EXECUTION_REVIEWER, execution_reviewer_node)
 builder.add_node(AgentName.COTS_SEARCH, cots_search_node)
-builder.add_node("skills", skills_node)
-builder.add_node("summarizer", summarizer_node)
-builder.add_node("steer", steerability_node)
+builder.add_node(AgentName.SKILL_AGENT, skills_node)
+builder.add_node(AgentName.JOURNALLING_AGENT, summarizer_node)
+builder.add_node(AgentName.STEER, steerability_node)
 
 # Set the entry point and edges
 builder.add_edge(START, AgentName.ENGINEER_PLANNER)
@@ -76,47 +76,47 @@ builder.add_conditional_edges(
     {
         AgentName.ENGINEER_CODER: AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_PLANNER: AgentName.ENGINEER_PLANNER,
-        "skills": "skills",
-        "steer": "steer",
-        "summarizer": "summarizer",
+        AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
+        AgentName.STEER: AgentName.STEER,
+        AgentName.JOURNALLING_AGENT: AgentName.JOURNALLING_AGENT,
     },
 )
 
 builder.add_conditional_edges(
     AgentName.ENGINEER_CODER,
     check_steering,
-    {"steer": "steer", "next": AgentName.ELECTRONICS_ENGINEER},
+    {AgentName.STEER: AgentName.STEER, "next": AgentName.ELECTRONICS_ENGINEER},
 )
 
 builder.add_conditional_edges(
     AgentName.ELECTRONICS_ENGINEER,
     check_steering,
-    {"steer": "steer", "next": AgentName.ELECTRONICS_REVIEWER},
+    {AgentName.STEER: AgentName.STEER, "next": AgentName.ELECTRONICS_REVIEWER},
 )
 
 builder.add_conditional_edges(
     AgentName.ELECTRONICS_REVIEWER,
     check_steering,
-    {"steer": "steer", "next": "execution_reviewer"},
+    {AgentName.STEER: AgentName.STEER, "next": AgentName.EXECUTION_REVIEWER},
 )
 
 # Conditional routing from execution reviewer
 builder.add_conditional_edges(
-    "execution_reviewer",
+    AgentName.EXECUTION_REVIEWER,
     should_continue,
     {
         AgentName.ENGINEER_CODER: AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_PLANNER: AgentName.ENGINEER_PLANNER,
-        "skills": "skills",
-        "steer": "steer",
-        "summarizer": "summarizer",
+        AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
+        AgentName.STEER: AgentName.STEER,
+        AgentName.JOURNALLING_AGENT: AgentName.JOURNALLING_AGENT,
     },
 )
 
-builder.add_edge("steer", AgentName.ENGINEER_PLANNER)
+builder.add_edge(AgentName.STEER, AgentName.ENGINEER_PLANNER)
 
-builder.add_edge("skills", END)
-builder.add_edge("summarizer", AgentName.ENGINEER_PLANNER)
+builder.add_edge(AgentName.SKILL_AGENT, END)
+builder.add_edge(AgentName.JOURNALLING_AGENT, AgentName.ENGINEER_PLANNER)
 builder.add_edge(AgentName.COTS_SEARCH, AgentName.ENGINEER_PLANNER)
 
 # T026: Implement Checkpointing

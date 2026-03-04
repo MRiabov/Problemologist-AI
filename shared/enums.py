@@ -102,12 +102,12 @@ class AgentName(StrEnum):
     ELECTRONICS_PLANNER = "electronics_planner"
     ELECTRONICS_ENGINEER = "electronics_engineer"
     ELECTRONICS_REVIEWER = "electronics_reviewer"
+    EXECUTION_REVIEWER = "execution_reviewer"
     SKILL_AGENT = "skill_agent"
-    SKILL_LEARNER = "skill_learner"
     GIT_AGENT = "git_agent"
     COTS_SEARCH = "cots_search"
-    SKILL_CREATOR = "skill_creator"
-    SUMMARIZER = "summarizer"
+    JOURNALLING_AGENT = "journalling_agent"
+    STEER = "steer"
 
 
 class EpisodeType(StrEnum):
@@ -134,7 +134,7 @@ class GenerationKind(StrEnum):
     SEEDED_EVAL = "seeded_eval"
     INTEGRATION_TEST = "integration_test"
     COTS_SEARCH = "cots_search"
-    SKILL_CREATOR = "skill_creator"
+    SKILL_AGENT = "skill_agent"
 
 
 class EvalMode(StrEnum):

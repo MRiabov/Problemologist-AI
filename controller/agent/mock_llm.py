@@ -305,8 +305,8 @@ class MockDSPyLM(dspy.LM):
         low_text = text.lower()
 
         # 1. Specific Role Headers (Highest Priority)
-        if "summarizer node" in low_text:
-            return "summarizer"
+        if "summarizer node" in low_text or "journalling node" in low_text:
+            return AgentName.JOURNALLING_AGENT
         if "sidecar learner" in low_text:
             return AgentName.SKILL_AGENT
         if "expert designer of spatial" in low_text:
@@ -488,7 +488,7 @@ class MockDSPyLM(dspy.LM):
             resp["journal"] = node_data.get("journal", "Work completed.")
             if not finished and "generated_code" not in resp:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
-        elif node_key == "summarizer":
+        elif node_key == AgentName.JOURNALLING_AGENT:
             resp["summarized_journal"] = node_data.get(
                 "summarized_journal", "Journal summary."
             )
@@ -523,7 +523,7 @@ class MockDSPyLM(dspy.LM):
                 "planner": ["reasoning", "plan", "summary"],
                 "coder": ["journal"],
                 "reviewer": ["review"],
-                "summarizer": ["summarized_journal"],
+                AgentName.JOURNALLING_AGENT: ["summarized_journal"],
                 "skill_learner": ["summary", "journal"],
                 "cots_search": ["search_summary"],
                 "electronics_planner": ["reasoning", "summary"],

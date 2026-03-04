@@ -15,8 +15,10 @@ export enum AgentName {
     ELECTRONICS_PLANNER = 'electronics_planner',
     ELECTRONICS_ENGINEER = 'electronics_engineer',
     ELECTRONICS_REVIEWER = 'electronics_reviewer',
+    EXECUTION_REVIEWER = 'execution_reviewer',
     SKILL_AGENT = 'skill_agent',
     GIT_AGENT = 'git_agent',
     COTS_SEARCH = 'cots_search',
-    SKILL_CREATOR = 'skill_creator',
+    JOURNALLING_AGENT = 'journalling_agent',
+    STEER = 'steer',
 }

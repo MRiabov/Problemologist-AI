@@ -31,6 +31,7 @@ class PromptManager:
             ],
             AgentName.ENGINEER_REVIEWER: data["engineer"]["critic"]["system"],
             AgentName.ELECTRONICS_REVIEWER: data["engineer"]["critic"]["system"],
+            AgentName.EXECUTION_REVIEWER: data["engineer"]["critic"]["system"],
             # Benchmark Generator
             AgentName.BENCHMARK_PLANNER: data["benchmark_generator"]["planner"][
                 "system"
@@ -42,7 +43,7 @@ class PromptManager:
             # Subagents
             AgentName.COTS_SEARCH: data["subagents"]["cots_search"]["system"],
             AgentName.SKILL_AGENT: data["subagents"]["skill_learner"]["system"],
-            "documentation": data["subagents"]["documentation"]["system"],
+            AgentName.JOURNALLING_AGENT: data["subagents"]["documentation"]["system"],
         }
 
         # Add fallbacks for things not in prompts.yaml yet

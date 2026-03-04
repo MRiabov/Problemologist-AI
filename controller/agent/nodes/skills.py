@@ -173,7 +173,7 @@ async def skills_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role=AgentName.ENGINEER_PLANNER,
+        agent_role=AgentName.SKILL_AGENT,
     )
     node = SkillsNode(context=ctx)
     return await node(state)

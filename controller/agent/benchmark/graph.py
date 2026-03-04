@@ -86,9 +86,9 @@ def define_graph():
     workflow.add_node(AgentName.BENCHMARK_CODER, coder_node)
     workflow.add_node(AgentName.BENCHMARK_REVIEWER, reviewer_node)
     workflow.add_node(AgentName.COTS_SEARCH, cots_search_node)
-    workflow.add_node("skills", skills_node)
-    workflow.add_node("summarizer", summarizer_node)
-    workflow.add_node("steer", steerability_node)
+    workflow.add_node(AgentName.SKILL_AGENT, skills_node)
+    workflow.add_node(AgentName.JOURNALLING_AGENT, summarizer_node)
+    workflow.add_node(AgentName.STEER, steerability_node)
 
     # Define transitions
     def route_start(
@@ -105,39 +105,39 @@ def define_graph():
     workflow.add_conditional_edges(
         AgentName.BENCHMARK_CODER,
         check_steering,
-        {"steer": "steer", "next": AgentName.BENCHMARK_REVIEWER},
+        {AgentName.STEER: AgentName.STEER, "next": AgentName.BENCHMARK_REVIEWER},
     )
 
     # Conditional edges for reviewer
     async def reviewer_router(
         state: BenchmarkGeneratorState,
     ) -> Literal[
-        "steer",
+        AgentName.STEER,
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_PLANNER,
-        "skills",
-        "summarizer",
+        AgentName.SKILL_AGENT,
+        AgentName.JOURNALLING_AGENT,
     ]:
         # Check for steering first
-        if await check_steering(state) == "steer":
-            return "steer"
+        if await check_steering(state) == AgentName.STEER:
+            return AgentName.STEER
 
         # Check for summarization need
         if len(state.journal or "") > 5000:
-            return "summarizer"
+            return AgentName.JOURNALLING_AGENT
 
         if state.review_round > 10:
             logger.warning(
                 "max_review_rounds_reached", session_id=state.session.session_id
             )
-            return "skills"
+            return AgentName.SKILL_AGENT
 
         # Use structured decision if available
         if state.review_decision:
             if state.review_decision == ReviewDecision.APPROVED:
-                return "skills"
+                return AgentName.SKILL_AGENT
             if state.review_decision == ReviewDecision.CONFIRM_PLAN_REFUSAL:
-                return "skills"
+                return AgentName.SKILL_AGENT
             if state.review_decision == ReviewDecision.REJECT_PLAN:
                 return AgentName.BENCHMARK_PLANNER
             if state.review_decision == ReviewDecision.REJECT_PLAN_REFUSAL:
@@ -147,7 +147,7 @@ def define_graph():
         # Fallback for legacy behavior
         feedback = (state.review_feedback or "").upper()
         if "APPROVED" in feedback:
-            return "skills"
+            return AgentName.SKILL_AGENT
         if feedback.startswith("STEERING:"):
             return AgentName.BENCHMARK_PLANNER
         return AgentName.BENCHMARK_CODER
@@ -156,17 +156,17 @@ def define_graph():
         AgentName.BENCHMARK_REVIEWER,
         reviewer_router,
         {
-            "steer": "steer",
+            AgentName.STEER: AgentName.STEER,
             AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_CODER,
             AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
-            "skills": "skills",
-            "summarizer": "summarizer",
+            AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
+            AgentName.JOURNALLING_AGENT: AgentName.JOURNALLING_AGENT,
         },
     )
 
-    workflow.add_edge("skills", END)
-    workflow.add_edge("summarizer", AgentName.BENCHMARK_PLANNER)
-    workflow.add_edge("steer", AgentName.BENCHMARK_PLANNER)
+    workflow.add_edge(AgentName.SKILL_AGENT, END)
+    workflow.add_edge(AgentName.JOURNALLING_AGENT, AgentName.BENCHMARK_PLANNER)
+    workflow.add_edge(AgentName.STEER, AgentName.BENCHMARK_PLANNER)
 
     # cots_search can be reached from planner or coder if we add those edges
     workflow.add_edge(AgentName.COTS_SEARCH, AgentName.BENCHMARK_PLANNER)

@@ -86,7 +86,7 @@ class ExecutionReviewerNode(BaseNode):
             inputs=inputs,
             tool_factory=get_engineer_tools,
             validate_files=validate_files,
-            node_type=AgentName.ENGINEER_REVIEWER,
+            node_type=AgentName.EXECUTION_REVIEWER,
         )
 
         if not prediction:
@@ -205,7 +205,7 @@ async def execution_reviewer_node(state: AgentState) -> AgentState:
         worker_light_url=settings.spec_001_api_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role=AgentName.ENGINEER_REVIEWER,
+        agent_role=AgentName.EXECUTION_REVIEWER,
     )
     node = ExecutionReviewerNode(context=ctx)
     return await node(state)

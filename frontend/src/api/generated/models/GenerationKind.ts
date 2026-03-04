@@ -11,5 +11,5 @@ export enum GenerationKind {
     SEEDED_EVAL = 'seeded_eval',
     INTEGRATION_TEST = 'integration_test',
     COTS_SEARCH = 'cots_search',
-    SKILL_CREATOR = 'skill_creator',
+    SKILL_AGENT = 'skill_agent',
 }

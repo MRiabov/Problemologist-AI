@@ -17,7 +17,6 @@ from controller.workflows.heavy import (
     HeavyValidationWorkflow,
 )
 from shared.enums import AgentName
-from shared.simulation.schemas import SimulatorBackendType
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -32,6 +31,7 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.policy import FilesystemPolicy
 from shared.workers.schema import (
