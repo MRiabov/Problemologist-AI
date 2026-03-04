@@ -95,8 +95,8 @@ def build():
     # Emit event to verify collection
     emit_event({"event_type": "simulation_result", "data": {"status": "success"}})
     
-    # Trigger a tool call if the worker instruments it
-    emit_event({"event_type": "tool_call", "data": {"tool": "fastener_hole", "args": {"type": "M3"}}})
+    # Trigger a standardized tool invocation event
+    emit_event({"event_type": "tool_invocation", "data": {"tool": "fastener_hole", "args": {"type": "M3"}}})
 
     p = Box(1, 1, 1)
     p.label = "test_part"
@@ -127,7 +127,7 @@ def build():
         # Verify event families
         event_types = [_event_get(e, "event_type") for e in events]
         assert "simulation_result" in event_types, "Missing simulation_result event"
-        assert "tool_call" in event_types, "Missing tool_call event"
+        assert "tool_invocation" in event_types, "Missing tool_invocation event"
 
 
 @pytest.mark.integration_p0

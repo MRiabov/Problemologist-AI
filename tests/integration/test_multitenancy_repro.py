@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import httpx
@@ -61,9 +62,7 @@ async def run_simulation(script: str, name: str):
             }
 
 
-@pytest.mark.integration_p0
-@pytest.mark.asyncio
-async def test_multitenancy_repro():
+async def _run_multitenancy_repro() -> None:
     # Pre-warm: the first simulation on a fresh worker always takes long due to kernel compilation.
     # We run a tiny dummy simulation to warm up the pool
     # and we include both Box and Sphere to trigger all needed kernels.
@@ -114,3 +113,8 @@ def build():
         assert success or "Simulation stable" in message, (
             f"FAILURE: {res['name']} reported success=False. Msg: {message}. Full Data: {json.dumps(data, indent=2)}"
         )
+
+
+@pytest.mark.integration_p0
+def test_multitenancy_repro():
+    asyncio.run(_run_multitenancy_repro())

@@ -245,6 +245,28 @@ def test_int_159_plan_approval_comment(page: Page):
             } catch (e) { return null; }
         }"""
     )
+    if benchmark_status == "PLANNING":
+        page.wait_for_function(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return false;
+                try {
+                    const data = JSON.parse(el.textContent);
+                    return ['PLANNED', 'FAILED'].includes(data.episodeStatus);
+                } catch (e) { return false; }
+            }""",
+            timeout=120000,
+        )
+        benchmark_status = page.evaluate(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return null;
+                try {
+                    return JSON.parse(el.textContent).episodeStatus ?? null;
+                } catch (e) { return null; }
+            }"""
+        )
+
     assert benchmark_status == "PLANNED", (
         f"Benchmark did not reach PLANNED in approval flow (status={benchmark_status})"
     )

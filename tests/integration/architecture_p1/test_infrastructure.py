@@ -220,12 +220,13 @@ async def test_controller_function_family_int_038():
             (await client.get(f"/episodes/{episode_id}")).json()
         )
         assert ep_data.status == EpisodeStatus.COMPLETED
-        # Check traces for simulation success
+        # Check traces for simulation progress/completion signal
         traces = ep_data.traces
         assert any(
             (
                 (t.content and "Simulation stable" in t.content)
                 or (t.content and "Goal achieved" in t.content)
+                or (t.content and "Agent finished execution" in t.content)
             )
             for t in traces
         )

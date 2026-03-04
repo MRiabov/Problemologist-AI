@@ -32,6 +32,7 @@ class MockDSPyLM(dspy.LM):
     """Mock DSPy LM using YAML scenarios keyed by session_id prefixes."""
 
     node_type: AgentName | None
+    _transcript_states: dict[str, int] = {}  # session_id -> entry_idx
 
     def __init__(
         self,
@@ -79,23 +80,19 @@ class MockDSPyLM(dspy.LM):
         full_text = self._get_full_text(prompt, messages)
         logger.info("mock_dspy_full_text", text=full_text)
 
-        # 1. Detect scenario.
-        # Prefer explicit session_id-mapped scenarios (e.g. INT-014-xxxx -> INT-014)
-        # to avoid generic text heuristics accidentally selecting "benchmark".
+        # 1. Resolve scenario from session_id only (no prompt heuristics).
         scenario_id = self._get_scenario_id()
-        if scenario_id not in self.scenarios or scenario_id in {"benchmark", "default"}:
-            detected = self._detect_scenario_from_text(full_text)
-            if detected:
-                scenario_id = detected
-
-        if scenario_id.startswith("INT-") and scenario_id not in self.scenarios:
-            scenario_id = "test-exec"
+        # Final check if session_id is a direct match but was missed by _get_scenario_id
+        if scenario_id not in self.scenarios and self.session_id in self.scenarios:
+            scenario_id = self.session_id
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
 
-        # 2. Detect Node Type (Use explicit if set, otherwise detect)
-        node_key = self._normalize_agent_name(self.node_type) or self._detect_node_key(
-            full_text
-        )
+        # 2. Node type must be explicit and map to AgentName exactly.
+        node_key = self._normalize_agent_name(self.node_type)
+        if node_key is None:
+            raise ValueError(
+                "MockDSPyLM requires explicit node_type AgentName during integration tests."
+            )
 
         # Detect if JSON is requested or if we should provide it for structured nodes
         low_text = full_text.lower()
@@ -106,6 +103,9 @@ class MockDSPyLM(dspy.LM):
 
         # Extract expected fields for ReAct compatibility
         expected_fields = []
+
+        if "next_tool_name" in full_text or "next_thought" in full_text:
+            expected_fields.extend(["next_thought", "next_tool_name", "next_tool_args"])
 
         # Always try to detect fields from text if they exist
         match = re.search(
@@ -149,12 +149,7 @@ class MockDSPyLM(dspy.LM):
         )
 
         lookup_key = node_key.value
-        node_data: dict[str, Any] = {}
-        for candidate in self._scenario_lookup_keys(node_key):
-            node_data = scenario.get(candidate, {})
-            if node_data:
-                lookup_key = candidate
-                break
+        node_data: dict[str, Any] = scenario.get(lookup_key, {})
         logger.info(
             "mock_dspy_lm_data_found",
             scenario=scenario_id,
@@ -178,8 +173,17 @@ class MockDSPyLM(dspy.LM):
 
         # 3. Handle multi-turn state and loop protection
         count = self._call_counts.get(lookup_key, 0)
-        self._call_counts[lookup_key] = count + 1
-        call_index = count + 1
+        # Idempotency check: if prompt is identical to last call for this node, don't increment
+        last_prompt = getattr(self, "_last_prompt", {}).get(lookup_key)
+        if last_prompt == full_text:
+            logger.info("mock_dspy_lm_idempotent_call", node=lookup_key)
+        else:
+            self._call_counts[lookup_key] = count + 1
+            if not hasattr(self, "_last_prompt"):
+                self._last_prompt = {}
+            self._last_prompt[lookup_key] = full_text
+
+        call_index = self._call_counts.get(lookup_key, 0)
 
         # Optional assertions for integration hardening.
         self._validate_expected_llm_inputs(
@@ -226,6 +230,15 @@ class MockDSPyLM(dspy.LM):
                 f"(completed_tools={completed_tools}, expected_tool_calls={len(tool_calls)})."
             )
 
+        # 3. Handle Transcript mode if present in scenario
+        if "transcript" in scenario:
+            transcript_resp = self._handle_transcript(
+                scenario, node_key, full_text, is_json, expected_fields
+            )
+            if transcript_resp:
+                return transcript_resp
+
+        # 4. Handle legacy multi-turn state and loop protection
         # Only force finish on observation when explicit tool calls are exhausted.
         tool_calls = node_data.get("tool_calls", [])
         tool_progress = self._tool_progress.get(lookup_key, 0)
@@ -242,39 +255,109 @@ class MockDSPyLM(dspy.LM):
             return None
         if isinstance(node_type, AgentName):
             return node_type
-        normalized = node_type.strip().lower()
-        alias_map = {
-            "planner": AgentName.ENGINEER_PLANNER,
-            "coder": AgentName.ENGINEER_CODER,
-            "engineer": AgentName.ENGINEER_CODER,
-            "cad_engineer": AgentName.ENGINEER_CODER,
-            "reviewer": AgentName.ENGINEER_REVIEWER,
-            "plan_reviewer": AgentName.ENGINEER_REVIEWER,
-            "execution_reviewer": AgentName.EXECUTION_REVIEWER,
-            "electronics_reviewer": AgentName.ELECTRONICS_REVIEWER,
-            "skill_learner": AgentName.SKILL_AGENT,
-            "journalling": AgentName.JOURNALLING_AGENT,
-        }
-        if normalized in alias_map:
-            return alias_map[normalized]
-        return AgentName(normalized)
+        return AgentName(node_type.strip())
 
     @staticmethod
     def _scenario_lookup_keys(node_key: AgentName) -> list[str]:
-        if node_key in PLANNER_AGENTS:
-            return [node_key.value, "planner", "engineer_planner", "benchmark_planner"]
-        if node_key in CODER_AGENTS:
-            return [node_key.value, "coder", "engineer_coder", "benchmark_coder"]
-        if node_key in REVIEWER_AGENTS:
-            return [
-                node_key.value,
-                "reviewer",
-                "engineer_reviewer",
-                "benchmark_reviewer",
-            ]
-        if node_key == AgentName.SKILL_AGENT:
-            return [node_key.value, "skill_agent", "skill_learner"]
         return [node_key.value]
+
+    def _handle_transcript(
+        self,
+        scenario: dict,
+        node_key: AgentName,
+        full_text: str,
+        is_json: bool,
+        expected_fields: list[str],
+    ) -> list[str] | None:
+        transcript = scenario.get("transcript", [])
+        entry_idx = self._transcript_states.get(self.session_id, 0)
+        target_node = node_key.value
+
+        # Find the next matching entry in transcript starting from current state
+        found_idx = -1
+        for i in range(entry_idx, len(transcript)):
+            if transcript[i].get("node") == target_node:
+                found_idx = i
+                break
+
+        if found_idx == -1:
+            logger.info(
+                "mock_transcript_node_not_found", node=node_key, entry_idx=entry_idx
+            )
+            return None
+
+        # Reset states if we are starting a new session/scenario entry to ensure idempotency
+        # However, entry_idx is class-level. We should probably use (session_id, node_key) if we want multi-node turns.
+        # But for now, entry_idx is enough for sequential node turns.
+
+        self._transcript_states[self.session_id] = found_idx
+        entry = transcript[found_idx]
+        steps = entry.get("steps", [])
+
+        # Step selection by counting observations in history
+        custom_markers = re.findall(
+            r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text
+        )
+        standard_markers = re.findall(r"Observation:", full_text, re.IGNORECASE)
+        completed_tools = len(custom_markers) + len(standard_markers)
+
+        step_idx = min(completed_tools, len(steps) - 1)
+        step_data = steps[step_idx]
+
+        logger.info(
+            "mock_transcript_step",
+            node=node_key.value,
+            entry_idx=found_idx,
+            step_idx=step_idx,
+            completed_tools=completed_tools,
+        )
+
+        # Validate observation if previous step had expected_observation
+        if step_idx > 0:
+            prev_step = steps[step_idx - 1]
+            expected_obs = prev_step.get("expected_observation")
+            if expected_obs:
+                # Regex to find observations. Handles both [[ ## observation_N ## ]] and Observation:
+                obs_matches = re.findall(
+                    r"(?:Observation:|\[\[\s*##\s*observation_\d+\s*##\s*\]\])\s*(.*?)(?=\n\s*\[\[\s*##|\Z)",
+                    full_text,
+                    re.DOTALL | re.IGNORECASE,
+                )
+                if obs_matches:
+                    actual_obs = obs_matches[-1].strip()
+
+                    # Normalize common observation values for easier matching
+                    if actual_obs.startswith("True"):
+                        actual_obs = "success"
+
+                    if expected_obs not in actual_obs:
+                        logger.warning(
+                            "mock_transcript_observation_mismatch",
+                            node=node_key.value,
+                            step=step_idx - 1,
+                            expected=expected_obs,
+                            actual=actual_obs,
+                        )
+
+        # If this step is 'finished', we prepare to move to next entry on NEXT call
+        if step_data.get("finished"):
+            self._transcript_states[self.session_id] = found_idx + 1
+
+        # Use tool_override if it's a tool-calling step
+        tool_override = None
+        if not step_data.get("finished"):
+            tool_name = step_data.get("tool_name")
+            if tool_name:
+                tool_override = (tool_name, step_data.get("tool_args", {}))
+
+        return self._generate_response(
+            node_key,
+            step_data,
+            is_json,
+            finished=step_data.get("finished", False),
+            expected_fields=expected_fields,
+            tool_override=tool_override,
+        )
 
     def _detect_expected_fields_from_json(self, text: str) -> list[str]:
         """Detect expected JSON keys from a template in the prompt."""
@@ -312,31 +395,18 @@ class MockDSPyLM(dspy.LM):
                 text += str(msg.get("content", ""))
         return text
 
-    def _detect_scenario_from_text(self, text: str) -> str | None:
-        """Detect scenario ID from prompt text keywords."""
-        # Sort by length descending to match most specific first (e.g. INT-177 before INT)
-        sorted_scenarios = sorted(self.scenarios.keys(), key=len, reverse=True)
-        for scenario_id in sorted_scenarios:
-            if scenario_id == "default" or scenario_id == "benchmark":
-                continue
-            # Use word boundaries for better matching
-            if re.search(rf"\b{re.escape(scenario_id)}\b", text):
-                return scenario_id
-
-        # Secondary check for benchmark scenario if it looks like one
-        if (
-            "move" in text.lower() and "sphere" in text.lower()
-        ) or "steel ball" in text.lower():
-            return "benchmark"
-
-        return None
-
     def _get_scenario_id(self) -> str:
         """Extract scenario ID from session_id, handling UUIDs and test prefixes."""
         # Check for UUID (roughly xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
         uuid_regex = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         if re.match(uuid_regex, self.session_id.lower()):
-            return "benchmark"
+            if self.node_type in {
+                AgentName.BENCHMARK_PLANNER,
+                AgentName.BENCHMARK_CODER,
+                AgentName.BENCHMARK_REVIEWER,
+            }:
+                return "benchmark"
+            return "default"
 
         parts = self.session_id.split("-")
         if len(parts) > 1:
@@ -357,65 +427,6 @@ class MockDSPyLM(dspy.LM):
             return self.session_id
 
         return self.session_id
-
-    def _detect_node_key(self, text: str) -> AgentName:
-        """Robustly detect node type by looking for role keywords and output fields."""
-        low_text = text.lower()
-
-        # 1. Specific Role Headers (Highest Priority)
-        if "summarizer node" in low_text or "journalling node" in low_text:
-            return AgentName.JOURNALLING_AGENT
-        if "sidecar learner" in low_text:
-            return AgentName.SKILL_AGENT
-        if "expert designer of spatial" in low_text:
-            return AgentName.ENGINEER_PLANNER
-        if "lead mechanical engineer (planner)" in low_text:
-            return AgentName.ENGINEER_PLANNER
-        if "cad engineer" in low_text or "build123d script" in low_text:
-            return AgentName.ENGINEER_CODER
-        if "design reviewer" in low_text or "benchmark auditor" in low_text:
-            return AgentName.ENGINEER_REVIEWER
-        if "commercial off-the-shelf" in low_text or "cots search" in low_text:
-            return AgentName.COTS_SEARCH
-        if "electrical strategy" in low_text or "electronics engineer" in low_text:
-            return AgentName.ELECTRONICS_PLANNER
-
-        # 2. Field-based detection (DSPy standard prompts)
-        if "journal" in low_text and (
-            "output fields" in low_text or "result:" in low_text
-        ):
-            return AgentName.ENGINEER_CODER
-        if "review" in low_text and (
-            "output fields" in low_text or "result:" in low_text
-        ):
-            return AgentName.ENGINEER_REVIEWER
-        if "plan" in low_text and (
-            "output fields" in low_text or "result:" in low_text
-        ):
-            return AgentName.ENGINEER_PLANNER
-        if "summary" in low_text and (
-            "output fields" in low_text or "result:" in low_text
-        ):
-            return AgentName.SKILL_AGENT
-        if "search_summary" in low_text and (
-            "output fields" in low_text or "result:" in low_text
-        ):
-            return AgentName.COTS_SEARCH
-
-        # 3. Fallbacks by loose role keywords
-        if any(kw in low_text for kw in ["skill", "sidecar", "learner"]):
-            return AgentName.SKILL_AGENT
-        if any(kw in low_text for kw in ["reviewer", "critic", "auditor"]):
-            return AgentName.ENGINEER_REVIEWER
-        if "cots" in low_text or "search" in low_text:
-            return AgentName.COTS_SEARCH
-        if any(
-            kw in low_text for kw in ["cad engineer", "build123d", "coder", "implement"]
-        ):
-            return AgentName.ENGINEER_CODER
-        if "planner" in low_text:
-            return AgentName.ENGINEER_PLANNER
-        return AgentName.ENGINEER_PLANNER
 
     def _is_finishing(self, text: str) -> bool:
         low_text = text.lower()
@@ -473,6 +484,7 @@ class MockDSPyLM(dspy.LM):
         is_json: bool,
         finished: bool,
         expected_fields: list[str] | None = None,
+        tool_override: tuple[str, dict] | None = None,
     ):
         """Unified response generator ensures all required fields are present."""
         logger.info("mock_dspy_lm_generate", node=node_key, finished=finished)
@@ -481,30 +493,36 @@ class MockDSPyLM(dspy.LM):
         reasoning = node_data.get("reasoning", "Verified all requirements.")
         expected_fields = expected_fields or []
 
+        tool_calls = node_data.get("tool_calls", [])
         # WP10: Support explicit tool calls in scenarios
         # We use call_count to track which tool we are on
         tool_progress = self._tool_progress.get(node_key, 0)
-        tool_calls = node_data.get("tool_calls", [])
-
         tool_name = None
         tool_args = {}
 
         if not finished:
-            if tool_progress < len(tool_calls) and len(tool_calls) > 0:
-                # Still have explicit tools to call.
-                tc = tool_calls[tool_progress]
-                thought = tc.get("thought", thought)
-                tool_name = tc.get("name")
-                tool_args = tc.get("input", {})
+            if tool_override:
+                tool_name, tool_args = tool_override
             else:
-                # Explicit tools exhausted, use generated_code if present
-                code = node_data.get("generated_code")
-                if code:
-                    tool_name = "execute_command"
-                    tool_args = {"command": code}
+                # WP10: Support explicit tool calls in scenarios (legacy mode)
+                tool_progress = self._tool_progress.get(node_key, 0)
+                tool_calls = node_data.get("tool_calls", [])
+
+                if tool_progress < len(tool_calls) and len(tool_calls) > 0:
+                    # Still have explicit tools to call.
+                    tc = tool_calls[tool_progress]
+                    thought = tc.get("thought", thought)
+                    tool_name = tc.get("name")
+                    tool_args = tc.get("input", {})
                 else:
-                    tool_name = "finish"
-                    tool_args = {}
+                    # Explicit tools exhausted, use generated_code if present
+                    code = node_data.get("generated_code")
+                    if code:
+                        tool_name = "execute_command"
+                        tool_args = {"command": code}
+                    else:
+                        tool_name = "finish"
+                        tool_args = {}
 
         # Base schema for DSPy JSONAdapter
         resp = {
@@ -530,7 +548,14 @@ class MockDSPyLM(dspy.LM):
         # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses
         if node_key in PLANNER_AGENTS:
-            resp["plan"] = node_data.get("plan", "No plan provided.")
+            default_plan = {
+                "theme": "benchmark_test",
+                "target_object_properties": {},
+                "environment_perturbations": {},
+                "difficulty_score": 0.5,
+                "reasoning": "Default mock benchmark plan.",
+            }
+            resp["plan"] = node_data.get("plan", default_plan)
             resp["summary"] = node_data.get("summary", "Plan generated.")
             # Support BenchmarkPlannerSignature
             if "plan" in node_data and isinstance(node_data["plan"], dict):
@@ -572,19 +597,24 @@ class MockDSPyLM(dspy.LM):
             # Ensure signature-defined output fields are also included
             # ReAct sometimes expects them even in intermediate turns
             sig_fields = {
-                AgentName.ENGINEER_PLANNER: ["reasoning", "plan", "summary"],
-                AgentName.BENCHMARK_PLANNER: ["reasoning", "plan", "summary"],
-                AgentName.ELECTRONICS_PLANNER: ["reasoning", "summary"],
-                AgentName.ENGINEER_CODER: ["journal"],
-                AgentName.BENCHMARK_CODER: ["journal"],
-                AgentName.ELECTRONICS_ENGINEER: ["journal"],
-                AgentName.ENGINEER_REVIEWER: ["review"],
-                AgentName.BENCHMARK_REVIEWER: ["review"],
-                AgentName.ELECTRONICS_REVIEWER: ["review"],
-                AgentName.EXECUTION_REVIEWER: ["review"],
-                AgentName.JOURNALLING_AGENT: ["summarized_journal"],
-                AgentName.SKILL_AGENT: ["summary", "journal"],
-                AgentName.COTS_SEARCH: ["search_summary"],
+                AgentName.ENGINEER_PLANNER: ["thought", "reasoning", "plan", "summary"],
+                AgentName.BENCHMARK_PLANNER: [
+                    "thought",
+                    "reasoning",
+                    "plan",
+                    "summary",
+                ],
+                AgentName.ELECTRONICS_PLANNER: ["thought", "reasoning", "summary"],
+                AgentName.ENGINEER_CODER: ["thought", "journal"],
+                AgentName.BENCHMARK_CODER: ["thought", "journal"],
+                AgentName.ELECTRONICS_ENGINEER: ["thought", "journal"],
+                AgentName.ENGINEER_REVIEWER: ["thought", "review"],
+                AgentName.BENCHMARK_REVIEWER: ["thought", "review"],
+                AgentName.ELECTRONICS_REVIEWER: ["thought", "review"],
+                AgentName.EXECUTION_REVIEWER: ["thought", "review"],
+                AgentName.JOURNALLING_AGENT: ["thought", "summarized_journal"],
+                AgentName.SKILL_AGENT: ["thought", "summary", "journal"],
+                AgentName.COTS_SEARCH: ["thought", "search_summary"],
             }.get(node_key, [])
 
             # For ReAct tool-call turns, return only the explicitly requested fields.
@@ -593,6 +623,9 @@ class MockDSPyLM(dspy.LM):
                 all_fields = list(dict.fromkeys(expected_fields))
             else:
                 all_fields = list(dict.fromkeys(expected_fields + sig_fields))
+
+            if finished and "finished" not in all_fields:
+                all_fields.append("finished")
 
             # WP10: Force plan inclusion for planner nodes to ensure state transitions work
             if node_key in PLANNER_AGENTS and "plan" not in all_fields:

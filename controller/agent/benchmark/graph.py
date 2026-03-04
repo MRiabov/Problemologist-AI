@@ -719,7 +719,12 @@ async def _update_episode_persistence(
                 episode.status = EpisodeStatus.RUNNING
 
             metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
-            metadata.detailed_status = new_status
+            # Keep detailed_status aligned with terminal EpisodeStatus values so
+            # UI polling that prefers detailed_status can detect completion.
+            if new_status == SessionStatus.ACCEPTED:
+                metadata.detailed_status = EpisodeStatus.COMPLETED.value
+            else:
+                metadata.detailed_status = new_status
             metadata.validation_logs = validation_logs
             metadata.prompt = prompt
             metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan

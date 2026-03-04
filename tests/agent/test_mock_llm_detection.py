@@ -11,7 +11,9 @@ def test_detect_node_key_explicit():
     prompt = "Some text with json output fields"
 
     # Mocking self.scenarios to be simple
-    mock_lm.scenarios = {"benchmark": {"planner": {"thought": "Explicit Success"}}}
+    mock_lm.scenarios = {
+        "benchmark": {"benchmark_planner": {"thought": "Explicit Success"}}
+    }
 
     responses = mock_lm(prompt=prompt)
     import json
@@ -20,27 +22,23 @@ def test_detect_node_key_explicit():
     assert resp_data["thought"] == "Explicit Success"
 
 
-def test_detect_node_key_fallback_still_works():
+def test_requires_explicit_node_type():
     mock_lm = MockDSPyLM(session_id="default", node_type=None)
-
-    # Header based detection
-    prompt = "You are the Sidecar Learner."
-    node_key = mock_lm._detect_node_key(prompt)
-    assert node_key == AgentName.SKILL_AGENT
-
-    prompt_2 = "You are an expert designer of spatial and geometric puzzles."
-    node_key_2 = mock_lm._detect_node_key(prompt_2)
-    assert node_key_2 == AgentName.ENGINEER_PLANNER
+    mock_lm.scenarios = {"default": {}}
+    with pytest.raises(ValueError, match="requires explicit node_type"):
+        mock_lm(prompt="any prompt")
 
 
 def test_normalization_logic():
-    mock_lm = MockDSPyLM(session_id="benchmark")
+    mock_lm = MockDSPyLM(session_id="benchmark", node_type=AgentName.BENCHMARK_PLANNER)
 
     mock_lm.scenarios = {
         "benchmark": {
-            "planner": {"thought": "P"},
-            "coder": {"thought": "C"},
-            "reviewer": {"thought": "R"},
+            "benchmark_planner": {"thought": "P"},
+            "benchmark_coder": {"thought": "C"},
+            "benchmark_reviewer": {"thought": "R"},
+            "engineer_reviewer": {"thought": "R"},
+            "execution_reviewer": {"thought": "R"},
         }
     }
 

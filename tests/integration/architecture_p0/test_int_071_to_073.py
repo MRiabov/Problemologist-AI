@@ -14,6 +14,8 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 ...
 
 
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
 async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     """INT-071: Agents config precedence + reviewer write scope."""
     session_id = f"INT-071-{uuid.uuid4().hex[:8]}"

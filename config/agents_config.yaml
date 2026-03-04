@@ -22,8 +22,8 @@ agents:
       allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "script.py", "**/*.py", "reviews/**", "renders/**"]
       deny: []
     write:
-      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md", "plan.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**"]
+      deny: ["skills/**", "utils/**", "reviews/**/*.py"]
 
   electronics_engineer:
     read:
@@ -35,7 +35,7 @@ agents:
 
   benchmark_coder:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "script.py", "**/*.py", "reviews/**", "renders/**"]
       deny: []
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]

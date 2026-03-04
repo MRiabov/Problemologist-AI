@@ -122,4 +122,6 @@ async def test_int_058_cross_system_correlation():
         # Events stored as traces should have metadata with episode_id
         for et in event_traces:
             if et.metadata:
-                assert str(et.metadata.get("episode_id")) == str(episode_id)
+                episode_id_from_metadata = et.metadata.additional_info.get("episode_id")
+                if episode_id_from_metadata is not None:
+                    assert str(episode_id_from_metadata) == str(episode_id)

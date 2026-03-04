@@ -100,6 +100,27 @@ def test_int_173_exact_pointing_payload(page: Page):
             } catch (e) { return null; }
         }"""
     )
+    if status == "PLANNING":
+        page.wait_for_function(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return false;
+                try {
+                    const data = JSON.parse(el.textContent);
+                    return ['PLANNED', 'COMPLETED', 'FAILED'].includes(data.episodeStatus);
+                } catch (e) { return false; }
+            }""",
+            timeout=120000,
+        )
+        status = page.evaluate(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return null;
+                try {
+                    return JSON.parse(el.textContent).episodeStatus ?? null;
+                } catch (e) { return null; }
+            }"""
+        )
     assert status in {"PLANNED", "COMPLETED"}, (
         f"Benchmark did not reach PLANNED/COMPLETED before selection flow (status={status})"
     )

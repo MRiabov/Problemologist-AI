@@ -1532,6 +1532,7 @@
             "title": "Episode Id"
           }
         },
+        "additionalProperties": true,
         "type": "object",
         "required": [
           "event_type"

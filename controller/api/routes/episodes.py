@@ -72,7 +72,7 @@ async def report_trace_feedback(
         diag_result = await db.execute(select(Trace).where(Trace.id == trace_id))
         diag_trace = diag_result.scalar_one_or_none()
         if diag_trace:
-            logger.error(
+            logger.warning(
                 "trace_episode_id_mismatch",
                 trace_id=trace_id,
                 requested_episode_id=str(episode_id),

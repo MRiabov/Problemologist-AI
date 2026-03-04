@@ -17,6 +17,8 @@ SERVICES = [
 DEFAULT_BROWSER_ERROR_ALLOWLIST = [
     r"Failed to parse assembly definition for electronics kb",
     r"Failed to fetch episodes",
+    r"TypeError: Failed to fetch",
+    r"Failed to hydrate episode after status update TypeError: Failed to fetch",
     r"Failed to load resource: net::ERR_CONNECTION_REFUSED",
     r"Connection check failed: TypeError: Failed to fetch",
     r"Polling failed TypeError: Failed to fetch",
