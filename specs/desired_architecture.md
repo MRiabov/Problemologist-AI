@@ -586,6 +586,11 @@ I decided to split the electrical planner because of complexity and different sk
 
 We trace all workflows with LangFuse.
 
+##### Actual implementation
+<!--This is because models implementing this produced something else.-->
+The pipeline is the simplest, proper way to call LLMs:
+DSPy (litellm) calls an endpoint, we get either reasoning, tool call, or both. We send it to frontend and to observability (and log it). that's all the intended logic.
+
 ### Filesystem
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.

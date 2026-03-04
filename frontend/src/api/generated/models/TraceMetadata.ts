@@ -18,6 +18,8 @@ export type TraceMetadata = {
     cots_query_id?: (string | null);
     review_id?: (string | null);
     decision?: (ReviewDecision | null);
+    reasoning_step_index?: (number | null);
+    reasoning_source?: (string | null);
     additional_info?: Record<string, any>;
 };
 

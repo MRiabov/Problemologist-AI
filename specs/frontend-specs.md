@@ -51,6 +51,8 @@ In Chat UI, agents must be able to:
 3. Interrupt agents before they finish.
 4. Steer agents reasoning in a "chat" mode, meaning, correct their reasoning in case they made an incorrect assumption.
 
+All data is shown as soon as the application receives it (or with a small delay)
+
 #### Reasoning traces
 
 By default, agents' reasoning is hidden, however users are able to expand it. [Chat UI desired design](/frontend/designs/Chat%20UI%20design.png)

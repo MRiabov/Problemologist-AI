@@ -3260,6 +3260,28 @@
               }
             ]
           },
+          "reasoning_step_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Step Index"
+          },
+          "reasoning_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Source"
+          },
           "additional_info": {
             "additionalProperties": true,
             "type": "object",
