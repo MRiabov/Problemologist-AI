@@ -40,3 +40,9 @@ async def test_db_setup():
     assert "episodes" in Base.metadata.tables
     assert "traces" in Base.metadata.tables
     assert "assets" in Base.metadata.tables
+    episode_columns = Base.metadata.tables["episodes"].c
+    assert "seed_id" in episode_columns
+    assert "seed_dataset" in episode_columns
+    assert "seed_match_method" in episode_columns
+    assert "generation_kind" in episode_columns
+    assert "parent_seed_id" in episode_columns
