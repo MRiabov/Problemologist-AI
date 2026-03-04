@@ -122,7 +122,7 @@ find "$ARCHIVE_DIR" -maxdepth 1 -name "run_*" -mmin +1440 -exec rm -rf {} + 2>/d
 export PYTHONPATH=$PYTHONPATH:.
 export WORKER_TYPE=light
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_light_debug.log"
-nohup uv run uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
+nohup .venv/bin/python -m uvicorn worker_light.app:app --host 0.0.0.0 --port 18001 > "$LOG_DIR/worker_light.log" 2>&1 &
 WORKER_LIGHT_PID=$!
 echo $WORKER_LIGHT_PID > logs/worker_light.pid
 echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
@@ -130,20 +130,20 @@ echo "Worker Light started (PID: $WORKER_LIGHT_PID)"
 # Start Worker Heavy (port 18002)
 export WORKER_TYPE=heavy
 export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_debug.log"
-nohup uv run uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
+nohup .venv/bin/python -m uvicorn worker_heavy.app:app --host 0.0.0.0 --port 18002 > "$LOG_DIR/worker_heavy.log" 2>&1 &
 WORKER_HEAVY_PID=$!
 echo $WORKER_HEAVY_PID > logs/worker_heavy.pid
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
-nohup uv run uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
+nohup .venv/bin/python -m uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
 CONTROLLER_PID=$!
 echo $CONTROLLER_PID > logs/controller.pid
 echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
-nohup uv run python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
+nohup .venv/bin/python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
@@ -183,24 +183,48 @@ ln -sf "$REL_LOG_DIR/temporal_worker.log" logs/temporal_worker.log
 ln -sf "$REL_LOG_DIR/frontend.log" logs/frontend.log
 
 echo "Waiting for services to be healthy..."
-sleep 5
-if curl -s http://127.0.0.1:18001/health | grep -q "healthy"; then
-  echo "Worker Light is healthy!"
-else
-  echo "Worker Light health check failed (see logs/manual_run/worker_light.log)"
-fi
+sleep 2
 
-if curl -s http://127.0.0.1:18002/health | grep -q "healthy"; then
-  echo "Worker Heavy is healthy!"
-else
-  echo "Worker Heavy health check failed (see logs/manual_run/worker_heavy.log)"
-fi
+wait_for_health() {
+  local name="$1"
+  local url="$2"
+  local retries="${3:-30}"
+  local delay="${4:-1}"
+  local i=0
 
-if curl -s http://127.0.0.1:18000/health | grep -q "healthy"; then
-  echo "Controller is healthy!"
-else
-  echo "Controller health check failed (see logs/controller.log)"
-fi
+  while [ "$i" -lt "$retries" ]; do
+    if curl -s "$url" | grep -q "healthy"; then
+      echo "$name is healthy!"
+      return 0
+    fi
+    i=$((i + 1))
+    sleep "$delay"
+  done
+
+  echo "$name health check failed after ${retries}s (see logs in $LOG_DIR)"
+  return 1
+}
+
+check_pid_alive() {
+  local name="$1"
+  local pid="$2"
+  if kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+  echo "$name process is not running (PID: $pid)"
+  return 1
+}
+
+FAIL=0
+
+check_pid_alive "Worker Light" "$WORKER_LIGHT_PID" || FAIL=1
+check_pid_alive "Worker Heavy" "$WORKER_HEAVY_PID" || FAIL=1
+check_pid_alive "Controller" "$CONTROLLER_PID" || FAIL=1
+check_pid_alive "Temporal Worker" "$TEMP_WORKER_PID" || FAIL=1
+
+wait_for_health "Worker Light" "http://127.0.0.1:18001/health" || FAIL=1
+wait_for_health "Worker Heavy" "http://127.0.0.1:18002/health" || FAIL=1
+wait_for_health "Controller" "http://127.0.0.1:18000/health" || FAIL=1
 
 if [ "$FRONTEND_STARTED" = true ]; then
   sleep 2
@@ -209,6 +233,11 @@ if [ "$FRONTEND_STARTED" = true ]; then
   else
     echo "Frontend health check failed (see logs/manual_run/frontend.log)"
   fi
+fi
+
+if [ "$FAIL" -ne 0 ]; then
+  echo "Environment startup failed."
+  exit 1
 fi
 
 echo "Environment is UP. Use 'scripts/env_down.sh' to stop."
