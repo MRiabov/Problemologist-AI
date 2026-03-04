@@ -10,9 +10,9 @@ def test_create_agent_graph_returns_engineering_graph():
     agent, callback = create_agent_graph(agent_name=AgentName.ENGINEER_CODER)
 
     # Assert
-    assert "planner" in agent.nodes
-    assert "coder" in agent.nodes
-    assert "plan_reviewer" in agent.nodes
+    assert AgentName.ENGINEER_PLANNER in agent.nodes
+    assert AgentName.ENGINEER_CODER in agent.nodes
+    assert AgentName.ENGINEER_REVIEWER in agent.nodes
     assert "execution_reviewer" in agent.nodes
     assert callback is None
 
@@ -25,9 +25,9 @@ def test_create_agent_graph_returns_benchmark_graph():
     agent, _ = create_agent_graph(agent_name=AgentName.BENCHMARK_PLANNER)
 
     # Assert
-    assert "planner" in agent.nodes
-    assert "coder" in agent.nodes
-    assert "reviewer" in agent.nodes
+    assert AgentName.BENCHMARK_PLANNER in agent.nodes
+    assert AgentName.BENCHMARK_CODER in agent.nodes
+    assert AgentName.BENCHMARK_REVIEWER in agent.nodes
     # Benchmark graph also has cots_search and skills
-    assert "cots_search" in agent.nodes
+    assert AgentName.COTS_SEARCH in agent.nodes
     assert "skills" in agent.nodes

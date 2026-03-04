@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { GenerationKind } from './GenerationKind';
 import type { SimulatorBackendType } from './SimulatorBackendType';
 export type BenchmarkGenerateRequest = {
     prompt: string;
@@ -10,7 +11,7 @@ export type BenchmarkGenerateRequest = {
     target_quantity?: (number | null);
     seed_id?: (string | null);
     seed_dataset?: (string | null);
-    generation_kind?: (string | null);
+    generation_kind?: (GenerationKind | null);
     backend?: SimulatorBackendType;
 };
 

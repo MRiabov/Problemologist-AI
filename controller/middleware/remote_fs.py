@@ -16,7 +16,8 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
 )
-from shared.enums import AgentName, SimulatorBackendType
+from shared.enums import AgentName
+from shared.simulation.schemas import SimulatorBackendType
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,

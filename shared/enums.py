@@ -103,9 +103,11 @@ class AgentName(StrEnum):
     ELECTRONICS_ENGINEER = "electronics_engineer"
     ELECTRONICS_REVIEWER = "electronics_reviewer"
     SKILL_AGENT = "skill_agent"
+    SKILL_LEARNER = "skill_learner"
     GIT_AGENT = "git_agent"
     COTS_SEARCH = "cots_search"
     SKILL_CREATOR = "skill_creator"
+    SUMMARIZER = "summarizer"
 
 
 class EpisodeType(StrEnum):

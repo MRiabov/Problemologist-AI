@@ -1996,7 +1996,9 @@
           "electronics_engineer",
           "electronics_reviewer",
           "skill_agent",
-          "git_agent"
+          "git_agent",
+          "cots_search",
+          "skill_creator"
         ],
         "title": "AgentName",
         "description": "Canonical agent identifiers used across API, evals, and orchestration."
@@ -2260,13 +2262,12 @@
           "generation_kind": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/GenerationKind"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Generation Kind"
+            ]
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
@@ -2647,17 +2648,12 @@
           "episode_type": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "benchmark",
-                  "engineer"
-                ]
+                "$ref": "#/components/schemas/EpisodeType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Episode Type"
+            ]
           },
           "validation_logs": {
             "items": {
@@ -2736,24 +2732,22 @@
           "seed_match_method": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/SeedMatchMethod"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Seed Match Method"
+            ]
           },
           "generation_kind": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/GenerationKind"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Generation Kind"
+            ]
           },
           "parent_seed_id": {
             "anyOf": [
@@ -2765,6 +2759,28 @@
               }
             ],
             "title": "Parent Seed Id"
+          },
+          "is_integration_test": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Integration Test"
+          },
+          "integration_test_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration Test Id"
           },
           "additional_info": {
             "additionalProperties": true,
@@ -2787,6 +2803,15 @@
         ],
         "title": "EpisodeStatus",
         "description": "Status of an agent episode."
+      },
+      "EpisodeType": {
+        "type": "string",
+        "enum": [
+          "benchmark",
+          "engineer"
+        ],
+        "title": "EpisodeType",
+        "description": "High-level episode workflow family."
       },
       "FeedbackRequest": {
         "properties": {
@@ -2811,6 +2836,19 @@
           "score"
         ],
         "title": "FeedbackRequest"
+      },
+      "GenerationKind": {
+        "type": "string",
+        "enum": [
+          "seeded",
+          "derived",
+          "seeded_eval",
+          "integration_test",
+          "cots_search",
+          "skill_creator"
+        ],
+        "title": "GenerationKind",
+        "description": "Origin category for generated episodes/dataset rows."
       },
       "GeometricSelection": {
         "properties": {
@@ -2992,6 +3030,17 @@
           "session_id"
         ],
         "title": "RunSimulationRequest"
+      },
+      "SeedMatchMethod": {
+        "type": "string",
+        "enum": [
+          "runtime_explicit",
+          "exact_task",
+          "no_exact_task_match",
+          "ambiguous_exact_task"
+        ],
+        "title": "SeedMatchMethod",
+        "description": "How a seed linkage was determined for an episode/dataset row."
       },
       "SelectionLevel": {
         "type": "string",

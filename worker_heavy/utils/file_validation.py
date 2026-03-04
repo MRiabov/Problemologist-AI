@@ -18,7 +18,8 @@ import structlog
 import yaml
 from pydantic import ValidationError
 
-from shared.enums import AgentName, SimulatorBackendType
+from shared.enums import AgentName
+from shared.simulation.schemas import SimulatorBackendType
 from shared.models.schemas import (
     AssemblyDefinition,
     ObjectivesYaml,

@@ -26,7 +26,7 @@ logger = structlog.get_logger(__name__)
 
 @dataclass
 class SharedNodeContext:
-    """Consolidates shared dependencies for agent nodes."""
+    """Shared dependencies and state for agent nodes."""
 
     worker_light_url: str
     session_id: str  # Langfuse/Worker session (string)
@@ -35,18 +35,17 @@ class SharedNodeContext:
     dspy_lm: dspy.LM
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
-    from shared.enums import AgentName, TraceType
-    ...
-        @classmethod
-        def create(
-            cls,
-            worker_light_url: str,
-            session_id: str,
-            episode_id: str | None = None,
-            worker_client: WorkerClient | None = None,
-            fs: RemoteFilesystemMiddleware | None = None,
-            agent_role: AgentName = AgentName.ENGINEER_CODER,
-        ) -> "SharedNodeContext":
+
+    @classmethod
+    def create(
+        cls,
+        worker_light_url: str,
+        session_id: str,
+        episode_id: str | None = None,
+        worker_client: WorkerClient | None = None,
+        fs: RemoteFilesystemMiddleware | None = None,
+        agent_role: AgentName = AgentName.ENGINEER_CODER,
+    ) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
         # Fallback for episode_id if not provided
         eid = episode_id or session_id

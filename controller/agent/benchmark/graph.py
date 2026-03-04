@@ -82,34 +82,42 @@ def define_graph():
     workflow = StateGraph(BenchmarkGeneratorState)
 
     # Add nodes
-    workflow.add_node("planner", planner_node)
-    workflow.add_node("coder", coder_node)
-    workflow.add_node("reviewer", reviewer_node)
-    workflow.add_node("cots_search", cots_search_node)
+    workflow.add_node(AgentName.BENCHMARK_PLANNER, planner_node)
+    workflow.add_node(AgentName.BENCHMARK_CODER, coder_node)
+    workflow.add_node(AgentName.BENCHMARK_REVIEWER, reviewer_node)
+    workflow.add_node(AgentName.COTS_SEARCH, cots_search_node)
     workflow.add_node("skills", skills_node)
     workflow.add_node("summarizer", summarizer_node)
     workflow.add_node("steer", steerability_node)
 
     # Define transitions
-    def route_start(state: BenchmarkGeneratorState) -> Literal["planner", "coder"]:
+    def route_start(
+        state: BenchmarkGeneratorState,
+    ) -> Literal[AgentName.BENCHMARK_PLANNER, AgentName.BENCHMARK_CODER]:
         if state.session.status in [SessionStatus.EXECUTING, SessionStatus.PLANNED]:
-            return "coder"
-        return "planner"
+            return AgentName.BENCHMARK_CODER
+        return AgentName.BENCHMARK_PLANNER
 
     workflow.add_conditional_edges(START, route_start)
-    workflow.add_edge("planner", END)
+    workflow.add_edge(AgentName.BENCHMARK_PLANNER, END)
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
     workflow.add_conditional_edges(
-        "coder",
+        AgentName.BENCHMARK_CODER,
         check_steering,
-        {"steer": "steer", "next": "reviewer"},
+        {"steer": "steer", "next": AgentName.BENCHMARK_REVIEWER},
     )
 
     # Conditional edges for reviewer
     async def reviewer_router(
         state: BenchmarkGeneratorState,
-    ) -> Literal["steer", "coder", "planner", "skills", "summarizer"]:
+    ) -> Literal[
+        "steer",
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_PLANNER,
+        "skills",
+        "summarizer",
+    ]:
         # Check for steering first
         if await check_steering(state) == "steer":
             return "steer"
@@ -131,37 +139,37 @@ def define_graph():
             if state.review_decision == ReviewDecision.CONFIRM_PLAN_REFUSAL:
                 return "skills"
             if state.review_decision == ReviewDecision.REJECT_PLAN:
-                return "planner"
+                return AgentName.BENCHMARK_PLANNER
             if state.review_decision == ReviewDecision.REJECT_PLAN_REFUSAL:
-                return "coder"
-            return "coder"
+                return AgentName.BENCHMARK_CODER
+            return AgentName.BENCHMARK_CODER
 
         # Fallback for legacy behavior
         feedback = (state.review_feedback or "").upper()
         if "APPROVED" in feedback:
             return "skills"
         if feedback.startswith("STEERING:"):
-            return "planner"
-        return "coder"
+            return AgentName.BENCHMARK_PLANNER
+        return AgentName.BENCHMARK_CODER
 
     workflow.add_conditional_edges(
-        "reviewer",
+        AgentName.BENCHMARK_REVIEWER,
         reviewer_router,
         {
             "steer": "steer",
-            "coder": "coder",
-            "planner": "planner",
+            AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
             "skills": "skills",
             "summarizer": "summarizer",
         },
     )
 
     workflow.add_edge("skills", END)
-    workflow.add_edge("summarizer", "planner")
-    workflow.add_edge("steer", "planner")
+    workflow.add_edge("summarizer", AgentName.BENCHMARK_PLANNER)
+    workflow.add_edge("steer", AgentName.BENCHMARK_PLANNER)
 
     # cots_search can be reached from planner or coder if we add those edges
-    workflow.add_edge("cots_search", "planner")
+    workflow.add_edge(AgentName.COTS_SEARCH, AgentName.BENCHMARK_PLANNER)
 
     return workflow.compile()
 
