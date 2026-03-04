@@ -242,7 +242,7 @@ def _missing_required_traces(
 
 
 async def _run_git_eval(
-    item: EvalDatasetItem, stats: dict[str, Any], agent_name: AgentName
+    item: EvalDatasetItem, stats: dict[AgentName, Any], agent_name: AgentName
 ):
     task_id = item.id
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
@@ -288,7 +288,7 @@ async def _run_git_eval(
 async def run_single_eval(
     item: EvalDatasetItem,
     agent_name: AgentName,
-    stats: dict[str, Any],
+    stats: dict[AgentName, Any],
     verbose: bool = False,
 ):
     """

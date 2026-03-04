@@ -32,9 +32,10 @@ class SharedNodeContext:
     session_id: str  # Langfuse/Worker session (string)
     episode_id: str  # Database episode ID (UUID string)
     pm: PromptManager
-    dspy_lm: dspy.LM
+    dspy_lm: Any
     worker_client: WorkerClient
     fs: RemoteFilesystemMiddleware
+    main_loop: asyncio.AbstractEventLoop
 
     @classmethod
     def create(
@@ -100,6 +101,11 @@ class SharedNodeContext:
         """Creates a database recorder for traces."""
         eid = episode_id or self.episode_id
         return DatabaseCallbackHandler(episode_id=eid, loop=self.main_loop)
+
+    def get_callbacks(self) -> list[DatabaseCallbackHandler]:
+        """WP08: Support manual callback retrieval for integration tests."""
+        recorder = self.get_database_recorder()
+        return [recorder]
 
 
 class BaseNode:
@@ -285,7 +291,7 @@ class BaseNode:
         inputs: dict[str, Any],
         tool_factory: Callable,
         validate_files: list[str],
-        node_type: str,
+        node_type: AgentName,
         max_retries: int | None = None,
     ) -> tuple[Any, dict[str, Any], str]:
         """
@@ -338,7 +344,7 @@ class BaseNode:
 
         if program_cls is dspy.ReAct:
             max_iters = settings.react_max_iters
-            if "planner" in node_type:
+            if "planner" in node_type.value:
                 max_iters = settings.react_planner_max_iters
             program = program_cls(
                 signature_cls, tools=list(tool_fns.values()), max_iters=max_iters

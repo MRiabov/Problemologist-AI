@@ -188,8 +188,9 @@ async def _execute_graph_streaming(
         episode_id=str(session_id), loop=asyncio.get_running_loop()
     )
     callbacks = [db_callback]
+    config: Any = {"callbacks": callbacks}
 
-    async for output in app.astream(initial_state, config={"callbacks": callbacks}):
+    async for output in app.astream(initial_state, config=config):
         for node_name, state_update in output.items():
             if state_update is None:
                 logger.warning("node_returned_none", node_name=node_name)

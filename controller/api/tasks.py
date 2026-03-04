@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import os
 import uuid
+from typing import Any
 
 import boto3
 from langchain_core.messages import HumanMessage
@@ -250,19 +251,17 @@ async def execute_agent_task(
                         trace_name=agent_name,
                         metadata=langfuse_metadata,
                     )
-                    result = await agent.ainvoke(
-                        initial_input,
-                        config={
-                            "callbacks": callbacks,
-                            "metadata": {
-                                "episode_id": str(episode_id),
-                                "langfuse_trace_id": trace_id,
-                                "langfuse_session_id": langfuse_session_id,
-                            },
-                            "run_name": agent_name,
-                            "configurable": {"thread_id": thread_id},
+                    config: Any = {
+                        "callbacks": callbacks,
+                        "metadata": {
+                            "episode_id": str(episode_id),
+                            "langfuse_trace_id": trace_id,
+                            "langfuse_session_id": langfuse_session_id,
                         },
-                    )
+                        "run_name": agent_name,
+                        "configurable": {"thread_id": thread_id},
+                    }
+                    result = await agent.ainvoke(initial_input, config=config)  # type: ignore
                 if isinstance(result, dict):
                     msgs = result.get("messages", [])
                     logger.info(
@@ -618,7 +617,7 @@ async def continue_agent_task(
                     try:
                         # Assuming AgentName might be in metadata_vars or we can infer it
                         # For now, we use metadata to get the original name if stored
-                        meta = EpisodeMetadata.model_validate(episode.metadata_vars)
+                        EpisodeMetadata.model_validate(episode.metadata_vars)
                         # We need a field in metadata for agent_name.
                         # If not present, default to ENGINEER_CODER for continuation.
                     except Exception:

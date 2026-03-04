@@ -148,8 +148,8 @@ async def plan_reviewer_node(state: AgentState) -> AgentState:
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url,
-        session_id=state["session_id"],
-        episode_id=state.get("episode_id"),
+        session_id=session_id,
+        episode_id=episode_id,
         agent_role=AgentName.ENGINEER_REVIEWER,
     )
     node = PlanReviewerNode(context=ctx)

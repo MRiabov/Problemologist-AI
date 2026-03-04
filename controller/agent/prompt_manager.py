@@ -21,29 +21,33 @@ class PromptManager:
         # Mapping from our template names to prompts.yaml paths
         templates = {
             # Engineer Agent
-            AgentName.ENGINEER_PLANNER: data["engineer"]["planner"]["system"],
-            AgentName.ELECTRONICS_PLANNER: data["engineer"]["electronics_planner"][
-                "system"
-            ],
-            AgentName.ENGINEER_CODER: data["engineer"]["engineer"]["system"],
-            AgentName.ELECTRONICS_ENGINEER: data["engineer"]["electronics_engineer"][
-                "system"
-            ],
-            AgentName.ENGINEER_REVIEWER: data["engineer"]["critic"]["system"],
-            AgentName.ELECTRONICS_REVIEWER: data["engineer"]["critic"]["system"],
-            AgentName.EXECUTION_REVIEWER: data["engineer"]["critic"]["system"],
+            AgentName.ENGINEER_PLANNER.value: data["engineer"]["planner"]["system"],
+            AgentName.ELECTRONICS_PLANNER.value: data["engineer"][
+                "electronics_planner"
+            ]["system"],
+            AgentName.ENGINEER_CODER.value: data["engineer"]["engineer"]["system"],
+            AgentName.ELECTRONICS_ENGINEER.value: data["engineer"][
+                "electronics_engineer"
+            ]["system"],
+            AgentName.ENGINEER_REVIEWER.value: data["engineer"]["critic"]["system"],
+            AgentName.ELECTRONICS_REVIEWER.value: data["engineer"]["critic"]["system"],
+            AgentName.EXECUTION_REVIEWER.value: data["engineer"]["critic"]["system"],
             # Benchmark Generator
-            AgentName.BENCHMARK_PLANNER: data["benchmark_generator"]["planner"][
+            AgentName.BENCHMARK_PLANNER.value: data["benchmark_generator"]["planner"][
                 "system"
             ],
-            AgentName.BENCHMARK_CODER: data["benchmark_generator"]["coder"]["system"],
-            AgentName.BENCHMARK_REVIEWER: data["benchmark_generator"]["reviewer"][
+            AgentName.BENCHMARK_CODER.value: data["benchmark_generator"]["coder"][
+                "system"
+            ],
+            AgentName.BENCHMARK_REVIEWER.value: data["benchmark_generator"]["reviewer"][
                 "system"
             ],
             # Subagents
-            AgentName.COTS_SEARCH: data["subagents"]["cots_search"]["system"],
-            AgentName.SKILL_AGENT: data["subagents"]["skill_learner"]["system"],
-            AgentName.JOURNALLING_AGENT: data["subagents"]["documentation"]["system"],
+            AgentName.COTS_SEARCH.value: data["subagents"]["cots_search"]["system"],
+            AgentName.SKILL_AGENT.value: data["subagents"]["skill_learner"]["system"],
+            AgentName.JOURNALLING_AGENT.value: data["subagents"]["documentation"][
+                "system"
+            ],
         }
 
         # Add fallbacks for things not in prompts.yaml yet
@@ -96,10 +100,15 @@ Output ONLY the resolved content. Do not include markdown code blocks (```) unle
 
         self.env = jinja2.Environment(loader=jinja2.DictLoader(templates))
 
-    def render(self, template_name: str, **kwargs: Any) -> str:
+    def render(self, template_name: str | AgentName, **kwargs: Any) -> str:
         """Render a template with the given context."""
         try:
-            template = self.env.get_template(template_name)
+            key = (
+                template_name.value
+                if isinstance(template_name, AgentName)
+                else template_name
+            )
+            template = self.env.get_template(key)
             return template.render(**kwargs)
         except jinja2.TemplateNotFound:
             raise ValueError(f"Template '{template_name}' not found")
@@ -113,7 +122,7 @@ Output ONLY the resolved content. Do not include markdown code blocks (```) unle
         from pathlib import Path
 
         # Look for compiled prompts in a standard location
-        prompt_path = Path("config/compiled_prompts") / f"{agent_name}.json"
+        prompt_path = Path("config/compiled_prompts") / f"{agent_name.value}.json"
 
         if prompt_path.exists():
             try:
