@@ -28,32 +28,6 @@ class FilesystemConfig(BaseModel):
 
 
 class FilesystemPolicy:
-    # Maps internal agent names/node names to canonical policy roles
-    ROLE_MAPPING = {
-        AgentName.ENGINEER_PLANNER: "engineering_planner",
-        "engineer_planner": "engineering_planner",
-        "engineering_planner": "engineering_planner",
-        AgentName.ENGINEER_CODER: "engineering_mechanical_coder",
-        "engineer_coder": "engineering_mechanical_coder",
-        AgentName.CAD_ENGINEER: "engineering_mechanical_coder",
-        "cad_engineer": "engineering_mechanical_coder",
-        "engineering_mechanical_coder": "engineering_mechanical_coder",
-        AgentName.ELECTRONICS_ENGINEER: "engineering_electrical_coder",
-        "electronics_engineer": "engineering_electrical_coder",
-        "engineering_electrical_coder": "engineering_electrical_coder",
-        AgentName.BENCHMARK_PLANNER: "benchmark_planner",
-        "benchmark_planner": "benchmark_planner",
-        AgentName.BENCHMARK_CODER: "benchmark_cad_coder",
-        "benchmark_coder": "benchmark_cad_coder",
-        AgentName.BENCHMARK_GENERATOR: "benchmark_cad_coder",
-        "benchmark_generator": "benchmark_cad_coder",
-        "benchmark_cad_coder": "benchmark_cad_coder",
-        AgentName.ENGINEER_REVIEWER: "engineering_reviewer",
-        "engineering_reviewer": "engineering_reviewer",
-        "reviewer": "engineering_reviewer",
-        "engineer_critic": "engineering_reviewer",
-    }
-
     def __init__(self, config_path: str | Path):
         with open(config_path) as f:
             data = yaml.safe_load(f)
@@ -85,14 +59,9 @@ class FilesystemPolicy:
                     return True
 
             # 4. Wildcard match using fnmatch (handles * and ? correctly)
-            # fnmatch doesn't handle ** correctly for recursion across path separators,
-            # but we've handled the common 'dir/**' case above.
-            # For deeper '**/file.py', we can use a simpler regex or improved logic.
             if "**" in pat:
-                # Simple conversion of ** to .* in regex
                 import re
 
-                # Escape special regex chars but keep * and **
                 regex_pat = (
                     re.escape(pat).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
                 )
@@ -109,15 +78,29 @@ class FilesystemPolicy:
         return False
 
     def check_permission(
-        self, agent_role: str, action: PolicyAction, path: str | Path
+        self, agent_role: str | AgentName, action: PolicyAction, path: str | Path
     ) -> bool:
         """
         Check if an agent role has permission for an action on a path.
         Precedence: deny > allow.
         Unmatched => deny.
         """
-        # Normalize agent role
-        role = self.ROLE_MAPPING.get(agent_role, agent_role)
+        # Normalize agent role to string value if it's an enum
+        role = agent_role.value if isinstance(agent_role, AgentName) else agent_role
+
+        # Mapping for legacy/node-specific names that don't match AgentName enum directly
+        # but should share the same policy.
+        LEGACY_MAPPING = {
+            "engineering_mechanical_coder": AgentName.ENGINEER_CODER.value,
+            "engineering_electrical_coder": AgentName.ELECTRONICS_ENGINEER.value,
+            "benchmark_cad_coder": AgentName.BENCHMARK_CODER.value,
+            "engineering_reviewer": AgentName.ENGINEER_REVIEWER.value,
+            "reviewer": AgentName.ENGINEER_REVIEWER.value,
+            "engineer_critic": AgentName.ENGINEER_REVIEWER.value,
+            "planner": AgentName.ENGINEER_PLANNER.value,
+            "coder": AgentName.ENGINEER_CODER.value,
+        }
+        role = LEGACY_MAPPING.get(role, role)
 
         p_str = Path(path).as_posix().lstrip("/")
 

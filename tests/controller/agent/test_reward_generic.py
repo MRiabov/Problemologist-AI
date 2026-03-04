@@ -64,7 +64,7 @@ def test_metric_benchmark_planner_cost_overage():
 def test_metric_cad_engineer_failure_formula():
     """Verify that cad_engineer simulation failure formula is used."""
     gold = SimpleNamespace(
-        agent_name=AgentName.CAD_ENGINEER,
+        agent_name=AgentName.ENGINEER_CODER,
         objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(

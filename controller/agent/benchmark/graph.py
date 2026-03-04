@@ -300,22 +300,9 @@ async def _execute_graph_streaming(
             trace_id = f"{span.get_span_context().trace_id:032x}"
 
         if trace_id:
-            async with get_sessionmaker()() as db:
-                from controller.config.settings import settings as global_settings
-
-                worker_light_url = global_settings.worker_light_url
-                client = WorkerClient(
-                    base_url=worker_light_url,
-                    session_id=str(session_id),
-                    heavy_url=global_settings.worker_heavy_url,
-                )
-                await calculate_and_report_automated_score(
-                    episode_id=session_id,
-                    trace_id=trace_id,
-                    agent_name=AgentName.BENCHMARK_GENERATOR,
-                    db=db,
-                    worker_client=client,
-                )
+            # WP10: Skip reporting score for the whole benchmark generation graph
+            # as it doesn't map to a single agent reward config yet.
+            pass
     except Exception as e:
         logger.error("failed_to_report_benchmark_automated_score", error=str(e))
 

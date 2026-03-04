@@ -6,6 +6,7 @@ import structlog
 from pydantic import BaseModel
 
 from controller.clients.worker import WorkerClient
+from shared.enums import AgentName
 from shared.observability.schemas import ObservabilityEventType
 
 logger = structlog.get_logger(__name__)
@@ -158,7 +159,7 @@ def cad_simulation_metric(
 
     from controller.agent.reward import load_reward_config
 
-    agent_name = getattr(gold, "agent_name", "cad_engineer")
+    agent_name = getattr(gold, "agent_name", AgentName.ENGINEER_CODER)
     full_cfg = load_reward_config()
 
     # Find the agent config in the hierarchy

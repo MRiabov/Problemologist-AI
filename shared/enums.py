@@ -104,8 +104,6 @@ class AgentName(StrEnum):
     ELECTRONICS_REVIEWER = "electronics_reviewer"
     SKILL_AGENT = "skill_agent"
     GIT_AGENT = "git_agent"
-    CAD_ENGINEER = "cad_engineer"
-    BENCHMARK_GENERATOR = "benchmark_generator"
     COTS_SEARCH = "cots_search"
     SKILL_CREATOR = "skill_creator"
 
@@ -133,8 +131,6 @@ class GenerationKind(StrEnum):
     DERIVED = "derived"
     SEEDED_EVAL = "seeded_eval"
     INTEGRATION_TEST = "integration_test"
-    CAD_ENGINEER = "cad_engineer"
-    BENCHMARK_GENERATOR = "benchmark_generator"
     COTS_SEARCH = "cots_search"
     SKILL_CREATOR = "skill_creator"
 

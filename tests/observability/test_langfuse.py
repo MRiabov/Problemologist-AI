@@ -93,7 +93,7 @@ async def test_calculate_and_report_automated_score():
 
     episode_id = uuid.uuid4()
     trace_id = "trace-123"
-    agent_name = AgentName.CAD_ENGINEER
+    agent_name = AgentName.ENGINEER_CODER
 
     # Mock DB session
     mock_db = AsyncMock()

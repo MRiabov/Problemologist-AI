@@ -83,7 +83,7 @@ benchmark_generator:
           acceptable benchmark.
 
   # ── Benchmark CAD Engineer ───────────────────────────────────────────────
-  benchmark_cad_engineer:
+  benchmark_coder:
     description: >
       Scores the CAD engineer's ability to implement a valid, compilable, and
       physically stable benchmark environment.
@@ -225,7 +225,7 @@ engineer:
           Dominant reward — a plan is only good if it leads to a working solution.
 
   # ── CAD Engineer (Mechanical Implementer) ────────────────────────────────
-  cad_engineer:
+  engineer_coder:
     description: >
       Scores the CAD engineer's ability to produce a manufacturable,
       cost-compliant solution that passes simulation.
@@ -332,7 +332,7 @@ engineer:
         weight: 0.55
         description: >
           Full simulation (mechanical + electrical) passes. Same partial
-          credit formula as cad_engineer.simulation_result.
+          credit formula as engineer_coder.simulation_result.
         partial: true
         success_formula: "0.55"
         failure_formula: "0.55 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
