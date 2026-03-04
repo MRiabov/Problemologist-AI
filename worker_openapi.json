@@ -1488,6 +1488,57 @@
   },
   "components": {
     "schemas": {
+      "BaseEvent": {
+        "properties": {
+          "event_type": {
+            "$ref": "#/components/schemas/ObservabilityEventType"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type"
+        ],
+        "title": "BaseEvent",
+        "description": "Base class for all observability events."
+      },
       "Body_upload_file_fs_upload_file_post": {
         "properties": {
           "path": {
@@ -1609,8 +1660,7 @@
           },
           "events": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/BaseEvent"
             },
             "type": "array",
             "title": "Events"
@@ -2008,6 +2058,61 @@
         "title": "ListFilesRequest",
         "description": "Request to list files in a directory."
       },
+      "ObservabilityEventType": {
+        "type": "string",
+        "enum": [
+          "component_usage",
+          "tool_invocation",
+          "manufacturability_check",
+          "scene_validation",
+          "render_request_engineer",
+          "render_request_benchmark",
+          "simulation_request",
+          "simulation_result",
+          "cots_search",
+          "cots_selection",
+          "plan_submission_benchmark",
+          "plan_submission_engineer",
+          "escalation_request",
+          "escalation_decision",
+          "lint_failure_code",
+          "lint_failure_docs",
+          "logic_failure",
+          "skill_edit",
+          "skill_read",
+          "ls_files_tool",
+          "grep_tool",
+          "read_file_tool",
+          "write_file_tool",
+          "edit_files_tool",
+          "run_command_tool",
+          "git_init_tool",
+          "git_commit_tool",
+          "simulation_instability",
+          "submission_validation",
+          "cost_weight_delta",
+          "library_usage",
+          "review_decision",
+          "tool_call",
+          "circuit_validation",
+          "wire_routing",
+          "power_budget_check",
+          "electrical_failure",
+          "elec_agent_handover",
+          "circuit_simulation",
+          "wire_torn",
+          "power_budget_warning",
+          "simulation_backend_selected",
+          "part_breakage",
+          "fluid_containment_check",
+          "flow_rate_check",
+          "stress_summary",
+          "meshing_failure",
+          "physics_instability",
+          "gpu_oom_retry"
+        ],
+        "title": "ObservabilityEventType"
+      },
       "ReadFileRequest": {
         "properties": {
           "path": {
@@ -2301,7 +2406,7 @@
           },
           "events": {
             "items": {
-              "$ref": "#/components/schemas/EventRecord"
+              "$ref": "#/components/schemas/BaseEvent"
             },
             "type": "array",
             "title": "Events"
@@ -2478,21 +2583,6 @@
         ],
         "title": "ElectronicsValidationRequest",
         "description": "Request to validate an electronic circuit."
-      },
-      "EventRecord": {
-        "properties": {
-          "event_type": {
-            "type": "string",
-            "title": "Event Type"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "event_type"
-        ],
-        "title": "EventRecord",
-        "description": "A single emitted observability event."
       },
       "FailureReason": {
         "type": "string",
@@ -2744,8 +2834,7 @@
           },
           "events": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/BaseEvent"
             },
             "type": "array",
             "title": "Events"

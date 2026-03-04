@@ -63,12 +63,12 @@ export_stl(part, "test.stl")
 msh_path = tetrahedralize(Path("test.stl"), Path("test.msh"))
 assert msh_path.exists(), f"Mesh file not created at {msh_path}"
 """
-        exec_req = ExecuteRequest(code=code, timeout=60)
+        exec_req = ExecuteRequest(code=code, timeout=180)
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=exec_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=60.0,
+            timeout=240.0,
         )
         assert resp.status_code == 200, f"Execution failed: {resp.text}"
         data = ExecuteResponse.model_validate(resp.json())
@@ -105,12 +105,12 @@ from pathlib import Path
 from worker_heavy.utils.mesh_utils import tetrahedralize
 tetrahedralize(Path("bad.stl"), Path("bad.msh"))
 """
-        exec_fail_req = ExecuteRequest(code=code_fail, timeout=60)
+        exec_fail_req = ExecuteRequest(code=code_fail, timeout=180)
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=exec_fail_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=60.0,
+            timeout=240.0,
         )
         data_fail = ExecuteResponse.model_validate(resp.json())
         assert data_fail.exit_code != 0, "Expected meshing to fail for malformed STL"

@@ -72,6 +72,7 @@ class ObservabilityEventType(StrEnum):
     LIBRARY_USAGE = "library_usage"
     # 24. Review decision (full details)
     REVIEW_DECISION = "review_decision"
+    TOOL_CALL = "tool_call"
 
     # 25. WP3 Electronics events
     CIRCUIT_VALIDATION = "circuit_validation"
@@ -97,7 +98,7 @@ class ObservabilityEventType(StrEnum):
 class BaseEvent(BaseModel):
     """Base class for all observability events."""
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, extra="allow")
 
     event_type: ObservabilityEventType
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
