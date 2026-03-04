@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -32,6 +33,14 @@ logger = get_logger(__name__)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+
+
+def _quiet_http_transport_logs() -> None:
+    """Suppress verbose httpx/httpcore transport debug logs in eval output."""
+    for name in ("httpcore", "httpcore.connection", "httpcore.http11", "httpx"):
+        noisy_logger = logging.getLogger(name)
+        noisy_logger.setLevel(logging.WARNING)
+        noisy_logger.propagate = True
 
 
 @dataclass(frozen=True)
@@ -120,6 +129,69 @@ def _episode_terminal(status: str | None) -> bool:
         EpisodeStatus.FAILED,
         EpisodeStatus.CANCELLED,
     }
+
+
+async def _wait_for_controller_ready(
+    timeout_seconds: float = 60.0, poll_interval_seconds: float = 1.0
+) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    attempt = 0
+    last_error: str | None = None
+
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        while time.monotonic() < deadline:
+            attempt += 1
+            try:
+                health_resp = await client.get(f"{CONTROLLER_URL}/health")
+                health_payload = health_resp.json()
+                if (
+                    health_resp.status_code == 200
+                    and health_payload.get("status") == "healthy"
+                ):
+                    logger.info("controller_health_check_ok", attempts=attempt)
+                    return
+                last_error = (
+                    f"status_code={health_resp.status_code}, "
+                    f"status={health_payload.get('status')}"
+                )
+            except Exception as exc:
+                last_error = str(exc)
+
+            logger.warning(
+                "controller_health_check_retry", attempt=attempt, error=last_error
+            )
+            await asyncio.sleep(poll_interval_seconds)
+
+    raise RuntimeError(
+        f"Controller did not become healthy within {timeout_seconds}s. last_error={last_error}"
+    )
+
+
+async def _wait_for_worker_ready(
+    timeout_seconds: float = 60.0, poll_interval_seconds: float = 1.0
+) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    attempt = 0
+    last_error: str | None = None
+    temp_client = WorkerClient(base_url=WORKER_LIGHT_URL, session_id="healthcheck")
+
+    while time.monotonic() < deadline:
+        attempt += 1
+        try:
+            health = await temp_client.get_health()
+            if health.get("status") == "healthy":
+                logger.info("worker_health_check_ok", attempts=attempt)
+                return
+            last_error = f"status={health.get('status')}"
+        except Exception as exc:
+            last_error = str(exc)
+
+        logger.warning("worker_health_check_retry", attempt=attempt, error=last_error)
+        await asyncio.sleep(poll_interval_seconds)
+
+    raise RuntimeError(
+        f"Worker did not become healthy within {timeout_seconds}s. last_error={last_error}"
+    )
 
 
 async def _fetch_episode(client: httpx.AsyncClient, episode_id: str) -> dict[str, Any]:
@@ -341,7 +413,14 @@ electronics_requirements:
 
                         log.info("eval_planned_confirming")
                         confirm_url = f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
-                        await client.post(confirm_url)
+                        confirm_resp = await client.post(confirm_url, json={})
+                        if confirm_resp.status_code >= 400:
+                            log.error(
+                                "benchmark_confirm_failed",
+                                status_code=confirm_resp.status_code,
+                                response_text=confirm_resp.text,
+                            )
+                            break
 
                     if status == EpisodeStatus.COMPLETED:
                         episode = await _fetch_episode(client, episode_id)
@@ -470,6 +549,7 @@ async def main():
     os.environ["EXTRA_DEBUG_LOG"] = str(log_file)
     os.environ["LOG_LEVEL"] = args.log_level
     configure_logging("evals")
+    _quiet_http_transport_logs()
 
     global logger
     logger = get_logger(__name__)
@@ -541,26 +621,15 @@ async def main():
 
     # Check health
     logger.info("controller_health_check_start", url=CONTROLLER_URL)
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
-            health_resp = await client.get(f"{CONTROLLER_URL}/health")
-            if (
-                health_resp.status_code != 200
-                or health_resp.json().get("status") != "healthy"
-            ):
-                logger.error("controller_unhealthy", response_text=health_resp.text)
-                sys.exit(1)
-        except Exception:
-            logger.exception("controller_unreachable", url=CONTROLLER_URL)
-            sys.exit(1)
+    try:
+        await _wait_for_controller_ready()
+    except Exception:
+        logger.exception("controller_unreachable", url=CONTROLLER_URL)
+        sys.exit(1)
 
     logger.info("worker_health_check_start", url=WORKER_LIGHT_URL)
-    temp_client = WorkerClient(base_url=WORKER_LIGHT_URL, session_id="healthcheck")
     try:
-        health = await temp_client.get_health()
-        if health.get("status") != "healthy":
-            logger.error("worker_unhealthy", health=health)
-            sys.exit(1)
+        await _wait_for_worker_ready()
     except Exception:
         logger.exception("worker_unreachable", url=WORKER_LIGHT_URL)
         sys.exit(1)
@@ -608,7 +677,7 @@ async def main():
         async def _guarded(item: dict[str, Any], agent: str):
             async with semaphore:
                 if not args.no_rate_limit:
-                    await asyncio.to_thread(limiter.delay_or_raise, "eval")
+                    await asyncio.to_thread(limiter.try_acquire, "eval")
                 await run_single_eval(item, agent, stats, verbose=args.verbose)
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))
