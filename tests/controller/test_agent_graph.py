@@ -1,4 +1,5 @@
 from controller.graph.agent import create_agent_graph
+from shared.enums import AgentName
 
 
 def test_create_agent_graph_returns_engineering_graph():
@@ -6,7 +7,7 @@ def test_create_agent_graph_returns_engineering_graph():
     Verifies that create_agent_graph returns the engineering graph.
     """
     # Execute
-    agent, callback = create_agent_graph(agent_name="engineer")
+    agent, callback = create_agent_graph(agent_name=AgentName.ENGINEER_CODER)
 
     # Assert
     assert "planner" in agent.nodes
@@ -21,7 +22,7 @@ def test_create_agent_graph_returns_benchmark_graph():
     Verifies that create_agent_graph returns the benchmark graph.
     """
     # Execute
-    agent, _ = create_agent_graph(agent_name="benchmark")
+    agent, _ = create_agent_graph(agent_name=AgentName.BENCHMARK_PLANNER)
 
     # Assert
     assert "planner" in agent.nodes

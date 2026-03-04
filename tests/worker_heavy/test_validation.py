@@ -49,14 +49,17 @@ def test_objectives_validation_events():
 
 
 def test_plan_validation_events():
+    from shared.enums import EpisodeType
     from worker_heavy.utils.file_validation import validate_plan_md_structure
 
     clear_emitted_events()
 
     invalid_plan = "# Some Heading\nNo required sections."
-    success, _ = validate_plan_md_structure(invalid_plan, plan_type="benchmark")
+    success, _ = validate_plan_md_structure(
+        invalid_plan, plan_type=EpisodeType.BENCHMARK
+    )
     assert not success
-    assert_event_emitted("lint_failure_docs", file_path="plan.md")
+    assert_event_emitted("logic_failure", file_path="plan.md")
 
 
 @pytest.mark.integration

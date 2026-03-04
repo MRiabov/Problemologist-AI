@@ -8,12 +8,13 @@ from dspy.teleprompt import GEPA
 from controller.agent.benchmark.data_loader import load_benchmark_dataset
 from controller.agent.bootstrap import build_eval_program
 from controller.agent.dspy_utils import cad_simulation_metric
+from shared.enums import AgentName
 
 logger = structlog.get_logger(__name__)
 
 
 def optimize_agent(
-    agent_name: str,
+    agent_name: AgentName,
     trainset_size: int = 10,
     max_bootstrapped_demos: int = 3,
     use_gepa: bool = True,
@@ -100,10 +101,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    try:
+        agent_name = AgentName(args.agent)
+    except ValueError:
+        logger.warning("unknown_agent_name_using_raw_string", agent_name=args.agent)
+        agent_name = args.agent  # type: ignore
+
     # Ensure LLM is configured globally if not already
     if not dspy.settings.lm:
         # Default to a reliable model from env or settings
         model = os.getenv("DSPY_OPTIMIZER_MODEL", "stepfun/step-3.5-flash:free")
         dspy.settings.configure(lm=dspy.LM(model))
 
-    optimize_agent(args.agent, args.size, args.demos, use_gepa=not args.no_gepa)
+    optimize_agent(agent_name, args.size, args.demos, use_gepa=not args.no_gepa)

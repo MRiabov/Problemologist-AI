@@ -18,6 +18,7 @@ import structlog
 import yaml
 from pydantic import ValidationError
 
+from shared.enums import AgentName, SimulatorBackendType
 from shared.models.schemas import (
     AssemblyDefinition,
     ObjectivesYaml,
@@ -26,7 +27,6 @@ from shared.models.schemas import (
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
-from shared.simulation.schemas import SimulatorBackendType
 
 logger = structlog.get_logger(__name__)
 
@@ -298,19 +298,23 @@ def validate_node_output(
         else:
             # If refusal is invalid, we still want regular files or a better refusal
             required_files = {
-                "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
-                "benchmark_planner": ["plan.md", "todo.md", "objectives.yaml"],
-                "coder": [
+                AgentName.ENGINEER_PLANNER: [
+                    "plan.md",
+                    "todo.md",
+                    "assembly_definition.yaml",
+                ],
+                AgentName.BENCHMARK_PLANNER: ["plan.md", "todo.md", "objectives.yaml"],
+                AgentName.ENGINEER_CODER: [
                     "plan.md",
                     "todo.md",
                     "objectives.yaml",
                 ],
-                "benchmark_coder": [
+                AgentName.BENCHMARK_CODER: [
                     "plan.md",
                     "todo.md",
                     "objectives.yaml",
                 ],
-                "electronics_engineer": [
+                AgentName.ELECTRONICS_ENGINEER: [
                     "plan.md",
                     "todo.md",
                     "assembly_definition.yaml",
@@ -318,19 +322,23 @@ def validate_node_output(
             }.get(node_type, [])
     else:
         required_files = {
-            "planner": ["plan.md", "todo.md", "assembly_definition.yaml"],
-            "benchmark_planner": ["plan.md", "todo.md", "objectives.yaml"],
-            "coder": [
+            AgentName.ENGINEER_PLANNER: [
+                "plan.md",
+                "todo.md",
+                "assembly_definition.yaml",
+            ],
+            AgentName.BENCHMARK_PLANNER: ["plan.md", "todo.md", "objectives.yaml"],
+            AgentName.ENGINEER_CODER: [
                 "plan.md",
                 "todo.md",
                 "objectives.yaml",
             ],
-            "benchmark_coder": [
+            AgentName.BENCHMARK_CODER: [
                 "plan.md",
                 "todo.md",
                 "objectives.yaml",
             ],
-            "electronics_engineer": [
+            AgentName.ELECTRONICS_ENGINEER: [
                 "plan.md",
                 "todo.md",
                 "assembly_definition.yaml",

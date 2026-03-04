@@ -106,7 +106,7 @@ from controller.api.schemas import (
     EpisodeCreateResponse,
 )
 from controller.api.tasks import execute_agent_task
-from controller.utils import get_episode_id
+from controller.utils import apply_integration_test_metadata, get_episode_id
 
 
 @app.post("/api/test/episodes", status_code=201, response_model=EpisodeCreateResponse)
@@ -123,6 +123,12 @@ async def create_test_episode(request: AgentRunRequest):
 
         metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
         metadata.worker_session_id = request.session_id
+        metadata = apply_integration_test_metadata(
+            metadata,
+            is_integration_test=settings.is_integration_test,
+            task=request.task,
+            session_id=request.session_id,
+        )
 
         episode_id = get_episode_id(request.session_id)
         existing = await db.get(Episode, episode_id)
@@ -179,11 +185,18 @@ async def run_agent(request: AgentRunRequest):
     session_factory = get_sessionmaker()
 
     # Ensure session_id is preserved in metadata for asset proxying
+    from shared.enums import EpisodeType
     from shared.models.schemas import EpisodeMetadata
 
     metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
     metadata.worker_session_id = request.session_id
-    metadata.episode_type = "engineer"
+    metadata.episode_type = EpisodeType.ENGINEER
+    metadata = apply_integration_test_metadata(
+        metadata,
+        is_integration_test=settings.is_integration_test,
+        task=request.task,
+        session_id=request.session_id,
+    )
 
     async with session_factory() as db:
         episode = Episode(

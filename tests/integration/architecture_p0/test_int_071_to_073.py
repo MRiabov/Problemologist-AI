@@ -6,14 +6,14 @@ import pytest
 
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.enums import AgentName
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+...
 
 
-@pytest.mark.integration_p0
-@pytest.mark.asyncio
 async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     """INT-071: Agents config precedence + reviewer write scope."""
     session_id = f"INT-071-{uuid.uuid4().hex[:8]}"
@@ -24,7 +24,7 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
             json={
                 "task": "INT-071 filesystem policy",
                 "session_id": session_id,
-                "agent_name": "engineering_mechanical_coder",
+                "agent_name": AgentName.ENGINEER_CODER,
             },
         )
         assert create_resp.status_code == 201
@@ -36,7 +36,7 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     )
     reviewer_fs = RemoteFilesystemMiddleware(
         reviewer_client,
-        agent_role="engineering_reviewer",
+        agent_role=AgentName.ENGINEER_REVIEWER,
     )
 
     coder_client = WorkerClient(
@@ -46,9 +46,8 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     )
     coder_fs = RemoteFilesystemMiddleware(
         coder_client,
-        agent_role="engineering_mechanical_coder",
+        agent_role=AgentName.ENGINEER_CODER,
     )
-
     # Reviewer write scope: only reviews/review-round-*/review.md
     assert await reviewer_fs.write_file(
         "reviews/review-round-1/review.md",
@@ -103,7 +102,7 @@ async def test_int_072_plan_refusal_validation_and_routing():
             json={
                 "task": "INT-072 plan refusal validation",
                 "session_id": session_id,
-                "agent_name": "engineering_mechanical_coder",
+                "agent_name": AgentName.ENGINEER_CODER,
             },
         )
         assert create_resp.status_code == 201
@@ -191,7 +190,7 @@ async def test_int_073_observability_linkage():
                 "task": "INT-073 observability linkage",
                 "session_id": session_id,
                 "user_session_id": str(user_session_id),
-                "agent_name": "engineering_mechanical_coder",
+                "agent_name": AgentName.ENGINEER_CODER,
             },
         )
         assert create_resp.status_code == 201

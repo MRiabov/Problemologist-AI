@@ -6,6 +6,7 @@ import uuid
 import httpx
 import pytest
 
+from shared.enums import AgentName
 from shared.workers.schema import ReadFileRequest, WriteFileRequest
 from tests.integration.agent.helpers import (
     CONTROLLER_URL,
@@ -54,7 +55,7 @@ async def test_int_181_tool_loop_ordering_and_clean_termination():
             client,
             int_id="INT-181",
             task="INT-181 ordering contract",
-            agent_name="engineer_coder",
+            agent_name=AgentName.ENGINEER_CODER,
         )
         episode = await wait_for_episode_terminal(client, episode_id)
 
@@ -113,7 +114,7 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
                 json={
                     "task": f"INT-182 concurrent run A token: {token_a}",
                     "session_id": session_a,
-                    "agent_name": "engineer_coder",
+                    "agent_name": AgentName.ENGINEER_CODER,
                 },
             ),
             client.post(
@@ -121,7 +122,7 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
                 json={
                     "task": f"INT-182 concurrent run B token: {token_b}",
                     "session_id": session_b,
-                    "agent_name": "engineer_coder",
+                    "agent_name": AgentName.ENGINEER_CODER,
                 },
             ),
         )
@@ -175,7 +176,7 @@ async def test_int_183_steerability_queue_single_consumption():
             client,
             int_id="INT-183",
             task="INT-183 queue consumption contract",
-            agent_name="engineer_coder",
+            agent_name=AgentName.ENGINEER_CODER,
         )
 
         steer_resp = await client.post(

@@ -2,6 +2,11 @@ import uuid
 
 import structlog
 
+from .integration import (
+    apply_integration_test_metadata as apply_integration_test_metadata,
+)
+from .integration import infer_integration_test_id as infer_integration_test_id
+
 logger = structlog.get_logger(__name__)
 
 

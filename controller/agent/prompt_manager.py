@@ -4,6 +4,8 @@ import dspy
 import jinja2
 import structlog
 
+from shared.enums import AgentName
+
 from ..prompts import load_prompts
 
 logger = structlog.get_logger(__name__)
@@ -95,7 +97,7 @@ Output ONLY the resolved content. Do not include markdown code blocks (```) unle
             raise ValueError(f"Template '{template_name}' not found")
 
     def load_compiled_program(
-        self, agent_name: str, program: dspy.Module
+        self, agent_name: AgentName, program: dspy.Module
     ) -> dspy.Module:
         """
         Loads a compiled DSPy program from config/compiled_prompts/ if it exists.

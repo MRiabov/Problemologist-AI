@@ -24,7 +24,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from controller.clients.worker import WorkerClient  # noqa: E402
-from shared.enums import EpisodeStatus  # noqa: E402
+from shared.enums import AgentName, EpisodeStatus, EvalMode  # noqa: E402
 from shared.logging import configure_logging, get_logger  # noqa: E402
 from shared.models.schemas import EpisodeMetadata  # noqa: E402
 from shared.utils.evaluation import analyze_electronics_metrics  # noqa: E402
@@ -49,7 +49,7 @@ def _quiet_http_transport_logs() -> None:
 class AgentEvalSpec:
     """Runtime details for an eval agent type."""
 
-    mode: str  # benchmark | agent | git
+    mode: EvalMode  # benchmark | agent | git
     request_agent_name: str | None = None
     required_trace_names: tuple[str, ...] = ()
 
@@ -65,53 +65,61 @@ class EvalDatasetItem(BaseModel):
 AGENT_SPECS: dict[str, AgentEvalSpec] = {
     # Benchmark graph roles
     "benchmark_planner": AgentEvalSpec(
-        mode="benchmark", required_trace_names=("benchmark_planner",)
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_PLANNER,
+        required_trace_names=("benchmark_planner",),
     ),
     "benchmark_coder": AgentEvalSpec(
-        mode="benchmark", required_trace_names=("benchmark_coder",)
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_CODER,
+        required_trace_names=("benchmark_coder",),
     ),
     "benchmark_reviewer": AgentEvalSpec(
-        mode="benchmark", required_trace_names=("benchmark_reviewer",)
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_REVIEWER,
+        required_trace_names=("benchmark_reviewer",),
     ),
     # Mechanical engineering roles
     "engineer_planner": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_planner",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_PLANNER,
         required_trace_names=("planner",),
     ),
     "engineer_coder": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_coder",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=("coder",),
     ),
     "engineer_reviewer": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_coder",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=("execution_reviewer",),
     ),
     # Electrical engineering roles inside the unified engineer graph
     "electronics_planner": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_planner",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_PLANNER,
         required_trace_names=("electronics_planner",),
     ),
     "electronics_engineer": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_coder",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=("electronics_engineer",),
     ),
     "electronics_reviewer": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_coder",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=("electronics_reviewer",),
     ),
     # Sidecars
     "skill_agent": AgentEvalSpec(
-        mode="agent",
-        request_agent_name="engineer_coder",
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.SKILL_AGENT,
         required_trace_names=("skill_learner",),
     ),
-    "git_agent": AgentEvalSpec(mode="git"),
+    "git_agent": AgentEvalSpec(
+        mode=EvalMode.GIT, request_agent_name=AgentName.GIT_AGENT
+    ),
 }
 
 
@@ -229,7 +237,7 @@ def _missing_required_traces(
 
 async def _run_git_eval(item: EvalDatasetItem, stats: dict[str, Any], agent_name: str):
     task_id = item.id
-    log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode="git")
+    log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
     log.info("eval_start")
 
     session_id = f"eval-git-{task_id}-{uuid.uuid4().hex[:8]}"
@@ -277,7 +285,7 @@ async def run_single_eval(
     """
     spec = AGENT_SPECS[agent_name]
 
-    if spec.mode == "git":
+    if spec.mode == EvalMode.GIT:
         await _run_git_eval(item, stats, agent_name)
         return
 
@@ -286,8 +294,8 @@ async def run_single_eval(
     lineage = EpisodeMetadata(
         seed_id=task_id,
         seed_dataset=str(item.seed_dataset) if item.seed_dataset else None,
-        seed_match_method="runtime_explicit",
-        generation_kind="seeded_eval",
+        seed_match_method=SeedMatchMethod.RUNTIME_EXPLICIT,
+        generation_kind=GenerationKind.SEEDED_EVAL,
         parent_seed_id=task_id,
     )
 

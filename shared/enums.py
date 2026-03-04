@@ -104,6 +104,47 @@ class AgentName(StrEnum):
     ELECTRONICS_REVIEWER = "electronics_reviewer"
     SKILL_AGENT = "skill_agent"
     GIT_AGENT = "git_agent"
+    CAD_ENGINEER = "cad_engineer"
+    BENCHMARK_GENERATOR = "benchmark_generator"
+    COTS_SEARCH = "cots_search"
+    SKILL_CREATOR = "skill_creator"
+
+
+class EpisodeType(StrEnum):
+    """High-level episode workflow family."""
+
+    BENCHMARK = "benchmark"
+    ENGINEER = "engineer"
+
+
+class SeedMatchMethod(StrEnum):
+    """How a seed linkage was determined for an episode/dataset row."""
+
+    RUNTIME_EXPLICIT = "runtime_explicit"
+    EXACT_TASK = "exact_task"
+    NO_EXACT_TASK_MATCH = "no_exact_task_match"
+    AMBIGUOUS_EXACT_TASK = "ambiguous_exact_task"
+
+
+class GenerationKind(StrEnum):
+    """Origin category for generated episodes/dataset rows."""
+
+    SEEDED = "seeded"
+    DERIVED = "derived"
+    SEEDED_EVAL = "seeded_eval"
+    INTEGRATION_TEST = "integration_test"
+    CAD_ENGINEER = "cad_engineer"
+    BENCHMARK_GENERATOR = "benchmark_generator"
+    COTS_SEARCH = "cots_search"
+    SKILL_CREATOR = "skill_creator"
+
+
+class EvalMode(StrEnum):
+    """Evaluation modes for run_evals.py."""
+
+    BENCHMARK = "benchmark"
+    AGENT = "agent"
+    GIT = "git"
 
 
 class FailureReason(UppercaseStrEnum):
