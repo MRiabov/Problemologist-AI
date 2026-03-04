@@ -462,6 +462,10 @@ class TraceMetadata(BaseModel):
     review_id: str | None = None
     decision: ReviewDecision | None = None
 
+    # Reasoning trace specific
+    reasoning_step_index: int | None = None
+    reasoning_source: str | None = None
+
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -550,13 +554,12 @@ class PlanRefusalFrontmatter(BaseModel):
                 for r in self.reasons
             ):
                 raise ValueError(f"Invalid reasons for {self.role}")
-        elif self.role == AgentName.BENCHMARK_CODER:
-            if not all(
-                isinstance(r, BenchmarkRefusalReason)
-                or str(r) in BenchmarkRefusalReason.__members__
-                for r in self.reasons
-            ):
-                raise ValueError(f"Invalid reasons for {self.role}")
+        elif self.role == AgentName.BENCHMARK_CODER and not all(
+            isinstance(r, BenchmarkRefusalReason)
+            or str(r) in BenchmarkRefusalReason.__members__
+            for r in self.reasons
+        ):
+            raise ValueError(f"Invalid reasons for {self.role}")
         return self
 
 

@@ -18,23 +18,6 @@ interface TraceListProps {
   onShowFeedback: (traceId: number, score: number) => void;
 }
 
-function extractReasoningFromPhaseLog(content: string): string {
-  const thoughtMatches = [...content.matchAll(/thought_\d+['"]?\s*:\s*['"]([^'"]+)['"]/g)]
-    .map((m) => m[1]?.trim())
-    .filter(Boolean) as string[];
-  if (thoughtMatches.length > 0) {
-    return thoughtMatches.join("\n");
-  }
-
-  const reasoningMatch = content.match(/reasoning['"]?\s*[:=]\s*['"]([^'"]+)['"]/i);
-  if (reasoningMatch?.[1]) {
-    return reasoningMatch[1].trim();
-  }
-
-  // Fallback: keep original text when no structured thought/reasoning is found.
-  return content;
-}
-
 export const TraceList = memo(({
   traces,
   assets,
@@ -72,9 +55,14 @@ export const TraceList = memo(({
                 .slice(index + 1)
                 .find((t) => t.trace_type === TraceType.TOOL_START);
               const nodeName = trace.name || "step";
+              const meta = (trace.metadata_vars || {}) as any;
+              const reasoningStepIndex = meta.reasoning_step_index as number | undefined;
+              const stepTitle = Number.isInteger(reasoningStepIndex)
+                ? ` · step ${reasoningStepIndex}`
+                : "";
               title = nextTool?.name
-                ? `Reasoning after ${nodeName} before ${nextTool.name}`
-                : `Reasoning after ${nodeName}`;
+                ? `Reasoning after ${nodeName}${stepTitle} before ${nextTool.name}`
+                : `Reasoning after ${nodeName}${stepTitle}`;
             }
             return (
               <ThoughtBlock
@@ -119,25 +107,6 @@ export const TraceList = memo(({
                         </div>
                     </div>
                   );
-              }
-              // Render node transition logs as reasoning when explicitly enabled.
-              const isPhaseLog =
-                !!trace.name &&
-                (trace.content.includes("Starting task phase:")
-                  || trace.content.includes("Completed task phase:"));
-              if (showReasoning && isPhaseLog) {
-                const stableDuration = (String(trace.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 5) + 1;
-                const title = `Reasoning around ${trace.name}`;
-                const reasoningContent = extractReasoningFromPhaseLog(trace.content);
-                return (
-                  <ThoughtBlock
-                    key={trace.id}
-                    duration={stableDuration}
-                    content={reasoningContent}
-                    title={title}
-                    testId="reasoning-span"
-                  />
-                );
               }
               // Other logs are intentionally not shown in the chat timeline.
               return null;

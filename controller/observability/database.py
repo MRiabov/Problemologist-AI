@@ -1,6 +1,8 @@
 import asyncio
+import contextlib
 import datetime
 import json
+import re
 import uuid
 from typing import Any
 
@@ -14,6 +16,7 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Trace
 from controller.utils import get_episode_id
 from shared.enums import TraceType
+from shared.models.schemas import TraceMetadata
 
 logger = structlog.get_logger(__name__)
 
@@ -45,6 +48,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         self.episode_id = get_episode_id(episode_id)
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
+        self._emitted_reasoning_by_node: dict[str, set[str]] = {}
         self.loop = loop or (
             asyncio.get_event_loop() if asyncio.get_event_loop().is_running() else None
         )
@@ -78,30 +82,161 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             pass
         return None
 
-    def _extract_reasoning_text(self, output_data: str) -> str | None:
-        """Extract concise reasoning text from node output payloads."""
-        import re
+    def _extract_reasoning_from_trajectory(
+        self, trajectory: dict[str, Any]
+    ) -> list[TraceMetadata]:
+        """Extract thought-style reasoning steps from trajectory fields."""
+        if not trajectory:
+            return []
 
-        if not output_data:
-            return None
+        pattern = re.compile(r"^thought_(\d+)$")
+        by_index: dict[int, str] = {}
+        for key, value in trajectory.items():
+            match = pattern.match(str(key))
+            if not match:
+                continue
+            idx_str = match.group(1)
+            idx = int(idx_str)
+            if isinstance(value, str) and value.strip():
+                by_index[idx] = value.strip()
 
-        thought_matches = [
-            m.strip()
-            for m in re.findall(
-                r"thought_\d+['\"]?\s*:\s*['\"]([^'\"]+)['\"]", output_data
+        steps: list[TraceMetadata] = []
+        for idx in sorted(by_index):
+            steps.append(
+                TraceMetadata(
+                    reasoning_step_index=idx,
+                    reasoning_source="trajectory",
+                    observation=by_index[idx],
+                )
             )
-            if m and m.strip()
-        ]
-        if thought_matches:
-            return "\n".join(thought_matches)
+
+        return steps
+
+    def _extract_reasoning_from_fallback_text(
+        self, output_data: str
+    ) -> list[TraceMetadata]:
+        """Fallback parser for reasoning embedded in stringified prediction."""
+        if not output_data:
+            return []
+
+        steps: list[TraceMetadata] = []
+        thought_matches = re.findall(
+            r"thought_(\d+)['\"]?\s*:\s*['\"]([^'\"]+)['\"]", output_data
+        )
+        for raw_idx, thought in thought_matches:
+            if thought and thought.strip():
+                steps.append(
+                    TraceMetadata(
+                        reasoning_step_index=int(raw_idx),
+                        reasoning_source="string_fallback",
+                        observation=thought.strip(),
+                    )
+                )
+
+        if steps:
+            return steps
 
         reasoning_match = re.search(
-            r"reasoning['\"]?\s*[:=]\s*['\"]([^'\"]+)['\"]", output_data, re.IGNORECASE
+            r"reasoning['\"]?\s*[:=]\s*['\"]([^'\"]+)['\"]",
+            output_data,
+            re.IGNORECASE,
         )
         if reasoning_match and reasoning_match.group(1).strip():
-            return reasoning_match.group(1).strip()
+            steps.append(
+                TraceMetadata(
+                    reasoning_source="string_fallback",
+                    observation=reasoning_match.group(1).strip(),
+                )
+            )
 
-        return None
+        return steps
+
+    def _extract_reasoning_steps(
+        self, output_data: str, output_obj: Any | None
+    ) -> list[TraceMetadata]:
+        """Structured-first extraction.
+
+        Order: trajectory fields -> reasoning fields -> regex fallback on text.
+        """
+        steps: list[TraceMetadata] = []
+        trajectory: dict[str, Any] | None = None
+        reasoning_text: str | None = None
+        reasoning_details: list[Any] | None = None
+
+        candidate: Any = output_obj
+        if candidate is None:
+            candidate = output_data
+
+        if isinstance(candidate, dict):
+            maybe_trajectory = candidate.get("trajectory")
+            trajectory = (
+                maybe_trajectory if isinstance(maybe_trajectory, dict) else None
+            )
+            raw_reasoning = candidate.get("reasoning")
+            if isinstance(raw_reasoning, str) and raw_reasoning.strip():
+                reasoning_text = raw_reasoning.strip()
+            raw_details = candidate.get("reasoning_details")
+            if isinstance(raw_details, list):
+                reasoning_details = raw_details
+        elif hasattr(candidate, "model_dump"):
+            with contextlib.suppress(Exception):
+                dumped = candidate.model_dump()
+                if isinstance(dumped, dict):
+                    maybe_trajectory = dumped.get("trajectory")
+                    trajectory = (
+                        maybe_trajectory if isinstance(maybe_trajectory, dict) else None
+                    )
+                    raw_reasoning = dumped.get("reasoning")
+                    if isinstance(raw_reasoning, str) and raw_reasoning.strip():
+                        reasoning_text = raw_reasoning.strip()
+                    raw_details = dumped.get("reasoning_details")
+                    if isinstance(raw_details, list):
+                        reasoning_details = raw_details
+
+        if trajectory is None and hasattr(candidate, "trajectory"):
+            maybe_trajectory = candidate.trajectory
+            if isinstance(maybe_trajectory, dict):
+                trajectory = maybe_trajectory
+
+        if not reasoning_text and hasattr(candidate, "reasoning"):
+            raw_reasoning = candidate.reasoning
+            if isinstance(raw_reasoning, str) and raw_reasoning.strip():
+                reasoning_text = raw_reasoning.strip()
+
+        if trajectory:
+            steps.extend(self._extract_reasoning_from_trajectory(trajectory))
+        if steps:
+            return steps
+
+        if reasoning_details:
+            for idx, detail in enumerate(reasoning_details):
+                if not isinstance(detail, dict):
+                    continue
+                detail_text = detail.get("text")
+                if not isinstance(detail_text, str) or not detail_text.strip():
+                    continue
+                detail_index = detail.get("index")
+                step_index = detail_index if isinstance(detail_index, int) else idx
+                steps.append(
+                    TraceMetadata(
+                        reasoning_step_index=step_index,
+                        reasoning_source="reasoning_details",
+                        observation=detail_text.strip(),
+                    )
+                )
+            if steps:
+                return steps
+
+        if reasoning_text:
+            steps.append(
+                TraceMetadata(
+                    reasoning_source="reasoning_field",
+                    observation=reasoning_text,
+                )
+            )
+            return steps
+
+        return self._extract_reasoning_from_fallback_text(output_data)
 
     async def record_node_start(self, node_name: str, input_data: str = "") -> None:
         """Explicitly log the start of an agent node (e.g., Planner, Coder)."""
@@ -112,7 +247,10 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                     episode_id=self.episode_id,
                     trace_type=TraceType.LOG,  # Use log for transitions
                     name=node_name,
-                    content=f"Starting task phase: {node_name}. Input: {input_data[:100]}...",
+                    content=(
+                        f"Starting task phase: {node_name}. "
+                        f"Input: {input_data[:100]}..."
+                    ),
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
                 db.add(trace_obj)
@@ -124,7 +262,9 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
 
-    async def record_node_end(self, node_name: str, output_data: str = "") -> None:
+    async def record_node_end(
+        self, node_name: str, output_data: str = "", output_obj: Any | None = None
+    ) -> None:
         """Explicitly log the end of an agent node."""
         logger.info("node_end", name=node_name, episode_id=str(self.episode_id))
         try:
@@ -133,7 +273,10 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                     episode_id=self.episode_id,
                     trace_type=TraceType.LOG,
                     name=node_name,
-                    content=f"Completed task phase: {node_name}. Result: {output_data[:100]}...",
+                    content=(
+                        f"Completed task phase: {node_name}. "
+                        f"Result: {output_data[:100]}..."
+                    ),
                     langfuse_trace_id=self._get_langfuse_id(),
                 )
                 db.add(trace_obj)
@@ -141,14 +284,23 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 await db.refresh(trace_obj)
                 await self._broadcast_trace(trace_obj)
 
-                # Emit a dedicated reasoning trace when structured thought/reasoning is present.
-                reasoning_text = self._extract_reasoning_text(output_data)
-                if reasoning_text:
+                # Emit dedicated reasoning traces extracted from structured prediction
+                # objects when available.
+                reasoning_steps = self._extract_reasoning_steps(output_data, output_obj)
+                live_emitted = self._emitted_reasoning_by_node.get(node_name, set())
+                for step in reasoning_steps:
+                    content = step.observation
+                    if not content:
+                        continue
+                    if content in live_emitted:
+                        continue
+
                     reasoning_trace = Trace(
                         episode_id=self.episode_id,
                         trace_type=TraceType.LLM_END,
                         name=node_name,
-                        content=reasoning_text,
+                        content=content,
+                        metadata_vars=step.model_dump(mode="json"),
                         langfuse_trace_id=self._get_langfuse_id(),
                     )
                     db.add(reasoning_trace)
@@ -159,6 +311,47 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             logger.warning(
                 "database_trace_failed", error=str(e), episode_id=str(self.episode_id)
             )
+
+    async def record_reasoning_text(
+        self,
+        node_name: str,
+        reasoning_text: str,
+        step_index: int | None = None,
+        source: str = "live_tool_loop",
+    ) -> None:
+        """Persist and broadcast a single live reasoning text chunk."""
+        text = reasoning_text.strip()
+        if not text:
+            return
+
+        node_key = str(node_name)
+        seen = self._emitted_reasoning_by_node.setdefault(node_key, set())
+        if text in seen:
+            return
+
+        metadata = TraceMetadata(
+            reasoning_step_index=step_index,
+            reasoning_source=source,
+            observation=text,
+        )
+
+        try:
+            async with self.session_factory() as db:
+                reasoning_trace = Trace(
+                    episode_id=self.episode_id,
+                    trace_type=TraceType.LLM_END,
+                    name=node_name,
+                    content=text,
+                    metadata_vars=metadata.model_dump(mode="json"),
+                    langfuse_trace_id=self._get_langfuse_id(),
+                )
+                db.add(reasoning_trace)
+                await db.commit()
+                await db.refresh(reasoning_trace)
+                await self._broadcast_trace(reasoning_trace)
+                seen.add(text)
+        except Exception as e:
+            logger.warning("database_reasoning_trace_failed", error=str(e))
 
     async def record_tool_start(self, tool_name: str, input_data: str) -> int:
         """Explicitly log the start of a tool call."""
@@ -221,6 +414,38 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         except Exception as e:
             logger.warning("database_tool_start_sync_failed", error=str(e))
             return 0
+
+    def record_reasoning_text_sync(
+        self,
+        node_name: str,
+        reasoning_text: str,
+        step_index: int | None = None,
+        source: str = "live_tool_loop",
+    ) -> None:
+        """Synchronous wrapper for live reasoning trace writes."""
+        try:
+            if self.loop and self.loop.is_running():
+                future = asyncio.run_coroutine_threadsafe(
+                    self.record_reasoning_text(
+                        node_name=node_name,
+                        reasoning_text=reasoning_text,
+                        step_index=step_index,
+                        source=source,
+                    ),
+                    self.loop,
+                )
+                future.result(timeout=10)
+            else:
+                asyncio.run(
+                    self.record_reasoning_text(
+                        node_name=node_name,
+                        reasoning_text=reasoning_text,
+                        step_index=step_index,
+                        source=source,
+                    )
+                )
+        except Exception as e:
+            logger.warning("database_reasoning_trace_sync_failed", error=str(e))
 
     def record_tool_end_sync(
         self, trace_id: int, output_data: str, is_error: bool = False

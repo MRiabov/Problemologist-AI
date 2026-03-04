@@ -130,9 +130,15 @@ describe('ChatWindow', () => {
         expect(screen.getByText(/test.py/i)).toBeInTheDocument();
     });
 
-    it('renders phase logs as reasoning when view reasoning is enabled', () => {
+    it('renders named LLM_END traces as reasoning when view reasoning is enabled', () => {
         const traces = [
-            { id: '10', trace_type: TraceType.LOG, name: 'planner', content: "Completed task phase: planner. Result: Prediction(trajectory={'thought_0': 'First thought', 'thought_1': 'Second thought'})" },
+            {
+                id: '10',
+                trace_type: TraceType.LLM_END,
+                name: 'planner',
+                content: 'First thought',
+                metadata_vars: { reasoning_step_index: 0 },
+            },
         ];
         (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
 
@@ -142,10 +148,9 @@ describe('ChatWindow', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByText(/Reasoning around planner/i)).toBeInTheDocument();
+        expect(screen.getByText(/Reasoning after planner · step 0/i)).toBeInTheDocument();
         fireEvent.click(screen.getByTestId('reasoning-span'));
         expect(screen.getByText(/First thought/i)).toBeInTheDocument();
-        expect(screen.getByText(/Second thought/i)).toBeInTheDocument();
     });
 
     it('renders failure message when episode failed', () => {

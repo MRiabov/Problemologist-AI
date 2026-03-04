@@ -1,67 +1,33 @@
-# =============================================================================
-# OBJECTIVES.YAML - Your Task Definition
-# =============================================================================
-# This file defines WHAT you must achieve. Read it carefully before planning.
-#
-# YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
-#   1. Staying WITHIN the `build_zone` (you cannot build outside it)
-#   2. AVOIDING all `forbid_zones` (contact = failure)
-#   3. Respecting `max_unit_cost` and `max_weight` constraints
-#
-# The environment geometry in this file is READ-ONLY. Engineering assembly
-# motion metadata is stored under engineering assembly_definition.yaml
-# final_assembly.parts and is also READ-ONLY once written.
-# =============================================================================
-
 objectives:
-  # SUCCESS: The moved_object's center enters this volume
   goal_zone:
-    min: [x_min, y_min, z_min]
-    max: [x_max, y_max, z_max]
-
-  # FAILURE: Any contact with these volumes fails the simulation
+    min: [8.0, -2.0, 0.0]
+    max: [12.0, 2.0, 4.0]
   forbid_zones:
     - name: "obstacle_collision_zone"
-      min: [x1, y1, z1]
-      max: [x2, y2, z2]
-    # Additional forbid zones may be listed here
-
-  # CONSTRAINT: Your entire design MUST fit within these bounds
-  # Parts placed outside will fail validation
+      min: [2.0, -3.0, 0.0]
+      max: [4.0, 3.0, 4.0]
   build_zone:
-    min: [x, y, z]
-    max: [x, y, z]
+    min: [-12.0, -12.0, -2.0]
+    max: [12.0, 12.0, 12.0]
+  fluid_objectives: []
+  stress_objectives: []
 
-# Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:
-  min: [-50, -50, 0]
-  max: [50, 50, 100]
+  min: [-30.0, -30.0, -10.0]
+  max: [30.0, 30.0, 30.0]
 
-# -----------------------------------------------------------------------------
-# THE OBJECT YOU MUST DELIVER
-# -----------------------------------------------------------------------------
-# This object spawns at `start_position` (with runtime jitter applied).
-# Your design must reliably guide it to the goal_zone.
 moved_object:
   label: "projectile_ball"
   shape: "sphere"
-  # Static randomization: shape varies between benchmark runs
   static_randomization:
-    radius: [5, 10] # [min, max] - actual value chosen per benchmark variant
-  start_position: [x, y, z]
-  # Runtime jitter: small position variation per simulation run
-  # Your solution must handle ALL positions within this range
-  runtime_jitter: [2, 2, 1] # [±x, ±y, ±z] mm
+    radius: [1.0, 2.0]
+  start_position: [0.0, 0.0, 0.0]
+  runtime_jitter: [0.5, 0.5, 0.5]
 
-# -----------------------------------------------------------------------------
-# YOUR CONSTRAINTS
-# -----------------------------------------------------------------------------
-# These are challenging but achievable. Exceeding them = rejection.
 constraints:
-  max_unit_cost: 50.00 # USD - total cost of your manufactured parts
-  max_weight: 1.2 # kg - total weight of your design
+  max_unit_cost: 50.0
+  max_weight_g: 1200.0
 
-# Randomization metadata (for reproducibility)
 randomization:
-  static_variation_id: "v1.2" # Which static variant this is
+  static_variation_id: "template-v1"
   runtime_jitter_enabled: true

@@ -115,11 +115,33 @@ class BaseNode:
         self.ctx = context
 
     def _get_tool_functions(
-        self, tool_factory: Callable, db_callback: DatabaseCallbackHandler | None = None
+        self,
+        tool_factory: Callable,
+        db_callback: DatabaseCallbackHandler | None = None,
+        node_name: AgentName | None = None,
     ) -> dict[str, Callable]:
         """Collects tool functions for DSPy compatibility."""
         tools = tool_factory(self.ctx.fs, self.ctx.session_id)
         tool_fns = {}
+        live_reasoning_step_idx = 0
+
+        def extract_live_thought(*args: Any, **kwargs: Any) -> str | None:
+            """Try to pull a current-thought string from ReAct tool call payload."""
+            direct_keys = ("next_thought", "thought", "reasoning")
+            for key in direct_keys:
+                value = kwargs.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+            for arg in args:
+                if isinstance(arg, dict):
+                    for key in direct_keys:
+                        value = arg.get(key)
+                        if isinstance(value, str) and value.strip():
+                            return value.strip()
+
+            return None
+
         for t in tools:
             # Now tools are already raw functions or wrapped in search_cots_catalog
             name = getattr(t, "name", t.__name__ if hasattr(t, "__name__") else str(t))
@@ -130,11 +152,24 @@ class BaseNode:
             def make_traced(func, tool_name):
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
+                    nonlocal live_reasoning_step_idx
+                    if db_callback and node_name:
+                        live_thought = extract_live_thought(*args, **kwargs)
+                        if live_thought:
+                            db_callback.record_reasoning_text_sync(
+                                node_name=str(node_name),
+                                reasoning_text=live_thought,
+                                step_index=live_reasoning_step_idx,
+                                source="live_tool_loop",
+                            )
+                            live_reasoning_step_idx += 1
+
                     # WP10: Explicitly record tool start
                     trace_id = 0
                     if db_callback:
                         try:
-                            # ReAct often passes complex objects, try to serialize or stringify
+                            # ReAct often passes complex objects, try to
+                            # serialize or stringify
                             input_dict = {}
                             if args:
                                 input_dict["args"] = [str(a) for a in args]
@@ -146,7 +181,8 @@ class BaseNode:
                         except Exception:
                             input_str = str(args) + " " + str(kwargs)
 
-                        # WP10: Special handling for common tools to ensure success in mocks
+                        # WP10: Special handling for common tools to ensure success
+                        # in mocks
                         if tool_name == "write_file":
                             if "overwrite" not in kwargs:
                                 kwargs["overwrite"] = True
@@ -215,7 +251,8 @@ class BaseNode:
 
         lines = []
 
-        # T015: Parse @file:line-line from message content if not already in code_references
+        # T015: Parse @file:line-line from message content if not
+        # already in code_references
         content = last_msg.content if isinstance(last_msg.content, str) else ""
         # Matches @path/to/file.ext:start-end
         matches = re.finditer(r"@([\w\./\-]+\.\w+):(\d+)-(\d+)", content)
@@ -265,7 +302,8 @@ class BaseNode:
                     if start < 1 or end > len(file_lines) or start > end:
                         lines.append(
                             f"  - File: {file_path}, Lines: {start}-{end} "
-                            f"[ERROR: Invalid line range. File has {len(file_lines)} lines]"
+                            f"[ERROR: Invalid line range. "
+                            f"File has {len(file_lines)} lines]"
                         )
                     else:
                         snippet = "\n".join(file_lines[start - 1 : end])
@@ -325,7 +363,11 @@ class BaseNode:
         interpreter = WorkerInterpreter(
             worker_client=self.ctx.worker_client, session_id=self.ctx.session_id
         )
-        tool_fns = self._get_tool_functions(tool_factory, db_callback=db_callback)
+        tool_fns = self._get_tool_functions(
+            tool_factory,
+            db_callback=db_callback,
+            node_name=node_type,
+        )
 
         # WP07: Inject system instructions from prompts.yaml into signature
         # Template names are now standardized to match node_type or explicit mappings
@@ -401,9 +443,11 @@ class BaseNode:
                                 f"{node_type}_dspy_timeout",
                                 session_id=self.ctx.session_id,
                             )
-                            msg = f"DSPy program {node_type} timed out after {dspy_timeout}s"
+                            msg = (
+                                f"DSPy program {node_type} "
+                                f"timed out after {dspy_timeout}s"
+                            )
                             raise RuntimeError(msg) from err
-
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
                             session_id=self.ctx.session_id,
@@ -412,7 +456,9 @@ class BaseNode:
                     # WP10: Explicitly record node end for UI
                     if db_callback:
                         await db_callback.record_node_end(
-                            node_type, output_data=str(prediction)
+                            node_type,
+                            output_data=str(prediction),
+                            output_obj=prediction,
                         )
 
                     results = await asyncio.gather(
@@ -437,52 +483,26 @@ class BaseNode:
                         if retry_count >= max_retries:
                             # Record the last (invalid) attempt for UI before failing
                             if db_callback and prediction:
-                                content = "Validation failed after max retries."
                                 async with db_callback.session_factory() as db:
                                     trace_obj = Trace(
                                         episode_id=db_callback.episode_id,
                                         trace_type=TraceType.ERROR,
                                         name=f"{node_type}_validation_error",
-                                        content=f"Validation errors: {validation_errors}",
+                                        content=(
+                                            f"Validation errors: {validation_errors}"
+                                        ),
                                         metadata_vars={"prediction": str(prediction)},
                                     )
                                     db.add(trace_obj)
                                     await db.commit()
 
                             raise ValueError(
-                                f"Node {node_type} failed to produce valid output after {max_retries} retries. Errors: {validation_errors}"
+                                f"Node {node_type} failed to produce valid "
+                                f"output after {max_retries} retries. "
+                                f"Errors: {validation_errors}"
                             )
-
                         await asyncio.sleep(1)  # Backoff to prevent log explosion
                         continue
-
-                    # WP10: Explicitly record LLM_END for UI
-                    if db_callback and prediction:
-                        try:
-                            content = "Task phase complete."
-                            if (
-                                hasattr(prediction, "reasoning")
-                                and prediction.reasoning
-                            ):
-                                content = prediction.reasoning
-                            elif hasattr(prediction, "answer") and prediction.answer:
-                                content = prediction.answer
-                            elif hasattr(prediction, "journal") and prediction.journal:
-                                content = prediction.journal
-
-                            async with db_callback.session_factory() as db:
-                                trace_obj = Trace(
-                                    episode_id=db_callback.episode_id,
-                                    trace_type=TraceType.LLM_END,
-                                    name=node_type,
-                                    content=content,
-                                    langfuse_trace_id=db_callback._get_langfuse_id(),
-                                )
-                                db.add(trace_obj)
-                                await db.commit()
-                                await db_callback._broadcast_trace(trace_obj)
-                        except Exception as e:
-                            logger.warning("llm_end_trace_failed", error=str(e))
 
                     return prediction, artifacts, journal_entry
 

@@ -121,7 +121,6 @@ class BenchmarkPlannerNode(BaseNode):
             get_benchmark_planner_tools,
             ["plan.md", "todo.md", "objectives.yaml"],
             AgentName.BENCHMARK_PLANNER,
-            max_retries=1,
         )
 
         if not prediction:
@@ -443,7 +442,7 @@ class BenchmarkSummarizerNode(BaseNode):
             SummarizerSignature,
             state,
             inputs,
-            lambda fs, sid: [],
+            lambda _fs, _sid: [],
             [],
             AgentName.JOURNALLING_AGENT,
         )
