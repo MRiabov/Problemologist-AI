@@ -131,7 +131,55 @@ async def test_remote_fs_middleware_grep_filters_unreadable_matches():
     ]
     middleware = RemoteFilesystemMiddleware(mock_client)
 
+    # Mock default policy which allows all for engineer role
+    # But wait, RemoteFilesystemMiddleware uses get_fs_policy() by default.
+    # The default agent_role is 'engineering_mechanical_coder'.
+    # In config/agents_config.yaml, 'engineering_mechanical_coder' can read everything.
+    # We need to use a role that has some denials to test filtering.
+
+    middleware.agent_role = "engineering_planner"
+    # engineering_planner denies script.py and **/*.py for writing, but for reading?
+    # Actually, the config says engineering_planner allows config/**, skills/**, utils/**,
+    # objectives.yaml, assembly_definition.yaml, plan.md, todo.md, journal.md.
+    # It does NOT allow script.py.
+
     result = await middleware.grep("pattern", path="/")
 
     assert len(result) == 1
     assert result[0].path == "/plan.md"
+
+
+@pytest.mark.asyncio
+async def test_remote_fs_middleware_analyze():
+    mock_client = AsyncMock()
+    from shared.workers.workbench_models import WorkbenchResult, WorkbenchMetadata, CostBreakdown
+    from shared.enums import ManufacturingMethod
+
+    mock_result = WorkbenchResult(
+        is_manufacturable=True,
+        unit_cost=10.0,
+        weight_g=100.0,
+        metadata=WorkbenchMetadata(
+            cost_breakdown=CostBreakdown(
+                process="cnc",
+                total_cost=10.0,
+                unit_cost=10.0,
+                material_cost_per_unit=2.0,
+                setup_cost=8.0,
+                is_reused=False
+            )
+        )
+    )
+    mock_client.analyze.return_value = mock_result
+
+    middleware = RemoteFilesystemMiddleware(mock_client)
+    result = await middleware.analyze("script.py", method=ManufacturingMethod.CNC, quantity=1)
+
+    assert result.is_manufacturable is True
+    assert result.unit_cost == 10.0
+    assert result.weight_g == 100.0
+    mock_client.analyze.assert_called_once_with(
+        method=ManufacturingMethod.CNC,
+        script_path="script.py",
+        quantity=1
+    )

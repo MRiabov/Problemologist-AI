@@ -33,6 +33,7 @@ from shared.observability.schemas import (
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.policy import FilesystemPolicy
+from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 from shared.workers.schema import (
     BenchmarkToolResponse,
     EditOp,
@@ -401,6 +402,38 @@ class RemoteFilesystemMiddleware:
             )
 
         return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+
+    async def analyze(
+        self,
+        script_path: str | Path,
+        method: ManufacturingMethod = ManufacturingMethod.CNC,
+        quantity: int = 1,
+    ) -> WorkbenchResult:
+        """Trigger manufacturing analysis via worker client."""
+        self._check_perm("read", script_path)
+        p_str = str(script_path)
+
+        res = await self.client.analyze(
+            method=method,
+            script_path=p_str,
+            quantity=quantity,
+        )
+
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[
+                ManufacturabilityCheckEvent(
+                    part_id=p_str,
+                    method=method.value,
+                    result=res.is_manufacturable,
+                    price=res.unit_cost,
+                    weight_g=res.weight_g,
+                    metadata=res.model_dump(),
+                )
+            ],
+        )
+
+        return res
 
     async def validate(
         self, script_path: str | Path

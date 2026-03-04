@@ -1,8 +1,8 @@
 from collections.abc import Callable
 
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
-from controller.observability.tracing import record_worker_events
 from shared.cots.agent import search_cots_catalog
+from shared.enums import ManufacturingMethod
 from shared.observability.schemas import RunCommandToolEvent
 
 
@@ -50,6 +50,31 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def analyze_design(
+        method: str | ManufacturingMethod = ManufacturingMethod.CNC,
+        script_path: str = "script.py",
+        quantity: int = 1,
+    ) -> dict:
+        """
+        Analyze the design for manufacturability, cost, and weight.
+        Supported methods: CNC, IM (Injection Molding), 3DP (3D Printing).
+        """
+        # Ensure we handle string inputs from LLM for the enum
+        if isinstance(method, str):
+            try:
+                # UppercaseStrEnum handles normalization
+                method = ManufacturingMethod(method)
+            except ValueError:
+                # Default to CNC if invalid method provided
+                method = ManufacturingMethod.CNC
+
+        result = await fs.analyze(
+            script_path=script_path,
+            method=method,
+            quantity=quantity,
+        )
+        return result.model_dump()
+
     return [
         list_files,
         read_file,
@@ -58,6 +83,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
+        analyze_design,
         search_cots_catalog,
     ]
 
