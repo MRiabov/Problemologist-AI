@@ -147,8 +147,10 @@ class ElectronicsEngineerNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def electronics_engineer_node(state: AgentState) -> AgentState:
-    # Use session_id from state, fallback to default if not set (e.g. tests)
-    session_id = state.session_id or settings.default_session_id
+    session_id = state.session_id
+    if not session_id:
+        msg = "Missing required session_id for electronics_engineer_node"
+        raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url,

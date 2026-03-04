@@ -58,12 +58,9 @@ class AgentModule(dspy.Module):
             )
             self.tools = get_engineer_tools(self.fs, self.session_id)
         else:
-            # Default fallback
-            logger.error("unknown_agent_type_fallback_coder", agent_name=agent_name)
-            self.signature = CoderSignature.with_instructions(
-                self.pm.render(AgentName.ENGINEER_CODER)
-            )
-            self.tools = get_engineer_tools(self.fs, self.session_id)
+            logger.error("unknown_agent_type_rejected", agent_name=agent_name)
+            msg = f"Unsupported agent type: {agent_name}"
+            raise ValueError(msg)
 
         # Extract raw functions from tools for DSPy
         self.tool_fns = {}

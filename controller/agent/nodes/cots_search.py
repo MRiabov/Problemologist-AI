@@ -72,7 +72,10 @@ class COTSSearchNode(BaseNode):
 
 @type_check
 async def cots_search_node(state: AgentState) -> AgentState:
-    session_id = state.session_id or settings.default_session_id
+    session_id = state.session_id
+    if not session_id:
+        msg = "Missing required session_id for cots_search_node"
+        raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url,

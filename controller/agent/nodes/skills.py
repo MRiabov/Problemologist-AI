@@ -167,7 +167,10 @@ class SkillsNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def skills_node(state: AgentState) -> AgentState:
-    session_id = state.session_id or settings.default_session_id
+    session_id = state.session_id
+    if not session_id:
+        msg = "Missing required session_id for skills_node"
+        raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.spec_001_api_url,
