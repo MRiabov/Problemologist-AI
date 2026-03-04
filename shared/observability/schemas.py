@@ -19,6 +19,7 @@ class ObservabilityEventType(StrEnum):
     COMPONENT_USAGE = "component_usage"
     # 2. Tool invocation
     TOOL_INVOCATION = "tool_invocation"
+    TOOL_CALL = "tool_call"
     # 3. Manufacturability and price check (engineer)
     MANUFACTURABILITY_CHECK = "manufacturability_check"
     # 4. Scene valiation (Benchmark CAD engineer)
@@ -97,7 +98,7 @@ class ObservabilityEventType(StrEnum):
 class BaseEvent(BaseModel):
     """Base class for all observability events."""
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, extra="allow")
 
     event_type: ObservabilityEventType
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -325,7 +326,6 @@ class LibraryUsageEvent(BaseEvent):
 
 class ReviewEvidenceStats(BaseModel):
     """Stats for evidence used in a review."""
-
     has_sim_report: bool = False
     has_mfg_report: bool = False
     num_renders: int = 0
