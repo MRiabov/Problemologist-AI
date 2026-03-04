@@ -78,10 +78,12 @@ export function ChatInput({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const sessionAssets = selectedEpisode?.assets || [];
+  const currentPrompt = prompt || inputRef.current?.value || "";
 
   const handleSubmit = async (e?: FormEvent | KeyboardEvent) => {
     if (e) e.preventDefault();
-    if (prompt.trim()) {
+    const submittedPrompt = currentPrompt.trim();
+    if (submittedPrompt) {
       // 1. Extract mentions and code references from selectedContext
       const mentions: string[] = [];
       const code_references: Record<string, unknown>[] = [];
@@ -110,7 +112,7 @@ export function ChatInput({
 
       // 2. Parse line-range steering from text: @filename:L1-L2
       const steeringRegex = /@([^:\n\s]+):L?(\d+)(?:-L?(\d+))?/g;
-      const matches = [...prompt.matchAll(steeringRegex)];
+      const matches = [...submittedPrompt.matchAll(steeringRegex)];
       
       matches.forEach(match => {
         const [, filename, start, end] = match;
@@ -133,7 +135,7 @@ export function ChatInput({
 
       // 3. Extract simple mentions from text (e.g. @part_name)
       const mentionRegex = /@([a-zA-Z0-9_\-.]+)(?![:\d])/g;
-      const mentionMatches = [...prompt.matchAll(mentionRegex)];
+      const mentionMatches = [...submittedPrompt.matchAll(mentionRegex)];
       mentionMatches.forEach(match => {
         const name = match[1];
         const part = findNodeByName(topologyNodes, name);
@@ -154,11 +156,27 @@ export function ChatInput({
         context_items: selectedContext
       };
       
-      await onSendMessage(prompt, metadata);
+      await onSendMessage(submittedPrompt, metadata);
       
       setPrompt("");
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
       setShowSuggestions(false);
     }
+  };
+
+  const applyPromptChange = (target: HTMLTextAreaElement) => {
+    const val = target.value;
+    setPrompt(val);
+    handleMention(val, target.selectionStart || 0);
+    target.style.height = 'auto';
+    target.style.height = target.scrollHeight + 'px';
+    handleScroll();
+  };
+
+  const handlePromptChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    applyPromptChange(event.target);
   };
 
   const handleMention = (value: string, selectionStart: number) => {
@@ -339,14 +357,8 @@ export function ChatInput({
                ref={inputRef}
                value={prompt}
                onScroll={handleScroll}
-               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                   const val = e.target.value;
-                   setPrompt(val);
-                   handleMention(val, e.target.selectionStart || 0);
-                   e.target.style.height = 'auto';
-                   e.target.style.height = e.target.scrollHeight + 'px';
-                   handleScroll();
-               }}
+               onChange={handlePromptChange}
+               onInput={(e) => applyPromptChange(e.currentTarget)}
                onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
                    if (showSuggestions && suggestions.length > 0) {
                        if (e.key === 'ArrowDown') {
@@ -443,7 +455,6 @@ export function ChatInput({
                     <Button 
                        type={isRunning ? "button" : "submit"}
                        size="icon" 
-                       disabled={!isRunning && !prompt.trim()}
                        className={cn(
                            "h-8 w-8 rounded-full transition-all flex items-center justify-center",
                            isRunning 
