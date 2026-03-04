@@ -2,13 +2,14 @@ from controller.agent.benchmark.graph import define_graph
 from controller.agent.graph import graph as engineering_graph
 from controller.config.settings import settings
 from shared.cots.agent import create_cots_search_agent
+from shared.enums import AgentName
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 def create_agent_graph(
-    agent_name: str = "engineer_coder",
+    agent_name: AgentName = AgentName.ENGINEER_CODER,
     trace_id: str | None = None,
     session_id: str | None = None,
 ):
@@ -18,7 +19,10 @@ def create_agent_graph(
     """
     # WP10: Remove LangChain-based Langfuse callbacks
 
-    if agent_name.startswith("engineer") or agent_name == "electronics_engineer":
+    if (
+        agent_name.startswith("engineer")
+        or agent_name == AgentName.ELECTRONICS_ENGINEER
+    ):
         # Unified engineering graph (Architect -> Engineer -> Critic)
         return engineering_graph, None
 
@@ -26,7 +30,7 @@ def create_agent_graph(
         # Unified benchmark generation graph (Planner -> Coder -> Reviewer)
         return define_graph(), None
 
-    if agent_name == "cots_search":
+    if agent_name == AgentName.COTS_SEARCH:
         # Specialized COTS search agent
         return create_cots_search_agent(settings.llm_model), None
 

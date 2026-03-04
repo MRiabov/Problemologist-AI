@@ -3,12 +3,13 @@ from types import SimpleNamespace
 import pytest
 
 from controller.agent.dspy_utils import cad_simulation_metric
+from shared.enums import AgentName
 
 
 def test_metric_benchmark_planner_basic():
     """Test using benchmark_planner milestones from reward_config.yaml"""
     gold = SimpleNamespace(
-        agent_name="benchmark_planner",
+        agent_name=AgentName.BENCHMARK_PLANNER,
         objectives=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0),
     )
     # Give it all milestones except reviewer_accepted
@@ -38,7 +39,7 @@ def test_metric_benchmark_planner_basic():
 
 def test_metric_benchmark_planner_cost_overage():
     gold = SimpleNamespace(
-        agent_name="benchmark_planner",
+        agent_name=AgentName.BENCHMARK_PLANNER,
         objectives=SimpleNamespace(max_unit_cost=100.0, max_weight_g=50.0),
     )
     # 20% over cost cap -> penalty 0.8
@@ -63,7 +64,7 @@ def test_metric_benchmark_planner_cost_overage():
 def test_metric_cad_engineer_failure_formula():
     """Verify that cad_engineer simulation failure formula is used."""
     gold = SimpleNamespace(
-        agent_name="cad_engineer",
+        agent_name=AgentName.CAD_ENGINEER,
         objectives=SimpleNamespace(max_unit_cost=10.0, max_weight_g=5.0),
     )
     prediction = SimpleNamespace(
@@ -87,7 +88,7 @@ def test_metric_cad_engineer_failure_formula():
 
 def test_metric_reviewer_generic_binary():
     """Test benchmark_reviewer with binary milestones."""
-    gold = SimpleNamespace(agent_name="benchmark_reviewer")
+    gold = SimpleNamespace(agent_name=AgentName.BENCHMARK_REVIEWER)
     prediction = SimpleNamespace(
         review_artifacts_complete=True, decision_correct=True, review_actionable=True
     )

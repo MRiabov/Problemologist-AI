@@ -6,6 +6,7 @@ from langfuse import Langfuse
 from openinference.instrumentation.dspy import DSPyInstrumentor
 
 from controller.config.settings import settings
+from shared.enums import AgentName, TraceType
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -121,7 +122,7 @@ def attach_session_to_current_trace(
 async def calculate_and_report_automated_score(
     episode_id: Any,  # uuid.UUID
     trace_id: str,
-    agent_name: str,
+    agent_name: AgentName,
     db: Any,  # AsyncSession
     worker_client: Any,  # WorkerClient
 ) -> None:
@@ -136,7 +137,6 @@ async def calculate_and_report_automated_score(
             map_events_to_prediction,
         )
         from controller.persistence.models import Episode, Trace
-        from shared.enums import TraceType
 
         # 1. Get all events recorded for this episode
         stmt = select(Trace).where(

@@ -4,10 +4,12 @@ from pathlib import Path
 import dspy
 import structlog
 
+from shared.enums import AgentName
+
 logger = structlog.get_logger(__name__)
 
 
-def load_benchmark_dataset(agent_type: str) -> list[dspy.Example]:
+def load_benchmark_dataset(agent_type: AgentName) -> list[dspy.Example]:
     """
     Loads a benchmark dataset from evals/datasets/ and converts to dspy.Example objects.
     """
@@ -48,7 +50,7 @@ def load_benchmark_dataset(agent_type: str) -> list[dspy.Example]:
     return examples
 
 
-def load_langfuse_traces(agent_name: str, limit: int = 20) -> list[dspy.Example]:
+def load_langfuse_traces(agent_name: AgentName, limit: int = 20) -> list[dspy.Example]:
     """
     Fetches historical traces from Langfuse and converts them to dspy.Example objects.
     """

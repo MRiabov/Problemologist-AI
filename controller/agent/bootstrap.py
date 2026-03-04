@@ -10,6 +10,7 @@ from controller.agent.prompt_manager import PromptManager
 from controller.agent.tools import get_engineer_tools
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.enums import AgentName
 
 logger = structlog.get_logger(__name__)
 
@@ -22,7 +23,7 @@ from controller.agent.benchmark.tools import get_benchmark_tools
 
 
 class AgentModule(dspy.Module):
-    def __init__(self, agent_name: str, session_id: str | None = None):
+    def __init__(self, agent_name: AgentName, session_id: str | None = None):
         super().__init__()
         self.agent_name = agent_name
         # Setup worker context for optimization
@@ -41,17 +42,17 @@ class AgentModule(dspy.Module):
         # Configure Agent based on name
         self.pm = PromptManager()
 
-        if agent_name == "benchmark_planner":
+        if agent_name == AgentName.BENCHMARK_PLANNER:
             self.signature = BenchmarkPlannerSignature.with_instructions(
                 self.pm.render("benchmark_planner")
             )
             self.tools = get_benchmark_tools(self.fs, self.session_id)
-        elif agent_name == "benchmark_coder":
+        elif agent_name == AgentName.BENCHMARK_CODER:
             self.signature = BenchmarkCoderSignature.with_instructions(
                 self.pm.render("benchmark_coder")
             )
             self.tools = get_benchmark_tools(self.fs, self.session_id)
-        elif agent_name == "coder" or agent_name == "engineer":
+        elif agent_name in [AgentName.ENGINEER_CODER, "coder", "engineer"]:
             # "engineer" template corresponds to the coder role in prompts.yaml
             self.signature = CoderSignature.with_instructions(
                 self.pm.render("engineer")
@@ -84,7 +85,7 @@ class AgentModule(dspy.Module):
 
     def forward(self, **kwargs):
         # Dynamically map input arguments based on the agent type
-        if self.agent_name == "benchmark_planner":
+        if self.agent_name == AgentName.BENCHMARK_PLANNER:
             # Map dataset keys to signature keys
             # Dataset: task, expected_criteria, objectives
             # Signature: prompt, history, review_feedback
@@ -93,7 +94,7 @@ class AgentModule(dspy.Module):
                 history="",  # No history in optimization yet
                 review_feedback="",  # No feedback yet
             )
-        if self.agent_name == "benchmark_coder":
+        if self.agent_name == AgentName.BENCHMARK_CODER:
             # Dataset keywords might need adjustment for coder
             return self.program(
                 prompt=kwargs.get("task", ""),
@@ -111,7 +112,7 @@ class AgentModule(dspy.Module):
         )
 
 
-def build_eval_program(agent_name: str) -> dspy.Module:
+def build_eval_program(agent_name: AgentName) -> dspy.Module:
     """
     Factory function to build a DSPy Module for agent evaluation/optimization.
     Handles all the necessary wiring of tools, worker client, and interpreter.

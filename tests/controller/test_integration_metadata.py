@@ -6,7 +6,9 @@ from shared.models.schemas import EpisodeMetadata
 
 
 def test_infer_integration_test_id_from_task():
-    assert infer_integration_test_id("Run scenario INT-173 with mock output") == "INT-173"
+    assert (
+        infer_integration_test_id("Run scenario INT-173 with mock output") == "INT-173"
+    )
 
 
 def test_apply_integration_test_metadata_sets_fields():

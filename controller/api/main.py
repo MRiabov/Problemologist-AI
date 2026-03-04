@@ -185,11 +185,12 @@ async def run_agent(request: AgentRunRequest):
     session_factory = get_sessionmaker()
 
     # Ensure session_id is preserved in metadata for asset proxying
+    from shared.enums import EpisodeType
     from shared.models.schemas import EpisodeMetadata
 
     metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
     metadata.worker_session_id = request.session_id
-    metadata.episode_type = "engineer"
+    metadata.episode_type = EpisodeType.ENGINEER
     metadata = apply_integration_test_metadata(
         metadata,
         is_integration_test=settings.is_integration_test,

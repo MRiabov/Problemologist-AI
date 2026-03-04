@@ -19,7 +19,7 @@ from controller.api.schemas import (
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode
-from shared.enums import ResponseStatus
+from shared.enums import GenerationKind, ResponseStatus
 from shared.models.schemas import CustomObjectives
 from shared.simulation.schemas import SimulatorBackendType
 
@@ -33,7 +33,7 @@ class BenchmarkGenerateRequest(BaseModel):
     target_quantity: int | None = None
     seed_id: str | None = None
     seed_dataset: str | None = None
-    generation_kind: str | None = None
+    generation_kind: GenerationKind | None = None
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS
 
     @field_validator("prompt")

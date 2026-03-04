@@ -6,6 +6,8 @@ from pathlib import Path
 
 import httpx
 
+from shared.enums import AgentName
+
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
@@ -40,7 +42,7 @@ async def run_agent_episode(
     *,
     int_id: str,
     task: str,
-    agent_name: str = "engineer_coder",
+    agent_name: AgentName = AgentName.ENGINEER_CODER,
 ) -> tuple[str, str]:
     session_id = f"{int_id}-{uuid.uuid4().hex[:8]}"
     resp = await client.post(

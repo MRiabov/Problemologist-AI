@@ -17,7 +17,7 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
-from shared.enums import EpisodeStatus, ReviewDecision
+from shared.enums import AgentName, EpisodeStatus, GenerationKind, ReviewDecision
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
@@ -312,7 +312,7 @@ async def _execute_graph_streaming(
                 await calculate_and_report_automated_score(
                     episode_id=session_id,
                     trace_id=trace_id,
-                    agent_name="benchmark_generator",
+                    agent_name=AgentName.BENCHMARK_GENERATOR,
                     db=db,
                     worker_client=client,
                 )
@@ -328,7 +328,7 @@ async def run_generation_session(
     custom_objectives: CustomObjectives | None = None,
     seed_id: str | None = None,
     seed_dataset: str | None = None,
-    generation_kind: str | None = None,
+    generation_kind: GenerationKind | None = None,
     backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
 ) -> BenchmarkGeneratorState:
     """
@@ -345,6 +345,7 @@ async def run_generation_session(
     # 1. Create DB entry (Episode)
     from controller.config.settings import settings
     from controller.utils.integration import apply_integration_test_metadata
+    from shared.enums import EpisodeType, SeedMatchMethod
     from shared.models.schemas import EpisodeMetadata
 
     session_factory = get_sessionmaker()
@@ -354,10 +355,10 @@ async def run_generation_session(
             validation_logs=[],
             prompt=prompt,
             custom_objectives=custom_objectives,
-            episode_type="benchmark",
+            episode_type=EpisodeType.BENCHMARK,
             seed_id=seed_id,
             seed_dataset=seed_dataset,
-            seed_match_method="runtime_explicit" if seed_id else None,
+            seed_match_method=SeedMatchMethod.RUNTIME_EXPLICIT if seed_id else None,
             generation_kind=generation_kind,
             parent_seed_id=seed_id,
         )

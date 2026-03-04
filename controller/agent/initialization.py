@@ -4,6 +4,7 @@ from pathlib import Path
 from structlog import get_logger
 
 from controller.clients.backend import RemoteFilesystemBackend
+from shared.enums import AgentName
 
 logger = get_logger(__name__)
 
@@ -54,7 +55,7 @@ async def _write_template(
 
 
 async def initialize_agent_files(
-    backend: RemoteFilesystemBackend, agent_name: str, overwrite: bool = False
+    backend: RemoteFilesystemBackend, agent_name: AgentName, overwrite: bool = False
 ) -> None:
     """
     Initializes the file system for a given agent with templates and directories.
@@ -82,20 +83,20 @@ async def initialize_agent_files(
     file_mappings = {}
 
     # Engineer Agents
-    if agent_name == "engineer_planner":
+    if agent_name == AgentName.ENGINEER_PLANNER:
         file_mappings = {
             "engineer/plan.md": "plan.md",
             "engineer/todo.md": "todo.md",
             "shared/journal.md": "journal.md",
         }
-    elif agent_name == "engineer_coder":
+    elif agent_name == AgentName.ENGINEER_CODER:
         file_mappings = {
             "engineer/todo.md": "todo.md",
             "shared/journal.md": "journal.md",
         }
 
     # Benchmark Agents
-    elif agent_name in ["benchmark_planner", "benchmark_coder"]:
+    elif agent_name in [AgentName.BENCHMARK_PLANNER, AgentName.BENCHMARK_CODER]:
         file_mappings = {
             "benchmark_generator/plan.md": "plan.md",
             "benchmark_generator/todo.md": "todo.md",
@@ -104,7 +105,7 @@ async def initialize_agent_files(
         }
 
     # Support Agents
-    elif agent_name in ["cots_search", "skill_creator"]:
+    elif agent_name in [AgentName.COTS_SEARCH, AgentName.SKILL_CREATOR]:
         file_mappings = {
             "shared/journal.md": "journal.md",
         }

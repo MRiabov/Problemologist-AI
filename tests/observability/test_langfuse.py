@@ -89,11 +89,11 @@ async def test_calculate_and_report_automated_score():
     import uuid
 
     from controller.observability.langfuse import calculate_and_report_automated_score
-    from shared.enums import TraceType
+    from shared.enums import AgentName, TraceType
 
     episode_id = uuid.uuid4()
     trace_id = "trace-123"
-    agent_name = "cad_engineer"
+    agent_name = AgentName.CAD_ENGINEER
 
     # Mock DB session
     mock_db = AsyncMock()

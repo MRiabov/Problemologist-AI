@@ -6,7 +6,13 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from shared.enums import AssetType, EpisodeStatus, GenerationKind, SeedMatchMethod, TraceType
+from shared.enums import (
+    AssetType,
+    EpisodeStatus,
+    GenerationKind,
+    SeedMatchMethod,
+    TraceType,
+)
 
 from .db import Base
 

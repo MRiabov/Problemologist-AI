@@ -82,7 +82,7 @@ async def execute_agent_task(
     episode_id: uuid.UUID,
     task: str,
     session_id: str,
-    agent_name: AgentName | str = AgentName.ENGINEER_CODER,
+    agent_name: AgentName = AgentName.ENGINEER_CODER,
 ):
     session_factory = get_sessionmaker()
 

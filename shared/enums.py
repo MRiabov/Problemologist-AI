@@ -104,6 +104,10 @@ class AgentName(StrEnum):
     ELECTRONICS_REVIEWER = "electronics_reviewer"
     SKILL_AGENT = "skill_agent"
     GIT_AGENT = "git_agent"
+    CAD_ENGINEER = "cad_engineer"
+    BENCHMARK_GENERATOR = "benchmark_generator"
+    COTS_SEARCH = "cots_search"
+    SKILL_CREATOR = "skill_creator"
 
 
 class EpisodeType(StrEnum):
@@ -131,6 +135,16 @@ class GenerationKind(StrEnum):
     INTEGRATION_TEST = "integration_test"
     CAD_ENGINEER = "cad_engineer"
     BENCHMARK_GENERATOR = "benchmark_generator"
+    COTS_SEARCH = "cots_search"
+    SKILL_CREATOR = "skill_creator"
+
+
+class EvalMode(StrEnum):
+    """Evaluation modes for run_evals.py."""
+
+    BENCHMARK = "benchmark"
+    AGENT = "agent"
+    GIT = "git"
 
 
 class FailureReason(UppercaseStrEnum):
@@ -261,36 +275,3 @@ class BenchmarkRefusalReason(UppercaseStrEnum):
     CONTRADICTORY_CONSTRAINTS = "CONTRADICTORY_CONSTRAINTS"
     UNSOLVABLE_SCENARIO = "UNSOLVABLE_SCENARIO"
     AMBIGUOUS_TASK = "AMBIGUOUS_TASK"
-
-
-class SeedMatchMethod(StrEnum):
-    """Method used to match an episode to a seed in the dataset."""
-
-    RUNTIME_EXPLICIT = "runtime_explicit"
-    EXACT_TASK = "exact_task"
-    NO_EXACT_TASK_MATCH = "no_exact_task_match"
-    AMBIGUOUS_EXACT_TASK = "ambiguous_exact_task"
-
-
-class GenerationKind(StrEnum):
-    """The context/purpose of the episode generation."""
-
-    SEEDED_EVAL = "seeded_eval"
-    SEEDED = "seeded"
-    DERIVED = "derived"
-    INTEGRATION_TEST = "integration_test"
-
-
-class EpisodeType(StrEnum):
-    """The high-level category of an episode."""
-
-    BENCHMARK = "benchmark"
-    ENGINEER = "engineer"
-
-
-class EvalMode(StrEnum):
-    """The mode for running evaluations."""
-
-    BENCHMARK = "benchmark"
-    AGENT = "agent"
-    GIT = "git"

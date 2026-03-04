@@ -28,7 +28,8 @@ def apply_integration_test_metadata(
         return metadata
 
     metadata.is_integration_test = True
-    metadata.integration_test_id = metadata.integration_test_id or infer_integration_test_id(
-        task, session_id, metadata.prompt
+    metadata.integration_test_id = (
+        metadata.integration_test_id
+        or infer_integration_test_id(task, session_id, metadata.prompt)
     )
     return metadata
