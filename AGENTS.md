@@ -34,3 +34,9 @@ Key workflow knowledge to apply:
 - Use `./scripts/run_integration_tests.sh` for integration runs; do not rely on plain `pytest` because required services/env setup may be missing.
 - Treat integration tests as HTTP-level system tests (real endpoints, no internal mocks/monkeypatching of `controller.*`, `worker.*`, `shared.*`).
 - Validate behavior at system boundaries (HTTP payloads, logs, DB/S3/events), and keep `INT-xxx` mapping/conventions intact.
+
+## Typed Schema Skill Trigger
+
+When the task adds or modifies a class, or plans/implements storage or API communication logic (function interfaces or HTTP endpoints), you **MUST** apply:
+
+`./.agent/skills/classes-instead-of-dicts/SKILL.md`
