@@ -52,8 +52,7 @@ class AgentModule(dspy.Module):
                 self.pm.render(AgentName.BENCHMARK_CODER)
             )
             self.tools = get_benchmark_tools(self.fs, self.session_id)
-        elif agent_name in [AgentName.ENGINEER_CODER, "coder", "engineer"]:
-            # "engineer" template corresponds to the coder role in prompts.yaml
+        elif agent_name == AgentName.ENGINEER_CODER:
             self.signature = CoderSignature.with_instructions(
                 self.pm.render(AgentName.ENGINEER_CODER)
             )

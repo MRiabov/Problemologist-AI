@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
@@ -192,6 +193,21 @@ async def _execute_graph_streaming(
 
     async for output in app.astream(initial_state, config=config):
         for node_name, state_update in output.items():
+            normalized_node_name: AgentName | None = None
+            if isinstance(node_name, AgentName):
+                normalized_node_name = node_name
+            elif isinstance(node_name, str):
+                with suppress(ValueError):
+                    normalized_node_name = AgentName(node_name)
+                if normalized_node_name is None:
+                    legacy_node_aliases = {
+                        "planner": AgentName.BENCHMARK_PLANNER,
+                        "coder": AgentName.BENCHMARK_CODER,
+                        "reviewer": AgentName.BENCHMARK_REVIEWER,
+                        "skills": AgentName.SKILL_AGENT,
+                    }
+                    normalized_node_name = legacy_node_aliases.get(node_name)
+
             if state_update is None:
                 logger.warning("node_returned_none", node_name=node_name)
                 continue
@@ -232,7 +248,7 @@ async def _execute_graph_streaming(
             new_status = final_state.session.status
             should_stop = False
 
-            if node_name == "planner":
+            if normalized_node_name == AgentName.BENCHMARK_PLANNER:
                 # Handle both object and dict types for the plan
                 plan_theme = None
                 logger.info(
@@ -255,9 +271,9 @@ async def _execute_graph_streaming(
                 else:
                     new_status = SessionStatus.PLANNED
                     should_stop = True
-            elif node_name == "coder":
+            elif normalized_node_name == AgentName.BENCHMARK_CODER:
                 new_status = SessionStatus.VALIDATING
-            elif node_name == "reviewer":
+            elif normalized_node_name == AgentName.BENCHMARK_REVIEWER:
                 if final_state.review_decision == ReviewDecision.APPROVED:
                     new_status = SessionStatus.ACCEPTED
                 elif final_state.review_decision:
@@ -269,7 +285,7 @@ async def _execute_graph_streaming(
                     else:
                         new_status = SessionStatus.REJECTED
             elif (
-                node_name == "skills"
+                normalized_node_name == AgentName.SKILL_AGENT
                 and final_state.session.status == SessionStatus.ACCEPTED
             ):
                 new_status = SessionStatus.ACCEPTED

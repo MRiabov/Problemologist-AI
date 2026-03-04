@@ -1,11 +1,11 @@
 import pytest
 
 from controller.agent.mock_llm import MockDSPyLM
+from shared.enums import AgentName
 
 
 def test_detect_node_key_explicit():
-    # Use benchmark_planner which should map to 'planner' lookup key
-    mock_lm = MockDSPyLM(session_id="benchmark", node_type="benchmark_planner")
+    mock_lm = MockDSPyLM(session_id="benchmark", node_type=AgentName.BENCHMARK_PLANNER)
 
     # Prompt MUST contain 'json' to trigger JSON response in MockDSPyLM
     prompt = "Some text with json output fields"
@@ -26,11 +26,11 @@ def test_detect_node_key_fallback_still_works():
     # Header based detection
     prompt = "You are the Sidecar Learner."
     node_key = mock_lm._detect_node_key(prompt)
-    assert node_key == "skill_learner"
+    assert node_key == AgentName.SKILL_AGENT
 
     prompt_2 = "You are an expert designer of spatial and geometric puzzles."
     node_key_2 = mock_lm._detect_node_key(prompt_2)
-    assert node_key_2 == "planner"
+    assert node_key_2 == AgentName.ENGINEER_PLANNER
 
 
 def test_normalization_logic():
@@ -46,19 +46,19 @@ def test_normalization_logic():
 
     prompt = "json output fields"
 
-    mock_lm.node_type = "benchmark_planner"
+    mock_lm.node_type = AgentName.BENCHMARK_PLANNER
     assert json_thought(mock_lm(prompt)) == "P"
 
-    mock_lm.node_type = "benchmark_coder"
+    mock_lm.node_type = AgentName.BENCHMARK_CODER
     assert json_thought(mock_lm(prompt)) == "C"
 
-    mock_lm.node_type = "benchmark_reviewer"
+    mock_lm.node_type = AgentName.BENCHMARK_REVIEWER
     assert json_thought(mock_lm(prompt)) == "R"
 
-    mock_lm.node_type = "plan_reviewer"
+    mock_lm.node_type = AgentName.ENGINEER_REVIEWER
     assert json_thought(mock_lm(prompt)) == "R"
 
-    mock_lm.node_type = "execution_reviewer"
+    mock_lm.node_type = AgentName.EXECUTION_REVIEWER
     assert json_thought(mock_lm(prompt)) == "R"
 
 

@@ -344,7 +344,11 @@ class BaseNode:
 
         if program_cls is dspy.ReAct:
             max_iters = settings.react_max_iters
-            if "planner" in node_type.value:
+            if node_type in {
+                AgentName.ENGINEER_PLANNER,
+                AgentName.ELECTRONICS_PLANNER,
+                AgentName.BENCHMARK_PLANNER,
+            }:
                 max_iters = settings.react_planner_max_iters
             program = program_cls(
                 signature_cls, tools=list(tool_fns.values()), max_iters=max_iters

@@ -1,6 +1,5 @@
 import json
 import re
-from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -12,11 +11,27 @@ from shared.enums import AgentName
 
 logger = structlog.get_logger(__name__)
 
+PLANNER_AGENTS = {
+    AgentName.ENGINEER_PLANNER,
+    AgentName.BENCHMARK_PLANNER,
+}
+CODER_AGENTS = {
+    AgentName.ENGINEER_CODER,
+    AgentName.BENCHMARK_CODER,
+    AgentName.ELECTRONICS_ENGINEER,
+}
+REVIEWER_AGENTS = {
+    AgentName.ENGINEER_REVIEWER,
+    AgentName.BENCHMARK_REVIEWER,
+    AgentName.ELECTRONICS_REVIEWER,
+    AgentName.EXECUTION_REVIEWER,
+}
+
 
 class MockDSPyLM(dspy.LM):
     """Mock DSPy LM using YAML scenarios keyed by session_id prefixes."""
 
-    node_type: AgentName | str | None
+    node_type: AgentName | None
 
     def __init__(
         self,
@@ -26,7 +41,7 @@ class MockDSPyLM(dspy.LM):
     ):
         super().__init__(model="mock-dspy-model", **kwargs)
         self.session_id = session_id or "default-session"
-        self.node_type = node_type
+        self.node_type = self._normalize_agent_name(node_type)
         self.provider = "openai"
         self.responses_path = Path("tests/integration/mock_responses.yaml")
         self.scenarios = self._load_scenarios()
@@ -78,10 +93,9 @@ class MockDSPyLM(dspy.LM):
         scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
 
         # 2. Detect Node Type (Use explicit if set, otherwise detect)
-        node_key = self.node_type or self._detect_node_key(full_text)
-        if isinstance(node_key, str):
-            with suppress(ValueError):
-                node_key = AgentName(node_key)
+        node_key = self._normalize_agent_name(self.node_type) or self._detect_node_key(
+            full_text
+        )
 
         # Detect if JSON is requested or if we should provide it for structured nodes
         low_text = full_text.lower()
@@ -134,30 +148,13 @@ class MockDSPyLM(dspy.LM):
             "mock_dspy_expected_fields", fields=expected_fields, is_json=is_json
         )
 
-        agent_to_scenario_key: dict[AgentName, str] = {
-            AgentName.BENCHMARK_PLANNER: "benchmark_planner",
-            AgentName.BENCHMARK_CODER: "benchmark_coder",
-            AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
-            AgentName.ENGINEER_PLANNER: "engineer_planner",
-            AgentName.ENGINEER_CODER: "engineer_coder",
-            AgentName.ENGINEER_REVIEWER: "engineer_reviewer",
-            AgentName.ELECTRONICS_PLANNER: "electronics_planner",
-            AgentName.ELECTRONICS_ENGINEER: "electronics_engineer",
-            AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",
-            AgentName.EXECUTION_REVIEWER: "execution_reviewer",
-            AgentName.COTS_SEARCH: "cots_search",
-            AgentName.JOURNALLING_AGENT: "journalling_agent",
-            AgentName.SKILL_AGENT: "skill_agent",
-        }
-
-        lookup_key = (
-            agent_to_scenario_key[node_key]
-            if isinstance(node_key, AgentName)
-            else str(node_key)
-        )
-        sig_lookup = node_key
-
-        node_data = scenario.get(lookup_key, {})
+        lookup_key = node_key.value
+        node_data: dict[str, Any] = {}
+        for candidate in self._scenario_lookup_keys(node_key):
+            node_data = scenario.get(candidate, {})
+            if node_data:
+                lookup_key = candidate
+                break
         logger.info(
             "mock_dspy_lm_data_found",
             scenario=scenario_id,
@@ -235,9 +232,49 @@ class MockDSPyLM(dspy.LM):
         if self._is_finishing(full_text) and (
             not tool_calls or tool_progress >= len(tool_calls)
         ):
-            return self._handle_finish(sig_lookup, node_data, is_json, expected_fields)
+            return self._handle_finish(node_key, node_data, is_json, expected_fields)
 
-        return self._handle_action(sig_lookup, node_data, is_json, expected_fields)
+        return self._handle_action(node_key, node_data, is_json, expected_fields)
+
+    @staticmethod
+    def _normalize_agent_name(node_type: AgentName | str | None) -> AgentName | None:
+        if node_type is None:
+            return None
+        if isinstance(node_type, AgentName):
+            return node_type
+        normalized = node_type.strip().lower()
+        alias_map = {
+            "planner": AgentName.ENGINEER_PLANNER,
+            "coder": AgentName.ENGINEER_CODER,
+            "engineer": AgentName.ENGINEER_CODER,
+            "cad_engineer": AgentName.ENGINEER_CODER,
+            "reviewer": AgentName.ENGINEER_REVIEWER,
+            "plan_reviewer": AgentName.ENGINEER_REVIEWER,
+            "execution_reviewer": AgentName.EXECUTION_REVIEWER,
+            "electronics_reviewer": AgentName.ELECTRONICS_REVIEWER,
+            "skill_learner": AgentName.SKILL_AGENT,
+            "journalling": AgentName.JOURNALLING_AGENT,
+        }
+        if normalized in alias_map:
+            return alias_map[normalized]
+        return AgentName(normalized)
+
+    @staticmethod
+    def _scenario_lookup_keys(node_key: AgentName) -> list[str]:
+        if node_key in PLANNER_AGENTS:
+            return [node_key.value, "planner", "engineer_planner", "benchmark_planner"]
+        if node_key in CODER_AGENTS:
+            return [node_key.value, "coder", "engineer_coder", "benchmark_coder"]
+        if node_key in REVIEWER_AGENTS:
+            return [
+                node_key.value,
+                "reviewer",
+                "engineer_reviewer",
+                "benchmark_reviewer",
+            ]
+        if node_key == AgentName.SKILL_AGENT:
+            return [node_key.value, "skill_agent", "skill_learner"]
+        return [node_key.value]
 
     def _detect_expected_fields_from_json(self, text: str) -> list[str]:
         """Detect expected JSON keys from a template in the prompt."""
@@ -321,7 +358,7 @@ class MockDSPyLM(dspy.LM):
 
         return self.session_id
 
-    def _detect_node_key(self, text: str) -> str:
+    def _detect_node_key(self, text: str) -> AgentName:
         """Robustly detect node type by looking for role keywords and output fields."""
         low_text = text.lower()
 
@@ -331,13 +368,13 @@ class MockDSPyLM(dspy.LM):
         if "sidecar learner" in low_text:
             return AgentName.SKILL_AGENT
         if "expert designer of spatial" in low_text:
-            return "planner"
+            return AgentName.ENGINEER_PLANNER
         if "lead mechanical engineer (planner)" in low_text:
-            return "planner"
+            return AgentName.ENGINEER_PLANNER
         if "cad engineer" in low_text or "build123d script" in low_text:
-            return "coder"
+            return AgentName.ENGINEER_CODER
         if "design reviewer" in low_text or "benchmark auditor" in low_text:
-            return "reviewer"
+            return AgentName.ENGINEER_REVIEWER
         if "commercial off-the-shelf" in low_text or "cots search" in low_text:
             return AgentName.COTS_SEARCH
         if "electrical strategy" in low_text or "electronics engineer" in low_text:
@@ -347,20 +384,19 @@ class MockDSPyLM(dspy.LM):
         if "journal" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
-            return "coder"
+            return AgentName.ENGINEER_CODER
         if "review" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
-            return "reviewer"
+            return AgentName.ENGINEER_REVIEWER
         if "plan" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
-            return "planner"
+            return AgentName.ENGINEER_PLANNER
         if "summary" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
-            # summary is common in skills/sidecar
-            return "skill_learner"
+            return AgentName.SKILL_AGENT
         if "search_summary" in low_text and (
             "output fields" in low_text or "result:" in low_text
         ):
@@ -370,16 +406,16 @@ class MockDSPyLM(dspy.LM):
         if any(kw in low_text for kw in ["skill", "sidecar", "learner"]):
             return AgentName.SKILL_AGENT
         if any(kw in low_text for kw in ["reviewer", "critic", "auditor"]):
-            return "reviewer"
+            return AgentName.ENGINEER_REVIEWER
         if "cots" in low_text or "search" in low_text:
             return AgentName.COTS_SEARCH
         if any(
             kw in low_text for kw in ["cad engineer", "build123d", "coder", "implement"]
         ):
-            return "coder"
+            return AgentName.ENGINEER_CODER
         if "planner" in low_text:
-            return "planner"
-        return "planner"
+            return AgentName.ENGINEER_PLANNER
+        return AgentName.ENGINEER_PLANNER
 
     def _is_finishing(self, text: str) -> bool:
         low_text = text.lower()
@@ -392,17 +428,25 @@ class MockDSPyLM(dspy.LM):
         )
 
     def _handle_finish(
-        self, node_key: str, node_data: dict, is_json: bool, expected_fields: list[str]
+        self,
+        node_key: AgentName,
+        node_data: dict,
+        is_json: bool,
+        expected_fields: list[str],
     ):
         return self._generate_response(
             node_key, node_data, is_json, finished=True, expected_fields=expected_fields
         )
 
     def _handle_action(
-        self, node_key: str, node_data: dict, is_json: bool, expected_fields: list[str]
+        self,
+        node_key: AgentName,
+        node_data: dict,
+        is_json: bool,
+        expected_fields: list[str],
     ):
         # Force finish for reviewer to avoid loops in mock
-        force_finish = node_key in ["reviewer"]
+        force_finish = node_key in REVIEWER_AGENTS
 
         count = self._call_counts.get(node_key, 0)
         tool_calls = node_data.get("tool_calls", [])
@@ -424,7 +468,7 @@ class MockDSPyLM(dspy.LM):
 
     def _generate_response(
         self,
-        node_key: str,
+        node_key: AgentName,
         node_data: dict,
         is_json: bool,
         finished: bool,
@@ -485,21 +529,13 @@ class MockDSPyLM(dspy.LM):
 
         # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses
-        if node_key in {"planner", "benchmark_planner", AgentName.ENGINEER_PLANNER}:
+        if node_key in PLANNER_AGENTS:
             resp["plan"] = node_data.get("plan", "No plan provided.")
             resp["summary"] = node_data.get("summary", "Plan generated.")
             # Support BenchmarkPlannerSignature
             if "plan" in node_data and isinstance(node_data["plan"], dict):
                 resp["plan"] = node_data["plan"]
-        elif (
-            node_key == "reviewer"
-            or node_key == "plan_reviewer"
-            or node_key == "execution_reviewer"
-            or node_key == "electronics_reviewer"
-            or node_key == AgentName.ENGINEER_REVIEWER
-            or node_key == AgentName.ELECTRONICS_REVIEWER
-            or node_key == AgentName.EXECUTION_REVIEWER
-        ):
+        elif node_key in REVIEWER_AGENTS:
             resp["review"] = node_data.get(
                 "review",
                 {
@@ -508,7 +544,7 @@ class MockDSPyLM(dspy.LM):
                     "required_fixes": [],
                 },
             )
-        elif node_key in {"coder", "benchmark_coder", AgentName.ENGINEER_CODER}:
+        elif node_key in CODER_AGENTS:
             resp["journal"] = node_data.get("journal", "Work completed.")
             if not finished and "generated_code" not in resp:
                 resp["generated_code"] = node_data.get("generated_code", "# No code")
@@ -516,7 +552,7 @@ class MockDSPyLM(dspy.LM):
             resp["summarized_journal"] = node_data.get(
                 "summarized_journal", "Journal summary."
             )
-        elif node_key in {"skill_learner", AgentName.SKILL_AGENT}:
+        elif node_key == AgentName.SKILL_AGENT:
             resp["summary"] = node_data.get("summary", "Skills identified.")
             resp["journal"] = node_data.get("journal", "Learning complete.")
         elif node_key == AgentName.COTS_SEARCH:
@@ -535,30 +571,21 @@ class MockDSPyLM(dspy.LM):
         if expected_fields:
             # Ensure signature-defined output fields are also included
             # ReAct sometimes expects them even in intermediate turns
-            sig_lookup_norm = node_key
-            if sig_lookup_norm == AgentName.BENCHMARK_PLANNER:
-                sig_lookup_norm = "planner"
-            if sig_lookup_norm == AgentName.BENCHMARK_CODER:
-                sig_lookup_norm = "coder"
-            if sig_lookup_norm == AgentName.BENCHMARK_REVIEWER:
-                sig_lookup_norm = "reviewer"
-
             sig_fields = {
-                "planner": ["reasoning", "plan", "summary"],
                 AgentName.ENGINEER_PLANNER: ["reasoning", "plan", "summary"],
+                AgentName.BENCHMARK_PLANNER: ["reasoning", "plan", "summary"],
                 AgentName.ELECTRONICS_PLANNER: ["reasoning", "summary"],
-                "coder": ["journal"],
                 AgentName.ENGINEER_CODER: ["journal"],
+                AgentName.BENCHMARK_CODER: ["journal"],
                 AgentName.ELECTRONICS_ENGINEER: ["journal"],
-                "reviewer": ["review"],
                 AgentName.ENGINEER_REVIEWER: ["review"],
+                AgentName.BENCHMARK_REVIEWER: ["review"],
                 AgentName.ELECTRONICS_REVIEWER: ["review"],
                 AgentName.EXECUTION_REVIEWER: ["review"],
                 AgentName.JOURNALLING_AGENT: ["summarized_journal"],
-                "skill_learner": ["summary", "journal"],
                 AgentName.SKILL_AGENT: ["summary", "journal"],
-                "cots_search": ["search_summary"],
-            }.get(sig_lookup_norm, [])
+                AgentName.COTS_SEARCH: ["search_summary"],
+            }.get(node_key, [])
 
             # For ReAct tool-call turns, return only the explicitly requested fields.
             # Extra signature fields here can cause parse/retry loops before tool execution.
@@ -568,10 +595,7 @@ class MockDSPyLM(dspy.LM):
                 all_fields = list(dict.fromkeys(expected_fields + sig_fields))
 
             # WP10: Force plan inclusion for planner nodes to ensure state transitions work
-            if (
-                sig_lookup_norm in {"planner", AgentName.ENGINEER_PLANNER}
-                and "plan" not in all_fields
-            ):
+            if node_key in PLANNER_AGENTS and "plan" not in all_fields:
                 all_fields.append("plan")
 
             lines = []
@@ -583,27 +607,16 @@ class MockDSPyLM(dspy.LM):
                         val = "finish"
                     elif field == "next_tool_args":
                         val = {}
-                    elif field == "plan" and sig_lookup_norm in {
-                        "planner",
-                        AgentName.ENGINEER_PLANNER,
-                    }:
+                    elif field == "plan" and node_key in PLANNER_AGENTS:
                         val = node_data.get("plan", {})
-                    elif field == "review" and sig_lookup_norm in {
-                        "reviewer",
-                        AgentName.ENGINEER_REVIEWER,
-                        AgentName.ELECTRONICS_REVIEWER,
-                        AgentName.EXECUTION_REVIEWER,
-                    }:
+                    elif field == "review" and node_key in REVIEWER_AGENTS:
                         val = node_data.get("review", {})
                     else:
                         val = "None"
 
                 if isinstance(val, bool):
                     val = str(val).lower()
-                elif field == "plan" and sig_lookup_norm in {
-                    "planner",
-                    AgentName.ENGINEER_PLANNER,
-                }:
+                elif field == "plan" and node_key in PLANNER_AGENTS:
                     # WP10: Always use JSON for the plan object in planner nodes
                     val = json.dumps(val)
                 elif isinstance(val, (dict, list)):
@@ -620,7 +633,7 @@ class MockDSPyLM(dspy.LM):
             return [result]
 
         # Fallback for plain text (rare in our ReAct setups)
-        if node_key == "reviewer":
+        if node_key in REVIEWER_AGENTS:
             return ["Review Result: approved\nReasoning: Approved."]
         return [
             f"Thought: {thought}\nReasoning: {reasoning}\nFinal Answer: Task complete."
