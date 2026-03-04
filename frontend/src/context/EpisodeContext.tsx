@@ -90,8 +90,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       // Update selected episode if it's in the list
       if (selectedEpisode) {
           const updated = data.find(e => e.id === selectedEpisode.id);
+          const selectedDetailedStatus = selectedEpisode.metadata_vars?.detailed_status || null;
+          const updatedDetailedStatus = updated?.metadata_vars?.detailed_status || null;
           if (updated && (
               updated.status !== selectedEpisode.status || 
+              updatedDetailedStatus !== selectedDetailedStatus ||
               (updated.traces?.length || 0) > (selectedEpisode.traces?.length || 0) ||
               (updated.assets?.length || 0) > (selectedEpisode.assets?.length || 0)
           )) {
@@ -115,7 +118,13 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedEpisode?.id, selectedEpisode?.status, selectedEpisode?.traces?.length, selectedEpisode?.assets?.length]);
+  }, [
+    selectedEpisode?.id,
+    selectedEpisode?.status,
+    selectedEpisode?.metadata_vars?.detailed_status,
+    selectedEpisode?.traces?.length,
+    selectedEpisode?.assets?.length
+  ]);
 
   const selectEpisode = useCallback(async (id: string) => {
     setIsCreationMode(false);
@@ -416,6 +425,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
               return {
                 ...ep,
                 status: message.type === 'status_update' ? message.status : ep.status,
+                metadata_vars: message.type === 'status_update'
+                  ? (message.metadata_vars || ep.metadata_vars)
+                  : ep.metadata_vars,
                 last_trace_id: newTraceId
               };
             }
@@ -464,8 +476,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           setSelectedEpisode((prev: Episode | null) => {
              if (!prev) return currentEp;
              // Check for meaningful changes to avoid re-rendering components like buttons
+             const prevDetailedStatus = prev.metadata_vars?.detailed_status || null;
+             const currentDetailedStatus = currentEp.metadata_vars?.detailed_status || null;
              if (prev.id === currentEp.id && 
                  prev.status === currentEp.status && 
+                 prevDetailedStatus === currentDetailedStatus &&
                  prev.last_trace_id === currentEp.last_trace_id &&
                  (prev.assets?.length || 0) === (currentEp.assets?.length || 0) &&
                  (prev.plan === currentEp.plan)) {

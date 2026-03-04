@@ -18,9 +18,16 @@ export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [filter, setFilter] = useState("");
+  const getEpisodeTitle = useCallback((ep: { task?: string | null; metadata_vars?: { prompt?: string | null } | null; id: string }) => {
+    const taskTitle = ep.task?.trim();
+    if (taskTitle) return taskTitle;
+    const promptTitle = ep.metadata_vars?.prompt?.trim();
+    if (promptTitle) return promptTitle;
+    return ep.id.substring(0, 8);
+  }, []);
 
   const filteredEpisodes = episodes.filter(ep => 
-    ep.task.toLowerCase().includes(filter.toLowerCase()) || 
+    getEpisodeTitle(ep).toLowerCase().includes(filter.toLowerCase()) || 
     ep.id.toLowerCase().includes(filter.toLowerCase())
   );
 
@@ -134,7 +141,7 @@ export default function Sidebar() {
                                       "text-[11px] font-semibold truncate flex-1 pr-2",
                                       selectedEpisode?.id === ep.id ? "text-primary" : "text-foreground"
                                     )}>
-                                      {ep.task || ep.id.substring(0,8)}
+                                      {getEpisodeTitle(ep)}
                                     </span>
                                     <div data-testid="episode-status" data-status={ep.status}>
                                         {ep.status === EpisodeStatus.RUNNING ? (
