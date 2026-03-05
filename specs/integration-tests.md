@@ -74,7 +74,7 @@ Priorities:
 | INT-002 | Controller-worker execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Simulation serialization | Multiple agents may run, but only one simulation runs at a time (queue/lock behavior enforced). |
-| INT-005 | Engineer-workflow planners mandatory artifact gate | Engineer planners (mechanical + electronics) must block handoff unless planner artifacts are present/valid (`plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`) and traces contain explicit `TOOL_START` for `submit_plan` before planner completion. Missing `submit_plan` must fail closed (no success-like status transition). |
+| INT-005 | Engineer planner mandatory artifact gate | Engineer planner must block handoff unless planner artifacts are present/valid (`plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`) and traces contain explicit `TOOL_START` for `submit_plan` with `node_type=engineer_planner`. After `submit_plan`, episode must reach `PLANNED`; if it reaches `FAILED`, test fails. Missing `submit_plan` must fail closed (no success-like status transition). |
 | INT-006 | `plan.md` structure validation | Exact required engineering plan headings enforced (`1..5` sections). |
 | INT-007 | `todo.md` checkbox integrity | Required checkbox format is enforced; deleted mandatory checklist entries are rejected. |
 | INT-008 | `objectives.yaml` logic validation | Build/goal/forbid constraints validated: bounds checks, no illegal intersections, valid moving-parts definitions. |
@@ -123,6 +123,8 @@ Priorities:
 | INT-110 | GPU OOM retry with particle reduction | Forced CUDA OOM triggers auto-retry at 75% particle count; `gpu_oom_retry` event emitted; result annotated `confidence: approximate`. |
 | INT-111 | `validate_and_price` FEM material gate | `validate_and_price` rejects parts whose `material_id` lacks FEM fields when `fem_enabled: true` and `backend: genesis`. |
 | INT-112 | Genesis rigid-body mode: backend ignores FEM/fluid config | Running with default backend (`genesis`) ignores `fluids`, `fluid_objectives`, `stress_objectives`, and `fem_enabled` if not specified; existing benchmarks pass unchanged. |
+| INT-113 | Electronics planner explicit submission gate | Electronics planner must emit explicit `submit_plan` (`TOOL_START`) with `node_type=electronics_planner`; after submission, episode must reach `PLANNED` (and must not transition to `FAILED`). Missing submission fails closed. |
+| INT-114 | Benchmark planner explicit submission gate | Benchmark planner must emit explicit `submit_plan` (`TOOL_START`) with `node_type=benchmark_planner`; after submission, episode must reach `PLANNED` (and must not transition to `FAILED`). Missing submission fails closed. |
 | INT-120 | Circuit validation pre-gate | `validate_circuit()` must pass (no short circuits, no floating nodes, total draw ≤ PSU rating) before physics simulation proceeds; simulation rejected otherwise. |
 | INT-121 | Short circuit detection | Circuit with near-zero resistance path across supply triggers `FAILED_SHORT_CIRCUIT` with branch current in result. |
 | INT-122 | Overcurrent supply detection | Circuit total draw exceeding `max_current_a` triggers `FAILED_OVERCURRENT_SUPPLY`; validation reports total draw vs PSU rating. |
@@ -255,7 +257,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-002 | Trigger real run via API; verify worker-side execution evidence and controller non-execution. | Patching remote FS client or executor calls. |
 | INT-003 | Use two real session IDs via HTTP file APIs and assert isolation. | Calling router/helper methods directly in-process. |
 | INT-004 | Send parallel simulate requests over HTTP; assert serialized execution from timings/logs. Ensure build scripts use `PartMetadata` class. | Mocking simulation lock/semaphore logic. |
-| INT-005 | Submit with missing engineer-planner artifacts through API and assert rejection, then run engineer workflow planner flows (mechanical + electronics) over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` and correct planner `node_type` before planner completion; assert missing submission trace cannot transition to success-like statuses. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
+| INT-005 | Submit with missing engineer-planner artifacts through API and assert rejection, then run engineer planner flow over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` and `node_type=engineer_planner`; after submission, assert episode reaches `PLANNED` and not `FAILED`. Assert missing submission trace cannot transition to success-like statuses. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
 | INT-008 | Upload invalid `objectives.yaml` via API and assert logic/bounds failure. | Constructing model objects without API path. |
@@ -336,6 +338,8 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-110 | (Requires GPU env) Force CUDA OOM conditions; assert retry at reduced particle count and `gpu_oom_retry` event. | Mocking CUDA allocator only. |
 | INT-111 | Submit part with FEM-missing `PartMetadata` via `validate_and_price` API when genesis+FEM; assert rejection. | Calling validation function directly with dict. |
 | INT-112 | Run existing rigid-body benchmark with default configuration; assert Genesis is used and success is unchanged despite fluids/FEM config being present in system but not active for the benchmark. | Importing backend and toggling flags in unit test. |
+| INT-113 | Run electronics-planner flow over controller APIs and assert traces include `TOOL_START submit_plan` with `node_type=electronics_planner`; after submission, episode must reach `PLANNED` and not `FAILED`; missing submission must not reach success-like status. | Mocking planner node returns or checking only status without trace-level `submit_plan` evidence. |
+| INT-114 | Run benchmark-planner flow over controller APIs and assert traces include `TOOL_START submit_plan` with `node_type=benchmark_planner`; after submission, episode must reach `PLANNED` and not `FAILED`; missing submission must not reach success-like status. | Mocking benchmark planner internals or asserting only terminal status without planner submission trace evidence. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
 | INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
 | INT-122 | Submit circuit exceeding PSU `max_current_a` via API; assert `FAILED_OVERCURRENT_SUPPLY` with total draw reported. | Comparing current values in unit test. |
@@ -392,7 +396,7 @@ This section exists to force implementation as true integration tests, not unit 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
-- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-073, INT-101..INT-112, INT-120..INT-128.
+- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-073, INT-101..INT-114, INT-120..INT-128.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 - `tests/integration/agent/p1/`: INT-181, INT-182, INT-183.

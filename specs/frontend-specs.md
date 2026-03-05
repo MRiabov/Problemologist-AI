@@ -64,6 +64,13 @@ By default, agents' reasoning is hidden, however users are able to expand it. [C
 3. Reasoning is expected to appear incrementally while an agent is running (streaming/polling updates), not only after workflow completion.
 4. `View reasoning` controls visibility only; it does not change backend capture behavior.
 5. If debugging/eval mode requires reasoning and backend returns zero reasoning traces for a running/completed episode, UI must show explicit telemetry-missing state (not silently appear successful).
+6. Reasoning traces should preserve backend metadata (`reasoning_step_index`, `reasoning_source`) when present, and use it for ordering/presentation.
+
+##### Context and compaction telemetry contract
+
+1. Frontend shows context usage from episode metadata (`additional_info.context_usage.used_tokens/max_tokens`, plus utilization ratio when present) in chat/workspace surfaces.
+2. Frontend renders `conversation_length_exceeded` trace events in the timeline with compaction details from event metadata.
+3. Missing reasoning in reasoning-required modes may show a UI warning, but run validity remains a backend fail-closed decision.
 
 ### Interrupting the worker
 
@@ -156,7 +163,7 @@ Tool activity contract:
 
 If the model will fail, the user will be informed "The model has failed a tool call."
 
-The user will be able to see the model context window as well as % from the total context length.
+The user will be able to see the model context window as well as % from the total context length, using backend-provided context usage telemetry.
 
 #### Adding context
 

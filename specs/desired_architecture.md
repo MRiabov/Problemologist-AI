@@ -600,6 +600,7 @@ Reasoning and tool observability are strict runtime contracts:
 4. We do not fabricate reasoning traces from synthetic defaults or inferred placeholders. If no reasoning payload is produced by the LM/runtime, the run is marked as missing required telemetry.
 5. For debugging/benchmark dataset modes, reasoning telemetry is fail-closed: a planner/execution stage that requires reasoning traces and produces none must not transition to success-like statuses.
 6. `trace_type` values such as `LLM_END` are observability event labels, not workflow termination signals. Episode termination is controlled only by workflow outcomes (success/failure/timeout/cancel).
+7. Reasoning traces should carry optional metadata `reasoning_step_index` and `reasoning_source` for deterministic ordering/provenance in frontend and evaluations.
 
 ### Filesystem
 
@@ -682,7 +683,7 @@ defaults:
     deny: []
 
 agents:
-  engineering_planner:
+  engineer_planner:
     read:
       allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
       deny: []
@@ -690,7 +691,7 @@ agents:
       allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
-  engineering_cad_implementer:
+  engineer_coder:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: []
@@ -698,7 +699,7 @@ agents:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
 
-  engineering_reviewer:
+  engineer_reviewer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: []
@@ -714,7 +715,7 @@ agents:
       allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
-  benchmark_cad_implementer:
+  benchmark_coder:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: []
@@ -730,7 +731,7 @@ agents:
       allow: ["reviews/review-round-*/review.md"]
       deny: []
 
-  cots_search_subagent:
+  cots_search:
     read:
       allow: ["parts.db", "journal.md", "skills/**", "utils/**"]
       deny: []
@@ -738,13 +739,45 @@ agents:
       allow: ["journal.md"]
       deny: []
 
-  skill_creator_learner:
+  skill_agent:
     read:
-      allow: ["skill-creator/**", "skills/**", "journal.md", "reviews/**"]
+      allow: ["skills/**", "journal.md", "reviews/**"]
       deny: []
     write:
       allow: ["skills/**", "journal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "script.py", "reviews/**"]
+
+  journalling_agent:
+    read:
+      allow: ["**"]
+      deny: [".git/**", ".env", "**/secrets/**"]
+    write:
+      allow: ["journal.md"]
+      deny: ["**"]
+
+  electronics_planner:
+    read:
+      allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+      deny: []
+    write:
+      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
+      deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+
+  electronics_engineer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      deny: []
+    write:
+      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
+      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+
+  electronics_reviewer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      deny: []
+    write:
+      allow: ["reviews/review-round-*/review.md"]
+      deny: []
 ```
 
 #### Immutability validation
@@ -915,7 +948,7 @@ Rules:
 Base frontmatter shape:
 
 ```yaml
-agent_role: engineering_mechanical_coder # or engineering_electrical_coder / benchmark_cad_coder
+agent_role: engineer_coder # or electronics_engineer / benchmark_coder
 reasons: [cost, weight] # one or more reasons
 summary: "Why the current plan cannot be implemented as written"
 evidence:
@@ -943,6 +976,8 @@ If the CAD agent refuses the plan, either of `confirm_plan_refusal`, `reject_pla
 ### Token compression
 
 As the agent will near its token generation limits, they will compress their old memory by a summarizing agent.
+Compaction is token-based (not character-based) and configured in `config/agents_config.yaml` via `llm.context_compaction_threshold_tokens`.
+Runtime persists/broadcasts canonical context telemetry in `metadata.additional_info.context_usage` with `{used_tokens, max_tokens, utilization_ratio}`.
 
 ### Skills
 
@@ -1111,6 +1146,7 @@ The agents' file must correspond to roughly the structure detailed above, with a
 <!-- Note: it may be interesting that the implementer could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
+If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `objectives.yaml` and must not silently mutate those constraints.
 
 #### Benchmark Generator with Engineer handover
 
@@ -1404,12 +1440,22 @@ As usual, the reviews will be strictly typed.
 2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
 3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
 
+### Clarification: agents outputs will *never* be parsed via text heuristics.
+
+Code is not to fall back to heuristic text parsing from agents; except of tools.
+
+If the agent is to record structured output or an enum, it'll record it as an enum.
+
 ### Agents hard fail cases
 
 The agents will fail on the following cases:
 1. Timeout (configurable per agent, mostly 300s)
 2. Max turns reached (for example, 150 turns (realistic with modern LLMs))
 3. Exceeded some credits usage (e.g. 400k tokens input and output).
+4. LLM loop-detection guard triggered:
+    - If the same normalized failure fingerprint repeats for `N` consecutive retries, fail the stage.
+    - Fingerprint is based on exception class/message plus latest LM output preview (or empty preview).
+    - This guard is local to the node runtime and does not depend on DB episode counters, so local/CLI runs also terminate deterministically.
 
 The user is able to have the agent continue for another number of turns.
 
@@ -1418,6 +1464,7 @@ All settings are configurable per-agent in @config/agents_config.yaml and should
 #### Agents retry as much as possible
 
 Clarification: models will retry until their quota is exceeded, as in one cases in the parent section. Until then, whatever execution environment (meaning, a failed tool call, an invalid script they've written); they must retry. 
+Retries are still fail-closed by loop-detection and timeout guards; repeated identical failures must not spin forever.
 
 ### Steerability
 
@@ -2335,6 +2382,7 @@ We use LangFuse for LLM observability. We will use a Railway template for deploy
 Langfuse is deployed locally/on Railway.
 
 For deeper observability, e.g. requirements like "fasteners were used in at least 70% of cases", store fastener usage in the application database.
+Per-call LM usage is forwarded to Langfuse observations (`input_tokens`, `output_tokens`, `total_tokens`, model, and cost when available) for deterministic attribution.
 
 #### ID model and linkage
 
@@ -2393,6 +2441,7 @@ We track the following structured domain events to compute the evaluation metric
 21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
+24. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
 
 <!-- 20. Metric for "Jamming Rate"
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
@@ -2407,6 +2456,18 @@ Notably, outside of just events, we want to track crucial numbers; especially fo
 ##### Tracking seeds
 
 In addition, we track randomization seed and variant events for every run (static variant id, runtime seed). Needed for robustness/flakiness metrics.
+We persist lineage fields in episode metadata and DB for both benchmark generation and engineer execution:
+
+- `seed_id`: canonical source item id.
+- `seed_dataset`: dataset/source path or identifier.
+- `seed_match_method`: enum describing linkage strategy (`runtime_explicit`, `exact_task`, `no_exact_task_match`, `ambiguous_exact_task`).
+- `generation_kind`: enum describing run origin (`seeded`, `derived`, `seeded_eval`, `integration_test`, `cots_search`, `skill_agent`).
+- `parent_seed_id`: direct lineage parent (for derived runs).
+
+Integration/test tagging is part of the same metadata contract:
+
+- `is_integration_test`: boolean marker set by integration runtime mode.
+- `integration_test_id`: canonical `INT-xxx` id inferred from task/session where available.
 
 #### Metrics
 
@@ -2492,6 +2553,7 @@ To further avoid any issues, we will use Beartype for type checking.
 ### Schema autogeneration
 
 We autogenerate python schemas, keeping in sync to the workers. We keep schemas defined in the Controller app; worker-light, worker-heavy, and frontend inherit them (for now). We have git hooks that implement the model.
+Trace schema contract includes optional reasoning metadata fields (`reasoning_step_index`, `reasoning_source`) and generated clients must preserve those fields.
 
 ## "Workbenches" - manufacturability verification
 
@@ -2511,6 +2573,11 @@ As said, "agents will live inside of a filesystem". The agents will generate and
 The following agents can expose the same tool API surface: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`.
 
 Actual read/write/edit access is enforced per-role via `config/agents_config.yaml` path rules. A tool call targeting a forbidden path is rejected by policy (deterministic permission error).
+
+Submission/review handoff tools are also ReAct-callable where relevant:
+
+- `submit_plan()` for planner roles.
+- `submit_for_review(Compound)` for CAD implementer/coder roles.
 
 1. Benchmark Planner: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
 2. Benchmark Generator: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
@@ -2590,6 +2657,7 @@ Note - used by default by
 1. Validate planner-required files for the planner role (engineering planner/electronics planner/benchmark planner).
 2. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
 3. Be mandatory before planner completion/handoff.
+4. Be the only valid planner completion gate: planner transitions are `PLANNED` when `ok=true`, and `FAILED` when validation fails.
 
 #### Exact tools logic
 
@@ -2624,6 +2692,7 @@ So:
 ##### submit_for_review(compound: Compound)
 
 The CAD engineer agent run `simulate(),` will ask a reviewer agent to review. If already the environment was already/recently simulated, the cache will hit and will skip directly to the review.
+Reviewer entry requires a successful `submit_for_review()` tool trace with structured success payload; otherwise the stage rejects/fails (fail-closed).
 
 #### Dealing with latency
 
@@ -2730,7 +2799,7 @@ The repository should be in a monorepo structure and as follows:
 
 ```text
 config/
-evals/
+dataset/evals/
 frontend/
 worker_light/
 worker_heavy/
@@ -2791,6 +2860,9 @@ The temporal
 The APIs are to be strict. OpenAPI schemas will be autogenerated on git commit hooks of controller and `schemathesis` will fuzz API endpoints. We have strict schemas for: worker-light <-> controller, worker-heavy <-> controller, worker-light <-> worker heavy and frontend <-> controller.
 
 We use Pydantic, and we use Beartype for hard type checking.
+Node runtime execution requires non-empty `session_id`; missing runtime identity is a hard error.
+Unsupported agent role/type is rejected explicitly (no fallback role mapping).
+`agent_name` is a strict `AgentName` enum across API request models, orchestration nodes, filesystem policy, and eval runtime contracts.
 
 ### Batch support as a first-class citizen
 
