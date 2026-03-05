@@ -98,12 +98,13 @@ async def test_check_steering():
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
+@patch("controller.agent.nodes.planner.PlannerNode._get_latest_submit_plan_result")
 @patch("controller.agent.nodes.planner.PlannerNode._run_program")
 @patch(
     "worker_heavy.utils.file_validation.validate_node_output", return_value=(True, [])
 )
 async def test_planner_node_steer_context(
-    mock_validate, mock_run_program, mock_record_events
+    mock_validate, mock_run_program, mock_get_submit, mock_record_events
 ):
     from controller.agent.nodes.planner import planner_node
 
@@ -148,6 +149,10 @@ async def test_planner_node_steer_context(
             mock_prediction,
             {"plan.md": "plan", "todo.md": "todo"},
             "\nJournal",
+        )
+        mock_get_submit.return_value = (
+            MagicMock(ok=True, status="submitted", errors=[]),
+            None,
         )
 
         await planner_node(state)

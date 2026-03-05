@@ -19,10 +19,14 @@ def mock_worker():
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.electronics_planner.record_worker_events")
+@patch(
+    "controller.agent.nodes.electronics_planner."
+    "ElectronicsPlannerNode._get_latest_submit_plan_result"
+)
 @patch("controller.agent.nodes.electronics_planner.ElectronicsPlannerNode._run_program")
 @patch("controller.agent.nodes.electronics_planner.SharedNodeContext")
 async def test_electronics_planner_node_logic(
-    mock_ctx_cls, mock_run_program, mock_record_events, mock_worker
+    mock_ctx_cls, mock_run_program, mock_get_submit, mock_record_events, mock_worker
 ):
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -48,6 +52,10 @@ async def test_electronics_planner_node_logic(
         {"plan.md": "New electrical plan", "todo.md": "- [ ] Wire it"},
         "\n[Electronics Planner] Summary",
     )
+    mock_get_submit.return_value = (
+        MagicMock(ok=True, status="submitted", errors=[]),
+        None,
+    )
 
     state = AgentState(
         task="Build robot", plan="Mechanical plan", session_id="test-session"
@@ -67,10 +75,14 @@ async def test_electronics_planner_node_logic(
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.electronics_planner.record_worker_events")
+@patch(
+    "controller.agent.nodes.electronics_planner."
+    "ElectronicsPlannerNode._get_latest_submit_plan_result"
+)
 @patch("controller.agent.nodes.electronics_planner.ElectronicsPlannerNode._run_program")
 @patch("controller.agent.nodes.electronics_planner.SharedNodeContext")
 async def test_electronics_planner_node_failure(
-    mock_ctx_cls, mock_run_program, mock_record_events, mock_worker
+    mock_ctx_cls, mock_run_program, mock_get_submit, mock_record_events, mock_worker
 ):
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -87,6 +99,7 @@ async def test_electronics_planner_node_failure(
 
     # Mock _run_program return value: (None, {}, journal_entry)
     mock_run_program.return_value = (None, {}, "\nMax retries reached.")
+    mock_get_submit.return_value = (None, "submit_plan() tool trace not found")
 
     state = AgentState(task="Build robot", session_id="test-session")
 
@@ -94,3 +107,42 @@ async def test_electronics_planner_node_failure(
 
     assert result.status == AgentStatus.FAILED
     assert "Max retries reached." in result.journal
+
+
+@pytest.mark.asyncio
+@patch(
+    "controller.agent.nodes.electronics_planner."
+    "ElectronicsPlannerNode._get_latest_submit_plan_result"
+)
+@patch("controller.agent.nodes.electronics_planner.ElectronicsPlannerNode._run_program")
+@patch("controller.agent.nodes.electronics_planner.SharedNodeContext")
+async def test_electronics_planner_fails_when_submit_plan_not_observed(
+    mock_ctx_cls, mock_run_program, mock_get_submit
+):
+    mock_pm = MagicMock()
+    mock_pm.render.return_value = "Rendered prompt"
+
+    from controller.agent.nodes.base import SharedNodeContext
+
+    mock_ctx = SharedNodeContext.create(
+        worker_light_url="http://worker",
+        session_id="test-session",
+        agent_role=AgentName.ELECTRONICS_PLANNER,
+    )
+    mock_ctx.pm = mock_pm
+    mock_ctx.worker_client.exists = AsyncMock(return_value=False)
+    mock_ctx_cls.create.return_value = mock_ctx
+
+    mock_prediction = MagicMock(summary="Finished electronics planning.")
+    mock_run_program.return_value = (
+        mock_prediction,
+        {"plan.md": "plan", "todo.md": "todo"},
+        "\nJournal",
+    )
+    mock_get_submit.return_value = (None, "submit_plan() tool trace not found")
+
+    state = AgentState(task="Build robot", session_id="test-session")
+    result = await electronics_planner_node(state)
+
+    assert result.status == AgentStatus.FAILED
+    assert "submit_plan validation failed" in result.journal

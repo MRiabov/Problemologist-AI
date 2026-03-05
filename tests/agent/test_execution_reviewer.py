@@ -15,6 +15,12 @@ def mock_worker():
         instance = mock.return_value
         instance.read_file = AsyncMock(return_value="# Mock content")
         instance.exists = AsyncMock(return_value=True)
+        instance.simulate = AsyncMock(
+            return_value=MagicMock(
+                success=True, message="Goal achieved.", confidence=1.0
+            )
+        )
+        instance.write_file = AsyncMock(return_value=True)
         yield instance
 
 
@@ -65,3 +71,24 @@ async def test_execution_reviewer_node_reject(mock_run, mock_worker):
     assert result.status == AgentStatus.CODE_REJECTED
     assert "Simulation failed" in result.feedback
     assert "Critic Decision: reject_code" in result.journal
+
+
+@pytest.mark.asyncio
+@patch("controller.agent.nodes.execution_reviewer.ExecutionReviewerNode._run_program")
+async def test_execution_reviewer_fails_closed_when_script_missing(
+    mock_run, mock_worker
+):
+    mock_run.return_value = (
+        MagicMock(
+            review=ReviewResult(decision=ReviewDecision.APPROVED, reason="Looks good.")
+        ),
+        [],
+        "\nExecution Reviewer Journal",
+    )
+    mock_worker.exists = AsyncMock(return_value=False)
+
+    state = AgentState(task="Build a part", journal="", session_id="test-session")
+    result = await execution_reviewer_node(state)
+
+    assert result.status == AgentStatus.CODE_REJECTED
+    assert "script.py missing" in result.feedback

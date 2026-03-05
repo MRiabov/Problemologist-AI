@@ -72,4 +72,29 @@ describe('ActionCard', () => {
     );
     expect(screen.getByText('config.yaml')).toBeInTheDocument();
   });
+
+  it('extracts path from nested kwargs payload', () => {
+    render(
+      <EpisodeProvider>
+        <ActionCard
+          trace={mockTrace('read_file', JSON.stringify({ kwargs: { path: '/workspace/objectives.yaml' } }))}
+          setActiveArtifactId={vi.fn()}
+        />
+      </EpisodeProvider>
+    );
+    expect(screen.getByText('objectives.yaml')).toBeInTheDocument();
+  });
+
+  it('shows directory name for list_files path', () => {
+    render(
+      <EpisodeProvider>
+        <ActionCard
+          trace={mockTrace('list_files', JSON.stringify({ kwargs: { path: '/workspace/skills/' } }))}
+          setActiveArtifactId={vi.fn()}
+        />
+      </EpisodeProvider>
+    );
+    expect(screen.getByText('skills')).toBeInTheDocument();
+    expect(screen.getByText('Viewed')).toBeInTheDocument();
+  });
 });

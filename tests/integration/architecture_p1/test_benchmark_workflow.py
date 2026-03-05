@@ -81,12 +81,21 @@ async def test_benchmark_planner_cad_reviewer_path():
         )
         episode_data = EpisodeResponse.model_validate(episode_resp.json())
         artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
+        traces = episode_data.traces or []
+        submit_plan_traces = [
+            t
+            for t in traces
+            if t.trace_type.value == "TOOL_START" and t.name == "submit_plan"
+        ]
 
         assert any(p.endswith("plan.md") for p in artifact_paths), (
             f"plan.md missing. Artifacts: {artifact_paths}"
         )
         assert any(p.endswith("objectives.yaml") for p in artifact_paths), (
             f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        )
+        assert submit_plan_traces, (
+            "Expected planner to call submit_plan before workflow completion."
         )
         assert any("reviews/" in p for p in artifact_paths) or any(
             p.endswith("validation_results.json") for p in artifact_paths

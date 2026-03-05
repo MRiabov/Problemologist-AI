@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 
@@ -5,6 +6,8 @@ import httpx
 import pytest
 import yaml
 
+from controller.api.schemas import BenchmarkGenerateRequest, BenchmarkGenerateResponse
+from shared.enums import EpisodeStatus, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -15,6 +18,7 @@ from shared.models.schemas import (
     ObjectivesSection,
     ObjectivesYaml,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
@@ -233,6 +237,53 @@ async def test_int_005_mandatory_artifacts_gate(
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert not data.success
         assert "assembly_definition.yaml is missing" in data.message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_005_planner_flow_emits_submit_plan_trace():
+    """INT-005: Planner execution emits explicit submit_plan tool trace before handoff."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        request = BenchmarkGenerateRequest(
+            prompt="INT-005 submit_plan execution trace contract.",
+            backend=SimulatorBackendType.GENESIS,
+        )
+        resp = await client.post(
+            f"{CONTROLLER_URL}/benchmark/generate", json=request.model_dump()
+        )
+        assert resp.status_code in [200, 202], resp.text
+
+        generate_response = BenchmarkGenerateResponse.model_validate(resp.json())
+        session_id = str(generate_response.session_id)
+        target_statuses = {EpisodeStatus.PLANNED, EpisodeStatus.FAILED}
+        status = None
+        for _ in range(90):
+            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
+            if status_resp.status_code == 404:
+                await asyncio.sleep(1)
+                continue
+            assert status_resp.status_code == 200, status_resp.text
+            status_payload = status_resp.json()
+            status = EpisodeStatus(status_payload["status"])
+            if status in target_statuses:
+                break
+            await asyncio.sleep(1)
+
+        assert status == EpisodeStatus.PLANNED, (
+            f"Expected planner to reach PLANNED for INT-005, got {status}."
+        )
+
+        episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{session_id}")
+        assert episode_resp.status_code == 200, episode_resp.text
+        traces = episode_resp.json().get("traces", [])
+        has_submit_plan = any(
+            trace.get("trace_type") == TraceType.TOOL_START.value
+            and trace.get("name") == "submit_plan"
+            for trace in traces
+        )
+        assert has_submit_plan, (
+            "Expected TOOL_START submit_plan trace in planner flow before handoff."
+        )
 
 
 @pytest.mark.integration_p0

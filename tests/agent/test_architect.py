@@ -5,7 +5,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.nodes.base import SharedNodeContext
 from controller.agent.nodes.planner import planner_node
-from controller.agent.state import AgentState
+from controller.agent.state import AgentState, AgentStatus
 from shared.enums import AgentName
 
 
@@ -35,10 +35,11 @@ Test Overview
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
+@patch("controller.agent.nodes.planner.PlannerNode._get_latest_submit_plan_result")
 @patch("controller.agent.nodes.planner.dspy.ReAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_logic(
-    mock_ctx_cls, mock_react_cls, mock_record_events, mock_llm
+    mock_ctx_cls, mock_react_cls, mock_get_submit, mock_record_events, mock_llm
 ):
     # Create a real SharedNodeContext but with mocked attributes to satisfy beartype
     mock_pm = MagicMock()
@@ -62,6 +63,7 @@ async def test_architect_node_logic(
         agent_role=AgentName.ENGINEER_PLANNER,
     )
     mock_ctx.pm = mock_pm
+    mock_ctx.fs = mock_fs
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
     mock_ctx_cls.create.return_value = mock_ctx
@@ -70,6 +72,10 @@ async def test_architect_node_logic(
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(summary="Finished planning.")
     mock_react_cls.return_value = mock_program
+    mock_get_submit.return_value = (
+        MagicMock(ok=True, status="submitted", errors=[]),
+        None,
+    )
 
     state = AgentState(task="Build a robot", session_id="test-session")
 
@@ -84,10 +90,11 @@ async def test_architect_node_logic(
 
 @pytest.mark.asyncio
 @patch("controller.agent.nodes.planner.record_worker_events")
+@patch("controller.agent.nodes.planner.PlannerNode._get_latest_submit_plan_result")
 @patch("controller.agent.nodes.planner.dspy.ReAct")
 @patch("controller.agent.nodes.planner.SharedNodeContext")
 async def test_architect_node_fallback(
-    mock_ctx_cls, mock_react_cls, mock_record_events, mock_llm
+    mock_ctx_cls, mock_react_cls, mock_get_submit, mock_record_events, mock_llm
 ):
     mock_pm = MagicMock()
     mock_pm.render.return_value = "Rendered prompt"
@@ -102,6 +109,7 @@ async def test_architect_node_fallback(
         agent_role=AgentName.ENGINEER_PLANNER,
     )
     mock_ctx.pm = mock_pm
+    mock_ctx.fs = mock_fs
     mock_ctx.get_callbacks = MagicMock(return_value=[])
 
     mock_ctx_cls.create.return_value = mock_ctx
@@ -110,12 +118,45 @@ async def test_architect_node_fallback(
     mock_program = MagicMock()
     mock_program.return_value = MagicMock(summary="Failed planning.")
     mock_react_cls.return_value = mock_program
+    mock_get_submit.return_value = (None, "submit_plan() tool trace not found")
 
     state = AgentState(task="Build a robot", session_id="test-session")
 
     result = await planner_node(state)
 
     # Should be rejected because validation fails (after retries)
-    from controller.agent.state import AgentStatus
+    assert result.status == AgentStatus.FAILED
+
+
+@pytest.mark.asyncio
+@patch("controller.agent.nodes.planner.PlannerNode._get_latest_submit_plan_result")
+@patch("controller.agent.nodes.planner.PlannerNode._run_program")
+@patch("controller.agent.nodes.planner.SharedNodeContext")
+async def test_planner_fails_when_submit_plan_not_observed(
+    mock_ctx_cls, mock_run_program, mock_get_submit
+):
+    mock_pm = MagicMock()
+    mock_pm.render.return_value = "Rendered prompt"
+
+    mock_ctx = SharedNodeContext.create(
+        worker_light_url="http://worker",
+        session_id="test-session",
+        agent_role=AgentName.ENGINEER_PLANNER,
+    )
+    mock_ctx.pm = mock_pm
+    mock_ctx.worker_client.exists = AsyncMock(return_value=False)
+    mock_ctx_cls.create.return_value = mock_ctx
+
+    mock_prediction = MagicMock(summary="Finished planning.")
+    mock_run_program.return_value = (
+        mock_prediction,
+        {"plan.md": "plan", "todo.md": "todo"},
+        "\nJournal",
+    )
+    mock_get_submit.return_value = (None, "submit_plan() tool trace not found")
+
+    state = AgentState(task="Build a robot", session_id="test-session")
+    result = await planner_node(state)
 
     assert result.status == AgentStatus.FAILED
+    assert "submit_plan validation failed" in result.journal

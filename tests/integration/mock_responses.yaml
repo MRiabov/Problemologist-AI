@@ -792,7 +792,7 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Test benchmark", overwrite: true }
+            tool_args: { path: "todo.md", content: "- [x] Test benchmark", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -846,6 +846,8 @@ scenarios:
                   runtime_jitter_enabled: true
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "Creating a simple benchmark."
             plan:
@@ -899,7 +901,7 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build part", overwrite: true }
+            tool_args: { path: "todo.md", content: "- [x] Build part", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -932,6 +934,8 @@ scenarios:
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "INT-180 planning artifacts generated."
       - node: electronics_planner
@@ -1255,7 +1259,7 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build frame", overwrite: true }
+            tool_args: { path: "todo.md", content: "- [x] Build frame", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1276,6 +1280,20 @@ scenarios:
                 final_assembly: []
               overwrite: true
             expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [5,5,5]}
+                  build_zone: {min: [-20,-20,0], max: [20,20,20]}
+                simulation_bounds: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object: {label: "projectile_ball", shape: "sphere", start_position: [0,0,2], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "Electronics-eval plan generated."
       - node: electronics_planner
