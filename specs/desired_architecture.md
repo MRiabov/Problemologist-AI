@@ -2612,6 +2612,13 @@ The rest (submitting the work, testing for design validity, etc) is called via a
 
 Note: runtime is DSPy.ReAct-first with LangGraph-managed architecture. We do not use LangChain `create_agent`; orchestration is implemented in our LangGraph workflows and Python runtime wrappers.
 
+ReAct is the first-line correction loop:
+1. The model produces output and calls tools.
+2. If a tool/validation response is not acceptable, ReAct continues the same node loop and retries.
+3. The node converges on valid handoff output or exits due to hard limits (timeout/turn budget/token budget).
+
+LangGraph handoff loopbacks are a defensive fail-closed control plane, not the primary retry mechanism. They handle node exit with invalid handoff state by routing back to the producing node with explicit validation logs/feedback.
+
 #### The "tools" as Python functions - Utils
 
 I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
@@ -2657,7 +2664,8 @@ Note - used by default by
 1. Validate planner-required files for the planner role (engineering planner/electronics planner/benchmark planner).
 2. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
 3. Be mandatory before planner completion/handoff.
-4. Be the only valid planner completion gate: planner transitions are `PLANNED` when `ok=true`, and `FAILED` when validation fails.
+4. Be the only valid planner completion gate: planner transitions are `PLANNED` only when `ok=true`.
+5. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
 #### Exact tools logic
 
@@ -2692,7 +2700,9 @@ So:
 ##### submit_for_review(compound: Compound)
 
 The CAD engineer agent run `simulate(),` will ask a reviewer agent to review. If already the environment was already/recently simulated, the cache will hit and will skip directly to the review.
-Reviewer entry requires a successful `submit_for_review()` tool trace with structured success payload; otherwise the stage rejects/fails (fail-closed).
+Reviewer entry requires a successful `submit_for_review()` tool trace with structured success payload.
+If this precondition is missing/invalid when coder exits, orchestration routes back to coder with `REJECTED` state plus validation logs (fail-closed loopback).
+If reviewer exits without a structured `review_decision`, orchestration routes back to reviewer with explicit invalid-output feedback (fail-closed loopback).
 
 #### Dealing with latency
 
