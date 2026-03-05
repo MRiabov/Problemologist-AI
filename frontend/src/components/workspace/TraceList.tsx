@@ -13,6 +13,7 @@ interface TraceListProps {
   assets: AssetResponse[] | undefined;
   theme: string;
   showReasoning: boolean;
+  reasoningRequired?: boolean;
   onAssetClick: (id: string | null) => void;
   addToContext: (item: ContextItem) => void;
   onShowFeedback: (traceId: number, score: number) => void;
@@ -23,6 +24,7 @@ export const TraceList = memo(({
   assets,
   theme,
   showReasoning,
+  reasoningRequired = false,
   onAssetClick,
   addToContext,
   onShowFeedback
@@ -37,8 +39,26 @@ export const TraceList = memo(({
     );
   }
 
+  const hasReasoningTraces = traces.some(
+    (t) => t.trace_type === TraceType.LLM_END && !!t.name
+  );
+  const toolCalls = traces.filter((t) => t.trace_type === TraceType.TOOL_START);
+  const showReasoningTelemetryWarning =
+    reasoningRequired &&
+    showReasoning &&
+    toolCalls.length >= 3 &&
+    !hasReasoningTraces;
+
   return (
     <>
+      {showReasoningTelemetryWarning && (
+        <div
+          data-testid="reasoning-telemetry-warning"
+          className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 mb-3"
+        >
+          Reasoning telemetry is required for this run, but no reasoning traces have been persisted yet.
+        </div>
+      )}
       {traces.map((trace, index) => {
           const type = trace.trace_type as string;
           const isLegacyThought = type === "llm_thought" || type === "thought";
@@ -91,6 +111,28 @@ export const TraceList = memo(({
                     <div className="text-[11px] text-red-400 font-mono whitespace-pre-wrap">
                         {trace.content || "An error occurred."}
                     </div>
+                </div>
+              );
+          }
+          if (trace.trace_type === TraceType.EVENT && trace.name === "conversation_length_exceeded") {
+              const meta = (trace.metadata_vars || {}) as any;
+              const previousLength = Number(meta.previous_length);
+              const compactedLength = Number(meta.compacted_length);
+              const threshold = Number(meta.threshold);
+              const hasCompactedLength = Number.isFinite(compactedLength) && compactedLength > 0;
+              return (
+                <div
+                  key={trace.id}
+                  data-testid="conversation-length-exceeded"
+                  className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30 my-2"
+                >
+                  <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="text-[11px] text-amber-700 whitespace-pre-wrap">
+                    Conversation length limit exceeded{Number.isFinite(threshold) ? ` (${threshold})` : ""}; compacted context
+                    {Number.isFinite(previousLength) && hasCompactedLength
+                      ? ` from ${previousLength} to ${compactedLength} characters.`
+                      : "."}
+                  </div>
                 </div>
               );
           }

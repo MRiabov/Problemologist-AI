@@ -111,6 +111,19 @@ export default function ChatWindow({
     (isPlanned || !!selectedEpisode.plan) &&
     selectedEpisode.status !== EpisodeStatus.COMPLETED &&
     selectedEpisode.status !== EpisodeStatus.FAILED;
+  const reasoningRequired = !!selectedEpisode?.metadata_vars?.additional_info?.reasoning_required;
+  const contextUsage = useMemo(() => {
+    const usage = selectedEpisode?.metadata_vars?.additional_info?.context_usage as
+      | Record<string, unknown>
+      | undefined;
+    if (!usage) return null;
+    const used = Number(usage.used_chars);
+    const max = Number(usage.max_chars);
+    if (!Number.isFinite(used) || !Number.isFinite(max) || max <= 0) {
+      return null;
+    }
+    return { used, max, pct: (used / max) * 100 };
+  }, [selectedEpisode?.metadata_vars]);
 
   // Stable handlers
   const handleShowFeedback = useCallback((traceId: number, score: number) => {
@@ -131,9 +144,18 @@ export default function ChatWindow({
       
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-white/5 bg-background shrink-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-[11px] font-bold tracking-tight opacity-70">Engineer Workspace</span>
+            {contextUsage && (
+              <span
+                data-testid="context-usage-indicator"
+                className="text-[10px] font-mono px-2 py-1 rounded-md border border-border bg-muted/30 text-muted-foreground"
+                title="Current context usage"
+              >
+                Ctx {Math.round(contextUsage.used).toLocaleString()} / {Math.round(contextUsage.max).toLocaleString()} ({contextUsage.pct.toFixed(1)}%)
+              </span>
+            )}
           </div>
           <button
             data-testid="view-reasoning-toggle"
@@ -192,6 +214,7 @@ export default function ChatWindow({
                     assets={stableAssets}
                     theme={theme}
                     showReasoning={viewReasoning}
+                    reasoningRequired={reasoningRequired}
                     onAssetClick={handleAssetClick}
                     addToContext={addToContext}
                     onShowFeedback={handleShowFeedback}

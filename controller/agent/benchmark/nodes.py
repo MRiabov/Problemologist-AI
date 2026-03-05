@@ -9,9 +9,13 @@ import structlog
 import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
+from controller.agent.config import settings
+from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.observability.middleware_helper import record_events
 from shared.enums import AgentName, SessionStatus
 from shared.models.schemas import ReviewResult
+from shared.observability.schemas import ConversationLengthExceededEvent
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -429,7 +433,8 @@ class BenchmarkSummarizerNode(BaseNode):
     """
 
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-        if not state.journal or len(state.journal) < 5000:
+        threshold = settings.context_compaction_threshold_chars
+        if not state.journal or len(state.journal) < threshold:
             return state
 
         logger.info(
@@ -451,6 +456,33 @@ class BenchmarkSummarizerNode(BaseNode):
         )
 
         summarized = getattr(prediction, "summarized_journal", state.journal)
+
+        if state.episode_id:
+            try:
+                await record_events(
+                    episode_id=state.episode_id,
+                    events=[
+                        ConversationLengthExceededEvent(
+                            previous_length=len(state.journal),
+                            threshold=threshold,
+                            compacted_length=len(summarized),
+                            agent_id=AgentName.JOURNALLING_AGENT.value,
+                            user_session_id=str(state.session.session_id),
+                            episode_id=state.episode_id,
+                        )
+                    ],
+                )
+                await update_episode_context_usage(
+                    episode_id=state.episode_id,
+                    used_chars=len(summarized),
+                    max_chars=threshold,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "conversation_length_event_emit_failed",
+                    error=str(exc),
+                    episode_id=state.episode_id,
+                )
 
         logger.info(
             "benchmark_journal_summarized",

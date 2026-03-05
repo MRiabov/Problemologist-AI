@@ -2,6 +2,8 @@ import structlog
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from controller.agent.config import settings as agent_settings
+from controller.agent.context_usage import update_episode_context_usage
 from controller.config.settings import settings
 from controller.graph.steerability_node import check_steering, steerability_node
 from shared.enums import AgentName
@@ -26,8 +28,24 @@ async def should_continue(state: AgentState) -> str:
     if await check_steering(state) == AgentName.STEER:
         return AgentName.STEER
 
+    if state.episode_id:
+        try:
+            threshold = agent_settings.context_compaction_threshold_chars
+            journal_len = len(state.journal)
+            await update_episode_context_usage(
+                episode_id=state.episode_id,
+                used_chars=journal_len,
+                max_chars=threshold,
+            )
+        except Exception as exc:
+            logger.warning(
+                "context_usage_event_emit_failed",
+                error=str(exc),
+                episode_id=state.episode_id,
+            )
+
     # Check for summarization need if journal is long
-    if len(state.journal) > 5000:
+    if len(state.journal) > agent_settings.context_compaction_threshold_chars:
         return AgentName.JOURNALLING_AGENT
 
     if state.turn_count >= settings.max_agent_turns:

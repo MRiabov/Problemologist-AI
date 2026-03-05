@@ -10,13 +10,17 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
+from sqlalchemy import func, select
 
 from controller.agent.config import settings
 from controller.agent.prompt_manager import PromptManager
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
-from controller.observability.langfuse import init_tracing
+from controller.observability.langfuse import (
+    init_tracing,
+    report_usage_to_current_observation,
+)
 from controller.persistence.models import Trace
 from shared.enums import AgentName, TraceType
 from shared.models.schemas import CodeReference, TraceMetadata
@@ -155,6 +159,9 @@ class BaseNode:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
                     nonlocal live_reasoning_step_idx
+                    reasoning_keys = ("next_thought", "thought", "reasoning")
+                    sanitized_kwargs = dict(kwargs)
+
                     if db_callback and node_name:
                         live_thought = extract_live_thought(*args, **kwargs)
                         if live_thought:
@@ -165,6 +172,8 @@ class BaseNode:
                                 source="live_tool_loop",
                             )
                             live_reasoning_step_idx += 1
+                    for key in reasoning_keys:
+                        sanitized_kwargs.pop(key, None)
 
                     # WP10: Explicitly record tool start
                     trace_id = 0
@@ -175,9 +184,9 @@ class BaseNode:
                             input_dict = {}
                             if args:
                                 input_dict["args"] = [str(a) for a in args]
-                            if kwargs:
+                            if sanitized_kwargs:
                                 input_dict["kwargs"] = {
-                                    k: str(v) for k, v in kwargs.items()
+                                    k: str(v) for k, v in sanitized_kwargs.items()
                                 }
                             input_str = json.dumps(input_dict)
                         except Exception:
@@ -186,8 +195,8 @@ class BaseNode:
                         # WP10: Special handling for common tools to ensure success
                         # in mocks
                         if tool_name == "write_file":
-                            if "overwrite" not in kwargs:
-                                kwargs["overwrite"] = True
+                            if "overwrite" not in sanitized_kwargs:
+                                sanitized_kwargs["overwrite"] = True
                         elif tool_name == "edit_file":
                             # Ensure we don't fail on missing files if we can help it
                             pass
@@ -204,11 +213,11 @@ class BaseNode:
                         if asyncio.iscoroutinefunction(func):
                             # WP10: Use run_coroutine_threadsafe on the main loop
                             future = asyncio.run_coroutine_threadsafe(
-                                func(*args, **kwargs), self.ctx.main_loop
+                                func(*args, **sanitized_kwargs), self.ctx.main_loop
                             )
                             result = future.result(timeout=60)
                         else:
-                            result = func(*args, **kwargs)
+                            result = func(*args, **sanitized_kwargs)
 
                         # WP10: Explicitly record tool success
                         if db_callback and trace_id:
@@ -246,8 +255,207 @@ class BaseNode:
                 return json.dumps(result)
         return str(result)
 
+    @staticmethod
+    def _serialize_llm_output(output: Any) -> str | dict[str, Any] | list[Any]:
+        """Serialize LM output payloads into structlog-friendly primitives."""
+        if isinstance(output, (str, int, float, bool)) or output is None:
+            return str(output)
+        if isinstance(output, (dict, list)):
+            return output
+        with suppress(Exception):
+            if hasattr(output, "model_dump"):
+                return output.model_dump(mode="json")
+        return str(output)
+
+    @staticmethod
+    def _extract_completion_tokens(usage: Any) -> int | None:
+        """Extract output/completion tokens from usage payloads."""
+        if usage is None:
+            return None
+        if hasattr(usage, "model_dump"):
+            with suppress(Exception):
+                usage = usage.model_dump(mode="json")
+        if not isinstance(usage, dict):
+            return None
+
+        for key in ("completion_tokens", "output_tokens"):
+            value = usage.get(key)
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+
+        total_tokens = usage.get("total_tokens")
+        prompt_tokens = usage.get("prompt_tokens")
+        if isinstance(total_tokens, (int, float)) and isinstance(
+            prompt_tokens, (int, float)
+        ):
+            diff = int(total_tokens - prompt_tokens)
+            if diff >= 0:
+                return diff
+        return None
+
+    @staticmethod
+    def _extract_latency_ms(response: Any) -> float | None:
+        """Extract per-call latency in milliseconds from provider response."""
+        if response is None:
+            return None
+
+        response_ms = getattr(response, "response_ms", None)
+        if isinstance(response_ms, (int, float)):
+            return float(response_ms)
+
+        hidden_params = getattr(response, "_hidden_params", None)
+        if isinstance(hidden_params, dict):
+            hidden_response_ms = hidden_params.get("response_ms")
+            if isinstance(hidden_response_ms, (int, float)):
+                return float(hidden_response_ms)
+        return None
+
+    @classmethod
+    def _compute_tpm(cls, *, usage: Any, response: Any) -> float | None:
+        """Compute tokens-per-minute using completion/output tokens and latency."""
+        completion_tokens = cls._extract_completion_tokens(usage)
+        latency_ms = cls._extract_latency_ms(response)
+        if completion_tokens is None or latency_ms is None or latency_ms <= 0:
+            return None
+        return round((completion_tokens * 60000.0) / latency_ms, 2)
+
+    def _log_lm_history_delta(
+        self,
+        *,
+        node_type: AgentName,
+        attempt: int,
+        history_start_idx: int | None,
+        db_callback: DatabaseCallbackHandler | None = None,
+    ) -> None:
+        """Emit one log event per newly completed LM generation."""
+        if history_start_idx is None:
+            return
+
+        history = getattr(self.ctx.dspy_lm, "history", None)
+        if not isinstance(history, list):
+            return
+        if history_start_idx >= len(history):
+            return
+
+        for absolute_idx, entry in enumerate(
+            history[history_start_idx:], history_start_idx + 1
+        ):
+            if not isinstance(entry, dict):
+                logger.info(
+                    "llm_response_generated",
+                    node_type=str(node_type),
+                    session_id=self.ctx.session_id,
+                    attempt=attempt,
+                    lm_call_index=absolute_idx,
+                    output=str(entry),
+                )
+                continue
+
+            raw_outputs = entry.get("outputs")
+            if isinstance(raw_outputs, list):
+                outputs = [self._serialize_llm_output(item) for item in raw_outputs]
+            elif raw_outputs is None:
+                outputs = []
+            else:
+                outputs = [self._serialize_llm_output(raw_outputs)]
+
+            logger.info(
+                "llm_response_generated",
+                node_type=str(node_type),
+                session_id=self.ctx.session_id,
+                attempt=attempt,
+                lm_call_index=absolute_idx,
+                model=entry.get("model"),
+                response_model=entry.get("response_model"),
+                usage=entry.get("usage"),
+                cost=entry.get("cost"),
+                latency_ms=self._extract_latency_ms(entry.get("response")),
+                tpm=self._compute_tpm(
+                    usage=entry.get("usage"),
+                    response=entry.get("response"),
+                ),
+                outputs=outputs,
+            )
+
+            report_usage_to_current_observation(
+                usage=entry.get("usage"),
+                model=entry.get("response_model") or entry.get("model"),
+                cost=entry.get("cost"),
+            )
+
+            if not db_callback:
+                continue
+
+            # Emit live reasoning traces from LM outputs so UI can show
+            # intermediate thinking even before node completion.
+            for output in outputs:
+                reasoning_chunks: list[str] = []
+                if isinstance(output, str):
+                    for key in ("Thought", "Reasoning"):
+                        matches = re.findall(
+                            rf"{key}\s*:\s*(.+?)(?=\n[A-Za-z_]+\s*:|\Z)",
+                            output,
+                            flags=re.IGNORECASE | re.DOTALL,
+                        )
+                        reasoning_chunks.extend(
+                            [
+                                m.strip()
+                                for m in matches
+                                if isinstance(m, str) and m.strip()
+                            ]
+                        )
+                elif isinstance(output, dict):
+                    for key in ("thought", "next_thought", "reasoning"):
+                        value = output.get(key)
+                        if isinstance(value, str) and value.strip():
+                            reasoning_chunks.append(value.strip())
+
+                for chunk in reasoning_chunks:
+                    text = chunk.strip()
+                    if not text:
+                        continue
+                    if len(text) > 2000:
+                        text = text[:2000] + "..."
+                    db_callback.record_reasoning_text_sync(
+                        node_name=str(node_type),
+                        reasoning_text=text,
+                        source="lm_history",
+                    )
+
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
         return self.ctx.get_database_recorder(session_id)
+
+    async def _get_latest_trace_id(self, recorder: DatabaseCallbackHandler) -> int:
+        """Return latest trace id for an episode (0 if none)."""
+        async with recorder.session_factory() as db:
+            result = await db.execute(
+                select(func.max(Trace.id)).where(
+                    Trace.episode_id == recorder.episode_id
+                )
+            )
+            latest = result.scalar_one_or_none()
+            return int(latest or 0)
+
+    async def _count_reasoning_traces_since(
+        self,
+        recorder: DatabaseCallbackHandler,
+        *,
+        node_type: AgentName,
+        min_trace_id: int,
+    ) -> int:
+        """Count persisted reasoning traces for a node after a trace-id watermark."""
+        async with recorder.session_factory() as db:
+            result = await db.execute(
+                select(func.count(Trace.id)).where(
+                    Trace.episode_id == recorder.episode_id,
+                    Trace.trace_type == TraceType.LLM_END,
+                    Trace.name == str(node_type),
+                    Trace.id > min_trace_id,
+                )
+            )
+            return int(result.scalar_one() or 0)
 
     async def _get_latest_submit_plan_result(
         self, expected_node_type: AgentName
@@ -500,9 +708,13 @@ class BaseNode:
             # to preserve the "Action: tool_name(args)" structural prompt.
             current_instr = getattr(signature_cls, "instructions", "")
             if program_cls is dspy.ReAct:
+                react_reasoning_instr = (
+                    "For every tool call, include a concise `next_thought` kwarg "
+                    "with your immediate reasoning for that call."
+                )
                 # Prepend for context, but keep structural instructions at the end
                 signature_cls = signature_cls.with_instructions(
-                    f"{instructions}\n\n{current_instr}"
+                    f"{instructions}\n\n{react_reasoning_instr}\n\n{current_instr}"
                 )
             else:
                 signature_cls = signature_cls.with_instructions(instructions)
@@ -538,6 +750,11 @@ class BaseNode:
         try:
             while retry_count < max_retries:
                 try:
+                    trace_watermark = (
+                        await self._get_latest_trace_id(db_callback)
+                        if db_callback
+                        else 0
+                    )
                     # WP10: Explicitly record node start for UI
                     if db_callback:
                         node_input = (
@@ -554,6 +771,35 @@ class BaseNode:
                         logger.info(
                             f"{node_type}_dspy_invoke_start",
                             session_id=self.ctx.session_id,
+                        )
+                        lm_history = getattr(self.ctx.dspy_lm, "history", None)
+                        history_start_idx = (
+                            len(lm_history) if isinstance(lm_history, list) else None
+                        )
+                        history_stream_stop = asyncio.Event()
+                        history_stream_task: asyncio.Task | None = None
+
+                        async def stream_lm_history_live(start_idx: int | None) -> None:
+                            """Continuously flush newly generated LM history rows."""
+                            if start_idx is None:
+                                return
+                            next_idx = start_idx
+                            while not history_stream_stop.is_set():
+                                self._log_lm_history_delta(
+                                    node_type=node_type,
+                                    attempt=retry_count + 1,
+                                    history_start_idx=next_idx,
+                                    db_callback=db_callback,
+                                )
+                                current_history = getattr(
+                                    self.ctx.dspy_lm, "history", None
+                                )
+                                if isinstance(current_history, list):
+                                    next_idx = len(current_history)
+                                await asyncio.sleep(0.2)
+
+                        history_stream_task = asyncio.create_task(
+                            stream_lm_history_live(history_start_idx)
                         )
                         # Add a timeout to prevent infinite hangs in DSPy ReAct
                         try:
@@ -577,6 +823,17 @@ class BaseNode:
                                 f"timed out after {dspy_timeout}s"
                             )
                             raise RuntimeError(msg) from err
+                        finally:
+                            history_stream_stop.set()
+                            if history_stream_task:
+                                with suppress(Exception):
+                                    await history_stream_task
+                            self._log_lm_history_delta(
+                                node_type=node_type,
+                                attempt=retry_count + 1,
+                                history_start_idx=history_start_idx,
+                                db_callback=db_callback,
+                            )
                         logger.info(
                             f"{node_type}_dspy_invoke_complete",
                             session_id=self.ctx.session_id,
@@ -632,6 +889,28 @@ class BaseNode:
                             )
                         await asyncio.sleep(1)  # Backoff to prevent log explosion
                         continue
+
+                    if settings.require_reasoning_traces and db_callback:
+                        reasoning_count = await self._count_reasoning_traces_since(
+                            db_callback,
+                            node_type=node_type,
+                            min_trace_id=trace_watermark,
+                        )
+                        if reasoning_count == 0:
+                            logger.error(
+                                "reasoning_telemetry_missing",
+                                node_type=str(node_type),
+                                episode_id=str(episode_id),
+                                attempt=retry_count + 1,
+                            )
+                            retry_count += 1
+                            if retry_count >= max_retries:
+                                raise ValueError(
+                                    f"Node {node_type} produced no reasoning traces "
+                                    "while REQUIRE_REASONING_TRACES is enabled."
+                                )
+                            await asyncio.sleep(1)
+                            continue
 
                     return prediction, artifacts, journal_entry
 

@@ -123,6 +123,9 @@ async def create_test_episode(request: AgentRunRequest):
 
         metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
         metadata.worker_session_id = request.session_id
+        metadata.additional_info["reasoning_required"] = (
+            settings.require_reasoning_traces
+        )
         metadata = apply_integration_test_metadata(
             metadata,
             is_integration_test=settings.is_integration_test,
@@ -190,6 +193,7 @@ async def run_agent(request: AgentRunRequest):
 
     metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
     metadata.worker_session_id = request.session_id
+    metadata.additional_info["reasoning_required"] = settings.require_reasoning_traces
     metadata.episode_type = EpisodeType.ENGINEER
     metadata = apply_integration_test_metadata(
         metadata,

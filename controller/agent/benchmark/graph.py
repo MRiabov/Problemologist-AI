@@ -12,6 +12,8 @@ from langgraph.graph import END, START, StateGraph
 from opentelemetry import trace
 from sqlalchemy import select
 
+from controller.agent.config import settings as agent_settings
+from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.initialization import initialize_agent_files
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
@@ -273,8 +275,24 @@ def define_graph():
         if await check_steering(state) == AgentName.STEER:
             return AgentName.STEER
 
+        if state.episode_id:
+            try:
+                threshold = agent_settings.context_compaction_threshold_chars
+                journal_len = len(state.journal or "")
+                await update_episode_context_usage(
+                    episode_id=state.episode_id,
+                    used_chars=journal_len,
+                    max_chars=threshold,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "context_usage_event_emit_failed",
+                    error=str(exc),
+                    episode_id=state.episode_id,
+                )
+
         # Check for summarization need
-        if len(state.journal or "") > 5000:
+        if len(state.journal or "") > agent_settings.context_compaction_threshold_chars:
             return AgentName.JOURNALLING_AGENT
 
         if state.review_round > 10:
