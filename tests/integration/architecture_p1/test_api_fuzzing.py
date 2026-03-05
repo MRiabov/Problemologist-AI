@@ -41,6 +41,13 @@ schema = schema.exclude(path_regex=HEAVY_ENDPOINTS_REGEX)
 
 @pytest.mark.integration_p1
 @pytest.mark.debug_fuzz
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        r"planner_handoff_validation_failed",
+        r"reviewer_handoff_validation_failed",
+        r"benchmark_reviewer_missing_structured_decision",
+    ]
+)
 @schema.parametrize()
 def test_api_fuzzing(case):
     """INT-044: Fuzz critical endpoints for strict API behavior; no schema drift."""

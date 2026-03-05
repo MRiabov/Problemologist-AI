@@ -5,6 +5,7 @@ import pytest
 
 from controller.agent.benchmark.graph import (
     _validate_planner_handoff,
+    _validate_reviewer_handoff,
     define_graph,
     run_generation_session,
 )
@@ -185,3 +186,33 @@ async def test_validate_planner_handoff_fails_when_submit_plan_missing(
     )
 
     assert any(str(err).startswith("planner_submission:") for err in errors)
+
+
+@pytest.mark.asyncio
+@patch("controller.agent.benchmark.graph._get_latest_submit_for_review_result")
+async def test_validate_reviewer_handoff_fails_when_submit_for_review_missing(
+    mock_submission_result,
+):
+    mock_submission_result.return_value = (
+        None,
+        "submit_for_review() tool trace not found",
+    )
+
+    errors = await _validate_reviewer_handoff(session_id=uuid4())
+
+    assert errors == ["reviewer_submission: submit_for_review() tool trace not found"]
+
+
+@pytest.mark.asyncio
+@patch("controller.agent.benchmark.graph._get_latest_submit_for_review_result")
+async def test_validate_reviewer_handoff_fails_when_submit_for_review_not_successful(
+    mock_submission_result,
+):
+    mock_submission_result.return_value = (
+        MagicMock(success=False),
+        None,
+    )
+
+    errors = await _validate_reviewer_handoff(session_id=uuid4())
+
+    assert errors == ["reviewer_submission: submit_for_review() returned success=false"]
