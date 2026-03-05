@@ -1,5 +1,11 @@
 from controller.agent.benchmark.graph import define_graph
-from controller.agent.graph import graph as engineering_graph
+from controller.agent.graph import (
+    electronics_planner_graph,
+    engineer_planner_graph,
+)
+from controller.agent.graph import (
+    graph as engineering_graph,
+)
 from controller.config.settings import settings
 from shared.cots.agent import create_cots_search_agent
 from shared.enums import AgentName
@@ -19,10 +25,15 @@ def create_agent_graph(
     """
     # WP10: Remove LangChain-based Langfuse callbacks
 
+    if agent_name == AgentName.ENGINEER_PLANNER:
+        return engineer_planner_graph, None
+
+    if agent_name == AgentName.ELECTRONICS_PLANNER:
+        return electronics_planner_graph, None
+
     if (
         agent_name
         in [
-            AgentName.ENGINEER_PLANNER,
             AgentName.ENGINEER_CODER,
             AgentName.ENGINEER_REVIEWER,
         ]

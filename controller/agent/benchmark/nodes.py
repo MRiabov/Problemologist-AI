@@ -57,7 +57,9 @@ class BenchmarkPlannerSignature(dspy.Signature):
     journal = dspy.InputField()
     review_feedback = dspy.InputField()
     reasoning = dspy.OutputField()
-    plan: RandomizationStrategy = dspy.OutputField()
+    plan = dspy.OutputField(
+        desc=("High-level randomization strategy summary. Can be plain text or JSON.")
+    )
 
 
 @type_check
@@ -164,7 +166,40 @@ class BenchmarkPlannerNode(BaseNode):
             )
             return state
 
-        state.plan = prediction.plan
+        raw_plan = getattr(prediction, "plan", None)
+        normalized_plan: RandomizationStrategy | None = None
+
+        if isinstance(raw_plan, RandomizationStrategy):
+            normalized_plan = raw_plan
+        elif isinstance(raw_plan, dict):
+            with suppress(Exception):
+                normalized_plan = RandomizationStrategy.model_validate(raw_plan)
+        elif isinstance(raw_plan, str):
+            raw_plan_text = raw_plan.strip()
+            if raw_plan_text:
+                with suppress(Exception):
+                    normalized_plan = RandomizationStrategy.model_validate_json(
+                        raw_plan_text
+                    )
+                if normalized_plan is None:
+                    with suppress(Exception):
+                        normalized_plan = RandomizationStrategy.model_validate(
+                            yaml.safe_load(raw_plan_text)
+                        )
+
+        if normalized_plan is None:
+            state.plan = None
+            state.session.validation_logs.append(
+                "benchmark_planner failed: plan output is missing or invalid. "
+                "Retry planner and call submit_plan() with schema-valid artifacts."
+            )
+            state.journal += (
+                "\n[Planner] Invalid or missing structured plan output. "
+                "Retry required." + journal_entry
+            )
+            return state
+
+        state.plan = normalized_plan
         state.journal += (
             f"\n[Planner] {getattr(prediction, 'reasoning', '')}\n{journal_entry}"
         )

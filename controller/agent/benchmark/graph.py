@@ -18,6 +18,11 @@ from controller.agent.context_usage import (
     estimate_text_tokens,
     update_episode_context_usage,
 )
+from controller.agent.execution_limits import (
+    evaluate_agent_hard_fail,
+    mark_episode_execution_window_start,
+    persist_episode_turn_count,
+)
 from controller.agent.initialization import initialize_agent_files
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
@@ -140,16 +145,14 @@ async def _validate_planner_handoff(
     Enforces:
     - Required planner files are present and structurally valid.
     - Explicit planner submission (`submit_plan`) succeeded.
+    - Structured planner output (`plan`) is present and schema-valid.
     - User-provided objective overrides are reflected in objectives constraints.
     """
     from shared.models.schemas import ObjectivesYaml
+    from shared.simulation.schemas import RandomizationStrategy
     from worker_heavy.utils.file_validation import validate_node_output
 
     errors: list[str] = []
-    if plan is None:
-        errors.append(
-            "planner_execution: benchmark planner produced no structured plan output"
-        )
     files_to_check = ("plan.md", "todo.md", "objectives.yaml")
     artifacts: dict[str, str] = {}
 
@@ -205,11 +208,7 @@ async def _validate_planner_handoff(
     submission, submission_error = await _get_latest_planner_submission_result(
         session_id
     )
-    if submission is None:
-        errors.append(
-            f"planner_submission: {submission_error or 'submit_plan() call missing'}"
-        )
-    else:
+    if submission is not None:
         if not submission.ok or submission.status != "submitted":
             errors.append("planner_submission: submit_plan() did not return submitted")
         if submission.node_type != AgentName.BENCHMARK_PLANNER:
@@ -218,6 +217,28 @@ async def _validate_planner_handoff(
             )
         if submission.errors:
             errors.extend([f"planner_submission: {msg}" for msg in submission.errors])
+    elif submission_error:
+        errors.append(f"planner_submission: {submission_error}")
+
+    if plan is None:
+        errors.append(
+            "planner_execution: missing structured planner output. "
+            "Retry planner and call submit_plan() before handoff."
+        )
+    elif isinstance(plan, dict):
+        is_plan_valid = False
+        with suppress(Exception):
+            RandomizationStrategy.model_validate(plan)
+            is_plan_valid = True
+        if not is_plan_valid:
+            errors.append(
+                "planner_execution: planner output does not match RandomizationStrategy"
+            )
+    elif not isinstance(plan, RandomizationStrategy):
+        errors.append(
+            "planner_execution: planner output has unexpected type; "
+            "expected RandomizationStrategy"
+        )
 
     return errors
 
@@ -307,9 +328,15 @@ def define_graph():
         ):
             return AgentName.JOURNALLING_AGENT
 
-        if state.review_round > 10:
-            logger.warning(
-                "max_review_rounds_reached", session_id=state.session.session_id
+        hard_fail = await evaluate_agent_hard_fail(
+            agent_name=AgentName.BENCHMARK_CODER,
+            episode_id=state.episode_id,
+            turn_count=state.turn_count,
+        )
+        if hard_fail.should_fail:
+            state.session.status = SessionStatus.FAILED
+            state.session.validation_logs.append(
+                hard_fail.message or "Agent hard-fail limit reached."
             )
             return AgentName.SKILL_AGENT
 
@@ -427,6 +454,13 @@ async def _execute_graph_streaming(
             # Determine new status
             new_status = final_state.session.status
             should_stop = False
+            if normalized_node_name is not None:
+                final_state.turn_count = int(final_state.turn_count) + 1
+                with suppress(Exception):
+                    await persist_episode_turn_count(
+                        episode_id=session_id,
+                        turn_count=final_state.turn_count,
+                    )
 
             if normalized_node_name == AgentName.BENCHMARK_PLANNER:
                 # Handle both object and dict types for the plan
@@ -486,6 +520,7 @@ async def _execute_graph_streaming(
                     prompt=prompt,
                     plan=final_state.plan,
                     journal=final_state.journal,
+                    turn_count=final_state.turn_count,
                 )
             except Exception as e:
                 logger.error("failed_to_update_episode_persistence", error=str(e))
@@ -585,6 +620,7 @@ async def run_generation_session(
         simulation_result=None,
         review_feedback=None,
         review_round=0,
+        turn_count=0,
         plan=None,
         messages=[],
     )
@@ -617,6 +653,7 @@ async def run_generation_session(
         )
 
     app = define_graph()
+    await mark_episode_execution_window_start(session_id)
 
     try:
         # 3. Stream execution and checkpoint
@@ -881,6 +918,7 @@ async def _update_episode_persistence(
     prompt: str,
     plan: Any = None,
     journal: str | None = None,
+    turn_count: int | None = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
     from controller.persistence.models import Episode
@@ -903,6 +941,10 @@ async def _update_episode_persistence(
                 episode.status = EpisodeStatus.RUNNING
 
             metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+            if turn_count is not None:
+                additional = dict(metadata.additional_info or {})
+                additional["turn_count"] = int(turn_count)
+                metadata.additional_info = additional
             # Keep detailed_status aligned with terminal EpisodeStatus values so
             # UI polling that prefers detailed_status can detect completion.
             if new_status == SessionStatus.ACCEPTED:
@@ -973,6 +1015,7 @@ async def continue_generation_session(
             if metadata.custom_objectives
             else {}
         )
+        saved_turn_count = int((metadata.additional_info or {}).get("turn_count") or 0)
 
         # Reconstruct session with status 'EXECUTING' so define_graph routes to 'coder'
         session = GenerationSession(
@@ -996,11 +1039,13 @@ async def continue_generation_session(
         simulation_result=None,
         review_feedback=None,
         review_round=0,
+        turn_count=saved_turn_count,
         plan=None,
         messages=[],
     )
 
     app = define_graph()
+    await mark_episode_execution_window_start(session_id)
 
     try:
         final_state = await _execute_graph_streaming(

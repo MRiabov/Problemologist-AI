@@ -2,6 +2,7 @@ import ast
 import asyncio
 import json
 import re
+import sys
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -14,6 +15,11 @@ from sqlalchemy import func, select
 
 from controller.agent.config import settings
 from controller.agent.context_usage import update_episode_context_usage
+from controller.agent.execution_limits import (
+    AgentHardFailError,
+    accumulate_episode_credit_usage,
+    evaluate_agent_hard_fail,
+)
 from controller.agent.prompt_manager import PromptManager
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -79,18 +85,55 @@ class SharedNodeContext:
             # T025: Initialize native tracing
             init_tracing()
 
-            # T012: Initialize DSPy LM for Agent support
-            api_key = "dummy"
-            if settings.openai_api_key:
-                api_key = settings.openai_api_key
-
-            dspy_lm = dspy.LM(
-                f"openai/{settings.llm_model}",
-                api_key=api_key,
-                cache=False,
-                timeout=settings.llm_timeout_seconds,
-                max_tokens=settings.llm_max_tokens,
+            # T012: Initialize DSPy LM (LiteLLM-backed) for Agent support.
+            # Prefer explicit OpenRouter provider wiring over OpenAI-compatible routing.
+            api_base = settings.openai_api_base
+            use_openrouter = bool(settings.openrouter_api_key) or bool(
+                api_base and "openrouter.ai" in api_base
             )
+            model_name = settings.llm_model
+            if "/" in model_name and model_name.split("/", 1)[0] in {
+                "openai",
+                "openrouter",
+                "anthropic",
+                "azure",
+                "gemini",
+            }:
+                litellm_model = model_name
+            elif use_openrouter:
+                litellm_model = f"openrouter/{model_name}"
+            else:
+                litellm_model = f"openai/{model_name}"
+
+            api_key = (
+                (settings.openrouter_api_key or settings.openai_api_key)
+                if use_openrouter
+                else settings.openai_api_key
+            ) or "dummy"
+
+            # Respect repository configuration (config/agents_config.yaml) directly.
+            lm_max_tokens = settings.llm_max_tokens
+
+            lm_kwargs: dict[str, Any] = {
+                "api_key": api_key,
+                "cache": False,
+                "timeout": settings.llm_timeout_seconds,
+                "max_tokens": lm_max_tokens,
+            }
+            # Keep support for custom gateways and explicit compatibility endpoints.
+            if api_base:
+                lm_kwargs["api_base"] = api_base
+
+            logger.info(
+                "lm_client_initialized",
+                provider=("openrouter" if use_openrouter else "openai_compatible"),
+                model=litellm_model,
+                api_base=api_base,
+                planner_token_cap=lm_max_tokens
+                if "planner" in agent_role.value
+                else None,
+            )
+            dspy_lm = dspy.LM(litellm_model, **lm_kwargs)
 
         return cls(
             worker_light_url=worker_light_url,
@@ -316,6 +359,29 @@ class BaseNode:
         return None
 
     @staticmethod
+    def _extract_total_tokens(usage: Any) -> int | None:
+        """Extract total tokens from usage payloads."""
+        if usage is None:
+            return None
+        if hasattr(usage, "model_dump"):
+            with suppress(Exception):
+                usage = usage.model_dump(mode="json")
+        if not isinstance(usage, dict):
+            return None
+
+        total = usage.get("total_tokens")
+        if isinstance(total, int):
+            return total
+        if isinstance(total, float):
+            return int(total)
+
+        prompt = BaseNode._extract_prompt_tokens(usage)
+        completion = BaseNode._extract_completion_tokens(usage)
+        if prompt is not None and completion is not None:
+            return prompt + completion
+        return None
+
+    @staticmethod
     def _extract_latency_ms(response: Any) -> float | None:
         """Extract per-call latency in milliseconds from provider response."""
         if response is None:
@@ -414,6 +480,18 @@ class BaseNode:
                             episode_id=self.ctx.episode_id,
                             used_tokens=prompt_tokens,
                             max_tokens=settings.context_compaction_threshold_tokens,
+                        )
+                    )
+            if self.ctx.episode_id:
+                with suppress(Exception):
+                    usage = entry.get("usage")
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(
+                        accumulate_episode_credit_usage(
+                            episode_id=self.ctx.episode_id,
+                            input_tokens=self._extract_prompt_tokens(usage),
+                            output_tokens=self._extract_completion_tokens(usage),
+                            total_tokens=self._extract_total_tokens(usage),
                         )
                     )
 
@@ -731,7 +809,7 @@ class BaseNode:
         Returns (prediction, artifacts, journal_entry).
         """
         if max_retries is None:
-            max_retries = 1 if settings.is_integration_test else 3
+            max_retries = sys.maxsize
 
         from controller.agent.dspy_utils import WorkerInterpreter
         from worker_heavy.utils.file_validation import validate_node_output
@@ -813,6 +891,17 @@ class BaseNode:
         try:
             while retry_count < max_retries:
                 try:
+                    hard_fail = await evaluate_agent_hard_fail(
+                        agent_name=node_type,
+                        episode_id=episode_id,
+                        turn_count=getattr(state, "turn_count", None),
+                    )
+                    if hard_fail.should_fail:
+                        raise AgentHardFailError(
+                            hard_fail.code or "hard_fail",
+                            hard_fail.message or "Agent hard-fail limit reached.",
+                        )
+
                     trace_watermark = (
                         await self._get_latest_trace_id(db_callback)
                         if db_callback
@@ -842,8 +931,11 @@ class BaseNode:
                         history_stream_stop = asyncio.Event()
                         history_stream_task: asyncio.Task | None = None
 
+                        final_history_idx = history_start_idx
+
                         async def stream_lm_history_live(start_idx: int | None) -> None:
                             """Continuously flush newly generated LM history rows."""
+                            nonlocal final_history_idx
                             if start_idx is None:
                                 return
                             next_idx = start_idx
@@ -859,6 +951,7 @@ class BaseNode:
                                 )
                                 if isinstance(current_history, list):
                                     next_idx = len(current_history)
+                                    final_history_idx = next_idx
                                 await asyncio.sleep(0.2)
 
                         history_stream_task = asyncio.create_task(
@@ -894,7 +987,7 @@ class BaseNode:
                             self._log_lm_history_delta(
                                 node_type=node_type,
                                 attempt=retry_count + 1,
-                                history_start_idx=history_start_idx,
+                                history_start_idx=final_history_idx,
                                 db_callback=db_callback,
                             )
                         logger.info(
@@ -977,8 +1070,22 @@ class BaseNode:
 
                     return prediction, artifacts, journal_entry
 
+                except AgentHardFailError:
+                    raise
                 except Exception as err:
-                    logger.error(f"{node_type}_dspy_failed", error=str(err))
+                    last_lm_preview = None
+                    lm_history = getattr(self.ctx.dspy_lm, "history", None)
+                    if isinstance(lm_history, list) and lm_history:
+                        last_entry = lm_history[-1]
+                        if isinstance(last_entry, dict):
+                            last_lm_preview = str(last_entry.get("response"))[:600]
+                    logger.error(
+                        f"{node_type}_dspy_failed",
+                        error=str(err),
+                        retry_count=retry_count + 1,
+                        max_retries=max_retries,
+                        last_lm_preview=last_lm_preview,
+                    )
                     journal_entry += f"\n[System Error] {err}"
                     retry_count += 1
                     await asyncio.sleep(1)  # Backoff to prevent log explosion
