@@ -51,14 +51,13 @@ Take a look; I've written 50-60% of words here myself.
 4. **Verifies Dynamics:** Runs the simulation to ensure the object reaches the **"Green Zone" (Objective Zone)** within the time limit.
 5. **Repeats**:  The system iterates until the machine works as intended.
  
-
 ---
 
 ## **Slide 4: How and what existing solutions fail to do?**
 
 ### **The "Dual-Graph" Engine**
 
-LLMs are currently very successful in code and math because there is abundant data available for both domains; but not in engienering. We create an architecture that solves the data scarcity problem in engineering:
+LLMs are currently very successful in code and math because there is abundant data available for both domains; but not in engineering. We create an architecture that solves the data scarcity problem in engineering:
 
 1. **The Benchmark Generator (The "Problem-creator"):**
 * Synthetically generates millions of "Physics puzzles" (e.g., "Push block A into Green Zone B without tipping").

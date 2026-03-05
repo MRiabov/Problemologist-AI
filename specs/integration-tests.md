@@ -33,6 +33,8 @@ Additionally:
 9. Every `build123d` script used in tests must ensure every part has a `.metadata` attribute initialized with a `PartMetadata` or `CompoundMetadata` instance (imported from `shared.models.schemas`), following strict typing rules.
 10. Every JSON, YAML, XML is converted to models e.g. Pydantic models and only then assertions are happening against them (for test maintainability and explainability). If there is no model for a JSON or similar schema, add it.
 11. Tests must utilize state-based polling (e.g., waiting for specific API responses, DB states, or UI elements) rather than hardcoded sleeps or generic timeouts. This ensures tests are deterministic and fail-fast.
+12. Reviewer entry must be gated by a valid latest-revision handover artifact (`.manifests/review_manifest.json`) produced by python `submit_for_review(Compound)` after successful `validate_and_price` and `simulate`; tool-trace presence alone must never unlock review.
+13. `.manifests/**` is system-only metadata and is denied to all LLM agent roles by `agents_config.yaml` policy; tests must verify reviewer gating via API/state transitions and persisted artifacts, not by model-side file reads.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
@@ -87,9 +89,9 @@ Priorities:
 | INT-015 | Engineer handover immutability checks | Engineer cannot modify benchmark environment geometry (hash/checksum immutability checks across handover). |
 | INT-016 | Review decision schema gate | Reviewer output frontmatter supports only allowed decision values and required evidence fields. |
 | INT-017 | Plan refusal decision loop | Refusal requires proof; reviewer confirm/reject branches route correctly. |
-| INT-018 | `validate_and_price` integration gate | `simulate` and `submit_for_review` require manufacturability + pricing validation first. |
-| INT-019 | Cost/weight/build-zone hard failure | Submission/simulation blocked when design exceeds price, weight, or build-zone constraints. |
-| INT-020 | Simulation success/failure taxonomy | Goal hit, forbid hit, out-of-bounds, timeout, and instability are correctly classified in result payloads and events. |
+| INT-018 | `validate_and_price` integration gate | `simulate` and coder `submit_for_review(Compound)` are hard-blocked unless the latest `validate_and_price` for the same revision succeeded and produced valid handover artifacts (`validation_results.json`, `simulation_result.json`). `submit_for_review(Compound)` must then produce a valid latest-revision `.manifests/review_manifest.json`. No fallback or inferred success is allowed. |
+| INT-019 | Cost/weight/build-zone hard failure | Validation/simulation/review-submission are blocked when price, weight, or build-zone constraints fail, or when required handover artifacts are missing/invalid for the latest revision. Fail closed with explicit reason codes. |
+| INT-020 | Simulation success/failure taxonomy | Goal-hit, forbid-hit, out-of-bounds, timeout, and instability are correctly classified in response payloads/events; reviewer handoff eligibility is granted only for the goal-hit/green-zone success path. |
 | INT-021 | Runtime randomization robustness check | Multi-seed runtime jitter execution occurs and aggregates pass/fail statistics correctly. |
 | INT-022 | Motor overload + forcerange behavior | Force clamping behaves correctly; sustained overload produces `motor_overload` failure reason. |
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
@@ -108,7 +110,7 @@ Priorities:
 | INT-062 | Split-worker OpenAPI artifact contract | Generated worker API schema is either (a) merged light+heavy `worker_openapi.json` or (b) separate `worker_light_openapi.json` + `worker_heavy_openapi.json`; benchmark/simulation endpoints must not disappear from generated artifacts. |
 | INT-063 | Mounted path compatibility/read-only contract | `/utils`, `/skills`, `/reviews`, `/config` mounts are present and read-only across light/heavy worker surfaces; write attempts fail while workspace root remains writable. |
 | INT-070 | Mounted path traversal protection | Path traversal attempts against mounted/read-only paths are rejected deterministically (`403`) and do not allow escaping mount boundaries. |
-| INT-071 | Agent filesystem policy precedence + reviewer write scope | `agents_config.yaml` enforcement matches policy precedence (`deny` > `allow`, unmatched => deny, agent override over defaults) and reviewer write/edit is restricted to `reviews/review-round-*/review.md` only. |
+| INT-071 | Agent filesystem policy precedence + reviewer write scope | `agents_config.yaml` enforcement matches policy precedence (`deny` > `allow`, unmatched => deny, agent override over defaults), `.manifests/**` is denied to all agent roles (read/write), and reviewer write/edit is restricted to `reviews/review-round-*/review.md` only. |
 | INT-072 | `plan_refusal.md` validation + reviewer routing | Plan refusal requires valid `plan_refusal.md` frontmatter, role-specific reason enums, non-empty evidence body, supports multi-reason lists, and reviewer `confirm_plan_refusal` / `reject_plan_refusal` routes deterministically. |
 | INT-073 | Session/episode/child-ID observability linkage | Persisted records/events expose joinable linkage `user_session_id -> episode_id -> (simulation_run_id, cots_query_id, review_id)` without conflating IDs. |
 | INT-101 | Physics backend selection contract | Setting `physics.backend: "mujoco"` in config selects the MuJoCo backend; `"genesis"` selects Genesis. Default (`genesis`) is used when not specified. `simulation_backend_selected` event emitted. |
@@ -139,10 +141,10 @@ Priorities:
 
 | ID | Test | Required assertions |
 |---|---|---|
-| INT-031 | Benchmark planner -> CAD -> reviewer path | Full benchmark-generation flow validates artifacts, review loop, accepted handoff object integrity, and benchmark-planner `submit_plan` trace presence before planner handoff (`PLANNED`). |
-| INT-032 | Benchmark-to-engineer handoff package | Engineer receives expected bundle (`objectives.yaml`, environment geometry metadata, 24-view renders, moving-parts DOFs, runtime jitter metadata). |
-| INT-033 | Engineering full loop (planner/coder/reviewer) | Planner sets realistic budgets, coder implements, reviewer approves/rejects with typed decision and evidence. |
-| INT-034 | Reviewer evidence completeness | Review decisions include expected evidence fields (images viewed, files checked, etc.). |
+| INT-031 | Benchmark planner -> CAD -> reviewer path | Full benchmark-generation flow validates artifacts, review loop, accepted handoff object integrity, benchmark-planner `submit_plan` trace presence before planner handoff (`PLANNED`), and reviewer start only after valid latest-revision coder handover artifact (`.manifests/review_manifest.json`) exists. |
+| INT-032 | Benchmark-to-engineer handoff package | Engineer receives expected bundle (`objectives.yaml`, environment geometry metadata, 24-view renders, moving-parts DOFs, runtime jitter metadata); downstream reviewer gate must require latest-revision handover artifacts, not tool-trace presence alone. |
+| INT-033 | Engineering full loop (planner/coder/reviewer) | Planner sets realistic budgets and emits `submit_plan`; coder implements and calls python `submit_for_review(Compound)` only after passing latest-revision validation/simulation gates and manifest generation; reviewer approves/rejects with typed decision and evidence. |
+| INT-034 | Reviewer evidence completeness | Review decisions include expected evidence fields and valid handover manifest (`.manifests/review_manifest.json`) tied to the latest revision and successful simulation result. |
 | INT-035 | Materials config enforcement | Only materials defined in `manufacturing_config.yaml` are accepted by validation/simulation pipeline. |
 | INT-036 | Supported workbench methods | CNC, injection molding, and 3D print validation/pricing each function in integrated runs. |
 | INT-037 | Joint mapping to MJCF correctness | Build123d joint definitions map to expected MJCF constraints/actuators in integrated export/simulate flow. |
@@ -270,9 +272,9 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-015 | Attempt environment mutation in engineering flow and assert immutability rejection. | Unit-testing hash helper only. |
 | INT-016 | Submit invalid review frontmatter via API and assert strict decision rejection. | Parsing markdown frontmatter in isolation only. |
 | INT-017 | Exercise refusal + reviewer confirm/reject branch with real API transitions. | State-machine branch unit test with mocks only. |
-| INT-018 | Call simulate/submit endpoints without prior valid pricing and assert hard block. | Directly testing function precondition checks only. |
-| INT-019 | Submit overweight/overbudget/out-of-zone design through API and assert fail reasons. | Testing only local numeric comparison helpers. |
-| INT-020 | Execute scenarios over HTTP and assert failure taxonomy in response + events. Build scripts must include `PartMetadata` for all parts. | Mocking simulation result enums. |
+| INT-018 | Call `simulate` and coder review-submission endpoints without latest successful `validate_and_price` artifacts and assert deterministic hard block; then provide valid artifacts and assert unblock only when `submit_for_review(Compound)` emits valid latest-revision `.manifests/review_manifest.json`. | Directly testing function precondition checks only. |
+| INT-019 | Submit overweight/overbudget/out-of-zone or missing-artifact latest revision via API and assert fail-closed reason codes at validation/simulation/review-submission boundaries. | Testing only local numeric comparison helpers. |
+| INT-020 | Execute scenarios over HTTP and assert taxonomy in response + events, and assert reviewer handoff remains blocked for all non-goal-hit outcomes. Build scripts must include `PartMetadata` for all parts. | Mocking simulation result enums. |
 | INT-021 | Run multi-seed runtime jitter simulations via API and assert aggregated robustness output. | Single mocked seed result assertion. |
 | INT-022 | Run overload scenario in real simulation path and assert `motor_overload` behavior. | Synthetic return object with overload flag. |
 | INT-023 | Submit invalid fastener/joint setup via run flow and assert validation failure. Verify `PartMetadata` is used for joint definitions. | Unit-test of fastener rule function only. |
@@ -283,10 +285,10 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-028 | Fetch live OpenAPI from running service and validate real responses. | Static schema file lint without live calls. |
 | INT-029 | Use live endpoints with missing/invalid/valid API key headers. | Unit-test auth dependency in isolation only. |
 | INT-030 | Start long run and interrupt through API; assert worker cancellation and final state. | Mocking interrupt handler methods. |
-| INT-031 | Execute full benchmark planner->CAD->reviewer workflow over APIs. | Patching graph nodes in process. |
-| INT-032 | Execute handoff and verify produced package artifacts from real storage paths. | Handcrafted dict payload assertions. |
-| INT-033 | Run engineering planner/coder/reviewer loop end-to-end through services. | Node-level unit tests with mocked agent outputs. |
-| INT-034 | Submit real reviews and assert evidence completeness persisted in decision records. | Unit-test of review schema only. |
+| INT-031 | Execute full benchmark planner->CAD->reviewer workflow over APIs; assert planner `submit_plan` trace and reviewer start blocked until valid latest-revision `.manifests/review_manifest.json` exists. | Patching graph nodes in process. |
+| INT-032 | Execute handoff and verify produced package artifacts from real storage paths, including latest-revision review manifest validity checks used by reviewer gate (no trace-only fallback, no model-side manifest reads). | Handcrafted dict payload assertions. |
+| INT-033 | Run engineering planner/coder/reviewer loop end-to-end through services; assert planner/coder submission semantics (`submit_plan` vs python `submit_for_review(Compound)`), strict latest-revision preconditions, and fail-closed behavior on stale artifacts. | Node-level unit tests with mocked agent outputs. |
+| INT-034 | Submit real reviews and assert evidence completeness plus persisted `.manifests/review_manifest.json` linkage for the accepted/rejected latest revision, with refusal when manifest is stale/missing/invalid. | Unit-test of review schema only. |
 | INT-035 | Use disallowed material in run and assert pipeline rejection from integrated config. | Local config parser unit test only. |
 | INT-036 | Exercise CNC/injection/3DP through validation/pricing APIs with real artifacts. | Mocked workbench method returns. |
 | INT-037 | Produce assembly and assert exported MJCF joint/actuator mapping from run outputs. | Unit-test mapper function only. |
@@ -318,7 +320,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-063 | Attempt writes to mounted paths and writes to workspace root via live file APIs; assert read-only mounts and writable workspace behavior across worker surfaces. | Asserting config constants for mount paths without exercising container mounts. |
 | INT-064 | Execute COTS lookup and artifact handoff via APIs; assert persisted `catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`, normalized query snapshot, ordered candidates, and selected `part_id`s in events/records/artifacts. | Unit-testing metadata dataclass construction only. |
 | INT-070 | Attempt mounted-path traversal via live file APIs (e.g., `/utils/../...`); assert deterministic `403` and no cross-boundary access. | Path-normalization unit checks without exercising worker HTTP/file boundary. |
-| INT-071 | Execute per-agent file operations via live file APIs and assert `agents_config.yaml` precedence (`deny` > `allow`, unmatched deny, agent override) and reviewer-only write scope (`reviews/review-round-*/review.md`). | In-process path policy matcher and precedence helpers only. |
+| INT-071 | Execute per-agent file operations via live file APIs and assert `agents_config.yaml` precedence (`deny` > `allow`, unmatched deny, agent override), strict deny of `.manifests/**` to all agent roles, and reviewer-only write scope (`reviews/review-round-*/review.md`). | In-process path policy matcher and precedence helpers only. |
 | INT-072 | Submit refusal artifacts through real planner/reviewer flow; assert invalid/missing `plan_refusal.md`, invalid role reasons, or empty evidence are rejected; assert `confirm_plan_refusal`/`reject_plan_refusal` transitions. | Frontmatter parser-only tests without exercising orchestration route/state transitions. |
 | INT-073 | Execute real episode runs and assert persisted traces/events expose `user_session_id`, `episode_id`, `simulation_run_id`, `cots_query_id`, and `review_id` with joinable linkage. | Checking schema fields exist without runtime persistence assertions. |
 | INT-065 | Run skill-update path through live workflow; attempt >15-line overwrite/delete and assert safety guard (block/revert) + persisted safety event. | Git diff unit test with mocked repository state. |

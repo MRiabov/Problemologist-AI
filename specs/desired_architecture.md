@@ -637,6 +637,10 @@ Each agent starts with a template, roughly defined in [Starting folder structure
   - read: `skill-creator/SKILL.md`, existing `skills/**`, relevant journals/reviews/traces, git metadata
   - write: `skills/**` (subject to safety limits), `journal.md`, git commit metadata
 
+System-only metadata:
+- `.manifests/**` is reserved for deterministic handover/state metadata written by backend utilities.
+- All LLM agent roles are denied read/write/edit on `.manifests/**` via `config/agents_config.yaml`.
+
 Locking rule:
 
 - Before planner submission: planner may edit planner-owned files above.
@@ -668,6 +672,7 @@ Rules:
 4. Agent-specific rules override `defaults` (defaults are fallback only).
 5. Tool availability can be broad, but path permissions are enforced per role by this file.
 6. Reviewer role gets `write/edit` tools, but policy only allows writes under `reviews/review-round-*/`.
+7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
 
 Example (`config/agents_config.yaml`):
 
@@ -677,16 +682,16 @@ version: "1.0"
 defaults:
   read:
     allow: []
-    deny: []
+    deny: [".manifests/**"]
   write:
     allow: []
-    deny: []
+    deny: [".manifests/**"]
 
 agents:
   engineer_planner:
     read:
       allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
@@ -694,7 +699,7 @@ agents:
   engineer_coder:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
@@ -702,15 +707,15 @@ agents:
   engineer_reviewer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
 
   benchmark_planner:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
@@ -718,7 +723,7 @@ agents:
   benchmark_coder:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
@@ -726,23 +731,23 @@ agents:
   benchmark_reviewer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
 
   cots_search:
     read:
       allow: ["parts.db", "journal.md", "skills/**", "utils/**"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["journal.md"]
-      deny: []
+      deny: [".manifests/**"]
 
   skill_agent:
     read:
       allow: ["skills/**", "journal.md", "reviews/**"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["skills/**", "journal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "script.py", "reviews/**"]
@@ -758,7 +763,7 @@ agents:
   electronics_planner:
     read:
       allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
@@ -766,7 +771,7 @@ agents:
   electronics_engineer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
@@ -774,10 +779,10 @@ agents:
   electronics_reviewer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
 ```
 
 #### Immutability validation
@@ -844,6 +849,7 @@ We define the file structure as follows, individual agents adapt to individual n
 ├── renders/                      # [Read-Only/tool-generated] (Renders of images and  from the environment) 
 │   ├── images/                 # Images from 24 angles (8 images clockwise on 3 levels).
 │   └── videos/                 # Video of the simulation. (latest simulation video.)
+├── .manifests/                 # [System-Only] Deterministic handover metadata (not readable by LLM agents)
 ├── reviews/                     # [Read-Only] Reviews of the reviewer agent.
 ├── journal.md                  # [Read-Write] Decisions, reasoning, and execution log
 ├── todo.md                     # [Read-Write] Execution plan
@@ -2701,13 +2707,14 @@ So:
 
 ##### submit_for_review(compound: Compound)
 
-The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts (including `renders/review_manifest.json`) and marks the submission candidate as ready for review.
+The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts (including `.manifests/review_manifest.json`) and marks the submission candidate as ready for review.
 
 Reviewer entry preconditions are explicit and fail-closed:
 1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
 2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in  pass).
 3. The latest simulation artifact must indicate success and objective completion (target object reached the green/goal zone).
-4. `renders/review_manifest.json` must exist and parse into a typed model (`ReviewManifest`) with `status=ready_for_review` and matching session/revision metadata.
+4. `.manifests/review_manifest.json` must exist and parse into a typed model (`ReviewManifest`) with `status=ready_for_review` and matching session/revision metadata.
+5. Reviewer model access to `.manifests/**` is denied by policy; reviewer eligibility is evaluated by deterministic system checks, not model-side reads of manifest files.
 
 If any precondition is missing/invalid, it is a handoff invariant violation (not a reviewer decision). The system must:
 1. Treat the handoff as invalid and route back to the producing agent with explicit validation feedback.
