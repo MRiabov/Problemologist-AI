@@ -17,6 +17,82 @@ scenarios:
 
   # INT-011: Planner target caps validation (No specific mock needed as it's a validation test)
 
+  INT-005:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create engineer planner artifacts for submit_plan gate verification."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Engineer planner INT-005 submission gate scenario.
+                ## 2. Parts List
+                - Test box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build a simple static part.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build test part", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-005 engineer planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - thought: "Finalize electronics planning for INT-005 and explicitly submit."
+            tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build test part
+                - [x] Electronics planning complete
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-005 electronics planner artifacts submitted."
+
   INT-014:
     transcript:
       - node: engineer_planner

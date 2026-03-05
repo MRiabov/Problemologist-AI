@@ -150,4 +150,21 @@ describe('ChatInput', () => {
         
         expect(mockOnInterrupt).toHaveBeenCalled();
     });
+
+    it('shows context usage next to model label when metadata is present', () => {
+        const propsWithUsage = {
+            ...defaultProps,
+            selectedEpisode: {
+                ...defaultProps.selectedEpisode,
+                metadata_vars: {
+                    additional_info: {
+                        context_usage: { used_tokens: 50000, max_tokens: 225000 }
+                    }
+                }
+            } as any
+        };
+
+        render(<ChatInput {...propsWithUsage} />);
+        expect(screen.getByTestId('chatinput-context-usage')).toHaveTextContent('50,000/225,000');
+    });
 });

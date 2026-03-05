@@ -34,7 +34,7 @@ async def test_summarizer_node_skips_short_journal(mock_worker):
 
 @pytest.mark.asyncio
 async def test_summarizer_node_compresses_long_journal(mock_worker):
-    long_journal = "X" * (agent_settings.context_compaction_threshold_chars + 1)
+    long_journal = "X" * (agent_settings.context_compaction_threshold_tokens * 4 + 1)
     state = AgentState(journal=long_journal, session_id="test-session")
 
     with patch.object(
@@ -53,7 +53,7 @@ async def test_summarizer_node_compresses_long_journal(mock_worker):
 
 @pytest.mark.asyncio
 async def test_benchmark_summarizer_node_compresses_long_journal(mock_worker):
-    long_journal = "X" * (agent_settings.context_compaction_threshold_chars + 1)
+    long_journal = "X" * (agent_settings.context_compaction_threshold_tokens * 4 + 1)
     session_id = uuid.uuid4()
     session = GenerationSession(session_id=session_id, prompt="test")
     state = BenchmarkGeneratorState(session=session, journal=long_journal)

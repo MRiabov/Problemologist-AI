@@ -232,8 +232,8 @@ describe('ChatWindow', () => {
                 metadata_vars: {
                     additional_info: {
                         context_usage: {
-                            used_chars: 50000,
-                            max_chars: 225000,
+                            used_tokens: 50000,
+                            max_tokens: 225000,
                         },
                     },
                 },

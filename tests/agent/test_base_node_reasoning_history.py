@@ -33,10 +33,18 @@ def test_log_lm_history_delta_emits_reasoning_from_string_and_dict_outputs() -> 
             "outputs": [
                 "Thought: inspect objectives first\nAction: read_file(path='/objectives.yaml')",
                 {"reasoning": "Now list config directory"},
+                {
+                    "text": "[[ ## next_thought ## ]]\nRead skills first\n[[ ## next_tool_name ## ]]\nread_file",
+                    "reasoning_content": "Internal long reasoning block",
+                },
             ]
         }
     ]
-    ctx = SimpleNamespace(dspy_lm=SimpleNamespace(history=history), session_id="s-1")
+    ctx = SimpleNamespace(
+        dspy_lm=SimpleNamespace(history=history),
+        session_id="s-1",
+        episode_id=None,
+    )
     node = BaseNode(context=ctx)
     recorder = _DummyRecorder()
 
@@ -50,6 +58,8 @@ def test_log_lm_history_delta_emits_reasoning_from_string_and_dict_outputs() -> 
     emitted = [c["reasoning_text"] for c in recorder.calls]
     assert "inspect objectives first" in emitted
     assert "Now list config directory" in emitted
+    assert "Read skills first" in emitted
+    assert "Internal long reasoning block" in emitted
     assert all(c["source"] == "lm_history" for c in recorder.calls)
 
 
@@ -62,7 +72,11 @@ def test_log_lm_history_delta_reports_langfuse_usage() -> None:
             "cost": 0.0001,
         }
     ]
-    ctx = SimpleNamespace(dspy_lm=SimpleNamespace(history=history), session_id="s-1")
+    ctx = SimpleNamespace(
+        dspy_lm=SimpleNamespace(history=history),
+        session_id="s-1",
+        episode_id=None,
+    )
     node = BaseNode(context=ctx)
 
     with patch(
