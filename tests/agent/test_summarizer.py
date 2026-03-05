@@ -5,10 +5,14 @@ import pytest
 
 from controller.agent.benchmark.models import GenerationSession
 from controller.agent.benchmark.nodes import (
+    BenchmarkSummarizerNode,
+)
+from controller.agent.benchmark.nodes import (
     summarizer_node as benchmark_summarizer_node,
 )
 from controller.agent.benchmark.state import BenchmarkGeneratorState
-from controller.agent.nodes.summarizer import summarizer_node
+from controller.agent.config import settings as agent_settings
+from controller.agent.nodes.summarizer import SummarizerNode, summarizer_node
 from controller.agent.state import AgentState
 
 
@@ -30,13 +34,17 @@ async def test_summarizer_node_skips_short_journal(mock_worker):
 
 @pytest.mark.asyncio
 async def test_summarizer_node_compresses_long_journal(mock_worker):
-    long_journal = "X" * 6000
+    long_journal = "X" * (agent_settings.context_compaction_threshold_chars + 1)
     state = AgentState(journal=long_journal, session_id="test-session")
 
-    with patch("dspy.ReAct") as mock_predict:
-        instance = mock_predict.return_value
-        instance.return_value = MagicMock(summarized_journal="Summarized content")
-
+    with patch.object(
+        SummarizerNode, "_run_program", new_callable=AsyncMock
+    ) as mock_run:
+        mock_run.return_value = (
+            MagicMock(summarized_journal="Summarized content"),
+            {},
+            "",
+        )
         result = await summarizer_node(state)
 
     assert "Summarized Journal" in result.journal
@@ -45,15 +53,19 @@ async def test_summarizer_node_compresses_long_journal(mock_worker):
 
 @pytest.mark.asyncio
 async def test_benchmark_summarizer_node_compresses_long_journal(mock_worker):
-    long_journal = "X" * 6000
+    long_journal = "X" * (agent_settings.context_compaction_threshold_chars + 1)
     session_id = uuid.uuid4()
     session = GenerationSession(session_id=session_id, prompt="test")
     state = BenchmarkGeneratorState(session=session, journal=long_journal)
 
-    with patch("dspy.ReAct") as mock_predict:
-        instance = mock_predict.return_value
-        instance.return_value = MagicMock(summarized_journal="Benchmark summary")
-
+    with patch.object(
+        BenchmarkSummarizerNode, "_run_program", new_callable=AsyncMock
+    ) as mock_run:
+        mock_run.return_value = (
+            MagicMock(summarized_journal="Benchmark summary"),
+            {},
+            "",
+        )
         result = await benchmark_summarizer_node(state)
 
     assert "Summarized Journal" in result.journal

@@ -83,6 +83,40 @@ def test_start_root_span_returns_noop_without_client():
     assert isinstance(cm, type(nullcontext()))
 
 
+def test_report_usage_to_current_observation_forwards_token_usage():
+    from controller.observability.langfuse import report_usage_to_current_observation
+
+    mock_client = MagicMock()
+    with patch(
+        "controller.observability.langfuse.get_langfuse_client",
+        return_value=mock_client,
+    ):
+        report_usage_to_current_observation(
+            usage={"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150},
+            model="openai/gpt-5-mini",
+            cost=0.0042,
+        )
+
+    mock_client.update_current_observation.assert_called_once()
+    _, kwargs = mock_client.update_current_observation.call_args
+    assert kwargs["usage_details"] == {"input": 120, "output": 30, "total": 150}
+    assert kwargs["model"] == "openai/gpt-5-mini"
+    assert kwargs["total_cost"] == 0.0042
+
+
+def test_report_usage_to_current_observation_ignores_missing_usage():
+    from controller.observability.langfuse import report_usage_to_current_observation
+
+    mock_client = MagicMock()
+    with patch(
+        "controller.observability.langfuse.get_langfuse_client",
+        return_value=mock_client,
+    ):
+        report_usage_to_current_observation(usage={"foo": "bar"})
+
+    mock_client.update_current_observation.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_calculate_and_report_automated_score():
     """Test that automated score is calculated from events and reported."""

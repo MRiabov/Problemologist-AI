@@ -2109,8 +2109,7 @@
           "stress_summary",
           "meshing_failure",
           "physics_instability",
-          "gpu_oom_retry",
-          "conversation_length_exceeded"
+          "gpu_oom_retry"
         ],
         "title": "ObservabilityEventType"
       },

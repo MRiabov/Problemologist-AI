@@ -173,4 +173,80 @@ describe('ChatWindow', () => {
         expect(screen.getByText(/Terminal failure/i)).toBeInTheDocument();
         expect(screen.getByText(/Error: failed to build/i)).toBeInTheDocument();
     });
+
+    it('shows telemetry warning when reasoning is required but missing', () => {
+        const traces = [
+            { id: '1', trace_type: TraceType.TOOL_START, name: 'list_files', content: '{"kwargs":{"path":"/"}}' },
+            { id: '2', trace_type: TraceType.TOOL_START, name: 'read_file', content: '{"kwargs":{"path":"objectives.yaml"}}' },
+            { id: '3', trace_type: TraceType.TOOL_START, name: 'list_files', content: '{"kwargs":{"path":"/config"}}' },
+        ];
+        (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
+        (useEpisodes as any).mockReturnValue({
+            ...defaultEpisodeContext,
+            selectedEpisode: {
+                id: 'ep-telemetry',
+                status: EpisodeStatus.RUNNING,
+                metadata_vars: { additional_info: { reasoning_required: true } },
+            },
+        });
+
+        render(
+            <MemoryRouter>
+                <ChatWindow traces={traces as any} />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByTestId('reasoning-telemetry-warning')).toBeInTheDocument();
+    });
+
+    it('renders conversation length exceeded event in chat timeline', () => {
+        const traces = [
+            {
+                id: '99',
+                trace_type: TraceType.EVENT,
+                name: 'conversation_length_exceeded',
+                metadata_vars: {
+                    threshold: 5000,
+                    previous_length: 6200,
+                    compacted_length: 2100,
+                },
+            },
+        ];
+
+        render(
+            <MemoryRouter>
+                <ChatWindow traces={traces as any} />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByTestId('conversation-length-exceeded')).toBeInTheDocument();
+        expect(screen.getByText(/Conversation length limit exceeded/i)).toBeInTheDocument();
+    });
+
+    it('renders context usage indicator from episode metadata', () => {
+        (useEpisodes as any).mockReturnValue({
+            ...defaultEpisodeContext,
+            selectedEpisode: {
+                id: 'ep-ctx',
+                status: EpisodeStatus.RUNNING,
+                metadata_vars: {
+                    additional_info: {
+                        context_usage: {
+                            used_chars: 50000,
+                            max_chars: 225000,
+                        },
+                    },
+                },
+            },
+        });
+
+        render(
+            <MemoryRouter>
+                <ChatWindow traces={[]} />
+            </MemoryRouter>
+        );
+
+        expect(screen.getByTestId('context-usage-indicator')).toBeInTheDocument();
+        expect(screen.getByText(/Ctx 50,000 \/ 225,000 \(22.2%\)/i)).toBeInTheDocument();
+    });
 });
