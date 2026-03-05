@@ -3,7 +3,10 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from controller.agent.config import settings as agent_settings
-from controller.agent.context_usage import update_episode_context_usage
+from controller.agent.context_usage import (
+    estimate_text_tokens,
+    update_episode_context_usage,
+)
 from controller.config.settings import settings
 from controller.graph.steerability_node import check_steering, steerability_node
 from shared.enums import AgentName
@@ -30,12 +33,12 @@ async def should_continue(state: AgentState) -> str:
 
     if state.episode_id:
         try:
-            threshold = agent_settings.context_compaction_threshold_chars
-            journal_len = len(state.journal)
+            threshold = agent_settings.context_compaction_threshold_tokens
+            journal_tokens = estimate_text_tokens(state.journal)
             await update_episode_context_usage(
                 episode_id=state.episode_id,
-                used_chars=journal_len,
-                max_chars=threshold,
+                used_tokens=journal_tokens,
+                max_tokens=threshold,
             )
         except Exception as exc:
             logger.warning(
@@ -45,7 +48,10 @@ async def should_continue(state: AgentState) -> str:
             )
 
     # Check for summarization need if journal is long
-    if len(state.journal) > agent_settings.context_compaction_threshold_chars:
+    if (
+        estimate_text_tokens(state.journal)
+        > agent_settings.context_compaction_threshold_tokens
+    ):
         return AgentName.JOURNALLING_AGENT
 
     if state.turn_count >= settings.max_agent_turns:

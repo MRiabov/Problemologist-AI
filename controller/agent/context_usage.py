@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
+import tiktoken
 
 from controller.api.manager import manager
 from controller.persistence.db import get_sessionmaker
@@ -11,10 +12,22 @@ from shared.models.schemas import EpisodeMetadata
 logger = structlog.get_logger(__name__)
 
 
+def estimate_text_tokens(text: str) -> int:
+    """Approximate token count using cl100k_base (OpenAI-compatible)."""
+    if not text:
+        return 0
+    try:
+        encoding = tiktoken.get_encoding("cl100k_base")
+        return len(encoding.encode(text))
+    except Exception:
+        # Fallback heuristic when tokenizer is unavailable.
+        return max(1, len(text) // 4)
+
+
 async def update_episode_context_usage(
     episode_id: str,
-    used_chars: int,
-    max_chars: int,
+    used_tokens: int,
+    max_tokens: int,
 ) -> None:
     """Persist current context usage in episode metadata and broadcast status update."""
     if not episode_id:
@@ -32,10 +45,10 @@ async def update_episode_context_usage(
             additional_info = dict(metadata.additional_info or {})
             current = additional_info.get("context_usage")
             next_payload = {
-                "used_chars": int(used_chars),
-                "max_chars": int(max_chars),
-                "utilization_ratio": (float(used_chars) / float(max_chars))
-                if max_chars > 0
+                "used_tokens": int(used_tokens),
+                "max_tokens": int(max_tokens),
+                "utilization_ratio": (float(used_tokens) / float(max_tokens))
+                if max_tokens > 0
                 else 0.0,
             }
 

@@ -13,6 +13,7 @@ import structlog
 from sqlalchemy import func, select
 
 from controller.agent.config import settings
+from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.prompt_manager import PromptManager
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -296,6 +297,25 @@ class BaseNode:
         return None
 
     @staticmethod
+    def _extract_prompt_tokens(usage: Any) -> int | None:
+        """Extract prompt/input tokens from usage payloads."""
+        if usage is None:
+            return None
+        if hasattr(usage, "model_dump"):
+            with suppress(Exception):
+                usage = usage.model_dump(mode="json")
+        if not isinstance(usage, dict):
+            return None
+
+        for key in ("prompt_tokens", "input_tokens"):
+            value = usage.get(key)
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+        return None
+
+    @staticmethod
     def _extract_latency_ms(response: Any) -> float | None:
         """Extract per-call latency in milliseconds from provider response."""
         if response is None:
@@ -385,6 +405,18 @@ class BaseNode:
                 cost=entry.get("cost"),
             )
 
+            prompt_tokens = self._extract_prompt_tokens(entry.get("usage"))
+            if prompt_tokens is not None and self.ctx.episode_id:
+                with suppress(Exception):
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(
+                        update_episode_context_usage(
+                            episode_id=self.ctx.episode_id,
+                            used_tokens=prompt_tokens,
+                            max_tokens=settings.context_compaction_threshold_tokens,
+                        )
+                    )
+
             if not db_callback:
                 continue
 
@@ -411,6 +443,32 @@ class BaseNode:
                         value = output.get(key)
                         if isinstance(value, str) and value.strip():
                             reasoning_chunks.append(value.strip())
+                    text_field = output.get("text")
+                    if isinstance(text_field, str) and text_field.strip():
+                        tagged_match = re.search(
+                            r"\[\[\s*##\s*next_thought\s*##\s*\]\]\s*(.+?)(?:\[\[\s*##|$)",
+                            text_field,
+                            flags=re.IGNORECASE | re.DOTALL,
+                        )
+                        if tagged_match and tagged_match.group(1).strip():
+                            reasoning_chunks.append(tagged_match.group(1).strip())
+                        else:
+                            for key in ("next_thought", "thought", "reasoning"):
+                                matches = re.findall(
+                                    rf"{key}\s*[:=]\s*(.+?)(?=\n[A-Za-z_]+\s*[:=]|\Z)",
+                                    text_field,
+                                    flags=re.IGNORECASE | re.DOTALL,
+                                )
+                                reasoning_chunks.extend(
+                                    [
+                                        m.strip()
+                                        for m in matches
+                                        if isinstance(m, str) and m.strip()
+                                    ]
+                                )
+                    reasoning_content = output.get("reasoning_content")
+                    if isinstance(reasoning_content, str) and reasoning_content.strip():
+                        reasoning_chunks.append(reasoning_content.strip())
 
                 for chunk in reasoning_chunks:
                     text = chunk.strip()
@@ -505,9 +563,14 @@ class BaseNode:
         elif isinstance(observation_raw, str):
             text = observation_raw.strip()
             with suppress(Exception):
-                parsed = ast.literal_eval(text)
-                if isinstance(parsed, dict):
-                    payload = parsed
+                parsed_json = json.loads(text)
+                if isinstance(parsed_json, dict):
+                    payload = parsed_json
+            with suppress(Exception):
+                if payload is None:
+                    parsed = ast.literal_eval(text)
+                    if isinstance(parsed, dict):
+                        payload = parsed
 
         if payload is None:
             return None, "submit_plan() observation is not a structured payload"

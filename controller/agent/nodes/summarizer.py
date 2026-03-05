@@ -2,7 +2,10 @@ import dspy
 import structlog
 
 from controller.agent.config import settings
-from controller.agent.context_usage import update_episode_context_usage
+from controller.agent.context_usage import (
+    estimate_text_tokens,
+    update_episode_context_usage,
+)
 from controller.agent.state import AgentState
 from controller.observability.middleware_helper import record_events
 from shared.enums import AgentName
@@ -32,10 +35,10 @@ class SummarizerNode(BaseNode):
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
-        threshold = settings.context_compaction_threshold_chars
+        threshold = settings.context_compaction_threshold_tokens
         # Check if journal actually needs summarization
         # Uses configured threshold from config/agents_config.yaml.
-        if len(state.journal) < threshold:
+        if estimate_text_tokens(state.journal) < threshold:
             return state
 
         logger.info(
@@ -64,9 +67,9 @@ class SummarizerNode(BaseNode):
                     episode_id=state.episode_id,
                     events=[
                         ConversationLengthExceededEvent(
-                            previous_length=len(state.journal),
+                            previous_length=estimate_text_tokens(state.journal),
                             threshold=threshold,
-                            compacted_length=len(summarized),
+                            compacted_length=estimate_text_tokens(summarized),
                             agent_id=AgentName.JOURNALLING_AGENT.value,
                             user_session_id=state.session_id or None,
                             episode_id=state.episode_id,
@@ -75,8 +78,8 @@ class SummarizerNode(BaseNode):
                 )
                 await update_episode_context_usage(
                     episode_id=state.episode_id,
-                    used_chars=len(summarized),
-                    max_chars=threshold,
+                    used_tokens=estimate_text_tokens(summarized),
+                    max_tokens=threshold,
                 )
             except Exception as exc:
                 logger.warning(

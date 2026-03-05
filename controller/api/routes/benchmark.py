@@ -3,6 +3,7 @@ import uuid
 from typing import Annotated
 
 import httpx
+import structlog
 import yaml
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, field_validator
@@ -24,6 +25,9 @@ from shared.models.schemas import CustomObjectives
 from shared.simulation.schemas import SimulatorBackendType
 
 router = APIRouter(prefix="/benchmark", tags=["benchmark"])
+logger = structlog.get_logger(__name__)
+
+_PROMPT_LOG_PREVIEW_LIMIT = 500
 
 
 class BenchmarkGenerateRequest(BaseModel):
@@ -52,6 +56,22 @@ async def generate_benchmark(
     # We use the graph's run_generation_session which handles its own persistence
     # but we wrap it in a background task to return immediately.
     session_id = uuid.uuid4()
+    logger.info(
+        "benchmark_generate_requested",
+        session_id=str(session_id),
+        prompt=request.prompt,
+        prompt_preview=request.prompt[:_PROMPT_LOG_PREVIEW_LIMIT],
+        prompt_length=len(request.prompt),
+        max_cost=request.max_cost,
+        max_weight=request.max_weight,
+        target_quantity=request.target_quantity,
+        seed_id=request.seed_id,
+        seed_dataset=request.seed_dataset,
+        generation_kind=request.generation_kind.value
+        if request.generation_kind
+        else None,
+        backend=request.backend.value,
+    )
 
     custom_objectives = CustomObjectives(
         max_unit_cost=request.max_cost,
@@ -96,6 +116,14 @@ async def confirm_benchmark(
     from controller.agent.benchmark.graph import continue_generation_session
     from controller.persistence.models import Trace
     from shared.enums import TraceType
+
+    # Record user comment if provided
+    logger.info(
+        "benchmark_confirm_requested",
+        session_id=str(session_id),
+        has_comment=bool(request.comment),
+        comment=request.comment,
+    )
 
     # Record user comment if provided
     if request.comment:
@@ -175,6 +203,14 @@ async def update_objectives(
 
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    logger.info(
+        "benchmark_objectives_update_requested",
+        session_id=str(session_id),
+        max_cost=request.max_cost,
+        max_weight=request.max_weight,
+        target_quantity=request.target_quantity,
+    )
 
     from controller.agent.config import settings
 

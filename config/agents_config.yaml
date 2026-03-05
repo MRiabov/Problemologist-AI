@@ -2,7 +2,7 @@ version: "1.0"
 
 llm:
   max_reasoning_tokens: 16384
-  context_compaction_threshold_chars: 225000
+  context_compaction_threshold_tokens: 225000
 
 defaults:
   read:

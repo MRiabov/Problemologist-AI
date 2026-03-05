@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import json
 import uuid
 from contextlib import suppress
 from datetime import UTC, datetime
@@ -13,7 +14,10 @@ from opentelemetry import trace
 from sqlalchemy import select
 
 from controller.agent.config import settings as agent_settings
-from controller.agent.context_usage import update_episode_context_usage
+from controller.agent.context_usage import (
+    estimate_text_tokens,
+    update_episode_context_usage,
+)
 from controller.agent.initialization import initialize_agent_files
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
@@ -83,9 +87,14 @@ async def _get_latest_planner_submission_result(
     elif isinstance(observation_raw, str):
         observation_text = observation_raw.strip()
         with suppress(Exception):
-            loaded = ast.literal_eval(observation_text)
-            if isinstance(loaded, dict):
-                parsed_payload = loaded
+            loaded_json = json.loads(observation_text)
+            if isinstance(loaded_json, dict):
+                parsed_payload = loaded_json
+        with suppress(Exception):
+            if parsed_payload is None:
+                loaded = ast.literal_eval(observation_text)
+                if isinstance(loaded, dict):
+                    parsed_payload = loaded
 
     if parsed_payload is None:
         return None, "submit_plan() observation is not a structured payload"
@@ -277,12 +286,12 @@ def define_graph():
 
         if state.episode_id:
             try:
-                threshold = agent_settings.context_compaction_threshold_chars
-                journal_len = len(state.journal or "")
+                threshold = agent_settings.context_compaction_threshold_tokens
+                journal_tokens = estimate_text_tokens(state.journal or "")
                 await update_episode_context_usage(
                     episode_id=state.episode_id,
-                    used_chars=journal_len,
-                    max_chars=threshold,
+                    used_tokens=journal_tokens,
+                    max_tokens=threshold,
                 )
             except Exception as exc:
                 logger.warning(
@@ -292,7 +301,10 @@ def define_graph():
                 )
 
         # Check for summarization need
-        if len(state.journal or "") > agent_settings.context_compaction_threshold_chars:
+        if (
+            estimate_text_tokens(state.journal or "")
+            > agent_settings.context_compaction_threshold_tokens
+        ):
             return AgentName.JOURNALLING_AGENT
 
         if state.review_round > 10:

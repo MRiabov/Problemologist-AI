@@ -24,7 +24,7 @@ class AgentPolicy(BaseModel):
 
 class LLMPolicyConfig(BaseModel):
     max_reasoning_tokens: int = 16384
-    context_compaction_threshold_chars: int = 225000
+    context_compaction_threshold_tokens: int = 225000
 
 
 class FilesystemConfig(BaseModel):

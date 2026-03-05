@@ -36,6 +36,7 @@ from shared.enums import (
 from shared.models.schemas import EpisodeMetadata, TraceMetadata
 
 logger = structlog.get_logger(__name__)
+_MESSAGE_LOG_PREVIEW_LIMIT = 500
 
 
 class FeedbackRequest(BaseModel):
@@ -293,6 +294,15 @@ async def continue_episode(
 
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
+
+    logger.info(
+        "episode_message_received",
+        episode_id=str(episode_id),
+        message=request.message,
+        message_preview=request.message[:_MESSAGE_LOG_PREVIEW_LIMIT],
+        message_length=len(request.message),
+        has_metadata=bool(request.metadata_vars),
+    )
 
     # In a real system, we might want to check if the agent is already busy
     # but for now we'll rely on the task_tracker or just allow it to queue.

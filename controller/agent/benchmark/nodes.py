@@ -10,7 +10,10 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
 from controller.agent.config import settings
-from controller.agent.context_usage import update_episode_context_usage
+from controller.agent.context_usage import (
+    estimate_text_tokens,
+    update_episode_context_usage,
+)
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
 from controller.observability.middleware_helper import record_events
 from shared.enums import AgentName, SessionStatus
@@ -136,6 +139,29 @@ class BenchmarkPlannerNode(BaseNode):
                 "benchmark_planner failed: no valid planner output produced"
             )
             state.journal += f"\n[Planner] Failed: {journal_entry}"
+            return state
+
+        submission, submit_err = await self._get_latest_submit_plan_result(
+            AgentName.BENCHMARK_PLANNER
+        )
+        if submission is None or not submission.ok or submission.status != "submitted":
+            submit_errors = (
+                [submit_err]
+                if submit_err
+                else (submission.errors if submission else ["submit_plan failed"])
+            )
+            error_text = (
+                "; ".join([e for e in submit_errors if e]) or "submit_plan failed"
+            )
+            state.plan = None
+            state.session.validation_logs.append(
+                f"benchmark_planner submit_plan validation failed: {error_text}"
+            )
+            state.journal += (
+                "\n[Planner] submit_plan validation failed: "
+                + error_text
+                + journal_entry
+            )
             return state
 
         state.plan = prediction.plan
@@ -433,8 +459,8 @@ class BenchmarkSummarizerNode(BaseNode):
     """
 
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-        threshold = settings.context_compaction_threshold_chars
-        if not state.journal or len(state.journal) < threshold:
+        threshold = settings.context_compaction_threshold_tokens
+        if not state.journal or estimate_text_tokens(state.journal) < threshold:
             return state
 
         logger.info(
@@ -463,9 +489,9 @@ class BenchmarkSummarizerNode(BaseNode):
                     episode_id=state.episode_id,
                     events=[
                         ConversationLengthExceededEvent(
-                            previous_length=len(state.journal),
+                            previous_length=estimate_text_tokens(state.journal),
                             threshold=threshold,
-                            compacted_length=len(summarized),
+                            compacted_length=estimate_text_tokens(summarized),
                             agent_id=AgentName.JOURNALLING_AGENT.value,
                             user_session_id=str(state.session.session_id),
                             episode_id=state.episode_id,
@@ -474,8 +500,8 @@ class BenchmarkSummarizerNode(BaseNode):
                 )
                 await update_episode_context_usage(
                     episode_id=state.episode_id,
-                    used_chars=len(summarized),
-                    max_chars=threshold,
+                    used_tokens=estimate_text_tokens(summarized),
+                    max_tokens=threshold,
                 )
             except Exception as exc:
                 logger.warning(

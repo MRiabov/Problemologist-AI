@@ -35,7 +35,7 @@ def _resolve_llm_max_tokens_from_agents_config(default: int = 16384) -> int:
         return default
 
 
-def _resolve_context_compaction_threshold_from_agents_config(
+def _resolve_context_compaction_threshold_tokens_from_agents_config(
     default: int = 225000,
 ) -> int:
     potential_paths = [
@@ -52,10 +52,10 @@ def _resolve_context_compaction_threshold_from_agents_config(
         with config_path.open("r", encoding="utf-8") as f:
             raw_data = yaml.safe_load(f) or {}
         config = FilesystemConfig(**raw_data)
-        return config.llm.context_compaction_threshold_chars
+        return config.llm.context_compaction_threshold_tokens
     except Exception as exc:
         logger.warning(
-            "failed_to_load_agents_context_compaction_config",
+            "failed_to_load_agents_context_compaction_tokens_config",
             config_path=str(config_path),
             error=str(exc),
         )
@@ -71,8 +71,8 @@ class AgentSettings(BaseSettings):
     anthropic_api_key: str | None = None
     llm_timeout_seconds: int = 300
     llm_max_tokens: int = _resolve_llm_max_tokens_from_agents_config()
-    context_compaction_threshold_chars: int = (
-        _resolve_context_compaction_threshold_from_agents_config()
+    context_compaction_threshold_tokens: int = (
+        _resolve_context_compaction_threshold_tokens_from_agents_config()
     )
     dspy_program_timeout_seconds: int = 300
     react_max_iters: int = 8
