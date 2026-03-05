@@ -2574,10 +2574,11 @@ The following agents can expose the same tool API surface: `execute`, `ls_info`,
 
 Actual read/write/edit access is enforced per-role via `config/agents_config.yaml` path rules. A tool call targeting a forbidden path is rejected by policy (deterministic permission error).
 
-Submission/review handoff tools are also ReAct-callable where relevant:
+Submission/review handoff contract:
 
-- `submit_plan()` for planner roles.
-- `submit_for_review(Compound)` for CAD implementer/coder roles.
+- `submit_plan()` is ReAct-callable for planner roles.
+- `submit_for_review(compound: Compound)` is a Python util called from CAD scripts (not a ReAct-native tool call).
+- Reviewer entry is gated by persisted handover artifacts and typed payload validation, not by a ReAct tool trace.
 
 1. Benchmark Planner: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
 2. Benchmark Generator: `execute`, `ls_info`, `read`, `write`, `edit`, `grep_raw`, `glob_info`, `upload_files`, `download_files`
@@ -2618,6 +2619,7 @@ ReAct is the first-line correction loop:
 3. The node converges on valid handoff output or exits due to hard limits (timeout/turn budget/token budget).
 
 LangGraph handoff loopbacks are a defensive fail-closed control plane, not the primary retry mechanism. They handle node exit with invalid handoff state by routing back to the producing node with explicit validation logs/feedback.
+When hard limits are reached, orchestration must set the session to `FAILED` and terminate the loop (no additional loopback retries after hard-fail).
 
 #### The "tools" as Python functions - Utils
 
@@ -2646,7 +2648,7 @@ Note - used by default by
     Validated under all environment randomization.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
-- `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
+- `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline. This call is valid only after current-revision validation/simulation succeed.
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
 <!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
 
@@ -2692,17 +2694,29 @@ So:
    - if valid, pass, if not valid, fail.
 2. Git commit all files.
 3. Start simulation, locally.
-4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a "submit for review.
+4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a `submit_for_review(final_compound)`.
     - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
-    The simulation will produce video. The issue is, it's expensive to
+    The simulation will produce video. The issue is, it's expensive to render. 
 5. If doesn't, retry the simulation.
 
 ##### submit_for_review(compound: Compound)
 
-The CAD engineer agent run `simulate(),` will ask a reviewer agent to review. If already the environment was already/recently simulated, the cache will hit and will skip directly to the review.
-Reviewer entry requires a successful `submit_for_review()` tool trace with structured success payload.
-If this precondition is missing/invalid when coder exits, orchestration routes back to coder with `REJECTED` state plus validation logs (fail-closed loopback).
-If reviewer exits without a structured `review_decision`, orchestration routes back to reviewer with explicit invalid-output feedback (fail-closed loopback).
+The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts (including `renders/review_manifest.json`) and marks the submission candidate as ready for review.
+
+Reviewer entry preconditions are explicit and fail-closed:
+1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
+2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in  pass).
+3. The latest simulation artifact must indicate success and objective completion (target object reached the green/goal zone).
+4. `renders/review_manifest.json` must exist and parse into a typed model (`ReviewManifest`) with `status=ready_for_review` and matching session/revision metadata.
+
+If any precondition is missing/invalid, it is a handoff invariant violation (not a reviewer decision). The system must:
+1. Treat the handoff as invalid and route back to the producing agent with explicit validation feedback.
+2. Keep this as fail-closed control flow (`REJECTED`/retry path), not as a successful transition into reviewer acceptance semantics.
+3. Escalate to terminal `FAILED` when hard limits are reached (timeout/turn/token budget), rather than circling forever.
+
+Reviewer output contract is strict:
+1. Reviewer completion must produce a structured `review_decision`.
+2. Missing structured reviewer output is invalid reviewer output and stays in fail-closed routing (with explicit logs), never auto-promoted to acceptance.
 
 #### Dealing with latency
 
