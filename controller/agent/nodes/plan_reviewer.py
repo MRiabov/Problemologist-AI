@@ -112,6 +112,22 @@ class PlanReviewerNode(BaseNode):
             ReviewDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.FAILED,
             ReviewDecision.REJECT_PLAN_REFUSAL: AgentStatus.PLAN_REJECTED,
         }
+        if decision not in status_map:
+            return state.model_copy(
+                update={
+                    "status": AgentStatus.FAILED,
+                    "feedback": (
+                        "Plan Reviewer returned unsupported structured decision: "
+                        f"{decision}"
+                    ),
+                    "journal": (
+                        state.journal
+                        + journal_entry
+                        + f"\n[Plan Reviewer] Unsupported decision: {decision}"
+                    ),
+                    "turn_count": state.turn_count + 1,
+                }
+            )
 
         # Emit ReviewDecisionEvent
         await record_worker_events(
@@ -129,7 +145,7 @@ class PlanReviewerNode(BaseNode):
 
         return state.model_copy(
             update={
-                "status": status_map.get(decision, AgentStatus.PLAN_REJECTED),
+                "status": status_map[decision],
                 "feedback": feedback,
                 "journal": state.journal + journal_entry,
                 "messages": [

@@ -435,11 +435,8 @@ benchmark_generator:
 
          **Filesystem Tools**:
          - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
-         - `execute_command(command: str)`, `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
-
-         **Python Utils**:
-         - `cots_search(query: str)`: Invoke subagent to find COTS parts and prices.
-         - `validate_costing_and_price()`: Validate pricing YAML, autopopulate fields, and output results.
+         - `list_files(path: str)`, `grep(pattern: str, path: str)`
+         - `submit_plan()`: Validate planner artifacts and explicitly submit planner handoff.
 
          **Default Environment**: 100x100x100 units unless specified.
 
@@ -506,7 +503,7 @@ benchmark_generator:
          Do NOT create any other files (no summaries, specifications, or completion reports).
 
          **Evaluation/Observability Checks (DO NOT SKIP)**:
-         - **Plan submission (benchmark)**: Ensure `plan.md` and `todo.md` are complete and valid.
+         - **Plan submission (benchmark)**: Ensure `plan.md`, `todo.md`, and `objectives.yaml` are complete and valid, then call `submit_plan()` and only finish after it returns `status=submitted`.
          - **Pricing assumptions**: Use COTS/manufacturing references for any price assumptions; use `cots_search` for exact part pricing and do not invent catalog prices.
          - **Docs/YAML validity**: Fix any markdown/YAML validation errors before handoff.
          - **Logic/constraint checks**: Ensure build zone, objectives, and randomization are consistent and solvable.

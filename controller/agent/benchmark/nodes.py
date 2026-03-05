@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 from contextlib import suppress
 
@@ -16,7 +17,7 @@ from shared.simulation.schemas import (
     SimulatorBackendType,
 )
 from shared.type_checking import type_check
-from shared.workers.schema import SimulationArtifacts
+from shared.workers.schema import BenchmarkToolResponse, SimulationArtifacts
 
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
@@ -40,11 +41,13 @@ class BenchmarkPlannerSignature(dspy.Signature):
     """
     Planner node: Analyzes the user prompt and creates a randomization strategy.
     You must use the provided tools to set up the objectives if necessary.
+    Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide the final randomization strategy.
     """
 
     prompt = dspy.InputField()
     history = dspy.InputField()
+    journal = dspy.InputField()
     review_feedback = dspy.InputField()
     reasoning = dspy.OutputField()
     plan: RandomizationStrategy = dspy.OutputField()
@@ -498,6 +501,13 @@ class BenchmarkReviewerNode(BaseNode):
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         logger.info("reviewer_node_start", round=state.review_round)
 
+        submit_err = await self._ensure_submit_for_review_succeeded()
+        if submit_err:
+            state.review_decision = None
+            state.review_feedback = f"Rejected: {submit_err}"
+            state.journal += f"\n[Reviewer] {submit_err}"
+            return state
+
         # Read context files
         plan_md = "# No plan.md found."
         with suppress(Exception):
@@ -573,6 +583,33 @@ class BenchmarkReviewerNode(BaseNode):
             await asyncio.sleep(2)
 
         return state
+
+    async def _ensure_submit_for_review_succeeded(self) -> str | None:
+        metadata, trace_err = await self._get_latest_tool_trace_metadata(
+            "submit_for_review"
+        )
+        if metadata is None:
+            return (
+                "Benchmark reviewer requires explicit submit_for_review() before "
+                f"review handoff: {trace_err}"
+            )
+
+        try:
+            raw = metadata.observation or ""
+            parsed = json.loads(raw)
+            result = BenchmarkToolResponse.model_validate(parsed)
+            if not result.success:
+                return (
+                    "Benchmark reviewer blocked: latest submit_for_review() failed: "
+                    f"{result.message}"
+                )
+        except Exception:
+            return (
+                "Benchmark reviewer blocked: submit_for_review() observation could "
+                "not be validated as BenchmarkToolResponse."
+            )
+
+        return None
 
 
 @type_check

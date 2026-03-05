@@ -3,6 +3,8 @@ from collections.abc import Callable
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
 from shared.cots.agent import search_cots_catalog
+from shared.enums import AgentName
+from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
 
 
@@ -67,6 +69,63 @@ def get_engineer_tools(
 ) -> list[Callable]:
     """
     Get the tools for the Engineer agent.
-    Now uses the common toolset.
+    Uses the common toolset only.
     """
     return get_common_tools(fs, session_id)
+
+
+def get_engineer_planner_tools(
+    fs: RemoteFilesystemMiddleware,
+    session_id: str,
+    planner_node_type: AgentName = AgentName.ENGINEER_PLANNER,
+) -> list[Callable]:
+    """
+    Planner-specific toolset for engineer/electronics planners.
+
+    Includes explicit `submit_plan()` so planner completion is an intentional action.
+    """
+    common_tools = get_common_tools(fs, session_id)
+
+    async def submit_plan() -> dict:
+        """
+        Validate planner artifacts and explicitly submit the planning handoff.
+
+        Returns:
+            {"ok": bool, "status": "submitted"|"rejected", "errors": [...], "node_type": "..."}
+        """
+        from worker_heavy.utils.file_validation import validate_node_output
+
+        # Engineer planner and electronics planner share the same planner artifacts.
+        required_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
+        artifacts: dict[str, str] = {}
+        missing_files: list[str] = []
+
+        for rel_path in required_files:
+            if not await fs.exists(rel_path):
+                missing_files.append(rel_path)
+                continue
+            content = await fs.read_file(rel_path)
+            if not content.strip():
+                missing_files.append(rel_path)
+                continue
+            artifacts[rel_path] = content
+
+        if missing_files:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[f"Missing required file: {p}" for p in missing_files],
+                node_type=planner_node_type,
+            )
+            return result.model_dump(mode="json")
+
+        is_valid, errors = validate_node_output(AgentName.ENGINEER_PLANNER, artifacts)
+        result = PlannerSubmissionResult(
+            ok=is_valid,
+            status="submitted" if is_valid else "rejected",
+            errors=errors,
+            node_type=planner_node_type,
+        )
+        return result.model_dump(mode="json")
+
+    return [*common_tools, submit_plan]

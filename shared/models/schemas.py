@@ -469,6 +469,15 @@ class TraceMetadata(BaseModel):
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
+class PlannerSubmissionResult(BaseModel):
+    """Typed result contract for explicit planner handoff submission."""
+
+    ok: bool
+    status: Literal["submitted", "rejected"]
+    errors: list[str] = Field(default_factory=list)
+    node_type: AgentName
+
+
 # =============================================================================
 # Review Frontmatter Schema
 # =============================================================================

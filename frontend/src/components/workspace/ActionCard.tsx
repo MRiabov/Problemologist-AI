@@ -31,8 +31,33 @@ export const ActionCard = memo(({ trace, resultCount, className, assets, setActi
     if (match) args.path = match[1];
   }
 
-  const filePath = args.TargetFile || args.AbsolutePath || args.path || "";
-  const fileName = filePath.split('/').pop() || "";
+  const findPath = () => {
+    const fromRoot = args.TargetFile || args.AbsolutePath || args.path || args.file_path || args.filePath;
+    if (typeof fromRoot === 'string' && fromRoot.length > 0) return fromRoot;
+
+    const nestedKwargs = args.kwargs as Record<string, any> | undefined;
+    const fromKwargs = nestedKwargs?.TargetFile || nestedKwargs?.AbsolutePath || nestedKwargs?.path || nestedKwargs?.file_path || nestedKwargs?.filePath;
+    if (typeof fromKwargs === 'string' && fromKwargs.length > 0) return fromKwargs;
+
+    const positionalArgs = Array.isArray(args.args) ? args.args : [];
+    if (positionalArgs.length > 0 && typeof positionalArgs[0] === 'string') {
+      return positionalArgs[0];
+    }
+
+    return "";
+  };
+
+  const filePath = findPath();
+  const isDirectoryTool = toolName.includes('list') || toolName.includes('ls');
+  const getDisplayName = () => {
+    if (!filePath) return "";
+    const normalized = filePath === "/" ? "/" : filePath.replace(/\/+$/, "");
+    if (normalized === "/") return "/";
+    const parts = normalized.split('/').filter(Boolean);
+    const base = parts[parts.length - 1] || normalized;
+    return isDirectoryTool ? base : (base || normalized);
+  };
+  const fileName = getDisplayName();
   
   const getToolIcon = () => {
     if (toolName.includes('search')) return Search;

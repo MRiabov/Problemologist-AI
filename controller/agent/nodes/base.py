@@ -1,6 +1,9 @@
+import ast
 import asyncio
+import json
 import re
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -16,7 +19,7 @@ from controller.observability.database import DatabaseCallbackHandler
 from controller.observability.langfuse import init_tracing
 from controller.persistence.models import Trace
 from shared.enums import AgentName, TraceType
-from shared.models.schemas import CodeReference
+from shared.models.schemas import CodeReference, TraceMetadata
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -147,7 +150,6 @@ class BaseNode:
             name = getattr(t, "name", t.__name__ if hasattr(t, "__name__") else str(t))
 
             import functools
-            import json
 
             def make_traced(func, tool_name):
                 @functools.wraps(func)
@@ -210,7 +212,9 @@ class BaseNode:
 
                         # WP10: Explicitly record tool success
                         if db_callback and trace_id:
-                            db_callback.record_tool_end_sync(trace_id, str(result))
+                            db_callback.record_tool_end_sync(
+                                trace_id, self._serialize_tool_observation(result)
+                            )
 
                         return result
                     except Exception as e:
@@ -228,8 +232,127 @@ class BaseNode:
             tool_fns[name] = wrapped
         return tool_fns
 
+    @staticmethod
+    def _serialize_tool_observation(result: Any) -> str:
+        """Serialize tool outputs to a parseable string for downstream gating."""
+        with suppress(Exception):
+            if hasattr(result, "model_dump"):
+                dumped = result.model_dump(mode="json")
+                return json.dumps(dumped)
+            if (
+                isinstance(result, (dict, list, bool, int, float, str))
+                or result is None
+            ):
+                return json.dumps(result)
+        return str(result)
+
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
         return self.ctx.get_database_recorder(session_id)
+
+    async def _get_latest_submit_plan_result(
+        self, expected_node_type: AgentName
+    ) -> tuple[Any | None, str | None]:
+        """
+        Read latest submit_plan result from persisted traces for this episode.
+
+        Returns (PlannerSubmissionResult | None, error_message | None).
+        """
+        from sqlalchemy import select
+
+        from shared.models.schemas import PlannerSubmissionResult
+
+        episode_id = getattr(self.ctx, "episode_id", None)
+        if not episode_id:
+            return None, "missing episode_id for submission trace lookup"
+
+        recorder = self.ctx.get_database_recorder(episode_id)
+        async with recorder.session_factory() as db:
+            query = (
+                select(Trace)
+                .where(
+                    Trace.episode_id == recorder.episode_id,
+                    Trace.trace_type == TraceType.TOOL_START,
+                    Trace.name == "submit_plan",
+                )
+                .order_by(Trace.id.desc())
+                .limit(1)
+            )
+            result = await db.execute(query)
+            trace_row = result.scalars().first()
+
+        if trace_row is None:
+            return None, "submit_plan() tool trace not found"
+
+        metadata_vars = trace_row.metadata_vars or {}
+        observation_raw = metadata_vars.get("observation")
+        if not observation_raw:
+            error_raw = metadata_vars.get("error")
+            if isinstance(error_raw, str) and error_raw.strip():
+                return None, f"submit_plan() execution failed: {error_raw.strip()}"
+            return None, "submit_plan() observation is missing"
+
+        payload: dict[str, Any] | None = None
+        if isinstance(observation_raw, dict):
+            payload = observation_raw
+        elif isinstance(observation_raw, str):
+            text = observation_raw.strip()
+            with suppress(Exception):
+                parsed = ast.literal_eval(text)
+                if isinstance(parsed, dict):
+                    payload = parsed
+
+        if payload is None:
+            return None, "submit_plan() observation is not a structured payload"
+
+        with suppress(Exception):
+            submission = PlannerSubmissionResult.model_validate(payload)
+            if submission.node_type != expected_node_type:
+                return (
+                    None,
+                    "submit_plan() node_type mismatch: "
+                    f"expected {expected_node_type.value}, got {submission.node_type.value}",
+                )
+            return submission, None
+        return None, "submit_plan() observation does not match PlannerSubmissionResult"
+
+    async def _get_latest_tool_trace_metadata(
+        self, tool_name: str
+    ) -> tuple[TraceMetadata | None, str | None]:
+        """
+        Read the latest TOOL_START trace metadata for a given tool name.
+
+        Returns (TraceMetadata | None, error_message | None).
+        """
+        from sqlalchemy import select
+
+        episode_id = getattr(self.ctx, "episode_id", None)
+        if not episode_id:
+            return None, "missing episode_id for tool trace lookup"
+
+        recorder = self.ctx.get_database_recorder(episode_id)
+        async with recorder.session_factory() as db:
+            query = (
+                select(Trace)
+                .where(
+                    Trace.episode_id == recorder.episode_id,
+                    Trace.trace_type == TraceType.TOOL_START,
+                    Trace.name == tool_name,
+                )
+                .order_by(Trace.id.desc())
+                .limit(1)
+            )
+            result = await db.execute(query)
+            trace_row = result.scalars().first()
+
+        if trace_row is None:
+            return None, f"{tool_name}() tool trace not found"
+
+        metadata = TraceMetadata.model_validate(trace_row.metadata_vars or {})
+        if metadata.error and metadata.error.strip():
+            return None, f"{tool_name}() execution failed: {metadata.error.strip()}"
+        if not metadata.observation or not metadata.observation.strip():
+            return None, f"{tool_name}() observation is missing"
+        return metadata, None
 
     def _get_skills_context(self) -> str:
         # Note: Skills are currently local to the controller
@@ -417,8 +540,14 @@ class BaseNode:
                 try:
                     # WP10: Explicitly record node start for UI
                     if db_callback:
+                        node_input = (
+                            inputs.get("task")
+                            or inputs.get("prompt")
+                            or inputs.get("journal")
+                            or ""
+                        )
                         await db_callback.record_node_start(
-                            node_type, input_data=str(inputs.get("task", ""))
+                            node_type, input_data=str(node_input)
                         )
 
                     with dspy.settings.context(lm=self.ctx.dspy_lm):

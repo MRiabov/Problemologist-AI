@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState, AgentStatus
-from controller.agent.tools import get_engineer_tools
+from controller.agent.tools import get_engineer_planner_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName
 from shared.observability.schemas import SubmissionValidationEvent
@@ -21,6 +21,7 @@ class PlannerSignature(dspy.Signature):
     """
     Planner node: Analyzes the task and creates plan.md and todo.md using tools.
     You must use the provided tools to create 'plan.md' and 'todo.md' directly.
+    Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide a summary of your plan.
     """
 
@@ -70,7 +71,7 @@ class PlannerNode(BaseNode):
             PlannerSignature,
             state,
             inputs,
-            get_engineer_tools,
+            get_engineer_planner_tools,
             validate_files,
             AgentName.ENGINEER_PLANNER,
         )
@@ -80,6 +81,28 @@ class PlannerNode(BaseNode):
                 update={
                     "status": AgentStatus.FAILED,
                     "journal": state.journal + journal_entry,
+                    "turn_count": state.turn_count + 1,
+                }
+            )
+
+        submission, submit_err = await self._get_latest_submit_plan_result(
+            AgentName.ENGINEER_PLANNER
+        )
+        if submission is None or not submission.ok or submission.status != "submitted":
+            submit_errors = (
+                [submit_err]
+                if submit_err
+                else (submission.errors if submission else ["submit_plan failed"])
+            )
+            return state.model_copy(
+                update={
+                    "status": AgentStatus.FAILED,
+                    "journal": (
+                        state.journal
+                        + "\n[Planner] submit_plan validation failed: "
+                        + "; ".join([e for e in submit_errors if e])
+                        + journal_entry
+                    ),
                     "turn_count": state.turn_count + 1,
                 }
             )

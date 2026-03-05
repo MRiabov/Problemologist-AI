@@ -24,6 +24,7 @@ from shared.observability.schemas import (
     LibraryUsageEvent,
     LsFilesToolEvent,
     ManufacturabilityCheckEvent,
+    PlanSubmissionBenchmarkEvent,
     PlanSubmissionEngineerEvent,
     ReadFileToolEvent,
     RunCommandToolEvent,
@@ -449,11 +450,21 @@ class RemoteFilesystemMiddleware:
         p_str = str(script_path)
         res = await self.client.submit(p_str)
 
-        # Record as PlanSubmissionEngineerEvent
+        benchmark_roles = {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_REVIEWER,
+        }
+        event_cls = (
+            PlanSubmissionBenchmarkEvent
+            if self.agent_role in benchmark_roles
+            else PlanSubmissionEngineerEvent
+        )
+
         await record_events(
             episode_id=self.client.session_id,
             events=[
-                PlanSubmissionEngineerEvent(
+                event_cls(
                     plan_path=p_str,
                 )
             ],

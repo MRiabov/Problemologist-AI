@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import uuid
 from contextlib import suppress
@@ -9,6 +10,7 @@ import httpx
 import structlog
 from langgraph.graph import END, START, StateGraph
 from opentelemetry import trace
+from sqlalchemy import select
 
 from controller.agent.initialization import initialize_agent_files
 from controller.clients.backend import RemoteFilesystemBackend
@@ -17,8 +19,15 @@ from controller.graph.steerability_node import check_steering, steerability_node
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Episode
-from shared.enums import AgentName, EpisodeStatus, GenerationKind, ReviewDecision
+from controller.persistence.models import Episode, Trace
+from shared.enums import (
+    AgentName,
+    EpisodeStatus,
+    GenerationKind,
+    ReviewDecision,
+    TraceType,
+)
+from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
@@ -34,6 +43,54 @@ from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
 logger = structlog.get_logger(__name__)
+
+
+async def _get_latest_planner_submission_result(
+    session_id: uuid.UUID,
+) -> tuple["PlannerSubmissionResult | None", str | None]:
+    """Read the latest submit_plan tool observation from persisted traces."""
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        query = (
+            select(Trace)
+            .where(
+                Trace.episode_id == session_id,
+                Trace.trace_type == TraceType.TOOL_START,
+                Trace.name == "submit_plan",
+            )
+            .order_by(Trace.id.desc())
+            .limit(1)
+        )
+        result = await db.execute(query)
+        trace_row = result.scalars().first()
+
+    if trace_row is None:
+        return None, "submit_plan() tool trace not found"
+
+    metadata_vars = trace_row.metadata_vars or {}
+    observation_raw = metadata_vars.get("observation")
+    if not observation_raw:
+        error_raw = metadata_vars.get("error")
+        if isinstance(error_raw, str) and error_raw.strip():
+            return None, f"submit_plan() execution failed: {error_raw.strip()}"
+        return None, "submit_plan() observation is missing"
+
+    parsed_payload: dict[str, Any] | None = None
+    if isinstance(observation_raw, dict):
+        parsed_payload = observation_raw
+    elif isinstance(observation_raw, str):
+        observation_text = observation_raw.strip()
+        with suppress(Exception):
+            loaded = ast.literal_eval(observation_text)
+            if isinstance(loaded, dict):
+                parsed_payload = loaded
+
+    if parsed_payload is None:
+        return None, "submit_plan() observation is not a structured payload"
+
+    with suppress(Exception):
+        return PlannerSubmissionResult.model_validate(parsed_payload), None
+    return None, "submit_plan() observation does not match PlannerSubmissionResult"
 
 
 async def _read_session_markdown(
@@ -62,14 +119,17 @@ async def _read_session_markdown(
 
 
 async def _validate_planner_handoff(
-    session_id: uuid.UUID, prompt: str, plan: Any | None
+    session_id: uuid.UUID,
+    plan: Any | None,
+    custom_objectives: CustomObjectives | None = None,
 ) -> list[str]:
     """
     Validate benchmark planner output before allowing PLANNED state.
 
     Enforces:
     - Required planner files are present and structurally valid.
-    - Planner output is semantically aligned with prompt requirements.
+    - Explicit planner submission (`submit_plan`) succeeded.
+    - User-provided objective overrides are reflected in objectives constraints.
     """
     from shared.models.schemas import ObjectivesYaml
     from worker_heavy.utils.file_validation import validate_node_output
@@ -96,8 +156,6 @@ async def _validate_planner_handoff(
         if not is_valid:
             errors.extend([f"planner_structural: {msg}" for msg in structural_errors])
 
-    prompt_lower = prompt.lower()
-
     objectives_text = artifacts.get("objectives.yaml")
     if objectives_text:
         try:
@@ -105,31 +163,50 @@ async def _validate_planner_handoff(
 
             parsed = yaml.safe_load(objectives_text)
             objectives = ObjectivesYaml.model_validate(parsed or {})
-
-            forbid_required = "forbid" in prompt_lower or "obstacle" in prompt_lower
-            if forbid_required and not objectives.objectives.forbid_zones:
-                errors.append(
-                    "planner_semantic: Prompt requires forbid zone, but objectives.yaml has no forbid_zones"
-                )
-
-            fluid_required = "fluid" in prompt_lower
-            if fluid_required and not (
-                objectives.objectives.fluid_objectives or objectives.fluids
-            ):
-                errors.append(
-                    "planner_semantic: Prompt requires fluid behavior, but no fluid objectives/config provided"
-                )
-
-            electronics_required = any(
-                token in prompt_lower
-                for token in ("electronics", "circuit", "wire", "power supply")
-            )
-            if electronics_required and objectives.electronics_requirements is None:
-                errors.append(
-                    "planner_semantic: Prompt requires electronics behavior, but electronics_requirements is missing"
-                )
+            if custom_objectives:
+                if custom_objectives.max_unit_cost is not None:
+                    observed = objectives.constraints.max_unit_cost
+                    expected = custom_objectives.max_unit_cost
+                    if abs(observed - expected) > 1e-6:
+                        errors.append(
+                            "planner_semantic: objectives.constraints.max_unit_cost "
+                            f"({observed}) does not match custom objective ({expected})"
+                        )
+                if custom_objectives.max_weight is not None:
+                    observed = objectives.constraints.max_weight_g
+                    expected = custom_objectives.max_weight
+                    if abs(observed - expected) > 1e-6:
+                        errors.append(
+                            "planner_semantic: objectives.constraints.max_weight_g "
+                            f"({observed}) does not match custom objective ({expected})"
+                        )
+                if custom_objectives.target_quantity is not None:
+                    observed = objectives.constraints.target_quantity
+                    expected = custom_objectives.target_quantity
+                    if observed != expected:
+                        errors.append(
+                            "planner_semantic: objectives.constraints.target_quantity "
+                            f"({observed}) does not match custom objective ({expected})"
+                        )
         except Exception as exc:
             errors.append(f"planner_semantic: Failed to parse objectives.yaml ({exc})")
+
+    submission, submission_error = await _get_latest_planner_submission_result(
+        session_id
+    )
+    if submission is None:
+        errors.append(
+            f"planner_submission: {submission_error or 'submit_plan() call missing'}"
+        )
+    else:
+        if not submission.ok or submission.status != "submitted":
+            errors.append("planner_submission: submit_plan() did not return submitted")
+        if submission.node_type != AgentName.BENCHMARK_PLANNER:
+            errors.append(
+                "planner_submission: submission node_type is not benchmark_planner"
+            )
+        if submission.errors:
+            errors.extend([f"planner_submission: {msg}" for msg in submission.errors])
 
     return errors
 
@@ -330,8 +407,8 @@ async def _execute_graph_streaming(
                 )
                 planner_errors = await _validate_planner_handoff(
                     session_id=session_id,
-                    prompt=prompt,
                     plan=final_state.plan,
+                    custom_objectives=final_state.session.custom_objectives,
                 )
                 if planner_errors:
                     logger.error(
