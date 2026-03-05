@@ -583,6 +583,36 @@
               "format": "uuid",
               "title": "Session Id"
             }
+          },
+          {
+            "name": "include_traces",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Include Traces"
+            }
+          },
+          {
+            "name": "trace_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Trace Limit"
+            }
+          },
+          {
+            "name": "trace_content_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 4000,
+              "title": "Trace Content Limit"
+            }
           }
         ],
         "responses": {
@@ -1376,6 +1406,36 @@
               "type": "string",
               "format": "uuid",
               "title": "Session Id"
+            }
+          },
+          {
+            "name": "include_traces",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Include Traces"
+            }
+          },
+          {
+            "name": "trace_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Trace Limit"
+            }
+          },
+          {
+            "name": "trace_content_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 4000,
+              "title": "Trace Content Limit"
             }
           }
         ],
@@ -2369,6 +2429,13 @@
               }
             ],
             "title": "Comment"
+          },
+          "additional_turns": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Additional Turns",
+            "description": "Optional extra turns to grant before resuming execution.",
+            "default": 0
           }
         },
         "type": "object",

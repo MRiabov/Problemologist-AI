@@ -68,6 +68,7 @@ class AgentSettings(BaseSettings):
     llm_model: str = global_settings.llm_model
     openai_api_key: str | None = None
     openai_api_base: str | None = None  # For OpenRouter or custom endpoints
+    openrouter_api_key: str | None = global_settings.openrouter_api_key
     anthropic_api_key: str | None = None
     llm_timeout_seconds: int = 300
     llm_max_tokens: int = _resolve_llm_max_tokens_from_agents_config()

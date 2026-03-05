@@ -6,20 +6,22 @@ import httpx
 import structlog
 import yaml
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel, field_validator
-from sqlalchemy import select
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.api.schemas import (
+    AssetResponse,
     BenchmarkConfirmResponse,
     BenchmarkGenerateResponse,
     BenchmarkObjectivesResponse,
     EpisodeResponse,
+    TraceResponse,
 )
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
-from controller.persistence.models import Episode
+from controller.persistence.models import Episode, Trace
 from shared.enums import GenerationKind, ResponseStatus
 from shared.models.schemas import CustomObjectives
 from shared.simulation.schemas import SimulatorBackendType
@@ -101,6 +103,11 @@ async def generate_benchmark(
 
 class ConfirmRequest(BaseModel):
     comment: str | None = None
+    additional_turns: int = Field(
+        default=0,
+        ge=0,
+        description="Optional extra turns to grant before resuming execution.",
+    )
 
 
 @router.post("/{session_id}/confirm", response_model=BenchmarkConfirmResponse)
@@ -123,6 +130,7 @@ async def confirm_benchmark(
         session_id=str(session_id),
         has_comment=bool(request.comment),
         comment=request.comment,
+        additional_turns=request.additional_turns,
     )
 
     # Record user comment if provided
@@ -139,6 +147,14 @@ async def confirm_benchmark(
         )
         db.add(trace_record)
         await db.commit()
+
+    if request.additional_turns > 0:
+        from controller.agent.execution_limits import grant_episode_additional_turns
+
+        await grant_episode_additional_turns(
+            episode_id=session_id,
+            additional_turns=request.additional_turns,
+        )
 
     background_tasks.add_task(
         continue_generation_session,
@@ -160,14 +176,18 @@ async def confirm_benchmark(
 
 @router.get("/{session_id}", response_model=EpisodeResponse)
 async def get_session(
-    session_id: uuid.UUID, db: Annotated[AsyncSession, Depends(get_db)]
+    session_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    include_traces: bool = True,
+    trace_limit: int = 200,
+    trace_content_limit: int = 4000,
 ):
     from sqlalchemy.orm import selectinload
 
     stmt = (
         select(Episode)
         .where(Episode.id == session_id)
-        .options(selectinload(Episode.traces), selectinload(Episode.assets))
+        .options(selectinload(Episode.assets))
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
@@ -175,7 +195,53 @@ async def get_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    return session
+    last_trace_id = await db.scalar(
+        select(func.max(Trace.id)).where(Trace.episode_id == session_id)
+    )
+
+    response = EpisodeResponse(
+        id=session.id,
+        user_session_id=session.user_session_id,
+        task=session.task,
+        status=session.status,
+        created_at=session.created_at,
+        updated_at=session.updated_at,
+        skill_git_hash=session.skill_git_hash,
+        template_versions=session.template_versions,
+        metadata_vars=session.metadata_vars,
+        todo_list=session.todo_list,
+        journal=session.journal,
+        plan=session.plan,
+        validation_logs=session.validation_logs,
+        last_trace_id=last_trace_id,
+        traces=[],
+        assets=[AssetResponse.model_validate(a) for a in session.assets],
+    )
+
+    if not include_traces:
+        return response
+
+    safe_trace_limit = max(1, min(trace_limit, 500))
+    safe_content_limit = max(200, min(trace_content_limit, 20000))
+
+    trace_stmt = (
+        select(Trace)
+        .where(Trace.episode_id == session_id)
+        .order_by(Trace.id.desc())
+        .limit(safe_trace_limit)
+    )
+    trace_rows = (await db.execute(trace_stmt)).scalars().all()
+    trace_rows = list(reversed(trace_rows))
+
+    trace_responses: list[TraceResponse] = []
+    for trace in trace_rows:
+        tr = TraceResponse.model_validate(trace)
+        if tr.content and len(tr.content) > safe_content_limit:
+            tr.content = tr.content[:safe_content_limit] + "\n...[truncated]"
+        trace_responses.append(tr)
+
+    response.traces = trace_responses
+    return response
 
 
 class UpdateObjectivesRequest(BaseModel):

@@ -4,6 +4,65 @@ llm:
   max_reasoning_tokens: 16384
   context_compaction_threshold_tokens: 225000
 
+execution:
+  defaults:
+    timeout_seconds: 300
+    max_turns: 150
+    max_total_tokens: 400000
+  agents:
+    engineer_planner:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    engineer_coder:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    engineer_reviewer:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    electronics_planner:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    electronics_engineer:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    electronics_reviewer:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    execution_reviewer:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    benchmark_planner:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    benchmark_coder:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    benchmark_reviewer:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    cots_search:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    journalling_agent:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+    skill_agent:
+      timeout_seconds: 300
+      max_turns: 150
+      max_total_tokens: 400000
+
 defaults:
   read:
     allow: ["**", "/", "."]

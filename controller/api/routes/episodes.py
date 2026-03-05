@@ -311,6 +311,7 @@ async def continue_episode(
         continue_agent_task(
             episode_id,
             request.message,
+            additional_turns=request.additional_turns,
             metadata=request.metadata_vars.model_dump()
             if request.metadata_vars
             else None,

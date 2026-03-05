@@ -7,7 +7,7 @@ from controller.agent.context_usage import (
     estimate_text_tokens,
     update_episode_context_usage,
 )
-from controller.config.settings import settings
+from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.graph.steerability_node import check_steering, steerability_node
 from shared.enums import AgentName
 
@@ -54,7 +54,17 @@ async def should_continue(state: AgentState) -> str:
     ):
         return AgentName.JOURNALLING_AGENT
 
-    if state.turn_count >= settings.max_agent_turns:
+    hard_fail = await evaluate_agent_hard_fail(
+        agent_name=AgentName.ENGINEER_CODER,
+        episode_id=state.episode_id,
+        turn_count=state.turn_count,
+    )
+    if hard_fail.should_fail:
+        state.status = AgentStatus.FAILED
+        state.feedback = hard_fail.message or "Agent hard-fail limit reached."
+        state.journal = (
+            state.journal + "\n[Hard Fail] " + (hard_fail.message or "quota reached")
+        ).strip()
         return AgentName.SKILL_AGENT
 
     if state.status == AgentStatus.APPROVED or state.status == AgentStatus.FAILED:
@@ -147,3 +157,19 @@ builder.add_edge(AgentName.COTS_SEARCH, AgentName.ENGINEER_PLANNER)
 memory = MemorySaver()
 
 graph = builder.compile(checkpointer=memory)
+
+
+def _build_single_node_graph(node_name: AgentName, node_callable):
+    single = StateGraph(AgentState)
+    single.add_node(node_name, node_callable)
+    single.add_edge(START, node_name)
+    single.add_edge(node_name, END)
+    return single.compile(checkpointer=MemorySaver())
+
+
+engineer_planner_graph = _build_single_node_graph(
+    AgentName.ENGINEER_PLANNER, planner_node
+)
+electronics_planner_graph = _build_single_node_graph(
+    AgentName.ELECTRONICS_PLANNER, electronics_planner_node
+)

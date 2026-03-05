@@ -28,6 +28,14 @@ logger = get_logger(__name__)
 WORKER_LIGHT_URL = settings.worker_light_url
 
 
+def _is_planner_agent(agent_name: AgentName) -> bool:
+    return agent_name in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.BENCHMARK_PLANNER,
+    }
+
+
 class AgentRunRequest(BaseModel):
     task: StrictStr = Field(..., description="The task for the agent to perform.")
     session_id: StrictStr = Field(..., description="Session ID for the worker.")
@@ -103,6 +111,11 @@ async def execute_agent_task(
                 client = get_worker_client(session_id)
                 middleware = RemoteFilesystemMiddleware(client, agent_role=agent_name)
                 backend = RemoteFilesystemBackend(middleware)
+                from controller.agent.execution_limits import (
+                    mark_episode_execution_window_start,
+                )
+
+                await mark_episode_execution_window_start(episode_id)
 
                 # Initialize agent files (templates, directories)
                 await initialize_agent_files(backend, agent_name=agent_name)
@@ -490,7 +503,12 @@ async def execute_agent_task(
                 # Mark completion after traces/assets are persisted.
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
-                    episode.status = EpisodeStatus.COMPLETED
+                    target_status = (
+                        EpisodeStatus.PLANNED
+                        if _is_planner_agent(agent_name)
+                        else EpisodeStatus.COMPLETED
+                    )
+                    episode.status = target_status
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
                     if not episode.plan:
@@ -508,7 +526,7 @@ async def execute_agent_task(
                         episode_id,
                         {
                             "type": "status_update",
-                            "status": EpisodeStatus.COMPLETED,
+                            "status": target_status,
                             "metadata_vars": episode.metadata_vars,
                             "timestamp": datetime.datetime.now(
                                 datetime.UTC
@@ -570,6 +588,7 @@ async def execute_agent_task(
 async def continue_agent_task(
     episode_id: uuid.UUID,
     message: str,
+    additional_turns: int = 0,
     metadata: dict | None = None,
 ):
     """
@@ -590,6 +609,21 @@ async def continue_agent_task(
             if episode.status != EpisodeStatus.RUNNING:
                 episode.status = EpisodeStatus.RUNNING
                 await db.commit()
+
+            if additional_turns > 0:
+                from controller.agent.execution_limits import (
+                    grant_episode_additional_turns,
+                )
+
+                await grant_episode_additional_turns(
+                    episode_id=episode_id,
+                    additional_turns=additional_turns,
+                )
+            from controller.agent.execution_limits import (
+                mark_episode_execution_window_start,
+            )
+
+            await mark_episode_execution_window_start(episode_id)
 
             try:
                 # Setup context

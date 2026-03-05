@@ -4,6 +4,7 @@ import uuid
 import typer
 
 from .config import settings
+from .execution_limits import resolve_agent_execution_policy
 from .graph import graph
 from .state import AgentState
 
@@ -26,6 +27,7 @@ def run(
 
 async def _run_agent(task: str, thread_id: str):
     config = {"configurable": {"thread_id": thread_id}}
+    turn_limit = resolve_agent_execution_policy("engineer_coder").max_turns
 
     # Smart resume logic
     snapshot = await graph.get_state(config)
@@ -34,10 +36,17 @@ async def _run_agent(task: str, thread_id: str):
     if snapshot.values:
         # State exists
         turn_count = snapshot.values.get("turn_count", 0)
+        existing_episode_id = snapshot.values.get("episode_id")
+        if not existing_episode_id:
+            generated_episode_id = str(uuid.uuid4())
+            await graph.update_state(
+                config, {"episode_id": generated_episode_id}, as_node="engineer_planner"
+            )
+            print(f"Missing episode_id in checkpoint; assigned {generated_episode_id}.")
 
         # Check if execution ended (next is empty)
         if not snapshot.next:
-            if turn_count >= settings.max_agent_turns:
+            if turn_count >= turn_limit:
                 print(
                     f"🔄 Turn limit reached ({turn_count}). Resetting counter and resuming."
                 )
@@ -55,7 +64,7 @@ async def _run_agent(task: str, thread_id: str):
     else:
         # New session
         print("🆕 Starting new session...")
-        inputs = AgentState(task=task)
+        inputs = AgentState(task=task, session_id=thread_id)
 
     print(f"🚀 Starting Agent with thread_id: {thread_id}")
     print(f"📝 Task: {task}")

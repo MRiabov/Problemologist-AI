@@ -251,6 +251,11 @@ class BenchmarkGenerateRequest(BaseModel):
 
 class ConfirmRequest(BaseModel):
     comment: str | None = None
+    additional_turns: int = Field(
+        default=0,
+        ge=0,
+        description="Optional extra turns to grant before resuming execution.",
+    )
 
 
 class UpdateObjectivesRequest(BaseModel):
@@ -288,6 +293,11 @@ class ReviewRequest(BaseModel):
 
 class MessageRequest(BaseModel):
     message: StrictStr
+    additional_turns: int = Field(
+        default=0,
+        ge=0,
+        description="Optional extra turns to grant before continuing the episode.",
+    )
     metadata_vars: EpisodeMetadata | None = Field(
         None, description="Additional metadata for the message."
     )

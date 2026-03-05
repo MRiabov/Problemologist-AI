@@ -1,3 +1,4 @@
+import uuid
 from enum import StrEnum
 from typing import Annotated, Any
 
@@ -31,7 +32,7 @@ class AgentState(BaseModel):
     status: AgentStatus = AgentStatus.IDLE
     feedback: StrictStr = ""
     session_id: StrictStr = ""
-    episode_id: StrictStr = ""
+    episode_id: StrictStr = Field(default_factory=lambda: str(uuid.uuid4()))
     best_cost: float | None = None
     best_weight_g: float | None = None
     turn_count: StrictInt = 0

@@ -9,7 +9,7 @@ from shared.enums import AgentName
 PolicyAction = Literal["read", "write"]
 
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PathPolicy(BaseModel):
@@ -27,8 +27,47 @@ class LLMPolicyConfig(BaseModel):
     context_compaction_threshold_tokens: int = 225000
 
 
+class AgentExecutionPolicy(BaseModel):
+    timeout_seconds: int = Field(default=300, ge=1)
+    max_turns: int = Field(default=150, ge=1)
+    max_total_tokens: int = Field(default=400000, ge=1)
+
+
+class AgentExecutionConfig(BaseModel):
+    defaults: AgentExecutionPolicy = Field(default_factory=AgentExecutionPolicy)
+    agents: dict[str, AgentExecutionPolicy] = Field(default_factory=dict)
+
+    @field_validator("agents", mode="before")
+    @classmethod
+    def _normalize_agent_keys(
+        cls, value: object
+    ) -> dict[str, AgentExecutionPolicy] | object:
+        if not isinstance(value, dict):
+            return value
+        normalized: dict[str, AgentExecutionPolicy] = {}
+        for raw_key, raw_policy in value.items():
+            key = str(raw_key)
+            try:
+                key = AgentName(key).value
+            except Exception:
+                key = key.strip().lower()
+            if isinstance(raw_policy, AgentExecutionPolicy):
+                normalized[key] = raw_policy
+            else:
+                normalized[key] = AgentExecutionPolicy.model_validate(raw_policy)
+        return normalized
+
+    def get_policy(self, agent_role: AgentName | str) -> AgentExecutionPolicy:
+        key = agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        policy = self.agents.get(key)
+        if policy:
+            return policy
+        return self.defaults
+
+
 class FilesystemConfig(BaseModel):
     llm: LLMPolicyConfig = Field(default_factory=LLMPolicyConfig)
+    execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
     defaults: AgentPolicy = Field(default_factory=AgentPolicy)
     agents: dict[str, AgentPolicy] = Field(default_factory=dict)
 
@@ -123,3 +162,9 @@ class FilesystemPolicy:
 
         # 3. Default deny
         return False
+
+    def get_execution_policy(self, agent_role: AgentName | str) -> AgentExecutionPolicy:
+        role = (
+            agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        )
+        return self.config.execution.get_policy(role)
