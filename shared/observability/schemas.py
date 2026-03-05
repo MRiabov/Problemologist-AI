@@ -92,6 +92,7 @@ class ObservabilityEventType(StrEnum):
     MESHING_FAILURE = "meshing_failure"
     PHYSICS_INSTABILITY = "physics_instability"
     GPU_OOM_RETRY = "gpu_oom_retry"
+    CONVERSATION_LENGTH_EXCEEDED = "conversation_length_exceeded"
 
 
 class BaseEvent(BaseModel):
@@ -484,3 +485,16 @@ class GpuOomRetryEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.GPU_OOM_RETRY
     original_particles: int
     reduced_particles: int
+
+
+class ConversationLengthExceededEvent(BaseEvent):
+    event_type: ObservabilityEventType = (
+        ObservabilityEventType.CONVERSATION_LENGTH_EXCEEDED
+    )
+    previous_length: int
+    threshold: int
+    compacted_length: int | None = None
+    compaction_strategy: str = "journal_summarization"
+    message: str = (
+        "Conversation length exceeded configured limit; context was compacted."
+    )

@@ -22,7 +22,13 @@ class AgentPolicy(BaseModel):
     write: PathPolicy = Field(default_factory=PathPolicy)
 
 
+class LLMPolicyConfig(BaseModel):
+    max_reasoning_tokens: int = 16384
+    context_compaction_threshold_chars: int = 225000
+
+
 class FilesystemConfig(BaseModel):
+    llm: LLMPolicyConfig = Field(default_factory=LLMPolicyConfig)
     defaults: AgentPolicy = Field(default_factory=AgentPolicy)
     agents: dict[str, AgentPolicy] = Field(default_factory=dict)
 

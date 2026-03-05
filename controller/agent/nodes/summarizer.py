@@ -2,8 +2,11 @@ import dspy
 import structlog
 
 from controller.agent.config import settings
+from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.state import AgentState
+from controller.observability.middleware_helper import record_events
 from shared.enums import AgentName
+from shared.observability.schemas import ConversationLengthExceededEvent
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -29,9 +32,10 @@ class SummarizerNode(BaseNode):
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
+        threshold = settings.context_compaction_threshold_chars
         # Check if journal actually needs summarization
-        # Using a conservative threshold for now (e.g., 5000 characters)
-        if len(state.journal) < 5000:
+        # Uses configured threshold from config/agents_config.yaml.
+        if len(state.journal) < threshold:
             return state
 
         logger.info(
@@ -53,6 +57,33 @@ class SummarizerNode(BaseNode):
         )
 
         summarized = getattr(prediction, "summarized_journal", state.journal)
+
+        if state.episode_id:
+            try:
+                await record_events(
+                    episode_id=state.episode_id,
+                    events=[
+                        ConversationLengthExceededEvent(
+                            previous_length=len(state.journal),
+                            threshold=threshold,
+                            compacted_length=len(summarized),
+                            agent_id=AgentName.JOURNALLING_AGENT.value,
+                            user_session_id=state.session_id or None,
+                            episode_id=state.episode_id,
+                        )
+                    ],
+                )
+                await update_episode_context_usage(
+                    episode_id=state.episode_id,
+                    used_chars=len(summarized),
+                    max_chars=threshold,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "conversation_length_event_emit_failed",
+                    error=str(exc),
+                    episode_id=state.episode_id,
+                )
 
         logger.info(
             "journal_summarized",

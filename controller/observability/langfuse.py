@@ -1,15 +1,27 @@
 import os
 from contextlib import AbstractContextManager, nullcontext
+from inspect import Parameter, signature
 from typing import Any
 
 from langfuse import Langfuse
 from openinference.instrumentation.dspy import DSPyInstrumentor
+from pydantic import BaseModel
 
 from controller.config.settings import settings
 from shared.enums import AgentName, TraceType
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class LangfuseUsageDetails(BaseModel):
+    """Normalized token/cost usage payload forwarded from DSPy/LiteLLM."""
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+    total_cost: float | None = None
+    model: str | None = None
 
 
 def init_tracing() -> None:
@@ -116,6 +128,147 @@ def attach_session_to_current_trace(
             "failed_to_attach_langfuse_session",
             error=str(e),
             session_id=session_id,
+        )
+
+
+def _to_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    return None
+
+
+def _to_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _build_usage_details(
+    usage: Any,
+    *,
+    model: str | None,
+    total_cost: float | None,
+) -> LangfuseUsageDetails | None:
+    usage_payload = usage
+    if usage_payload is None:
+        return None
+
+    if hasattr(usage_payload, "model_dump"):
+        try:
+            usage_payload = usage_payload.model_dump(mode="json")
+        except Exception:
+            return None
+
+    if not isinstance(usage_payload, dict):
+        return None
+
+    input_tokens = _to_int(
+        usage_payload.get("prompt_tokens", usage_payload.get("input_tokens"))
+    )
+    output_tokens = _to_int(
+        usage_payload.get("completion_tokens", usage_payload.get("output_tokens"))
+    )
+    total_tokens = _to_int(usage_payload.get("total_tokens"))
+
+    if total_tokens is None and input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+
+    payload = LangfuseUsageDetails(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
+        total_cost=total_cost,
+        model=model,
+    )
+
+    if (
+        payload.input_tokens is None
+        and payload.output_tokens is None
+        and payload.total_tokens is None
+        and payload.total_cost is None
+    ):
+        return None
+
+    return payload
+
+
+def report_usage_to_current_observation(
+    *,
+    usage: Any,
+    model: str | None = None,
+    cost: Any | None = None,
+) -> None:
+    """Best-effort usage forwarding to the active Langfuse observation.
+
+    Usage data is sourced from DSPy LM history entries, which are backed by LiteLLM.
+    """
+    client = get_langfuse_client()
+    if not client:
+        return
+
+    usage_details = _build_usage_details(
+        usage,
+        model=model,
+        total_cost=_to_float(cost),
+    )
+    if usage_details is None:
+        return
+
+    method = getattr(client, "update_current_observation", None)
+    if method is None:
+        return
+
+    payload = usage_details.model_dump(exclude_none=True)
+    token_payload = {
+        k: v
+        for k, v in {
+            "input": usage_details.input_tokens,
+            "output": usage_details.output_tokens,
+            "total": usage_details.total_tokens,
+        }.items()
+        if v is not None
+    }
+
+    try:
+        params = signature(method).parameters
+        has_var_kwargs = any(p.kind == Parameter.VAR_KEYWORD for p in params.values())
+
+        kwargs: dict[str, Any] = {}
+
+        if "usage_details" in params or has_var_kwargs:
+            kwargs["usage_details"] = token_payload
+        elif "usage" in params:
+            kwargs["usage"] = token_payload
+        else:
+            for key, value in (
+                ("input_tokens", usage_details.input_tokens),
+                ("output_tokens", usage_details.output_tokens),
+                ("total_tokens", usage_details.total_tokens),
+            ):
+                if value is not None and key in params:
+                    kwargs[key] = value
+
+        if usage_details.model is not None and ("model" in params or has_var_kwargs):
+            kwargs["model"] = usage_details.model
+
+        if usage_details.total_cost is not None:
+            if "total_cost" in params or has_var_kwargs:
+                kwargs["total_cost"] = usage_details.total_cost
+            elif "cost" in params:
+                kwargs["cost"] = usage_details.total_cost
+
+        method(**kwargs)
+    except Exception as e:
+        logger.warning(
+            "failed_to_report_langfuse_usage",
+            error=str(e),
+            usage=payload,
         )
 
 

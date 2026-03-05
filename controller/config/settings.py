@@ -15,6 +15,9 @@ class Settings(BaseSettings):
 
     # Agent Settings
     max_agent_turns: int = Field(default=60, alias="MAX_AGENT_TURNS")
+    require_reasoning_traces: bool = Field(
+        default=False, alias="REQUIRE_REASONING_TRACES"
+    )
 
     # Infrastructure Settings
     temporal_url: str = Field(default="127.0.0.1:17233", alias="TEMPORAL_URL")
