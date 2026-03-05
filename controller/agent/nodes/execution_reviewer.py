@@ -15,8 +15,8 @@ from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
-from shared.workers.schema import BenchmarkToolResponse
 
+from ..review_handover import validate_reviewer_handover
 from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
@@ -247,30 +247,9 @@ class ExecutionReviewerNode(BaseNode):
             )
 
     async def _ensure_submit_for_review_succeeded(self) -> str | None:
-        metadata, trace_err = await self._get_latest_tool_trace_metadata(
-            "submit_for_review"
-        )
-        if metadata is None:
-            return (
-                "Execution review requires explicit submit_for_review() before reviewer "
-                f"handoff: {trace_err}"
-            )
-
-        try:
-            raw = metadata.observation or ""
-            parsed = json.loads(raw)
-            result = BenchmarkToolResponse.model_validate(parsed)
-            if not result.success:
-                return (
-                    "Execution review blocked: latest submit_for_review() failed: "
-                    f"{result.message}"
-                )
-        except Exception:
-            return (
-                "Execution review blocked: submit_for_review() observation could not "
-                "be validated as BenchmarkToolResponse."
-            )
-
+        handoff_err = await validate_reviewer_handover(self.ctx.worker_client)
+        if handoff_err:
+            return f"Execution review blocked: {handoff_err}"
         return None
 
 
@@ -283,7 +262,7 @@ async def execution_reviewer_node(state: AgentState) -> AgentState:
         raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
-        worker_light_url=settings.spec_001_api_url,
+        worker_light_url=settings.worker_light_url,
         session_id=session_id,
         episode_id=episode_id,
         agent_role=AgentName.EXECUTION_REVIEWER,

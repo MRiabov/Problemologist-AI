@@ -253,13 +253,20 @@ class BaseNode:
                         except Exception as e:
                             logger.warning("tool_start_trace_failed", error=str(e))
 
+                    tool_timeout_seconds = 60.0
+                    if tool_name in {"simulate", "validate"}:
+                        # Physics/validation calls can legitimately exceed 60s in integration runs.
+                        tool_timeout_seconds = float(
+                            settings.dspy_program_timeout_seconds
+                        )
+
                     try:
                         if asyncio.iscoroutinefunction(func):
                             # WP10: Use run_coroutine_threadsafe on the main loop
                             future = asyncio.run_coroutine_threadsafe(
                                 func(*args, **sanitized_kwargs), self.ctx.main_loop
                             )
-                            result = future.result(timeout=60)
+                            result = future.result(timeout=tool_timeout_seconds)
                         else:
                             result = func(*args, **sanitized_kwargs)
 

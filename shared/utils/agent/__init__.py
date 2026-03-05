@@ -49,6 +49,20 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
     return BenchmarkToolResponse.model_validate(res)
 
 
+def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
+    """Proxy for benchmark geometric validation."""
+    if os.getenv("IS_HEAVY_WORKER"):
+        from worker_heavy.utils.validation import validate as real_validate
+
+        return real_validate(compound, **kwargs)
+
+    # In light worker, we call heavy worker
+    payload = {"script_path": "script.py", **kwargs}
+    res = _call_heavy_worker("/benchmark/validate", payload)
+    parsed = BenchmarkToolResponse.model_validate(res)
+    return parsed.success, parsed.message
+
+
 def validate_and_price(
     part: Any, method: Any = None, config: Any = None
 ) -> BenchmarkToolResponse:

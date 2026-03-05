@@ -24,6 +24,7 @@ from controller.agent.execution_limits import (
     persist_episode_turn_count,
 )
 from controller.agent.initialization import initialize_agent_files
+from controller.agent.review_handover import validate_reviewer_handover
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.graph.steerability_node import check_steering, steerability_node
@@ -40,7 +41,6 @@ from shared.enums import (
 )
 from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
-from shared.workers.schema import BenchmarkToolResponse
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -110,76 +110,22 @@ async def _get_latest_planner_submission_result(
     return None, "submit_plan() observation does not match PlannerSubmissionResult"
 
 
-async def _get_latest_submit_for_review_result(
-    session_id: uuid.UUID,
-) -> tuple["BenchmarkToolResponse | None", str | None]:
-    """Read the latest submit_for_review tool observation from persisted traces."""
-    session_factory = get_sessionmaker()
-    async with session_factory() as db:
-        query = (
-            select(Trace)
-            .where(
-                Trace.episode_id == session_id,
-                Trace.trace_type == TraceType.TOOL_START,
-                Trace.name == "submit_for_review",
-            )
-            .order_by(Trace.id.desc())
-            .limit(1)
-        )
-        result = await db.execute(query)
-        trace_row = result.scalars().first()
-
-    if trace_row is None:
-        return None, "submit_for_review() tool trace not found"
-
-    metadata_vars = trace_row.metadata_vars or {}
-    observation_raw = metadata_vars.get("observation")
-    if not observation_raw:
-        error_raw = metadata_vars.get("error")
-        if isinstance(error_raw, str) and error_raw.strip():
-            return None, f"submit_for_review() execution failed: {error_raw.strip()}"
-        return None, "submit_for_review() observation is missing"
-
-    parsed_payload: dict[str, Any] | None = None
-    if isinstance(observation_raw, dict):
-        parsed_payload = observation_raw
-    elif isinstance(observation_raw, str):
-        observation_text = observation_raw.strip()
-        with suppress(Exception):
-            loaded_json = json.loads(observation_text)
-            if isinstance(loaded_json, dict):
-                parsed_payload = loaded_json
-        with suppress(Exception):
-            if parsed_payload is None:
-                loaded = ast.literal_eval(observation_text)
-                if isinstance(loaded, dict):
-                    parsed_payload = loaded
-
-    if parsed_payload is None:
-        return None, "submit_for_review() observation is not a structured payload"
-
-    with suppress(Exception):
-        return BenchmarkToolResponse.model_validate(parsed_payload), None
-    return None, "submit_for_review() observation does not match BenchmarkToolResponse"
-
-
 async def _validate_reviewer_handoff(session_id: uuid.UUID) -> list[str]:
     """
     Validate benchmark coder -> reviewer handoff before reviewer node execution.
-
-    Enforces explicit successful submit_for_review() tool submission.
     """
     errors: list[str] = []
-    submission, submission_error = await _get_latest_submit_for_review_result(
-        session_id
+    client = WorkerClient(
+        base_url=agent_settings.worker_light_url,
+        heavy_url=agent_settings.worker_heavy_url,
+        session_id=str(session_id),
     )
-    if submission is not None:
-        if not submission.success:
-            errors.append(
-                "reviewer_submission: submit_for_review() returned success=false"
-            )
-    elif submission_error:
-        errors.append(f"reviewer_submission: {submission_error}")
+    try:
+        handoff_err = await validate_reviewer_handover(client)
+    finally:
+        await client.aclose()
+    if handoff_err:
+        errors.append(f"reviewer_submission: {handoff_err}")
     return errors
 
 
@@ -394,7 +340,10 @@ def define_graph():
     async def coder_router(
         state: BenchmarkGeneratorState,
     ) -> Literal[
-        AgentName.STEER, AgentName.BENCHMARK_REVIEWER, AgentName.BENCHMARK_CODER
+        AgentName.STEER,
+        AgentName.BENCHMARK_REVIEWER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.SKILL_AGENT,
     ]:
         if await check_steering(state) == AgentName.STEER:
             return AgentName.STEER
@@ -411,7 +360,7 @@ def define_graph():
                 reviewer_errors
             )
             state.session.validation_logs.extend(reviewer_errors)
-            return AgentName.BENCHMARK_CODER
+            return AgentName.SKILL_AGENT
 
         return AgentName.BENCHMARK_REVIEWER
 
@@ -422,6 +371,7 @@ def define_graph():
             AgentName.STEER: AgentName.STEER,
             AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_REVIEWER,
             AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_CODER,
+            AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
         },
     )
 

@@ -1,5 +1,6 @@
-import json
 import os
+import subprocess
+from hashlib import sha256
 from pathlib import Path
 
 import structlog
@@ -7,11 +8,37 @@ import yaml
 from build123d import Compound, export_step
 
 from shared.models.schemas import ObjectivesYaml
+from shared.models.simulation import SimulationResult
+from shared.workers.schema import ReviewManifest, ValidationResultRecord
 from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.utils.dfm import validate_and_price
 from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
+
+
+def _sha256_file(path: Path) -> str:
+    return sha256(path.read_bytes()).hexdigest()
+
+
+def _goal_reached(summary: str) -> bool:
+    s = (summary or "").lower()
+    return "goal achieved" in s or "green zone" in s or "goal zone" in s
+
+
+def _latest_git_revision(cwd: Path) -> str | None:
+    try:
+        return (
+            subprocess.check_output(
+                ["git", "-C", str(cwd), "rev-parse", "HEAD"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            )
+            .strip()
+            .lower()
+        )
+    except Exception:
+        return None
 
 
 def submit_for_review(component: Compound, cwd: Path = Path()):
@@ -24,19 +51,22 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     logger.info("handover_started", cwd=str(cwd), files=os.listdir(cwd))
 
     renders_dir = cwd / os.getenv("RENDERS_DIR", "renders")
+    manifests_dir = cwd / ".manifests"
 
     # 1. Validate mandatory base files (INT-005)
 
     # plan.md
     plan_path = cwd / "plan.md"
     if plan_path.exists():
-        from shared.workers.markdown_validator import validate_plan_md
+        from .file_validation import validate_plan_md_structure
 
         plan_content = plan_path.read_text(encoding="utf-8")
-        plan_result = validate_plan_md(plan_content)
-        if not plan_result.is_valid:
-            logger.error("plan_md_invalid", violations=plan_result.violations)
-            raise ValueError(f"plan.md invalid: {plan_result.violations}")
+        lowered = plan_content.lower()
+        plan_type = "benchmark" if "learning objective" in lowered else "engineering"
+        is_valid, errors = validate_plan_md_structure(plan_content, plan_type=plan_type)
+        if not is_valid:
+            logger.error("plan_md_invalid", plan_type=plan_type, violations=errors)
+            raise ValueError(f"plan.md invalid: {errors}")
     else:
         logger.error("plan_md_missing")
         raise ValueError("plan.md is missing (required for submission)")
@@ -93,16 +123,63 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             "assembly_definition.yaml is missing (required for submission)"
         )
 
-    # 2. Verify prior validation (INT-018)
+    # 2. Verify prior validation (INT-018) for current script revision
+    script_path = cwd / "script.py"
+    if not script_path.exists():
+        logger.error("script_missing_for_handover")
+        raise ValueError("script.py is missing (required for submission)")
+    script_mtime = script_path.stat().st_mtime
+    script_sha256 = _sha256_file(script_path)
+
     validation_results_path = cwd / "validation_results.json"
     if not validation_results_path.exists():
         logger.error("prior_validation_missing")
         raise ValueError(
             "Prior validation missing. Call /benchmark/validate before submission."
         )
+    validation_record = ValidationResultRecord.model_validate_json(
+        validation_results_path.read_text(encoding="utf-8")
+    )
+    if not validation_record.success:
+        logger.error("prior_validation_failed")
+        raise ValueError(
+            "Prior validation failed. Fix validation errors before submission."
+        )
+    if validation_results_path.stat().st_mtime < script_mtime:
+        logger.error("prior_validation_stale_for_script")
+        raise ValueError(
+            "Prior validation is stale for current script revision. Re-run validate."
+        )
+
+    # 2b. Verify prior simulation for current script revision and objective success.
+    simulation_results_path = cwd / "simulation_result.json"
+    if not simulation_results_path.exists():
+        logger.error("prior_simulation_missing")
+        raise ValueError("Prior simulation missing. Call /benchmark/simulate first.")
+    simulation_result = SimulationResult.model_validate_json(
+        simulation_results_path.read_text(encoding="utf-8")
+    )
+    if not simulation_result.success:
+        logger.error("prior_simulation_failed", summary=simulation_result.summary)
+        raise ValueError(
+            "Prior simulation failed. Submission requires a successful simulation."
+        )
+    if not _goal_reached(simulation_result.summary):
+        logger.error(
+            "goal_not_reached_in_simulation", summary=simulation_result.summary
+        )
+        raise ValueError(
+            "Simulation did not report goal completion (green/goal zone reached)."
+        )
+    if simulation_results_path.stat().st_mtime < script_mtime:
+        logger.error("prior_simulation_stale_for_script")
+        raise ValueError(
+            "Prior simulation is stale for current script revision. Re-run simulate."
+        )
 
     # 3. Perform DFM + Geometry Checks (INT-019)
     renders_dir.mkdir(parents=True, exist_ok=True)
+    manifests_dir.mkdir(parents=True, exist_ok=True)
     dfm_config = load_config()
 
     objectives_data = yaml.safe_load(objectives_path.read_text())
@@ -168,20 +245,29 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     shutil.copy(cost_path, renders_dir / "assembly_definition.yaml")
 
     # 5. Create manifest
-    manifest_path = renders_dir / "review_manifest.json"
-    manifest = {
-        "status": "ready_for_review",
-        "timestamp": os.getenv("TIMESTAMP"),
-        "session_id": os.getenv("SESSION_ID", "default"),
-        "renders": render_paths,
-        "mjcf_path": str(renders_dir / "scene.xml"),
-        "cad_path": str(cad_path),
-        "objectives_path": str(renders_dir / "objectives.yaml"),
-        "assembly_definition_path": str(renders_dir / "assembly_definition.yaml"),
-    }
+    manifest_path = manifests_dir / "review_manifest.json"
+    manifest = ReviewManifest(
+        status="ready_for_review",
+        timestamp=os.getenv("TIMESTAMP"),
+        session_id=os.getenv("SESSION_ID", "default"),
+        revision=_latest_git_revision(cwd),
+        script_path=str(script_path.relative_to(cwd)),
+        script_sha256=script_sha256,
+        validation_success=validation_record.success,
+        validation_timestamp=validation_record.timestamp,
+        simulation_success=simulation_result.success,
+        simulation_summary=simulation_result.summary,
+        simulation_timestamp=simulation_results_path.stat().st_mtime,
+        goal_reached=_goal_reached(simulation_result.summary),
+        renders=render_paths,
+        mjcf_path=str(renders_dir / "scene.xml"),
+        cad_path=str(cad_path),
+        objectives_path=str(renders_dir / "objectives.yaml"),
+        assembly_definition_path=str(renders_dir / "assembly_definition.yaml"),
+    )
 
     with manifest_path.open("w", encoding="utf-8") as f:
-        json.dump(manifest, f)
+        f.write(manifest.model_dump_json(indent=2))
 
     logger.info("handover_complete", manifest=str(manifest_path))
     return True

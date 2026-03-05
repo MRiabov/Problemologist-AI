@@ -1,5 +1,4 @@
 import asyncio
-import json
 import re
 from contextlib import suppress
 
@@ -15,6 +14,7 @@ from controller.agent.context_usage import (
     update_episode_context_usage,
 )
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
+from controller.agent.tools import filter_tools_for_agent
 from controller.observability.middleware_helper import record_events
 from shared.enums import AgentName, SessionStatus
 from shared.models.schemas import ReviewResult
@@ -24,8 +24,9 @@ from shared.simulation.schemas import (
     SimulatorBackendType,
 )
 from shared.type_checking import type_check
-from shared.workers.schema import BenchmarkToolResponse, SimulationArtifacts
+from shared.workers.schema import SimulationArtifacts
 
+from ..review_handover import validate_reviewer_handover
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
@@ -632,11 +633,10 @@ class BenchmarkReviewerNode(BaseNode):
             final_tools = []
             for t in tools:
                 name = getattr(t, "name", getattr(t, "__name__", None))
-                if name not in ("write_file", "edit_file", "submit_for_review"):
+                if name not in ("write_file", "edit_file"):
                     final_tools.append(t)
 
-            final_tools.append(write_review_file)
-            return final_tools
+            return filter_tools_for_agent(fs, [*final_tools, write_review_file])
 
         inputs = {
             "theme": state.plan.theme if state.plan else "Unknown",
@@ -678,30 +678,9 @@ class BenchmarkReviewerNode(BaseNode):
         return state
 
     async def _ensure_submit_for_review_succeeded(self) -> str | None:
-        metadata, trace_err = await self._get_latest_tool_trace_metadata(
-            "submit_for_review"
-        )
-        if metadata is None:
-            return (
-                "Benchmark reviewer requires explicit submit_for_review() before "
-                f"review handoff: {trace_err}"
-            )
-
-        try:
-            raw = metadata.observation or ""
-            parsed = json.loads(raw)
-            result = BenchmarkToolResponse.model_validate(parsed)
-            if not result.success:
-                return (
-                    "Benchmark reviewer blocked: latest submit_for_review() failed: "
-                    f"{result.message}"
-                )
-        except Exception:
-            return (
-                "Benchmark reviewer blocked: submit_for_review() observation could "
-                "not be validated as BenchmarkToolResponse."
-            )
-
+        handoff_err = await validate_reviewer_handover(self.ctx.worker_client)
+        if handoff_err:
+            return f"Benchmark reviewer blocked: {handoff_err}"
         return None
 
 

@@ -8,6 +8,20 @@ from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
 
 
+def _tool_name(tool: Callable) -> str:
+    return getattr(tool, "name", getattr(tool, "__name__", str(tool)))
+
+
+def filter_tools_for_agent(
+    fs: RemoteFilesystemMiddleware, tools: list[Callable]
+) -> list[Callable]:
+    """Filter tool list using per-agent allowlist from config/agents_config.yaml."""
+    allowed = fs.policy.get_allowed_tools(fs.agent_role)
+    if allowed is None:
+        return tools
+    return [tool for tool in tools if _tool_name(tool) in allowed]
+
+
 def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Callable]:
     """
     Get the set of common tools available to all agents (Engineer, Benchmark, etc.).
@@ -52,7 +66,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
-    return [
+    tools = [
         list_files,
         read_file,
         write_file,
@@ -62,6 +76,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         inspect_topology,
         search_cots_catalog,
     ]
+    return filter_tools_for_agent(fs, tools)
 
 
 def get_engineer_tools(
@@ -128,4 +143,4 @@ def get_engineer_planner_tools(
         )
         return result.model_dump(mode="json")
 
-    return [*common_tools, submit_plan]
+    return filter_tools_for_agent(fs, [*common_tools, submit_plan])

@@ -260,6 +260,38 @@ class BenchmarkToolResponse(BaseModel):
     events: list[BaseEvent] = Field(default_factory=list)
 
 
+class ValidationResultRecord(BaseModel):
+    """Persisted validation gate result for submission handoff checks."""
+
+    success: bool
+    message: str | None = None
+    timestamp: float
+    script_path: StrictStr | None = None
+    script_sha256: StrictStr | None = None
+
+
+class ReviewManifest(BaseModel):
+    """Persisted handoff manifest used to gate reviewer entry."""
+
+    status: Literal["ready_for_review"]
+    timestamp: str | None = None
+    session_id: StrictStr
+    revision: StrictStr | None = None
+    script_path: StrictStr
+    script_sha256: StrictStr
+    validation_success: bool
+    validation_timestamp: float
+    simulation_success: bool
+    simulation_summary: StrictStr
+    simulation_timestamp: float
+    goal_reached: bool
+    renders: list[StrictStr] = Field(default_factory=list)
+    mjcf_path: StrictStr | None = None
+    cad_path: StrictStr
+    objectives_path: StrictStr
+    assembly_definition_path: StrictStr
+
+
 class GitCommitRequest(BaseModel):
     """Request to commit changes in the session workspace."""
 

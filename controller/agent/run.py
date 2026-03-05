@@ -69,7 +69,7 @@ async def _run_agent(task: str, thread_id: str):
     print(f"🚀 Starting Agent with thread_id: {thread_id}")
     print(f"📝 Task: {task}")
     print(
-        f"🔧 Config: Worker={settings.spec_001_api_url}, Session={settings.default_session_id}"
+        f"🔧 Config: Worker={settings.worker_light_url}, Session={settings.default_session_id}"
     )
     print("---")
 

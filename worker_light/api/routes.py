@@ -360,6 +360,7 @@ async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
 @light_router.post("/runtime/execute", response_model=ExecuteResponse)
 async def execute_code(
     request: ExecuteRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Execute Python code in session-isolated environment."""
@@ -369,7 +370,11 @@ async def execute_code(
         timeout_seconds=request.timeout,
         working_directory=str(session_dir),
     )
-    result = await run_python_code_async(code=request.code, config=config)
+    result = await run_python_code_async(
+        code=request.code,
+        env={"SESSION_ID": x_session_id},
+        config=config,
+    )
     events = _collect_events(fs_router)
 
     return ExecuteResponse(

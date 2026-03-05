@@ -20,6 +20,7 @@ class PathPolicy(BaseModel):
 class AgentPolicy(BaseModel):
     read: PathPolicy = Field(default_factory=PathPolicy)
     write: PathPolicy = Field(default_factory=PathPolicy)
+    tools: list[str] | None = None
 
 
 class LLMPolicyConfig(BaseModel):
@@ -168,3 +169,18 @@ class FilesystemPolicy:
             agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
         )
         return self.config.execution.get_policy(role)
+
+    def get_allowed_tools(self, agent_role: AgentName | str) -> set[str] | None:
+        """
+        Return allowed tool names for an agent role.
+        - None means "no explicit tool policy" (caller may allow all defaults).
+        - Empty set means "no tools allowed".
+        """
+        role = (
+            agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        )
+        agent_rules = self.config.agents.get(role)
+        tools = agent_rules.tools if agent_rules else None
+        if tools is None:
+            return None
+        return {str(t).strip() for t in tools if str(t).strip()}

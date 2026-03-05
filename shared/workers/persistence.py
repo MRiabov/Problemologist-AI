@@ -1,9 +1,12 @@
 import json
 import time
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
 import structlog
+
+from shared.workers.schema import ValidationResultRecord
 
 logger = structlog.get_logger(__name__)
 
@@ -30,16 +33,28 @@ def collect_and_cleanup_events(session_root: Path) -> list[dict[str, Any]]:
 
 
 def record_validation_result(
-    session_root: Path, is_valid: bool, message: str | None
+    session_root: Path,
+    is_valid: bool,
+    message: str | None,
+    script_path: str = "script.py",
 ) -> None:
     """Record validation results to satisfy the handover gate."""
     results_path = session_root / "validation_results.json"
+    resolved_script = session_root / script_path
+    script_hash: str | None = None
+    if resolved_script.exists():
+        try:
+            script_hash = sha256(resolved_script.read_bytes()).hexdigest()
+        except Exception as e:
+            logger.warning("failed_to_hash_validation_script", error=str(e))
     try:
-        results_path.write_text(
-            json.dumps(
-                {"success": is_valid, "message": message, "timestamp": time.time()}
-            ),
-            encoding="utf-8",
+        record = ValidationResultRecord(
+            success=is_valid,
+            message=message,
+            timestamp=time.time(),
+            script_path=script_path,
+            script_sha256=script_hash,
         )
+        results_path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
     except Exception as e:
         logger.error("failed_to_record_validation_result", error=str(e))

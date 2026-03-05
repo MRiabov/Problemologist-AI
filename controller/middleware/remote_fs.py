@@ -16,7 +16,7 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
 )
-from shared.enums import AgentName
+from shared.enums import AgentName, ManufacturingMethod
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
@@ -434,7 +434,8 @@ class RemoteFilesystemMiddleware:
             events=[
                 ManufacturabilityCheckEvent(
                     part_id=p_str,  # Using script_path as part identifier
-                    method="auto_geometric",
+                    method=ManufacturingMethod.THREE_DP,
+                    # FIXME: why 3dp and not a particular method?
                     result=res.success,
                     price=getattr(res, "price", None),
                     weight_g=getattr(res, "weight_g", None),

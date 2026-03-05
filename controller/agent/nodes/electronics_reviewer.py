@@ -168,7 +168,7 @@ async def electronics_reviewer_node(state: AgentState) -> AgentState:
         raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
-        worker_light_url=settings.spec_001_api_url,
+        worker_light_url=settings.worker_light_url,
         session_id=session_id,
         episode_id=episode_id,
         agent_role=AgentName.ELECTRONICS_REVIEWER,

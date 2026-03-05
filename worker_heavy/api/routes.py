@@ -398,7 +398,9 @@ async def api_validate(
                     is_valid = False
                     message = (message + "; " + fem_msg) if message else fem_msg
 
-                record_validation_result(root, is_valid, message)
+                record_validation_result(
+                    root, is_valid, message, script_path=request.script_path
+                )
 
                 events = _collect_events(fs_router, root=root)
                 artifacts = SimulationArtifacts()

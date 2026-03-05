@@ -1,7 +1,7 @@
 version: "1.0"
 
 llm:
-  max_reasoning_tokens: 16384
+  max_reasoning_tokens: 16384 # per turn, I assume.
   context_compaction_threshold_tokens: 225000
 
 execution:
@@ -66,7 +66,7 @@ execution:
 defaults:
   read:
     allow: ["**", "/", "."]
-    deny: [".git/**", ".env", "**/secrets/**"]
+    deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
   write:
     allow: []
     deny: ["**"]
@@ -74,96 +74,488 @@ defaults:
 agents:
   engineer_planner:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan.md",
+          "todo.md",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
-      deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+      allow:
+        [
+          "plan.md",
+          "todo.md",
+          "journal.md",
+          "assembly_definition.yaml",
+          "objectives.yaml",
+        ]
+      deny:
+        [
+          "skills/**",
+          "utils/**",
+          "reviews/**",
+          "renders/**",
+          "script.py",
+          "**/*.py",
+          ".manifests/**",
+        ]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "submit_plan",
+      ]
 
   engineer_coder:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "script.py", "**/*.py", "reviews/**", "renders/**"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "script.py",
+          "**/*.py",
+          "reviews/**",
+          "renders/**",
+        ]
+      deny: [".manifests/**"]
     write:
-      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md", "plan.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**"]
-      deny: ["skills/**", "utils/**", "reviews/**/*.py"]
+      allow:
+        [
+          "script.py",
+          "**/*.py",
+          "todo.md",
+          "journal.md",
+          "renders/**",
+          "plan_refusal.md",
+          "plan.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "reviews/**",
+        ]
+      deny: ["skills/**", "utils/**", "reviews/**/*.py", ".manifests/**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+      ]
 
   electronics_engineer:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "reviews/**",
+          "renders/**",
+        ]
+      deny: [".manifests/**"]
     write:
-      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md", "schematic_*.png", "schematic_*.pdf", "wiring_*.png"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+      allow:
+        [
+          "script.py",
+          "**/*.py",
+          "todo.md",
+          "journal.md",
+          "renders/**",
+          "plan_refusal.md",
+          "schematic_*.png",
+          "schematic_*.pdf",
+          "wiring_*.png",
+        ]
+      deny:
+        [
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan.md",
+          "skills/**",
+          "utils/**",
+          "reviews/**",
+          ".manifests/**",
+        ]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+      ]
 
   benchmark_coder:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "script.py", "**/*.py", "reviews/**", "renders/**"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "script.py",
+          "**/*.py",
+          "reviews/**",
+          "renders/**",
+        ]
+      deny: [".manifests/**"]
     write:
-      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+      allow:
+        [
+          "script.py",
+          "**/*.py",
+          "todo.md",
+          "journal.md",
+          "renders/**",
+          "plan_refusal.md",
+        ]
+      deny:
+        [
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan.md",
+          "skills/**",
+          "utils/**",
+          "reviews/**",
+          ".manifests/**",
+        ]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+      ]
 
   engineer_reviewer:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "simulation_result.json", "validation_results.json", "workbench_report.md", "renders/**", "journal.md"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan_refusal.md",
+          "script.py",
+          "**/*.py",
+          "simulation_result.json",
+          "validation_results.json",
+          "workbench_report.md",
+          "renders/**",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+      ]
 
   execution_reviewer:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "simulation_result.json", "validation_results.json", "workbench_report.md", "renders/**", "journal.md"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan_refusal.md",
+          "script.py",
+          "**/*.py",
+          "simulation_result.json",
+          "validation_results.json",
+          "workbench_report.md",
+          "renders/**",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+      ]
 
   benchmark_planner:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md", "assets/**", "renders/**", "reviews/**"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan.md",
+          "todo.md",
+          "journal.md",
+          "assets/**",
+          "renders/**",
+          "reviews/**",
+        ]
+      deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
-      deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+      allow:
+        [
+          "plan.md",
+          "todo.md",
+          "journal.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+        ]
+      deny:
+        [
+          "skills/**",
+          "utils/**",
+          "reviews/**",
+          "renders/**",
+          "script.py",
+          "**/*.py",
+          ".manifests/**",
+        ]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "submit_plan",
+      ]
 
   benchmark_reviewer:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "simulation_result.json", "validation_results.json", "renders/**", "journal.md"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan_refusal.md",
+          "script.py",
+          "**/*.py",
+          "simulation_result.json",
+          "validation_results.json",
+          "renders/**",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+        "write_review_file",
+      ]
 
   electronics_planner:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "journal.md"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan.md",
+          "todo.md",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
-      deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+      allow:
+        [
+          "plan.md",
+          "todo.md",
+          "journal.md",
+          "assembly_definition.yaml",
+          "objectives.yaml",
+        ]
+      deny:
+        [
+          "skills/**",
+          "utils/**",
+          "reviews/**",
+          "renders/**",
+          "script.py",
+          "**/*.py",
+          ".manifests/**",
+        ]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "submit_plan",
+      ]
 
   electronics_reviewer:
     read:
-      allow: ["/", ".", "config/**", "skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "simulation_result.json", "validation_results.json", "renders/**", "journal.md"]
-      deny: []
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "plan.md",
+          "todo.md",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan_refusal.md",
+          "script.py",
+          "**/*.py",
+          "simulation_result.json",
+          "validation_results.json",
+          "renders/**",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
     write:
       allow: ["reviews/review-round-*/review.md"]
-      deny: []
+      deny: [".manifests/**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+      ]
+
+  cots_search:
+    read:
+      allow:
+        [
+          "/",
+          ".",
+          "config/**",
+          "skills/**",
+          "utils/**",
+          "objectives.yaml",
+          "assembly_definition.yaml",
+          "plan.md",
+          "todo.md",
+          "journal.md",
+        ]
+      deny: [".manifests/**"]
+    write:
+      allow: []
+      deny: ["**"]
+    tools: ["search_cots_catalog", "list_files", "read_file", "grep"]
 
   journalling_agent:
     read:
       allow: ["**"]
-      deny: [".git/**", ".env", "**/secrets/**"]
+      deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
     write:
       allow: ["journal.md"]
       deny: ["**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "grep",
+        "write_file",
+        "edit_file",
+        "execute_command",
+      ]
 
   skill_agent:
     read:
       allow: ["**"]
-      deny: [".git/**", ".env", "**/secrets/**"]
+      deny: [".git/**", ".env", "**/secrets/**", ".manifests/**"]
     write:
       allow: ["suggested_skills/**", "journal.md"]
-      deny: []
+      deny: [".manifests/**"]
+    tools:
+      [
+        "list_files",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "grep",
+        "execute_command",
+        "inspect_topology",
+        "search_cots_catalog",
+        "save_suggested_skill",
+      ]

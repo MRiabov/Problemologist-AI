@@ -19,7 +19,10 @@ from controller.agent.benchmark.nodes import (
     BenchmarkCoderSignature,
     BenchmarkPlannerSignature,
 )
-from controller.agent.benchmark.tools import get_benchmark_tools
+from controller.agent.benchmark.tools import (
+    get_benchmark_planner_tools,
+    get_benchmark_tools,
+)
 
 
 class AgentModule(dspy.Module):
@@ -30,7 +33,7 @@ class AgentModule(dspy.Module):
         self.session_id = session_id or f"opt-{agent_name}-{uuid.uuid4().hex[:8]}"
 
         self.worker_client = WorkerClient(
-            base_url=settings.spec_001_api_url,
+            base_url=settings.worker_light_url,
             session_id=self.session_id,
             heavy_url=settings.worker_heavy_url,
         )
@@ -46,7 +49,7 @@ class AgentModule(dspy.Module):
             self.signature = BenchmarkPlannerSignature.with_instructions(
                 self.pm.render(AgentName.BENCHMARK_PLANNER)
             )
-            self.tools = get_benchmark_tools(self.fs, self.session_id)
+            self.tools = get_benchmark_planner_tools(self.fs, self.session_id)
         elif agent_name == AgentName.BENCHMARK_CODER:
             self.signature = BenchmarkCoderSignature.with_instructions(
                 self.pm.render(AgentName.BENCHMARK_CODER)

@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableConfig
 
 from controller.agent.config import settings
 from controller.agent.state import AgentState
-from controller.agent.tools import get_engineer_tools
+from controller.agent.tools import filter_tools_for_agent, get_engineer_tools
 from controller.observability.tracing import record_worker_events, sync_asset
 from controller.utils.git import GitManager
 from shared.enums import AgentName
@@ -125,8 +125,7 @@ class SkillsNode(BaseNode):
 
         def get_skills_tools(fs, session_id):
             tools = get_engineer_tools(fs, session_id)
-            tools.append(save_suggested_skill)
-            return tools
+            return filter_tools_for_agent(fs, [*tools, save_suggested_skill])
 
         inputs = {
             "task": state.task,
@@ -173,7 +172,7 @@ async def skills_node(state: AgentState) -> AgentState:
         raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
-        worker_light_url=settings.spec_001_api_url,
+        worker_light_url=settings.worker_light_url,
         session_id=session_id,
         episode_id=episode_id,
         agent_role=AgentName.SKILL_AGENT,

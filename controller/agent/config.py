@@ -80,8 +80,8 @@ class AgentSettings(BaseSettings):
     react_planner_max_iters: int = 6
     require_reasoning_traces: bool = global_settings.require_reasoning_traces
 
-    # URL for the Spec 001 Worker API
-    spec_001_api_url: str = global_settings.worker_light_url
+    # URL for the Worker Light API
+    worker_light_url: str = global_settings.worker_light_url
     worker_heavy_url: str | None = global_settings.worker_heavy_url
     is_integration_test: bool = global_settings.is_integration_test
 
