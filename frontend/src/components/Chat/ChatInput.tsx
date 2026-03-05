@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
 import type { TopologyNode } from "../visualization/ModelBrowser";
 import type { AssetResponse as Asset } from "../../api/generated/models/AssetResponse";
+import type { Episode } from "../../api/client";
 import type { ContextItem } from "../../context/EpisodeContext";
 import { getFileIconInfo } from "../../lib/fileIcons";
 
@@ -28,18 +29,7 @@ interface ChatInputProps {
   onSendMessage: (prompt: string, metadata: Record<string, unknown>) => Promise<void>;
   isRunning: boolean;
   onInterrupt: () => void;
-  selectedEpisode: {
-    id: string;
-    assets?: Asset[] | null;
-    metadata_vars?: {
-      additional_info?: {
-        context_usage?: {
-          used_tokens?: number;
-          max_tokens?: number;
-        };
-      };
-    };
-  } | null;
+  selectedEpisode: Pick<Episode, "id" | "assets" | "metadata_vars"> | null;
   selectedContext: ContextItem[];
   topologyNodes: TopologyNode[];
   addToContext: (item: ContextItem) => void;

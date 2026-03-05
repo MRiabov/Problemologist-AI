@@ -4,5 +4,9 @@
 /* eslint-disable */
 export type ConfirmRequest = {
     comment?: (string | null);
+    /**
+     * Optional extra turns to grant before resuming execution.
+     */
+    additional_turns?: number;
 };
 

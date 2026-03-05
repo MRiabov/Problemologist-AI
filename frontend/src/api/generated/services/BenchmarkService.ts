@@ -61,17 +61,28 @@ export class BenchmarkService {
     /**
      * Get Session
      * @param sessionId
+     * @param includeTraces
+     * @param traceLimit
+     * @param traceContentLimit
      * @returns controller__api__schemas__EpisodeResponse Successful Response
      * @throws ApiError
      */
     public static getSessionApiBenchmarkSessionIdGet(
         sessionId: string,
+        includeTraces: boolean = true,
+        traceLimit: number = 200,
+        traceContentLimit: number = 4000,
     ): CancelablePromise<controller__api__schemas__EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/benchmark/{session_id}',
             path: {
                 'session_id': sessionId,
+            },
+            query: {
+                'include_traces': includeTraces,
+                'trace_limit': traceLimit,
+                'trace_content_limit': traceContentLimit,
             },
             errors: {
                 422: `Validation Error`,
@@ -151,17 +162,28 @@ export class BenchmarkService {
     /**
      * Get Session
      * @param sessionId
+     * @param includeTraces
+     * @param traceLimit
+     * @param traceContentLimit
      * @returns controller__api__schemas__EpisodeResponse Successful Response
      * @throws ApiError
      */
     public static getSessionBenchmarkSessionIdGet(
         sessionId: string,
+        includeTraces: boolean = true,
+        traceLimit: number = 200,
+        traceContentLimit: number = 4000,
     ): CancelablePromise<controller__api__schemas__EpisodeResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/benchmark/{session_id}',
             path: {
                 'session_id': sessionId,
+            },
+            query: {
+                'include_traces': includeTraces,
+                'trace_limit': traceLimit,
+                'trace_content_limit': traceContentLimit,
             },
             errors: {
                 422: `Validation Error`,
