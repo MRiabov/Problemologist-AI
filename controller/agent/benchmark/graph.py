@@ -40,6 +40,7 @@ from shared.enums import (
 )
 from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
+from shared.workers.schema import BenchmarkToolResponse
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -107,6 +108,79 @@ async def _get_latest_planner_submission_result(
     with suppress(Exception):
         return PlannerSubmissionResult.model_validate(parsed_payload), None
     return None, "submit_plan() observation does not match PlannerSubmissionResult"
+
+
+async def _get_latest_submit_for_review_result(
+    session_id: uuid.UUID,
+) -> tuple["BenchmarkToolResponse | None", str | None]:
+    """Read the latest submit_for_review tool observation from persisted traces."""
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        query = (
+            select(Trace)
+            .where(
+                Trace.episode_id == session_id,
+                Trace.trace_type == TraceType.TOOL_START,
+                Trace.name == "submit_for_review",
+            )
+            .order_by(Trace.id.desc())
+            .limit(1)
+        )
+        result = await db.execute(query)
+        trace_row = result.scalars().first()
+
+    if trace_row is None:
+        return None, "submit_for_review() tool trace not found"
+
+    metadata_vars = trace_row.metadata_vars or {}
+    observation_raw = metadata_vars.get("observation")
+    if not observation_raw:
+        error_raw = metadata_vars.get("error")
+        if isinstance(error_raw, str) and error_raw.strip():
+            return None, f"submit_for_review() execution failed: {error_raw.strip()}"
+        return None, "submit_for_review() observation is missing"
+
+    parsed_payload: dict[str, Any] | None = None
+    if isinstance(observation_raw, dict):
+        parsed_payload = observation_raw
+    elif isinstance(observation_raw, str):
+        observation_text = observation_raw.strip()
+        with suppress(Exception):
+            loaded_json = json.loads(observation_text)
+            if isinstance(loaded_json, dict):
+                parsed_payload = loaded_json
+        with suppress(Exception):
+            if parsed_payload is None:
+                loaded = ast.literal_eval(observation_text)
+                if isinstance(loaded, dict):
+                    parsed_payload = loaded
+
+    if parsed_payload is None:
+        return None, "submit_for_review() observation is not a structured payload"
+
+    with suppress(Exception):
+        return BenchmarkToolResponse.model_validate(parsed_payload), None
+    return None, "submit_for_review() observation does not match BenchmarkToolResponse"
+
+
+async def _validate_reviewer_handoff(session_id: uuid.UUID) -> list[str]:
+    """
+    Validate benchmark coder -> reviewer handoff before reviewer node execution.
+
+    Enforces explicit successful submit_for_review() tool submission.
+    """
+    errors: list[str] = []
+    submission, submission_error = await _get_latest_submit_for_review_result(
+        session_id
+    )
+    if submission is not None:
+        if not submission.success:
+            errors.append(
+                "reviewer_submission: submit_for_review() returned success=false"
+            )
+    elif submission_error:
+        errors.append(f"reviewer_submission: {submission_error}")
+    return errors
 
 
 async def _read_session_markdown(
@@ -282,13 +356,73 @@ def define_graph():
         return AgentName.BENCHMARK_PLANNER
 
     workflow.add_conditional_edges(START, route_start)
-    workflow.add_edge(AgentName.BENCHMARK_PLANNER, END)
+
+    async def planner_router(
+        state: BenchmarkGeneratorState,
+    ) -> Literal[AgentName.BENCHMARK_PLANNER, END]:
+        planner_errors = await _validate_planner_handoff(
+            session_id=state.session.session_id,
+            plan=state.plan,
+            custom_objectives=state.session.custom_objectives,
+        )
+        if planner_errors:
+            logger.error(
+                "planner_handoff_validation_failed",
+                session_id=state.session.session_id,
+                errors=planner_errors,
+            )
+            state.session.status = SessionStatus.REJECTED
+            state.review_feedback = "Planner handoff blocked: " + "; ".join(
+                planner_errors
+            )
+            state.session.validation_logs.extend(planner_errors)
+            return AgentName.BENCHMARK_PLANNER
+
+        state.session.status = SessionStatus.PLANNED
+        return END
+
+    workflow.add_conditional_edges(
+        AgentName.BENCHMARK_PLANNER,
+        planner_router,
+        {
+            AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
+            END: END,
+        },
+    )
 
     # In benchmark coder also does validation (it was coder -> validator -> reviewer)
+    async def coder_router(
+        state: BenchmarkGeneratorState,
+    ) -> Literal[
+        AgentName.STEER, AgentName.BENCHMARK_REVIEWER, AgentName.BENCHMARK_CODER
+    ]:
+        if await check_steering(state) == AgentName.STEER:
+            return AgentName.STEER
+
+        reviewer_errors = await _validate_reviewer_handoff(state.session.session_id)
+        if reviewer_errors:
+            logger.error(
+                "reviewer_handoff_validation_failed",
+                session_id=state.session.session_id,
+                errors=reviewer_errors,
+            )
+            state.session.status = SessionStatus.REJECTED
+            state.review_feedback = "Reviewer handoff blocked: " + "; ".join(
+                reviewer_errors
+            )
+            state.session.validation_logs.extend(reviewer_errors)
+            return AgentName.BENCHMARK_CODER
+
+        return AgentName.BENCHMARK_REVIEWER
+
     workflow.add_conditional_edges(
         AgentName.BENCHMARK_CODER,
-        check_steering,
-        {AgentName.STEER: AgentName.STEER, "next": AgentName.BENCHMARK_REVIEWER},
+        coder_router,
+        {
+            AgentName.STEER: AgentName.STEER,
+            AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_REVIEWER,
+            AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_CODER,
+        },
     )
 
     # Conditional edges for reviewer
@@ -296,6 +430,7 @@ def define_graph():
         state: BenchmarkGeneratorState,
     ) -> Literal[
         AgentName.STEER,
+        AgentName.BENCHMARK_REVIEWER,
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_PLANNER,
         AgentName.SKILL_AGENT,
@@ -340,6 +475,10 @@ def define_graph():
             )
             return AgentName.SKILL_AGENT
 
+        feedback = (state.review_feedback or "").upper()
+        if feedback.startswith("REVIEWER OUTPUT INVALID:"):
+            return AgentName.BENCHMARK_REVIEWER
+
         # Use structured decision if available
         if state.review_decision:
             if state.review_decision == ReviewDecision.APPROVED:
@@ -353,7 +492,6 @@ def define_graph():
             return AgentName.BENCHMARK_CODER
 
         # Fallback for legacy behavior
-        feedback = (state.review_feedback or "").upper()
         if "APPROVED" in feedback:
             return AgentName.SKILL_AGENT
         if feedback.startswith("STEERING:"):
@@ -365,6 +503,7 @@ def define_graph():
         reviewer_router,
         {
             AgentName.STEER: AgentName.STEER,
+            AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_REVIEWER,
             AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_CODER,
             AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
             AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
@@ -481,7 +620,10 @@ async def _execute_graph_streaming(
                         errors=planner_errors,
                     )
                     final_state.session.validation_logs.extend(planner_errors)
-                    new_status = SessionStatus.FAILED
+                    final_state.review_feedback = (
+                        "Planner handoff blocked: " + "; ".join(planner_errors)
+                    )
+                    new_status = SessionStatus.REJECTED
                 else:
                     new_status = SessionStatus.PLANNED
                     should_stop = True
@@ -498,10 +640,12 @@ async def _execute_graph_streaming(
                         session_id=session_id,
                         feedback=final_state.review_feedback,
                     )
-                    final_state.session.validation_logs.append(
-                        "benchmark_reviewer failed: missing structured review_decision"
+                    error_msg = "reviewer_execution: missing structured review_decision"
+                    final_state.session.validation_logs.append(error_msg)
+                    final_state.review_feedback = (
+                        "Reviewer output invalid: missing structured review_decision."
                     )
-                    new_status = SessionStatus.FAILED
+                    new_status = SessionStatus.REJECTED
             elif (
                 normalized_node_name == AgentName.SKILL_AGENT
                 and final_state.session.status == SessionStatus.ACCEPTED
