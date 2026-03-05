@@ -1404,9 +1404,20 @@ As usual, the reviews will be strictly typed.
 2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
 3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
 
-### Agents cap on execution
+### Agents hard fail cases
 
-The agents will have a max_turns=60 (for example) cap, which would control how many turns (tool call invocations/responses) the agent can do. The agent will stop on turn number max turns. The user is able to have the agent continue for another number of turns.
+The agents will fail on the following cases:
+1. Timeout (configurable per agent, mostly 300s)
+2. Max turns reached (for example, 150 turns (realistic with modern LLMs))
+3. Exceeded some credits usage (e.g. 400k tokens input and output).
+
+The user is able to have the agent continue for another number of turns.
+
+All settings are configurable per-agent in @config/agents_config.yaml and should be rather permissive.
+
+#### Agents retry as much as possible
+
+Clarification: models will retry until their quota is exceeded, as in one cases in the parent section. Until then, whatever execution environment (meaning, a failed tool call, an invalid script they've written); they must retry. 
 
 ### Steerability
 
