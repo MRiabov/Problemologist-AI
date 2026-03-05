@@ -28,7 +28,18 @@ interface ChatInputProps {
   onSendMessage: (prompt: string, metadata: Record<string, unknown>) => Promise<void>;
   isRunning: boolean;
   onInterrupt: () => void;
-  selectedEpisode: { id: string; assets?: Asset[] | null } | null;
+  selectedEpisode: {
+    id: string;
+    assets?: Asset[] | null;
+    metadata_vars?: {
+      additional_info?: {
+        context_usage?: {
+          used_tokens?: number;
+          max_tokens?: number;
+        };
+      };
+    };
+  } | null;
   selectedContext: ContextItem[];
   topologyNodes: TopologyNode[];
   addToContext: (item: ContextItem) => void;
@@ -79,6 +90,11 @@ export function ChatInput({
 
   const sessionAssets = selectedEpisode?.assets || [];
   const currentPrompt = prompt || inputRef.current?.value || "";
+  const contextUsage = selectedEpisode?.metadata_vars?.additional_info?.context_usage;
+  const usedChars = Number(contextUsage?.used_tokens);
+  const maxChars = Number(contextUsage?.max_tokens);
+  const hasContextUsage =
+    Number.isFinite(usedChars) && Number.isFinite(maxChars) && maxChars > 0;
 
   const handleSubmit = async (e?: FormEvent | KeyboardEvent) => {
     if (e) e.preventDefault();
@@ -444,6 +460,14 @@ export function ChatInput({
                     >
                         <Rocket className="h-3 w-3 opacity-40" />
                         Claude Opus 4.6
+                        {hasContextUsage && (
+                            <span
+                                data-testid="chatinput-context-usage"
+                                className="ml-1.5 text-[10px] font-mono opacity-70"
+                            >
+                                {`${Math.round(usedChars).toLocaleString()}/${Math.round(maxChars).toLocaleString()}`}
+                            </span>
+                        )}
                     </Button>
                 </div>
 

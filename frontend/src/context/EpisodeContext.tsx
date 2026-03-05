@@ -87,31 +87,19 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchEpisodes();
       setEpisodes(data);
       
-      // Update selected episode if it's in the list
+      // Always refresh selected episode from the detail endpoint because
+      // listEpisodes intentionally omits traces/assets for payload size.
       if (selectedEpisode) {
-          const updated = data.find(e => e.id === selectedEpisode.id);
-          const selectedDetailedStatus = selectedEpisode.metadata_vars?.detailed_status || null;
-          const updatedDetailedStatus = updated?.metadata_vars?.detailed_status || null;
-          if (updated && (
-              updated.status !== selectedEpisode.status || 
-              updatedDetailedStatus !== selectedDetailedStatus ||
-              (updated.traces?.length || 0) > (selectedEpisode.traces?.length || 0) ||
-              (updated.assets?.length || 0) > (selectedEpisode.assets?.length || 0)
-          )) {
-              setSelectedEpisode(prev => {
-                  if (!prev) return updated;
-                  const updatedTraces = updated.traces || [];
-                  const updatedAssets = updated.assets || [];
-                  return {
-                    ...prev,
-                    ...updated,
-                    // Preserve richer data when list endpoint omits/under-reports details.
-                    traces: updatedTraces.length > 0 ? updatedTraces : (prev.traces || []),
-                    assets: updatedAssets.length > 0 ? updatedAssets : (prev.assets || []),
-                    plan: updated.plan || prev.plan
-                  };
-              });
-          }
+          const detailed = await fetchEpisode(selectedEpisode.id);
+          setSelectedEpisode(prev => {
+            if (!prev) return detailed;
+            return {
+              ...prev,
+              ...detailed,
+              traces: detailed.traces || [],
+              assets: detailed.assets || [],
+            };
+          });
       }
     } catch (e) {
       console.error("Failed to fetch episodes", e);

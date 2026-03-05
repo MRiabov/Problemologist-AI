@@ -117,8 +117,8 @@ export default function ChatWindow({
       | Record<string, unknown>
       | undefined;
     if (!usage) return null;
-    const used = Number(usage.used_chars);
-    const max = Number(usage.max_chars);
+    const used = Number(usage.used_tokens);
+    const max = Number(usage.max_tokens);
     if (!Number.isFinite(used) || !Number.isFinite(max) || max <= 0) {
       return null;
     }
