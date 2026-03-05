@@ -190,6 +190,90 @@ def _submit_plan_node_types_from_episode_traces(traces) -> set[str]:
     return node_types
 
 
+async def _wait_for_submit_plan_node_types(
+    client: httpx.AsyncClient, episode_id: str, required_node_type: str
+) -> tuple[EpisodeStatus | None, set[str]]:
+    target_statuses = {EpisodeStatus.COMPLETED, EpisodeStatus.FAILED}
+    status: EpisodeStatus | None = None
+    submit_node_types: set[str] = set()
+    for _ in range(90):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        status = episode.status
+        submit_node_types = _submit_plan_node_types_from_episode_traces(
+            episode.traces or []
+        )
+        if required_node_type in submit_node_types:
+            break
+        if status in target_statuses:
+            break
+        await asyncio.sleep(1)
+    return status, submit_node_types
+
+
+async def _wait_for_planned_after_submit_plan(
+    client: httpx.AsyncClient, episode_id: str
+) -> EpisodeStatus | None:
+    status: EpisodeStatus | None = None
+    for _ in range(90):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        status = episode.status
+        if status in {EpisodeStatus.PLANNED, EpisodeStatus.FAILED}:
+            break
+        await asyncio.sleep(1)
+    return status
+
+
+async def _wait_for_submit_plan_node_types_benchmark(
+    client: httpx.AsyncClient, session_id: str, required_node_type: str
+) -> tuple[EpisodeStatus | None, set[str]]:
+    target_statuses = {
+        EpisodeStatus.PLANNED,
+        EpisodeStatus.COMPLETED,
+        EpisodeStatus.FAILED,
+    }
+    status: EpisodeStatus | None = None
+    submit_node_types: set[str] = set()
+    for _ in range(90):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
+        if ep_resp.status_code == 404:
+            await asyncio.sleep(1)
+            continue
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        status = episode.status
+        submit_node_types = _submit_plan_node_types_from_episode_traces(
+            episode.traces or []
+        )
+        if required_node_type in submit_node_types:
+            break
+        if status in target_statuses:
+            break
+        await asyncio.sleep(1)
+    return status, submit_node_types
+
+
+async def _wait_for_planned_after_submit_plan_benchmark(
+    client: httpx.AsyncClient, session_id: str
+) -> EpisodeStatus | None:
+    status: EpisodeStatus | None = None
+    for _ in range(90):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
+        if ep_resp.status_code == 404:
+            await asyncio.sleep(1)
+            continue
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        status = episode.status
+        if status in {EpisodeStatus.PLANNED, EpisodeStatus.FAILED}:
+            break
+        await asyncio.sleep(1)
+    return status
+
+
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
@@ -297,40 +381,34 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
         run_resp = AgentRunResponse.model_validate(resp.json())
         episode_id = str(run_resp.episode_id)
 
-        target_statuses = {EpisodeStatus.COMPLETED, EpisodeStatus.FAILED}
-        status = None
-        submit_node_types: set[str] = set()
-        for _ in range(90):
-            ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-            assert ep_resp.status_code == 200, ep_resp.text
-            episode = EpisodeResponse.model_validate(ep_resp.json())
-            status = episode.status
-            submit_node_types = _submit_plan_node_types_from_episode_traces(
-                episode.traces or []
-            )
-            if status in target_statuses:
-                break
-            await asyncio.sleep(1)
-
-        assert status == EpisodeStatus.COMPLETED, (
-            f"Expected engineer planner run to complete for INT-005, got {status}."
+        status, submit_node_types = await _wait_for_submit_plan_node_types(
+            client, episode_id, AgentName.ENGINEER_PLANNER.value
         )
         assert AgentName.ENGINEER_PLANNER.value in submit_node_types, (
             "Expected submit_plan TOOL_START trace with node_type=engineer_planner "
-            f"in engineer planner flow. Observed node_types={sorted(submit_node_types)}"
+            f"in engineer planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
+        )
+        post_submit_status = await _wait_for_planned_after_submit_plan(
+            client, episode_id
+        )
+        assert post_submit_status != EpisodeStatus.FAILED, (
+            "Engineer planner reached FAILED after submit_plan; expected PLANNED."
+        )
+        assert post_submit_status == EpisodeStatus.PLANNED, (
+            f"Expected engineer planner to reach PLANNED after submit_plan, got {post_submit_status}."
         )
 
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_005_electronics_planner_flow_emits_submit_plan_trace():
-    """INT-005: Electronics planner must emit explicit submit_plan TOOL_START before completion."""
+async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
+    """INT-113: Electronics planner must emit explicit submit_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"INT-005-{uuid.uuid4().hex[:8]}"
+        session_id = f"INT-113-{uuid.uuid4().hex[:8]}"
         req = AgentRunRequest(
-            task="INT-005 electronics planner submission trace contract.",
+            task="INT-113 electronics planner submission trace contract.",
             session_id=session_id,
-            agent_name=AgentName.ENGINEER_PLANNER,
+            agent_name=AgentName.ELECTRONICS_PLANNER,
         )
         resp = await client.post(
             f"{CONTROLLER_URL}/api/agent/run", json=req.model_dump(mode="json")
@@ -339,92 +417,55 @@ async def test_int_005_electronics_planner_flow_emits_submit_plan_trace():
         run_resp = AgentRunResponse.model_validate(resp.json())
         episode_id = str(run_resp.episode_id)
 
-        target_statuses = {EpisodeStatus.COMPLETED, EpisodeStatus.FAILED}
-        status = None
-        submit_node_types: set[str] = set()
-        for _ in range(90):
-            ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-            assert ep_resp.status_code == 200, ep_resp.text
-            episode = EpisodeResponse.model_validate(ep_resp.json())
-            status = episode.status
-            submit_node_types = _submit_plan_node_types_from_episode_traces(
-                episode.traces or []
-            )
-            if status in target_statuses:
-                break
-            await asyncio.sleep(1)
-
-        assert status == EpisodeStatus.COMPLETED, (
-            f"Expected electronics planner run to complete for INT-005, got {status}."
+        status, submit_node_types = await _wait_for_submit_plan_node_types(
+            client, episode_id, AgentName.ELECTRONICS_PLANNER.value
         )
         assert AgentName.ELECTRONICS_PLANNER.value in submit_node_types, (
             "Expected submit_plan TOOL_START trace with node_type=electronics_planner "
-            f"in electronics planner flow. Observed node_types={sorted(submit_node_types)}"
+            f"in electronics planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
+        )
+        post_submit_status = await _wait_for_planned_after_submit_plan(
+            client, episode_id
+        )
+        assert post_submit_status != EpisodeStatus.FAILED, (
+            "Electronics planner reached FAILED after submit_plan; expected PLANNED."
+        )
+        assert post_submit_status == EpisodeStatus.PLANNED, (
+            f"Expected electronics planner to reach PLANNED after submit_plan, got {post_submit_status}."
         )
 
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_benchmark_planner_flow_emits_submit_plan_trace():
-    """Benchmark planner flow emits explicit submit_plan TOOL_START before handoff."""
+async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
+    """INT-114: Benchmark planner must emit explicit submit_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        request = BenchmarkGenerateRequest(
-            prompt="INT-031 benchmark planner submit_plan trace contract.",
+        req = BenchmarkGenerateRequest(
+            prompt="INT-114 benchmark planner submission trace contract.",
             backend=SimulatorBackendType.GENESIS,
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/benchmark/generate", json=request.model_dump()
+            f"{CONTROLLER_URL}/benchmark/generate", json=req.model_dump(mode="json")
         )
-        assert resp.status_code in [200, 202], resp.text
+        assert resp.status_code in {200, 202}, resp.text
+        run_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        episode_id = str(run_resp.episode_id)
 
-        generate_response = BenchmarkGenerateResponse.model_validate(resp.json())
-        session_id = str(generate_response.session_id)
-        target_statuses = {EpisodeStatus.PLANNED, EpisodeStatus.FAILED}
-        status = None
-        for _ in range(90):
-            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-            if status_resp.status_code == 404:
-                await asyncio.sleep(1)
-                continue
-            assert status_resp.status_code == 200, status_resp.text
-            status_payload = status_resp.json()
-            status = EpisodeStatus(status_payload["status"])
-            if status in target_statuses:
-                break
-            await asyncio.sleep(1)
-
-        episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{session_id}")
-        assert episode_resp.status_code == 200, episode_resp.text
-        episode_payload = episode_resp.json()
-        traces = episode_payload.get("traces", [])
-        validation_logs = episode_payload.get("validation_logs") or []
-        submit_node_types: set[str] = set()
-        for trace in traces:
-            if (
-                trace.get("trace_type") == TraceType.TOOL_START.value
-                and trace.get("name") == "submit_plan"
-            ):
-                metadata_vars = trace.get("metadata_vars") or {}
-                parsed_node_type = _parse_submit_observation_node_type(
-                    metadata_vars.get("observation")
-                )
-                if parsed_node_type:
-                    submit_node_types.add(parsed_node_type)
-        if status == EpisodeStatus.FAILED:
-            assert any("planner_submission" in str(msg) for msg in validation_logs), (
-                "Planner failed without planner_submission diagnostics in validation logs. "
-                f"Logs: {validation_logs}"
-            )
-            pytest.fail(
-                "Planner failed before PLANNED. Expected success path with explicit submit_plan trace."
-            )
-
-        assert status == EpisodeStatus.PLANNED, (
-            f"Expected planner to reach PLANNED for INT-005, got {status}."
+        status, submit_node_types = await _wait_for_submit_plan_node_types_benchmark(
+            client, episode_id, AgentName.BENCHMARK_PLANNER.value
         )
         assert AgentName.BENCHMARK_PLANNER.value in submit_node_types, (
             "Expected submit_plan TOOL_START trace with node_type=benchmark_planner "
-            f"in benchmark planner flow. Observed node_types={sorted(submit_node_types)}"
+            f"in benchmark planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
+        )
+        post_submit_status = await _wait_for_planned_after_submit_plan_benchmark(
+            client, episode_id
+        )
+        assert post_submit_status != EpisodeStatus.FAILED, (
+            "Benchmark planner reached FAILED after submit_plan; expected PLANNED."
+        )
+        assert post_submit_status == EpisodeStatus.PLANNED, (
+            f"Expected benchmark planner to reach PLANNED after submit_plan, got {post_submit_status}."
         )
 
 

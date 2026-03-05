@@ -77,21 +77,208 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "INT-005 engineer planner artifacts generated and submitted."
+
+  INT-113:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create baseline engineer planner artifacts for INT-113."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Engineer planner baseline for INT-113.
+                ## 2. Parts List
+                - Test box (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build a simple static part.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [ ] Build test part", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-113 engineer planner artifacts submitted."
       - node: electronics_planner
         steps:
-          - thought: "Finalize electronics planning for INT-005 and explicitly submit."
+          - thought: "Create electronics planner artifacts for INT-113 and explicitly submit."
             tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Electronics planner flow for INT-113.
+                ## 2. Parts List
+                - Controller board
+                - Wiring harness
+                ## 3. Assembly Strategy
+                1. Route wiring with mechanical clearance.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $12
+                - Estimated weight: 120g
+                ## 5. Risk Assessment
+                - Wiring interference risk.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 12
+                  estimated_weight_g: 120
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
             tool_args:
               path: "todo.md"
               content: |
-                - [x] Build test part
+                - [x] Baseline planning
                 - [x] Electronics planning complete
               overwrite: true
             expected_observation: "success"
           - tool_name: "submit_plan"
             expected_observation: "submitted"
           - finished: true
-            summary: "INT-005 electronics planner artifacts submitted."
+            summary: "INT-113 electronics planner artifacts generated and submitted."
+
+  INT-114:
+    transcript:
+      - node: benchmark_planner
+        steps:
+          - thought: "Designing benchmark scenario for INT-114."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Move a sphere into the goal zone.
+                ## Geometry
+                - Simple box environment around origin.
+                ## Objectives
+                - Reach goal while avoiding forbid zone.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args: { path: "todo.md", content: "- [x] Test benchmark", overwrite: true }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 50
+                  benchmark_max_weight_g: 1200
+                  planner_target_max_unit_cost_usd: 25
+                  planner_target_max_weight_g: 600
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  forbid_zones:
+                    - name: "obstacle_collision_zone"
+                      min: [2, -3, 0]
+                      max: [4, 3, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  static_randomization:
+                    radius: [1, 2]
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0.5, 0.5, 0.5]
+                constraints:
+                  max_unit_cost: 50.0
+                  max_weight_g: 1200.0
+                randomization:
+                  static_variation_id: "v1.0"
+                  runtime_jitter_enabled: true
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-114 benchmark planner artifacts submitted."
 
   INT-014:
     transcript:

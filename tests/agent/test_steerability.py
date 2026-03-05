@@ -169,7 +169,10 @@ async def test_planner_node_steer_context(
 
 @pytest.mark.asyncio
 @patch("controller.agent.benchmark.nodes.BenchmarkPlannerNode._run_program")
-async def test_benchmark_planner_node_steer(mock_run_program):
+@patch(
+    "controller.agent.benchmark.nodes.BenchmarkPlannerNode._get_latest_submit_plan_result"
+)
+async def test_benchmark_planner_node_steer(mock_get_submit, mock_run_program):
     from controller.agent.benchmark.nodes import planner_node as benchmark_planner
 
     session_id = uuid4()
@@ -200,6 +203,10 @@ async def test_benchmark_planner_node_steer(mock_run_program):
             plan=RandomizationStrategy(theme="test", reasoning="test")
         )
         mock_run_program.return_value = (mock_prediction, {}, "\nJournal")
+        mock_get_submit.return_value = (
+            MagicMock(ok=True, status="submitted", errors=[]),
+            None,
+        )
 
         await benchmark_planner(state)
 
