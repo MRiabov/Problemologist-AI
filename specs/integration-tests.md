@@ -74,7 +74,7 @@ Priorities:
 | INT-002 | Controller-worker execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Simulation serialization | Multiple agents may run, but only one simulation runs at a time (queue/lock behavior enforced). |
-| INT-005 | Engineer planner mandatory artifact gate | Planner handoff blocked unless `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml` are present and valid, and planner traces contain explicit `TOOL_START` for `submit_plan` before planner completion. |
+| INT-005 | Engineer-workflow planners mandatory artifact gate | Engineer planners (mechanical + electronics) must block handoff unless planner artifacts are present/valid (`plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`) and traces contain explicit `TOOL_START` for `submit_plan` before planner completion. Missing `submit_plan` must fail closed (no success-like status transition). |
 | INT-006 | `plan.md` structure validation | Exact required engineering plan headings enforced (`1..5` sections). |
 | INT-007 | `todo.md` checkbox integrity | Required checkbox format is enforced; deleted mandatory checklist entries are rejected. |
 | INT-008 | `objectives.yaml` logic validation | Build/goal/forbid constraints validated: bounds checks, no illegal intersections, valid moving-parts definitions. |
@@ -137,7 +137,7 @@ Priorities:
 
 | ID | Test | Required assertions |
 |---|---|---|
-| INT-031 | Benchmark planner -> CAD -> reviewer path | Full benchmark-generation flow validates artifacts, review loop, and accepted handoff object integrity. |
+| INT-031 | Benchmark planner -> CAD -> reviewer path | Full benchmark-generation flow validates artifacts, review loop, accepted handoff object integrity, and benchmark-planner `submit_plan` trace presence before planner handoff (`PLANNED`). |
 | INT-032 | Benchmark-to-engineer handoff package | Engineer receives expected bundle (`objectives.yaml`, environment geometry metadata, 24-view renders, moving-parts DOFs, runtime jitter metadata). |
 | INT-033 | Engineering full loop (planner/coder/reviewer) | Planner sets realistic budgets, coder implements, reviewer approves/rejects with typed decision and evidence. |
 | INT-034 | Reviewer evidence completeness | Review decisions include expected evidence fields (images viewed, files checked, etc.). |
@@ -255,7 +255,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-002 | Trigger real run via API; verify worker-side execution evidence and controller non-execution. | Patching remote FS client or executor calls. |
 | INT-003 | Use two real session IDs via HTTP file APIs and assert isolation. | Calling router/helper methods directly in-process. |
 | INT-004 | Send parallel simulate requests over HTTP; assert serialized execution from timings/logs. Ensure build scripts use `PartMetadata` class. | Mocking simulation lock/semaphore logic. |
-| INT-005 | Submit with missing artifacts through API and assert rejection, then run planner flow over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` before planner completion. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
+| INT-005 | Submit with missing engineer-planner artifacts through API and assert rejection, then run engineer workflow planner flows (mechanical + electronics) over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` and correct planner `node_type` before planner completion; assert missing submission trace cannot transition to success-like statuses. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
 | INT-008 | Upload invalid `objectives.yaml` via API and assert logic/bounds failure. | Constructing model objects without API path. |

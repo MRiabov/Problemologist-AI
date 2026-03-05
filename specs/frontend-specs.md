@@ -163,7 +163,7 @@ The user will be able to see the model context window as well as % from the tota
 The users should know what they are prompting with and should visually display the component they are passing as a context when selecting a prompt UI. When a user has clicked a part, a piece in a simulation, the part will be added to the context, above the UI. Please see [### Steerability](/kitty-specs/desired_architecture.md#steerability) section in the main spec for what can be added.
 However, in the UI, it will be shown on the top of the chat UI.
 
-By holding Ctrl, users can select multiple items, and each will have a card - parts, code items, and others.
+By holding Ctrl, users can select mult  iple items, and each will have a card - parts, code items, and others.
 On top of each "context" card, the users will be able delete it from context by pressing a cross on top of them (top right corner).
 
 Frontend will only send a set of elements that are selected, and won't actually concatenate values to prompt; the backend will handle the prompting.
