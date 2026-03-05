@@ -2866,6 +2866,7 @@
         "enum": [
           "RUNNING",
           "PLANNED",
+          "WAITING_USER",
           "COMPLETED",
           "FAILED",
           "CANCELLED"

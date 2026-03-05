@@ -8,6 +8,7 @@
 export enum EpisodeStatus {
     RUNNING = 'RUNNING',
     PLANNED = 'PLANNED',
+    WAITING_USER = 'WAITING_USER',
     COMPLETED = 'COMPLETED',
     FAILED = 'FAILED',
     CANCELLED = 'CANCELLED',
