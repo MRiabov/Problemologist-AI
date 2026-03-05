@@ -592,6 +592,15 @@ We trace all workflows with LangFuse.
 The pipeline is the simplest, proper way to call LLMs:
 DSPy (litellm) calls an endpoint, we get either reasoning, tool call, or both. We send it to frontend and to observability (and log it). that's all the intended logic.
 
+Reasoning and tool observability are strict runtime contracts:
+
+1. LM outputs are emitted as trace records incrementally during execution (streaming), not only at node end or episode end.
+2. Tool call traces are emitted at call start with exact arguments, and updated with observation/error at call end.
+3. Reasoning visibility in frontend is backed only by persisted backend traces for the same `episode_id`; frontend must not synthesize placeholder reasoning rows.
+4. We do not fabricate reasoning traces from synthetic defaults or inferred placeholders. If no reasoning payload is produced by the LM/runtime, the run is marked as missing required telemetry.
+5. For debugging/benchmark dataset modes, reasoning telemetry is fail-closed: a planner/execution stage that requires reasoning traces and produces none must not transition to success-like statuses.
+6. `trace_type` values such as `LLM_END` are observability event labels, not workflow termination signals. Episode termination is controlled only by workflow outcomes (success/failure/timeout/cancel).
+
 ### Filesystem
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
@@ -2787,6 +2796,8 @@ Frontend specs now live in the sibling `frontend-specs.md` file. It serves as a 
 
 Frontend observability requirements (mandatory):
 - Reasoning visibility in chat (`View reasoning`) must be backed by persisted backend traces that are queryable via episode APIs (for example, dedicated reasoning traces per node); frontend must not rely on placeholder-only phase labels.
+- Reasoning traces must appear incrementally while the agent is running (streaming), not only after episode/node completion.
+- If a run is configured to require reasoning telemetry for debugging/eval, absence of persisted reasoning traces is a validation failure (fail-closed), not a UI-only warning.
 - Tool activity rows shown in chat must map directly to backend tool-call traces for that run (no synthetic-only rows).
 
 ## Inputs to the system

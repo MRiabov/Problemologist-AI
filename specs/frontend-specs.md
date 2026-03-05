@@ -57,6 +57,14 @@ All data is shown as soon as the application receives it (or with a small delay)
 
 By default, agents' reasoning is hidden, however users are able to expand it. [Chat UI desired design](/frontend/designs/Chat%20UI%20design.png)
 
+##### Reasoning trace contract (strict)
+
+1. Reasoning rows in chat are rendered only from persisted backend trace records for the active `episode_id` (for example, `LLM_END` traces with node/stage names).
+2. Frontend must not synthesize fake reasoning rows from phase labels, tool rows, or placeholders.
+3. Reasoning is expected to appear incrementally while an agent is running (streaming/polling updates), not only after workflow completion.
+4. `View reasoning` controls visibility only; it does not change backend capture behavior.
+5. If debugging/eval mode requires reasoning and backend returns zero reasoning traces for a running/completed episode, UI must show explicit telemetry-missing state (not silently appear successful).
+
 ### Interrupting the worker
 
 The engineers will have a "stop" button, superseding the "send" message button, but only active during agent generation.
@@ -140,7 +148,15 @@ For each successful tool call that the model has generated, we will have a text 
 
 And other annotated tool calls.
 
+Tool activity contract:
+
+1. Tool activity rows are rendered from backend tool-call traces only.
+2. File/directory names are derived from trace arguments exactly as recorded (no guessed paths).
+3. For directory listing calls, render the directory name (or `/` for root) as the primary label.
+
 If the model will fail, the user will be informed "The model has failed a tool call."
+
+The user will be able to see the model context window as well as % from the total context length.
 
 #### Adding context
 
