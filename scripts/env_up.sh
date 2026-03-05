@@ -136,6 +136,7 @@ echo $WORKER_HEAVY_PID > logs/worker_heavy.pid
 echo "Worker Heavy started (PID: $WORKER_HEAVY_PID)"
 
 # Start Controller (port 18000)
+export EXTRA_DEBUG_LOG="$LOG_DIR/controller_debug.log"
 nohup .venv/bin/python -m uvicorn controller.api.main:app --host 0.0.0.0 --port 18000 > "$LOG_DIR/controller.log" 2>&1 &
 CONTROLLER_PID=$!
 echo $CONTROLLER_PID > logs/controller.pid
@@ -143,6 +144,7 @@ echo "Controller started (PID: $CONTROLLER_PID)"
 
 # Start Temporal Worker
 export PYTHONPATH=$PYTHONPATH:.
+export EXTRA_DEBUG_LOG="$LOG_DIR/temporal_worker_debug.log"
 nohup .venv/bin/python -m controller.temporal_worker > "$LOG_DIR/temporal_worker.log" 2>&1 &
 TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
@@ -175,11 +177,13 @@ fi
 # We strip the logs/ prefix from LOG_DIR to get the relative target
 REL_LOG_DIR="${LOG_DIR#logs/}"
 ln -sf "$REL_LOG_DIR/controller.log" logs/controller.log
+ln -sf "$REL_LOG_DIR/controller_debug.log" logs/controller_debug.log
 ln -sf "$REL_LOG_DIR/worker_light.log" logs/worker_light.log
 ln -sf "$REL_LOG_DIR/worker_light_debug.log" logs/worker_light_debug.log
 ln -sf "$REL_LOG_DIR/worker_heavy.log" logs/worker_heavy.log
 ln -sf "$REL_LOG_DIR/worker_heavy_debug.log" logs/worker_heavy_debug.log
 ln -sf "$REL_LOG_DIR/temporal_worker.log" logs/temporal_worker.log
+ln -sf "$REL_LOG_DIR/temporal_worker_debug.log" logs/temporal_worker_debug.log
 ln -sf "$REL_LOG_DIR/frontend.log" logs/frontend.log
 
 echo "Waiting for services to be healthy..."

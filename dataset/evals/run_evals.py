@@ -627,9 +627,13 @@ async def main():
             logs_root = ROOT / "logs"
             links = [
                 ("evals/controller.log", "controller.log"),
+                ("evals/controller_debug.log", "controller_debug.log"),
                 ("evals/worker_light.log", "worker_light.log"),
                 ("evals/worker_heavy.log", "worker_heavy.log"),
+                ("evals/worker_light_debug.log", "worker_light_debug.log"),
+                ("evals/worker_heavy_debug.log", "worker_heavy_debug.log"),
                 ("evals/temporal_worker.log", "temporal_worker.log"),
+                ("evals/temporal_worker_debug.log", "temporal_worker_debug.log"),
                 ("evals/frontend.log", "frontend.log"),
                 ("evals/run_evals.log", "run_evals.log"),
             ]
@@ -717,10 +721,10 @@ async def main():
             with json_path.open() as f:
                 try:
                     data = json.load(f)
-                    if args.limit > 0:
-                        data = data[: args.limit]
                     if args.task_id:
                         data = [item for item in data if item["id"] == args.task_id]
+                    if args.limit > 0:
+                        data = data[: args.limit]
                     seed_dataset = json_path.relative_to(ROOT)
                     datasets[agent] = [
                         EvalDatasetItem.model_validate(
