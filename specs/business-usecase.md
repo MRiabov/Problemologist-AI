@@ -1,16 +1,20 @@
-# Business use-case
+In my own words:
 
-## In my own words:
-We are focused on solving dynamics problems, not on statics problems. See e.g. what are the requirements for goal objectives: you need to move a some object into a objective zone (might be called "green zone" in my specs)
+TLDR: Cursor or Replit for robotics and manufacturing hardware instead of code.
 
-Okay, two cases I'm solving:
+Longer version:
+Engineering is hard; engineers have very high salaries (140k out of college, 280k when senior), and it's famously one industry where AI was still not applied successfully, for mostly technical reasons.
+To solve this issue, I'm building an AI agent that uses workflows that engineers use every day. I had to overcome a lot of technical issues and deploy all engineering knowledge that I had to develop a solution that actually delivers *reliable* designs.
+
+Two cases I'm solving:
 
 1. Manufacturing (designing machines that do work in manufacturing), autonomously. The machines are designed and verified end-to-end with simulation.
-
 2. Robotics - suppose we want to design a robot that... helps move a certain class of objects in a certain class of environments. My code is perfectly suited for that use-case.
 
-## Pitch deck as below
----
+I've taken a my entire documentation of the project and put it through an LLM to ask me to generate slides for a pitch deck, and then edited it manually.
+Take a look; I've written 50-60% of words here myself.
+
+
 
 ## **Slide 1: Title Slide**
 
@@ -29,7 +33,7 @@ Okay, two cases I'm solving:
 * **The Problem:** Current Generative AI can design static objects (enclosures, brackets) because they only need to *fit*.
 * **The Missing Link:** Real engineering is about **Dynamics**—moving objects, applying forces, and interacting with environments.
 * **The Barrier:** You cannot verify a dynamic design with a screenshot. You need **physics simulation** to know if the motor is strong enough, if the gears mesh, or if the arm reaches the target.
-* **Status Quo:** Engineers spend weeks calculating torque, selecting motors, and building physical prototypes just to find out their machine is too weak.
+* **Status Quo:** Engineers spend weeks iterating, performing manual calculations, calculating torque, selecting motors, and building physical prototypes etc, which causes signficant business overheads.
 
 ---
 
@@ -37,34 +41,35 @@ Okay, two cases I'm solving:
 
 ### **End-to-End Autonomous Machine Design**
 
-**Problemologist-AI** is an agentic system that designs, builds, and **verifies** machines in a physics simulator.
+**Problemologist-AI** is an agentic system that **designs**, **builds**, and **verifies** machines in a physics simulator.
 
 * **Input:** "Design a machine to move 5kg boxes from this conveyor to that pallet."
 * **Process:**
-1. **Selects COTS Parts:** Intelligently picks motors, sensors, and gears from a real supply chain database.
-2. **Generates Geometry:** Writes Python code (Build123d) to create the custom chassis and linkages.
+1. **Selects available Parts:** Intelligently picks motors, sensors, and gears from a real supply chain database.
+2. **Generates Geometry:** Generates CAD to create the custom chassis and linkages.
 3. **Simulates Physics:** Instantiates the machine in **MuJoCo/Genesis**, creating a "digital twin" environment.
 4. **Verifies Dynamics:** Runs the simulation to ensure the object reaches the **"Green Zone" (Objective Zone)** within the time limit.
+5. **Repeats**:  The system iterates until the machine works as intended.
+ 
 
 ---
 
-## **Slide 4: Technical Architecture**
+## **Slide 4: How and what existing solutions fail to do?**
 
 ### **The "Dual-Graph" Engine**
 
-Our proprietary architecture solves the data scarcity problem in robotics:
+LLMs are currently very successful in code and math because there is abundant data available for both domains; but not in engienering. We create an architecture that solves the data scarcity problem in engineering:
 
-1. **The Benchmark Generator (The "Teacher"):**
-* Synthetically generates millions of "Physics Puzzles" (e.g., "Push block A into Green Zone B without tipping").
+1. **The Benchmark Generator (The "Problem-creator"):**
+* Synthetically generates millions of "Physics puzzles" (e.g., "Push block A into Green Zone B without tipping").
 * Creates the "Ground Truth" and evaluation criteria automatically.
+* Allows the LLMs to verify their solutions against a given target.
 
 
-2. **The Solver Graph (The "Engineer"):**
+2. **The Solver (The "Engineer"):**
 * **Architect Agent:** Decomposes the movement problem into mechanical subsystems.
 * **Engineer Agent:** Codes the geometry and integrates electromechanical components.
 * **Reviewer Agent:** Watches the simulation replay and critiques failures (e.g., "The gripper slipped; increase friction or motor torque").
-
-
 
 ---
 
@@ -84,34 +89,40 @@ Our proprietary architecture solves the data scarcity problem in robotics:
 * **Problemologist:** Designs a soft-robot gripper optimized for that specific object class and environment.
 * **Value:** Enables "One-off" robot designs that are economically viable.
 
+We are not aiming to automate mass-manufacturing engineering (yet) because a) the models may not be reliable enough b) a lot of engineering in West (unlike China) is actually small-volume (e.g., keeping Military machines operating; keeping factories running), and it's a great market.
+
 ---
 
 ## **Slide 6: Why Now?**
 
-### **The Convergence of Code & Physics**
+### **It wasn't posible before**
+ 
+* **Code-First CAD:** We only recently got libraries that can do mechanical design as *software code*, making it versionable and AI-writable. Otherwise, LLMs would be incapable of generating CAD, or would struggle too much.
+* **LLMs become great:** LLMs become great and good in vision, unlike previous (2024) generations. 
+### **Unique skillset**
+ 
 
-* **Code-First CAD:** We leverage **Build123d** to treat mechanical design as *software code*, making it versionable and AI-writable.
-* **Fast Simulation:** Advances in differentiable physics (MuJoCo, Genesis) allow us to run thousands of design iterations in minutes.
-* **Agentic Reasoning:** Frontier LLMs can now reason about "cause and effect" in physical systems, provided they have a **feedback loop** (which we built).
-
+* Very few mechanical/electronics engineers are good programmers and very few coders (especially AI coders) are good mechanical engineers. I have developed both.
 ---
 
 ## **Slide 7: Roadmap**
 
 ### **From Simulation to Reality**
 
-* **Phase 1 (Current):** **The "Physics Unit Test."**
-* System achieves human-level success on "Green Zone" benchmarks (moving objects from A to B) in simulation.
+* **Phase 1 (Current):** **The PoC**
+* System achieves human-level success on object moving benchmarks (moving objects from A to B) in simulation; it adheres to manufacturing constraints; it produces parts and solutions within budget.
+
+ * **Phase 2:** ** Simple Real-world machinery."**
+* System can solve simple tasks involving more complex physical phenomena; and be significantly more reliable.
+* Systems also do what engineer intends, more that they can prompt.
+* The difficulty here is obtaining data that would reflect real-world use-cases.
+
+* **Phase 3:** ** Replit for engineering ."**
+* System can solve simple tasks involving engineering. 
+* The difficulty here is obtaining data that would reflect real-world use-cases.
 
 
-* **Phase 2:** **The "Manufacturing" Workbench.**
-* Integration with CNC and 3D Printing constraints to ensure the simulated machine can be built.
-
-
-* **Phase 3:** **Sim2Real.**
-* Direct export to manufacturing files (STEP, STL, BOM) for physical assembly.
-
-
+ 
 
 ---
 
@@ -123,9 +134,9 @@ Our proprietary architecture solves the data scarcity problem in robotics:
 
 **Use of Funds:**
 
-* **Hire 1 Simulation Engineer:** To deepen our MuJoCo/Genesis integration.
-* **Hire 1 AI Engineer:** To optimize the "Critic" agent loop.
-* **Compute:** Massive parallel simulation runs to generate our proprietary training dataset.
+* **Get out of PoC:** We need deepen our data engine to work with real-world use-cases, and not just synthetic "physics puzzles".
+* **Support enterprise demands:** Allow us enough engineering speed to support uses that corporations demand. 
+* **LLM costs and iteration speed:** AI runs to generate our proprietary training datasets and further deepen our data engine.
 
 ---
 

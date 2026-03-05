@@ -471,6 +471,7 @@ The Engineering Planner workflow is:
 - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
 - Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
+- Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 
 At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 <!-- 
@@ -2544,11 +2545,11 @@ Note - used by default by
 ##### Benchmark generator (CAD editor) tools
 
 - `validate(Compound) -> bool` the benchmark is validated to not be out of bounds, and not have intersecting:
-- Input object with environment
-- Goal objective with forbid objective
-- Input objective with goal or forbid objectives.
-
-Validated under all environment randomization.
+    - Input object with environment
+    - Goal objective with forbid objective
+    - Input objective with goal or forbid objectives.
+    
+    Validated under all environment randomization.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline.
@@ -2563,6 +2564,12 @@ Validated under all environment randomization.
 2. Output a price in the terminal and warn if the file,
 3. Autopopulate some fields to prevent forcing LLMs into calculating or inserting them (e.g., will populate max_unit_cost fields in the engineering planner.)
 <!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
+
+`submit_plan()`. Will:
+
+1. Validate planner-required files for the planner role (engineering planner/electronics planner/benchmark planner).
+2. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
+3. Be mandatory before planner completion/handoff.
 
 #### Exact tools logic
 

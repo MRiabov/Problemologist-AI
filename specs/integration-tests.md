@@ -74,7 +74,7 @@ Priorities:
 | INT-002 | Controller-worker execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Simulation serialization | Multiple agents may run, but only one simulation runs at a time (queue/lock behavior enforced). |
-| INT-005 | Engineer planner mandatory artifact gate | Planner handoff blocked unless `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml` are present and valid. |
+| INT-005 | Engineer planner mandatory artifact gate | Planner handoff blocked unless `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml` are present and valid, and planner traces contain explicit `TOOL_START` for `submit_plan` before planner completion. |
 | INT-006 | `plan.md` structure validation | Exact required engineering plan headings enforced (`1..5` sections). |
 | INT-007 | `todo.md` checkbox integrity | Required checkbox format is enforced; deleted mandatory checklist entries are rejected. |
 | INT-008 | `objectives.yaml` logic validation | Build/goal/forbid constraints validated: bounds checks, no illegal intersections, valid moving-parts definitions. |
@@ -255,7 +255,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-002 | Trigger real run via API; verify worker-side execution evidence and controller non-execution. | Patching remote FS client or executor calls. |
 | INT-003 | Use two real session IDs via HTTP file APIs and assert isolation. | Calling router/helper methods directly in-process. |
 | INT-004 | Send parallel simulate requests over HTTP; assert serialized execution from timings/logs. Ensure build scripts use `PartMetadata` class. | Mocking simulation lock/semaphore logic. |
-| INT-005 | Submit with missing artifacts through API and assert rejection. | Calling artifact validator function directly. |
+| INT-005 | Submit with missing artifacts through API and assert rejection, then run planner flow over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` before planner completion. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
 | INT-008 | Upload invalid `objectives.yaml` via API and assert logic/bounds failure. | Constructing model objects without API path. |
