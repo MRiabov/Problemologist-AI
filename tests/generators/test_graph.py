@@ -189,30 +189,38 @@ async def test_validate_planner_handoff_fails_when_submit_plan_missing(
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.benchmark.graph._get_latest_submit_for_review_result")
+@patch(
+    "controller.agent.benchmark.graph.validate_reviewer_handover",
+    new_callable=AsyncMock,
+)
+@patch("controller.agent.benchmark.graph.WorkerClient")
 async def test_validate_reviewer_handoff_fails_when_submit_for_review_missing(
-    mock_submission_result,
+    mock_worker_client,
+    mock_validate_handover,
 ):
-    mock_submission_result.return_value = (
-        None,
-        "submit_for_review() tool trace not found",
-    )
+    mock_validate_handover.return_value = "review_manifest.json missing"
+    mock_worker_client.return_value.aclose = AsyncMock()
 
     errors = await _validate_reviewer_handoff(session_id=uuid4())
 
-    assert errors == ["reviewer_submission: submit_for_review() tool trace not found"]
+    assert errors == ["reviewer_submission: review_manifest.json missing"]
 
 
 @pytest.mark.asyncio
-@patch("controller.agent.benchmark.graph._get_latest_submit_for_review_result")
+@patch(
+    "controller.agent.benchmark.graph.validate_reviewer_handover",
+    new_callable=AsyncMock,
+)
+@patch("controller.agent.benchmark.graph.WorkerClient")
 async def test_validate_reviewer_handoff_fails_when_submit_for_review_not_successful(
-    mock_submission_result,
+    mock_worker_client,
+    mock_validate_handover,
 ):
-    mock_submission_result.return_value = (
-        MagicMock(success=False),
-        None,
-    )
+    mock_validate_handover.return_value = "simulation gate failed for latest revision."
+    mock_worker_client.return_value.aclose = AsyncMock()
 
     errors = await _validate_reviewer_handoff(session_id=uuid4())
 
-    assert errors == ["reviewer_submission: submit_for_review() returned success=false"]
+    assert errors == [
+        "reviewer_submission: simulation gate failed for latest revision."
+    ]

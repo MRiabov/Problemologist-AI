@@ -11,6 +11,7 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import ReviewManifest
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -92,3 +93,27 @@ async def test_benchmark_to_engineer_handoff():
             if "renders/" in p and (".png" in p or ".jpg" in p)
         ]
         assert len(render_files) > 0, f"No renders found. Artifacts: {artifact_paths}"
+        assert any("validation_results.json" in p for p in artifact_paths), (
+            f"validation_results.json missing. Artifacts: {artifact_paths}"
+        )
+        assert any("simulation_result.json" in p for p in artifact_paths), (
+            f"simulation_result.json missing. Artifacts: {artifact_paths}"
+        )
+        manifest_paths = [
+            p for p in artifact_paths if p.endswith("review_manifest.json")
+        ]
+        assert manifest_paths, (
+            f"review_manifest.json missing. Artifacts: {artifact_paths}"
+        )
+        assert any(
+            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
+        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        manifest_resp = await client.get(
+            f"/episodes/{session_id}/assets/{manifest_paths[0]}"
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = ReviewManifest.model_validate_json(manifest_resp.text)
+        assert manifest.status == "ready_for_review"
+        assert manifest.validation_success is True
+        assert manifest.simulation_success is True
+        assert manifest.goal_reached is True

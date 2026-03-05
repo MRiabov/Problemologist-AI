@@ -37,7 +37,13 @@ Test
 - Low
 """)
     (temp_dir / "todo.md").write_text("# TODO\n- [x] Done")
-    (temp_dir / "validation_results.json").write_text('{"success": true}')
+    (temp_dir / "script.py").write_text("def build():\n    return None\n")
+    (temp_dir / "validation_results.json").write_text(
+        '{"success": true, "timestamp": 1.0}'
+    )
+    (temp_dir / "simulation_result.json").write_text(
+        '{"success": true, "summary": "Goal achieved."}'
+    )
 
     # Create valid objectives.yaml in CWD (mocked)
     objectives_content = """
@@ -124,7 +130,7 @@ totals:
             assert target_obj.read_text() == objectives_content
 
             # Check manifest
-            manifest_path = temp_dir / "renders" / "review_manifest.json"
+            manifest_path = temp_dir / ".manifests" / "review_manifest.json"
             assert manifest_path.exists()
             with manifest_path.open() as f:
                 manifest = json.load(f)

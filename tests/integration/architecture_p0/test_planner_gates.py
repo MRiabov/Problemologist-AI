@@ -788,40 +788,56 @@ async def test_int_015_engineer_handover_immutability(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.allow_backend_errors("submission_cost_limit_exceeded")
 async def test_int_019_hard_constraints_gates(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, valid_cost
 ):
     """INT-019: Verify cost/weight/build-zone hard failure during submission."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Box translated to (1000, 1000, 1000) will be outside [ -50, 50 ]
-        oob_script = """
+        # Keep geometry valid/simulatable, then fail closed on cost/weight caps at submit.
+        expensive_script = """
 from build123d import *
 from shared.models.schemas import PartMetadata
 from shared.workers.workbench_models import ManufacturingMethod
 def build():
-    p = Box(10, 10, 10)
-    p = p.move(Location((1000, 1000, 1000)))
-    p.label = "oob_part"
+    p = Box(10, 10, 10).translate((15, 15, 15))
+    p.label = "ball"
     p.metadata = PartMetadata(
         manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
     )
     return p
 """
+        tight_objectives = valid_objectives.model_copy(deep=True)
+        tight_objectives.constraints.max_unit_cost = 0.01
+        tight_objectives.constraints.max_weight_g = 0.1
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "objectives.yaml": tight_objectives,
             "assembly_definition.yaml": valid_cost,
-            "solution.py": oob_script,
+            "script.py": expensive_script,
         }
         await setup_workspace(client, base_headers, files)
-        # Record validation
-        val_req = BenchmarkToolRequest(script_path="solution.py")
-        await client.post(
+
+        val_req = BenchmarkToolRequest(script_path="script.py")
+        val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
         )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=val_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
 
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
@@ -830,10 +846,11 @@ def build():
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert not data.success
-        assert "Submission rejected (DFM)" in data.message
+        assert "Submission rejected" in data.message
         assert (
-            "Build zone violation" in data.message
-            or "out of bounds" in data.message.lower()
+            "cost" in data.message.lower()
+            or "weight" in data.message.lower()
+            or "exceeds limit" in data.message.lower()
         )
 
 
@@ -893,7 +910,14 @@ async def test_int_010_planner_pricing_script_integration(
 
 
 @pytest.mark.integration_p0
-@pytest.mark.allow_backend_errors("prior_validation_missing")
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "prior_validation_missing",
+        "prior_validation_stale_for_script",
+        "prior_simulation_missing",
+        "goal_not_reached_in_simulation",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_018_validate_and_price_integration_gate(
     session_id,
@@ -904,19 +928,35 @@ async def test_int_018_validate_and_price_integration_gate(
     valid_cost,
     minimal_script,
 ):
-    """INT-018: Verify simulate/submit require prior validation."""
+    """INT-018: Verify submit_for_review gate requires validation + simulation on latest revision."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # 1. Setup workspace BUT do not call /benchmark/validate
+        relaxed_objectives = valid_objectives.model_copy(deep=True)
+        relaxed_objectives.constraints.max_unit_cost = 500.0
+        relaxed_objectives.constraints.max_weight_g = 10000.0
+
+        goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "objectives.yaml": relaxed_objectives,
             "assembly_definition.yaml": valid_cost,
-            "solution.py": minimal_script,
+            "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
 
-        # Let's delete the cached validation results specifically if any
+        # 1) Missing validation gate must fail closed.
         delete_req = DeleteFileRequest(path="validation_results.json")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/delete",
@@ -924,7 +964,7 @@ async def test_int_018_validate_and_price_integration_gate(
             headers=base_headers,
         )
 
-        submit_req = BenchmarkToolRequest(script_path="solution.py")
+        submit_req = BenchmarkToolRequest(script_path="script.py")
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),
@@ -933,3 +973,99 @@ async def test_int_018_validate_and_price_integration_gate(
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert not data.success
         assert "validation" in data.message.lower()
+
+        # 2) Validation present but simulation missing must fail closed.
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        delete_sim_req = DeleteFileRequest(path="simulation_result.json")
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/delete",
+            json=delete_sim_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        missing_sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        missing_sim_data = BenchmarkToolResponse.model_validate(missing_sim_resp.json())
+        assert not missing_sim_data.success
+        assert "simulation" in missing_sim_data.message.lower()
+
+        # 3) Latest revision enforcement must fail when script changed after gates.
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+
+        stale_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((0, 0, 5))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+        await setup_workspace(client, base_headers, {"script.py": stale_script})
+        stale_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        stale_data = BenchmarkToolResponse.model_validate(stale_resp.json())
+        assert not stale_data.success
+        assert (
+            "stale" in stale_data.message.lower()
+            or "re-run validate" in stale_data.message.lower()
+            or "re-run simulate" in stale_data.message.lower()
+        )
+
+        # 4) Happy path: validate + simulate + submit on latest revision succeeds.
+        await setup_workspace(client, base_headers, {"script.py": goal_script})
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+        assert (
+            "goal achieved" in sim_data.message.lower()
+            or "goal zone" in sim_data.message.lower()
+            or "green zone" in sim_data.message.lower()
+        ), sim_data.message
+
+        ok_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        ok_data = BenchmarkToolResponse.model_validate(ok_resp.json())
+        assert ok_data.success, ok_data.message

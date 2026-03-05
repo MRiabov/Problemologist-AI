@@ -11,6 +11,7 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import ReviewManifest
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -97,6 +98,27 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert submit_plan_traces, (
             "Expected planner to call submit_plan before workflow completion."
         )
-        assert any("reviews/" in p for p in artifact_paths) or any(
-            p.endswith("validation_results.json") for p in artifact_paths
-        ), f"Reviewer/validation outputs missing. Artifacts: {artifact_paths}"
+        assert any(p.endswith("validation_results.json") for p in artifact_paths), (
+            f"validation_results.json missing. Artifacts: {artifact_paths}"
+        )
+        assert any(p.endswith("simulation_result.json") for p in artifact_paths), (
+            f"simulation_result.json missing. Artifacts: {artifact_paths}"
+        )
+        manifest_paths = [
+            p for p in artifact_paths if p.endswith("review_manifest.json")
+        ]
+        assert manifest_paths, (
+            f"review_manifest.json missing. Artifacts: {artifact_paths}"
+        )
+        assert any(
+            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
+        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        manifest_resp = await client.get(
+            f"/episodes/{session_id}/assets/{manifest_paths[0]}"
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = ReviewManifest.model_validate_json(manifest_resp.text)
+        assert manifest.status == "ready_for_review"
+        assert manifest.validation_success is True
+        assert manifest.simulation_success is True
+        assert manifest.goal_reached is True

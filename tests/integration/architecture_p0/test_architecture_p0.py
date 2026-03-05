@@ -340,6 +340,37 @@ run()
             ]
         )
 
+        # Success path for taxonomy: explicit goal completion signal.
+        success_objectives = objectives.model_copy(deep=True)
+        success_objectives.objectives.forbid_zones = []
+        success_objectives.objectives.goal_zone = BoundingBox(
+            min=(3.0, 3.0, 3.0), max=(4.0, 4.0, 4.0)
+        )
+        req_write_success_obj = WriteFileRequest(
+            path="objectives.yaml",
+            content=yaml.dump(success_objectives.model_dump(mode="json")),
+            overwrite=True,
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=req_write_success_obj.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        success_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=sim_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=600.0,
+        )
+        assert success_resp.status_code == 200
+        success_data = BenchmarkToolResponse.model_validate(success_resp.json())
+        assert success_data.success, success_data.message
+        assert (
+            "goal achieved" in success_data.message.lower()
+            or "goal zone" in success_data.message.lower()
+            or "green zone" in success_data.message.lower()
+        ), success_data.message
+
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio

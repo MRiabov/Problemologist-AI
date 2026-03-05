@@ -85,8 +85,15 @@ def test_handover():
     obj_path = Path("objectives.yaml")
     cost_path = Path("assembly_definition.yaml")
     val_res_path = Path("validation_results.json")
+    sim_res_path = Path("simulation_result.json")
+    script_path = Path("script.py")
+    manifest_path = Path(".manifests") / "review_manifest.json"
     try:
-        val_res_path.write_text('{"success": true}')
+        script_path.write_text("def build():\n    return None\n", encoding="utf-8")
+        val_res_path.write_text('{"success": true, "timestamp": 1.0}')
+        sim_res_path.write_text(
+            '{"success": true, "summary": "Goal achieved."}', encoding="utf-8"
+        )
         obj_path.write_text("""
 objectives:
   goal_zone:
@@ -172,10 +179,10 @@ Simple test plan
         obj_path.unlink(missing_ok=True)
         cost_path.unlink(missing_ok=True)
         val_res_path.unlink(missing_ok=True)
+        sim_res_path.unlink(missing_ok=True)
+        script_path.unlink(missing_ok=True)
     assert res
 
-    renders_dir = Path(os.getenv("RENDERS_DIR", "./renders"))
-    manifest_path = renders_dir / "review_manifest.json"
     assert manifest_path.exists()
 
     import json

@@ -16,6 +16,7 @@ from controller.api.schemas import (
 from shared.enums import EpisodeStatus
 from shared.models.schemas import ReviewFrontmatter
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import ReviewManifest
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -118,6 +119,24 @@ async def test_reviewer_evidence_completeness():
         assert len(review_assets) > 0, (
             f"No reviews found in assets: {[a.s3_path for a in assets]}"
         )
+        artifact_paths = [a.s3_path for a in assets]
+        manifest_paths = [
+            p for p in artifact_paths if p.endswith("review_manifest.json")
+        ]
+        assert manifest_paths, (
+            f"review_manifest.json missing. Artifacts: {artifact_paths}"
+        )
+        assert any(
+            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
+        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        manifest_resp = await client.get(
+            f"/episodes/{episode_id}/assets/{manifest_paths[0]}"
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = ReviewManifest.model_validate_json(manifest_resp.text)
+        assert manifest.validation_success is True
+        assert manifest.simulation_success is True
+        assert manifest.goal_reached is True
 
         # 3. Inspect Content for Evidence
         passed_evidence_check = False

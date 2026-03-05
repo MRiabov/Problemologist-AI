@@ -69,6 +69,16 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     with pytest.raises(PermissionError):
         await coder_fs.write_file("unmatched.txt", "denied")
 
+    # System-only manifests: denied to all agent roles
+    with pytest.raises(PermissionError):
+        await coder_fs.read_file(".manifests/review_manifest.json")
+    with pytest.raises(PermissionError):
+        await coder_fs.write_file(".manifests/review_manifest.json", "{}")
+    with pytest.raises(PermissionError):
+        await reviewer_fs.read_file(".manifests/review_manifest.json")
+    with pytest.raises(PermissionError):
+        await reviewer_fs.write_file(".manifests/review_manifest.json", "{}")
+
     # Defense-in-depth filtering: list_files should not leak unreadable entry names.
     async with httpx.AsyncClient(timeout=30.0) as client:
         seed_allowed = await client.post(

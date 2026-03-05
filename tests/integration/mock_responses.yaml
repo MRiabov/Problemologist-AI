@@ -1129,6 +1129,12 @@ scenarios:
           - tool_name: "write_file"
             tool_args: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
             expected_observation: "success"
+          - tool_name: "execute_command"
+            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
+            expected_observation: "True"
+          - tool_name: "execute_command"
+            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))" }
+            expected_observation: "True"
           - finished: true
             journal: "Work completed."
       - node: benchmark_reviewer
@@ -1212,16 +1218,30 @@ scenarios:
       - node: benchmark_coder
         steps:
           - thought: "Emit a simple script."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+                def build():
+                    p = Box(10,10,10)
+                    p.label = "box"
+                    p.metadata = PartMetadata(
+                        material_id="abs", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "execute_command"
+            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
+            expected_observation: "True"
+          - tool_name: "execute_command"
+            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))" }
+            expected_observation: "True"
+          - finished: true
             journal: "Implemented placeholder geometry for INT-180."
-            generated_code: |
-              from build123d import *
-              from shared.models.schemas import PartMetadata
-              def build():
-                  p = Box(10,10,10)
-                  p.label = "box"
-                  p.metadata = PartMetadata(material_id="abs", fixed=True)
-                  return p
       - node: benchmark_reviewer
         steps:
           - finished: true
@@ -1580,12 +1600,30 @@ scenarios:
       - node: benchmark_coder
         steps:
           - thought: "Implementing basic geometry."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+                def build():
+                    p = Box(10,10,10)
+                    p.label = "box"
+                    p.metadata = PartMetadata(
+                        material_id="abs", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "execute_command"
+            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
+            expected_observation: "True"
+          - tool_name: "execute_command"
+            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))" }
+            expected_observation: "True"
+          - finished: true
             journal: "Mechanical implementation completed."
-            generated_code: |
-              from build123d import *
-              def build():
-                  return Box(10,10,10)
       - node: benchmark_reviewer
         steps:
           - finished: true

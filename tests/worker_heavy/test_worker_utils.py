@@ -48,7 +48,13 @@ Test solution
 """
     (tmp_path / "plan.md").write_text(plan_content)
     (tmp_path / "todo.md").write_text("# TODO\n- [x] Done")
-    (tmp_path / "validation_results.json").write_text('{"success": true}')
+    (tmp_path / "script.py").write_text("def build():\n    return None\n")
+    (tmp_path / "validation_results.json").write_text(
+        '{"success": true, "timestamp": 1.0}'
+    )
+    (tmp_path / "simulation_result.json").write_text(
+        '{"success": true, "summary": "Goal achieved."}'
+    )
 
     # Create valid objectives.yaml in tmp_path
     objectives_content = """
@@ -107,7 +113,7 @@ totals:
     assert result is True
     mock_export_step.assert_called_once()
 
-    manifest_path = renders_dir / "review_manifest.json"
+    manifest_path = tmp_path / ".manifests" / "review_manifest.json"
     assert manifest_path.exists()
 
     with manifest_path.open() as f:
