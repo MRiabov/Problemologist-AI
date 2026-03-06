@@ -4,7 +4,6 @@ import uuid
 
 import httpx
 import pytest
-from pydantic import BaseModel, Field
 
 from controller.api.schemas import (
     AgentRunResponse,
@@ -14,23 +13,10 @@ from controller.api.schemas import (
 )
 from controller.api.tasks import AgentRunRequest
 from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, TraceType
+from shared.models.schemas import EntryValidationContext
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
-
-class EntryValidationErrorPayload(BaseModel):
-    code: str
-    message: str
-    source: str
-    artifact_path: str | None = None
-
-
-class EntryValidationPayload(BaseModel):
-    node: str
-    disposition: str
-    reason_code: str
-    reroute_target: str | None = None
-    errors: list[EntryValidationErrorPayload] = Field(default_factory=list)
 
 
 async def _poll_engineer_episode(
@@ -74,12 +60,12 @@ async def _poll_benchmark_session(
     return latest
 
 
-def _entry_validation_from_episode(episode: EpisodeResponse) -> EntryValidationPayload:
+def _entry_validation_from_episode(episode: EpisodeResponse) -> EntryValidationContext:
     assert episode.metadata_vars is not None
     additional_info = episode.metadata_vars.additional_info or {}
     raw = additional_info.get("entry_validation")
     assert isinstance(raw, dict), "Missing metadata.additional_info.entry_validation"
-    return EntryValidationPayload.model_validate(raw)
+    return EntryValidationContext.model_validate(raw)
 
 
 def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
@@ -129,10 +115,10 @@ async def test_int_184_engineer_fail_fast_and_skip_target_node():
         assert episode.status == EpisodeStatus.FAILED
 
         entry = _entry_validation_from_episode(episode)
-        assert entry.node == AgentName.EXECUTION_REVIEWER.value
-        assert entry.disposition == EntryFailureDisposition.FAIL_FAST.value
+        assert entry.node == AgentName.EXECUTION_REVIEWER
+        assert entry.disposition == EntryFailureDisposition.FAIL_FAST
         assert entry.reason_code == "reviewer_entry_blocked"
-        assert entry.reroute_target == AgentName.ENGINEER_CODER.value
+        assert entry.reroute_target == AgentName.ENGINEER_CODER
         assert entry.errors
         assert all(err.code and err.message and err.source for err in entry.errors)
 
@@ -196,8 +182,8 @@ async def test_int_184_benchmark_fail_fast_state_invalid_confirm_path():
         assert session.status == EpisodeStatus.FAILED
 
         entry = _entry_validation_from_episode(session)
-        assert entry.node == AgentName.BENCHMARK_CODER.value
-        assert entry.disposition == EntryFailureDisposition.FAIL_FAST.value
+        assert entry.node == AgentName.BENCHMARK_CODER
+        assert entry.disposition == EntryFailureDisposition.FAIL_FAST
         assert entry.reason_code == "state_invalid"
         assert entry.reroute_target is None
         assert entry.errors

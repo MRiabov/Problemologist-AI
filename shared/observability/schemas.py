@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from shared.enums import (
+    AgentName,
+    EntryFailureDisposition,
     FailureReason,
     ManufacturingMethod,
     ReviewDecision,
@@ -505,8 +507,8 @@ class NodeEntryValidationFailedEvent(BaseEvent):
     event_type: ObservabilityEventType = (
         ObservabilityEventType.NODE_ENTRY_VALIDATION_FAILED
     )
-    node: str
-    disposition: str
+    node: AgentName
+    disposition: EntryFailureDisposition
     reason_code: str
     errors: list[dict[str, Any]] = Field(default_factory=list)
-    reroute_target: str | None = None
+    reroute_target: AgentName | None = None

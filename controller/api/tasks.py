@@ -65,6 +65,8 @@ def _is_failed_result(result: Any) -> bool:
 
 
 def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
+    from shared.models.schemas import EntryValidationContext
+
     raw_errors = _extract_result_field(result, "entry_validation_errors")
     errors: list[dict[str, Any]] = []
     if isinstance(raw_errors, list):
@@ -112,18 +114,23 @@ def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
         if disposition is None:
             journal = str(_extract_result_field(result, "journal") or "")
             journal_match = re.search(
-                r"\[Entry Validation\].*disposition=(?P<disposition>[^\s]+)", journal
+                r"\[Entry Validation\].*disposition=(?P<disposition>[^\s]+)",
+                journal,
             )
             if journal_match:
                 disposition = journal_match.group("disposition")
 
-    return {
+    raw_context = {
         "node": node,
         "disposition": disposition,
         "reason_code": reason_code,
         "reroute_target": reroute_target,
         "errors": errors,
     }
+    try:
+        return EntryValidationContext.model_validate(raw_context).model_dump(mode="json")
+    except Exception:
+        return raw_context
 
 
 def _update_episode_entry_validation_metadata(
