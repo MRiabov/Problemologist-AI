@@ -470,7 +470,12 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
 
 
 @pytest.mark.integration_p0
-@pytest.mark.allow_backend_errors("plan_md_invalid")
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "plan_md_invalid",
+        "plan_md_missing_sections",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_006_plan_structure_validation(
     session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
