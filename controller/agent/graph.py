@@ -101,7 +101,7 @@ def _build_entry_rejection_feedback(
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
     custom_checks = {
         EXECUTION_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, state: reviewer_handover_custom_check_from_session_id(
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=getattr(state, "session_id", None),
                 reviewer_label="Execution",
             )

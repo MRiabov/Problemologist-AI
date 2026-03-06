@@ -289,7 +289,7 @@ async def _evaluate_benchmark_node_entry(
 ):
     custom_checks = {
         BENCHMARK_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, state: _custom_benchmark_reviewer_handover_check(
+            lambda *, contract, state: _custom_benchmark_reviewer_handover_check(  # noqa: ARG005
                 state=state
             )
         )
