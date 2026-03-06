@@ -15,7 +15,7 @@ subtasks:
 - T017
 phase: Phase 2 - Benchmark Runtime Integration
 assignee: ''
-agent: ''
+agent: "codex"
 shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
@@ -151,3 +151,4 @@ Reviewer should verify:
 ## Activity Log
 
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
+- 2026-03-06T10:10:12Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
