@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Benchmark Graph Guard Integration
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: 012-automatic-node-entry-validation-WP02
 base_commit: ae1c7ce385e49f01271ca1e8a7b08caa270915f5
@@ -15,8 +15,8 @@ subtasks:
 - T017
 phase: Phase 2 - Benchmark Runtime Integration
 assignee: ''
-agent: "codex"
-shell_pid: "8707"
+agent: codex
+shell_pid: '8707'
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
@@ -152,3 +152,4 @@ Reviewer should verify:
 
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
 - 2026-03-06T10:10:12Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
+- 2026-03-06T10:17:24Z – codex – shell_pid=8707 – lane=for_review – Ready for review: benchmark graph entry guards integrated with reroute/fail-fast and continue-path validation.
