@@ -59,6 +59,10 @@ logger = structlog.get_logger(__name__)
 light_router = APIRouter()
 
 
+def _bypass_enabled(requested: bool, system_header: str | None) -> bool:
+    return bool(requested and system_header == "1")
+
+
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
@@ -100,9 +104,15 @@ def _collect_events(fs_router) -> list[dict[str, Any]]:
 
 
 @light_router.post("/fs/ls", response_model=list[FsFileEntry])
-async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
+async def list_files(
+    request: ListFilesRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """List contents of a directory."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            return fs_router.local_backend.ls(request.path)
         return fs_router.ls(request.path)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Directory not found")
@@ -114,9 +124,15 @@ async def list_files(request: ListFilesRequest, fs_router=Depends(get_router)):
 
 
 @light_router.post("/fs/exists", response_model=ExistsResponse)
-async def file_exists(request: ReadFileRequest, fs_router=Depends(get_router)):
+async def file_exists(
+    request: ReadFileRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Check if a file or directory exists."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            return ExistsResponse(exists=fs_router.local_backend.exists(request.path))
         exists = fs_router.exists(request.path)
         return ExistsResponse(exists=exists)
     except PermissionError as e:
@@ -127,9 +143,18 @@ async def file_exists(request: ReadFileRequest, fs_router=Depends(get_router)):
 
 
 @light_router.post("/fs/read", response_model=ReadFileResponse)
-async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
+async def read_file(
+    request: ReadFileRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Read file contents."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            local_path = fs_router.local_backend._resolve(request.path)
+            if not local_path.exists():
+                raise FileNotFoundError
+            return ReadFileResponse(content=local_path.read_text(encoding="utf-8"))
         content = fs_router.read(request.path)
         return ReadFileResponse(content=content.decode("utf-8"))
     except FileNotFoundError:
@@ -142,9 +167,20 @@ async def read_file(request: ReadFileRequest, fs_router=Depends(get_router)):
 
 
 @light_router.post("/fs/write", response_model=StatusResponse)
-async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
+async def write_file(
+    request: WriteFileRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Write content to a file."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            result = fs_router.local_backend.write(
+                request.path, request.content, overwrite=request.overwrite
+            )
+            if result.error:
+                raise HTTPException(status_code=500, detail=result.error)
+            return StatusResponse(status=ResponseStatus.SUCCESS)
         fs_router.write(request.path, request.content, overwrite=request.overwrite)
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except (WritePermissionError, PermissionError) as e:
@@ -155,9 +191,27 @@ async def write_file(request: WriteFileRequest, fs_router=Depends(get_router)):
 
 
 @light_router.post("/fs/edit", response_model=StatusResponse)
-async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
+async def edit_file(
+    request: EditFileRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Edit a file with one or more operations."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            if not fs_router.local_backend.exists(request.path):
+                raise HTTPException(status_code=404, detail="File not found")
+            for edit in request.edits:
+                result = fs_router.local_backend.edit(
+                    request.path, edit.old_string, edit.new_string
+                )
+                if result.error or (result.occurrences or 0) <= 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Content not found for replacement: {edit.old_string[:50]}...",
+                    )
+            return StatusResponse(status=ResponseStatus.SUCCESS)
+
         # Check if file exists first
         if not fs_router.exists(request.path):
             raise HTTPException(status_code=404, detail="File not found")
@@ -185,12 +239,17 @@ async def edit_file(request: EditFileRequest, fs_router=Depends(get_router)):
 async def upload_file(
     path: str = Form(...),
     file: UploadFile = File(...),
+    bypass_agent_permissions: bool = Form(False),
     fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
 ):
     """Upload a file with binary content."""
     try:
         content = await file.read()
-        responses = fs_router.upload_files([(path, content)])
+        if _bypass_enabled(bypass_agent_permissions, x_system_fs_bypass):
+            responses = fs_router.local_backend.upload_files([(path, content)])
+        else:
+            responses = fs_router.upload_files([(path, content)])
 
         if responses and responses[0].error:
             raise HTTPException(status_code=403, detail=responses[0].error)
@@ -204,9 +263,21 @@ async def upload_file(
 
 
 @light_router.post("/fs/read_blob")
-async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
+async def read_blob(
+    request: ReadFileRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Read file contents as binary blob."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            local_path = fs_router.local_backend._resolve(request.path)
+            if not local_path.exists():
+                raise FileNotFoundError
+            return Response(
+                content=local_path.read_bytes(),
+                media_type="application/octet-stream",
+            )
         content = fs_router.read(request.path)
         return Response(content=content, media_type="application/octet-stream")
     except FileNotFoundError:
@@ -219,12 +290,21 @@ async def read_blob(request: ReadFileRequest, fs_router=Depends(get_router)):
 
 
 @light_router.post("/fs/grep", response_model=list[GrepMatch])
-async def api_grep(request: GrepRequest, fs_router=Depends(get_router)):
+async def api_grep(
+    request: GrepRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Search for a pattern in files."""
     try:
-        matches = fs_router.grep_raw(
-            pattern=request.pattern, path=request.path, glob=request.glob
-        )
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            matches = fs_router.local_backend.grep_raw(
+                pattern=request.pattern, path=request.path, glob=request.glob
+            )
+        else:
+            matches = fs_router.grep_raw(
+                pattern=request.pattern, path=request.path, glob=request.glob
+            )
         if isinstance(matches, str):
             raise HTTPException(status_code=400, detail=matches)
         return matches
@@ -265,9 +345,16 @@ async def bundle_session(fs_router=Depends(get_router)):
 
 
 @light_router.post("/fs/delete", response_model=StatusResponse)
-async def delete_file(request: DeleteFileRequest, fs_router=Depends(get_router)):
+async def delete_file(
+    request: DeleteFileRequest,
+    fs_router=Depends(get_router),
+    x_system_fs_bypass: str | None = Header(default=None, alias="X-System-FS-Bypass"),
+):
     """Delete a file or directory."""
     try:
+        if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
+            fs_router.local_backend.delete(request.path)
+            return StatusResponse(status=ResponseStatus.SUCCESS)
         fs_router.delete(request.path)
         return StatusResponse(status=ResponseStatus.SUCCESS)
     except FileNotFoundError:

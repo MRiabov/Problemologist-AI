@@ -79,6 +79,7 @@ class ListFilesRequest(BaseModel):
     """Request to list files in a directory."""
 
     path: StrictStr = Field(default="/")
+    bypass_agent_permissions: bool = False
 
 
 class FsFileEntry(BaseModel):
@@ -94,12 +95,14 @@ class ReadFileRequest(BaseModel):
     """Request to read a file."""
 
     path: StrictStr = Field(..., min_length=1)
+    bypass_agent_permissions: bool = False
 
 
 class DeleteFileRequest(BaseModel):
     """Request to delete a file."""
 
     path: StrictStr = Field(..., min_length=1)
+    bypass_agent_permissions: bool = False
 
 
 class WriteFileRequest(BaseModel):
@@ -108,6 +111,7 @@ class WriteFileRequest(BaseModel):
     path: StrictStr = Field(..., min_length=1)
     content: StrictStr
     overwrite: bool = False  # was and should've been StrictBool?
+    bypass_agent_permissions: bool = False
 
 
 class EditOp(BaseModel):
@@ -122,6 +126,7 @@ class EditFileRequest(BaseModel):
 
     path: StrictStr = Field(..., min_length=1)
     edits: list[EditOp] = Field(..., min_length=1)
+    bypass_agent_permissions: bool = False
 
 
 class GrepMatch(BaseModel):
@@ -138,6 +143,7 @@ class GrepRequest(BaseModel):
     pattern: StrictStr = Field(..., min_length=1)
     path: StrictStr | None = None
     glob: StrictStr | None = None
+    bypass_agent_permissions: bool = False
 
 
 class ExecuteRequest(BaseModel):
@@ -246,6 +252,9 @@ class SimulationArtifacts(BaseModel):
     verification_result: MultiRunResult | None = None
     total_cost: float | None = None
     total_weight_g: float | None = None
+    validation_results_json: StrictStr | None = None
+    simulation_result_json: StrictStr | None = None
+    review_manifest_json: StrictStr | None = None
 
     model_config = {"extra": "allow"}
 

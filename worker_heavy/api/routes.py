@@ -336,6 +336,11 @@ async def api_simulate(
                     total_cost=result.total_cost,
                     total_weight_g=result.total_weight_g,
                 )
+                sim_result_path = root / "simulation_result.json"
+                if sim_result_path.exists():
+                    artifacts.simulation_result_json = sim_result_path.read_text(
+                        encoding="utf-8"
+                    )
                 return BenchmarkToolResponse(
                     success=result.success,
                     message=summary,
@@ -404,6 +409,11 @@ async def api_validate(
 
                 events = _collect_events(fs_router, root=root)
                 artifacts = SimulationArtifacts()
+                validation_result_path = root / "validation_results.json"
+                if validation_result_path.exists():
+                    artifacts.validation_results_json = (
+                        validation_result_path.read_text(encoding="utf-8")
+                    )
                 if not is_valid:
                     artifacts.failure = SimulationFailure(
                         reason=FailureReason.VALIDATION_FAILED,
@@ -495,14 +505,13 @@ async def api_analyze(
                     session_root=root,
                     script_content=request.script_content,
                 )
-                result = await asyncio.to_thread(
+                return await asyncio.to_thread(
                     analyze_component,
                     component,
                     output_dir=root,
                     method=request.method,
                     quantity=request.quantity,
                 )
-                return result
     except Exception as e:
         logger.warning("api_benchmark_analyze_failed", error=str(e))
         return WorkbenchResult(
@@ -625,9 +634,26 @@ async def api_submit(
             )
             success = submit_for_review(component, cwd=root)
             events = _collect_events(fs_router, root=root)
+            artifacts = SimulationArtifacts()
+            validation_result_path = root / "validation_results.json"
+            if validation_result_path.exists():
+                artifacts.validation_results_json = validation_result_path.read_text(
+                    encoding="utf-8"
+                )
+            sim_result_path = root / "simulation_result.json"
+            if sim_result_path.exists():
+                artifacts.simulation_result_json = sim_result_path.read_text(
+                    encoding="utf-8"
+                )
+            manifest_path = root / ".manifests" / "review_manifest.json"
+            if manifest_path.exists():
+                artifacts.review_manifest_json = manifest_path.read_text(
+                    encoding="utf-8"
+                )
             return BenchmarkToolResponse(
                 success=success,
                 message="Handover complete" if success else "Handover failed",
+                artifacts=artifacts,
                 events=events,
             )
 

@@ -41,13 +41,12 @@ async def get_episode_from_session_id(
         # This assumes Episode.metadata_vars is a JSON/JSONB column.
         stmt = (
             select(Episode)
-            .where(Episode.metadata_vars["worker_session_id"].astext == session_id)
+            .where(Episode.metadata_vars["worker_session_id"].as_string() == session_id)
             .order_by(Episode.created_at.desc())
             .limit(1)
         )
         result = await db.execute(stmt)
-        episode = result.scalar_one_or_none()
-        return episode
+        return result.scalar_one_or_none()
     except Exception as e:
         logger.warning("failed_to_query_episode_by_metadata", error=str(e))
         return None
