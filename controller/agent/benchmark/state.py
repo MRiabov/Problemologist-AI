@@ -21,6 +21,7 @@ class BenchmarkGeneratorState(BaseModel):
     simulation_result: ValidationResult | None = None  # Result of the last check
     review_feedback: str | None = None  # Comments from reviewer
     review_decision: ReviewDecision | None = None  # Structured decision from reviewer
+    hard_fail_code: str | None = None  # Structured hard-fail code from execution limits
     review_round: int = 0  # Current review iteration
     turn_count: int = 0  # Total graph turns across planner/coder/reviewer loops
     journal: str = ""  # Reasoning journal

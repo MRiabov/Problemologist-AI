@@ -22,7 +22,9 @@ from shared.enums import (
     BenchmarkRefusalReason,
     ElectricalRefusalReason,
     ElectronicComponentType,
+    EpisodePhase,
     EpisodeType,
+    FailureClass,
     FluidEvalAt,
     FluidObjectiveType,
     FluidShapeType,
@@ -33,6 +35,7 @@ from shared.enums import (
     MovingPartType,
     ReviewDecision,
     SeedMatchMethod,
+    TerminalReason,
 )
 from shared.models.simulation import SimulationFailure
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
@@ -418,6 +421,9 @@ class EpisodeMetadata(BaseModel):
     benchmark_id: str | None = None
     custom_objectives: CustomObjectives | None = None
     detailed_status: str | None = None  # Using str to avoid circular deps if needed
+    episode_phase: EpisodePhase | None = None
+    terminal_reason: TerminalReason | None = None
+    failure_class: FailureClass | None = None
     error: str | None = None
     variant_id: str | None = None
     seed: int | None = None

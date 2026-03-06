@@ -3,9 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CustomObjectives } from './CustomObjectives';
+import type { EpisodePhase } from './EpisodePhase';
 import type { EpisodeType } from './EpisodeType';
+import type { FailureClass } from './FailureClass';
 import type { GenerationKind } from './GenerationKind';
 import type { SeedMatchMethod } from './SeedMatchMethod';
+import type { TerminalReason } from './TerminalReason';
 /**
  * Structured metadata for episodes and benchmark sessions.
  */
@@ -14,6 +17,9 @@ export type EpisodeMetadata = {
     benchmark_id?: (string | null);
     custom_objectives?: (CustomObjectives | null);
     detailed_status?: (string | null);
+    episode_phase?: (EpisodePhase | null);
+    terminal_reason?: (TerminalReason | null);
+    failure_class?: (FailureClass | null);
     error?: (string | null);
     variant_id?: (string | null);
     seed?: (number | null);

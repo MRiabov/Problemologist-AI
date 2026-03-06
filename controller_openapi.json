@@ -2626,6 +2626,36 @@
             ],
             "title": "Detailed Status"
           },
+          "episode_phase": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EpisodePhase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terminal_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TerminalReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure_class": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureClass"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "error": {
             "anyOf": [
               {
@@ -2861,6 +2891,19 @@
         "title": "EpisodeMetadata",
         "description": "Structured metadata for episodes and benchmark sessions."
       },
+      "EpisodePhase": {
+        "type": "string",
+        "enum": [
+          "BENCHMARK_PLANNING",
+          "BENCHMARK_CODING",
+          "BENCHMARK_REVIEWING",
+          "ENGINEERING_PLANNING",
+          "ENGINEERING_CODING",
+          "ENGINEERING_REVIEWING"
+        ],
+        "title": "EpisodePhase",
+        "description": "Current workflow phase within an episode."
+      },
       "EpisodeStatus": {
         "type": "string",
         "enum": [
@@ -2882,6 +2925,17 @@
         ],
         "title": "EpisodeType",
         "description": "High-level episode workflow family."
+      },
+      "FailureClass": {
+        "type": "string",
+        "enum": [
+          "AGENT_QUALITY_FAILURE",
+          "AGENT_SEMANTIC_FAILURE",
+          "APPLICATION_LOGIC_FAILURE",
+          "INFRA_DEVOPS_FAILURE"
+        ],
+        "title": "FailureClass",
+        "description": "High-level failure ownership classification for terminal outcomes."
       },
       "FeedbackRequest": {
         "properties": {
@@ -3216,6 +3270,22 @@
           "text"
         ],
         "title": "SteerablePrompt"
+      },
+      "TerminalReason": {
+        "type": "string",
+        "enum": [
+          "APPROVED",
+          "REJECTED_BY_REVIEW",
+          "HANDOFF_INVARIANT_VIOLATION",
+          "OUT_OF_TURN_BUDGET",
+          "OUT_OF_TOKEN_BUDGET",
+          "TIMEOUT",
+          "INTERNAL_ERROR",
+          "INFRA_ERROR",
+          "USER_CANCELLED"
+        ],
+        "title": "TerminalReason",
+        "description": "Reason why an episode ended in a terminal state."
       },
       "TraceMetadata": {
         "properties": {

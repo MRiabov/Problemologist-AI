@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import re
 from contextlib import suppress
@@ -16,7 +17,7 @@ from controller.agent.context_usage import (
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
 from controller.agent.tools import filter_tools_for_agent
 from controller.observability.middleware_helper import record_events
-from shared.enums import AgentName, SessionStatus
+from shared.enums import AgentName, ReviewDecision, SessionStatus
 from shared.models.schemas import ReviewResult
 from shared.observability.schemas import ConversationLengthExceededEvent
 from shared.simulation.schemas import (
@@ -43,6 +44,21 @@ def extract_python_code(text: str) -> str:
     if match:
         return match.group(1).strip()
     return text.strip()
+
+
+def _has_submit_for_review_call(script: str) -> bool:
+    """Return True when script contains an explicit submit_for_review(...) call."""
+    with suppress(Exception):
+        tree = ast.parse(script)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            if isinstance(func, ast.Name) and func.id == "submit_for_review":
+                return True
+            if isinstance(func, ast.Attribute) and func.attr == "submit_for_review":
+                return True
+    return "submit_for_review(" in script
 
 
 class BenchmarkPlannerSignature(dspy.Signature):
@@ -308,6 +324,18 @@ class BenchmarkCoderNode(BaseNode):
         # Run Verification (Geometric + Physics)
         script = state.current_script
         if script:
+            if not _has_submit_for_review_call(script):
+                state.session.status = SessionStatus.REJECTED
+                state.review_feedback = (
+                    "Coder handoff blocked: script.py must include an explicit "
+                    "submit_for_review(...) call."
+                )
+                state.session.validation_logs.append(
+                    "reviewer_submission: missing explicit submit_for_review(...) "
+                    "call in script.py"
+                )
+                return state
+
             logger.info("running_integrated_validation", session_id=session_id)
             try:
                 val_res = await self.ctx.worker_client.validate(script_path=SCRIPT_FILE)
@@ -399,6 +427,23 @@ class BenchmarkCoderNode(BaseNode):
                             render_paths=render_paths,
                             render_data=render_data,
                         )
+
+                        # Control-plane handoff submit is executed only after
+                        # validate+simulate pass. The script itself must still
+                        # contain an explicit submit_for_review(...) call.
+                        submit_res = await self.ctx.worker_client.submit(
+                            script_path=SCRIPT_FILE
+                        )
+                        if not submit_res.success:
+                            state.session.status = SessionStatus.REJECTED
+                            state.review_feedback = (
+                                "Reviewer handoff blocked: "
+                                f"{submit_res.message or 'submit_for_review failed.'}"
+                            )
+                            state.session.validation_logs.append(
+                                "reviewer_submission: "
+                                f"{submit_res.message or 'submit_for_review failed.'}"
+                            )
             except Exception as e:
                 logger.error("integrated_validation_error", error=str(e))
                 state.session.status = SessionStatus.FAILED
@@ -597,7 +642,7 @@ class BenchmarkReviewerNode(BaseNode):
 
         submit_err = await self._ensure_submit_for_review_succeeded()
         if submit_err:
-            state.review_decision = None
+            state.review_decision = ReviewDecision.REJECTED
             state.review_feedback = f"Rejected: {submit_err}"
             state.journal += f"\n[Reviewer] {submit_err}"
             return state
@@ -660,6 +705,7 @@ class BenchmarkReviewerNode(BaseNode):
             )
 
             if not prediction:
+                state.review_decision = ReviewDecision.REJECTED
                 state.review_feedback = "Error: Reviewer failed to complete."
                 state.journal += f"\n[Reviewer] Failed: {journal_entry}"
                 return state
@@ -672,6 +718,7 @@ class BenchmarkReviewerNode(BaseNode):
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
         except Exception as e:
             logger.warning("benchmark_reviewer_node_failed", error=str(e))
+            state.review_decision = ReviewDecision.REJECTED
             state.review_feedback = "Rejected: Internal error"
             await asyncio.sleep(2)
 

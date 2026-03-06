@@ -266,8 +266,19 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         assembly_definition_path=str(renders_dir / "assembly_definition.yaml"),
     )
 
+    manifest_json = manifest.model_dump_json(indent=2)
     with manifest_path.open("w", encoding="utf-8") as f:
-        f.write(manifest.model_dump_json(indent=2))
+        f.write(manifest_json)
 
-    logger.info("handover_complete", manifest=str(manifest_path))
+    # Keep deterministic system manifest in .manifests and mirror to a synced folder
+    # so benchmark artifact collection can surface it in episode assets.
+    synced_manifest_path = renders_dir / "review_manifest.json"
+    with synced_manifest_path.open("w", encoding="utf-8") as f:
+        f.write(manifest_json)
+
+    logger.info(
+        "handover_complete",
+        manifest=str(manifest_path),
+        synced_manifest=str(synced_manifest_path),
+    )
     return True

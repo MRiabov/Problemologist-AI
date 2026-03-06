@@ -24,7 +24,6 @@ from controller.agent.execution_limits import (
     persist_episode_turn_count,
 )
 from controller.agent.initialization import initialize_agent_files
-from controller.agent.review_handover import validate_reviewer_handover
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.graph.steerability_node import check_steering, steerability_node
@@ -34,9 +33,12 @@ from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode, Trace
 from shared.enums import (
     AgentName,
+    EpisodePhase,
     EpisodeStatus,
+    FailureClass,
     GenerationKind,
     ReviewDecision,
+    TerminalReason,
     TraceType,
 )
 from shared.models.schemas import PlannerSubmissionResult
@@ -110,25 +112,6 @@ async def _get_latest_planner_submission_result(
     return None, "submit_plan() observation does not match PlannerSubmissionResult"
 
 
-async def _validate_reviewer_handoff(session_id: uuid.UUID) -> list[str]:
-    """
-    Validate benchmark coder -> reviewer handoff before reviewer node execution.
-    """
-    errors: list[str] = []
-    client = WorkerClient(
-        base_url=agent_settings.worker_light_url,
-        heavy_url=agent_settings.worker_heavy_url,
-        session_id=str(session_id),
-    )
-    try:
-        handoff_err = await validate_reviewer_handover(client)
-    finally:
-        await client.aclose()
-    if handoff_err:
-        errors.append(f"reviewer_submission: {handoff_err}")
-    return errors
-
-
 async def _read_session_markdown(
     session_id: uuid.UUID, relative_path: str
 ) -> str | None:
@@ -152,6 +135,18 @@ async def _read_session_markdown(
             await client.aclose()
     except Exception:
         return None
+
+
+def _map_hard_fail_metadata(
+    hard_fail_code: str | None,
+) -> tuple[TerminalReason, FailureClass]:
+    if hard_fail_code == "timeout":
+        return TerminalReason.TIMEOUT, FailureClass.AGENT_QUALITY_FAILURE
+    if hard_fail_code == "max_turns":
+        return TerminalReason.OUT_OF_TURN_BUDGET, FailureClass.AGENT_QUALITY_FAILURE
+    if hard_fail_code == "credits_exceeded":
+        return TerminalReason.OUT_OF_TOKEN_BUDGET, FailureClass.AGENT_QUALITY_FAILURE
+    return TerminalReason.INTERNAL_ERROR, FailureClass.APPLICATION_LOGIC_FAILURE
 
 
 async def _validate_planner_handoff(
@@ -348,18 +343,10 @@ def define_graph():
         if await check_steering(state) == AgentName.STEER:
             return AgentName.STEER
 
-        reviewer_errors = await _validate_reviewer_handoff(state.session.session_id)
-        if reviewer_errors:
-            logger.error(
-                "reviewer_handoff_validation_failed",
-                session_id=state.session.session_id,
-                errors=reviewer_errors,
-            )
-            state.session.status = SessionStatus.REJECTED
-            state.review_feedback = "Reviewer handoff blocked: " + "; ".join(
-                reviewer_errors
-            )
-            state.session.validation_logs.extend(reviewer_errors)
+        if state.session.status == SessionStatus.REJECTED:
+            return AgentName.BENCHMARK_CODER
+
+        if state.session.status == SessionStatus.FAILED:
             return AgentName.SKILL_AGENT
 
         return AgentName.BENCHMARK_REVIEWER
@@ -420,6 +407,7 @@ def define_graph():
         )
         if hard_fail.should_fail:
             state.session.status = SessionStatus.FAILED
+            state.hard_fail_code = hard_fail.code
             state.session.validation_logs.append(
                 hard_fail.message or "Agent hard-fail limit reached."
             )
@@ -543,6 +531,17 @@ async def _execute_graph_streaming(
             # Determine new status
             new_status = final_state.session.status
             should_stop = False
+            episode_phase: EpisodePhase | None = None
+            terminal_reason: TerminalReason | None = None
+            failure_class: FailureClass | None = None
+
+            if normalized_node_name == AgentName.BENCHMARK_PLANNER:
+                episode_phase = EpisodePhase.BENCHMARK_PLANNING
+            elif normalized_node_name == AgentName.BENCHMARK_CODER:
+                episode_phase = EpisodePhase.BENCHMARK_CODING
+            elif normalized_node_name == AgentName.BENCHMARK_REVIEWER:
+                episode_phase = EpisodePhase.BENCHMARK_REVIEWING
+
             if normalized_node_name is not None:
                 final_state.turn_count = int(final_state.turn_count) + 1
                 with suppress(Exception):
@@ -574,16 +573,31 @@ async def _execute_graph_streaming(
                         "Planner handoff blocked: " + "; ".join(planner_errors)
                     )
                     new_status = SessionStatus.REJECTED
+                    # Not necessarily terminal if it retries, but if it was the last turn
+                    # evaluate_agent_hard_fail would have caught it.
+                    # Mapping to failure class for visibility even if not terminal.
+                    if any(
+                        "structural" in e or "submission" in e for e in planner_errors
+                    ):
+                        failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+                    else:
+                        failure_class = FailureClass.AGENT_QUALITY_FAILURE
                 else:
                     new_status = SessionStatus.PLANNED
                     should_stop = True
             elif normalized_node_name == AgentName.BENCHMARK_CODER:
-                new_status = SessionStatus.VALIDATING
+                if final_state.session.status == SessionStatus.FAILED:
+                    new_status = SessionStatus.FAILED
+                elif final_state.session.status == SessionStatus.REJECTED:
+                    new_status = SessionStatus.REJECTED
+                else:
+                    new_status = SessionStatus.VALIDATING
             elif normalized_node_name == AgentName.BENCHMARK_REVIEWER:
                 if final_state.review_decision == ReviewDecision.APPROVED:
                     new_status = SessionStatus.ACCEPTED
                 elif final_state.review_decision:
                     new_status = SessionStatus.REJECTED
+                    failure_class = FailureClass.AGENT_QUALITY_FAILURE
                 else:
                     logger.error(
                         "benchmark_reviewer_missing_structured_decision",
@@ -596,11 +610,29 @@ async def _execute_graph_streaming(
                         "Reviewer output invalid: missing structured review_decision."
                     )
                     new_status = SessionStatus.REJECTED
+                    failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+
             elif (
                 normalized_node_name == AgentName.SKILL_AGENT
                 and final_state.session.status == SessionStatus.ACCEPTED
             ):
                 new_status = SessionStatus.ACCEPTED
+                terminal_reason = TerminalReason.APPROVED
+
+            # Final terminal state logic
+            if new_status == SessionStatus.ACCEPTED:
+                terminal_reason = TerminalReason.APPROVED
+            elif new_status == SessionStatus.FAILED:
+                # Prefer structured hard-fail mapping when available.
+                if final_state.hard_fail_code:
+                    terminal_reason, failure_class = _map_hard_fail_metadata(
+                        final_state.hard_fail_code
+                    )
+                else:
+                    if not terminal_reason:
+                        terminal_reason = TerminalReason.INTERNAL_ERROR
+                    if not failure_class:
+                        failure_class = FailureClass.APPLICATION_LOGIC_FAILURE
 
             # Update internal session status
             final_state.session.status = new_status
@@ -615,6 +647,9 @@ async def _execute_graph_streaming(
                     plan=final_state.plan,
                     journal=final_state.journal,
                     turn_count=final_state.turn_count,
+                    episode_phase=episode_phase,
+                    terminal_reason=terminal_reason,
+                    failure_class=failure_class,
                 )
             except Exception as e:
                 logger.error("failed_to_update_episode_persistence", error=str(e))
@@ -673,6 +708,7 @@ async def run_generation_session(
     async with session_factory() as db:
         metadata = EpisodeMetadata(
             detailed_status=SessionStatus.PLANNING,
+            episode_phase=EpisodePhase.BENCHMARK_PLANNING,
             validation_logs=[],
             prompt=prompt,
             custom_objectives=custom_objectives,
@@ -767,6 +803,20 @@ async def run_generation_session(
                 metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
                 metadata.detailed_status = SessionStatus.FAILED
                 metadata.error = str(e)
+
+                # Set terminal reason and failure class
+                metadata.terminal_reason = TerminalReason.INTERNAL_ERROR
+                # Distinguish infra vs application if possible
+                if any(
+                    x in str(e).lower()
+                    for x in ["worker", "network", "timeout", "http", "connection"]
+                ):
+                    metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
+                    if "timeout" in str(e).lower():
+                        metadata.terminal_reason = TerminalReason.TIMEOUT
+                else:
+                    metadata.failure_class = FailureClass.APPLICATION_LOGIC_FAILURE
+
                 episode.metadata_vars = metadata.model_dump()
                 await db.commit()
         return initial_state
@@ -1013,6 +1063,9 @@ async def _update_episode_persistence(
     plan: Any = None,
     journal: str | None = None,
     turn_count: int | None = None,
+    episode_phase: EpisodePhase | None = None,
+    terminal_reason: TerminalReason | None = None,
+    failure_class: FailureClass | None = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
     from controller.persistence.models import Episode
@@ -1045,6 +1098,23 @@ async def _update_episode_persistence(
                 metadata.detailed_status = EpisodeStatus.COMPLETED.value
             else:
                 metadata.detailed_status = new_status
+
+            if episode_phase:
+                metadata.episode_phase = episode_phase
+
+            # Terminal metadata must be cleared on non-terminal states to avoid
+            # stale terminal labels leaking across retry loops.
+            is_terminal_state = new_status in (
+                SessionStatus.ACCEPTED,
+                SessionStatus.FAILED,
+            )
+            if is_terminal_state:
+                metadata.terminal_reason = terminal_reason
+                metadata.failure_class = failure_class
+            else:
+                metadata.terminal_reason = None
+                metadata.failure_class = None
+
             metadata.validation_logs = validation_logs
             metadata.prompt = prompt
             metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan
