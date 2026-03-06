@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Reviewer & Handover Entry Contracts
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02, WP03]
 base_branch: 012-automatic-node-entry-validation-WP03
 base_commit: 03e8138613ddd86642efaefdfafdef45cd1979d8
@@ -14,8 +14,8 @@ subtasks:
 - T022
 phase: Phase 3 - Contract Harmonization
 assignee: ''
-agent: "codex"
-shell_pid: "8707"
+agent: codex
+shell_pid: '8707'
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
@@ -139,3 +139,4 @@ Reviewer should verify:
 
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
 - 2026-03-06T10:22:36Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
+- 2026-03-06T10:33:10Z – codex – shell_pid=8707 – lane=for_review – Ready for review: shared reviewer entry-handover contracts integrated for engineer + benchmark graphs with explicit reason codes and scope guardrails.
