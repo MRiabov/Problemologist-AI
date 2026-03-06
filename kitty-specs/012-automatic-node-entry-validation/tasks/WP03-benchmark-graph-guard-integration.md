@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: Benchmark Graph Guard Integration
-lane: planned
+lane: "doing"
 dependencies: [WP01]
+base_branch: 012-automatic-node-entry-validation-WP02
+base_commit: ae1c7ce385e49f01271ca1e8a7b08caa270915f5
+created_at: '2026-03-06T10:10:11.515229+00:00'
 subtasks:
 - T012
 - T013
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 2 - Benchmark Runtime Integration
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
