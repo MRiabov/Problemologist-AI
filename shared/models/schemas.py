@@ -20,6 +20,7 @@ from pydantic import (
 from shared.enums import (
     AgentName,
     BenchmarkRefusalReason,
+    EntryFailureDisposition,
     ElectricalRefusalReason,
     ElectronicComponentType,
     EpisodePhase,
@@ -482,6 +483,25 @@ class PlannerSubmissionResult(BaseModel):
     status: Literal["submitted", "rejected"]
     errors: list[str] = Field(default_factory=list)
     node_type: AgentName
+
+
+class EntryValidationError(BaseModel):
+    """Structured entry-validation error payload persisted in episode metadata."""
+
+    code: str
+    message: str
+    source: str
+    artifact_path: str | None = None
+
+
+class EntryValidationContext(BaseModel):
+    """Structured node-entry validation context persisted in episode metadata."""
+
+    node: AgentName | None = None
+    disposition: EntryFailureDisposition | None = None
+    reason_code: str | None = None
+    reroute_target: AgentName | None = None
+    errors: list[EntryValidationError] = Field(default_factory=list)
 
 
 # =============================================================================

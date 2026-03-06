@@ -22,6 +22,14 @@ class BenchmarkGeneratorState(BaseModel):
     review_feedback: str | None = None  # Comments from reviewer
     review_decision: ReviewDecision | None = None  # Structured decision from reviewer
     hard_fail_code: str | None = None  # Structured hard-fail code from execution limits
+    entry_validation_rejected: bool = False  # Guard rejected node entry this turn
+    entry_validation_terminal: bool = False  # Guard rejection terminated workflow
+    entry_validation_reason_code: str | None = None
+    entry_validation_target_node: str | None = None
+    entry_validation_disposition: str | None = None
+    entry_validation_reroute_target: str | None = None
+    entry_validation_errors: list[dict[str, str | None]] = Field(default_factory=list)
+    entry_validation_trace_emitted: bool = False
     reviewer_handoff_block_count: int = 0  # Consecutive handoff invariant failures
     review_round: int = 0  # Current review iteration
     turn_count: int = 0  # Total graph turns across planner/coder/reviewer loops

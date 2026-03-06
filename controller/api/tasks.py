@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import os
 import uuid
+from contextlib import suppress
 from typing import Any
 
 import boto3
@@ -34,6 +35,126 @@ def _is_planner_agent(agent_name: AgentName) -> bool:
         AgentName.ELECTRONICS_PLANNER,
         AgentName.BENCHMARK_PLANNER,
     }
+
+
+def _extract_result_field(result: Any, key: str) -> Any | None:
+    if isinstance(result, dict):
+        return result.get(key)
+    return getattr(result, key, None)
+
+
+def _result_status_lower(result: Any) -> str:
+    raw_status = _extract_result_field(result, "status")
+    if raw_status is None:
+        return ""
+    if hasattr(raw_status, "value"):
+        raw_status = raw_status.value
+    return str(raw_status).strip().lower()
+
+
+def _result_feedback(result: Any) -> str:
+    raw_feedback = _extract_result_field(result, "feedback")
+    return str(raw_feedback or "").strip()
+
+
+def _is_failed_result(result: Any) -> bool:
+    status = _result_status_lower(result)
+    if status == "failed":
+        return True
+    return bool(_extract_result_field(result, "entry_validation_terminal"))
+
+
+def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
+    from shared.models.schemas import EntryValidationContext
+
+    raw_errors = _extract_result_field(result, "entry_validation_errors")
+    errors: list[dict[str, Any]] = []
+    if isinstance(raw_errors, list):
+        for item in raw_errors:
+            if isinstance(item, dict):
+                errors.append(dict(item))
+            else:
+                errors.append({"message": str(item)})
+
+    node = _extract_result_field(result, "entry_validation_target_node")
+    disposition = _extract_result_field(result, "entry_validation_disposition")
+    reason_code = _extract_result_field(result, "entry_validation_reason_code")
+    reroute_target = _extract_result_field(result, "entry_validation_reroute_target")
+
+    # Keep entry-validation metadata stable even if later nodes clear transient state.
+    if node is None or disposition is None or reason_code is None:
+        import re
+
+        feedback = _result_feedback(result)
+        match = re.search(
+            r"ENTRY_VALIDATION_FAILED\[(?P<reason>[^\]]+)\]\s+"
+            r"target=(?P<node>[^\s]+)\s+"
+            r"(?:(?:reroute=(?P<reroute>[^\s]+))|(?:disposition=(?P<disposition>[^\s]+)))"
+            r"\s+\|\s*(?P<detail>.*)$",
+            feedback,
+        )
+        if match:
+            reason_code = reason_code or match.group("reason")
+            node = node or match.group("node")
+            disposition = disposition or match.group("disposition")
+            reroute_target = reroute_target or match.group("reroute")
+
+            if not errors:
+                detail = (match.group("detail") or "").strip()
+                if detail:
+                    errors.append(
+                        {
+                            "code": reason_code or "state_invalid",
+                            "message": detail,
+                            "source": "policy",
+                            "artifact_path": None,
+                        }
+                    )
+
+        if disposition is None:
+            journal = str(_extract_result_field(result, "journal") or "")
+            journal_match = re.search(
+                r"\[Entry Validation\].*disposition=(?P<disposition>[^\s]+)",
+                journal,
+            )
+            if journal_match:
+                disposition = journal_match.group("disposition")
+
+    raw_context = {
+        "node": node,
+        "disposition": disposition,
+        "reason_code": reason_code,
+        "reroute_target": reroute_target,
+        "errors": errors,
+    }
+    try:
+        return EntryValidationContext.model_validate(raw_context).model_dump(mode="json")
+    except Exception:
+        return raw_context
+
+
+def _update_episode_entry_validation_metadata(
+    *, episode: Episode, result: Any, result_feedback: str
+) -> dict[str, Any] | None:
+    if not result_feedback.startswith("ENTRY_VALIDATION_FAILED["):
+        return None
+
+    from shared.models.schemas import EpisodeMetadata
+
+    metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+    if result_feedback not in metadata.validation_logs:
+        metadata.validation_logs.append(result_feedback)
+
+    entry_context = _extract_entry_validation_context(result)
+    additional = dict(metadata.additional_info or {})
+    additional["entry_validation"] = entry_context
+    additional["entry_validation_terminal"] = (
+        bool(_extract_result_field(result, "entry_validation_terminal"))
+        or entry_context.get("disposition") == "fail_fast"
+    )
+    metadata.additional_info = additional
+    episode.metadata_vars = metadata.model_dump()
+    return entry_context
 
 
 class AgentRunRequest(BaseModel):
@@ -181,7 +302,7 @@ async def execute_agent_task(
                 await db.refresh(initial_trace)
                 await db_callback._broadcast_trace(initial_trace)
 
-                # Prepare callbacks list (only langfuse if present, since DB callback is now explicit)
+                # Prepare callbacks list and add Langfuse callback if present.
                 callbacks = [db_callback]
                 if langfuse_callback:
                     callbacks.append(langfuse_callback)
@@ -298,7 +419,9 @@ async def execute_agent_task(
                 if final_messages:
                     final_output = final_messages[-1].content
                 else:
-                    final_output = "No output produced by agent."
+                    final_output = _result_feedback(result) or (
+                        "No output produced by agent."
+                    )
                 final_trace = Trace(
                     episode_id=episode_id,
                     trace_type=TraceType.LOG,
@@ -317,6 +440,37 @@ async def execute_agent_task(
                     langfuse_trace_id=trace_id,
                 )
                 db.add(final_llm_trace)
+
+                result_feedback = _result_feedback(result)
+                if result_feedback.startswith("ENTRY_VALIDATION_FAILED[") and not bool(
+                    _extract_result_field(result, "entry_validation_trace_emitted")
+                ):
+                    entry_context = _extract_entry_validation_context(result)
+                    trace_metadata = {
+                        "source": "node_entry_validation",
+                        "status": _result_status_lower(result),
+                        **entry_context,
+                    }
+                    db.add(
+                        Trace(
+                            episode_id=episode_id,
+                            trace_type=TraceType.EVENT,
+                            name="node_entry_validation_failed",
+                            content=result_feedback,
+                            langfuse_trace_id=trace_id,
+                            metadata_vars=trace_metadata,
+                        )
+                    )
+                    db.add(
+                        Trace(
+                            episode_id=episode_id,
+                            trace_type=TraceType.ERROR,
+                            name="node_entry_validation_failed",
+                            content=result_feedback,
+                            langfuse_trace_id=trace_id,
+                            metadata_vars=trace_metadata,
+                        )
+                    )
 
                 await db.commit()
                 await db.refresh(final_llm_trace)
@@ -503,11 +657,19 @@ async def execute_agent_task(
                 # Mark completion after traces/assets are persisted.
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
-                    target_status = (
-                        EpisodeStatus.PLANNED
-                        if _is_planner_agent(agent_name)
-                        else EpisodeStatus.COMPLETED
+                    result_feedback = _result_feedback(result)
+                    _update_episode_entry_validation_metadata(
+                        episode=episode,
+                        result=result,
+                        result_feedback=result_feedback,
                     )
+                    target_status = EpisodeStatus.FAILED
+                    if not _is_failed_result(result):
+                        target_status = (
+                            EpisodeStatus.PLANNED
+                            if _is_planner_agent(agent_name)
+                            else EpisodeStatus.COMPLETED
+                        )
                     episode.status = target_status
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
@@ -648,14 +810,9 @@ async def continue_agent_task(
                 if episode.metadata_vars:
                     from shared.models.schemas import EpisodeMetadata
 
-                    try:
-                        # Assuming AgentName might be in metadata_vars or we can infer it
-                        # For now, we use metadata to get the original name if stored
+                    with suppress(Exception):
+                        # Validate metadata shape if present.
                         EpisodeMetadata.model_validate(episode.metadata_vars)
-                        # We need a field in metadata for agent_name.
-                        # If not present, default to ENGINEER_CODER for continuation.
-                    except Exception:
-                        pass
 
                 agent, langfuse_callback = create_agent_graph(
                     agent_name=agent_name,
@@ -746,7 +903,9 @@ async def continue_agent_task(
                 if final_messages:
                     final_output = final_messages[-1].content
                 else:
-                    final_output = "No output produced by agent."
+                    final_output = _result_feedback(result) or (
+                        "No output produced by agent."
+                    )
 
                 final_trace = Trace(
                     episode_id=episode_id,
@@ -756,10 +915,51 @@ async def continue_agent_task(
                 )
                 db.add(final_trace)
 
+                result_feedback = _result_feedback(result)
+                if result_feedback.startswith("ENTRY_VALIDATION_FAILED[") and not bool(
+                    _extract_result_field(result, "entry_validation_trace_emitted")
+                ):
+                    entry_context = _extract_entry_validation_context(result)
+                    trace_metadata = {
+                        "source": "node_entry_validation",
+                        "status": _result_status_lower(result),
+                        **entry_context,
+                    }
+                    db.add(
+                        Trace(
+                            episode_id=episode_id,
+                            trace_type=TraceType.EVENT,
+                            name="node_entry_validation_failed",
+                            content=result_feedback,
+                            langfuse_trace_id=trace_id,
+                            metadata_vars=trace_metadata,
+                        )
+                    )
+                    db.add(
+                        Trace(
+                            episode_id=episode_id,
+                            trace_type=TraceType.ERROR,
+                            name="node_entry_validation_failed",
+                            content=result_feedback,
+                            langfuse_trace_id=trace_id,
+                            metadata_vars=trace_metadata,
+                        )
+                    )
+
                 # Update status
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
-                    episode.status = EpisodeStatus.COMPLETED
+                    result_feedback = _result_feedback(result)
+                    _update_episode_entry_validation_metadata(
+                        episode=episode,
+                        result=result,
+                        result_feedback=result_feedback,
+                    )
+                    episode.status = (
+                        EpisodeStatus.FAILED
+                        if _is_failed_result(result)
+                        else EpisodeStatus.COMPLETED
+                    )
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
                     if not episode.plan:
@@ -779,7 +979,7 @@ async def continue_agent_task(
                     episode_id,
                     {
                         "type": "status_update",
-                        "status": EpisodeStatus.COMPLETED,
+                        "status": episode.status,
                         "metadata_vars": episode.metadata_vars,
                         "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
                     },

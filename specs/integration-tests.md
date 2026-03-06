@@ -127,6 +127,7 @@ Priorities:
 | INT-112 | Genesis rigid-body mode: backend ignores FEM/fluid config | Running with default backend (`genesis`) ignores `fluids`, `fluid_objectives`, `stress_objectives`, and `fem_enabled` if not specified; existing benchmarks pass unchanged. |
 | INT-113 | Electronics planner explicit submission gate | Electronics planner must emit explicit `submit_plan` (`TOOL_START`) with `node_type=electronics_planner`; after submission, episode must reach `PLANNED` (and must not transition to `FAILED`). Missing submission fails closed. |
 | INT-114 | Benchmark planner explicit submission gate | Benchmark planner must emit explicit `submit_plan` (`TOOL_START`) with `node_type=benchmark_planner`; after submission, episode must reach `PLANNED` (and must not transition to `FAILED`). Missing submission fails closed. |
+| INT-184 | Node-entry validation fail-fast + reroute metadata contract | Invalid node entry in integration mode must fail closed in one turn with `FAILED`, emit `node_entry_validation_failed` evidence, and skip target-node execution. Persisted metadata must include `node`, `disposition`, `reason_code`, and structured `errors`; when a deterministic previous-node mapping exists, `reroute_target` must be populated (for non-integration reroute parity) even when integration disposition is `fail_fast`. |
 | INT-120 | Circuit validation pre-gate | `validate_circuit()` must pass (no short circuits, no floating nodes, total draw ≤ PSU rating) before physics simulation proceeds; simulation rejected otherwise. |
 | INT-121 | Short circuit detection | Circuit with near-zero resistance path across supply triggers `FAILED_SHORT_CIRCUIT` with branch current in result. |
 | INT-122 | Overcurrent supply detection | Circuit total draw exceeding `max_current_a` triggers `FAILED_OVERCURRENT_SUPPLY`; validation reports total draw vs PSU rating. |
@@ -342,6 +343,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-112 | Run existing rigid-body benchmark with default configuration; assert Genesis is used and success is unchanged despite fluids/FEM config being present in system but not active for the benchmark. | Importing backend and toggling flags in unit test. |
 | INT-113 | Run electronics-planner flow over controller APIs and assert traces include `TOOL_START submit_plan` with `node_type=electronics_planner`; after submission, episode must reach `PLANNED` and not `FAILED`; missing submission must not reach success-like status. | Mocking planner node returns or checking only status without trace-level `submit_plan` evidence. |
 | INT-114 | Run benchmark-planner flow over controller APIs and assert traces include `TOOL_START submit_plan` with `node_type=benchmark_planner`; after submission, episode must reach `PLANNED` and not `FAILED`; missing submission must not reach success-like status. | Mocking benchmark planner internals or asserting only terminal status without planner submission trace evidence. |
+| INT-184 | Trigger deterministic node-entry rejection over HTTP (engineer + benchmark paths), assert terminal fail-fast, target-node non-execution, and persisted metadata schema (`node`, `disposition`, `reason_code`, `errors`, `reroute_target` when applicable). | Calling `evaluate_node_entry_contract()` directly in-process or asserting only log strings without episode metadata/traces. |
 | INT-120 | Submit circuit via API; call `validate_circuit` endpoint; assert pass/fail controls whether simulate endpoint accepts the run. | Importing `validate_circuit()` and calling in-process. |
 | INT-121 | Submit circuit with near-zero-ohm path across supply via API; assert `FAILED_SHORT_CIRCUIT` and branch current in response. | Constructing PySpice result object manually. |
 | INT-122 | Submit circuit exceeding PSU `max_current_a` via API; assert `FAILED_OVERCURRENT_SUPPLY` with total draw reported. | Comparing current values in unit test. |
@@ -398,7 +400,7 @@ This section exists to force implementation as true integration tests, not unit 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
-- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-073, INT-101..INT-114, INT-120..INT-128.
+- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-073, INT-101..INT-114, INT-120..INT-128, INT-184.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 - `tests/integration/agent/p1/`: INT-181, INT-182, INT-183.
