@@ -837,6 +837,11 @@ In TODO lists, we assert that either [x] or [-] is present in all checkboxes, an
 
 Files are linted and don't pass execution/submission if they have red errors. Refer to "linting" section.
 
+#### Automatic validation on node entry
+
+To prevent unusual bugs in agent state management on entry (e.g., missing plan when entering coder), we add an extra layer of security before node entry - in every node we have a function that validates the input. If it fails, the loops back to the previous graph node. 
+Notably, during integration tests this simply fail fast as this led to infinite loops.
+
 #### Starting folder structure for various agents
 
 We define the file structure as follows, individual agents adapt to individual needs:
@@ -2643,10 +2648,7 @@ ReAct is the first-line correction loop:
 1. The model produces output and calls tools.
 2. If a tool/validation response is not acceptable, ReAct continues the same node loop and retries.
 3. The node converges on valid handoff output or exits due to hard limits (timeout/turn budget/token budget).
-
-LangGraph handoff loopbacks are a defensive fail-closed control plane, not the primary retry mechanism. They handle node exit with invalid handoff state by routing back to the producing node with explicit validation logs/feedback.
-When hard limits are reached, orchestration must set the session to `FAILED` and terminate the loop (no additional loopback retries after hard-fail).
-
+4. 
 #### The "tools" as Python functions - Utils
 
 I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
