@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Engineer Graph Guard Integration
-lane: planned
+lane: "doing"
 dependencies: [WP01]
+base_branch: main
+base_commit: 22af09078a853762f9384a23494fafc08ae1d6fd
+created_at: '2026-03-06T09:35:03.039089+00:00'
 subtasks:
 - T006
 - T007
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 2 - Engineer Runtime Integration
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
