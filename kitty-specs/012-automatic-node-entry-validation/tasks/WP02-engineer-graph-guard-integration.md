@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Engineer Graph Guard Integration
-lane: "planned"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: main
 base_commit: 22af09078a853762f9384a23494fafc08ae1d6fd
@@ -17,9 +17,9 @@ phase: Phase 2 - Engineer Runtime Integration
 assignee: ''
 agent: codex
 shell_pid: '64395'
-review_status: "has_feedback"
-reviewed_by: "MRiabov"
-review_feedback: "feedback://012-automatic-node-entry-validation/WP02/20260306T095130Z-86e80136.md"
+review_status: has_feedback
+reviewed_by: MRiabov
+review_feedback: feedback://012-automatic-node-entry-validation/WP02/20260306T095130Z-86e80136.md
 history:
 - timestamp: '2026-03-06T08:36:05Z'
   lane: planned
@@ -158,3 +158,4 @@ Reviewer should verify:
 - 2026-03-06T09:45:40Z – unknown – shell_pid=8707 – lane=for_review – Ready for review: integrated pre-entry validation across engineer graph nodes, added deterministic reroute/fail-fast handling, and persisted guard fail-fast outcomes in episode status/traces.
 - 2026-03-06T09:48:20Z – codex – shell_pid=64395 – lane=doing – Started review via workflow command
 - 2026-03-06T09:51:30Z – codex – shell_pid=64395 – lane=planned – Moved to planned
+- 2026-03-06T10:00:22Z – codex – shell_pid=64395 – lane=for_review – Addressed review: terminal failure now keyed to explicit state marker/status (no feedback-text heuristic), and re-ran live integration tests: INT-005 engineer planner submit-plan trace, INT-113 electronics planner submit-plan trace, INT-005 mandatory artifacts gate (3/3 passed).
