@@ -3,9 +3,11 @@ vcs:
 agents:
   available:
   - claude
-  - gemini
   - codex
   selection:
-    strategy: random
-    preferred_implementer:
-    preferred_reviewer:
+    preferred_implementer: codex
+    preferred_reviewer: codex
+project:
+  uuid: 3c834b7e-4b82-406a-8e49-d83ab0929dbc
+  slug: problemologist-ai
+  node_id: f517e89ef941

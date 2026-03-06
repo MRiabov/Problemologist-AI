@@ -73,3 +73,4 @@ suggested_skills/
 
 gha-creds-*.json
 logs/
+.kittify/missions/__pycache__/
