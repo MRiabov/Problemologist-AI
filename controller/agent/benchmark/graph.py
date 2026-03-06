@@ -149,6 +149,13 @@ def _map_hard_fail_metadata(
     return TerminalReason.INTERNAL_ERROR, FailureClass.APPLICATION_LOGIC_FAILURE
 
 
+def _is_reviewer_handoff_blocked_feedback(review_feedback: str | None) -> bool:
+    text = (review_feedback or "").lower()
+    return (
+        "reviewer handoff blocked" in text or "benchmark reviewer blocked" in text
+    ) and ("review_manifest" in text or "submit_for_review" in text)
+
+
 async def _validate_planner_handoff(
     session_id: uuid.UUID,
     plan: Any | None,
@@ -588,16 +595,31 @@ async def _execute_graph_streaming(
             elif normalized_node_name == AgentName.BENCHMARK_CODER:
                 if final_state.session.status == SessionStatus.FAILED:
                     new_status = SessionStatus.FAILED
+                    final_state.reviewer_handoff_block_count = 0
                 elif final_state.session.status == SessionStatus.REJECTED:
                     new_status = SessionStatus.REJECTED
+                    if _is_reviewer_handoff_blocked_feedback(
+                        final_state.review_feedback
+                    ):
+                        final_state.reviewer_handoff_block_count += 1
+                    else:
+                        final_state.reviewer_handoff_block_count = 0
                 else:
                     new_status = SessionStatus.VALIDATING
+                    final_state.reviewer_handoff_block_count = 0
             elif normalized_node_name == AgentName.BENCHMARK_REVIEWER:
                 if final_state.review_decision == ReviewDecision.APPROVED:
                     new_status = SessionStatus.ACCEPTED
+                    final_state.reviewer_handoff_block_count = 0
                 elif final_state.review_decision:
                     new_status = SessionStatus.REJECTED
                     failure_class = FailureClass.AGENT_QUALITY_FAILURE
+                    if _is_reviewer_handoff_blocked_feedback(
+                        final_state.review_feedback
+                    ):
+                        final_state.reviewer_handoff_block_count += 1
+                    else:
+                        final_state.reviewer_handoff_block_count = 0
                 else:
                     logger.error(
                         "benchmark_reviewer_missing_structured_decision",
@@ -611,6 +633,27 @@ async def _execute_graph_streaming(
                     )
                     new_status = SessionStatus.REJECTED
                     failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+                    final_state.reviewer_handoff_block_count = 0
+
+                # Integration fail-fast: avoid long reject->coder->reviewer loops
+                # when reviewer handoff invariants are repeatedly violated.
+                if (
+                    agent_settings.is_integration_test
+                    and new_status == SessionStatus.REJECTED
+                    and final_state.reviewer_handoff_block_count >= 2
+                ):
+                    new_status = SessionStatus.FAILED
+                    terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
+                    failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+                    final_state.session.validation_logs.append(
+                        "integration_fail_fast: repeated reviewer handoff block"
+                    )
+                    logger.error(
+                        "integration_fail_fast_reviewer_handoff_loop",
+                        session_id=session_id,
+                        handoff_block_count=final_state.reviewer_handoff_block_count,
+                        review_feedback=final_state.review_feedback,
+                    )
 
             elif (
                 normalized_node_name == AgentName.SKILL_AGENT
