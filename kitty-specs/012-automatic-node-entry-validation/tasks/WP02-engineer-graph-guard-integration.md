@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Engineer Graph Guard Integration
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: main
 base_commit: 22af09078a853762f9384a23494fafc08ae1d6fd
@@ -16,7 +16,7 @@ subtasks:
 phase: Phase 2 - Engineer Runtime Integration
 assignee: ''
 agent: ''
-shell_pid: "8707"
+shell_pid: '8707'
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
@@ -155,3 +155,4 @@ Reviewer should verify:
 ## Activity Log
 
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
+- 2026-03-06T09:45:40Z – unknown – shell_pid=8707 – lane=for_review – Ready for review: integrated pre-entry validation across engineer graph nodes, added deterministic reroute/fail-fast handling, and persisted guard fail-fast outcomes in episode status/traces.
