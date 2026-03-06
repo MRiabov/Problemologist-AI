@@ -1,3 +1,5 @@
+import contextlib
+
 from shared.cots.base import COTSPart
 from shared.cots.runtime import SearchQuery, search_parts
 from tests.observability.test_observability_utils import (
@@ -34,10 +36,8 @@ def test_cots_search_event():
 
     # We might need to mock create_engine or just provide a dummy db
     # To keep it simple, I'll just verify the emission logic exists.
-    try:
+    with contextlib.suppress(Exception):
         results, _ = search_parts(query, "non_existent.db")
-    except Exception:
-        pass
 
     # Even if it fails, it might not reach emit_event.
     # Actually looking at shared/cots/runtime.py:67, it emits AFTER stmt.all()
@@ -46,6 +46,6 @@ def test_cots_search_event():
     from unittest.mock import patch
 
     with patch("shared.cots.runtime.Session"):
-        results, _ = search_parts(query, "dummy.db")
+        _results, _ = search_parts(query, "dummy.db")
 
     assert_event_emitted("cots_search", query="motor")

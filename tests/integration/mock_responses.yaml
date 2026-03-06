@@ -1,3 +1,4 @@
+# NOTE: distances are in meters. So box with size (30,30,30) is a 30*30*30 m box.
 scenarios:
   # Optional hardening keys for any node scenario entry:
   # - expected_llm_inputs:
@@ -40,7 +41,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build test part", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Build test part",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -101,7 +107,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build test part", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Build test part",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -221,7 +232,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Test benchmark", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Test benchmark",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -398,7 +414,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Design with MOCK-MOTOR-ID", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Design with MOCK-MOTOR-ID",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -452,7 +473,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Initial plan\n- [x] Check electronics",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics needed."
@@ -501,7 +527,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build oscillating arm", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Build oscillating arm",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -540,7 +571,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build oscillating arm\n- [x] Electronics N/A", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Build oscillating arm\n- [x] Electronics N/A",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics required."
@@ -588,7 +624,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Step 1", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Step 1", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -610,7 +647,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
+            tool_args:
+              {
+                path: "objectives.yaml",
+                content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "Plan for 10x10x10mm box generated."
@@ -618,7 +660,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Initial plan\n- [x] Check electronics",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics needed."
@@ -665,7 +712,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Create cube", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Create cube", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -709,10 +757,18 @@ scenarios:
         steps:
           - thought: "Creating cube GLB."
             tool_name: "execute_command"
-            tool_args: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+            tool_args:
+              {
+                command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')",
+              }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "from build123d import *\ndef build(): return Box(10,10,10)", overwrite: true }
+            tool_args:
+              {
+                path: "script.py",
+                content: "from build123d import *\ndef build(): return Box(10,10,10)",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             journal: "Created cube GLB."
@@ -742,7 +798,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Create parts", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Create parts",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -786,10 +847,18 @@ scenarios:
         steps:
           - thought: "Creating two parts GLB."
             tool_name: "execute_command"
-            tool_args: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b1 = Box(10,10,10); b1.label = 'part1'; b2 = Box(5,5,5).translate((20,0,0)); b2.label = 'part2'; c = b1 + b2; export_stl(c, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+            tool_args:
+              {
+                command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b1 = Box(10,10,10); b1.label = 'part1'; b2 = Box(5,5,5).translate((20,0,0)); b2.label = 'part2'; c = b1 + b2; export_stl(c, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')",
+              }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "from build123d import *\ndef build():\n    b1 = Box(10,10,10)\n    b1.label = 'part1'\n    b2 = Box(5,5,5).translate((20,0,0))\n    b2.label = 'part2'\n    return b1 + b2", overwrite: true }
+            tool_args:
+              {
+                path: "script.py",
+                content: "from build123d import *\ndef build():\n    b1 = Box(10,10,10)\n    b1.label = 'part1'\n    b2 = Box(5,5,5).translate((20,0,0))\n    b2.label = 'part2'\n    return b1 + b2",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             journal: "Created two parts GLB."
@@ -800,7 +869,6 @@ scenarios:
               decision: "APPROVED"
               reason: "The design satisfies all requirements."
               required_fixes: []
-
 
   INT-176:
     transcript:
@@ -824,7 +892,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Fail a tool\n- [ ] Continue", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Fail a tool\n- [ ] Continue",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -867,7 +940,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Initial plan\n- [x] Check electronics",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics needed."
@@ -875,14 +953,18 @@ scenarios:
         steps:
           - thought: "I will call a command that fails, then continue."
             tool_name: "execute_command"
-            tool_args: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
+            tool_args:
+              {
+                command: 'python3 -c "from build123d import *; import trimesh; import os; os.makedirs(''assets'', exist_ok=True); b=Box(10,10,10); export_stl(b, ''assets/box.stl''); trimesh.load(''assets/box.stl'').export(''assets/box.glb'', file_type=''glb'')"',
+              }
             expected_observation: "success"
           - thought: "Attempting to list non-existent path."
             tool_name: "execute_command"
             tool_args: { command: "ls /non_existent_path_to_fail" }
             expected_observation: "ls: cannot access"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "# Recovered", overwrite: true }
+            tool_args:
+              { path: "script.py", content: "# Recovered", overwrite: true }
             expected_observation: "success"
           - finished: true
             journal: "Observed failure but continued work."
@@ -912,7 +994,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Test", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Test", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -955,7 +1038,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Initial plan\n- [x] Check electronics",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -998,10 +1086,14 @@ scenarios:
         steps:
           - thought: "Coding for INT-177."
             tool_name: "execute_command"
-            tool_args: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
+            tool_args:
+              {
+                command: 'python3 -c "from build123d import *; import trimesh; import os; os.makedirs(''assets'', exist_ok=True); b=Box(10,10,10); export_stl(b, ''assets/box.stl''); trimesh.load(''assets/box.stl'').export(''assets/box.glb'', file_type=''glb'')"',
+              }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "# Test script", overwrite: true }
+            tool_args:
+              { path: "script.py", content: "# Test script", overwrite: true }
             expected_observation: "success"
           - finished: true
             journal: "Coding for INT-177 complete."
@@ -1031,7 +1123,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Test", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Test", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1074,7 +1167,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Initial plan\n- [x] Check electronics",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1117,10 +1215,18 @@ scenarios:
         steps:
           - thought: "Coding for INT-179."
             tool_name: "execute_command"
-            tool_args: { command: "python3 -c \"from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')\"" }
+            tool_args:
+              {
+                command: 'python3 -c "from build123d import *; import trimesh; import os; os.makedirs(''assets'', exist_ok=True); b=Box(10,10,10); export_stl(b, ''assets/box.stl''); trimesh.load(''assets/box.stl'').export(''assets/box.glb'', file_type=''glb'')"',
+              }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "# Test script for mentions\nfrom shared.models.schemas import PartMetadata\n# line 3\n# line 4\n# line 5\n# line 6\n# line 7\n# line 8\n# line 9\n# line 10", overwrite: true }
+            tool_args:
+              {
+                path: "script.py",
+                content: "# Test script for mentions\nfrom shared.models.schemas import PartMetadata\n# line 3\n# line 4\n# line 5\n# line 6\n# line 7\n# line 8\n# line 9\n# line 10",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             journal: "Coding for INT-179 complete."
@@ -1151,7 +1257,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Test benchmark", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Test benchmark",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1217,19 +1328,36 @@ scenarios:
         steps:
           - thought: "Implementing benchmark script and setting up mandatory files."
             tool_name: "execute_command"
-            tool_args: { command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')" }
+            tool_args:
+              {
+                command: "from build123d import *; import trimesh; import os; os.makedirs('assets', exist_ok=True); b=Box(10,10,10); export_stl(b, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb', file_type='glb')",
+              }
             expected_observation: "success"
           - tool_name: "execute_command"
-            tool_args: { command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)" }
+            tool_args:
+              {
+                command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)",
+              }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\nfrom shared.utils.agent import submit_for_review\ndef build():\n    p = Box(1, 1, 1).translate((8, 0, 0.5))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p\n\ndef reviewer_handoff_contract(compound):\n    submit_for_review(compound)", overwrite: true }
+            tool_args:
+              {
+                path: "script.py",
+                content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\nfrom shared.utils.agent import submit_for_review\ndef build():\n    p = Box(1, 1, 1).translate((8, 0, 0.5))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p\n\ndef reviewer_handoff_contract(compound):\n    submit_for_review(compound)",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "execute_command"
-            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
+            tool_args:
+              {
+                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
+              }
             expected_observation: "True"
           - tool_name: "execute_command"
-            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))" }
+            tool_args:
+              {
+                command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
+              }
             expected_observation: "True"
           - finished: true
             journal: "Work completed."
@@ -1296,7 +1424,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build part", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [x] Build part", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1337,7 +1466,12 @@ scenarios:
         steps:
           - thought: "Mark electronics planning complete."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build part\n- [x] Electronics N/A", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Build part\n- [x] Electronics N/A",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics required."
@@ -1361,10 +1495,16 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "execute_command"
-            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
+            tool_args:
+              {
+                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
+              }
             expected_observation: "True"
           - tool_name: "execute_command"
-            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))" }
+            tool_args:
+              {
+                command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
+              }
             expected_observation: "True"
           - finished: true
             journal: "Implemented placeholder geometry for INT-180."
@@ -1385,7 +1525,12 @@ scenarios:
             tool_args: { path: "/" }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "journal.md", content: "ordered write marker", overwrite: true }
+            tool_args:
+              {
+                path: "journal.md",
+                content: "ordered write marker",
+                overwrite: true,
+              }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1404,7 +1549,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Build", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1443,7 +1589,12 @@ scenarios:
         steps:
           - thought: "No electronics steps."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Build\n- [x] Electronics N/A",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics required."
@@ -1490,7 +1641,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Build", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1529,7 +1681,12 @@ scenarios:
         steps:
           - thought: "No electronics steps."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Build\n- [x] Electronics N/A",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics required."
@@ -1558,9 +1715,9 @@ scenarios:
     transcript:
       - node: engineer_planner
         steps:
-          - thought: "Run a short command so steering can queue mid-run."
-            tool_name: "execute_command"
-            tool_args: { command: "python -c \"import time; time.sleep(1.0)\"" }
+          - thought: "Probe workspace first so steering can queue during active run."
+            tool_name: "list_files"
+            tool_args: { path: "/" }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1579,7 +1736,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Build", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Build", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1618,7 +1776,12 @@ scenarios:
         steps:
           - thought: "No electronics steps."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [x] Build\n- [x] Electronics N/A",
+                overwrite: true,
+              }
             expected_observation: "success"
           - finished: true
             summary: "No electronics required."
@@ -1668,7 +1831,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Build frame", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [x] Build frame", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1743,10 +1907,16 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "execute_command"
-            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
+            tool_args:
+              {
+                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
+              }
             expected_observation: "True"
           - tool_name: "execute_command"
-            tool_args: { command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))" }
+            tool_args:
+              {
+                command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
+              }
             expected_observation: "True"
           - finished: true
             journal: "Mechanical implementation completed."
@@ -1757,7 +1927,6 @@ scenarios:
               decision: "APPROVED"
               reason: "The design satisfies all requirements."
               required_fixes: []
-
 
   # Default fallback
   default:
@@ -1812,8 +1981,8 @@ scenarios:
                   start_position: [0, 0, 0]
                   runtime_jitter: [0.5, 0.5, 0.5]
                 constraints:
-                  max_unit_cost: 50.0
-                  max_weight_g: 1200.0
+                  max_unit_cost: 500.0
+                  max_weight_g: 5000.0
                 randomization:
                   static_variation_id: "v1.0"
                   runtime_jitter_enabled: true
@@ -1882,7 +2051,8 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [ ] Done", overwrite: true }
+            tool_args:
+              { path: "todo.md", content: "- [ ] Done", overwrite: true }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1890,10 +2060,10 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
-                  benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
-                  planner_target_max_weight_g: 500
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 5000
+                  planner_target_max_unit_cost_usd: 500
+                  planner_target_max_weight_g: 5000
                 totals:
                   estimated_unit_cost_usd: 10
                   estimated_weight_g: 100
@@ -1904,7 +2074,12 @@ scenarios:
               overwrite: true
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "objectives.yaml", content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 50, max_weight_g: 1000.0}", overwrite: true }
+            tool_args:
+                  {
+                    path: "objectives.yaml",
+                    content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 500, max_weight_g: 5000.0}",
+                    overwrite: true,
+                  }
             expected_observation: "success"
           - finished: true
             summary: "Default plan generated."
@@ -1912,7 +2087,12 @@ scenarios:
         steps:
           - thought: "No electronics needed."
             tool_name: "write_file"
-            tool_args: { path: "todo.md", content: "- [x] Initial plan\n- [x] Check electronics", overwrite: true }
+            tool_args:
+                  {
+                    path: "todo.md",
+                    content: "- [x] Initial plan\n- [x] Check electronics",
+                    overwrite: true,
+                  }
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
@@ -1936,10 +2116,10 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
-                  benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
-                  planner_target_max_weight_g: 500
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 5000
+                  planner_target_max_unit_cost_usd: 500
+                  planner_target_max_weight_g: 5000
                 totals:
                   estimated_unit_cost_usd: 10
                   estimated_weight_g: 100

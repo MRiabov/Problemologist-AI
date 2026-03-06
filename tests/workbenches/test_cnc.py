@@ -14,7 +14,7 @@ def test_cnc_machinable_part(config):
     # A simple block with a pocket (machinable from +Z)
     with BuildPart() as p:
         Box(20, 20, 10)
-        with BuildSketch(p.faces().sort_by(Axis.Z)[-1]) as s:
+        with BuildSketch(p.faces().sort_by(Axis.Z)[-1]):
             Rectangle(10, 10)
         extrude(amount=-5, mode=Mode.SUBTRACT)
         # Fillet the vertical edges of the pocket to make it machinable
@@ -34,7 +34,7 @@ def test_cnc_undercut_part(config):
         Box(20, 20, 20)
         # Create a side face hole
         side_face = p.faces().sort_by(Axis.X)[-1]
-        with BuildSketch(side_face) as s:
+        with BuildSketch(side_face):
             Circle(3)
         extrude(amount=-10, mode=Mode.SUBTRACT)
 
@@ -58,7 +58,7 @@ def test_cnc_undercut_part(config):
     with BuildPart() as p2:
         Box(20, 20, 5)  # Top
         # Stem starting from the bottom face of the top
-        with BuildPart(p2.faces().sort_by(Axis.Z)[0], mode=Mode.ADD) as stem:
+        with BuildPart(p2.faces().sort_by(Axis.Z)[0], mode=Mode.ADD):
             Box(10, 10, 20)
 
     # The underside of the top box points DOWN (0,0,-1) and is not at min_z.
@@ -71,7 +71,7 @@ def test_cnc_sharp_internal_corner(config):
     # A block with a sharp square pocket (not machinable with round tool)
     with BuildPart() as p:
         Box(20, 20, 10)
-        with BuildSketch(p.faces().sort_by(Axis.Z)[-1]) as s:
+        with BuildSketch(p.faces().sort_by(Axis.Z)[-1]):
             Rectangle(10, 10)
         extrude(amount=-5, mode=Mode.SUBTRACT)
 

@@ -279,7 +279,7 @@ async def test_int_030_interrupt_propagation():
         StandardResponse.model_validate(interrupt_resp.json())
 
         status = None
-        for i in range(20):
+        for _i in range(20):
             await asyncio.sleep(0.5)
             status_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
             assert status_resp.status_code == 200

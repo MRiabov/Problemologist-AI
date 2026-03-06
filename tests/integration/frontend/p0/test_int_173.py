@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 
@@ -42,10 +43,8 @@ def _ensure_model_assets(page: Page) -> None:
             return
         rebuild_model_button = page.get_by_test_id("rebuild-model-button")
         expect(rebuild_model_button).to_be_visible(timeout=30000)
-        try:
+        with contextlib.suppress(Exception):
             rebuild_model_button.click(force=True, timeout=10000)
-        except Exception:
-            pass
         page.wait_for_load_state("networkidle", timeout=60000)
         page.wait_for_timeout(800)
 

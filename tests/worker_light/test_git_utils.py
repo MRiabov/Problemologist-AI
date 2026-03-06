@@ -1,3 +1,5 @@
+import contextlib
+
 from worker_light.utils.git import (
     abort_merge,
     commit_all,
@@ -12,7 +14,6 @@ from worker_light.utils.git import (
 def test_git_conflict_resolution(tmp_path):
     # 1. Setup repo
     repo = init_workspace_repo(tmp_path)
-    default_branch = repo.active_branch.name
     file_path = tmp_path / "conflict.txt"
     file_path.write_text("Base content")
     commit_all(tmp_path, "Initial commit")
@@ -70,10 +71,8 @@ def test_git_abort_merge(tmp_path):
     file_path.write_text("Main content")
     commit_all(tmp_path, "Main commit")
 
-    try:
+    with contextlib.suppress(Exception):
         repo.git.merge("feature")
-    except Exception:
-        pass
 
     assert has_merge_conflicts(tmp_path) is True
 

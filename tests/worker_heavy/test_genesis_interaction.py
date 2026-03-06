@@ -23,13 +23,13 @@ def test_apply_control(genesis_backend):
     genesis_backend.apply_control({"motor1": 10.0})
 
     # Check if set_dofs_force was called with a numpy array containing 10.0
-    args, kwargs = mock_entity.set_dofs_force.call_args
+    args, _kwargs = mock_entity.set_dofs_force.call_args
     assert np.allclose(args[0], np.array([10.0]))
 
 
 def test_check_collision_with_zone(genesis_backend):
     # Mock scene_meta with a zone
-    mock_scene = SimulationScene(scene_path="dummy.json")
+    SimulationScene(scene_path="dummy.json")
     # For simplicity, we manually inject into GenesisBackend's logic
     genesis_backend.scene_meta = MagicMock()
     genesis_backend.scene_meta.assets = {

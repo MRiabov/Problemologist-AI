@@ -170,7 +170,7 @@ async def test_calculate_and_report_automated_score():
         )
 
         mock_report.assert_called_once()
-        args, kwargs = mock_report.call_args
+        _args, kwargs = mock_report.call_args
         assert kwargs["trace_id"] == trace_id
         assert kwargs["name"] == "automated_score"
         assert kwargs["value"] > 0

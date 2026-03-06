@@ -98,7 +98,7 @@ async def test_remote_fs_middleware_read():
 
 @pytest.mark.asyncio
 async def test_remote_fs_middleware_overwrite(mock_observability):
-    m1, m2 = mock_observability
+    m1, _m2 = mock_observability
     mock_client = AsyncMock()
     middleware = RemoteFilesystemMiddleware(mock_client)
 

@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import os
 import re
@@ -301,7 +302,5 @@ def log_test_marker(request):
     marker_finish = f"FINISH TEST: {test_id}"
     with httpx.Client(timeout=1.0) as client:
         for service_url in SERVICES:
-            try:
+            with contextlib.suppress(Exception):
                 client.get(f"{service_url}/health", params={"marker": marker_finish})
-            except Exception:
-                pass

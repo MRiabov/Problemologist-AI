@@ -124,7 +124,7 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
     found_feedback = False
     import time
 
-    for attempt in range(5):
+    for _attempt in range(5):
         with httpx.Client() as client:
             # Get all episodes
             resp = client.get(f"{CONTROLLER_URL}/api/episodes/")

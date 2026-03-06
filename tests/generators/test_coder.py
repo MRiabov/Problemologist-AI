@@ -54,7 +54,7 @@ async def test_coder_node_success(mock_state):
             "controller.agent.benchmark.nodes.SharedNodeContext.create"
         ) as mock_ctx_create,
         patch("controller.agent.benchmark.nodes.dspy.ReAct") as mock_react,
-        patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
+        patch("controller.agent.benchmark.nodes.get_benchmark_tools"),
     ):
         mock_ctx = MagicMock()
         mock_ctx_create.return_value = mock_ctx
@@ -103,7 +103,7 @@ async def test_coder_node_with_feedback(mock_state):
             "controller.agent.benchmark.nodes.SharedNodeContext.create"
         ) as mock_ctx_create,
         patch("controller.agent.benchmark.nodes.dspy.ReAct") as mock_react,
-        patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
+        patch("controller.agent.benchmark.nodes.get_benchmark_tools"),
     ):
         mock_ctx = MagicMock()
         mock_ctx_create.return_value = mock_ctx

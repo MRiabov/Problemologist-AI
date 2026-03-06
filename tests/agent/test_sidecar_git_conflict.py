@@ -21,8 +21,7 @@ def mock_repo():
 
 @pytest.fixture
 def mock_dspy_lm():
-    mock_lm = MagicMock()
-    return mock_lm
+    return MagicMock()
 
 
 @type_check

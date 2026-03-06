@@ -18,7 +18,6 @@ from shared.models.schemas import EntryValidationContext
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
-
 async def _poll_engineer_episode(
     client: httpx.AsyncClient,
     episode_id: str,

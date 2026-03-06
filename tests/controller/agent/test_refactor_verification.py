@@ -51,7 +51,7 @@ async def test_all_agents_initialization():
         assert exec_reviewer.ctx == mock_ctx
 
         # 6. Skill Creator (SkillsNode)
-        skills = SkillsNode(context=mock_ctx)
+        SkillsNode(context=mock_ctx)
         # Mocking config for __call__ check
         mock_state = MagicMock(spec=AgentState)
         mock_state.journal = ""

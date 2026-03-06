@@ -64,7 +64,7 @@ objectives:
         assert any("simulation_bounds" in str(e) for e in errors)
 
     def test_invalid_yaml_syntax(self):
-        is_valid, errors = validate_objectives_yaml("invalid: yaml: content:")
+        is_valid, _errors = validate_objectives_yaml("invalid: yaml: content:")
         assert is_valid is False
 
 
@@ -111,7 +111,7 @@ comments:
 decision: maybe_approved
 ---
 """
-        is_valid, errors = validate_review_frontmatter(content)
+        is_valid, _errors = validate_review_frontmatter(content)
         assert is_valid is False
 
     def test_refusal_decision_without_context(self):
@@ -189,7 +189,7 @@ A ramp design
 ## 5. Risk Assessment
 - Low risk
 """
-        is_valid, errors = validate_plan_md_structure(content, plan_type="engineering")
+        is_valid, _errors = validate_plan_md_structure(content, plan_type="engineering")
         assert is_valid is True
 
     def test_missing_section_engineering(self):

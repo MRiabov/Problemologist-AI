@@ -139,7 +139,6 @@ async def test_reviewer_evidence_completeness():
         assert manifest.goal_reached is True
 
         # 3. Inspect Content for Evidence
-        passed_evidence_check = False
         for review_asset in review_assets:
             # We assume content is available if asset_type is readable
             content = review_asset.content or ""
@@ -165,7 +164,6 @@ async def test_reviewer_evidence_completeness():
                         if frontmatter.decision and (
                             frontmatter.comments or "images_viewed" in raw_frontmatter
                         ):
-                            passed_evidence_check = True
                             break
                 except Exception:
                     pass

@@ -66,9 +66,7 @@ def test_int_175_controller_first_api_boundary(page: Page):
     expect(send_button).to_be_enabled(timeout=30000)
 
     # Capture a network request that indicates we've started generating
-    with page.expect_request(
-        lambda request: "/api/episodes" in request.url
-    ) as req_info:
+    with page.expect_request(lambda request: "/api/episodes" in request.url):
         send_button.click()
 
     # 5. Wait for the planner to finish (indicator: status changes to PLANNED)
@@ -89,7 +87,7 @@ def test_int_175_controller_first_api_boundary(page: Page):
         expect(confirm_button).to_be_visible()
 
         # Capture a network request for confirmation
-        with page.expect_request(lambda request: "confirm" in request.url) as req_info:
+        with page.expect_request(lambda request: "confirm" in request.url):
             confirm_button.click()
     except Exception:
         pass  # Ignore timeout if we don't reach here, the main test is the network traffic

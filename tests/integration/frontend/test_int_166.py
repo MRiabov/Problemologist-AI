@@ -1,3 +1,4 @@
+import contextlib
 import os
 
 import pytest
@@ -18,10 +19,8 @@ def _ensure_viewport_assets(page: Page) -> None:
         rebuild_assets_button = page.get_by_test_id("rebuild-assets-button")
         if not rebuild_assets_button.is_visible():
             pytest.skip("Viewport assets unavailable and rebuild action not present")
-        try:
+        with contextlib.suppress(Exception):
             rebuild_assets_button.click(force=True, timeout=10000)
-        except Exception:
-            pass
         page.wait_for_load_state("networkidle", timeout=60000)
         page.wait_for_timeout(800)
 

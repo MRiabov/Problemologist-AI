@@ -51,7 +51,7 @@ def test_analyze_passes_method_and_quantity(
     calls = mock_validate_and_price.call_args_list
     assert len(calls) == 1
 
-    args, kwargs = calls[0]
+    _args, kwargs = calls[0]
 
     # Check kwargs for method and quantity
     # If passed as positional, we'd check args. validate_and_price signature:

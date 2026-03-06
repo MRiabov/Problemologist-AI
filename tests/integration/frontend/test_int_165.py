@@ -1,3 +1,4 @@
+import contextlib
 import os
 import re
 
@@ -18,10 +19,8 @@ def _ensure_viewport_assets(page: Page) -> None:
             return
         rebuild_assets_button = page.get_by_test_id("rebuild-assets-button")
         expect(rebuild_assets_button).to_be_visible(timeout=30000)
-        try:
+        with contextlib.suppress(Exception):
             rebuild_assets_button.click(force=True, timeout=10000)
-        except Exception:
-            pass
         page.wait_for_load_state("networkidle", timeout=60000)
         page.wait_for_timeout(800)
 

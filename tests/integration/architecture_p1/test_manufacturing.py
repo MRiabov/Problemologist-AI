@@ -131,12 +131,10 @@ async def test_manufacturing_methods_and_materials():
         bad_episode_id = AgentRunResponse.model_validate(bad_run_resp.json()).episode_id
 
         # Minimal assertion for INT-035: The system shouldn't crash, and if it fails, it handles it gracefully.
-        bad_engineer_completed = False
         for _ in range(150):
             ep_resp = await client.get(f"/episodes/{bad_episode_id}")
             if ep_resp.status_code == 200:
                 ep = EpisodeResponse.model_validate(ep_resp.json())
                 if ep.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
-                    bad_engineer_completed = True
                     break
             await asyncio.sleep(2)

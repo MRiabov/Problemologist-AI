@@ -33,47 +33,45 @@ async def test_nodes_call_get_langfuse_callback():
     )
 
     # Use nested with blocks for maximum compatibility
-    with patch(
-        "controller.agent.nodes.base.get_langfuse_callback"
-    ) as mock_get_callback:
-        with patch("controller.agent.nodes.base.DatabaseCallbackHandler"):
-            with patch(
-                "controller.agent.benchmark.nodes.SharedNodeContext"
-            ) as mock_ctx_cls:
-                mock_ctx = mock_ctx_cls.create.return_value
+    with (
+        patch("controller.agent.nodes.base.get_langfuse_callback"),
+        patch("controller.agent.nodes.base.DatabaseCallbackHandler"),
+        patch("controller.agent.benchmark.nodes.SharedNodeContext") as mock_ctx_cls,
+    ):
+        mock_ctx = mock_ctx_cls.create.return_value
 
-                # Setup mock LLM
-                mock_llm = mock_ctx.llm
-                mock_llm.ainvoke = AsyncMock(return_value=MagicMock())
-                mock_llm.with_structured_output = MagicMock(return_value=mock_llm)
+        # Setup mock LLM
+        mock_llm = mock_ctx.llm
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock())
+        mock_llm.with_structured_output = MagicMock(return_value=mock_llm)
 
-                # Setup mock worker client
-                mock_worker = mock_ctx.worker_client
-                mock_worker.list_files = AsyncMock(return_value=[])
-                mock_worker.read_file = AsyncMock(return_value="")
-                mock_worker.write_file = AsyncMock(return_value=True)
-                mock_worker.git_init = AsyncMock(return_value=True)
-                mock_worker.exists = AsyncMock(return_value=False)
+        # Setup mock worker client
+        mock_worker = mock_ctx.worker_client
+        mock_worker.list_files = AsyncMock(return_value=[])
+        mock_worker.read_file = AsyncMock(return_value="")
+        mock_worker.write_file = AsyncMock(return_value=True)
+        mock_worker.git_init = AsyncMock(return_value=True)
+        mock_worker.exists = AsyncMock(return_value=False)
 
-                # Test cots_search_node
-                with patch(
-                    "controller.agent.benchmark.nodes.create_react_agent"
-                ) as mock_create_agent:
-                    mock_agent = AsyncMock()
-                    mock_agent.ainvoke.return_value = {"messages": []}
-                    mock_create_agent.return_value = mock_agent
+        # Test cots_search_node
+        with patch(
+            "controller.agent.benchmark.nodes.create_react_agent"
+        ) as mock_create_agent:
+            mock_agent = AsyncMock()
+            mock_agent.ainvoke.return_value = {"messages": []}
+            mock_create_agent.return_value = mock_agent
 
-                    await cots_search_node(state)
+            await cots_search_node(state)
 
-                # Test skills_node
-                await skills_node(state)
+        # Test skills_node
+        await skills_node(state)
 
-                # Test planner_node
-                with patch(
-                    "controller.agent.benchmark.nodes.get_prompt",
-                    return_value="prompt",
-                ):
-                    await planner_node(state)
+        # Test planner_node
+        with patch(
+            "controller.agent.benchmark.nodes.get_prompt",
+            return_value="prompt",
+        ):
+            await planner_node(state)
 
 
 @pytest.mark.asyncio

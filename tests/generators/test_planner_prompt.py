@@ -86,7 +86,7 @@ async def test_coder_node_prompt_construction():
         patch(
             "controller.agent.benchmark.nodes.create_react_agent"
         ) as mock_create_agent,
-        patch("controller.agent.benchmark.nodes.get_benchmark_tools") as mock_get_tools,
+        patch("controller.agent.benchmark.nodes.get_benchmark_tools"),
     ):
         mock_ctx = MagicMock()
         mock_ctx_create.return_value = mock_ctx

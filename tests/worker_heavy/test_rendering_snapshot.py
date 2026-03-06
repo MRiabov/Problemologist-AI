@@ -40,5 +40,5 @@ def build():
         assert res.startswith("snapshots/")
         assert mock_s3.upload_file.called
         # Verify it was called with some path and the key
-        args, kwargs = mock_s3.upload_file.call_args
+        args, _kwargs = mock_s3.upload_file.call_args
         assert args[1] == res

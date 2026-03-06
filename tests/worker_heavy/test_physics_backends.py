@@ -38,8 +38,8 @@ def test_simulation_loop_with_mujoco():
     metrics = loop.step(control_inputs={}, duration=0.1)
 
     assert metrics.total_time >= 0.1
-    assert metrics.success == True  # Finished normally without failure
-    assert metrics.fail_reason == None  # Finished normally
+    assert metrics.success  # Finished normally without failure
+    assert metrics.fail_reason is None  # Finished normally
 
 
 def test_simulation_builder_factory():

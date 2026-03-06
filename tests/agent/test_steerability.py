@@ -158,7 +158,7 @@ async def test_planner_node_steer_context(
         await planner_node(state)
 
         # Verify _run_program called with inputs containing steer_context
-        args, kwargs = mock_run_program.call_args
+        args, _kwargs = mock_run_program.call_args
         # args[3] is the inputs dict in _run_program(self, program_cls, signature_cls, state, inputs, ...)
         inputs = args[3]
         assert "steer_context" in inputs
@@ -211,7 +211,7 @@ async def test_benchmark_planner_node_steer(mock_get_submit, mock_run_program):
         await benchmark_planner(state)
 
         # Verify _run_program called with inputs containing history with steer_msg
-        args, kwargs = mock_run_program.call_args
+        args, _kwargs = mock_run_program.call_args
         inputs = args[3]
         history = inputs["history"]
         assert "Steering prompt" in history

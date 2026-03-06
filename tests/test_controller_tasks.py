@@ -123,6 +123,6 @@ async def test_execute_agent_task_without_langfuse_callback(
 
     # Verify callbacks were passed
     assert mock_agent.ainvoke.called
-    args, kwargs = mock_agent.ainvoke.call_args
+    _args, kwargs = mock_agent.ainvoke.call_args
     callbacks = kwargs["config"]["callbacks"]
     assert len(callbacks) >= 1

@@ -89,7 +89,7 @@ async def test_smoke_e2e(fresh_graph):
             events.append(event)
 
         # Verify the sequence of nodes
-        node_sequence = [list(e.keys())[0] for e in events]
+        node_sequence = [next(iter(e.keys())) for e in events]
         assert "planner" in node_sequence
         assert "electronics_planner" in node_sequence
         assert "plan_reviewer" in node_sequence

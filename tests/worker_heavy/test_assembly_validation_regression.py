@@ -42,9 +42,7 @@ totals:
 
     print(f"Validation result: {is_valid}, Errors: {errors}")
 
-    assert is_valid == False, (
-        "Validation PASSED (Bug still present or new logic flawed)!"
-    )
+    assert not is_valid, "Validation PASSED (Bug still present or new logic flawed)!"
 
     # Assert that errors about assembly_definition.yaml EXIST
     has_yaml_error = any("assembly_definition.yaml" in e for e in errors)

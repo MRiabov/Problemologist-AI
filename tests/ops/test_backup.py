@@ -13,8 +13,8 @@ def test_backup_postgres_success():
         patch("boto3.client") as mock_boto,
         patch("builtins.open", mock_open(read_data=b"dummy data")),
         patch("shared.ops.backup.Path.open", mock_open(read_data=b"dummy data")),
-        patch("gzip.open", mock_open()) as mock_gzip,
-        patch("shutil.copyfileobj") as mock_copy,
+        patch("gzip.open", mock_open()),
+        patch("shutil.copyfileobj"),
         patch("shared.ops.backup.Path.unlink") as mock_unlink,
         patch("shared.ops.backup.Path.exists", return_value=True),
     ):

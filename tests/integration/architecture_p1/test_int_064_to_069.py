@@ -226,7 +226,7 @@ async def test_int_067_068_steerability():
             json=request.model_dump(),
         )
         assert resp.status_code == 201
-        episode_id = EpisodeCreateResponse.model_validate(resp.json()).episode_id
+        EpisodeCreateResponse.model_validate(resp.json()).episode_id
 
         # 2. Submit a steered prompt with selections, mentions, and code references
         steer_session_id = f"test-steer-{int(time.time())}"

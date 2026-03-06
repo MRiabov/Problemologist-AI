@@ -24,7 +24,7 @@ def test_servo_motor_emission():
 
 
 def test_servo_motor_mg996r():
-    with patch("shared.cots.base.emit_event") as mock_emit:
+    with patch("shared.cots.base.emit_event"):
         servo = ServoMotor(size="MG996R")
         assert servo.metadata.cots_id == "MG996R"
         assert servo.price == 12.00
@@ -32,6 +32,6 @@ def test_servo_motor_mg996r():
 
 
 def test_servo_motor_unknown():
-    with patch("shared.cots.base.emit_event") as mock_emit:
+    with patch("shared.cots.base.emit_event"):
         servo = ServoMotor(size="UNKNOWN_SIZE")
         assert servo.failed is True

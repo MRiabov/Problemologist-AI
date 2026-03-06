@@ -29,7 +29,7 @@ def test_fem_breakage_detection(tmp_path):
 
     with (
         patch("worker_heavy.simulation.loop.get_physics_backend") as mock_get_backend,
-        patch("worker_heavy.simulation.loop.validate_and_price") as mock_validate,
+        patch("worker_heavy.simulation.loop.validate_and_price"),
     ):
         mock_backend = MagicMock()
         mock_get_backend.return_value = mock_backend
