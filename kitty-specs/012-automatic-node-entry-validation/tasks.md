@@ -157,11 +157,11 @@
 
 #### Included Subtasks
 
-- [ ] T036 Run targeted integration suites for planner gates, reviewer handover, and new entry-validation tests.
-- [ ] T037 Resolve regressions caused by new guard routing while preserving fail-closed semantics.
-- [ ] T038 Update feature `quickstart.md` and plan notes if implementation details diverge from planned assumptions.
-- [ ] T039 Validate that `.manifests/**` policy and reviewer write-scope behavior remain unchanged.
-- [ ] T040 Produce final implementation notes for reviewers describing expected node-entry failure signatures.
+- [x] T036 Run targeted integration suites for planner gates, reviewer handover, and new entry-validation tests.
+- [x] T037 Resolve regressions caused by new guard routing while preserving fail-closed semantics.
+- [x] T038 Update feature `quickstart.md` and plan notes if implementation details diverge from planned assumptions.
+- [x] T039 Validate that `.manifests/**` policy and reviewer write-scope behavior remain unchanged.
+- [x] T040 Produce final implementation notes for reviewers describing expected node-entry failure signatures.
 
 **Estimated Prompt Size**: ~260 lines
 
