@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Integration Tests & Scenario Wiring
-lane: "for_review"
+lane: "doing"
 dependencies: [WP04, WP05]
 base_branch: 012-automatic-node-entry-validation-WP06-merge-base
 base_commit: 4a1a92d9a378285a450eb8f13ef7a1d6310749a8
@@ -16,8 +16,8 @@ subtasks:
 - T035
 phase: Phase 5 - Contract Verification
 assignee: ''
-agent: codex
-shell_pid: '8707'
+agent: "codex"
+shell_pid: "41663"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
@@ -169,3 +169,4 @@ Reviewer should verify:
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
 - 2026-03-06T12:04:45Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
 - 2026-03-06T12:25:28Z – codex – shell_pid=8707 – lane=for_review – Ready for review: INT-184 integration coverage and entry-validation metadata persistence
+- 2026-03-06T12:39:12Z – codex – shell_pid=41663 – lane=doing – Started review via workflow command
