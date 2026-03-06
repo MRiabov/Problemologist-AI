@@ -36,7 +36,14 @@ class AgentState(BaseModel):
     best_cost: float | None = None
     best_weight_g: float | None = None
     turn_count: StrictInt = 0
+    entry_validation_rejected: bool = False
     entry_validation_terminal: bool = False
+    entry_validation_reason_code: StrictStr | None = None
+    entry_validation_target_node: StrictStr | None = None
+    entry_validation_disposition: StrictStr | None = None
+    entry_validation_reroute_target: StrictStr | None = None
+    entry_validation_errors: list[dict[str, str | None]] = Field(default_factory=list)
+    entry_validation_trace_emitted: bool = False
     worker_client: Any = None
     fs: Any = None
 

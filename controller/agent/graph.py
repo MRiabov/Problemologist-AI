@@ -22,6 +22,8 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from controller.graph.steerability_node import check_steering, steerability_node
 from shared.enums import AgentName
+from shared.observability.events import emit_event
+from shared.observability.schemas import NodeEntryValidationFailedEvent
 
 from .nodes.coder import coder_node
 from .nodes.cots_search import cots_search_node
@@ -99,7 +101,7 @@ def _build_entry_rejection_feedback(
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
     custom_checks = {
         EXECUTION_REVIEWER_HANDOVER_CHECK: (
-            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(
+            lambda *, _contract, state: reviewer_handover_custom_check_from_session_id(
                 session_id=getattr(state, "session_id", None),
                 reviewer_label="Execution",
             )
@@ -121,20 +123,56 @@ def _guarded_node(target_node: AgentName, node_callable):
         # Tool-invoked helper subagents are out of scope for this contract.
         validation = await _evaluate_engineer_node_entry(target_node, state)
         if validation.ok:
+            state.entry_validation_rejected = False
+            state.entry_validation_terminal = False
+            state.entry_validation_reason_code = None
+            state.entry_validation_target_node = None
+            state.entry_validation_disposition = None
+            state.entry_validation_reroute_target = None
+            state.entry_validation_errors = []
+            state.entry_validation_trace_emitted = False
             return await node_callable(state)
 
         feedback, journal_line = _build_entry_rejection_feedback(
             target_node=target_node,
             result=validation,
         )
+        serialized_errors = [
+            error.model_dump(mode="json") for error in validation.errors
+        ]
         current_journal = state.journal or ""
         update = {
             "feedback": feedback,
             "journal": (current_journal + "\n" + journal_line).strip(),
+            "entry_validation_rejected": True,
+            "entry_validation_reason_code": validation.reason_code,
+            "entry_validation_target_node": target_node.value,
+            "entry_validation_disposition": validation.disposition.value,
+            "entry_validation_reroute_target": (
+                validation.reroute_target.value if validation.reroute_target else None
+            ),
+            "entry_validation_errors": serialized_errors,
+            "entry_validation_trace_emitted": False,
         }
 
+        emit_event(
+            NodeEntryValidationFailedEvent(
+                episode_id=state.episode_id or None,
+                user_session_id=state.session_id or None,
+                node=target_node.value,
+                disposition=validation.disposition.value,
+                reason_code=validation.reason_code,
+                errors=serialized_errors,
+                reroute_target=(
+                    validation.reroute_target.value
+                    if validation.reroute_target
+                    else None
+                ),
+            )
+        )
         logger.error(
             "node_entry_validation_rejected",
+            episode_id=state.episode_id,
             target_node=target_node.value,
             disposition=validation.disposition.value,
             reason_code=validation.reason_code,
@@ -142,7 +180,7 @@ def _guarded_node(target_node: AgentName, node_callable):
                 validation.reroute_target.value if validation.reroute_target else None
             ),
             integration_mode=integration_mode_enabled(),
-            errors=[error.model_dump() for error in validation.errors],
+            errors=serialized_errors,
         )
 
         if (

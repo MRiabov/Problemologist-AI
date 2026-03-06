@@ -52,6 +52,8 @@ from shared.enums import (
     TraceType,
 )
 from shared.models.schemas import PlannerSubmissionResult
+from shared.observability.events import emit_event
+from shared.observability.schemas import NodeEntryValidationFailedEvent
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
 from .models import GenerationSession, SessionStatus
@@ -168,6 +170,52 @@ def _is_reviewer_handoff_blocked_feedback(review_feedback: str | None) -> bool:
     ) and ("review_manifest" in text or "submit_for_review" in text)
 
 
+def _entry_validation_metadata_from_state(
+    state: BenchmarkGeneratorState,
+) -> dict[str, Any]:
+    return {
+        "node": state.entry_validation_target_node,
+        "disposition": state.entry_validation_disposition,
+        "reason_code": state.entry_validation_reason_code,
+        "reroute_target": state.entry_validation_reroute_target,
+        "errors": list(state.entry_validation_errors or []),
+    }
+
+
+async def _persist_entry_validation_rejection_trace(
+    *,
+    session_id: uuid.UUID,
+    review_feedback: str | None,
+    metadata_payload: dict[str, Any],
+) -> None:
+    content = (review_feedback or "").strip()
+    if not content.startswith("ENTRY_VALIDATION_FAILED["):
+        return
+
+    trace_metadata = {"source": "node_entry_validation", **metadata_payload}
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        db.add(
+            Trace(
+                episode_id=session_id,
+                trace_type=TraceType.EVENT,
+                name="node_entry_validation_failed",
+                content=content,
+                metadata_vars=trace_metadata,
+            )
+        )
+        db.add(
+            Trace(
+                episode_id=session_id,
+                trace_type=TraceType.ERROR,
+                name="node_entry_validation_failed",
+                content=content,
+                metadata_vars=trace_metadata,
+            )
+        )
+        await db.commit()
+
+
 async def _artifact_exists_for_benchmark_state(
     state: BenchmarkGeneratorState, artifact_path: str
 ) -> bool:
@@ -241,7 +289,7 @@ async def _evaluate_benchmark_node_entry(
 ):
     custom_checks = {
         BENCHMARK_REVIEWER_HANDOVER_CHECK: (
-            lambda *, contract, state: _custom_benchmark_reviewer_handover_check(
+            lambda *, _contract, state: _custom_benchmark_reviewer_handover_check(
                 state=state
             )
         )
@@ -267,6 +315,9 @@ def _guarded_node(target_node: AgentName, node_callable):
             state.entry_validation_reason_code = None
             state.entry_validation_target_node = None
             state.entry_validation_disposition = None
+            state.entry_validation_reroute_target = None
+            state.entry_validation_errors = []
+            state.entry_validation_trace_emitted = False
             return await node_callable(state)
 
         feedback, journal_line = _build_entry_rejection_feedback(
@@ -276,16 +327,35 @@ def _guarded_node(target_node: AgentName, node_callable):
             reroute_target=validation.reroute_target,
             errors=validation.errors,
         )
+        serialized_errors = [
+            error.model_dump(mode="json") for error in validation.errors
+        ]
         state.review_feedback = feedback
         state.journal = (state.journal + "\n" + journal_line).strip()
         state.entry_validation_rejected = True
         state.entry_validation_reason_code = validation.reason_code
         state.entry_validation_target_node = target_node.value
         state.entry_validation_disposition = validation.disposition.value
+        state.entry_validation_reroute_target = (
+            validation.reroute_target.value if validation.reroute_target else None
+        )
+        state.entry_validation_errors = serialized_errors
         state.session.validation_logs.append(feedback)
 
+        emit_event(
+            NodeEntryValidationFailedEvent(
+                episode_id=state.episode_id,
+                user_session_id=str(state.session.session_id),
+                node=target_node.value,
+                disposition=validation.disposition.value,
+                reason_code=validation.reason_code,
+                errors=serialized_errors,
+                reroute_target=state.entry_validation_reroute_target,
+            )
+        )
         logger.error(
             "benchmark_node_entry_validation_rejected",
+            episode_id=state.episode_id,
             target_node=target_node.value,
             disposition=validation.disposition.value,
             reason_code=validation.reason_code,
@@ -293,7 +363,7 @@ def _guarded_node(target_node: AgentName, node_callable):
                 validation.reroute_target.value if validation.reroute_target else None
             ),
             integration_mode=integration_mode_enabled(),
-            errors=[error.model_dump() for error in validation.errors],
+            errors=serialized_errors,
         )
 
         if (
@@ -313,6 +383,11 @@ def _guarded_node(target_node: AgentName, node_callable):
                     "entry_validation_reason_code": state.entry_validation_reason_code,
                     "entry_validation_target_node": state.entry_validation_target_node,
                     "entry_validation_disposition": state.entry_validation_disposition,
+                    "entry_validation_reroute_target": (
+                        state.entry_validation_reroute_target
+                    ),
+                    "entry_validation_errors": state.entry_validation_errors,
+                    "entry_validation_trace_emitted": False,
                 },
             )
 
@@ -329,6 +404,11 @@ def _guarded_node(target_node: AgentName, node_callable):
                 "entry_validation_reason_code": state.entry_validation_reason_code,
                 "entry_validation_target_node": state.entry_validation_target_node,
                 "entry_validation_disposition": state.entry_validation_disposition,
+                "entry_validation_reroute_target": (
+                    state.entry_validation_reroute_target
+                ),
+                "entry_validation_errors": state.entry_validation_errors,
+                "entry_validation_trace_emitted": False,
             },
         )
 
@@ -757,6 +837,15 @@ async def _execute_graph_streaming(
                     )
 
             if final_state.entry_validation_rejected:
+                entry_validation_metadata = _entry_validation_metadata_from_state(
+                    final_state
+                )
+                await _persist_entry_validation_rejection_trace(
+                    session_id=session_id,
+                    review_feedback=final_state.review_feedback,
+                    metadata_payload=entry_validation_metadata,
+                )
+                final_state.entry_validation_trace_emitted = True
                 if final_state.entry_validation_terminal:
                     new_status = SessionStatus.FAILED
                     terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
@@ -905,6 +994,11 @@ async def _execute_graph_streaming(
                     episode_phase=episode_phase,
                     terminal_reason=terminal_reason,
                     failure_class=failure_class,
+                    entry_validation_metadata=(
+                        _entry_validation_metadata_from_state(final_state)
+                        if final_state.entry_validation_rejected
+                        else None
+                    ),
                 )
             except Exception as e:
                 logger.error("failed_to_update_episode_persistence", error=str(e))
@@ -1321,6 +1415,7 @@ async def _update_episode_persistence(
     episode_phase: EpisodePhase | None = None,
     terminal_reason: TerminalReason | None = None,
     failure_class: FailureClass | None = None,
+    entry_validation_metadata: dict[str, Any] | None = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
     from controller.persistence.models import Episode
@@ -1346,6 +1441,14 @@ async def _update_episode_persistence(
             if turn_count is not None:
                 additional = dict(metadata.additional_info or {})
                 additional["turn_count"] = int(turn_count)
+                metadata.additional_info = additional
+            if entry_validation_metadata is not None:
+                additional = dict(metadata.additional_info or {})
+                additional["entry_validation"] = entry_validation_metadata
+                additional["entry_validation_terminal"] = bool(
+                    entry_validation_metadata.get("disposition") == "fail_fast"
+                    or new_status == SessionStatus.FAILED
+                )
                 metadata.additional_info = additional
             # Keep detailed_status aligned with terminal EpisodeStatus values so
             # UI polling that prefers detailed_status can detect completion.
@@ -1444,6 +1547,26 @@ async def continue_generation_session(
                 f"requires PLANNED episode status, got {observed_status}"
             )
             metadata.validation_logs.append(rejection_reason)
+            additional = dict(metadata.additional_info or {})
+            additional["entry_validation"] = {
+                "node": AgentName.BENCHMARK_CODER.value,
+                "disposition": "fail_fast",
+                "reason_code": "state_invalid",
+                "reroute_target": None,
+                "errors": [
+                    {
+                        "code": "state_invalid",
+                        "message": (
+                            "continue_generation_session requires PLANNED "
+                            f"episode status, got {observed_status}"
+                        ),
+                        "source": "state",
+                        "artifact_path": None,
+                    }
+                ],
+            }
+            additional["entry_validation_terminal"] = True
+            metadata.additional_info = additional
             metadata.detailed_status = SessionStatus.FAILED
             metadata.terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
             metadata.failure_class = FailureClass.AGENT_SEMANTIC_FAILURE

@@ -93,6 +93,7 @@ class ObservabilityEventType(StrEnum):
     PHYSICS_INSTABILITY = "physics_instability"
     GPU_OOM_RETRY = "gpu_oom_retry"
     CONVERSATION_LENGTH_EXCEEDED = "conversation_length_exceeded"
+    NODE_ENTRY_VALIDATION_FAILED = "node_entry_validation_failed"
 
 
 class BaseEvent(BaseModel):
@@ -498,3 +499,14 @@ class ConversationLengthExceededEvent(BaseEvent):
     message: str = (
         "Conversation length exceeded configured limit; context was compacted."
     )
+
+
+class NodeEntryValidationFailedEvent(BaseEvent):
+    event_type: ObservabilityEventType = (
+        ObservabilityEventType.NODE_ENTRY_VALIDATION_FAILED
+    )
+    node: str
+    disposition: str
+    reason_code: str
+    errors: list[dict[str, Any]] = Field(default_factory=list)
+    reroute_target: str | None = None
