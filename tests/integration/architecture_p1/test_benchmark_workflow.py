@@ -9,7 +9,7 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from shared.enums import EpisodeStatus
+from shared.enums import EpisodePhase, EpisodeStatus, TerminalReason
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
 
@@ -75,6 +75,15 @@ async def test_benchmark_planner_cad_reviewer_path():
         if not benchmark_completed:
             pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
 
+        final_status_resp = await client.get(f"/benchmark/{session_id}")
+        assert final_status_resp.status_code == 200, final_status_resp.text
+        final_episode = EpisodeResponse.model_validate(final_status_resp.json())
+        final_metadata = final_episode.metadata_vars
+        assert final_metadata is not None, "Episode metadata is missing."
+        assert final_metadata.terminal_reason == TerminalReason.APPROVED
+        assert final_metadata.failure_class is None
+        assert final_metadata.episode_phase == EpisodePhase.BENCHMARK_REVIEWING
+
         # 3. Verify Artifacts from episode assets
         episode_resp = await client.get(f"/episodes/{session_id}")
         assert episode_resp.status_code == 200, (
@@ -122,3 +131,11 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert manifest.validation_success is True
         assert manifest.simulation_success is True
         assert manifest.goal_reached is True
+
+        script_paths = [p for p in artifact_paths if p.endswith("script.py")]
+        assert script_paths, f"script.py missing. Artifacts: {artifact_paths}"
+        script_resp = await client.get(
+            f"/episodes/{session_id}/assets/{script_paths[0]}"
+        )
+        assert script_resp.status_code == 200, script_resp.text
+        assert "submit_for_review(" in script_resp.text

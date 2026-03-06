@@ -268,7 +268,7 @@ scenarios:
                   start_position: [0, 0, 0]
                   runtime_jitter: [0.5, 0.5, 0.5]
                 constraints:
-                  max_unit_cost: 50.0
+                  max_unit_cost: 200.0
                   max_weight_g: 1200.0
                 randomization:
                   static_variation_id: "v1.0"
@@ -1102,7 +1102,7 @@ scenarios:
                   start_position: [0, 0, 0]
                   runtime_jitter: [0.5, 0.5, 0.5]
                 constraints:
-                  max_unit_cost: 50.0
+                  max_unit_cost: 200.0
                   max_weight_g: 1200.0
                 randomization:
                   static_variation_id: "v1.0"
@@ -1127,7 +1127,7 @@ scenarios:
             tool_args: { command: "import base64, os; os.makedirs('renders', exist_ok=True); png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII='); open('renders/preview.png','wb').write(png)" }
             expected_observation: "success"
           - tool_name: "write_file"
-            tool_args: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\ndef build():\n    p = Sphere(1).translate((8, 0, 2))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p", overwrite: true }
+            tool_args: { path: "script.py", content: "from build123d import *\nfrom shared.models.schemas import PartMetadata\nfrom shared.enums import ManufacturingMethod\nfrom shared.utils.agent import submit_for_review\ndef build():\n    p = Box(1, 1, 1).translate((8, 0, 0.5))\n    p.label = \"projectile_ball\"\n    p.metadata = PartMetadata(material_id=\"abs\", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP)\n    return p\n\ndef reviewer_handoff_contract(compound):\n    submit_for_review(compound)", overwrite: true }
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args: { command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)" }
@@ -1143,6 +1143,36 @@ scenarios:
             review:
               decision: "APPROVED"
               reason: "Benchmark artifacts and simulation outputs are valid."
+              required_fixes: []
+      - node: benchmark_coder
+        steps:
+          - thought: "Recovery pass: ensure explicit submit_for_review handoff exists."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box, Compound
+                from shared.models.schemas import PartMetadata
+                from shared.utils.agent import submit_for_review
+
+                def build():
+                    p = Box(1, 1, 1).translate((8, 0, 0.5))
+                    p.label = "projectile_ball"
+                    p.metadata = PartMetadata(material_id="abs", fixed=False)
+                    return Compound(children=[p])
+
+                def reviewer_handoff_contract(compound: Compound) -> None:
+                    submit_for_review(compound)
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "Recovery: script includes explicit submit_for_review contract."
+      - node: benchmark_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Recovery pass produced valid reviewer handoff artifacts."
               required_fixes: []
 
   INT-180:
@@ -1636,6 +1666,110 @@ scenarios:
   # Default fallback
   default:
     transcript:
+      - node: benchmark_planner
+        steps:
+          - thought: "Create baseline benchmark planner artifacts and submit plan."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## Learning Objective
+                - Move a sphere into the goal zone while avoiding the obstacle zone.
+                ## Geometry
+                - One obstacle wall and one moved object.
+                ## Objectives
+                - Reach goal zone without touching forbid zone.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Define benchmark objective
+                - [x] Define geometry zones
+                - [x] Submit benchmark plan
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  forbid_zones:
+                    - name: "obstacle_collision_zone"
+                      min: [2, -3, 0]
+                      max: [4, 3, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  static_randomization:
+                    radius: [1, 2]
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0.5, 0.5, 0.5]
+                constraints:
+                  max_unit_cost: 50.0
+                  max_weight_g: 1200.0
+                randomization:
+                  static_variation_id: "v1.0"
+                  runtime_jitter_enabled: true
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "Default benchmark planner artifacts submitted."
+      - node: benchmark_coder
+        steps:
+          - thought: "Write benchmark script with explicit submit_for_review call."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box, Compound, Cylinder, Location
+                from shared.models.schemas import PartMetadata, CompoundMetadata
+                from shared.utils.agent import submit_for_review
+
+                ground = Box(20, 20, 1)
+                ground.label = "ground"
+                ground.metadata = PartMetadata(material_id="abs", fixed=True)
+
+                obstacle = Box(2, 6, 4)
+                obstacle = obstacle.moved(Location((3, 0, 2)))
+                obstacle.label = "obstacle_wall"
+                obstacle.metadata = PartMetadata(material_id="abs", fixed=True)
+
+                ball = Cylinder(radius=1.2, height=2.4)
+                ball = ball.moved(Location((0, 0, 1.2)))
+                ball.label = "projectile_ball"
+                ball.metadata = PartMetadata(material_id="abs", fixed=False)
+
+                benchmark_compound = Compound(children=[ground, obstacle, ball])
+                benchmark_compound.label = "benchmark_scene"
+                benchmark_compound.metadata = CompoundMetadata(fixed=False)
+
+                # Explicit handoff intent required by benchmark coder contract.
+                def reviewer_handoff_contract(compound: Compound) -> None:
+                    submit_for_review(compound)
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "Benchmark script updated with explicit submit_for_review contract."
+      - node: benchmark_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Benchmark is valid and handoff contract was satisfied."
+              required_fixes: []
       - node: engineer_planner
         steps:
           - thought: "Default planner response."
