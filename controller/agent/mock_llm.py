@@ -21,10 +21,10 @@ CODER_AGENTS = {
     AgentName.ELECTRONICS_ENGINEER,
 }
 REVIEWER_AGENTS = {
-    AgentName.ENGINEER_REVIEWER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
     AgentName.BENCHMARK_REVIEWER,
     AgentName.ELECTRONICS_REVIEWER,
-    AgentName.EXECUTION_REVIEWER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
 }
 
 
@@ -608,10 +608,10 @@ class MockDSPyLM(dspy.LM):
                 AgentName.ENGINEER_CODER: ["thought", "journal"],
                 AgentName.BENCHMARK_CODER: ["thought", "journal"],
                 AgentName.ELECTRONICS_ENGINEER: ["thought", "journal"],
-                AgentName.ENGINEER_REVIEWER: ["thought", "review"],
+                AgentName.ENGINEER_PLAN_REVIEWER: ["thought", "review"],
                 AgentName.BENCHMARK_REVIEWER: ["thought", "review"],
                 AgentName.ELECTRONICS_REVIEWER: ["thought", "review"],
-                AgentName.EXECUTION_REVIEWER: ["thought", "review"],
+                AgentName.ENGINEER_EXECUTION_REVIEWER: ["thought", "review"],
                 AgentName.JOURNALLING_AGENT: ["thought", "summarized_journal"],
                 AgentName.SKILL_AGENT: ["thought", "summary", "journal"],
                 AgentName.COTS_SEARCH: ["thought", "search_summary"],

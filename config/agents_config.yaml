@@ -18,7 +18,7 @@ execution:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
-    engineer_reviewer:
+    engineer_plan_reviewer:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
@@ -34,7 +34,7 @@ execution:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
-    execution_reviewer:
+    engineer_execution_reviewer:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
@@ -266,7 +266,7 @@ agents:
         "search_cots_catalog",
       ]
 
-  engineer_reviewer:
+  engineer_plan_reviewer:
     read:
       allow:
         [
@@ -302,7 +302,7 @@ agents:
         "search_cots_catalog",
       ]
 
-  execution_reviewer:
+  engineer_execution_reviewer:
     read:
       allow:
         [

@@ -96,10 +96,10 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_CODER,),
     ),
-    AgentName.ENGINEER_REVIEWER: AgentEvalSpec(
+    AgentName.ENGINEER_PLAN_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
-        required_trace_names=(AgentName.ENGINEER_REVIEWER,),
+        required_trace_names=(AgentName.ENGINEER_PLAN_REVIEWER,),
     ),
     # Electrical engineering roles inside the unified engineer graph
     AgentName.ELECTRONICS_PLANNER: AgentEvalSpec(

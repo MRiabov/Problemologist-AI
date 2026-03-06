@@ -80,7 +80,7 @@ class PlanReviewerNode(BaseNode):
             inputs=inputs,
             tool_factory=get_engineer_tools,
             validate_files=validate_files,
-            node_type=AgentName.ENGINEER_REVIEWER,
+            node_type=AgentName.ENGINEER_PLAN_REVIEWER,
         )
 
         if not prediction:
@@ -159,17 +159,17 @@ class PlanReviewerNode(BaseNode):
 
 # Factory function for LangGraph
 @type_check
-async def plan_reviewer_node(state: AgentState) -> AgentState:
+async def engineer_plan_reviewer_node(state: AgentState) -> AgentState:
     session_id = state.session_id
     if not session_id:
-        msg = "Missing required session_id for plan_reviewer_node"
+        msg = "Missing required session_id for engineer_plan_reviewer_node"
         raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.worker_light_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role=AgentName.ENGINEER_REVIEWER,
+        agent_role=AgentName.ENGINEER_PLAN_REVIEWER,
     )
     node = PlanReviewerNode(context=ctx)
     return await node(state)

@@ -35,7 +35,8 @@ def create_agent_graph(
         agent_name
         in [
             AgentName.ENGINEER_CODER,
-            AgentName.ENGINEER_REVIEWER,
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
         ]
         or agent_name == AgentName.ELECTRONICS_ENGINEER
     ):

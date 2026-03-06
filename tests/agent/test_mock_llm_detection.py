@@ -53,7 +53,7 @@ def test_normalization_logic():
     mock_lm.node_type = AgentName.BENCHMARK_REVIEWER
     assert json_thought(mock_lm(prompt)) == "R"
 
-    mock_lm.node_type = AgentName.ENGINEER_REVIEWER
+    mock_lm.node_type = AgentName.ENGINEER_PLAN_REVIEWER
     assert json_thought(mock_lm(prompt)) == "R"
 
     mock_lm.node_type = AgentName.EXECUTION_REVIEWER

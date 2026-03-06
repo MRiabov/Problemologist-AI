@@ -29,9 +29,9 @@ class PromptManager:
             AgentName.ELECTRONICS_ENGINEER.value: data["engineer"][
                 "electronics_engineer"
             ]["system"],
-            AgentName.ENGINEER_REVIEWER.value: data["engineer"]["critic"]["system"],
+            AgentName.ENGINEER_PLAN_REVIEWER.value: data["engineer"]["critic"]["system"],
             AgentName.ELECTRONICS_REVIEWER.value: data["engineer"]["critic"]["system"],
-            AgentName.EXECUTION_REVIEWER.value: data["engineer"]["critic"]["system"],
+            AgentName.ENGINEER_EXECUTION_REVIEWER.value: data["engineer"]["critic"]["system"],
             # Benchmark Generator
             AgentName.BENCHMARK_PLANNER.value: data["benchmark_generator"]["planner"][
                 "system"

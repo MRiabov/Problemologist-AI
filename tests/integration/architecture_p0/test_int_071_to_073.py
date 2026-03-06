@@ -38,7 +38,7 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     )
     reviewer_fs = RemoteFilesystemMiddleware(
         reviewer_client,
-        agent_role=AgentName.ENGINEER_REVIEWER,
+        agent_role=AgentName.ENGINEER_PLAN_REVIEWER,
     )
 
     coder_client = WorkerClient(

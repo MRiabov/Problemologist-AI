@@ -12,7 +12,7 @@ def test_create_agent_graph_returns_engineering_graph():
     # Assert
     assert AgentName.ENGINEER_PLANNER in agent.nodes
     assert AgentName.ENGINEER_CODER in agent.nodes
-    assert AgentName.ENGINEER_REVIEWER in agent.nodes
+    assert AgentName.ENGINEER_PLAN_REVIEWER in agent.nodes
     assert "execution_reviewer" in agent.nodes
     assert callback is None
 
