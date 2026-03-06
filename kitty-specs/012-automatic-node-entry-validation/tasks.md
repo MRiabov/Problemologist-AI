@@ -219,3 +219,8 @@
 | T038 | Sync quickstart/plan notes with implementation | WP07 | P2 | Yes |
 | T039 | Validate manifests/reviewer policy unchanged | WP07 | P2 | Yes |
 | T040 | Final reviewer-facing implementation notes | WP07 | P2 | Yes |
+
+<!-- status-model:start -->
+## Canonical Status (Generated)
+- WP01: for_review
+<!-- status-model:end -->
