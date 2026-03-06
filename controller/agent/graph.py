@@ -10,7 +10,7 @@ from controller.agent.context_usage import (
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.agent.node_entry_validation import (
-    EXECUTION_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
     ValidationGraph,
     build_engineer_node_contracts,
@@ -30,8 +30,8 @@ from .nodes.cots_search import cots_search_node
 from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.electronics_planner import electronics_planner_node
 from .nodes.electronics_reviewer import electronics_reviewer_node
-from .nodes.execution_reviewer import execution_reviewer_node
-from .nodes.plan_reviewer import plan_reviewer_node
+from .nodes.execution_reviewer import engineer_execution_reviewer_node
+from .nodes.plan_reviewer import engineer_plan_reviewer_node
 from .nodes.planner import planner_node
 from .nodes.skills import skills_node
 from .nodes.summarizer import summarizer_node
@@ -100,7 +100,7 @@ def _build_entry_rejection_feedback(
 
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
     custom_checks = {
-        EXECUTION_REVIEWER_HANDOVER_CHECK: (
+        ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK: (
             lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=getattr(state, "session_id", None),
                 reviewer_label="Execution",
@@ -254,6 +254,60 @@ async def should_continue(state: AgentState) -> str:
     return AgentName.SKILL_AGENT
 
 
+async def should_continue_after_plan_review(state: AgentState) -> str:
+    """Route after plan reviewer. Approved plans must proceed to implementation."""
+    if await check_steering(state) == AgentName.STEER:
+        return AgentName.STEER
+
+    if state.episode_id:
+        try:
+            threshold = agent_settings.context_compaction_threshold_tokens
+            journal_tokens = estimate_text_tokens(state.journal)
+            await update_episode_context_usage(
+                episode_id=state.episode_id,
+                used_tokens=journal_tokens,
+                max_tokens=threshold,
+            )
+        except Exception as exc:
+            logger.warning(
+                "context_usage_event_emit_failed",
+                error=str(exc),
+                episode_id=state.episode_id,
+            )
+
+    if (
+        estimate_text_tokens(state.journal)
+        > agent_settings.context_compaction_threshold_tokens
+    ):
+        return AgentName.JOURNALLING_AGENT
+
+    if state.status == AgentStatus.APPROVED:
+        return AgentName.ENGINEER_CODER
+
+    hard_fail = await evaluate_agent_hard_fail(
+        agent_name=AgentName.ENGINEER_CODER,
+        episode_id=state.episode_id,
+        turn_count=state.turn_count,
+    )
+    if hard_fail.should_fail:
+        state.status = AgentStatus.FAILED
+        state.feedback = hard_fail.message or "Agent hard-fail limit reached."
+        state.journal = (
+            state.journal + "\n[Hard Fail] " + (hard_fail.message or "quota reached")
+        ).strip()
+        return AgentName.SKILL_AGENT
+
+    if state.status == AgentStatus.FAILED:
+        return AgentName.SKILL_AGENT
+
+    if state.iteration < 5:
+        if state.status == AgentStatus.PLAN_REJECTED:
+            return AgentName.ENGINEER_PLANNER
+        return AgentName.ENGINEER_CODER
+
+    return AgentName.SKILL_AGENT
+
+
 # Initialize the StateGraph with our AgentState
 builder = StateGraph(AgentState)
 
@@ -267,8 +321,8 @@ builder.add_node(
     _guarded_node(AgentName.ELECTRONICS_PLANNER, electronics_planner_node),
 )
 builder.add_node(
-    AgentName.ENGINEER_REVIEWER,
-    _guarded_node(AgentName.ENGINEER_REVIEWER, plan_reviewer_node),
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    _guarded_node(AgentName.ENGINEER_PLAN_REVIEWER, engineer_plan_reviewer_node),
 )
 builder.add_node(
     AgentName.ENGINEER_CODER,
@@ -283,8 +337,8 @@ builder.add_node(
     _guarded_node(AgentName.ELECTRONICS_REVIEWER, electronics_reviewer_node),
 )
 builder.add_node(
-    AgentName.EXECUTION_REVIEWER,
-    _guarded_node(AgentName.EXECUTION_REVIEWER, execution_reviewer_node),
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
+    _guarded_node(AgentName.ENGINEER_EXECUTION_REVIEWER, engineer_execution_reviewer_node),
 )
 builder.add_node(
     AgentName.COTS_SEARCH,
@@ -303,11 +357,11 @@ builder.add_node(AgentName.STEER, _guarded_node(AgentName.STEER, steerability_no
 # Set the entry point and edges
 builder.add_edge(START, AgentName.ENGINEER_PLANNER)
 builder.add_edge(AgentName.ENGINEER_PLANNER, AgentName.ELECTRONICS_PLANNER)
-builder.add_edge(AgentName.ELECTRONICS_PLANNER, AgentName.ENGINEER_REVIEWER)
+builder.add_edge(AgentName.ELECTRONICS_PLANNER, AgentName.ENGINEER_PLAN_REVIEWER)
 
 builder.add_conditional_edges(
-    AgentName.ENGINEER_REVIEWER,
-    should_continue,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    should_continue_after_plan_review,
     {
         AgentName.ENGINEER_CODER: AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_PLANNER: AgentName.ENGINEER_PLANNER,
@@ -332,12 +386,12 @@ builder.add_conditional_edges(
 builder.add_conditional_edges(
     AgentName.ELECTRONICS_REVIEWER,
     check_steering,
-    {AgentName.STEER: AgentName.STEER, "next": AgentName.EXECUTION_REVIEWER},
+    {AgentName.STEER: AgentName.STEER, "next": AgentName.ENGINEER_EXECUTION_REVIEWER},
 )
 
 # Conditional routing from execution reviewer
 builder.add_conditional_edges(
-    AgentName.EXECUTION_REVIEWER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
     should_continue,
     {
         AgentName.ENGINEER_CODER: AgentName.ENGINEER_CODER,

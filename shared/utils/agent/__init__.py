@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from shared.utils.fasteners import HoleType as HoleType, fastener_hole as fastener_hole
 from build123d import Compound
 from pydantic import BaseModel
 
+from shared.utils.fasteners import HoleType as HoleType
+from shared.utils.fasteners import fastener_hole as fastener_hole
 from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
 
 logger = logging.getLogger(__name__)
@@ -135,4 +136,3 @@ def refuse_plan(reason: str) -> bool:
 
 
 # Re-export fasteners
-from shared.utils.fasteners import HoleType, fastener_hole

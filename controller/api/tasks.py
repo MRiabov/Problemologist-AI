@@ -260,8 +260,14 @@ async def execute_agent_task(
 
                             for asset in benchmark_assets:
                                 if asset.content:
-                                    # Copy to worker
-                                    await backend.awrite(asset.s3_path, asset.content)
+                                    # Copy as a system operation: benchmark-to-engineer
+                                    # handoff must not be gated by agent-role FS policy.
+                                    await client.write_file(
+                                        asset.s3_path,
+                                        asset.content,
+                                        overwrite=True,
+                                        bypass_agent_permissions=True,
+                                    )
                                     logger.info(
                                         "copied_benchmark_asset",
                                         episode_id=episode_id,
@@ -315,7 +321,8 @@ async def execute_agent_task(
                     in [
                         AgentName.ENGINEER_PLANNER,
                         AgentName.ENGINEER_CODER,
-                        AgentName.ENGINEER_REVIEWER,
+                        AgentName.ENGINEER_PLAN_REVIEWER,
+                        AgentName.ENGINEER_EXECUTION_REVIEWER,
                     ]
                     or agent_name == AgentName.ELECTRONICS_ENGINEER
                 ):

@@ -2077,7 +2077,7 @@ scenarios:
             tool_args:
                   {
                     path: "objectives.yaml",
-                    content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [0,0,0], max: [1,1,1]}}\nsimulation_bounds: {min: [-10,-10,-10], max: [10,10,10]}\nmoved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 500, max_weight_g: 5000.0}",
+                    content: "objectives: {goal_zone: {min: [0,0,0], max: [1,1,1]}, build_zone: {min: [-10,-10,-10], max: [10,10,10]}}\nsimulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}\nmoved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}\nconstraints: {max_unit_cost: 500, max_weight_g: 5000.0}",
                     overwrite: true,
                   }
             expected_observation: "success"
@@ -2090,7 +2090,7 @@ scenarios:
             tool_args:
                   {
                     path: "todo.md",
-                    content: "- [x] Initial plan\n- [x] Check electronics",
+                    content: "- [ ] Build baseline mechanical solution\n- [x] Check electronics",
                     overwrite: true,
                   }
             expected_observation: "success"
@@ -2131,30 +2131,41 @@ scenarios:
             expected_observation: "success"
           - finished: true
             summary: "No electronics needed."
-      - node: engineer_coder
-        steps:
-          - thought: "Default coder response."
-            finished: true
-            journal: "Work completed."
-            generated_code: |
-              from build123d import *
-              from shared.models.schemas import PartMetadata
-              import os
-              import trimesh
-
-              # Create GLB
-              os.makedirs('assets', exist_ok=True)
-              b = Box(10,10,10)
-              export_stl(b, 'assets/box.stl')
-              mesh = trimesh.load('assets/box.stl')
-              mesh.export('assets/box.glb', file_type='glb')
-
-              with open('script.py', 'w') as f:
-                  f.write('from build123d import *\nfrom shared.models.schemas import PartMetadata\ndef build():\n    b = Box(10,10,10)\n    b.label = "box"\n    b.metadata = PartMetadata(material_id="abs", fixed=True)\n    return b')
       - node: engineer_reviewer
         steps:
           - finished: true
             review:
               decision: "APPROVED"
               reason: "The design satisfies all requirements."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Write engineer script for downstream system-side review handoff."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    p = Box(1, 1, 1)
+                    p.label = "projectile_ball"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "Default engineer coder generated script for execution review."
+      - node: execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Code artifacts and submission evidence are valid."
               required_fixes: []
