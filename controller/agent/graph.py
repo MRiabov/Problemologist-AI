@@ -1,6 +1,7 @@
 import structlog
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command
 
 from controller.agent.config import settings as agent_settings
 from controller.agent.context_usage import (
@@ -8,6 +9,15 @@ from controller.agent.context_usage import (
     update_episode_context_usage,
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
+from controller.agent.node_entry_validation import (
+    NodeEntryContract,
+    NodeEntryValidationError,
+    ValidationGraph,
+    evaluate_node_entry_contract,
+    integration_mode_enabled,
+)
+from controller.clients.worker import WorkerClient
+from controller.config.settings import settings as controller_settings
 from controller.graph.steerability_node import check_steering, steerability_node
 from shared.enums import AgentName
 
@@ -24,6 +34,171 @@ from .nodes.summarizer import summarizer_node
 from .state import AgentState, AgentStatus
 
 logger = structlog.get_logger(__name__)
+
+_ENGINEER_PLANNER_HANDOFF_ARTIFACTS = (
+    "plan.md",
+    "todo.md",
+    "objectives.yaml",
+    "assembly_definition.yaml",
+)
+
+ENGINEER_NODE_CONTRACTS: dict[AgentName, NodeEntryContract] = {
+    AgentName.ENGINEER_PLANNER: NodeEntryContract(
+        node=AgentName.ENGINEER_PLANNER,
+        required_state_fields=["task", "episode_id"],
+    ),
+    AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
+        node=AgentName.ELECTRONICS_PLANNER,
+        required_state_fields=["task", "episode_id"],
+    ),
+    AgentName.ENGINEER_REVIEWER: NodeEntryContract(
+        node=AgentName.ENGINEER_REVIEWER,
+        required_state_fields=["episode_id"],
+        required_artifacts=list(_ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
+    ),
+    AgentName.ENGINEER_CODER: NodeEntryContract(
+        node=AgentName.ENGINEER_CODER,
+        required_state_fields=["episode_id"],
+        required_artifacts=list(_ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
+    ),
+    AgentName.ELECTRONICS_ENGINEER: NodeEntryContract(
+        node=AgentName.ELECTRONICS_ENGINEER,
+        required_state_fields=["episode_id"],
+        required_artifacts=["script.py"],
+    ),
+    AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
+        node=AgentName.ELECTRONICS_REVIEWER,
+        required_state_fields=["episode_id"],
+        required_artifacts=["script.py"],
+    ),
+    AgentName.EXECUTION_REVIEWER: NodeEntryContract(
+        node=AgentName.EXECUTION_REVIEWER,
+        required_state_fields=["episode_id"],
+        required_artifacts=["script.py"],
+    ),
+    AgentName.COTS_SEARCH: NodeEntryContract(
+        node=AgentName.COTS_SEARCH,
+        required_state_fields=["episode_id"],
+    ),
+    AgentName.SKILL_AGENT: NodeEntryContract(
+        node=AgentName.SKILL_AGENT,
+        required_state_fields=["episode_id"],
+    ),
+    AgentName.JOURNALLING_AGENT: NodeEntryContract(
+        node=AgentName.JOURNALLING_AGENT,
+        required_state_fields=["episode_id"],
+    ),
+    AgentName.STEER: NodeEntryContract(
+        node=AgentName.STEER,
+        required_state_fields=["episode_id"],
+    ),
+}
+
+
+async def _artifact_exists_for_state(state: AgentState, artifact_path: str) -> bool:
+    session_id = (state.session_id or "").strip()
+    if not session_id:
+        logger.error(
+            "node_entry_validation_session_missing",
+            artifact_path=artifact_path,
+            target_node=getattr(state, "current_step", ""),
+        )
+        return False
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=session_id,
+    )
+    try:
+        return await client.exists(artifact_path)
+    except Exception as exc:
+        logger.error(
+            "node_entry_validation_artifact_lookup_failed",
+            artifact_path=artifact_path,
+            session_id=session_id,
+            error=str(exc),
+        )
+        return False
+    finally:
+        await client.aclose()
+
+
+def _format_entry_errors(errors: list[NodeEntryValidationError]) -> str:
+    return "; ".join(f"{error.code}: {error.message}" for error in errors)
+
+
+def _build_entry_rejection_feedback(
+    *,
+    target_node: AgentName,
+    result,
+) -> tuple[str, str]:
+    action = (
+        f"reroute={result.reroute_target.value}"
+        if result.reroute_target
+        else f"disposition={result.disposition.value}"
+    )
+    detail = _format_entry_errors(result.errors)
+    feedback = (
+        f"ENTRY_VALIDATION_FAILED[{result.reason_code}] "
+        f"target={target_node.value} {action} | {detail}"
+    )
+    journal_entry = (
+        f"[Entry Validation] target={target_node.value} "
+        f"disposition={result.disposition.value} reason={result.reason_code} "
+        f"errors={detail}"
+    )
+    return feedback, journal_entry
+
+
+async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
+    contract = ENGINEER_NODE_CONTRACTS[target_node]
+    return await evaluate_node_entry_contract(
+        contract=contract,
+        state=state,
+        artifact_exists=lambda path: _artifact_exists_for_state(state, path),
+        graph=ValidationGraph.ENGINEER,
+    )
+
+
+def _guarded_node(target_node: AgentName, node_callable):
+    async def _run(state: AgentState):
+        validation = await _evaluate_engineer_node_entry(target_node, state)
+        if validation.ok:
+            return await node_callable(state)
+
+        feedback, journal_line = _build_entry_rejection_feedback(
+            target_node=target_node,
+            result=validation,
+        )
+        current_journal = state.journal or ""
+        update = {
+            "feedback": feedback,
+            "journal": (current_journal + "\n" + journal_line).strip(),
+        }
+
+        logger.error(
+            "node_entry_validation_rejected",
+            target_node=target_node.value,
+            disposition=validation.disposition.value,
+            reason_code=validation.reason_code,
+            reroute_target=(
+                validation.reroute_target.value if validation.reroute_target else None
+            ),
+            integration_mode=integration_mode_enabled(),
+            errors=[error.model_dump() for error in validation.errors],
+        )
+
+        if (
+            validation.disposition.value == "reroute_previous"
+            and validation.reroute_target is not None
+        ):
+            return Command(goto=validation.reroute_target, update=update)
+
+        update["status"] = AgentStatus.FAILED
+        return Command(goto=END, update=update)
+
+    return _run
 
 
 async def should_continue(state: AgentState) -> str:
@@ -87,17 +262,47 @@ async def should_continue(state: AgentState) -> str:
 builder = StateGraph(AgentState)
 
 # Add nodes
-builder.add_node(AgentName.ENGINEER_PLANNER, planner_node)
-builder.add_node(AgentName.ELECTRONICS_PLANNER, electronics_planner_node)
-builder.add_node(AgentName.ENGINEER_REVIEWER, plan_reviewer_node)
-builder.add_node(AgentName.ENGINEER_CODER, coder_node)
-builder.add_node(AgentName.ELECTRONICS_ENGINEER, electronics_engineer_node)
-builder.add_node(AgentName.ELECTRONICS_REVIEWER, electronics_reviewer_node)
-builder.add_node(AgentName.EXECUTION_REVIEWER, execution_reviewer_node)
-builder.add_node(AgentName.COTS_SEARCH, cots_search_node)
-builder.add_node(AgentName.SKILL_AGENT, skills_node)
-builder.add_node(AgentName.JOURNALLING_AGENT, summarizer_node)
-builder.add_node(AgentName.STEER, steerability_node)
+builder.add_node(
+    AgentName.ENGINEER_PLANNER,
+    _guarded_node(AgentName.ENGINEER_PLANNER, planner_node),
+)
+builder.add_node(
+    AgentName.ELECTRONICS_PLANNER,
+    _guarded_node(AgentName.ELECTRONICS_PLANNER, electronics_planner_node),
+)
+builder.add_node(
+    AgentName.ENGINEER_REVIEWER,
+    _guarded_node(AgentName.ENGINEER_REVIEWER, plan_reviewer_node),
+)
+builder.add_node(
+    AgentName.ENGINEER_CODER,
+    _guarded_node(AgentName.ENGINEER_CODER, coder_node),
+)
+builder.add_node(
+    AgentName.ELECTRONICS_ENGINEER,
+    _guarded_node(AgentName.ELECTRONICS_ENGINEER, electronics_engineer_node),
+)
+builder.add_node(
+    AgentName.ELECTRONICS_REVIEWER,
+    _guarded_node(AgentName.ELECTRONICS_REVIEWER, electronics_reviewer_node),
+)
+builder.add_node(
+    AgentName.EXECUTION_REVIEWER,
+    _guarded_node(AgentName.EXECUTION_REVIEWER, execution_reviewer_node),
+)
+builder.add_node(
+    AgentName.COTS_SEARCH,
+    _guarded_node(AgentName.COTS_SEARCH, cots_search_node),
+)
+builder.add_node(
+    AgentName.SKILL_AGENT,
+    _guarded_node(AgentName.SKILL_AGENT, skills_node),
+)
+builder.add_node(
+    AgentName.JOURNALLING_AGENT,
+    _guarded_node(AgentName.JOURNALLING_AGENT, summarizer_node),
+)
+builder.add_node(AgentName.STEER, _guarded_node(AgentName.STEER, steerability_node))
 
 # Set the entry point and edges
 builder.add_edge(START, AgentName.ENGINEER_PLANNER)
@@ -161,7 +366,7 @@ graph = builder.compile(checkpointer=memory)
 
 def _build_single_node_graph(node_name: AgentName, node_callable):
     single = StateGraph(AgentState)
-    single.add_node(node_name, node_callable)
+    single.add_node(node_name, _guarded_node(node_name, node_callable))
     single.add_edge(START, node_name)
     single.add_edge(node_name, END)
     return single.compile(checkpointer=MemorySaver())

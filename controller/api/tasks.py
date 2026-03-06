@@ -36,6 +36,33 @@ def _is_planner_agent(agent_name: AgentName) -> bool:
     }
 
 
+def _extract_result_field(result: Any, key: str) -> Any | None:
+    if isinstance(result, dict):
+        return result.get(key)
+    return getattr(result, key, None)
+
+
+def _result_status_lower(result: Any) -> str:
+    raw_status = _extract_result_field(result, "status")
+    if raw_status is None:
+        return ""
+    if hasattr(raw_status, "value"):
+        raw_status = raw_status.value
+    return str(raw_status).strip().lower()
+
+
+def _result_feedback(result: Any) -> str:
+    raw_feedback = _extract_result_field(result, "feedback")
+    return str(raw_feedback or "").strip()
+
+
+def _is_failed_result(result: Any) -> bool:
+    status = _result_status_lower(result)
+    if status == "failed":
+        return True
+    return _result_feedback(result).startswith("ENTRY_VALIDATION_FAILED[")
+
+
 class AgentRunRequest(BaseModel):
     task: StrictStr = Field(..., description="The task for the agent to perform.")
     session_id: StrictStr = Field(..., description="Session ID for the worker.")
@@ -298,7 +325,9 @@ async def execute_agent_task(
                 if final_messages:
                     final_output = final_messages[-1].content
                 else:
-                    final_output = "No output produced by agent."
+                    final_output = _result_feedback(result) or (
+                        "No output produced by agent."
+                    )
                 final_trace = Trace(
                     episode_id=episode_id,
                     trace_type=TraceType.LOG,
@@ -317,6 +346,21 @@ async def execute_agent_task(
                     langfuse_trace_id=trace_id,
                 )
                 db.add(final_llm_trace)
+
+                result_feedback = _result_feedback(result)
+                if result_feedback.startswith("ENTRY_VALIDATION_FAILED["):
+                    db.add(
+                        Trace(
+                            episode_id=episode_id,
+                            trace_type=TraceType.ERROR,
+                            content=result_feedback,
+                            langfuse_trace_id=trace_id,
+                            metadata_vars={
+                                "source": "node_entry_validation",
+                                "status": _result_status_lower(result),
+                            },
+                        )
+                    )
 
                 await db.commit()
                 await db.refresh(final_llm_trace)
@@ -503,11 +547,13 @@ async def execute_agent_task(
                 # Mark completion after traces/assets are persisted.
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
-                    target_status = (
-                        EpisodeStatus.PLANNED
-                        if _is_planner_agent(agent_name)
-                        else EpisodeStatus.COMPLETED
-                    )
+                    target_status = EpisodeStatus.FAILED
+                    if not _is_failed_result(result):
+                        target_status = (
+                            EpisodeStatus.PLANNED
+                            if _is_planner_agent(agent_name)
+                            else EpisodeStatus.COMPLETED
+                        )
                     episode.status = target_status
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
@@ -746,7 +792,9 @@ async def continue_agent_task(
                 if final_messages:
                     final_output = final_messages[-1].content
                 else:
-                    final_output = "No output produced by agent."
+                    final_output = _result_feedback(result) or (
+                        "No output produced by agent."
+                    )
 
                 final_trace = Trace(
                     episode_id=episode_id,
@@ -756,10 +804,29 @@ async def continue_agent_task(
                 )
                 db.add(final_trace)
 
+                result_feedback = _result_feedback(result)
+                if result_feedback.startswith("ENTRY_VALIDATION_FAILED["):
+                    db.add(
+                        Trace(
+                            episode_id=episode_id,
+                            trace_type=TraceType.ERROR,
+                            content=result_feedback,
+                            langfuse_trace_id=trace_id,
+                            metadata_vars={
+                                "source": "node_entry_validation",
+                                "status": _result_status_lower(result),
+                            },
+                        )
+                    )
+
                 # Update status
                 await db.refresh(episode)
                 if episode.status != EpisodeStatus.CANCELLED:
-                    episode.status = EpisodeStatus.COMPLETED
+                    episode.status = (
+                        EpisodeStatus.FAILED
+                        if _is_failed_result(result)
+                        else EpisodeStatus.COMPLETED
+                    )
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
                     if not episode.plan:
@@ -779,7 +846,7 @@ async def continue_agent_task(
                     episode_id,
                     {
                         "type": "status_update",
-                        "status": EpisodeStatus.COMPLETED,
+                        "status": episode.status,
                         "metadata_vars": episode.metadata_vars,
                         "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
                     },
