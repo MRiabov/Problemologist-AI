@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import contextlib
+
 from controller.clients.worker import WorkerClient  # noqa: E402
 from shared.enums import (  # noqa: E402
     AgentName,
@@ -579,14 +581,10 @@ async def main():
     # Symlink for run_evals.log (latest.log in logs/evals/)
     latest_log = log_dir / "latest.log"
     if latest_log.exists():
-        try:
+        with contextlib.suppress(Exception):
             latest_log.unlink()
-        except Exception:
-            pass
-    try:
+    with contextlib.suppress(Exception):
         latest_log.symlink_to(log_file.name)
-    except Exception:
-        pass
 
     os.environ["LOG_DIR"] = str(log_dir)
     os.environ["EXTRA_DEBUG_LOG"] = str(log_file)

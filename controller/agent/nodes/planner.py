@@ -128,8 +128,10 @@ class PlannerNode(BaseNode):
                 "todo": artifacts.get("todo.md", ""),
                 "status": AgentStatus.EXECUTING,
                 "journal": state.journal + f"\n[Planner] {summary}" + journal_entry,
-                "messages": state.messages
-                + [AIMessage(content=f"Plan summary: {summary}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Plan summary: {summary}"),
+                ],
                 "turn_count": state.turn_count + 1,
             }
         )

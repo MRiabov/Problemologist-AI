@@ -1179,45 +1179,8 @@ async def run_generation_session(
     # 4. Final Asset Persistence
     await _persist_session_assets(final_state, session_id)
 
-    # 5. Final status update
-    if final_state.session.status == SessionStatus.ACCEPTED:
-        async with session_factory() as db:
-            episode = await db.get(Episode, session_id)
-            if episode:
-                episode.status = EpisodeStatus.COMPLETED
-                await db.commit()
-
-                # Broadcast status update
-                from controller.api.manager import manager
-
-                await manager.broadcast(
-                    session_id,
-                    {
-                        "type": "status_update",
-                        "status": EpisodeStatus.COMPLETED,
-                        "metadata_vars": episode.metadata_vars,
-                        "timestamp": datetime.now(UTC).isoformat(),
-                    },
-                )
-    elif final_state.session.status in [SessionStatus.FAILED, SessionStatus.REJECTED]:
-        async with session_factory() as db:
-            episode = await db.get(Episode, session_id)
-            if episode and episode.status != EpisodeStatus.FAILED:
-                episode.status = EpisodeStatus.FAILED
-                await db.commit()
-
-                # Broadcast status update
-                from controller.api.manager import manager
-
-                await manager.broadcast(
-                    session_id,
-                    {
-                        "type": "status_update",
-                        "status": EpisodeStatus.FAILED,
-                        "metadata_vars": episode.metadata_vars,
-                        "timestamp": datetime.now(UTC).isoformat(),
-                    },
-                )
+    # 5. Final status update only after assets are synced.
+    await _finalize_episode_terminal_status(session_id, final_state.session.status)
 
     logger.info(
         "generation_session_complete",
@@ -1287,10 +1250,6 @@ async def _persist_session_assets(
                 http_client=http_client,
                 heavy_url=global_settings.worker_heavy_url,
             )
-            middleware = RemoteFilesystemMiddleware(
-                client, agent_role=AgentName.BENCHMARK_PLANNER
-            )
-            backend = RemoteFilesystemBackend(middleware)
 
             from controller.observability.middleware_helper import (
                 broadcast_file_update,
@@ -1322,11 +1281,11 @@ async def _persist_session_assets(
             # light-worker session (e.g., isolated heavy-worker temp outputs).
             try:
                 render_entries = await asyncio.wait_for(
-                    backend.als_info("/renders/"), timeout=5.0
+                    client.list_files("/renders/"), timeout=5.0
                 )
                 has_render_image = any(
-                    (not e["is_dir"])
-                    and str(e["path"]).lower().endswith((".png", ".jpg", ".jpeg"))
+                    (not e.is_dir)
+                    and str(e.path).lower().endswith((".png", ".jpg", ".jpeg"))
                     for e in render_entries
                 )
             except Exception:
@@ -1349,18 +1308,17 @@ async def _persist_session_assets(
                 except Exception:
                     pass
 
-            # Only sync top-level files and critical directories to avoid hangs
-            # We sync /assets, /renders, and /reviews for benchmark artifacts.
+            # Only sync top-level files and critical directories to avoid hangs.
             for dir_to_sync in ["/", "/assets/", "/renders/", "/reviews/"]:
                 try:
                     files = await asyncio.wait_for(
-                        backend.als_info(dir_to_sync), timeout=5.0
+                        client.list_files(dir_to_sync), timeout=5.0
                     )
                     for file_info in files:
-                        if file_info["is_dir"]:
+                        if file_info.is_dir:
                             continue
 
-                        path = file_info["path"]
+                        path = file_info.path
                         # Skip obviously irrelevant files
                         if path.endswith((".log", ".lock", ".tmp", ".pyc")):
                             continue
@@ -1381,13 +1339,8 @@ async def _persist_session_assets(
                         content = ""
                         if is_text:
                             try:
-                                raw_content = await asyncio.wait_for(
-                                    backend.aread(path), timeout=2.0
-                                )
-                                content = (
-                                    raw_content.decode("utf-8", errors="replace")
-                                    if isinstance(raw_content, bytes)
-                                    else str(raw_content)
+                                content = await asyncio.wait_for(
+                                    client.read_file(path), timeout=2.0
                                 )
                             except Exception:
                                 pass  # Proceed with empty content if read fails
@@ -1400,8 +1353,75 @@ async def _persist_session_assets(
                         )
                 except Exception:
                     continue
+
+            # .manifests is system-owned metadata and may be denied via role policy
+            # through the routed backend. Read it directly through WorkerClient so
+            # the manifest is still surfaced as an episode asset.
+            try:
+                manifest_path = ".manifests/review_manifest.json"
+                if await asyncio.wait_for(client.exists(manifest_path), timeout=5.0):
+                    manifest_content = await asyncio.wait_for(
+                        client.read_file(manifest_path), timeout=5.0
+                    )
+                    await asyncio.wait_for(
+                        broadcast_file_update(
+                            str(session_id), manifest_path, manifest_content
+                        ),
+                        timeout=2.0,
+                    )
+            except Exception:
+                pass
     except Exception as e:
         logger.error("failed_to_sync_assets_to_db", error=str(e))
+
+
+async def _finalize_episode_terminal_status(
+    session_id: uuid.UUID,
+    session_status: SessionStatus,
+) -> None:
+    """Publish terminal Episode status after artifact sync has completed."""
+    from shared.models.schemas import EpisodeMetadata
+
+    if session_status not in (
+        SessionStatus.ACCEPTED,
+        SessionStatus.FAILED,
+        SessionStatus.REJECTED,
+    ):
+        return
+
+    target_status = (
+        EpisodeStatus.COMPLETED
+        if session_status == SessionStatus.ACCEPTED
+        else EpisodeStatus.FAILED
+    )
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, session_id)
+        if not episode:
+            return
+        if episode.status == target_status:
+            return
+
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        if target_status == EpisodeStatus.COMPLETED:
+            metadata.detailed_status = EpisodeStatus.COMPLETED.value
+        else:
+            metadata.detailed_status = EpisodeStatus.FAILED.value
+        episode.metadata_vars = metadata.model_dump()
+        episode.status = target_status
+        await db.commit()
+
+        from controller.api.manager import manager
+
+        await manager.broadcast(
+            session_id,
+            {
+                "type": "status_update",
+                "status": target_status,
+                "metadata_vars": episode.metadata_vars,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+        )
 
 
 async def _update_episode_persistence(
@@ -1433,7 +1453,8 @@ async def _update_episode_persistence(
             elif new_status == SessionStatus.FAILED:
                 episode.status = EpisodeStatus.FAILED
             elif new_status == SessionStatus.ACCEPTED:
-                episode.status = EpisodeStatus.COMPLETED
+                # Completion is published only after _persist_session_assets finishes.
+                episode.status = EpisodeStatus.RUNNING
             else:
                 episode.status = EpisodeStatus.RUNNING
 
@@ -1452,10 +1473,7 @@ async def _update_episode_persistence(
                 metadata.additional_info = additional
             # Keep detailed_status aligned with terminal EpisodeStatus values so
             # UI polling that prefers detailed_status can detect completion.
-            if new_status == SessionStatus.ACCEPTED:
-                metadata.detailed_status = EpisodeStatus.COMPLETED.value
-            else:
-                metadata.detailed_status = new_status
+            metadata.detailed_status = new_status
 
             if episode_phase:
                 metadata.episode_phase = episode_phase
@@ -1627,6 +1645,7 @@ async def continue_generation_session(
         )
 
         await _persist_session_assets(final_state, session_id)
+        await _finalize_episode_terminal_status(session_id, final_state.session.status)
 
         return final_state
     except Exception as e:

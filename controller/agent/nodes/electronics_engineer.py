@@ -94,7 +94,7 @@ class ElectronicsEngineerNode(BaseNode):
         }
         validate_files = ["plan.md", "todo.md", "assembly_definition.yaml", "script.py"]
 
-        prediction, artifacts, journal_entry = await self._run_program(
+        prediction, _artifacts, journal_entry = await self._run_program(
             dspy.ReAct,
             ElectronicsSignature,
             state,
@@ -128,8 +128,10 @@ class ElectronicsEngineerNode(BaseNode):
                 "todo": new_todo,
                 "journal": state.journal + journal_entry,
                 "turn_count": state.turn_count + 1,
-                "messages": state.messages
-                + [AIMessage(content=f"Electronics summary: {summary}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Electronics summary: {summary}"),
+                ],
             }
         )
 

@@ -94,9 +94,8 @@ class FilesystemPolicy:
                 return True
 
             # 2. Directory match: if pattern is 'dir/', match 'dir/file'
-            if pat.endswith("/"):
-                if p_str.startswith(pat):
-                    return True
+            if pat.endswith("/") and p_str.startswith(pat):
+                return True
 
             # 3. Recursive directory match: if pattern is 'dir/**', match 'dir/file'
             if pat.endswith("/**"):
@@ -132,10 +131,7 @@ class FilesystemPolicy:
         Unmatched => deny.
         """
         # Strictly enforce AgentName enum
-        if isinstance(agent_role, str):
-            role_enum = AgentName(agent_role)
-        else:
-            role_enum = agent_role
+        role_enum = AgentName(agent_role) if isinstance(agent_role, str) else agent_role
 
         role = role_enum.value
 

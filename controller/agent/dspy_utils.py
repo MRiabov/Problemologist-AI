@@ -352,9 +352,8 @@ def map_events_to_prediction(
         if etype in [
             ObservabilityEventType.PLAN_SUBMISSION_ENGINEER,
             ObservabilityEventType.PLAN_SUBMISSION_BENCHMARK,
-        ]:
-            if required_planner_files.issubset(planned_files):
-                metrics.plan_artifacts_present = True
+        ] and required_planner_files.issubset(planned_files):
+            metrics.plan_artifacts_present = True
 
         if etype == ObservabilityEventType.LOGIC_FAILURE:
             metrics.yaml_schema_valid = False

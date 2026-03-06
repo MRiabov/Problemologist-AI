@@ -203,7 +203,15 @@ class MockDSPyLM(dspy.LM):
             full_text=full_text,
         )
 
-        # For scripted tool sequences, detect true no-progress stalls.
+        # 3. Handle Transcript mode if present in scenario
+        if "transcript" in scenario:
+            transcript_resp = self._handle_transcript(
+                scenario, node_key, full_text, is_json, expected_fields
+            )
+            if transcript_resp:
+                return transcript_resp
+
+        # For non-transcript scripted tool sequences, detect true no-progress stalls.
         # DSPy can invoke LM multiple times per step, so raw call count is insufficient.
         tool_calls = node_data.get("tool_calls", [])
         prev_progress = self._tool_progress.get(f"{lookup_key}__prev", -1)
@@ -229,14 +237,6 @@ class MockDSPyLM(dspy.LM):
                 f"no tool-progress for {stalled_calls} calls "
                 f"(completed_tools={completed_tools}, expected_tool_calls={len(tool_calls)})."
             )
-
-        # 3. Handle Transcript mode if present in scenario
-        if "transcript" in scenario:
-            transcript_resp = self._handle_transcript(
-                scenario, node_key, full_text, is_json, expected_fields
-            )
-            if transcript_resp:
-                return transcript_resp
 
         # 4. Handle legacy multi-turn state and loop protection
         # Only force finish on observation when explicit tool calls are exhausted.

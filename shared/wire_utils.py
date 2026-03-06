@@ -270,7 +270,7 @@ def route_wire_legacy(
     wire_id: str,
     waypoints: list[tuple[float, float, float]],
     gauge_awg: int,
-    attach_to: list[str] = None,
+    attach_to: list[str] | None = None,
 ) -> WireRouteResult:
     """
     Process a wire route (legacy signature), calculating length and basic path validation.
@@ -282,7 +282,7 @@ def route_wire_legacy(
         errors.append(f"Wire {wire_id} has zero or negative length.")
 
     # Heuristic for AWG to diameter (mm)
-    diameter = 0.127 * (92 ** ((36 - gauge_awg) / 39.0))
+    0.127 * (92 ** ((36 - gauge_awg) / 39.0))
 
     # Check for points being too close (can cause simulation instability)
     for i in range(len(waypoints) - 1):

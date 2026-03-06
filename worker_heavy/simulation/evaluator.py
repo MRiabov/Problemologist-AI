@@ -26,7 +26,7 @@ class SuccessEvaluator:
         total_time: float,
         qpos: np.ndarray,
         qvel: np.ndarray,
-        contacts: list = None,
+        contacts: list | None = None,
     ) -> SimulationFailureMode | None:
         """
         Check for various failure modes.

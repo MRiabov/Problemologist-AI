@@ -39,7 +39,7 @@ def calculate_3dp_cost(
     if material_name not in three_dp_cfg.materials:
         # Fallback to first available if specific one is missing
         if three_dp_cfg.materials:
-            material_name = list(three_dp_cfg.materials.keys())[0]
+            material_name = next(iter(three_dp_cfg.materials.keys()))
         else:
             material_name = "abs"
 

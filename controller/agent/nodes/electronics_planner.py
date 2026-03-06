@@ -126,8 +126,10 @@ class ElectronicsPlannerNode(BaseNode):
                 "journal": state.journal
                 + f"\n[Electronics Planner] {summary}"
                 + journal_entry,
-                "messages": state.messages
-                + [AIMessage(content=f"Electronics Plan summary: {summary}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Electronics Plan summary: {summary}"),
+                ],
                 "turn_count": state.turn_count + 1,
             }
         )

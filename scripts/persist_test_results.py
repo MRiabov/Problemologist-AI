@@ -45,10 +45,7 @@ def parse_junit(xml_path):
         root = tree.getroot()
 
         # In pytest, root is usually 'testsuites'
-        if root.tag == "testsuites":
-            testsuite = root.find("testsuite")
-        else:
-            testsuite = root
+        testsuite = root.find("testsuite") if root.tag == "testsuites" else root
 
         if testsuite is None:
             print("No testsuite found in XML")

@@ -127,9 +127,7 @@ def verify_with_jitter(
     is_consistent = len(set(outcomes)) == 1
 
     # Collect unique failure reasons
-    fail_reasons = list(
-        set(r.fail_reason for r in results if r.fail_reason is not None)
-    )
+    fail_reasons = list({r.fail_reason for r in results if r.fail_reason is not None})
 
     return MultiRunResult(
         num_runs=num_runs,

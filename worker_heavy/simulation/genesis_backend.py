@@ -701,10 +701,7 @@ class GenesisBackend(PhysicsBackend):
                     # state.pos is [1, n_nodes, 3] for soft/MPM, or [n_envs, 3] for rigid?
                     # Genesis RigidEntity.get_pos() returns [n_envs, 3]
                     pos = entity.get_pos().cpu().numpy()
-                    if pos.ndim > 1:
-                        center = pos[0]
-                    else:
-                        center = pos
+                    center = pos[0] if pos.ndim > 1 else pos
 
                     dist = np.linalg.norm(particles - center, axis=1)
                     if np.any(dist < 0.05):  # 5cm threshold
@@ -953,10 +950,7 @@ class GenesisBackend(PhysicsBackend):
         cam = self.cameras[camera_name]
         # Genesis can return (rgb, depth, segmentation) or more
         res = cam.render()
-        if isinstance(res, tuple):
-            rgb = res[0]
-        else:
-            rgb = res
+        rgb = res[0] if isinstance(res, tuple) else res
 
         if hasattr(rgb, "cpu"):
             rgb = rgb.cpu().numpy()

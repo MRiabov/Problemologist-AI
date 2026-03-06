@@ -3,6 +3,7 @@ import base64
 from typing import Any, Literal
 
 import httpx
+import structlog
 
 from shared.enums import ResponseStatus
 from shared.simulation.schemas import SimulatorBackendType
@@ -17,6 +18,8 @@ from shared.workers.schema import (
     InspectTopologyResponse,
 )
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
+
+logger = structlog.get_logger(__name__)
 
 
 class WorkerClient:
@@ -45,6 +48,14 @@ class WorkerClient:
         self.http_client = http_client
         self._loop_clients: dict[int, httpx.AsyncClient] = {}
         self._loop_locks: dict[int, asyncio.Lock] = {}
+
+    def _request_headers(
+        self, *, bypass_agent_permissions: bool = False
+    ) -> dict[str, str]:
+        headers = dict(self.headers)
+        if bypass_agent_permissions:
+            headers["X-System-FS-Bypass"] = "1"
+        return headers
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Helper to get a client, either shared or new (for compatibility)."""
@@ -110,7 +121,9 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def list_files(self, path: str = "/") -> list[FileInfo]:
+    async def list_files(
+        self, path: str = "/", *, bypass_agent_permissions: bool = False
+    ) -> list[FileInfo]:
         """List contents of a directory."""
         if not path:
             path = "/"
@@ -118,8 +131,13 @@ class WorkerClient:
         try:
             response = await client.post(
                 f"{self.base_url}/fs/ls",
-                json={"path": path},
-                headers=self.headers,
+                json={
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -128,15 +146,27 @@ class WorkerClient:
             await self._close_client(client)
 
     async def grep(
-        self, pattern: str, path: str | None = None, glob: str | None = None
+        self,
+        pattern: str,
+        path: str | None = None,
+        glob: str | None = None,
+        *,
+        bypass_agent_permissions: bool = False,
     ) -> list[GrepMatch]:
         """Search for a pattern in files."""
         client = await self._get_client()
         try:
             response = await client.post(
                 f"{self.base_url}/fs/grep",
-                json={"pattern": pattern, "path": path, "glob": glob},
-                headers=self.headers,
+                json={
+                    "pattern": pattern,
+                    "path": path,
+                    "glob": glob,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=30.0,
             )
             response.raise_for_status()
@@ -144,14 +174,21 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def read_file(self, path: str) -> str:
+    async def read_file(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> str:
         """Read file contents."""
         client = await self._get_client()
         try:
             response = await client.post(
                 f"{self.base_url}/fs/read",
-                json={"path": path},
-                headers=self.headers,
+                json={
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=10.0,
             )
             if response.status_code == 404:
@@ -161,14 +198,21 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def exists(self, path: str) -> bool:
+    async def exists(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> bool:
         """Check if a file exists."""
         client = await self._get_client()
         try:
             response = await client.post(
                 f"{self.base_url}/fs/exists",
-                json={"path": path},
-                headers=self.headers,
+                json={
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=10.0,
             )
             if response.status_code == 404:
@@ -180,14 +224,28 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def write_file(self, path: str, content: str, overwrite: bool = True) -> bool:
+    async def write_file(
+        self,
+        path: str,
+        content: str,
+        overwrite: bool = True,
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:
         """Write content to a file."""
         client = await self._get_client()
         try:
             response = await client.post(
                 f"{self.base_url}/fs/write",
-                json={"path": path, "content": content, "overwrite": overwrite},
-                headers=self.headers,
+                json={
+                    "path": path,
+                    "content": content,
+                    "overwrite": overwrite,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -210,23 +268,70 @@ class WorkerClient:
             await self._close_client(client)
 
     async def _add_bundle_to_payload(self, payload: dict):
-        """Append a workspace bundle to the payload if light and heavy workers are different."""
+        """Append workspace bundle payload for split light/heavy worker mode."""
         if self.light_url != self.heavy_url:
             bundle = await self.bundle_session()
             payload["bundle_base64"] = base64.b64encode(bundle).decode("utf-8")
 
-    async def upload_file(self, path: str, content: bytes) -> bool:
+    async def _sync_handover_artifacts_to_light(
+        self,
+        response: BenchmarkToolResponse,
+    ) -> None:
+        """
+        Mirror critical handover artifacts returned by the heavy worker into the
+        light-worker workspace when running split-worker mode.
+        """
+        if self.light_url == self.heavy_url or not response.artifacts:
+            return
+
+        artifacts = response.artifacts
+        writes: list[tuple[str, str]] = []
+        if artifacts.validation_results_json:
+            writes.append(
+                ("validation_results.json", artifacts.validation_results_json)
+            )
+        if artifacts.simulation_result_json:
+            writes.append(("simulation_result.json", artifacts.simulation_result_json))
+        if artifacts.review_manifest_json:
+            writes.append(
+                (".manifests/review_manifest.json", artifacts.review_manifest_json)
+            )
+
+        for path, content in writes:
+            ok = await self.write_file(
+                path,
+                content,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
+            if not ok:
+                logger.warning("handover_artifact_sync_write_failed", path=path)
+            else:
+                logger.info("handover_artifact_synced", path=path)
+
+    async def upload_file(
+        self,
+        path: str,
+        content: bytes,
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:
         """Upload a file with binary content."""
         client = await self._get_client()
         try:
             # Prepare multipart form data
             files = {"file": ("blob", content)}
-            data = {"path": path}
+            data = {
+                "path": path,
+                "bypass_agent_permissions": str(bypass_agent_permissions).lower(),
+            }
             response = await client.post(
                 f"{self.base_url}/fs/upload_file",
                 data=data,
                 files=files,
-                headers=self.headers,
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=30.0,
             )
             response.raise_for_status()
@@ -234,14 +339,21 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def read_file_binary(self, path: str) -> bytes:
+    async def read_file_binary(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> bytes:
         """Read file contents as binary."""
         client = await self._get_client()
         try:
             response = await client.post(
                 f"{self.base_url}/fs/read_blob",
-                json={"path": path},
-                headers=self.headers,
+                json={
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=30.0,
             )
             response.raise_for_status()
@@ -280,15 +392,27 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def edit_file(self, path: str, edits: list[EditOp]) -> bool:
+    async def edit_file(
+        self,
+        path: str,
+        edits: list[EditOp],
+        *,
+        bypass_agent_permissions: bool = False,
+    ) -> bool:
         """Edit a file with one or more operations."""
         client = await self._get_client()
         try:
             json_edits = [op.model_dump() for op in edits]
             response = await client.post(
                 f"{self.base_url}/fs/edit",
-                json={"path": path, "edits": json_edits},
-                headers=self.headers,
+                json={
+                    "path": path,
+                    "edits": json_edits,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -334,7 +458,9 @@ class WorkerClient:
                 timeout=600.0,
             )
             response.raise_for_status()
-            return BenchmarkToolResponse.model_validate(response.json())
+            parsed = BenchmarkToolResponse.model_validate(response.json())
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
         finally:
             await self._close_client(client)
 
@@ -357,7 +483,9 @@ class WorkerClient:
                 timeout=30.0,
             )
             response.raise_for_status()
-            return BenchmarkToolResponse.model_validate(response.json())
+            parsed = BenchmarkToolResponse.model_validate(response.json())
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
         finally:
             await self._close_client(client)
 
@@ -411,7 +539,9 @@ class WorkerClient:
                 timeout=30.0,
             )
             response.raise_for_status()
-            return BenchmarkToolResponse.model_validate(response.json())
+            parsed = BenchmarkToolResponse.model_validate(response.json())
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
         finally:
             await self._close_client(client)
 

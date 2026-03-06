@@ -1,9 +1,10 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
+from shared.utils.fasteners import HoleType as HoleType, fastener_hole as fastener_hole
 from build123d import Compound
 from pydantic import BaseModel
 
@@ -94,6 +95,22 @@ def submit_for_review(compound: Compound) -> bool:
         from worker_heavy.utils.handover import submit_for_review as real_submit
 
         return real_submit(compound)
+
+    # In light-worker execution (e.g., script runtime checks), avoid emitting
+    # heavy-worker gate errors before prerequisites are present. The controller
+    # runs the authoritative submit call after validate+simulate in sequence.
+    if not Path("validation_results.json").exists():
+        logger.info(
+            "submit_for_review_deferred_missing_validation",
+            extra={"path": "validation_results.json"},
+        )
+        return False
+    if not Path("simulation_result.json").exists():
+        logger.info(
+            "submit_for_review_deferred_missing_simulation",
+            extra={"path": "simulation_result.json"},
+        )
+        return False
 
     payload = {"script_path": "script.py"}
     res = _call_heavy_worker("/benchmark/submit", payload)

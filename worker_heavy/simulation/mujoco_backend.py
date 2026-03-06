@@ -1,3 +1,4 @@
+import contextlib
 import threading
 from typing import Any
 
@@ -176,10 +177,8 @@ class MuJoCoBackend(PhysicsBackend):
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         # Recreate renderer every time to avoid resolution/framebuffer issues
         if self.renderer is not None:
-            try:
+            with contextlib.suppress(BaseException):
                 self.renderer.close()
-            except:
-                pass
 
         self.renderer = mujoco.Renderer(self.model, width, height)
 
@@ -456,10 +455,8 @@ class MuJoCoBackend(PhysicsBackend):
     def close(self) -> None:
         """Close MuJoCo backend and release resources."""
         if self.renderer:
-            try:
+            with contextlib.suppress(Exception):
                 self.renderer.close()
-            except Exception:
-                pass
             self.renderer = None
         self.data = None
         self.model = None

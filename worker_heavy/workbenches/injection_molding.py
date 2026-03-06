@@ -141,10 +141,9 @@ def _calculate_im_cost(
 
     if material_name not in im_cfg.materials:
         # Fallback to first available if specific one is missing
-        if im_cfg.materials:
-            material_name = list(im_cfg.materials.keys())[0]
-        else:
-            material_name = "abs"
+        material_name = (
+            next(iter(im_cfg.materials.keys())) if im_cfg.materials else "abs"
+        )
 
     material_cfg = im_cfg.materials.get(material_name)
     if not material_cfg:

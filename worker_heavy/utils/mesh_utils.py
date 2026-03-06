@@ -143,6 +143,7 @@ def tetrahedralize(
                 raise MeshProcessingError(
                     f"Tetrahedralization failed after {max_retries} retries: {e}"
                 ) from e
+    return None
 
 
 def _tetrahedralize_gmsh(

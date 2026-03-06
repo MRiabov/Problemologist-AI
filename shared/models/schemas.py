@@ -20,9 +20,9 @@ from pydantic import (
 from shared.enums import (
     AgentName,
     BenchmarkRefusalReason,
-    EntryFailureDisposition,
     ElectricalRefusalReason,
     ElectronicComponentType,
+    EntryFailureDisposition,
     EpisodePhase,
     EpisodeType,
     FailureClass,

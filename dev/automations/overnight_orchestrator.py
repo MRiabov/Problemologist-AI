@@ -25,7 +25,7 @@ def run_cmd(cmd, cwd=PROJ_ROOT, capture=True):
     try:
         stdout_dest = subprocess.PIPE if capture else None
         stderr_dest = subprocess.STDOUT if capture else None
-        result = subprocess.run(
+        return subprocess.run(
             cmd,
             cwd=cwd,
             stdout=stdout_dest,
@@ -33,7 +33,6 @@ def run_cmd(cmd, cwd=PROJ_ROOT, capture=True):
             text=True,
             shell=isinstance(cmd, str),
         )
-        return result
     except Exception as e:
         log(f"Error running command {cmd}: {e}")
         return None

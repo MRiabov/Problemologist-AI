@@ -64,8 +64,10 @@ class COTSSearchNode(BaseNode):
         return state.model_copy(
             update={
                 "journal": new_journal,
-                "messages": state.messages
-                + [AIMessage(content=f"COTS Search summary: {summary}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"COTS Search summary: {summary}"),
+                ],
             }
         )
 

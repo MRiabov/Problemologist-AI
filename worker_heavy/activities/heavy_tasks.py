@@ -59,7 +59,7 @@ async def run_simulation_activity(params: HeavySimulationParams) -> SimulationRe
         # backend might be a string from temporal, convert to enum
         backend_type = SimulatorBackendType(backend)
 
-        result = await asyncio.to_thread(
+        return await asyncio.to_thread(
             simulate_subprocess,
             script_path=str(root / script_path),
             session_root=str(root),
@@ -68,7 +68,6 @@ async def run_simulation_activity(params: HeavySimulationParams) -> SimulationRe
             backend=backend_type,
             session_id=session_id,
         )
-        return result
 
 
 @activity.defn(name="worker_validate_design")

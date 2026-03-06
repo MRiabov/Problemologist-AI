@@ -1,3 +1,4 @@
+import contextlib
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -68,10 +69,8 @@ async def broadcast_file_update(episode_id_str: str, path: str, content: str):
 
 async def sync_file_asset(episode_id_str: str, path: str, content: str):
     """Sync file content to Asset table."""
-    try:
+    with contextlib.suppress(Exception):
         await sync_asset(episode_id_str, path, content)
-    except Exception:
-        pass
 
 
 def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailureMode:

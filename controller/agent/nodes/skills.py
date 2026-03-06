@@ -157,8 +157,10 @@ class SkillsNode(BaseNode):
         return state.model_copy(
             update={
                 "journal": state.journal + full_journal_entry,
-                "messages": state.messages
-                + [AIMessage(content=f"Skills update: {summary}")],
+                "messages": [
+                    *state.messages,
+                    AIMessage(content=f"Skills update: {summary}"),
+                ],
             }
         )
 

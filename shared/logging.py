@@ -151,7 +151,6 @@ def log_marker_middleware():
                 logger = structlog.get_logger("marker")
                 logger.info(f"\n\n{'=' * 20} {query_marker} {'=' * 20}\n")
 
-            response = await call_next(request)
-            return response
+            return await call_next(request)
 
     return LogMarkerMiddleware

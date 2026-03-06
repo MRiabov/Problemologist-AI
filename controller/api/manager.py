@@ -50,7 +50,7 @@ class ConnectionManager:
         if episode_id not in self.active_connections:
             # Diagnostic: check if ID exists as string key
             found_as_str = False
-            for k in self.active_connections.keys():
+            for k in self.active_connections:
                 if str(k) == str(episode_id):
                     found_as_str = True
                     break

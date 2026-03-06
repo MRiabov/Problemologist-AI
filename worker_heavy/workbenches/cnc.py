@@ -118,7 +118,7 @@ def calculate_cnc_cost(
     if material_name not in cnc_cfg.materials:
         # Fallback to the first available CNC material if specifically requested one is missing
         if cnc_cfg.materials:
-            material_name = list(cnc_cfg.materials.keys())[0]
+            material_name = next(iter(cnc_cfg.materials.keys()))
         else:
             # Absolute fallback if config is empty
             material_name = "aluminum_6061"

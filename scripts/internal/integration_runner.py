@@ -321,9 +321,7 @@ def _is_non_test_frontend_source_file(file_path: str) -> bool:
         return False
     if ".test." in file_path or ".spec." in file_path:
         return False
-    if "/__tests__/" in file_path or "/tests/" in file_path:
-        return False
-    return True
+    return not ("/__tests__/" in file_path or "/tests/" in file_path)
 
 
 def _has_non_test_frontend_changes(files: list[str]) -> bool:
@@ -957,10 +955,10 @@ def _run_integration_command(
         compose_cmd = ["docker", "compose", "-f", "docker-compose.test.yaml"]
         if args.down:
             print("Bringing down infrastructure containers (--down flag provided)...")
-            _run(compose_cmd + ["down", "--remove-orphans"], check=False)
+            _run([*compose_cmd, "down", "--remove-orphans"], check=False)
         else:
             print("Stopping infrastructure containers...")
-            _run(compose_cmd + ["stop"], check=False)
+            _run([*compose_cmd, "stop"], check=False)
 
 
 def _build_parser() -> argparse.ArgumentParser:

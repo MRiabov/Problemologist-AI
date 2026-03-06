@@ -7,7 +7,7 @@ from deepagents.middlewares import FilesystemMiddleware
 from ..filesystem.backend import LocalFilesystemBackend
 
 
-def get_filesystem_middleware(session_id: str = None):
+def get_filesystem_middleware(session_id: str | None = None):
     """
     Configure FilesystemMiddleware with LocalFilesystemBackend.
     Allows agents to interact with the sandboxed filesystem using standard tools.

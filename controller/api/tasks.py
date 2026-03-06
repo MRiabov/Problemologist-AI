@@ -128,7 +128,9 @@ def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
         "errors": errors,
     }
     try:
-        return EntryValidationContext.model_validate(raw_context).model_dump(mode="json")
+        return EntryValidationContext.model_validate(raw_context).model_dump(
+            mode="json"
+        )
     except Exception:
         return raw_context
 

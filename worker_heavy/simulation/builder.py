@@ -1037,7 +1037,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
             from shared.wire_utils import get_awg_properties
 
             # Build lookup for part positions (needed for wire attachments)
-            part_locations = {d.label: (d.pos, d.euler) for d in parts_data}
+            {d.label: (d.pos, d.euler) for d in parts_data}
             for wire in electronics.wiring:
                 if not getattr(wire, "routed_in_3d", False):
                     continue
