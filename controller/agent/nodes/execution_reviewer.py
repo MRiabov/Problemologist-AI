@@ -116,7 +116,7 @@ class ExecutionReviewerNode(BaseNode):
             inputs=inputs,
             tool_factory=get_engineer_tools,
             validate_files=validate_files,
-            node_type=AgentName.EXECUTION_REVIEWER,
+            node_type=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
 
         if not prediction:
@@ -240,6 +240,7 @@ class ExecutionReviewerNode(BaseNode):
                 "simulation_result.json",
                 json.dumps(sim_payload),
                 overwrite=True,
+                bypass_agent_permissions=True,
             )
         except Exception as e:
             logger.warning(
@@ -248,24 +249,64 @@ class ExecutionReviewerNode(BaseNode):
 
     async def _ensure_submit_for_review_succeeded(self) -> str | None:
         handoff_err = await validate_reviewer_handover(self.ctx.worker_client)
-        if handoff_err:
-            return f"Execution review blocked: {handoff_err}"
+        if not handoff_err:
+            return None
+
+        if not await self.ctx.worker_client.exists("script.py"):
+            return "Execution review blocked: script.py missing."
+
+        # System-side handoff materialization path. This avoids agent-permission
+        # writes to protected manifest files while keeping submission strict.
+        try:
+            validate_result = await self.ctx.worker_client.validate("script.py")
+        except Exception as exc:
+            return f"Execution review blocked: validate failed: {exc}"
+        if not validate_result.success:
+            return (
+                "Execution review blocked: validate failed: "
+                f"{validate_result.message or 'unknown validation failure'}"
+            )
+
+        try:
+            simulate_result = await self.ctx.worker_client.simulate("script.py")
+            await self._persist_simulation_artifacts(simulate_result)
+        except Exception as exc:
+            return f"Execution review blocked: simulate failed: {exc}"
+        if not simulate_result.success:
+            return (
+                "Execution review blocked: simulate failed: "
+                f"{simulate_result.message or 'unknown simulation failure'}"
+            )
+
+        try:
+            submit_result = await self.ctx.worker_client.submit("script.py")
+        except Exception as exc:
+            return f"Execution review blocked: submit_for_review failed: {exc}"
+        if not submit_result.success:
+            return (
+                "Execution review blocked: submit_for_review failed: "
+                f"{submit_result.message or 'unknown submit failure'}"
+            )
+
+        post_submit_err = await validate_reviewer_handover(self.ctx.worker_client)
+        if post_submit_err:
+            return f"Execution review blocked: {post_submit_err}"
         return None
 
 
 # Factory function for LangGraph
 @type_check
-async def execution_reviewer_node(state: AgentState) -> AgentState:
+async def engineer_execution_reviewer_node(state: AgentState) -> AgentState:
     session_id = state.session_id
     if not session_id:
-        msg = "Missing required session_id for execution_reviewer_node"
+        msg = "Missing required session_id for engineer_execution_reviewer_node"
         raise ValueError(msg)
     episode_id = state.episode_id
     ctx = SharedNodeContext.create(
         worker_light_url=settings.worker_light_url,
         session_id=session_id,
         episode_id=episode_id,
-        agent_role=AgentName.EXECUTION_REVIEWER,
+        agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
     )
     node = ExecutionReviewerNode(context=ctx)
     return await node(state)

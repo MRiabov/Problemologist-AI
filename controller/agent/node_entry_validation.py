@@ -32,16 +32,16 @@ class ValidationGraph(StrEnum):
 ENGINEER_PREVIOUS_NODE_MAP: Mapping[AgentName, AgentName | None] = {
     AgentName.ENGINEER_PLANNER: None,
     AgentName.ELECTRONICS_PLANNER: AgentName.ENGINEER_PLANNER,
-    AgentName.ENGINEER_REVIEWER: AgentName.ELECTRONICS_PLANNER,
-    AgentName.ENGINEER_CODER: AgentName.ENGINEER_REVIEWER,
+    AgentName.ENGINEER_PLAN_REVIEWER: AgentName.ELECTRONICS_PLANNER,
+    AgentName.ENGINEER_CODER: AgentName.ENGINEER_PLAN_REVIEWER,
     AgentName.ELECTRONICS_ENGINEER: AgentName.ENGINEER_CODER,
     AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_ENGINEER,
     # Execution review failures should route back to coder so latest-revision
     # handover artifacts can be regenerated before another reviewer entry.
-    AgentName.EXECUTION_REVIEWER: AgentName.ENGINEER_CODER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_CODER,
     AgentName.COTS_SEARCH: AgentName.ENGINEER_PLANNER,
-    AgentName.SKILL_AGENT: AgentName.EXECUTION_REVIEWER,
-    AgentName.JOURNALLING_AGENT: AgentName.ENGINEER_REVIEWER,
+    AgentName.SKILL_AGENT: AgentName.ENGINEER_EXECUTION_REVIEWER,
+    AgentName.JOURNALLING_AGENT: AgentName.ENGINEER_PLAN_REVIEWER,
     AgentName.STEER: None,
 }
 
@@ -78,7 +78,7 @@ ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "assembly_definition.yaml",
 )
 BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
-EXECUTION_REVIEWER_HANDOVER_CHECK = "execution_reviewer_handover"
+ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
 
 
 class NodeEntryValidationError(BaseModel):
@@ -175,8 +175,8 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             node=AgentName.ELECTRONICS_PLANNER,
             required_state_fields=["task", "episode_id"],
         ),
-        AgentName.ENGINEER_REVIEWER: NodeEntryContract(
-            node=AgentName.ENGINEER_REVIEWER,
+        AgentName.ENGINEER_PLAN_REVIEWER: NodeEntryContract(
+            node=AgentName.ENGINEER_PLAN_REVIEWER,
             required_state_fields=["episode_id"],
             required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
         ),
@@ -195,10 +195,10 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_state_fields=["episode_id"],
             required_artifacts=["script.py"],
         ),
-        AgentName.EXECUTION_REVIEWER: NodeEntryContract(
-            node=AgentName.EXECUTION_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
+            node=AgentName.ENGINEER_EXECUTION_REVIEWER,
             required_state_fields=["episode_id"],
-            custom_check=EXECUTION_REVIEWER_HANDOVER_CHECK,
+            custom_check=ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
             node=AgentName.COTS_SEARCH,
@@ -241,6 +241,14 @@ async def reviewer_handover_custom_check_from_session_id(
     )
     try:
         handover_error = await validate_reviewer_handover(client)
+        if handover_error and reviewer_label.lower() == "execution":
+            materialization_error = await _materialize_execution_reviewer_handover(
+                client
+            )
+            if materialization_error is None:
+                handover_error = await validate_reviewer_handover(client)
+            else:
+                handover_error = materialization_error
     except Exception as exc:
         handover_error = f"reviewer handover validation exception: {exc}"
     finally:
@@ -257,6 +265,45 @@ async def reviewer_handover_custom_check_from_session_id(
             artifact_path=".manifests/review_manifest.json",
         )
     ]
+
+
+async def _materialize_execution_reviewer_handover(
+    client: WorkerClient,
+) -> str | None:
+    if not await client.exists("script.py"):
+        return "script.py missing; cannot materialize review handover."
+
+    try:
+        validate_result = await client.validate("script.py")
+    except Exception as exc:
+        return f"validate failed while materializing handover: {exc}"
+    if not validate_result.success:
+        return (
+            "validate failed while materializing handover: "
+            f"{validate_result.message or 'unknown validation failure'}"
+        )
+
+    try:
+        simulate_result = await client.simulate("script.py")
+    except Exception as exc:
+        return f"simulate failed while materializing handover: {exc}"
+    if not simulate_result.success:
+        return (
+            "simulate failed while materializing handover: "
+            f"{simulate_result.message or 'unknown simulation failure'}"
+        )
+
+    try:
+        submit_result = await client.submit("script.py")
+    except Exception as exc:
+        return f"submit_for_review failed while materializing handover: {exc}"
+    if not submit_result.success:
+        return (
+            "submit_for_review failed while materializing handover: "
+            f"{submit_result.message or 'unknown submit failure'}"
+        )
+
+    return None
 
 
 class ArtifactExistsFn(Protocol):
@@ -417,7 +464,7 @@ __all__ = [
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
     "ENGINEER_PLANNER_HANDOFF_ARTIFACTS",
     "ENGINEER_PREVIOUS_NODE_MAP",
-    "EXECUTION_REVIEWER_HANDOVER_CHECK",
+    "ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK",
     "PREVIOUS_NODE_MAPS",
     "REASON_CUSTOM_CHECK_FAILED",
     "REASON_HANDOVER_INVALID",
