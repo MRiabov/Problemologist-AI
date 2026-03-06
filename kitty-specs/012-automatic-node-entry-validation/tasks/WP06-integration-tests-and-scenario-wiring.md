@@ -16,7 +16,7 @@ subtasks:
 - T035
 phase: Phase 5 - Contract Verification
 assignee: ''
-agent: ''
+agent: "codex"
 shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
@@ -167,3 +167,4 @@ Reviewer should verify:
 ## Activity Log
 
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
+- 2026-03-06T12:04:45Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
