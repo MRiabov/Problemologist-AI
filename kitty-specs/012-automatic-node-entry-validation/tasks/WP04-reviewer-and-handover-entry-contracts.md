@@ -14,7 +14,7 @@ subtasks:
 - T022
 phase: Phase 3 - Contract Harmonization
 assignee: ''
-agent: ''
+agent: "codex"
 shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
@@ -138,3 +138,4 @@ Reviewer should verify:
 ## Activity Log
 
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
+- 2026-03-06T10:22:36Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
