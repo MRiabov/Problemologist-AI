@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: Benchmark Graph Guard Integration
-lane: "doing"
+lane: "done"
 dependencies: [WP01]
 base_branch: 012-automatic-node-entry-validation-WP02
 base_commit: ae1c7ce385e49f01271ca1e8a7b08caa270915f5
@@ -15,10 +15,10 @@ subtasks:
 - T017
 phase: Phase 2 - Benchmark Runtime Integration
 assignee: ''
-agent: "codex"
-shell_pid: "95304"
-review_status: ''
-reviewed_by: ''
+agent: codex
+shell_pid: '95304'
+review_status: "approved"
+reviewed_by: "MRiabov"
 review_feedback: ''
 history:
 - timestamp: '2026-03-06T08:36:05Z'
@@ -154,3 +154,4 @@ Reviewer should verify:
 - 2026-03-06T10:10:12Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
 - 2026-03-06T10:17:24Z – codex – shell_pid=8707 – lane=for_review – Ready for review: benchmark graph entry guards integrated with reroute/fail-fast and continue-path validation.
 - 2026-03-06T10:18:58Z – codex – shell_pid=95304 – lane=doing – Started review via workflow command
+- 2026-03-06T10:21:17Z – codex – shell_pid=95304 – lane=done – Review passed: benchmark graph entry guards integrated with deterministic reroute/fail-fast behavior, benchmark contracts/custom reviewer handover check added, and planner-gate integration tests INT-005/INT-113/INT-114 plus mandatory artifacts gate pass (4/4). | Done override: Review approval is complete; branch merge ancestry is enforced separately by feature integration workflow after review lane transition.
