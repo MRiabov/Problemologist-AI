@@ -74,13 +74,54 @@ def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
             else:
                 errors.append({"message": str(item)})
 
+    node = _extract_result_field(result, "entry_validation_target_node")
+    disposition = _extract_result_field(result, "entry_validation_disposition")
+    reason_code = _extract_result_field(result, "entry_validation_reason_code")
+    reroute_target = _extract_result_field(result, "entry_validation_reroute_target")
+
+    # Keep entry-validation metadata stable even if later nodes clear transient state.
+    if node is None or disposition is None or reason_code is None:
+        import re
+
+        feedback = _result_feedback(result)
+        match = re.search(
+            r"ENTRY_VALIDATION_FAILED\[(?P<reason>[^\]]+)\]\s+"
+            r"target=(?P<node>[^\s]+)\s+"
+            r"(?:(?:reroute=(?P<reroute>[^\s]+))|(?:disposition=(?P<disposition>[^\s]+)))"
+            r"\s+\|\s*(?P<detail>.*)$",
+            feedback,
+        )
+        if match:
+            reason_code = reason_code or match.group("reason")
+            node = node or match.group("node")
+            disposition = disposition or match.group("disposition")
+            reroute_target = reroute_target or match.group("reroute")
+
+            if not errors:
+                detail = (match.group("detail") or "").strip()
+                if detail:
+                    errors.append(
+                        {
+                            "code": reason_code or "state_invalid",
+                            "message": detail,
+                            "source": "policy",
+                            "artifact_path": None,
+                        }
+                    )
+
+        if disposition is None:
+            journal = str(_extract_result_field(result, "journal") or "")
+            journal_match = re.search(
+                r"\[Entry Validation\].*disposition=(?P<disposition>[^\s]+)", journal
+            )
+            if journal_match:
+                disposition = journal_match.group("disposition")
+
     return {
-        "node": _extract_result_field(result, "entry_validation_target_node"),
-        "disposition": _extract_result_field(result, "entry_validation_disposition"),
-        "reason_code": _extract_result_field(result, "entry_validation_reason_code"),
-        "reroute_target": _extract_result_field(
-            result, "entry_validation_reroute_target"
-        ),
+        "node": node,
+        "disposition": disposition,
+        "reason_code": reason_code,
+        "reroute_target": reroute_target,
         "errors": errors,
     }
 
@@ -100,8 +141,9 @@ def _update_episode_entry_validation_metadata(
     entry_context = _extract_entry_validation_context(result)
     additional = dict(metadata.additional_info or {})
     additional["entry_validation"] = entry_context
-    additional["entry_validation_terminal"] = bool(
-        _extract_result_field(result, "entry_validation_terminal")
+    additional["entry_validation_terminal"] = (
+        bool(_extract_result_field(result, "entry_validation_terminal"))
+        or entry_context.get("disposition") == "fail_fast"
     )
     metadata.additional_info = additional
     episode.metadata_vars = metadata.model_dump()

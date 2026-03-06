@@ -280,6 +280,102 @@ scenarios:
           - finished: true
             summary: "INT-114 benchmark planner artifacts submitted."
 
+  INT-184:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts needed for submit_plan."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Engineer planner setup for INT-184 entry-validation contract.
+                ## 2. Parts List
+                - Test bracket (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build a simple static bracket.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $8
+                - Estimated weight: 90g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [ ] Build test bracket
+                - [ ] Optional wire routing
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 40
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 90
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-184 engineer planner submission complete."
+      - node: electronics_planner
+        steps:
+          - thought: "Re-submit planner artifacts from electronics planner."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-184 electronics planner submission complete."
+      - node: engineer_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Plan is acceptable for execution handoff."
+              required_fixes: []
+            summary: "INT-184 plan review approved."
+      - node: engineer_coder
+        steps:
+          - thought: "Create a minimal script without submit_for_review to trigger reviewer handoff block."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+
+                def build():
+                    return Box(1, 1, 1)
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-184 coder produced baseline script."
+      - node: electronics_engineer
+        steps:
+          - finished: true
+            journal: "INT-184 electronics engineer no-op pass."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics review passes for entry-guard test."
+              required_fixes: []
+            summary: "INT-184 electronics review approved."
+
   INT-014:
     transcript:
       - node: engineer_planner
