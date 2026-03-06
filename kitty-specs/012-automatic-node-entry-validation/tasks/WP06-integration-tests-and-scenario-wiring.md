@@ -1,8 +1,11 @@
 ---
 work_package_id: WP06
 title: Integration Tests & Scenario Wiring
-lane: planned
+lane: "doing"
 dependencies: [WP04, WP05]
+base_branch: 012-automatic-node-entry-validation-WP06-merge-base
+base_commit: 4a1a92d9a378285a450eb8f13ef7a1d6310749a8
+created_at: '2026-03-06T12:04:45.089990+00:00'
 subtasks:
 - T029
 - T030
@@ -14,7 +17,7 @@ subtasks:
 phase: Phase 5 - Contract Verification
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
