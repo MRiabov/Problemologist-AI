@@ -108,7 +108,7 @@
 
 #### Included Subtasks
 
-- [ ] T023 Add dedicated observability event schema for node-entry validation failure (or map to existing strict event family if required).
+- [x] T023 Add dedicated observability event schema for node-entry validation failure (or map to existing strict event family if required).
 - [ ] T024 Emit trace/error records on entry rejection with normalized metadata payload (`node`, `disposition`, `reason_code`, `reroute_target`, `errors`).
 - [ ] T025 Ensure episode `metadata_vars.validation_logs` receives stable reason-code strings for entry failures.
 - [ ] T026 Ensure status broadcasts include fail-fast transition metadata in integration mode.
