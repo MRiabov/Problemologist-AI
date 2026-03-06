@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Observability & Failure Surfacing
-lane: "doing"
+lane: "planned"
 dependencies: [WP02, WP03, WP04]
 base_branch: 012-automatic-node-entry-validation-WP04
 base_commit: 06cf43faba071189eb9e8798e37eeafb62ac5f21
@@ -15,11 +15,11 @@ subtasks:
 - T028
 phase: Phase 4 - Telemetry and Persistence
 assignee: ''
-agent: "codex"
-shell_pid: "41663"
-review_status: ''
-reviewed_by: ''
-review_feedback: ''
+agent: codex
+shell_pid: '41663'
+review_status: "has_feedback"
+reviewed_by: "MRiabov"
+review_feedback: "feedback://012-automatic-node-entry-validation/WP05/20260306T114153Z-3f0963bd.md"
 history:
 - timestamp: '2026-03-06T08:36:05Z'
   lane: planned
@@ -151,3 +151,4 @@ Reviewer should verify:
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
 - 2026-03-06T11:19:57Z – unknown – shell_pid=8707 – lane=for_review – Ready for review: added structured node-entry rejection events/traces and fail-fast metadata propagation
 - 2026-03-06T11:37:43Z – codex – shell_pid=41663 – lane=doing – Started review via workflow command
+- 2026-03-06T11:41:53Z – codex – shell_pid=41663 – lane=planned – Moved to planned
