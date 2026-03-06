@@ -1,8 +1,11 @@
 ---
 work_package_id: WP04
 title: Reviewer & Handover Entry Contracts
-lane: planned
+lane: "doing"
 dependencies: [WP02, WP03]
+base_branch: 012-automatic-node-entry-validation-WP03
+base_commit: 03e8138613ddd86642efaefdfafdef45cd1979d8
+created_at: '2026-03-06T10:22:36.073681+00:00'
 subtasks:
 - T018
 - T019
@@ -12,7 +15,7 @@ subtasks:
 phase: Phase 3 - Contract Harmonization
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
