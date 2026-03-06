@@ -338,7 +338,9 @@ builder.add_node(
 )
 builder.add_node(
     AgentName.ENGINEER_EXECUTION_REVIEWER,
-    _guarded_node(AgentName.ENGINEER_EXECUTION_REVIEWER, engineer_execution_reviewer_node),
+    _guarded_node(
+        AgentName.ENGINEER_EXECUTION_REVIEWER, engineer_execution_reviewer_node
+    ),
 )
 builder.add_node(
     AgentName.COTS_SEARCH,

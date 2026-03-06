@@ -20,7 +20,7 @@ logger = structlog.get_logger(__name__)
 
 class PlanReviewerSignature(dspy.Signature):
     """
-    Plan Reviewer node: Evaluates the proposed mechanical and electrical plans.
+    Engineer Plan Reviewer node: Evaluates the proposed mechanical and electrical plans.
     You must use the provided tools to read 'plan.md', 'todo.md', and 'assembly_definition.yaml'.
     Ensure the plan is physically feasible, within budget, and complete.
     When done, use SUBMIT to provide your final ReviewResult.
@@ -39,7 +39,7 @@ class PlanReviewerSignature(dspy.Signature):
 @type_check
 class PlanReviewerNode(BaseNode):
     """
-    Plan Reviewer node: Evaluates the engineering plan before implementation.
+    Engineer Plan Reviewer node: Evaluates the engineering plan before implementation.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:

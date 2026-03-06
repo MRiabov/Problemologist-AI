@@ -24,7 +24,7 @@ logger = structlog.get_logger(__name__)
 
 class ExecutionReviewerSignature(dspy.Signature):
     """
-    Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
+    Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
     You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
     When done, use SUBMIT to provide your final ReviewResult.
     """
@@ -51,7 +51,7 @@ class SimulationReviewOutcome(BaseModel):
 @type_check
 class ExecutionReviewerNode(BaseNode):
     """
-    Execution Reviewer node: Evaluates the implementation after simulation.
+    Engineer Execution Reviewer node: Evaluates the implementation after simulation.
     """
 
     async def __call__(self, state: AgentState) -> AgentState:
