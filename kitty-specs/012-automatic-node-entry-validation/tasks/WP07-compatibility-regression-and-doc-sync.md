@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: Compatibility, Regression, and Documentation Sync
-lane: "doing"
+lane: "done"
 dependencies: [WP06]
 base_branch: 012-automatic-node-entry-validation-WP06
 base_commit: 14e61b8a93abe28ccf6467517103b161182f1402
@@ -14,10 +14,10 @@ subtasks:
 - T040
 phase: Phase 6 - Hardening
 assignee: ''
-agent: "codex"
-shell_pid: "41663"
-review_status: ''
-reviewed_by: ''
+agent: codex
+shell_pid: '41663'
+review_status: "approved"
+reviewed_by: "MRiabov"
 review_feedback: ''
 history:
 - timestamp: '2026-03-06T08:36:05Z'
@@ -136,3 +136,4 @@ Reviewer should verify:
 - 2026-03-06T12:43:15Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
 - 2026-03-06T13:08:36Z – codex – shell_pid=8707 – lane=for_review – Ready for review: expected guard failure signatures annotated in planner integration tests; required node-entry suite passes; integration_p0 has unrelated baseline failure INT-020 (simulation taxonomy).
 - 2026-03-06T13:12:15Z – codex – shell_pid=41663 – lane=doing – Started review via workflow command
+- 2026-03-06T13:19:25Z – codex – shell_pid=41663 – lane=done – Review passed: planner gate tests now annotate expected guard signatures; node-entry integration suite passes (2/2). Full integration_p0 run: 63 passed, 1 skipped, 1 known unrelated failure (INT-020 simulation taxonomy: FORBID_ZONE_HIT:target_box). | Done override: Stacked feature workflow: WP07 reviewed and validated on feature stack branch before merge to main.
