@@ -1,6 +1,15 @@
 # Simulation and "Definitions of Done"
 
-While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to boot.
+## Scope summary
+
+- Primary focus: physics simulation contract and success/failure definition for generated solutions.
+- Defines constraints realism rules, allowed mechanisms/components, and CAD-joint-to-simulator mapping.
+- Specifies simulation constants, randomization assumptions, and validation expectations.
+- Use this file for changes related to simulation semantics, constraints, or definition-of-done logic.
+
+## Genesis for simulation
+
+While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to work.
 
 <!-- Downsides of MuJoCo?
 
@@ -125,6 +134,15 @@ For each, the internal/external diameters must match, and there will be special 
 This is to prevent the CAD designers from creating impossible constraints.
 
 To support moving parts (hinges, sliders, motors), we force build123d Joints from *to be created from predefined CAD components* almost always - e.g., again, revolute joints from bearings, rigid joints/weld constraints via fasteners.
+
+##### DOF minimality rule
+
+For engineering solutions, DOFs are constrained by intent, not by convenience.
+
+1. Default state is static (`dofs: []`) for all parts.
+2. A part may receive non-empty `dofs` only when the mechanism requires real motion to satisfy the objective.
+3. Each non-empty DOF assignment must map to a physical mechanism (bearing/motor/slider or equivalent allowed component) and a reviewer-visible rationale in planning artifacts.
+4. Excessive or unjustified DOFs are treated as a review failure (plan stage and/or execution stage), even if a single simulation run passes.
 
 Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
 
@@ -449,4 +467,3 @@ materials:
 ```
 
 The materials are only ever chosen from the config.
-

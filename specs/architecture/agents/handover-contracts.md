@@ -1,5 +1,12 @@
 # Agent handovers
 
+## Scope summary
+
+- Primary focus: deterministic handoff contracts between planner, implementer, and reviewer roles.
+- Defines which files are handed over, what each artifact must contain, and when refusals are valid.
+- Specifies routing behavior for review outcomes, replanning loops, and benchmark-to-engineer transition.
+- Use this file to validate inter-agent boundary correctness.
+
 ## All handovers that happen
 
 User prompt ->
@@ -8,11 +15,11 @@ benchmark planner agent <-> Benchmark CAD agent <-> benchmark reviewer (If plan 
 
 Benchmark reviewer "accepts" and passes the environment to the "lead engineer" - the Engineering Planner model. (indirect contact - no actual "communication")
 
-Lead engineer <-> CAD modelling engineer <-> Engineering Reviewer
+Lead engineer -> Engineering Plan Reviewer -> CAD modelling engineer -> Engineering Execution Reviewer
 
 The lead engineer will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info, build zones).
 CAD modelling engineer can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
-In this case, the CAD modelling engineer must provide `plan_refusal.md` (with role-specific reasons + evidence). The Engineering Reviewer validates that refusal and either confirms (`confirm_plan_refusal`) and routes back to planner, or rejects (`reject_plan_refusal`) and routes back to implementation.
+In this case, the CAD modelling engineer must provide `plan_refusal.md` (with role-specific reasons + evidence). The Engineering Plan Reviewer validates that refusal and either confirms (`CONFIRM_PLAN_REFUSAL`) and routes back to planner, or rejects (`REJECT_PLAN_REFUSAL`) and routes back to implementation.
 
 The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
 
@@ -71,12 +78,28 @@ For now, nothing. I'll filter it out via SQL or similar later and make a "price 
 
 ## Engineer Planner and "Coder" interaction
 
+Engineering handoff includes two review gates:
+
+1. Planner gate (`ENGINEER_PLAN_REVIEWER`): validates planner artifacts before coder entry.
+2. Execution gate (`ENGINEER_EXECUTION_REVIEWER`): validates latest implementation handoff after validation/simulation success.
+
 Engineer sends four files to the coder agent who has to implement the plan:
 
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
 2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
 4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
+
+Planner gate requirements (`ENGINEER_PLAN_REVIEWER` / coder entry contract):
+
+- Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
+- Required artifacts: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`
+- Plan reviewer responsibilities:
+  - Reject unsupported/invented system components or mechanisms.
+  - Reject inconsistent, infeasible, ambiguous, or incomplete plans.
+  - Reject excessive DOFs; motion metadata must be minimal and mechanism-necessary, not convenience-driven.
+  - Keep cost/weight target scrutiny as a mandatory realism check.
+  - Optional future work: propose weight/cost optimization opportunities.
 
 ### `plan.md` structure for the engineering plan
 
@@ -209,6 +232,10 @@ Minimum motion metadata fields inside `final_assembly.parts` entries:
 
 - `dofs`
 - For motorized parts: `control.mode`, plus required control params (e.g. `speed`, `frequency`) per mode
+- DOF minimization contract:
+  - `dofs: []` is the default for non-moving parts.
+  - Non-empty `dofs` must be explicitly justified in `plan.md` (`## 3. Assembly Strategy` or `## 5. Risk Assessment`) with objective-linked rationale.
+  - Unjustified or excessive DOF assignments are plan-review rejection criteria.
 
 Minimum per-manufactured-part fields:
 
@@ -304,18 +331,18 @@ Validation requirement:
 
 - Submission is blocked if `assembly_definition.yaml` is missing, malformed, still template-like, fails `validate_costing_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
 
-## Coder and Reviewer interaction
+## Coder and Execution Reviewer interaction
 
-1. The reviewer will have access to all files of agents in read-only mode (note: questionable decision - why would they need code files?). Primarily, they will focus on reviewing the video and image files for a more realistic review (presumably directly from the Railway bucket, if filesystem allows it), plus `objectives.yaml` and `assembly_definition.yaml` (YAML files with objectives and `final_assembly.parts` DOF/control metadata). Thus the Reviewer will only have readonly on all agent files permissions.
-The reviewer will also have `write` and `edit` tool with permissions of editing a single "reviews/review-round-[round number]" folder.
+The execution reviewer (`ENGINEER_EXECUTION_REVIEWER`) is a post-validation/post-simulation stage.
+
+1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/review_manifest.json`).
+   - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation.
+2. The execution reviewer has read-only access to implementation and evidence files, plus write/edit only under `reviews/review-round-[round number]/`.
+3. Primary review is robustness and realism: verify successful behavior is not flaky across runtime randomization and is likely repeatable.
+4. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.
+5. Optional code-quality review is secondary and should only block for concrete correctness/safety risks.
 
 The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
-
-The reviewer will validate for the following:
-
-1. The solution looks stable, i.e. #2
-2. No excessive DOFs which will hijack the reliable work of the solution.
-3. The solution is as optimal it should be.
 
 Notably the Engineer will at this point already have passed the manufacturability constraint, cost constraint, and others.
 <!-- and others - I need to ideate/remember what else it should review for.  -->
@@ -323,7 +350,7 @@ Notably the Engineer will at this point already have passed the manufacturabilit
 The reviews will also come with the following YAML frontmatter:
 
 ```yaml
-decision: approved # [approved, rejected, confirm_plan_refusal, reject_plan_refusal]
+decision: APPROVED # [APPROVED, REJECTED, REJECT_PLAN, REJECT_CODE, CONFIRM_PLAN_REFUSAL, REJECT_PLAN_REFUSAL]
 comments: [
    # short commentary on issues, as a array.
    # Up to 100 chars per issue.
@@ -446,4 +473,3 @@ We should give agents less chances to fail (our) system, and fail the execution 
 While we don't enforce strict Pydantic schemas, we effectively validate all inputs as such.
 
 E.g., if a part doesn't have a `material` custom property on it, we fail the script; we don't substitute to a default Aluminum.
-

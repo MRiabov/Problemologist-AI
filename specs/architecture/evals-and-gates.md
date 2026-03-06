@@ -1,5 +1,12 @@
 # Agent Evaluations
 
+## Scope summary
+
+- Primary focus: evaluation architecture and quality gates for agent behavior.
+- Defines fast/medium/slow evaluation tiers and measurable acceptance thresholds.
+- Specifies terminal-state/failure classification requirements and fail-closed gating behavior.
+- Use this file when adding or modifying eval criteria, gate logic, or episode terminalization policy.
+
 Evaluations are treated as a first-class architecture in this application. In fact our work on manufacturability validation, code linting, simulation is just a tool for evaluation.
 
 <!-- To build great agents, we need agent needs a great evaluation pipelines.
@@ -53,16 +60,24 @@ We should be able to test evaluations on multiple tiers, specifically:
 4. The engineer, after simulation, would interpret the simulation results correctly [...] (how to enforce it? they wouldn't always need to view the results, they can use final positions table that should be output or text too.)
 5. The engineer will prefer CSG over sketches in 70% of the cases (soft requirement, but it makes it actually easier to build with code).
 
-##### Medium evals - Engineer Reviewer
+##### Medium evals - Engineering Plan Reviewer
 
-1. Given a viewed model, the review agent will correctly navigate images of the output (would check at least 3 images) before solution
-2. Given a viewed model, the review agent would be able to correctly identify the issues in the plan in at least 70% of the cases.
-    - Correctness: given a valid plan with an issue introduced by another LLM, a reviewer would be able to spot the issue in the plan (with the first LLM or other LLM validating that in fact, the described found issue matches).
-3. Given a viewed model, the reviewer would force the CAD engineer to provide a cheaper solution in at least 15% of the cases.
-4. Reviewer efficacy - reviews would be successful enough that they lead to a solution in at least 60% of cases after a failure. This means the reviewer should look deeper than one surface problem.
-5. Price/weight escalation refusal - If the price or weight was set inadequately, the reviewer would scrutinize how the CAD model can be improved; and if they can find ways to thin/optimize a shape that would in fact be sufficient, then they will refuse the manufacturing. (specifics?)
-6. Manufacturability awareness - the reviewer would be reporting only solutions appropriate to a given manufacturing method.
-    - The reviewer would not be reporting solutions inappropriate to the manufacturing method in 97% of the cases.
+1. Given a viewed plan package, the plan reviewer would correctly identify plan issues in at least 70% of cases.
+    - Correctness: given a valid plan with an issue introduced by another LLM, a reviewer would spot the issue and the issue matches independent validation.
+2. Given a viewed plan package, the plan reviewer rejects unsupported/invented components or mechanisms in at least 97% of cases.
+3. Given a viewed plan package, the plan reviewer rejects inconsistent, infeasible, ambiguous, or incomplete plans in at least 90% of cases.
+4. Given a viewed plan package, the plan reviewer rejects excessive/unjustified DOFs in at least 90% of seeded over-actuation cases.
+5. Price/weight realism gate: if target budgets are set unrealistically, the plan reviewer rejects and requests concrete planner fixes.
+6. Reviewer efficacy: plan-review feedback should lead to a corrected plan in at least 60% of failed first submissions.
+
+##### Medium evals - Engineering Execution Reviewer
+
+1. Given a viewed model, the execution reviewer correctly navigates output evidence (would check at least 3 images) before decision.
+2. Given a successful handoff package, the execution reviewer identifies plan-vs-execution deviations and robustness risks in at least 70% of cases.
+3. Given a successful simulation result, the execution reviewer rejects flaky/non-robust solutions in at least 70% of known flaky cases.
+4. Given a successful simulation result, the execution reviewer flags over-actuated solutions (excessive moving axes/parts) in at least 80% of seeded over-actuation cases.
+5. Manufacturability awareness: the execution reviewer reports only changes appropriate to the manufacturing method in 97% of cases.
+6. Given a viewed model, the execution reviewer requests cheaper/lighter improvements where feasible in at least 15% of cases.
 7. Toolkit usage and diversity; the model will use:
     - fasteners in at least in 70% of builds
     - Motors in at least 20% of the builds
@@ -160,5 +175,3 @@ There are some episodes which can be take multiple episodes to run.
 2. If a reviewer said "this is acceptably the cheapest we can get" and then the model got cheaper by 50% unit cost at the same quantity (during subsequent planning) - the reviewer in fact didn't find an optimal quantity, and that shouldn't happen... (in which cases out of which?)
 
 ##
-
-

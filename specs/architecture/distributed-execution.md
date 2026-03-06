@@ -1,5 +1,12 @@
 # Distributed execution
 
+## Scope summary
+
+- Primary focus: controller and split-worker deployment architecture.
+- Defines `worker-light` vs `worker-heavy` responsibilities, worker APIs, and routing contract.
+- Covers persistence/storage expectations, concurrency model, and Temporal orchestration boundary.
+- Use this file when changing infra topology or controller-to-worker integration behavior.
+
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
 1. `worker-light` for filesystem + execution tooling,
@@ -194,4 +201,3 @@ Temporal is used to orchestrate the workers. It is not used to run or retry the 
 Temporal needs a database and we will use the Postgres database used by temporal, except under the different `DATABASE` partition.
 
 Because tasks like simulation (with involve both simulation and uploading to the database) could be long-running we are using webhooks and callbacks to report their completion.
-

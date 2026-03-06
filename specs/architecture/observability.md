@@ -1,5 +1,12 @@
 # Observability
 
+## Scope summary
+
+- Primary focus: observability data model for traces, events, metrics, and debugging.
+- Defines ID/linkage contracts (`user_session_id`, `episode_id`, and related run IDs) and event catalog requirements.
+- Covers metric extraction strategy, lineage metadata, failure tracking, backups, and user-review signals.
+- Use this file for telemetry schema decisions and observability pipeline behavior.
+
 To track all agent movements and to persist data, we encode the following:
 
 1. The agent pass/fail reasons
@@ -75,10 +82,11 @@ We track the following structured domain events to compute the evaluation metric
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
+21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineering plan reviewer, engineering execution reviewer, electronics reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
-24. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
+24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, expected-minimal `dofs`, reviewer_stage).
+25. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
 
 <!-- 20. Metric for "Jamming Rate"
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
@@ -196,4 +204,3 @@ When user stores the review, first of all, store it in the observability DB, and
 We temporarily won't do auto-improvement through a model, though I bet we'll need it in the near future.
 
 <!-- Note: I don't know why, but the Gemini models are good at coding but horrible at making prompts/interpreting desired prompt behavior; don't use them for this purpose. -->
-

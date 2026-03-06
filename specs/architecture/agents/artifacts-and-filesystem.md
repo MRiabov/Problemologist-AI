@@ -1,5 +1,12 @@
 # Agentic framework
 
+## Scope summary
+
+- Primary focus: runtime framework and filesystem contract for all agent workflows.
+- Defines DSPy/LangGraph/Langfuse architecture and strict reasoning/tool trace requirements.
+- Specifies agent artifact surfaces, file templates, and role-based path permissions (`agents_config.yaml` policy model).
+- Use this file for runtime plumbing, file immutability, and access-control decisions.
+
 We use DSPy.ReAct as the primary agent runtime (reasoning + tool use) and LangGraph to manage agent architecture/orchestration. Langfuse is used for observability.
 
 ## Implementation
@@ -18,7 +25,8 @@ The Engineer consists of
 - Electrical Planner
 - Implementer,
 - Electrical implementer
-- Reviewer,
+- Plan reviewer,
+- Execution reviewer,
 - Electrical reviewer
 - Skill agent
 - COTS search subagent.
@@ -58,7 +66,10 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 - Engineering CAD implementer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
-- Engineering reviewer:
+- Engineering plan reviewer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - write: `reviews/review-round-*/review.md` only
+- Engineering execution reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/review-round-*/review.md` only
 - Benchmark planner:
@@ -111,7 +122,7 @@ Rules:
 3. If a path is not matched by `allow`, access is denied by default.
 4. Agent-specific rules override `defaults` (defaults are fallback only).
 5. Tool availability can be broad, but path permissions are enforced per role by this file.
-6. Reviewer role gets `write/edit` tools, but policy only allows writes under `reviews/review-round-*/`.
+6. Reviewer roles (engineering plan reviewer, engineering execution reviewer, benchmark reviewer, electronics reviewer) get `write/edit` tools, but policy only allows writes under `reviews/review-round-*/`.
 7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
 
 Example (`config/agents_config.yaml`):
@@ -144,7 +155,15 @@ agents:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
       deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
 
-  engineer_reviewer:
+  engineer_plan_reviewer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      deny: [".manifests/**"]
+    write:
+      allow: ["reviews/review-round-*/review.md"]
+      deny: [".manifests/**"]
+
+  engineer_execution_reviewer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
@@ -229,7 +248,7 @@ agents:
 
 We assert that files (especially "control" files like `objectives.yaml` and `assembly_definition.yaml`) are not edited by coder agents, however they are edited by planner agents. We use git-based hash assertions for such files where they must be immutable.
 
-Essentially, the goal is a clear separation of concerns: planner files are edited by the planner, review files are edited by the reviewer, coder edits coder files; skill subagents modify only skill files, etc.
+Essentially, the goal is a clear separation of concerns: planner files are edited by the planner, review files are edited by reviewer nodes, coder edits coder files; skill subagents modify only skill files, etc.
 
 ## File updates
 
@@ -383,7 +402,7 @@ The agents will delimit their reasoning with markdown headings, which would allo
 
 ## TODOs
 
-The Planner will build a list of TODOs for the agent to do. The critic will verify against the plan and the list of TODOs.
+The Planner will build a list of TODOs for the agent to do. Reviewer nodes will verify against the plan and the TODO list.
 
 ## Plan refusal artifact (`plan_refusal.md`)
 
@@ -541,7 +560,7 @@ It was proven that agents work better with markdown (in general) than JSON (prob
 
 The simulation returns the data from *video*. There will be a simple text summary prepended to the video, e.g. "the agent failed to hit the objective"
 
-The agent (the engineer, critic or another "summarizer") will write the video summary to the Journal.
+The agent (engineer, reviewer, or another "summarizer") will write the video summary to the Journal.
 
 ### Compressing the video
 
@@ -550,4 +569,3 @@ Future work will need to address the issue of the video being too expensive. Ins
 ## Feedback from cost and manufacturability constraints
 
 The agent will receive feedback from cost and manufacturability constraints (basically, workbenches) in markdown.
-

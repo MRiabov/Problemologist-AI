@@ -1,5 +1,12 @@
 # Benchmark generator agent (or graph)
 
+## Scope summary
+
+- Primary focus: role-level behavior for benchmark generation and engineering execution.
+- Defines planner/implementer/reviewer responsibilities, expected artifacts, and quality expectations.
+- Includes concrete examples of `plan.md` and `objectives.yaml` style outputs.
+- Use alongside handover contracts when implementing agent transitions.
+
 ## Agent purpose
 
 The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need challenges to scale, data to improve against.
@@ -142,7 +149,14 @@ Again, the execution runs in isolated containers to prevent accidental harmful c
 
 ## Engineer agent details
 
-Engineer has a Planner, which is responsible for architecting the solution, the engineer which actually implements the solution, and the critic.
+Engineer has explicit node roles:
+
+1. `ENGINEER_PLANNER` (mechanical plan author)
+2. `ELECTRONICS_PLANNER` (electrical planning companion stage)
+3. `ENGINEER_PLAN_REVIEWER` (plan-quality reviewer before coding)
+4. `ENGINEER_CODER` (mechanical implementation)
+5. `ELECTRONICS_ENGINEER` + `ELECTRONICS_REVIEWER` (electrical implementation and electrical review)
+6. `ENGINEER_EXECUTION_REVIEWER` (final execution reviewer after validated/simulated implementation handoff)
 
 The architect will create and persist a TODO list. The engineer must implement. The agent will have easy access to the TODO list.
 
@@ -163,6 +177,7 @@ The Engineering Planner workflow is:
 2. **Plan the mechanism and budgets**
    - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
    - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
+   - Minimize motion complexity: use the smallest DOF set needed to satisfy the objective; avoid unnecessary moving axes.
    - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS search subagent and carry part IDs + catalog prices into the plan.
 
 3. **Calculate the costs per part**:
@@ -226,6 +241,27 @@ The Engineering Planner workflow is:
 - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 
 At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+
+### Engineering reviewer split
+
+The engineering loop has two reviewer stages with different responsibilities.
+
+`ENGINEER_PLAN_REVIEWER` responsibilities:
+
+1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
+2. Validate plan consistency across `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml`.
+3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
+4. Validate non-ambiguity and completeness of planner handoff artifacts.
+5. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
+6. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
+
+`ENGINEER_EXECUTION_REVIEWER` responsibilities:
+
+1. Verify implementation follows the approved plan (or has justified, reviewable deviations).
+2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
+3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/review_manifest.json` for latest revision).
+4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
+5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -250,7 +286,7 @@ The Engineer agent will verify its work by:
 2. Checking the cost of its solution; against the part count and unit cost as specified by the user.
 3. Checking the weight of its solution.
 4. Simulating - did the model achieve the goal as per the benchmark?
-5. The critic will assess whether the simulation is stable or not - will it be functional to work in a real scenario? Is it flaky?
+5. The execution reviewer assesses whether the successful simulation is stable and non-flaky for realistic repeated runs.
 
 ## COTS search subagent
 
@@ -309,4 +345,3 @@ Database:
 - COTS reproducibility is invalid if selected parts are persisted without the snapshot metadata above.
 
 <!-- TODO move details away from this section into CAD section... -->
-
