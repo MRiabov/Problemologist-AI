@@ -11,18 +11,18 @@ This feature adds a mandatory pre-entry validation layer to agent graph nodes so
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Block invalid coder entry (Priority: P1)
+### User Story 1 - Block invalid entry for any node (Priority: P1)
 
-As a platform maintainer, I need the graph to reject entering coder nodes when required planner artifacts/state are missing, so the system does not execute coding logic against corrupt or incomplete state.
+As a platform maintainer, I need the graph to reject entering any orchestrated node when required upstream state/artifacts are invalid, so the system does not execute node logic against corrupt or incomplete state.
 
 **Why this priority**: This is the direct architecture gap and root cause for state corruption bugs.
 
-**Independent Test**: Start an episode that reaches coder with missing planner prerequisites and verify coder logic is not executed for that turn.
+**Independent Test**: Start episodes that attempt entry into planner, coder, and reviewer nodes with missing prerequisites and verify target-node logic is not executed for those turns.
 
 **Acceptance Scenarios**:
 
-1. **Given** an engineer episode where coder entry is attempted without valid plan inputs, **When** node-entry validation runs, **Then** entry is rejected before coder execution and the run is rerouted.
-2. **Given** a benchmark episode resumed in `PLANNED` state with missing coder prerequisites, **When** benchmark coder entry is evaluated, **Then** entry is rejected with explicit validation errors.
+1. **Given** an engineer episode where planner, coder, or reviewer entry is attempted with invalid required inputs, **When** node-entry validation runs, **Then** entry is rejected before target-node execution and the run is rerouted or failed-fast per mode.
+2. **Given** a benchmark episode resumed in `PLANNED` state with missing prerequisites for planner/coder/reviewer nodes, **When** any target node entry is evaluated, **Then** entry is rejected with explicit validation errors.
 
 ---
 
@@ -49,6 +49,8 @@ As a developer debugging failed episodes, I need structured traces/events for no
 
 **Independent Test**: Trigger an entry-gate failure and assert persisted trace/event fields include node, error list, and disposition (`reroute` or `fail_fast`).
 
+Human note: the telemetry will be implemented as the events from @desired_architecture.md document.
+
 **Acceptance Scenarios**:
 
 1. **Given** a node-entry validation failure, **When** the failure is persisted, **Then** traces/events include failing node id, reason codes, and disposition.
@@ -63,6 +65,7 @@ As a developer debugging failed episodes, I need structured traces/events for no
 - Reviewer entry attempted with stale `.manifests/review_manifest.json` that no longer matches script hash.
 - Repeated invalid-entry conditions that could loop indefinitely in non-integration mode.
 - Mixed mechanical/electronics TODOs where coder/electronics engineer entry gates select different prerequisite checks.
+- Subagent/helper-agent calls that are not first-class graph nodes and may require separate validation boundaries.
 
 ## Requirements *(mandatory)*
 
@@ -82,6 +85,7 @@ As a developer debugging failed episodes, I need structured traces/events for no
 | FR-010 | Existing post-node output validation gates MUST remain active and unchanged in intent; entry validation is an additional layer, not a replacement. | Proposed |
 | FR-011 | Single-node planner graphs used by direct planner runs MUST apply entry validation and fail closed on failure (no loopback path). | Proposed |
 | FR-012 | Integration tests MUST cover both reroute and fail-fast contracts via HTTP-only black-box flows. | Proposed |
+| FR-013 | Subagent scope MUST be explicit: if a subagent is represented as a graph node, entry validation applies; if it is only a tool-invoked helper call, it is out of scope for this feature and requires separate guard semantics. | Proposed |
 
 ### Non-Functional Requirements
 
@@ -113,13 +117,14 @@ As a developer debugging failed episodes, I need structured traces/events for no
 
 ### Measurable Outcomes
 
-- **SC-001**: In a forced "missing plan before coder" scenario, coder node execution count is `0` for the rejected turn and reroute/fail-fast behavior matches runtime mode.
+- **SC-001**: In forced invalid-entry scenarios across planner/coder/reviewer nodes, target-node execution count is `0` for rejected turns and reroute/fail-fast behavior matches runtime mode.
 - **SC-002**: In integration mode, invalid node entry transitions to `FAILED` without repeated loopback cycles.
 - **SC-003**: Every entry-validation rejection is visible in episode traces/events with node id and reason details.
 - **SC-004**: Existing planner/reviewer gate coverage remains green after introducing node-entry guards, with no silent weakening of failure semantics.
 
 ## Assumptions
 
-- The feature applies to both orchestration graphs (`controller/agent/graph.py` and `controller/agent/benchmark/graph.py`).
+- The feature applies to all first-class orchestrated nodes in both orchestration graphs (`controller/agent/graph.py` and `controller/agent/benchmark/graph.py`).
 - Existing reviewer handoff validation utilities are reused instead of duplicating reviewer-gate logic.
 - New integration tests are added to architecture P0 coverage and mapped to a new `INT-xxx` identifier in the integration spec.
+- Subagents not represented as first-class graph nodes are treated as out of scope in this increment unless explicitly promoted to node transitions.
