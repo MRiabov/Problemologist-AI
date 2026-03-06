@@ -87,11 +87,11 @@
 
 #### Included Subtasks
 
-- [ ] T018 Refactor/reuse `validate_reviewer_handover` as contract hook for execution reviewer and benchmark reviewer entry.
-- [ ] T019 Add explicit reviewer-entry contract checks for engineer and benchmark reviewer nodes (including manifest/script hash alignment).
-- [ ] T020 Ensure reviewer entry failures are surfaced as node-entry failures, not generic runtime exceptions.
-- [ ] T021 Add contract boundary for first-class subagent nodes only; tool-invoked helper agents remain explicitly out of scope.
-- [ ] T022 Add guardrail comments/docstrings in orchestration files clarifying entry-validation scope and exception boundary.
+- [x] T018 Refactor/reuse `validate_reviewer_handover` as contract hook for execution reviewer and benchmark reviewer entry.
+- [x] T019 Add explicit reviewer-entry contract checks for engineer and benchmark reviewer nodes (including manifest/script hash alignment).
+- [x] T020 Ensure reviewer entry failures are surfaced as node-entry failures, not generic runtime exceptions.
+- [x] T021 Add contract boundary for first-class subagent nodes only; tool-invoked helper agents remain explicitly out of scope.
+- [x] T022 Add guardrail comments/docstrings in orchestration files clarifying entry-validation scope and exception boundary.
 
 **Estimated Prompt Size**: ~300 lines
 
