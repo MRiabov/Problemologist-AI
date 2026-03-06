@@ -1,16 +1,16 @@
 {
-  "event_count": 28,
+  "event_count": 31,
   "feature_slug": "012-automatic-node-entry-validation",
-  "last_event_id": "01KK1F8G0MAJ4WWS2YS1GZYMVC",
-  "materialized_at": "2026-03-06T11:41:53.045076+00:00",
+  "last_event_id": "01KK1G3PPT6ZGYMYB5N7CWH8VR",
+  "materialized_at": "2026-03-06T11:56:44.635521+00:00",
   "summary": {
     "blocked": 0,
     "canceled": 0,
     "claimed": 0,
     "done": 4,
-    "for_review": 0,
+    "for_review": 1,
     "in_progress": 0,
-    "planned": 1
+    "planned": 0
   },
   "work_packages": {
     "WP01": {
@@ -44,9 +44,9 @@
     "WP05": {
       "actor": "user",
       "force_count": 2,
-      "lane": "planned",
-      "last_event_id": "01KK1F8G0MAJ4WWS2YS1GZYMVC",
-      "last_transition_at": "2026-03-06T11:41:53.044434+00:00"
+      "lane": "for_review",
+      "last_event_id": "01KK1G3PPT6ZGYMYB5N7CWH8VR",
+      "last_transition_at": "2026-03-06T11:56:44.634629+00:00"
     }
   }
 }
