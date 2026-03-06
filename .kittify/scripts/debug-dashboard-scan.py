@@ -11,10 +11,7 @@ from specify_cli.dashboard.scanner import gather_feature_paths, scan_all_feature
 
 
 def main():
-    if len(sys.argv) > 1:
-        project_dir = Path(sys.argv[1]).resolve()
-    else:
-        project_dir = Path.cwd()
+    project_dir = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd()
 
     print(f"Scanning project directory: {project_dir}")
     print()

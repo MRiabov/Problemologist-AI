@@ -125,7 +125,7 @@ def main():
         return
 
     # Group by Spec
-    specs = sorted(list(set((wp.spec_number, wp.spec_slug) for wp in wps)))
+    specs = sorted({(wp.spec_number, wp.spec_slug) for wp in wps})
 
     print("\n🚀 Spec-Kitty Progress Report\n" + "=" * 30)
 
