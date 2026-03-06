@@ -1,3 +1,4 @@
+import re
 from contextlib import suppress
 
 import dspy
@@ -46,11 +47,14 @@ class CoderNode(BaseNode):
         """Execute the coder node logic."""
         # T010: Find next active item in TODO
         todo = state.todo
+        if not todo.strip():
+            with suppress(Exception):
+                if await self.ctx.worker_client.exists("todo.md"):
+                    todo = await self.ctx.worker_client.read_file("todo.md")
         current_step = self._get_next_step(todo)
-        if not current_step:
-            return state.model_copy(
-                update={"journal": state.journal + "\nNo more steps in TODO."}
-            )
+        no_step_mode = current_step is None
+        if no_step_mode:
+            current_step = "Finalize implementation and submit for review."
 
         # WP04: Extract steerability context
         steer_context = await self._get_steer_context(state.messages)
@@ -111,8 +115,11 @@ class CoderNode(BaseNode):
         )
         journal_entry += f"\n[Coder] {summary}"
 
-        # Mark TODO as done
-        new_todo = todo.replace(f"- [ ] {current_step}", f"- [x] {current_step}")
+        # Persist TODO progress to disk so downstream reviewer checks use current state.
+        new_todo = todo
+        if not no_step_mode:
+            new_todo = self._mark_current_step_complete(todo, current_step)
+            await self._persist_todo_update(new_todo)
 
         return state.model_copy(
             update={
@@ -126,6 +133,33 @@ class CoderNode(BaseNode):
                 "turn_count": state.turn_count + 1,
             }
         )
+
+    def _mark_current_step_complete(self, todo: str, current_step: str) -> str:
+        # Prefer exact line replacement for deterministic bookkeeping.
+        exact_unchecked = f"- [ ] {current_step}"
+        exact_checked = f"- [x] {current_step}"
+        if exact_unchecked in todo:
+            return todo.replace(exact_unchecked, exact_checked, 1)
+
+        # Fallback: mark first unchecked non-electronics line as done.
+        lines = todo.splitlines()
+        elec_keywords = ("circuit", "wire", "electronics", "routing", "psu", "power")
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped.startswith("- [ ]"):
+                continue
+            task = stripped.replace("- [ ]", "", 1).strip().lower()
+            if any(kw in task for kw in elec_keywords):
+                continue
+            lines[idx] = re.sub(r"^\s*-\s*\[\s\]", "- [x]", line, count=1)
+            return "\n".join(lines)
+        return todo
+
+    async def _persist_todo_update(self, todo: str) -> None:
+        try:
+            await self.ctx.worker_client.write_file("todo.md", todo, overwrite=True)
+        except Exception as exc:
+            logger.warning("coder_todo_persist_failed", error=str(exc))
 
     def _get_next_step(self, todo: str) -> str | None:
         """Extract the first '- [ ]' item from the TODO list."""
