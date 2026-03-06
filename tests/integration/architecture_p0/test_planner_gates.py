@@ -436,6 +436,14 @@ async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
 
 
 @pytest.mark.integration_p0
+# Benchmark planner traces can include fail-closed handover rejection signatures
+# from guard contracts while the planner stage still reaches PLANNED.
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "integrated_validation_error",
+        "prior_validation_missing",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
     """INT-114: Benchmark planner must emit explicit submit_plan TOOL_START before completion."""
@@ -470,7 +478,14 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
 
 
 @pytest.mark.integration_p0
-@pytest.mark.allow_backend_errors("plan_md_invalid")
+# INT-006 intentionally exercises invalid plan structure paths; both the
+# high-level gate and section-level reason signatures are expected.
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "plan_md_invalid",
+        "plan_md_missing_sections",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_006_plan_structure_validation(
     session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
