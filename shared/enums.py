@@ -104,6 +104,23 @@ class ResponseStatus(UppercaseStrEnum):
     ERROR = "ERROR"
 
 
+class EntryFailureDisposition(StrEnum):
+    """Routing policy for failed node-entry validation."""
+
+    ALLOW = "allow"
+    REROUTE_PREVIOUS = "reroute_previous"
+    FAIL_FAST = "fail_fast"
+
+
+class EntryValidationSource(StrEnum):
+    """Primary source category for node-entry validation errors."""
+
+    STATE = "state"
+    ARTIFACT = "artifact"
+    HANDOVER = "handover"
+    POLICY = "policy"
+
+
 class TraceType(StrEnum):
     """Type of observability trace."""
 
