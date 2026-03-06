@@ -63,12 +63,12 @@
 
 #### Included Subtasks
 
-- [ ] T012 Add entry-guard routing for benchmark planner, coder, reviewer, skill, and journalling nodes in `controller/agent/benchmark/graph.py`.
-- [ ] T013 Define benchmark-node contracts including planner artifact/state prerequisites and reviewer handover prerequisites.
-- [ ] T014 Enforce deterministic reroute target selection for non-integration mode benchmark failures.
-- [ ] T015 Enforce integration fail-fast for benchmark entry rejection in streaming execution path.
-- [ ] T016 Apply guard checks to start/continue paths (`run_generation_session` and `continue_generation_session`) so invalid resumed states are rejected.
-- [ ] T017 Ensure benchmark state persistence captures entry-validation failure details and reason codes.
+- [x] T012 Add entry-guard routing for benchmark planner, coder, reviewer, skill, and journalling nodes in `controller/agent/benchmark/graph.py`.
+- [x] T013 Define benchmark-node contracts including planner artifact/state prerequisites and reviewer handover prerequisites.
+- [x] T014 Enforce deterministic reroute target selection for non-integration mode benchmark failures.
+- [x] T015 Enforce integration fail-fast for benchmark entry rejection in streaming execution path.
+- [x] T016 Apply guard checks to start/continue paths (`run_generation_session` and `continue_generation_session`) so invalid resumed states are rejected.
+- [x] T017 Ensure benchmark state persistence captures entry-validation failure details and reason codes.
 
 **Estimated Prompt Size**: ~450 lines
 
