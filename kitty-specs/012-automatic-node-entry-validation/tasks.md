@@ -20,11 +20,11 @@
 
 #### Included Subtasks
 
-- [ ] T001 Create shared node-entry validation module and typed result/error models under `controller/agent/`.
-- [ ] T002 Add shared enums/reason-code constants for entry failure disposition and source.
-- [ ] T003 Implement deterministic previous-node mapping tables for engineer and benchmark graphs.
-- [ ] T004 Add integration-mode policy resolver (`IS_INTEGRATION_TEST`) used by entry guards.
-- [ ] T005 Add reusable validation contract interface for node-specific checks (state/artifact/custom hook).
+- [x] T001 Create shared node-entry validation module and typed result/error models under `controller/agent/`.
+- [x] T002 Add shared enums/reason-code constants for entry failure disposition and source.
+- [x] T003 Implement deterministic previous-node mapping tables for engineer and benchmark graphs.
+- [x] T004 Add integration-mode policy resolver (`IS_INTEGRATION_TEST`) used by entry guards.
+- [x] T005 Add reusable validation contract interface for node-specific checks (state/artifact/custom hook).
 
 **Estimated Prompt Size**: ~320 lines
 
