@@ -7,12 +7,16 @@ from typing import Any, Protocol
 from pydantic import BaseModel, Field, model_validator
 
 from controller.agent.config import settings as agent_settings
+from controller.agent.review_handover import validate_reviewer_handover
+from controller.clients.worker import WorkerClient
+from controller.config.settings import settings as controller_settings
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
 
 REASON_OK = "ok"
 REASON_STATE_INVALID = "state_invalid"
 REASON_MISSING_ARTIFACT = "missing_artifact"
 REASON_HANDOVER_INVALID = "handover_invalid"
+REASON_REVIEWER_ENTRY_BLOCKED = "reviewer_entry_blocked"
 REASON_POLICY_INVALID = "policy_invalid"
 REASON_NO_PREVIOUS_NODE = "no_previous_node"
 REASON_CUSTOM_CHECK_FAILED = "custom_check_failed"
@@ -32,7 +36,9 @@ ENGINEER_PREVIOUS_NODE_MAP: Mapping[AgentName, AgentName | None] = {
     AgentName.ENGINEER_CODER: AgentName.ENGINEER_REVIEWER,
     AgentName.ELECTRONICS_ENGINEER: AgentName.ENGINEER_CODER,
     AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_ENGINEER,
-    AgentName.EXECUTION_REVIEWER: AgentName.ELECTRONICS_REVIEWER,
+    # Execution review failures should route back to coder so latest-revision
+    # handover artifacts can be regenerated before another reviewer entry.
+    AgentName.EXECUTION_REVIEWER: AgentName.ENGINEER_CODER,
     AgentName.COTS_SEARCH: AgentName.ENGINEER_PLANNER,
     AgentName.SKILL_AGENT: AgentName.EXECUTION_REVIEWER,
     AgentName.JOURNALLING_AGENT: AgentName.ENGINEER_REVIEWER,
@@ -59,13 +65,20 @@ BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "todo.md",
     "objectives.yaml",
 )
-BENCHMARK_REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "script.py",
     "validation_results.json",
     "simulation_result.json",
     ".manifests/review_manifest.json",
 )
+ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+    "plan.md",
+    "todo.md",
+    "objectives.yaml",
+    "assembly_definition.yaml",
+)
 BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
+EXECUTION_REVIEWER_HANDOVER_CHECK = "execution_reviewer_handover"
 
 
 class NodeEntryValidationError(BaseModel):
@@ -115,6 +128,8 @@ class NodeEntryContract(BaseModel):
 
 
 def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
+    # Scope boundary: contracts apply only to first-class graph transitions.
+    # Tool-invoked helper subagents are explicitly out of scope for this registry.
     return {
         AgentName.BENCHMARK_PLANNER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLANNER,
@@ -128,7 +143,6 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.BENCHMARK_REVIEWER: NodeEntryContract(
             node=AgentName.BENCHMARK_REVIEWER,
             required_state_fields=["session", "episode_id"],
-            required_artifacts=list(BENCHMARK_REVIEWER_HANDOFF_ARTIFACTS),
             custom_check=BENCHMARK_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
@@ -148,6 +162,101 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
             required_state_fields=["session", "episode_id"],
         ),
     }
+
+
+def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
+    # Scope boundary: only first-class orchestration nodes are entry-guarded.
+    return {
+        AgentName.ENGINEER_PLANNER: NodeEntryContract(
+            node=AgentName.ENGINEER_PLANNER,
+            required_state_fields=["task", "episode_id"],
+        ),
+        AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
+            node=AgentName.ELECTRONICS_PLANNER,
+            required_state_fields=["task", "episode_id"],
+        ),
+        AgentName.ENGINEER_REVIEWER: NodeEntryContract(
+            node=AgentName.ENGINEER_REVIEWER,
+            required_state_fields=["episode_id"],
+            required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
+        ),
+        AgentName.ENGINEER_CODER: NodeEntryContract(
+            node=AgentName.ENGINEER_CODER,
+            required_state_fields=["episode_id"],
+            required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
+        ),
+        AgentName.ELECTRONICS_ENGINEER: NodeEntryContract(
+            node=AgentName.ELECTRONICS_ENGINEER,
+            required_state_fields=["episode_id"],
+            required_artifacts=["script.py"],
+        ),
+        AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
+            node=AgentName.ELECTRONICS_REVIEWER,
+            required_state_fields=["episode_id"],
+            required_artifacts=["script.py"],
+        ),
+        AgentName.EXECUTION_REVIEWER: NodeEntryContract(
+            node=AgentName.EXECUTION_REVIEWER,
+            required_state_fields=["episode_id"],
+            custom_check=EXECUTION_REVIEWER_HANDOVER_CHECK,
+        ),
+        AgentName.COTS_SEARCH: NodeEntryContract(
+            node=AgentName.COTS_SEARCH,
+            required_state_fields=["episode_id"],
+        ),
+        AgentName.SKILL_AGENT: NodeEntryContract(
+            node=AgentName.SKILL_AGENT,
+            required_state_fields=["episode_id"],
+        ),
+        AgentName.JOURNALLING_AGENT: NodeEntryContract(
+            node=AgentName.JOURNALLING_AGENT,
+            required_state_fields=["episode_id"],
+        ),
+        AgentName.STEER: NodeEntryContract(
+            node=AgentName.STEER,
+            required_state_fields=["episode_id"],
+        ),
+    }
+
+
+async def reviewer_handover_custom_check_from_session_id(
+    *,
+    session_id: str | None,
+    reviewer_label: str,
+) -> list[NodeEntryValidationError]:
+    normalized_session_id = (session_id or "").strip()
+    if not normalized_session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_REVIEWER_ENTRY_BLOCKED,
+                message=f"{reviewer_label} reviewer handover check failed: missing session_id.",
+                source=EntryValidationSource.HANDOVER,
+            )
+        ]
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=normalized_session_id,
+    )
+    try:
+        handover_error = await validate_reviewer_handover(client)
+    except Exception as exc:
+        handover_error = f"reviewer handover validation exception: {exc}"
+    finally:
+        await client.aclose()
+
+    if handover_error is None:
+        return []
+
+    return [
+        NodeEntryValidationError(
+            code=REASON_REVIEWER_ENTRY_BLOCKED,
+            message=f"{reviewer_label} reviewer entry blocked: {handover_error}",
+            source=EntryValidationSource.HANDOVER,
+            artifact_path=".manifests/review_manifest.json",
+        )
+    ]
 
 
 class ArtifactExistsFn(Protocol):
@@ -305,8 +414,9 @@ async def evaluate_node_entry_contract(
 __all__ = [
     "BENCHMARK_PREVIOUS_NODE_MAP",
     "BENCHMARK_PLANNER_HANDOFF_ARTIFACTS",
-    "BENCHMARK_REVIEWER_HANDOFF_ARTIFACTS",
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
+    "ENGINEER_PLANNER_HANDOFF_ARTIFACTS",
+    "EXECUTION_REVIEWER_HANDOVER_CHECK",
     "ENGINEER_PREVIOUS_NODE_MAP",
     "PREVIOUS_NODE_MAPS",
     "REASON_CUSTOM_CHECK_FAILED",
@@ -315,14 +425,18 @@ __all__ = [
     "REASON_NO_PREVIOUS_NODE",
     "REASON_OK",
     "REASON_POLICY_INVALID",
+    "REASON_REVIEWER_ENTRY_BLOCKED",
     "REASON_STATE_INVALID",
+    "REVIEWER_HANDOFF_ARTIFACTS",
     "NodeEntryContract",
     "NodeEntryValidationError",
     "NodeEntryValidationResult",
     "ValidationGraph",
+    "build_engineer_node_contracts",
     "build_benchmark_node_contracts",
     "evaluate_node_entry_contract",
     "get_previous_node",
     "integration_mode_enabled",
+    "reviewer_handover_custom_check_from_session_id",
     "resolve_failure_disposition",
 ]

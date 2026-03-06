@@ -10,11 +10,13 @@ from controller.agent.context_usage import (
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.agent.node_entry_validation import (
-    NodeEntryContract,
+    EXECUTION_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
     ValidationGraph,
+    build_engineer_node_contracts,
     evaluate_node_entry_contract,
     integration_mode_enabled,
+    reviewer_handover_custom_check_from_session_id,
 )
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
@@ -35,64 +37,7 @@ from .state import AgentState, AgentStatus
 
 logger = structlog.get_logger(__name__)
 
-_ENGINEER_PLANNER_HANDOFF_ARTIFACTS = (
-    "plan.md",
-    "todo.md",
-    "objectives.yaml",
-    "assembly_definition.yaml",
-)
-
-ENGINEER_NODE_CONTRACTS: dict[AgentName, NodeEntryContract] = {
-    AgentName.ENGINEER_PLANNER: NodeEntryContract(
-        node=AgentName.ENGINEER_PLANNER,
-        required_state_fields=["task", "episode_id"],
-    ),
-    AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
-        node=AgentName.ELECTRONICS_PLANNER,
-        required_state_fields=["task", "episode_id"],
-    ),
-    AgentName.ENGINEER_REVIEWER: NodeEntryContract(
-        node=AgentName.ENGINEER_REVIEWER,
-        required_state_fields=["episode_id"],
-        required_artifacts=list(_ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
-    ),
-    AgentName.ENGINEER_CODER: NodeEntryContract(
-        node=AgentName.ENGINEER_CODER,
-        required_state_fields=["episode_id"],
-        required_artifacts=list(_ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
-    ),
-    AgentName.ELECTRONICS_ENGINEER: NodeEntryContract(
-        node=AgentName.ELECTRONICS_ENGINEER,
-        required_state_fields=["episode_id"],
-        required_artifacts=["script.py"],
-    ),
-    AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
-        node=AgentName.ELECTRONICS_REVIEWER,
-        required_state_fields=["episode_id"],
-        required_artifacts=["script.py"],
-    ),
-    AgentName.EXECUTION_REVIEWER: NodeEntryContract(
-        node=AgentName.EXECUTION_REVIEWER,
-        required_state_fields=["episode_id"],
-        required_artifacts=["script.py"],
-    ),
-    AgentName.COTS_SEARCH: NodeEntryContract(
-        node=AgentName.COTS_SEARCH,
-        required_state_fields=["episode_id"],
-    ),
-    AgentName.SKILL_AGENT: NodeEntryContract(
-        node=AgentName.SKILL_AGENT,
-        required_state_fields=["episode_id"],
-    ),
-    AgentName.JOURNALLING_AGENT: NodeEntryContract(
-        node=AgentName.JOURNALLING_AGENT,
-        required_state_fields=["episode_id"],
-    ),
-    AgentName.STEER: NodeEntryContract(
-        node=AgentName.STEER,
-        required_state_fields=["episode_id"],
-    ),
-}
+ENGINEER_NODE_CONTRACTS = build_engineer_node_contracts()
 
 
 async def _artifact_exists_for_state(state: AgentState, artifact_path: str) -> bool:
@@ -152,17 +97,28 @@ def _build_entry_rejection_feedback(
 
 
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
+    custom_checks = {
+        EXECUTION_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(
+                session_id=getattr(state, "session_id", None),
+                reviewer_label="Execution",
+            )
+        )
+    }
     contract = ENGINEER_NODE_CONTRACTS[target_node]
     return await evaluate_node_entry_contract(
         contract=contract,
         state=state,
         artifact_exists=lambda path: _artifact_exists_for_state(state, path),
         graph=ValidationGraph.ENGINEER,
+        custom_checks=custom_checks,
     )
 
 
 def _guarded_node(target_node: AgentName, node_callable):
     async def _run(state: AgentState):
+        # Entry validation is intentionally scoped to first-class graph transitions.
+        # Tool-invoked helper subagents are out of scope for this contract.
         validation = await _evaluate_engineer_node_entry(target_node, state)
         if validation.ok:
             return await node_callable(state)

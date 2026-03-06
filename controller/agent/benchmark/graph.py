@@ -32,6 +32,7 @@ from controller.agent.node_entry_validation import (
     build_benchmark_node_contracts,
     evaluate_node_entry_contract,
     integration_mode_enabled,
+    reviewer_handover_custom_check_from_session_id,
 )
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
@@ -53,7 +54,6 @@ from shared.enums import (
 from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
-from ..review_handover import validate_reviewer_handover
 from .models import GenerationSession, SessionStatus
 from .nodes import (
     coder_node,
@@ -200,44 +200,10 @@ async def _artifact_exists_for_benchmark_state(
 async def _custom_benchmark_reviewer_handover_check(
     *, state: BenchmarkGeneratorState
 ) -> list[NodeEntryValidationError]:
-    from controller.agent.node_entry_validation import REASON_HANDOVER_INVALID
-    from shared.enums import EntryValidationSource
-
-    session_id = str(state.session.session_id).strip()
-    if not session_id:
-        return [
-            NodeEntryValidationError(
-                code=REASON_HANDOVER_INVALID,
-                message="Reviewer handover check failed: missing benchmark session_id.",
-                source=EntryValidationSource.HANDOVER,
-            )
-        ]
-
-    from controller.config.settings import settings as global_settings
-
-    client = WorkerClient(
-        base_url=global_settings.worker_light_url,
-        heavy_url=global_settings.worker_heavy_url,
-        session_id=session_id,
+    return await reviewer_handover_custom_check_from_session_id(
+        session_id=str(state.session.session_id),
+        reviewer_label="Benchmark",
     )
-    try:
-        handover_error = await validate_reviewer_handover(client)
-    except Exception as exc:
-        handover_error = f"reviewer handover validation exception: {exc}"
-    finally:
-        await client.aclose()
-
-    if handover_error is None:
-        return []
-
-    return [
-        NodeEntryValidationError(
-            code=REASON_HANDOVER_INVALID,
-            message=handover_error,
-            source=EntryValidationSource.HANDOVER,
-            artifact_path=".manifests/review_manifest.json",
-        )
-    ]
 
 
 def _format_entry_errors(errors: list[NodeEntryValidationError]) -> str:
@@ -292,6 +258,8 @@ async def _evaluate_benchmark_node_entry(
 
 def _guarded_node(target_node: AgentName, node_callable):
     async def _run(state: BenchmarkGeneratorState):
+        # Only first-class graph transitions are entry-guarded here.
+        # Tool-invoked helper subagents remain explicitly out of scope.
         validation = await _evaluate_benchmark_node_entry(target_node, state)
         if validation.ok:
             state.entry_validation_rejected = False
