@@ -112,7 +112,7 @@
 - [x] T024 Emit trace/error records on entry rejection with normalized metadata payload (`node`, `disposition`, `reason_code`, `reroute_target`, `errors`).
 - [x] T025 Ensure episode `metadata_vars.validation_logs` receives stable reason-code strings for entry failures.
 - [x] T026 Ensure status broadcasts include fail-fast transition metadata in integration mode.
-- [ ] T027 Add structured logging keys for operational debugging without leaking sensitive payloads.
+- [x] T027 Add structured logging keys for operational debugging without leaking sensitive payloads.
 - [ ] T028 Verify event/trace emission order remains deterministic and parseable by existing integration assertions.
 
 **Estimated Prompt Size**: ~360 lines
