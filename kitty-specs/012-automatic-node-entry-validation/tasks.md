@@ -42,7 +42,7 @@
 #### Included Subtasks
 
 - [x] T006 Integrate guard evaluation into `controller/agent/graph.py` routing before each first-class node transition.
-- [ ] T007 Define engineer-node contracts for planner, electronics planner, coder, electronics engineer, and reviewer nodes.
+- [x] T007 Define engineer-node contracts for planner, electronics planner, coder, electronics engineer, and reviewer nodes.
 - [ ] T008 Ensure rejected entries skip target node execution and route to deterministic previous node in non-integration mode.
 - [ ] T009 Ensure integration-mode entry rejection transitions to failed state without loopback retry.
 - [ ] T010 Apply same guard semantics to `engineer_planner_graph` and `electronics_planner_graph` (single-node fail-closed behavior).
