@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import os
 import uuid
+from contextlib import suppress
 from typing import Any
 
 import boto3
@@ -60,7 +61,7 @@ def _is_failed_result(result: Any) -> bool:
     status = _result_status_lower(result)
     if status == "failed":
         return True
-    return _result_feedback(result).startswith("ENTRY_VALIDATION_FAILED[")
+    return bool(_extract_result_field(result, "entry_validation_terminal"))
 
 
 class AgentRunRequest(BaseModel):
@@ -208,7 +209,7 @@ async def execute_agent_task(
                 await db.refresh(initial_trace)
                 await db_callback._broadcast_trace(initial_trace)
 
-                # Prepare callbacks list (only langfuse if present, since DB callback is now explicit)
+                # Prepare callbacks list and add Langfuse callback if present.
                 callbacks = [db_callback]
                 if langfuse_callback:
                     callbacks.append(langfuse_callback)
@@ -694,14 +695,9 @@ async def continue_agent_task(
                 if episode.metadata_vars:
                     from shared.models.schemas import EpisodeMetadata
 
-                    try:
-                        # Assuming AgentName might be in metadata_vars or we can infer it
-                        # For now, we use metadata to get the original name if stored
+                    with suppress(Exception):
+                        # Validate metadata shape if present.
                         EpisodeMetadata.model_validate(episode.metadata_vars)
-                        # We need a field in metadata for agent_name.
-                        # If not present, default to ENGINEER_CODER for continuation.
-                    except Exception:
-                        pass
 
                 agent, langfuse_callback = create_agent_graph(
                     agent_name=agent_name,

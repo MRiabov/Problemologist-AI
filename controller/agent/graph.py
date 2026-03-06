@@ -193,9 +193,11 @@ def _guarded_node(target_node: AgentName, node_callable):
             validation.disposition.value == "reroute_previous"
             and validation.reroute_target is not None
         ):
+            update["entry_validation_terminal"] = False
             return Command(goto=validation.reroute_target, update=update)
 
         update["status"] = AgentStatus.FAILED
+        update["entry_validation_terminal"] = True
         return Command(goto=END, update=update)
 
     return _run
