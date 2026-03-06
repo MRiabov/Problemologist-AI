@@ -225,5 +225,5 @@
 - WP01: done
 - WP02: done
 - WP03: done
-- WP04: in_progress
+- WP04: done
 <!-- status-model:end -->

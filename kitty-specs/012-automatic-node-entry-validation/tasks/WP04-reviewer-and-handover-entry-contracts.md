@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Reviewer & Handover Entry Contracts
-lane: "doing"
+lane: "done"
 dependencies: [WP02, WP03]
 base_branch: 012-automatic-node-entry-validation-WP03
 base_commit: 03e8138613ddd86642efaefdfafdef45cd1979d8
@@ -14,10 +14,10 @@ subtasks:
 - T022
 phase: Phase 3 - Contract Harmonization
 assignee: ''
-agent: "codex"
-shell_pid: "108853"
-review_status: ''
-reviewed_by: ''
+agent: codex
+shell_pid: '108853'
+review_status: "approved"
+reviewed_by: "MRiabov"
 review_feedback: ''
 history:
 - timestamp: '2026-03-06T08:36:05Z'
@@ -141,3 +141,4 @@ Reviewer should verify:
 - 2026-03-06T10:22:36Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
 - 2026-03-06T10:33:10Z – codex – shell_pid=8707 – lane=for_review – Ready for review: shared reviewer entry-handover contracts integrated for engineer + benchmark graphs with explicit reason codes and scope guardrails.
 - 2026-03-06T10:36:18Z – codex – shell_pid=108853 – lane=doing – Started review via workflow command
+- 2026-03-06T10:48:27Z – codex – shell_pid=108853 – lane=done – Review passed: reviewer handover validation centralized in node_entry_validation, explicit execution+benchmark reviewer custom checks added with dedicated reviewer_entry_blocked reason code, and reviewer contracts/scope guardrail comments are in place; P0 handover gate tests INT-018/INT-019 pass. | Done override: Review approval is complete for stacked branch workflow; merge ancestry to main is enforced later by feature integration/merge stage.
