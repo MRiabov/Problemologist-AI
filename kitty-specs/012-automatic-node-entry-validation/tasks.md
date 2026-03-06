@@ -46,7 +46,7 @@
 - [x] T008 Ensure rejected entries skip target node execution and route to deterministic previous node in non-integration mode.
 - [x] T009 Ensure integration-mode entry rejection transitions to failed state without loopback retry.
 - [x] T010 Apply same guard semantics to `engineer_planner_graph` and `electronics_planner_graph` (single-node fail-closed behavior).
-- [ ] T011 Persist structured entry-rejection context into state feedback/journal fields used by downstream status persistence.
+- [x] T011 Persist structured entry-rejection context into state feedback/journal fields used by downstream status persistence.
 
 **Estimated Prompt Size**: ~430 lines
 
