@@ -1,0 +1,15 @@
+{
+  "wp_id": "WP06",
+  "feature_slug": "012-automatic-node-entry-validation",
+  "worktree_path": ".worktrees/012-automatic-node-entry-validation-WP06",
+  "branch_name": "012-automatic-node-entry-validation-WP06",
+  "base_branch": "012-automatic-node-entry-validation-WP06-merge-base",
+  "base_commit": "4a1a92d9a378285a450eb8f13ef7a1d6310749a8",
+  "dependencies": [
+    "WP04",
+    "WP05"
+  ],
+  "created_at": "2026-03-06T12:04:45.089990+00:00",
+  "created_by": "implement-command-multi-parent-merge",
+  "vcs_backend": "git"
+}

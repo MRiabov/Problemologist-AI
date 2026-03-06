@@ -1,0 +1,14 @@
+{
+  "wp_id": "WP02",
+  "feature_slug": "012-automatic-node-entry-validation",
+  "worktree_path": ".worktrees/012-automatic-node-entry-validation-WP02",
+  "branch_name": "012-automatic-node-entry-validation-WP02",
+  "base_branch": "main",
+  "base_commit": "22af09078a853762f9384a23494fafc08ae1d6fd",
+  "dependencies": [
+    "WP01"
+  ],
+  "created_at": "2026-03-06T09:35:03.039089+00:00",
+  "created_by": "implement-command",
+  "vcs_backend": "git"
+}
