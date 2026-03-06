@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Entry Guard Foundation & Contracts
-lane: "for_review"
+lane: "doing"
 dependencies: []
 base_branch: main
 base_commit: c500573985514e3935b8662f0792ab5d569ae5a7
@@ -14,8 +14,8 @@ subtasks:
 - T005
 phase: Phase 1 - Foundations
 assignee: ''
-agent: codex
-shell_pid: '8707'
+agent: "Gemini"
+shell_pid: "61666"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
@@ -146,3 +146,4 @@ Reviewer should verify:
 - 2026-03-06T08:36:05Z - system - lane=planned - Prompt created.
 - 2026-03-06T08:45:30Z – codex – shell_pid=8707 – lane=doing – Assigned agent via workflow command
 - 2026-03-06T08:56:04Z – codex – shell_pid=8707 – lane=for_review – Ready for review: added typed node-entry validation foundation, deterministic maps, and integration-policy resolver
+- 2026-03-06T08:58:56Z – Gemini – shell_pid=61666 – lane=doing – Started review via workflow command
