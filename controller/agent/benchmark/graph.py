@@ -10,6 +10,7 @@ from uuid import uuid4
 import httpx
 import structlog
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command
 from opentelemetry import trace
 from sqlalchemy import select
 
@@ -24,6 +25,14 @@ from controller.agent.execution_limits import (
     persist_episode_turn_count,
 )
 from controller.agent.initialization import initialize_agent_files
+from controller.agent.node_entry_validation import (
+    BENCHMARK_REVIEWER_HANDOVER_CHECK,
+    NodeEntryValidationError,
+    ValidationGraph,
+    build_benchmark_node_contracts,
+    evaluate_node_entry_contract,
+    integration_mode_enabled,
+)
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.graph.steerability_node import check_steering, steerability_node
@@ -44,6 +53,7 @@ from shared.enums import (
 from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
 
+from ..review_handover import validate_reviewer_handover
 from .models import GenerationSession, SessionStatus
 from .nodes import (
     coder_node,
@@ -57,6 +67,8 @@ from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
 logger = structlog.get_logger(__name__)
+
+BENCHMARK_NODE_CONTRACTS = build_benchmark_node_contracts()
 
 
 async def _get_latest_planner_submission_result(
@@ -154,6 +166,205 @@ def _is_reviewer_handoff_blocked_feedback(review_feedback: str | None) -> bool:
     return (
         "reviewer handoff blocked" in text or "benchmark reviewer blocked" in text
     ) and ("review_manifest" in text or "submit_for_review" in text)
+
+
+async def _artifact_exists_for_benchmark_state(
+    state: BenchmarkGeneratorState, artifact_path: str
+) -> bool:
+    session_id = str(state.session.session_id).strip()
+    if not session_id:
+        return False
+
+    try:
+        from controller.config.settings import settings as global_settings
+
+        client = WorkerClient(
+            base_url=global_settings.worker_light_url,
+            heavy_url=global_settings.worker_heavy_url,
+            session_id=session_id,
+        )
+        try:
+            return await client.exists(artifact_path)
+        finally:
+            await client.aclose()
+    except Exception as exc:
+        logger.error(
+            "benchmark_node_entry_artifact_lookup_failed",
+            session_id=session_id,
+            artifact_path=artifact_path,
+            error=str(exc),
+        )
+        return False
+
+
+async def _custom_benchmark_reviewer_handover_check(
+    *, state: BenchmarkGeneratorState
+) -> list[NodeEntryValidationError]:
+    from controller.agent.node_entry_validation import REASON_HANDOVER_INVALID
+    from shared.enums import EntryValidationSource
+
+    session_id = str(state.session.session_id).strip()
+    if not session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_HANDOVER_INVALID,
+                message="Reviewer handover check failed: missing benchmark session_id.",
+                source=EntryValidationSource.HANDOVER,
+            )
+        ]
+
+    from controller.config.settings import settings as global_settings
+
+    client = WorkerClient(
+        base_url=global_settings.worker_light_url,
+        heavy_url=global_settings.worker_heavy_url,
+        session_id=session_id,
+    )
+    try:
+        handover_error = await validate_reviewer_handover(client)
+    except Exception as exc:
+        handover_error = f"reviewer handover validation exception: {exc}"
+    finally:
+        await client.aclose()
+
+    if handover_error is None:
+        return []
+
+    return [
+        NodeEntryValidationError(
+            code=REASON_HANDOVER_INVALID,
+            message=handover_error,
+            source=EntryValidationSource.HANDOVER,
+            artifact_path=".manifests/review_manifest.json",
+        )
+    ]
+
+
+def _format_entry_errors(errors: list[NodeEntryValidationError]) -> str:
+    return "; ".join(f"{error.code}: {error.message}" for error in errors)
+
+
+def _build_entry_rejection_feedback(
+    *,
+    target_node: AgentName,
+    reason_code: str,
+    disposition: str,
+    reroute_target: AgentName | None,
+    errors: list[NodeEntryValidationError],
+) -> tuple[str, str]:
+    action = (
+        f"reroute={reroute_target.value}"
+        if reroute_target is not None
+        else f"disposition={disposition}"
+    )
+    detail = _format_entry_errors(errors)
+    feedback = (
+        f"ENTRY_VALIDATION_FAILED[{reason_code}] target={target_node.value} "
+        f"{action} | {detail}"
+    )
+    journal_line = (
+        f"[Entry Validation] target={target_node.value} disposition={disposition} "
+        f"reason={reason_code} errors={detail}"
+    )
+    return feedback, journal_line
+
+
+async def _evaluate_benchmark_node_entry(
+    target_node: AgentName,
+    state: BenchmarkGeneratorState,
+):
+    custom_checks = {
+        BENCHMARK_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: _custom_benchmark_reviewer_handover_check(
+                state=state
+            )
+        )
+    }
+    contract = BENCHMARK_NODE_CONTRACTS[target_node]
+    return await evaluate_node_entry_contract(
+        contract=contract,
+        state=state,
+        artifact_exists=lambda path: _artifact_exists_for_benchmark_state(state, path),
+        graph=ValidationGraph.BENCHMARK,
+        custom_checks=custom_checks,
+    )
+
+
+def _guarded_node(target_node: AgentName, node_callable):
+    async def _run(state: BenchmarkGeneratorState):
+        validation = await _evaluate_benchmark_node_entry(target_node, state)
+        if validation.ok:
+            state.entry_validation_rejected = False
+            state.entry_validation_terminal = False
+            state.entry_validation_reason_code = None
+            state.entry_validation_target_node = None
+            state.entry_validation_disposition = None
+            return await node_callable(state)
+
+        feedback, journal_line = _build_entry_rejection_feedback(
+            target_node=target_node,
+            reason_code=validation.reason_code,
+            disposition=validation.disposition.value,
+            reroute_target=validation.reroute_target,
+            errors=validation.errors,
+        )
+        state.review_feedback = feedback
+        state.journal = (state.journal + "\n" + journal_line).strip()
+        state.entry_validation_rejected = True
+        state.entry_validation_reason_code = validation.reason_code
+        state.entry_validation_target_node = target_node.value
+        state.entry_validation_disposition = validation.disposition.value
+        state.session.validation_logs.append(feedback)
+
+        logger.error(
+            "benchmark_node_entry_validation_rejected",
+            target_node=target_node.value,
+            disposition=validation.disposition.value,
+            reason_code=validation.reason_code,
+            reroute_target=(
+                validation.reroute_target.value if validation.reroute_target else None
+            ),
+            integration_mode=integration_mode_enabled(),
+            errors=[error.model_dump() for error in validation.errors],
+        )
+
+        if (
+            validation.disposition.value == "reroute_previous"
+            and validation.reroute_target is not None
+        ):
+            state.entry_validation_terminal = False
+            state.session.status = SessionStatus.REJECTED
+            return Command(
+                goto=validation.reroute_target,
+                update={
+                    "session": state.session,
+                    "review_feedback": state.review_feedback,
+                    "journal": state.journal,
+                    "entry_validation_rejected": True,
+                    "entry_validation_terminal": False,
+                    "entry_validation_reason_code": state.entry_validation_reason_code,
+                    "entry_validation_target_node": state.entry_validation_target_node,
+                    "entry_validation_disposition": state.entry_validation_disposition,
+                },
+            )
+
+        state.entry_validation_terminal = True
+        state.session.status = SessionStatus.FAILED
+        return Command(
+            goto=END,
+            update={
+                "session": state.session,
+                "review_feedback": state.review_feedback,
+                "journal": state.journal,
+                "entry_validation_rejected": True,
+                "entry_validation_terminal": True,
+                "entry_validation_reason_code": state.entry_validation_reason_code,
+                "entry_validation_target_node": state.entry_validation_target_node,
+                "entry_validation_disposition": state.entry_validation_disposition,
+            },
+        )
+
+    return _run
 
 
 async def _validate_planner_handoff(
@@ -287,13 +498,33 @@ def define_graph():
     workflow = StateGraph(BenchmarkGeneratorState)
 
     # Add nodes
-    workflow.add_node(AgentName.BENCHMARK_PLANNER, planner_node)
-    workflow.add_node(AgentName.BENCHMARK_CODER, coder_node)
-    workflow.add_node(AgentName.BENCHMARK_REVIEWER, reviewer_node)
-    workflow.add_node(AgentName.COTS_SEARCH, cots_search_node)
-    workflow.add_node(AgentName.SKILL_AGENT, skills_node)
-    workflow.add_node(AgentName.JOURNALLING_AGENT, summarizer_node)
-    workflow.add_node(AgentName.STEER, steerability_node)
+    workflow.add_node(
+        AgentName.BENCHMARK_PLANNER,
+        _guarded_node(AgentName.BENCHMARK_PLANNER, planner_node),
+    )
+    workflow.add_node(
+        AgentName.BENCHMARK_CODER,
+        _guarded_node(AgentName.BENCHMARK_CODER, coder_node),
+    )
+    workflow.add_node(
+        AgentName.BENCHMARK_REVIEWER,
+        _guarded_node(AgentName.BENCHMARK_REVIEWER, reviewer_node),
+    )
+    workflow.add_node(
+        AgentName.COTS_SEARCH,
+        _guarded_node(AgentName.COTS_SEARCH, cots_search_node),
+    )
+    workflow.add_node(
+        AgentName.SKILL_AGENT,
+        _guarded_node(AgentName.SKILL_AGENT, skills_node),
+    )
+    workflow.add_node(
+        AgentName.JOURNALLING_AGENT,
+        _guarded_node(AgentName.JOURNALLING_AGENT, summarizer_node),
+    )
+    workflow.add_node(
+        AgentName.STEER, _guarded_node(AgentName.STEER, steerability_node)
+    )
 
     # Define transitions
     def route_start(
@@ -557,7 +788,20 @@ async def _execute_graph_streaming(
                         turn_count=final_state.turn_count,
                     )
 
-            if normalized_node_name == AgentName.BENCHMARK_PLANNER:
+            if final_state.entry_validation_rejected:
+                if final_state.entry_validation_terminal:
+                    new_status = SessionStatus.FAILED
+                    terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
+                    failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+                    final_state.session.validation_logs.append(
+                        "entry_validation_fail_fast: benchmark node entry validation rejected "
+                        f"target={final_state.entry_validation_target_node} "
+                        f"reason={final_state.entry_validation_reason_code}"
+                    )
+                else:
+                    new_status = SessionStatus.REJECTED
+                    failure_class = FailureClass.AGENT_QUALITY_FAILURE
+            elif normalized_node_name == AgentName.BENCHMARK_PLANNER:
                 # Handle both object and dict types for the plan
                 logger.info(
                     "checking_planner_output",
@@ -1223,6 +1467,38 @@ async def continue_generation_session(
             else {}
         )
         saved_turn_count = int((metadata.additional_info or {}).get("turn_count") or 0)
+
+        if episode.status != EpisodeStatus.PLANNED:
+            observed_status = episode.status
+            rejection_reason = (
+                "ENTRY_VALIDATION_FAILED[state_invalid] target=benchmark_coder "
+                "disposition=fail_fast | state_invalid: continue_generation_session "
+                f"requires PLANNED episode status, got {observed_status}"
+            )
+            metadata.validation_logs.append(rejection_reason)
+            metadata.detailed_status = SessionStatus.FAILED
+            metadata.terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
+            metadata.failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+            episode.status = EpisodeStatus.FAILED
+            episode.metadata_vars = metadata.model_dump()
+            await db.commit()
+            from controller.api.manager import manager
+
+            await manager.broadcast(
+                session_id,
+                {
+                    "type": "status_update",
+                    "status": EpisodeStatus.FAILED,
+                    "metadata_vars": episode.metadata_vars,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            )
+            logger.error(
+                "continue_generation_invalid_episode_status",
+                session_id=session_id,
+                episode_status=observed_status,
+            )
+            return None
 
         # Reconstruct session with status 'EXECUTING' so define_graph routes to 'coder'
         session = GenerationSession(

@@ -54,6 +54,19 @@ PREVIOUS_NODE_MAPS: Mapping[ValidationGraph, Mapping[AgentName, AgentName | None
     ValidationGraph.BENCHMARK: BENCHMARK_PREVIOUS_NODE_MAP,
 }
 
+BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+    "plan.md",
+    "todo.md",
+    "objectives.yaml",
+)
+BENCHMARK_REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
+    "script.py",
+    "validation_results.json",
+    "simulation_result.json",
+    ".manifests/review_manifest.json",
+)
+BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
+
 
 class NodeEntryValidationError(BaseModel):
     code: str
@@ -99,6 +112,42 @@ class NodeEntryContract(BaseModel):
     integration_failure_policy: EntryFailureDisposition = (
         EntryFailureDisposition.FAIL_FAST
     )
+
+
+def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
+    return {
+        AgentName.BENCHMARK_PLANNER: NodeEntryContract(
+            node=AgentName.BENCHMARK_PLANNER,
+            required_state_fields=["session", "episode_id"],
+        ),
+        AgentName.BENCHMARK_CODER: NodeEntryContract(
+            node=AgentName.BENCHMARK_CODER,
+            required_state_fields=["session", "episode_id"],
+            required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
+        ),
+        AgentName.BENCHMARK_REVIEWER: NodeEntryContract(
+            node=AgentName.BENCHMARK_REVIEWER,
+            required_state_fields=["session", "episode_id"],
+            required_artifacts=list(BENCHMARK_REVIEWER_HANDOFF_ARTIFACTS),
+            custom_check=BENCHMARK_REVIEWER_HANDOVER_CHECK,
+        ),
+        AgentName.COTS_SEARCH: NodeEntryContract(
+            node=AgentName.COTS_SEARCH,
+            required_state_fields=["session", "episode_id"],
+        ),
+        AgentName.SKILL_AGENT: NodeEntryContract(
+            node=AgentName.SKILL_AGENT,
+            required_state_fields=["session", "episode_id"],
+        ),
+        AgentName.JOURNALLING_AGENT: NodeEntryContract(
+            node=AgentName.JOURNALLING_AGENT,
+            required_state_fields=["session", "episode_id"],
+        ),
+        AgentName.STEER: NodeEntryContract(
+            node=AgentName.STEER,
+            required_state_fields=["session", "episode_id"],
+        ),
+    }
 
 
 class ArtifactExistsFn(Protocol):
@@ -255,6 +304,9 @@ async def evaluate_node_entry_contract(
 
 __all__ = [
     "BENCHMARK_PREVIOUS_NODE_MAP",
+    "BENCHMARK_PLANNER_HANDOFF_ARTIFACTS",
+    "BENCHMARK_REVIEWER_HANDOFF_ARTIFACTS",
+    "BENCHMARK_REVIEWER_HANDOVER_CHECK",
     "ENGINEER_PREVIOUS_NODE_MAP",
     "PREVIOUS_NODE_MAPS",
     "REASON_CUSTOM_CHECK_FAILED",
@@ -268,6 +320,7 @@ __all__ = [
     "NodeEntryValidationError",
     "NodeEntryValidationResult",
     "ValidationGraph",
+    "build_benchmark_node_contracts",
     "evaluate_node_entry_contract",
     "get_previous_node",
     "integration_mode_enabled",
