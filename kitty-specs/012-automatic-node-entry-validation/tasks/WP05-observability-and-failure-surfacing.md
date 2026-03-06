@@ -1,8 +1,11 @@
 ---
 work_package_id: WP05
 title: Observability & Failure Surfacing
-lane: planned
+lane: "doing"
 dependencies: [WP02, WP03, WP04]
+base_branch: 012-automatic-node-entry-validation-WP04
+base_commit: 06cf43faba071189eb9e8798e37eeafb62ac5f21
+created_at: '2026-03-06T11:07:07.593102+00:00'
 subtasks:
 - T023
 - T024
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 4 - Telemetry and Persistence
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
