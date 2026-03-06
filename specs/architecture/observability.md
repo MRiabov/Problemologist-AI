@@ -1,0 +1,199 @@
+# Observability
+
+To track all agent movements and to persist data, we encode the following:
+
+1. The agent pass/fail reasons
+2. Error messages from script execution, linting,
+3. All agent thoughts.
+4. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
+5. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
+6. Feedback from the user.
+7. All detailed metadata as required by "Evaluation" database, and more. All bits of data on what called when should be extracted.
+
+These will be later used for querying, preproc and model training.
+
+## LangFuse for observability, DB for deeper logs
+
+We use LangFuse for LLM observability. We will use a Railway template for deployment / deploy a separate container on docker-compose locally.
+
+Langfuse is deployed locally/on Railway.
+
+For deeper observability, e.g. requirements like "fasteners were used in at least 70% of cases", store fastener usage in the application database.
+Per-call LM usage is forwarded to Langfuse observations (`input_tokens`, `output_tokens`, `total_tokens`, model, and cost when available) for deterministic attribution.
+
+### ID model and linkage
+
+Use explicit IDs and link all observability data to them:
+
+1. `user_session_id`: one user conversation/session.
+2. `episode_id`: one agent workflow execution attempt within a user session.
+3. `simulation_run_id`: one simulation invocation within an episode.
+4. `cots_query_id`: one COTS query invocation within an episode.
+5. `review_id`: one reviewer decision artifact.
+6. `trace_id`: one observability trace record (with optional `langfuse_trace_id` linkage).
+
+Current implementation note (explicit bug):
+
+- We currently conflate `session_id` and `episode_id` in parts of the runtime/observability flow.
+- This is a bug, because user session scope and workflow execution scope are different concerns.
+- Required fix direction: keep `episode_id` as workflow-run identity, introduce/propagate `user_session_id`, and store both on traces/events/assets for deterministic joins.
+
+### All collected events
+
+We track the following structured domain events to compute the evaluation metrics defined in the [Agent Evaluations](#agent-evaluations) section:
+
+1. Component usage,
+2. Tool invocation,
+    - separate events for each tool call - easier to track later.
+3. Manufacturability and price check (engineer)
+    - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
+4. Scene validation (Benchmark CAD engineer)
+5. Render request (engineer)
+6. Render request (benchmark)
+7. Simulation request (engineer)
+8. Simulation result (engineer)
+    - Failure/pass reason -
+        - Success: hit green zone
+        - Failure in [failures](#failure):
+            - Timeout,
+            - Out of bounds
+            - Forbid zone hit
+            - Part breakage
+    - Simulation time elapsed
+    - Computing time
+
+9. COTS search (engineer/planner?)
+10. Plan submission (benchmark)
+11. Plan submission (Engineer)
+12. Price/weight failure escalation request (CAD engineer)
+13. Price/weight failure escalation decision (reviewer)
+14. Lint failure - code
+15. Lint failure - Markdown/YAML
+16. Logic/constraint failure - YAML
+17. Skill edit (skill editing agent)
+18. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
+19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
+20. Submission attempt without creating all necessary files.
+    - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
+21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
+22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
+23. Forbidden joint creation/adding logic.
+24. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
+
+<!-- 20. Metric for "Jamming Rate"
+    - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
+    - Why: Distinguishes between "I didn't try" and "I tried but the mechanism jammed". Crucial for debugging friction/tolerance issues -->
+
+<!-- Code quality: all events are enums and all events have models for strict schema.-->
+
+#### Not just events, but numeric events
+
+Notably, outside of just events, we want to track crucial numbers; especially for metrics below. E.g. cost/weight estimate events from planners and actual cost/weight from validation, for error analysis. *Technically*, we don't exactly *need* an event because we have the objectives.yaml in s3, but extracting the data from `objectives.yaml` and other "numeric" files (yaml frontmatter included) will make it very handy for downstream analysis (and would save time for analysis downstream.)
+
+#### Tracking seeds
+
+In addition, we track randomization seed and variant events for every run (static variant id, runtime seed). Needed for robustness/flakiness metrics.
+We persist lineage fields in episode metadata and DB for both benchmark generation and engineer execution:
+
+- `seed_id`: canonical source item id.
+- `seed_dataset`: dataset/source path or identifier.
+- `seed_match_method`: enum describing linkage strategy (`runtime_explicit`, `exact_task`, `no_exact_task_match`, `ambiguous_exact_task`).
+- `generation_kind`: enum describing run origin (`seeded`, `derived`, `seeded_eval`, `integration_test`, `cots_search`, `skill_agent`).
+- `parent_seed_id`: direct lineage parent (for derived runs).
+
+Integration/test tagging is part of the same metadata contract:
+
+- `is_integration_test`: boolean marker set by integration runtime mode.
+- `integration_test_id`: canonical `INT-xxx` id inferred from task/session where available.
+
+### Metrics
+
+We define (a growing list of) (aggregate) metrics:
+
+<!-- All below are LLM suggested, but are good. -->
+1. Benchmark solvability rate: % of generated benchmarks solvable within constraints by the engineer (or baseline solver).
+2. Benchmark diversity coverage: distribution across physics principles (gravity, friction, motors), object types, DOF counts, moving parts, and environment templates.
+3. Robustness across seeds: success rate across runtime jitter seeds and static variants.
+4. Plan adherence rate: how often CAD output matches plan (geometry, constraints, objectives).
+5. Price/weight estimation error: planner estimated vs actual validated cost/weight, by agent and benchmark type.
+6. Time-to-solution metrics: median time/tool-calls to first valid benchmark and first valid solution.
+7. Reasoning trace capture rate: % of runs with stored traces; trace sufficiency score (presence of required sections).
+8. Journal quality score: % of entries with intent/result/reflection/next-step; frequency per run; correlation with success.
+9. Optimization capture rate: % of runs where notable optimization is logged (objective #5).
+10. Skill effectiveness: performance delta before/after a new skill version.
+11. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
+12. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
+13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
+14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
+
+<!-- 1. Infrastructure/framework stability:
+    - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->
+<!-- 2. Denser reward signal - track normalized distance to target, something like `Score = 1.0 - (min_distance_achieved / initial_distance)`. Ideally (not mandatory, probably skip for now), also measure a performance of simulation simply without any changes (what if we do nothing - how good is the result?)
+    - it's a metric that was more used in RL, but it's infromative... sometimes. LLM-suggested. -->
+
+<!-- LLM-suggested. -->
+
+<!-- 11. Library growth and reuse: new build123d modules added per period and reuse rate across tasks. -->
+
+## Tracking failures
+
+It is desirable to understand why the simulation/model has failing, so I propose to introduce a more detailed tracking system:
+
+1. `EpisodeStatus` stores the coarse lifecycle state (`RUNNING`, `PLANNED`, `WAITING_USER`, `COMPLETED`, `FAILED`, `CANCELLED`).
+2. `EpisodeMetadata` stores detailed execution details:
+   - `episode_phase` stores the current workflow phase (`BENCHMARK_PLANNING`, `BENCHMARK_CODING`, `BENCHMARK_REVIEWING`, `ENGINEERING_PLANNING`, `ENGINEERING_CODING`, `ENGINEERING_REVIEWING`).
+   - `terminal_reason` stores the concrete terminal cause (`APPROVED`, `REJECTED_BY_REVIEW`, `TIMEOUT`, `OUT_OF_TURN_BUDGET`, etc.).
+   - `failure_class` stores ownership classification (`AGENT_QUALITY_FAILURE`, `AGENT_SEMANTIC_FAILURE`, `APPLICATION_LOGIC_FAILURE`, `INFRA_DEVOPS_FAILURE`).
+
+During agent debugging, manual or self-improvement via GEPA we'll be able to use it to guide on how to fix the system.
+
+### Fail-closed terminalization
+
+The system enforces fail-closed behavior for terminal states.
+
+- Hard-fail limits terminalize episodes with `EpisodeStatus.FAILED` when turn, token, or time budgets are exceeded. Terminal reasons map to `OUT_OF_TURN_BUDGET`, `OUT_OF_TOKEN_BUDGET`, or `TIMEOUT`.
+- Handoff validation gates transitions between nodes (for example planner to coder) through strict structural and semantic checks. Failed checks produce a `REJECTED` session state and terminalize as `FAILED` if unrecovered.
+- Structured outcomes require `terminal_reason` for all terminal episodes. Failed terminal episodes also require `failure_class` for evaluation routing and infrastructure debugging.
+
+### Bulk uploading events
+
+<!-- This part was LLM-suggested, but is OK -->
+We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance: opening DB a hundred connections is slower than opening one and batch uploading it.
+
+## Best practice: Give LLMs a way to complain
+
+We have a "sidecar" model that checks where the agent was confused and updates skills.
+
+We can reuse the same approach for debugging.  A LLM that explicitly checks where the model got confused and sends a tool call if something was really wrong. The developer gets that into a DB/observability DB. **The developer can use the LLM output to debug.**
+(ideally, we would also heap those and send them to Google Jules which will fix bugs/propose functionality/ etc.
+
+<https://jules.google/docs/api/reference/>)
+
+Create another sidecar model running async (maybe batch) that would read reasoning traces of the agent and populate the issues. Basically an agent that debugs. It saves me, a developer, a pain in the of debugging.
+
+## Backups
+
+In prod we will backup the database(s) daily.
+<!-- Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up. -->
+
+One way to do it is by sending a `cron` job daily. Thus, implement an endpoint which will accept a cron call, and will back up the SQLite folder to the s3. Again, this is in production.
+
+## User Reviews
+
+I want to track successful/failed reasoning via user thumbs up/down during:
+
+1. Benchmark generation planning
+2. Benchmark Generation implementation; specifically voting on individual file outputs and voting on the output "as a whole". Ideally, the users would also be able to input their feedbacks on individual subassembly parts, as defined by the assembly view in the frontend, by selecting them and pressing thumbs up/down and inserting a comment.
+3. Implementation Planning
+4. Implementation Generation.
+
+We are using LangFuse and it has those capabilities natively.
+
+### Training on user reviews
+
+When user stores the review, first of all, store it in the observability DB, and then we'll also need to incorporate an automatic prompt improvement with powerful models like Claude 4.6 Opus with human review that will be merged/skipped.
+
+We temporarily won't do auto-improvement through a model, though I bet we'll need it in the near future.
+
+<!-- Note: I don't know why, but the Gemini models are good at coding but horrible at making prompts/interpreting desired prompt behavior; don't use them for this purpose. -->
+

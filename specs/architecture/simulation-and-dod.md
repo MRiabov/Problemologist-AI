@@ -1,0 +1,452 @@
+# Simulation and "Definitions of Done"
+
+While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to boot.
+
+<!-- Downsides of MuJoCo?
+
+- we won't support deformation (finite element analysis)
+- we won't support fluids-->
+
+## Simulation constants and assumptions
+
+We operate in a real-world-like scenario, with rigid bodies, gravity,  real-world materials - with all standard properties like friction, restitution (bounciness), etc.
+
+In environments, some objects are fixed, whereas others can be freely hanging or partially constrained at will to other objects - the input environment is not "bound" by physics too much. Whereas, the engineer-created objects can *never* be fixed unless they are properly constrained (in near future, we want to add "bolting" mechanism to the environment - i.e. the model would drill a hole in an environment and constrain it's object to the hole or multiple holes); and all constraints must be physically-realistic.
+
+Benchmarked time of execution for Genesis, simulating one-two FEM parts - 20s on dev mode.
+
+### Physically-realistic constraints
+
+In the end, our systems should be transferrable to the real world.
+
+For engineers, constraints must be physically realistic. Meaning: if an engineer agent tries to constrain two parts together, they need to use fasteners or make a mechanism which would fit two parts together. However, the engineer can't constrain two parts by just assigning them a CAD constraint.
+This is because it fits how physics works in the real world, transferring to which is ultimately the goal of this project.
+
+We can perhaps verify it by simply adding realistic fastener logic.
+
+Similarly, while you can constrain a ball to a plane in CAD, you can't do so in real life. In real life, a ball needs to have a special holder. Two flat planes can't be constrained to each other, you need to either add them, make a real constraint that would hold them together.
+
+#### Creating realistic constraints
+
+Constraints done by the engineer should be enforced for validity. E.g.: two parts should be actually close together.
+
+##### Fixed parts for the simulation definition
+
+Some parts will need to be "fixed" despite physics *during benchmark generation, not agents*, specifically for the implementation. We can pass `fixed=True` to the models as a custom parameter (or metadata).
+
+##### Fasteners
+
+We use **build123d's native `RigidJoint` system** for mating parts. This avoids custom positioning math — build123d handles transforms automatically via `connect_to()`. Fastener geometry (bolts, screws, nuts) comes from the [`bd-warehouse`](https://bd-warehouse.readthedocs.io/en/latest/fastener.html) package.
+
+**Helper function**: `fastener_hole(part, pos, depth, diameter, hole_id: str, hole_type: HoleType = HoleType.FlatHeadHole, add_fastener=False)`
+
+1. Cuts a hole at `pos` using build123d `Hole` (or `CounterBoreHole`)
+2. Creates a `RigidJoint` at the hole location with a parameter `rigid_joint.hole_id=hole_id`
+3. If `add_fastener=True`, inserts appropriate fastener from bd-warehouse catalog
+4. Returns the modified part
+
+The type of Hole is determined by an enum - HoleType: `FlatHeadHole`, `CounterBoreHole`, `CounterSinkHole` for according types of holes.
+
+##### Agent workflow for fasteners
+
+```python
+from utils.fasteners import fastener_hole
+
+# Create bracket (anchor part) - explicitly positioned
+bracket = Box(100, 50, 10)
+bracket = fastener_hole(bracket, pos=(20, 25), depth=10, diameter=5, hole_id="mount_1")
+bracket = fastener_hole(bracket, pos=(80, 25), depth=10, diameter=5, hole_id="mount_2")
+bracket.position = (0, 0, 100)  # world position
+
+# Create arm - will be positioned via joint mating
+arm = Box(200, 30, 8)
+arm = fastener_hole(arm, pos=(10, 15), depth=8, diameter=5, hole_id="arm_1", add_fastener=True)
+arm = fastener_hole(arm, pos=(50, 15), depth=8, diameter=5, hole_id="arm_2", add_fastener=True)
+
+# Mate parts - build123d computes transform automatically
+arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
+arm.joints["arm_2"].connect_to(bracket.joints["mount_2"])
+```
+
+After `connect_to()`, the arm is automatically positioned so holes align. **No manual rotation/translation math needed.**
+
+Note: hole names are given readable names, e.g. explicit names like "front_mount" or "pivot_hole" for easier identification. In fact, the hole name serves as a local label for the joint. So that we can reference the build123d joint with its hole name.
+
+"""
+Without hole_id:
+
+```python
+# How would you reference the joint?
+arm.joints[???].connect_to(bracket.joints[???])
+```
+
+With hole_id:
+
+```python
+arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
+```
+
+"""
+**Validation rules**:
+
+- Single-fastener connections are **rejected** (underconstrained — allows rotation around bolt axis)
+- Minimum 2 fasteners required for rigid connection between parts <!-- Note: this is not true, actually. You can design such inserts that only 1 will be sufficient. But, let it be.>
+- Hole diameters must match between mated pairs
+- Can't connect holes with both `add_fastener=True`. <!--Note: not a hard constraint - if it's difficult to do, skip.-->
+
+**MJCF translation**:
+
+1. Walk assembly, find all `RigidJoint` pairs that are connected
+2. For each connected pair: emit `<weld body1="..." body2="..."/>` constraint
+3. Fastener geometry is included in physics only as a visual (cosmetic in CAD renders only) <!-- (I don't care about making that collision with head. Actually, it's rather simple - just put the fastener at its last position in CAD. But still.) -->
+
+##### Edge case: multiple holes
+
+The `hole_id` is **local to each Part**, not a global identifier. When one central part connects to multiple identical parts, each child part can have the same `hole_id` (e.g., `"attach"`) — the matching happens via explicit `connect_to()` calls:
+
+```python
+# 4 identical legs with same local hole_id
+for i, leg in enumerate(legs):
+    leg.joints["attach"].connect_to(bracket.joints[f"mount_{i+1}"])
+```
+
+This avoids the need for global ID management or dict-based hole matching.
+
+##### Mechanisms and Moving Parts
+
+Genesis (which has parity with MuJoCo) constraints will only ever be spawned from predefined components. Meaning, a "revolute constraint" will only ever be spawned if there is either a:
+
+1. Bearing (ideally),
+2. Motor,
+3. Through hole intentionally created for two parts.
+
+For each, the internal/external diameters must match, and there will be special commands on how to define these. In addition, the critic will be prompted to specifically scrutinize if the constraint is valid. In addition, parts will have to be close to each other physically - distance between both must be nearing <1 mm or so.
+
+This is to prevent the CAD designers from creating impossible constraints.
+
+To support moving parts (hinges, sliders, motors), we force build123d Joints from *to be created from predefined CAD components* almost always - e.g., again, revolute joints from bearings, rigid joints/weld constraints via fasteners.
+
+Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
+
+Map of joints to Genesis (which has parity with MuJoCo) constraints and their uses:
+
+1. RigidJoint to `<weld>` constraint:
+    - Used for fasteners and fixed connections.
+    - Connects two bodies rigidly at the joint location.
+2. **RevoluteJoint** to `<joint type="hinge">`:
+    - Used for axles, pivots, and motors.
+    - The joint axis in build123d becomes the hinge axis in Genesis.
+    - If the joint is motorized, we add an `<actuator>` targeting this joint.
+3. **PrismaticJoint** -> `<joint type="slide">`:
+    - Used for linear sliders and rails.
+    - The joint axis defines the slide direction.
+    - Can be motorized with a `<position>` or `<motor>` actuator.
+
+##### Implementation Logic for constraints
+
+- Walk the `build123d` assembly and inspect `part.joints`.
+- If a joint is connected (via `connect_to`), identify the two parts involved.
+- Assert the joint is valid programmatically (distance, not conflicting with other constraints, etc.)
+- Generate the appropriate Genesis/MuJoCo XML element connecting the two bodies.
+- Assign stable names to identifying joints so controllers can reference them (e.g. "motor_joint").
+
+#### Constraining to the environment
+
+Oftentimes engineers will need to constrain machinery to the environment, e.g. to the floor. However, not all things can be constrained to, e.g. you don't want to drill a motor some other machine.
+
+The benchmark generator agent (and planner) will thus produce parts and compounds will `drillable=True` or False, by the semantic meaning of the file.
+
+The Engineering Planner will get a visual confirmation of drillable/non-drillable objects via a texture or a separate set of renders, and will have a YAML file describing what can be drilled and what can't be
+<!-- ouch: I'm starting to be uncertain on how to actually pass it to the engineer -->
+
+##### Specifics
+
+If the compound is `drillable=False` so are all of it's children.
+
+#### Allowed components in simulation
+
+The simulation would have only a set number of components that both benchmark designer and engineer can use. The following list is acceptable:
+
+1. 3d CAD parts:
+    - Environment (unmodifiable, or modifiable with minor changes, e.g. drilling);
+        - Objectives (goal, forbid zones)
+        - Parts (any obstacle/standard CAD object) <!-- probably needs for a better name-->
+        - Input objects (e.g. - a ball that needs to be delivered somewhere.)
+    - Engineer parts:
+       - 3d CAD parts representing real-life objects that engineers would normally create; bound by all physics.
+2. Motors (and simple scripts/functions that run the motors, e.g. in sinusoidal wave, or start/stop every few seconds). Accessible by both engineer and benchmark generator.
+3. Fasteners - Accessible by both engineer and benchmark generator, however likely environment doesn't really need them.
+
+<!-- Future:
+Bearings.
+Gears,
+PCBs
+Wires
+Fluid vessels, e.g. pipes, hoses, or tanks that supply each. 
+Fluid pumps.-->
+
+### Constants
+
+- Simulation timestep of the rigid-body simulation -  0.002s (default MuJoCo setting)
+- Max simulation time - 30 seconds (configurable globally)
+- Max speed - >1000m/s
+- Default benchmark size - 1\*1\*1m
+- Default stretch - 0.5\*0.5\*0.5 to 2*2*2, disproportionally
+- Collision:
+  - How often is the simulation checked for collision with goals - every 0.05s.
+  - Number of vertices needed for collision - 1 (maybe more in the future)
+- Units: Metric.
+- Safety factor (for motors and parts breaking) 20%.
+
+## Convex decomposition
+
+<!-- We don't have convex decomposition logic in MuJoCo (we do in Genesis, but we'll approach it later). We'll need a V-HACD logic on worker. -->
+
+Genesis supports convex decomposition natively.
+
+<!-- Note: I have no clue about how V-HACD works. Assume good defaults. -->
+
+## Motors
+
+We use standard Genesis/MuJoCo actuators. They need to be controller by the controller functions.
+
+### Controller functions
+
+We need to define how motors will behave, and we'll use a controller. For this, create a util package like `controllers`, which would have time and position-based controllers.
+
+#### Time-based functions (take in `t` as time)
+
+1. Constant - `constant(power:float) -> float` <!-- as far as I understand, a standard MuJoCo <motor> -->
+2. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
+3. "full-on, full-off" - a.k.a. a "square" function in signals - `square(time_on_time_off: list[tuple[float,float]], power:float) -> float` - takes in lists of time when to start and stop; and how much power it would output.
+4. "smooth on, smooth off"- a.k.a. a "trapezoidal function" in signals `trapezoidal(time_on_time_off: list[tuple[float,float]], power, ramp_up_time: float)`
+
+Note: I'm not a pro in these functions - maybe they need renaming. but that's the idea.
+
+Note: they will need to be importable utils, just as tools like `simulate` are.
+
+#### Implementation for time-based controller functions
+
+One easy way to implement it is to define a dict of control functions, then pass it to simulation logic, and it would control the motors by their control functions. The `assembly_definition.yaml` `final_assembly.parts` entries will contain which controller functions the motors are referencing.
+
+#### Position-based functions
+
+Oftentimes we'll want to control motors through positions, e.g. servos or stepper motors. Define a set of functions that would do inverse kinematics (rotate the motor to a given position, at least).
+
+We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10 seconds, rotate to 0, and at 15 seconds rotate back to 45 deg." This will also involve Python functions (probably pre-determined). At least a basic set of these (time-based, constant).
+
+<!-- In the future work, I presume, full inverse kinematics pipelines are desired. I know they are trivial in Genesis, it seems not so much in MuJoCo. -->
+
+<!-- Notably, MuJoCo already has some... motor types: " MuJoCo has `position`, `velocity`, `motor` actuators". I don't know how they work -->
+
+<!-- moving-part metadata moved out of objectives.yaml into assembly_definition.yaml final_assembly.parts to keep objectives focused on task constraints. -->
+
+##### Position-based controllers implementation
+
+""" AI-generated, I'm not a pro in the MuJoCo motors.
+For position-based control (servos, steppers), we use **MuJoCo's native `<position>` actuator**:
+
+```xml
+<actuator>
+  <position name="servo1" joint="arm_hinge" 
+            kp="{kp_from_COTS}" kv="{kv_from_COTS}"
+            forcerange="-{max_torque_nm} {max_torque_nm}"/>
+</actuator>
+```
+
+**Key differences from `<motor>`**:
+
+- **`ctrl[i]` meaning**: Target position (radians for hinge, meters for slide) – *not* torque
+- **Internal PD control**: MuJoCo applies `torque = kp * (target - pos) - kv * vel`
+- **Physics-based tracking**: The joint "seeks" the target position naturally (no teleportation)
+- **`forcerange`**: Clamps output torque to realistic motor limits (prevents infinite force)
+
+**PD gain tuning** (critical for stability):
+
+- Gains must be tuned relative to body inertia
+- Low inertia + high kp = numerical explosion
+- Safe starting point: `kp=5`, `kv=0.5` with `mass=1`, `diaginertia=0.01`
+- Add joint `damping` to improve stability further
+
+**Available position controllers** (`worker_heavy.utils.controllers`):
+
+- `waypoint(schedule: list[tuple[float, float]])`: Move to target positions at scheduled times
+- `hold_position(target: float)`: Hold a fixed target position  
+- `oscillate(center, amplitude, frequency, phase)`: Sinusoidal position oscillation
+
+"""
+
+Notably, we have a set of COTS motors in COTS section below. We need to assume/research COTS actuator strength and parameters.
+
+### Actuator force limits (forcerange)
+
+MuJoCo's `forcerange` attribute clamps the actuator output to realistic torque limits:
+
+```xml
+<!-- Example: MG996R hobby servo with ~1.1 N·m max torque -->
+<position name="servo" joint="arm" kp="15" kv="0.8" forcerange="-1.1 1.1"/>
+```
+
+**Behavior**:
+
+- If PD control computes torque > `forcerange`, it's clamped to the limit
+- Motor "struggles" realistically when overloaded (can't reach target)
+- Simulation does NOT fail from clamping alone (see below for failure logic)
+
+**Source of values**: `forcerange` comes from COTS servo catalog (`max_torque_nm` field).
+
+### Motor overload failure
+
+We don't want motors to break; set the maximum *sustained* load threshold above the servo's rated torque.
+If a motor is clamped at `forcerange` for more than **2 seconds continuous**, the simulation fails with `motor_overload`.
+
+This forces agents to:
+
+1. Pick appropriately-sized motors for the load
+2. Design mechanisms that don't exceed torque limits
+"""
+Note: AI-written, I'm not a pro in MuJoCo motors.
+
+## Definition of "success" and failure in the simulation
+
+We want to support one primary use-case: moving an object from one position to another, using motors and gravity; avoiding forbidden zones, and staying in simulation bounds.
+
+<!-- another use-case could be: given a severe constraint in positioning, design a system which would support a given load. However, the issue is that it's not  -->
+
+### Moving an object from one screen to another
+
+We define the "simulation objective" from four components:
+
+1. A "build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone),
+2. A "goal zone" - the area to which the goal object needs to move to,
+3. The moved object - the object which is spawned to be moved into the goal
+4. A "forbid" zone - an area none of the simulation objects the agent may not go into.
+
+The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The forbid or goal zone is triggered if the agent touches it even slightly.
+
+Additionally, the simulation is constrained by the bounds of the simulation, i.e. the space which the simulation can not leave.
+
+#### Checking for objective interaction
+
+As above, "The forbid or goal zone is triggered if the agent touches it even slightly". This means that if any vertex (let's limit to vertices for simplicity/speed) touches the simulation, it fails.
+
+### Randomization
+
+<!-- LLM-generated from my other spec. -->
+The benchmarks are randomized to enable a wider data distribution with less generation effort.
+
+"Static" randomization is stronger than the "runtime" randomization. Static randomization are complete variations of the environment - stretching the entire space, stretching objectives, etc. Whereas runtime randomization - meant to make the engineer less prone to "overfitting" their CAD to the exact environment - is smaller.
+
+#### Static randomization
+
+- The benchmark volume size can vary 2x in all sides, and will be rescaled to random values, e.g. 1.68\*0.8\*1.3; the benchmark generator agent can narrow the scaling down if somehing is expected to break; however it is undesirable as we want to keep randomization higher.
+  - The environment - objectives (goals, forbids, build zones) are rescaled respectively.
+- Goal, and obstacle positions are randomized by up to 40% of their size inwards (meaning they are becoming smaller and repositioned anywhere in the region where they are becoming smaller; smaller by their own size. They will always stay within original (maximum) bounds for safety).
+- The models that make up the scene can and should be different. Up to the point where it can be solved; but the benchmark generation agent must ensure randomization of the environment too; which can be also made quite extreme (which is preferred - we are not to make it easy.)
+
+##### Material static randomization
+
+If a part is moving (has degrees of freedom), let us randomly switch its material for a more randomly generated environment - e.g., a part would be heavier, lighter, more/less stiff, have more/less restitution, have more/less friction coefficient; the material would be from predetermined files.
+The engineer would be informed about materials of various parts ahead of time.
+(Notably, the benchmark generator should probably allow constraining some materials but only optionally so - e.g. if something is translated by the motor, it probably isn't ABS plastic, it's at least a metal. Allow the "minimum strength" or similar material selection.)
+
+##### Visual static randomization
+
+To allow for better visual generalization and more realistic environments, environment parts will change their colors to alongside of the material change, defined in materials config.
+
+#### Runtime randomization
+
+Notably, the engineer is informed about runtime randomization to prevent unexpected issues.
+
+- The spawned "moved" object will also include some position jitter to ensure the CAD model's robustness against variable input.
+
+##### Runtime randomization verification
+
+The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as Genesis/MuJoCo are made for parallel simulations with slightly varying input positions.
+
+### Failure
+
+Failure is achieved via either of:
+
+1. Timeout of the simulation
+    - How to define timeout of the simulation? that's a question. I suggest putting a hard cap of 30 seconds on all simulations and letting the benchmark planner decide how quickly a given goal should be achieved (with leeway); no more than 30 seconds though.
+2. Any of components going out of bounds of the workspace
+3. Instability in simulation (e.g. NaNs, parts interference)
+4. Any part going into forbid zones.
+5. Any part is broken:
+
+    - With "passive/static" parts: break upon stress which is higher than max stress - safety factor(note: not applicable for now as we are simulating rigid-body only).
+    - Some parts have custom breaking logic - e.g. motors can be overloaded on shaft.
+
+## Conversion of CAD to mesh and to MuJoCo/Genesis
+
+We will convert `build123d` CAD files into `obj` format (not STL, because the it is very bulky), and then put the obj into mesh. I think build123d allows a `export_obj(Compound|Part)` function.
+
+The conversion pipeline is - putting every part into mesh;
+
+When I implemented a similar pipeline some time ago, it was helpful to: recenter all build123d parts so that they are at (0,0,0), then export them, then add them to Genesis/MuJoCo with confidence at their known position (and trivially) because they are at (0,0,0). We need to know build123d part position ahead of time though.
+
+<!-- Note: Genesis if we'll migrate to it, supports GLB. -->
+
+## Preview/visualization
+
+We want the agent to be able to preview their own CAD models (likely done more often). We will render CAD images, not MuJoCo for it. The materials will have their colors.
+
+### Mesh limits and Simplification
+
+The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. That said, the mesh should be simplified where *safe* to do so; however the higher quality is desired.
+
+- **Smoke Test Optimization**: When `smoke_test_mode=True` is requested, the system automatically increases the CAD-to-STL export tolerance (e.g., from 0.1 to 1.0). This generates coarser meshes that are drastically faster for the physics engine (especially Genesis on CPU) to voxelize, enabling rapid stability and multitenancy checks.
+- **Dynamic Manufacturing Resolution**: Simulation and validation logic must dynamically resolve the manufacturing method from CAD metadata. This ensures that validation rules (like CNC undercut detection) are only applied when appropriate for the chosen production process.
+
+<!-- For rigid mesh only - not for deformable materials(!), we do this:
+The mesh is unbounded in vertex counts because we are simulating engineering-grade materials. However, to ensure **simulation stability** and **performance**, we use a dual-mesh strategy:
+
+1. **Visual Mesh**: High-quality, high-poly mesh (e.g., `angular_deflection=0.1`).
+    - Used for rendering and visual inspection.
+    - Preserves cosmetic details.
+2. **Collision Mesh**: Simplified, decimated mesh (e.g., `angular_deflection=0.5` or `trimesh.decimate`).
+    - Used for physics calculation and V-HACD decomposition.
+    - **Loss**: Curved surfaces become faceted (spheres look like polyhedrons). Small features (threads, text) are smoothed over.
+    - **Gain**: 10x-100x faster collision detection, fewer "thin triangle" artifacts, more stable contacts.
+
+**Implementation**:
+
+- `builder.py` exports two OBJ files per part: `part_visual.obj` and `part_collision.obj`.
+- V-HACD is run ONLY on the collision mesh.
+- MuJoCo XML references the collision mesh for `<geom class="collision">` and visual mesh for `<geom class="visual">`.
+
+Watertightness is required for both. -->
+
+<!-- Note: when implementing this logic, don't overcomplicate it. We'll migrate to native logic in Genesis relatively soon (which simplifies it without any extra config at all, including mesh decomposition). I don't care too -->
+
+## Materials
+
+We have a set of materials defined in `manufacturing_config.yaml`, which defines: `materials` section, and which materials can be used for the simulation - their weight, price, and cost per KG. The config is auto-validated with unit tests (e.g., can't reference and inexisting material).
+
+`manufacturing_config.yaml` can be read-only for the agents to gauge the pricing ahead of time. It is also used during programmatic validation of manufacturability.
+
+`manufacturing_config.yaml` sample schema:
+
+```yaml
+manufacturing_processes:
+  cnc:
+    setup_price: [...]
+    price_per_X: [...]
+    price_per_Y: [...]
+
+  injection_molding:
+  # [...]
+
+materials:
+  alu-6061:
+    color: #
+    elongation_stress:
+    restitution: 
+    friction_coef: 
+    # and others
+  ... 
+```
+
+The materials are only ever chosen from the config.
+

@@ -1,0 +1,312 @@
+# Benchmark generator agent (or graph)
+
+## Agent purpose
+
+The agent is to generate problems for an engineer to solve. This is important, as to train or fine-tune a model with reinforcement learning or prompt optimization we need challenges to scale, data to improve against.
+
+## Agent subagents
+
+1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, friction, dynamic objects, motors, etc.
+2. A CAD engineer/coder that implements the benchmark from the plan
+3. A reviewer that reviews the environment for
+    - Feasibility of solution
+    - Lack of violation of environment constraints (no significant, etc.)
+    - Proper randomization.
+    - No excessive degrees of freedom; all parts are fixed as they should be.
+
+## Output requirements
+
+The benchmark generator writes code for the and gets internal reviews by the reviewer inside of the generator.
+
+The benchmarks are randomized to ensure data distribution.
+
+The benchmarks are consisting of CAD models which are converted into XML.
+
+- The execution runs in isolated containers to prevent accidental harmful code execution in the main system.
+- The benchmarks are verified for being creatable in Genesis. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
+  - Validity means no intersections and other problems; it also means that the code will compile in the first place.
+  - MJCF is verified for the correctness by XML schema. And also by running a few frames of a simulation
+- MJCF is created programmatically, not by a LLM.
+<!-- I will need to experiment, but I don't think the LLM should be able to edit it.  ->
+
+## Benchmarks
+
+The environments are made with static objects, dynamic objects, and motors. <!-- note - not sure if I handle dynamic objects atm. If I do, how are they specified in CAD? -->
+
+Motors require power to run, however, we don't bother with "wiring" yet.
+
+Problems with motors and moving parts are verified more consistently because they are more prone to error.
+
+<!-- note: it would be useful to persist an "expected solution" from the planner during task generator. It'll help guide exploration and maybe improve LLM optimization (prompt reflection/RL) with more data. -->
+
+## Subagents output requirements
+
+## Sample output
+
+(input: Test benchmark: drop a ball into a funnel)
+
+```markdown
+`plan.md` (benchmark planner excerpt)
+
+1. **Learning objective**
+   - Test spatial redirection with gravity: the engineer must route a falling ball into a goal while avoiding a forbidden vertical-drop path.
+
+2. **Environment geometry (with static randomization)**
+   - `support_wall`: center `[0, -35, 40]`, size `[120, 6, 80]`, static scale range `[0.9, 1.15]`.
+   - `funnel_body`: center `[32, 10, 18]`, top radius `20`, bottom radius `7`, height `26`, static scale range `[0.9, 1.1]`.
+   - `goal_bin`: AABB min `[26, 4, 0]`, max `[42, 20, 10]`.
+   - No moving parts in this benchmark (all `final_assembly.parts[*].dofs: []`).
+
+3. **Input objective (moved object)**
+   - Shape: `sphere`.
+   - Static randomization: radius in `[5, 7]`.
+   - Nominal spawn position: `[0, 0, 70]`.
+   - Runtime jitter: `[2, 2, 1]` (must be solved robustly across seeds).
+
+4. **Objective locations**
+   - `build_zone`: min `[-40, -30, 0]`, max `[40, 30, 70]`.
+   - `forbid_zones`:
+     - `vertical_drop_trap`: min `[-8, -8, 0]`, max `[8, 8, 20]`.
+   - `goal_zone`: min `[28, 6, 1]`, max `[40, 18, 9]`.
+
+5. **Simulation bounds**
+   - min `[-60, -60, 0]`, max `[60, 60, 90]`.
+
+6. **Constraints handed to engineering**
+   - Benchmark/customer caps: `max_unit_cost <= 45.0 USD`, `max_weight <= 1.1 kg`.
+
+7. **Success criteria**
+   - Success if the moved object's center enters `goal_zone` without touching any forbid zone.
+   - Fail if object exits `simulation_bounds`.
+
+8. **Planner artifacts**
+   - Write `todo.md` implementation checklist.
+   - Write draft `objectives.yaml` matching this geometry/constraint data.
+   - Write draft `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+```
+
+```yaml
+# objectives.yaml (draft from benchmark planner)
+objectives:
+  goal_zone:
+    min: [28, 6, 1]
+    max: [40, 18, 9]
+  forbid_zones:
+    - name: "vertical_drop_trap"
+      min: [-8, -8, 0]
+      max: [8, 8, 20]
+  build_zone:
+    min: [-40, -30, 0]
+    max: [40, 30, 70]
+
+simulation_bounds:
+  min: [-60, -60, 0]
+  max: [60, 60, 90]
+
+moved_object:
+  label: "projectile_ball"
+  shape: "sphere"
+  static_randomization:
+    radius: [5, 7]
+  start_position: [0, 0, 70]
+  runtime_jitter: [2, 2, 1]
+
+constraints:
+  max_unit_cost: 45.0
+  max_weight: 1.1
+
+randomization:
+  static_variation_id: "drop_ball_funnel_v2"
+  runtime_jitter_enabled: true
+```
+
+## Engineer (problem solver)
+
+## Purpose
+
+There are real-life engineering problems that LLM AI agents can help overcome. This agent is an engineer that should be capable of solving problems, given their visuals/CAD designs, and produce solutions as to how to solve a given problem; constrained on physics. The agent should operate in the most closely real-life environment. The agent shouldn't even understand it works in a "fake" environment.
+
+## Description
+
+Writes CAD code to solve the problems (the benchmarks as above).
+
+Is constrained by cost and manufacturability. Also constraints such as weight and where the agent can actually build their solution.
+
+Has access to all realistic CAD tools.
+
+The agent can preview their tools and check for whether the designs are manufacturable without being "punished".
+
+It is OK if agents are running for 10 or more minutes (in production).
+
+Again, the execution runs in isolated containers to prevent accidental harmful code execution in the main system.
+
+## Engineer agent details
+
+Engineer has a Planner, which is responsible for architecting the solution, the engineer which actually implements the solution, and the critic.
+
+The architect will create and persist a TODO list. The engineer must implement. The agent will have easy access to the TODO list.
+
+- The engineer, after *proving* the TODO list is impossible, can refuse the plan.
+
+<!-- Standard best practices will be used. No point in making anything weird in this application. -->
+
+### Planner workflow
+
+The Engineering Planner workflow is:
+
+1. **Intake and mandatory context read**
+   - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
+   - Do not read benchmark `assembly_definition.yaml`; benchmark cost estimation stays local to the benchmark planner.
+   - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
+   - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
+
+2. **Plan the mechanism and budgets**
+   - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
+   - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
+   - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS search subagent and carry part IDs + catalog prices into the plan.
+
+3. **Calculate the costs per part**:
+
+  We want to estimate a rough, but detailed prices and architecture of the solution.
+
+  Create a file like `assembly_definition.yaml` containing:
+
+  For each part:
+      1. A name of the part
+      2. a description of the part,
+      3. costing information each part in the simulation, e.g. for CNC, blank size, and final volume of the part (and calculate how much to be removed). The inputs are auto-validated, per manufacturing method
+
+  Then: create an assembly structure, like:
+
+  ```yaml
+  final_assembly:
+    - subassembly_1: 
+        parts:
+          - part_1:
+              dofs: ["dof_2", "dof_1"]
+          - part_2:
+              dofs: []
+          - motor_a:
+              dofs: ["rotate_z"]
+              control:
+                mode: sinusoidal
+                speed: 1.0
+        joints: 
+        - joint_1: 
+            parts:
+              - part_1
+              - part_2
+            type: fastener_joint 
+    - subassembly_2:
+        parts:
+          - part_4:
+              dofs: []
+          - part_1: # part 1 is inserted twice. Hence it'll be estimated as necessary to manufacture it twice, hence unit costs will drop (as per manufacturing method config)
+              dofs: ["dof_2", "dof_1"]
+        joints:
+          - joint_2:
+              parts:  #note: maybe we want to inline it.
+                - part_4
+                - part_1
+              type: fastener_joint
+    - part_5 
+  ```
+
+  Then: Run a script like `validate_costing_and_price.py` that would automatically validate the YAML file for consistency and output pricing. The model can thus use a stricter constraint.
+
+  Notably, if the plan is higher than the max_unit_cost, it can't proceed and needs to adapt the plan.
+
+1. **Write required planner artifacts**
+
+- Create `plan.md` using the strict engineering structure:
+     `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
+- In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
+- Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
+- Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
+- Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
+
+At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+<!-- 
+4. **Pre-handover validation gate**
+   - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
+   - Verify constraints/logic consistency: units, build-zone fit, cost/weight bounds, and no invented catalog pricing.
+   - Planner submission is treated as invalid if required files are missing or malformed.
+
+5. **Handover and iteration loop**
+   - Handover `plan.md` + planner-constrained objectives + `todo.md` to the CAD engineer.
+   - CAD engineer implements and may request refusal only with proof that planner constraints/approach are infeasible.
+   - Reviewer either confirms refusal (`confirm_plan_refusal`) and routes back to Planner for re-plan, or rejects refusal (`reject_plan_refusal`) and routes back to CAD implementation.
+
+6. **Observability**
+   - Emit structured events for plan submission, COTS search usage, markdown/YAML failures, logic/constraint failures, and plan-refusal decisions for downstream evaluation. -->
+
+## Verification
+
+The Engineer agent will verify its work by:
+
+1. Checking the manufacturability of its solution, on
+    1. Individual part scale (this part can be machined)
+    2. Assembly scale - this assembly has no interference of parts and has valid part constraints.
+2. Checking the cost of its solution; against the part count and unit cost as specified by the user.
+3. Checking the weight of its solution.
+4. Simulating - did the model achieve the goal as per the benchmark?
+5. The critic will assess whether the simulation is stable or not - will it be functional to work in a real scenario? Is it flaky?
+
+## COTS search subagent
+
+An engineering agent(s) can invoke a COTS (Commercial-Off-The-Shelf) search agent to delegate the search for off-the-shelf components. E.g.: search for motors.
+
+Purpose: a lightweight subagent that performs catalog lookups and returns verified part candidates.
+
+## Model and runtime
+
+- Uses a smaller/cheaper model than the primary planner/engineer.
+- Read-only access to the COTS catalog DB and/or CLI; no writes.
+- No file edits except optional `journal.md` logging of queries + results.
+
+## Inputs (from planner/engineer/benchmark planner/benchmark CAD engineer)
+
+- Part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608").
+- Constraints: quantity tier, max_unit_cost, size/torque/voltage limits, material, mounting/shaft constraints.
+
+## Tools
+
+- Read-only SQL queries against the COTS catalog database.
+- Read-only CLI helpers/scripts (if provided) for catalog search.
+
+Outputs (structured, concise):
+
+- 3-10 candidate parts with `part_id`, `manufacturer`, `key specs`, `unit_cost`, `quantity_tier`, `source`, `why it fits`.
+- If no match, explicitly say "no match" and list which constraints were too strict.
+
+## Invocation
+
+- Engineering Planner, implementer, reviewers and benchmark Planner, implementer, reviewers call the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- The returned part IDs and prices must be used in the plan and cost estimates.
+
+Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation.
+
+### Reasons for invocation
+
+1. Planners in benchmark and engineering invoke to check exact prices for subcomponents (both make price decisions)
+2. Engineers invoke them because they need to use them and check prices for components (they are constrained by the price)
+3. Reviewers may search for a better component *(suggestion: reviewers may want to read the search queries of invoking agents to decide if the part found was sufficiently good or not. If the query is good enough—can just skip!)*
+
+## COTS catalog database (spec 006)
+
+This system is backed by a SQL catalog built from `bd_warehouse`. The catalog is **read-only in workers** and queried only via the COTS search subagent.
+
+Database:
+
+- Artifact: `parts.db` (SQLite; local on worker, read-only).
+- Build-time indexer extracts metadata and usage snippets from `bd_warehouse`.
+- Store reproducibility metadata: `catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`.
+- `catalog_snapshot_id` is a deterministic snapshot fingerprint created at catalog build time (prefer hash of canonical exported catalog content; acceptable fallback is hash of `parts.db` bytes).
+- Every COTS handoff artifact must persist:
+  - catalog metadata (`catalog_version`, `bd_warehouse_commit`, `generated_at`, `catalog_snapshot_id`)
+  - query snapshot (normalized intent + constraints + limit/sort)
+  - selection snapshot (ordered returned candidates + final selected `part_id`s used by planner/engineer)
+- COTS reproducibility is invalid if selected parts are persisted without the snapshot metadata above.
+
+<!-- TODO move details away from this section into CAD section... -->
+
