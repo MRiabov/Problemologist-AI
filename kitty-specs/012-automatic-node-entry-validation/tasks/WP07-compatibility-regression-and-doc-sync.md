@@ -1,8 +1,11 @@
 ---
 work_package_id: WP07
 title: Compatibility, Regression, and Documentation Sync
-lane: planned
+lane: "doing"
 dependencies: [WP06]
+base_branch: 012-automatic-node-entry-validation-WP06
+base_commit: 14e61b8a93abe28ccf6467517103b161182f1402
+created_at: '2026-03-06T12:43:14.885420+00:00'
 subtasks:
 - T036
 - T037
@@ -12,7 +15,7 @@ subtasks:
 phase: Phase 6 - Hardening
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "8707"
 review_status: ''
 reviewed_by: ''
 review_feedback: ''
