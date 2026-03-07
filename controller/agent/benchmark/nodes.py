@@ -659,7 +659,7 @@ class BenchmarkReviewerNode(BaseNode):
                 objectives = await self.ctx.worker_client.read_file("objectives.yaml")
 
         state.review_round = state.review_round + 1
-        review_filename = f"reviews/review-round-{state.review_round}/review.md"
+        review_filename = f"reviews/benchmark-review-round-{state.review_round}.md"
 
         # Specialized local tool
         async def write_review_file(path: str, content: str) -> str:

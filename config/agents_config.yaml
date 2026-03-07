@@ -290,7 +290,7 @@ agents:
         ]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/engineering-plan-review-round-*.md"]
       deny: [".manifests/**"]
     tools:
       [
@@ -326,7 +326,7 @@ agents:
         ]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/engineering-execution-review-round-*.md"]
       deny: [".manifests/**"]
     tools:
       [
@@ -409,7 +409,7 @@ agents:
         ]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/benchmark-review-round-*.md"]
       deny: [".manifests/**"]
     tools:
       [
@@ -490,7 +490,7 @@ agents:
         ]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/electronics-review-round-*.md"]
       deny: [".manifests/**"]
     tools:
       [

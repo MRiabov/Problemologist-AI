@@ -14,6 +14,7 @@ from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
+from .dof_guard import collect_excessive_dof_findings, has_accepted_dof_justification
 
 logger = structlog.get_logger(__name__)
 
@@ -54,6 +55,70 @@ class PlanReviewerNode(BaseNode):
             if await self.ctx.worker_client.exists("assembly_definition.yaml"):
                 assembly_definition = await self.ctx.worker_client.read_file(
                     "assembly_definition.yaml"
+                )
+
+        plan_markdown = state.plan or ""
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("plan.md"):
+                plan_markdown = await self.ctx.worker_client.read_file("plan.md")
+
+        with suppress(Exception):
+            findings = collect_excessive_dof_findings(assembly_definition)
+            unjustified = [
+                finding
+                for finding in findings
+                if not has_accepted_dof_justification(
+                    plan_markdown, part_id=finding.part_id
+                )
+            ]
+            if unjustified:
+                for finding in unjustified:
+                    payload = {
+                        "reviewer_stage": "engineering_plan_reviewer",
+                        "part_id": finding.part_id,
+                        "proposed_dofs": finding.dofs,
+                        "dof_count": finding.dof_count,
+                        "expected_minimal_dofs": 3,
+                        "dof_count_gt_3": True,
+                    }
+                    await record_worker_events(
+                        episode_id=state.episode_id,
+                        events=[
+                            {
+                                "event_type": "excessive_dof_detected",
+                                "data": payload,
+                                **payload,
+                            }
+                        ],
+                    )
+                await record_worker_events(
+                    episode_id=state.episode_id,
+                    events=[
+                        {
+                            "event_type": "plan_review_validation_run",
+                            "data": {
+                                "validator_status": "rejected_excessive_dof",
+                                "violation_count": len(unjustified),
+                            },
+                            "validator_status": "rejected_excessive_dof",
+                            "violation_count": len(unjustified),
+                        }
+                    ],
+                )
+                summary = ", ".join(
+                    f"{item.part_id}({item.dof_count})" for item in unjustified
+                )
+                feedback = (
+                    "Plan reviewer rejected excessive DOFs: "
+                    f"{summary}. Add explicit DOF_JUSTIFICATION markers in plan.md."
+                )
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.FAILED,
+                        "feedback": feedback,
+                        "journal": state.journal + f"\n[Plan Reviewer] {feedback}",
+                        "turn_count": state.turn_count + 1,
+                    }
                 )
 
         plan_refusal = ""

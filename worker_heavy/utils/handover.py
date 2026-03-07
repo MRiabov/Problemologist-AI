@@ -276,6 +276,19 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     with synced_manifest_path.open("w", encoding="utf-8") as f:
         f.write(manifest_json)
 
+    # Stage-specific manifest aliases (INT-034/INT-071 hardening).
+    stage_manifest_names = [
+        "benchmark_review_manifest.json",
+        "engineering_plan_review_manifest.json",
+        "engineering_execution_review_manifest.json",
+        "electronics_review_manifest.json",
+    ]
+    for name in stage_manifest_names:
+        with (manifests_dir / name).open("w", encoding="utf-8") as f:
+            f.write(manifest_json)
+        with (renders_dir / name).open("w", encoding="utf-8") as f:
+            f.write(manifest_json)
+
     logger.info(
         "handover_complete",
         manifest=str(manifest_path),
