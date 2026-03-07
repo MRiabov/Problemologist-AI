@@ -806,6 +806,16 @@ async def execute_agent_task(
                 episode = await db.get(Episode, episode_id)
                 if episode:
                     episode.status = EpisodeStatus.FAILED
+                    metadata = EpisodeMetadata.model_validate(
+                        episode.metadata_vars or {}
+                    )
+                    if SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(e):
+                        metadata.terminal_reason = (
+                            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED
+                        )
+                        metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
+                        metadata.error = SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER
+                        episode.metadata_vars = metadata.model_dump(mode="json")
                     await db.commit()
 
                     # Broadcast status update
@@ -1111,6 +1121,16 @@ async def continue_agent_task(
                 episode = await db.get(Episode, episode_id)
                 if episode:
                     episode.status = EpisodeStatus.FAILED
+                    metadata = EpisodeMetadata.model_validate(
+                        episode.metadata_vars or {}
+                    )
+                    if SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(e):
+                        metadata.terminal_reason = (
+                            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED
+                        )
+                        metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
+                        metadata.error = SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER
+                        episode.metadata_vars = metadata.model_dump(mode="json")
                     await db.commit()
 
                     # Broadcast status update

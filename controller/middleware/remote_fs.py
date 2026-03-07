@@ -1,7 +1,9 @@
+import asyncio
 import logging
 from pathlib import Path
 from typing import Literal
 
+import httpx
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
@@ -51,6 +53,7 @@ from shared.workers.schema import (
 )
 
 logger = logging.getLogger(__name__)
+_SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 
 # Global policy instance (cached)
@@ -303,20 +306,57 @@ class RemoteFilesystemMiddleware:
             episode_id=self.client.session_id,
             events=[RunCommandToolEvent(command=code)],
         )
-        if self.temporal_client:
-            # Wrap in Temporal workflow for durability
-            return await self.temporal_client.execute_workflow(
-                ScriptExecutionWorkflow.run,
-                ScriptExecutionRequest(
-                    code=code,
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                if self.temporal_client:
+                    # Wrap in Temporal workflow for durability
+                    return await self.temporal_client.execute_workflow(
+                        ScriptExecutionWorkflow.run,
+                        ScriptExecutionRequest(
+                            code=code,
+                            session_id=self.client.session_id,
+                            timeout=timeout,
+                        ),
+                        id=f"exec-{self.client.session_id}-{hash(code) % 10**8}",
+                        task_queue="simulation-task-queue",
+                    )
+                # Fallback to direct client call if Temporal is not available
+                return await self.client.execute_python(code, timeout=timeout)
+            except Exception as exc:
+                is_infra = isinstance(exc, (httpx.HTTPError, TimeoutError))
+                if not is_infra:
+                    msg = str(exc).lower()
+                    is_infra = any(
+                        token in msg
+                        for token in (
+                            "connection refused",
+                            "temporarily unavailable",
+                            "name or service not known",
+                            "failed to establish",
+                            "network is unreachable",
+                            "timed out",
+                            "timeout",
+                        )
+                    )
+
+                if not is_infra:
+                    raise
+
+                logger.error(
+                    "system_tool_retry_attempt",
                     session_id=self.client.session_id,
-                    timeout=timeout,
-                ),
-                id=f"exec-{self.client.session_id}-{hash(code) % 10**8}",
-                task_queue="simulation-task-queue",
-            )
-        # Fallback to direct client call if Temporal is not available
-        return await self.client.execute_python(code, timeout=timeout)
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                    error=str(exc),
+                )
+                if attempt >= max_attempts:
+                    raise RuntimeError(
+                        f"{_SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER}: {exc}"
+                    ) from exc
+                await asyncio.sleep(min(0.5 * attempt, 1.5))
+
+        raise RuntimeError(_SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER)
 
     # Adding alias for consistency with deepagents naming if needed
     async def execute(self, code: str, timeout: int = 30) -> ExecuteResponse:

@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from controller.agent.state import AgentState
 
 logger = structlog.get_logger(__name__)
+_SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 
 @dataclass
@@ -1087,6 +1088,10 @@ class BaseNode:
                 except AgentHardFailError:
                     raise
                 except Exception as err:
+                    if _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(err):
+                        # Fail-fast for infra retry exhaustion; do not continue
+                        # node-level retry loops.
+                        raise RuntimeError(str(err)) from err
                     last_lm_preview = None
                     lm_history = getattr(self.ctx.dspy_lm, "history", None)
                     if isinstance(lm_history, list) and lm_history:
