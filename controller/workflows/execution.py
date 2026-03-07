@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 
 from shared.workers.schema import ExecuteResponse, ScriptExecutionRequest
 
@@ -14,4 +15,5 @@ class ScriptExecutionWorkflow:
             "execute_script_activity",
             request,
             start_to_close_timeout=timedelta(minutes=10),
+            retry_policy=RetryPolicy(maximum_attempts=3),
         )

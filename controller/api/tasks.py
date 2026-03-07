@@ -22,11 +22,20 @@ from controller.observability.langfuse import (
 )
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
-from shared.enums import AgentName, AssetType, EpisodeStatus, TraceType
+from shared.enums import (
+    AgentName,
+    AssetType,
+    EpisodeStatus,
+    FailureClass,
+    TerminalReason,
+    TraceType,
+)
 from shared.logging import get_logger
+from shared.models.schemas import EpisodeMetadata
 
 logger = get_logger(__name__)
 WORKER_LIGHT_URL = settings.worker_light_url
+SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 
 def _is_planner_agent(agent_name: AgentName) -> bool:
@@ -141,8 +150,6 @@ def _update_episode_entry_validation_metadata(
     if not result_feedback.startswith("ENTRY_VALIDATION_FAILED["):
         return None
 
-    from shared.models.schemas import EpisodeMetadata
-
     metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
     if result_feedback not in metadata.validation_logs:
         metadata.validation_logs.append(result_feedback)
@@ -157,6 +164,26 @@ def _update_episode_entry_validation_metadata(
     metadata.additional_info = additional
     episode.metadata_vars = metadata.model_dump()
     return entry_context
+
+
+async def _episode_has_system_tool_retry_exhausted(
+    *, db, episode_id: uuid.UUID
+) -> bool:
+    """Detect infra retry exhaustion marker from tool-error traces."""
+    from sqlalchemy import select
+
+    rows = await db.execute(
+        select(Trace).where(
+            Trace.episode_id == episode_id,
+            Trace.trace_type == TraceType.TOOL_START,
+        )
+    )
+    for trace_row in rows.scalars():
+        metadata = trace_row.metadata_vars or {}
+        error = str(metadata.get("error") or "")
+        if SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in error:
+            return True
+    return False
 
 
 class AgentRunRequest(BaseModel):
@@ -701,6 +728,11 @@ async def execute_agent_task(
                         result=result,
                         result_feedback=result_feedback,
                     )
+                    system_retry_exhausted = (
+                        await _episode_has_system_tool_retry_exhausted(
+                            db=db, episode_id=episode_id
+                        )
+                    )
                     target_status = EpisodeStatus.FAILED
                     if not _is_failed_result(result):
                         target_status = (
@@ -708,6 +740,17 @@ async def execute_agent_task(
                             if _is_planner_agent(agent_name)
                             else EpisodeStatus.COMPLETED
                         )
+                    if system_retry_exhausted:
+                        target_status = EpisodeStatus.FAILED
+                        metadata = EpisodeMetadata.model_validate(
+                            episode.metadata_vars or {}
+                        )
+                        metadata.terminal_reason = (
+                            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED
+                        )
+                        metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
+                        metadata.error = SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER
+                        episode.metadata_vars = metadata.model_dump(mode="json")
                     episode.status = target_status
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
@@ -993,11 +1036,26 @@ async def continue_agent_task(
                         result=result,
                         result_feedback=result_feedback,
                     )
+                    system_retry_exhausted = (
+                        await _episode_has_system_tool_retry_exhausted(
+                            db=db, episode_id=episode_id
+                        )
+                    )
                     episode.status = (
                         EpisodeStatus.FAILED
-                        if _is_failed_result(result)
+                        if (_is_failed_result(result) or system_retry_exhausted)
                         else EpisodeStatus.COMPLETED
                     )
+                    if system_retry_exhausted:
+                        metadata = EpisodeMetadata.model_validate(
+                            episode.metadata_vars or {}
+                        )
+                        metadata.terminal_reason = (
+                            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED
+                        )
+                        metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
+                        metadata.error = SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER
+                        episode.metadata_vars = metadata.model_dump(mode="json")
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}
                     if not episode.plan:

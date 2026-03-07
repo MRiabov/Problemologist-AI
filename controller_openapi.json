@@ -3281,6 +3281,7 @@
           "OUT_OF_TOKEN_BUDGET",
           "TIMEOUT",
           "INTERNAL_ERROR",
+          "SYSTEM_TOOL_RETRY_EXHAUSTED",
           "INFRA_ERROR",
           "USER_CANCELLED"
         ],
