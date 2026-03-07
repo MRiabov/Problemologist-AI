@@ -296,6 +296,26 @@ class WorkerClient:
             writes.append(
                 (".manifests/review_manifest.json", artifacts.review_manifest_json)
             )
+            writes.extend(
+                [
+                    (
+                        ".manifests/benchmark_review_manifest.json",
+                        artifacts.review_manifest_json,
+                    ),
+                    (
+                        ".manifests/engineering_plan_review_manifest.json",
+                        artifacts.review_manifest_json,
+                    ),
+                    (
+                        ".manifests/engineering_execution_review_manifest.json",
+                        artifacts.review_manifest_json,
+                    ),
+                    (
+                        ".manifests/electronics_review_manifest.json",
+                        artifacts.review_manifest_json,
+                    ),
+                ]
+            )
 
         for path, content in writes:
             ok = await self.write_file(

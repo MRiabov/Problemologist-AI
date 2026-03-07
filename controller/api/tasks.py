@@ -624,6 +624,35 @@ async def execute_agent_task(
 
                     simulation_success_text: str | None = None
                     await sync_dir("/")
+                    # .manifests is system-owned metadata and may be denied via role
+                    # policy through routed backend calls. Read directly with
+                    # permission bypass so reviewer manifests still appear in assets.
+                    try:
+                        from controller.observability.middleware_helper import (
+                            broadcast_file_update,
+                        )
+
+                        manifest_path = ".manifests/review_manifest.json"
+                        if await client.exists(
+                            manifest_path, bypass_agent_permissions=True
+                        ):
+                            manifest_content = await client.read_file(
+                                manifest_path, bypass_agent_permissions=True
+                            )
+                            await broadcast_file_update(
+                                str(episode_id), manifest_path, manifest_content
+                            )
+                            for alias in (
+                                ".manifests/benchmark_review_manifest.json",
+                                ".manifests/engineering_plan_review_manifest.json",
+                                ".manifests/engineering_execution_review_manifest.json",
+                                ".manifests/electronics_review_manifest.json",
+                            ):
+                                await broadcast_file_update(
+                                    str(episode_id), alias, manifest_content
+                                )
+                    except Exception:
+                        pass
                     try:
                         raw_results = await client.read_file("validation_results.json")
                         if raw_results:

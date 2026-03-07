@@ -83,11 +83,14 @@ def _boxes_intersect(
 
 
 def _validate_objectives_consistency(objectives: ObjectivesYaml) -> str | None:
-    """Fail closed on invalid objective relationships, including runtime jitter ranges."""
+    """Fail closed on invalid objective relationships and jitter ranges."""
     goal = objectives.objectives.goal_zone
     for zone in objectives.objectives.forbid_zones:
         if _boxes_intersect(goal.min, goal.max, zone.min, zone.max):
-            return f"Objective zone intersection: goal_zone overlaps forbid zone '{zone.name}'"
+            return (
+                "Objective zone intersection: goal_zone overlaps "
+                f"forbid zone '{zone.name}'"
+            )
 
     jitter = objectives.moved_object.runtime_jitter
     start = objectives.moved_object.start_position

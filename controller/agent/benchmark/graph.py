@@ -1356,12 +1356,16 @@ async def _persist_session_assets(
 
             # .manifests is system-owned metadata and may be denied via role policy
             # through the routed backend. Read it directly through WorkerClient so
-            # the manifest is still surfaced as an episode asset.
+            # reviewer manifests are still surfaced as episode assets.
             try:
                 manifest_path = ".manifests/review_manifest.json"
-                if await asyncio.wait_for(client.exists(manifest_path), timeout=5.0):
+                if await asyncio.wait_for(
+                    client.exists(manifest_path, bypass_agent_permissions=True),
+                    timeout=5.0,
+                ):
                     manifest_content = await asyncio.wait_for(
-                        client.read_file(manifest_path), timeout=5.0
+                        client.read_file(manifest_path, bypass_agent_permissions=True),
+                        timeout=5.0,
                     )
                     await asyncio.wait_for(
                         broadcast_file_update(
@@ -1369,6 +1373,18 @@ async def _persist_session_assets(
                         ),
                         timeout=2.0,
                     )
+                    for alias in (
+                        ".manifests/benchmark_review_manifest.json",
+                        ".manifests/engineering_plan_review_manifest.json",
+                        ".manifests/engineering_execution_review_manifest.json",
+                        ".manifests/electronics_review_manifest.json",
+                    ):
+                        await asyncio.wait_for(
+                            broadcast_file_update(
+                                str(session_id), alias, manifest_content
+                            ),
+                            timeout=2.0,
+                        )
             except Exception:
                 pass
     except Exception as e:
