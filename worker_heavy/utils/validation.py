@@ -73,6 +73,56 @@ def _sanitize_stress_summaries(
     return safe
 
 
+def _boxes_intersect(
+    a_min: tuple[float, float, float],
+    a_max: tuple[float, float, float],
+    b_min: tuple[float, float, float],
+    b_max: tuple[float, float, float],
+) -> bool:
+    return all(a_min[i] <= b_max[i] and b_min[i] <= a_max[i] for i in range(3))
+
+
+def _validate_objectives_consistency(objectives: ObjectivesYaml) -> str | None:
+    """Fail closed on invalid objective relationships, including runtime jitter ranges."""
+    goal = objectives.objectives.goal_zone
+    for zone in objectives.objectives.forbid_zones:
+        if _boxes_intersect(goal.min, goal.max, zone.min, zone.max):
+            return f"Objective zone intersection: goal_zone overlaps forbid zone '{zone.name}'"
+
+    jitter = objectives.moved_object.runtime_jitter
+    start = objectives.moved_object.start_position
+    radius_max = 0.0
+    if objectives.moved_object.static_randomization.radius:
+        radius_max = max(objectives.moved_object.static_randomization.radius)
+
+    moved_min = (
+        start[0] - abs(jitter[0]) - radius_max,
+        start[1] - abs(jitter[1]) - radius_max,
+        start[2] - abs(jitter[2]) - radius_max,
+    )
+    moved_max = (
+        start[0] + abs(jitter[0]) + radius_max,
+        start[1] + abs(jitter[1]) + radius_max,
+        start[2] + abs(jitter[2]) + radius_max,
+    )
+
+    build_zone = objectives.objectives.build_zone
+    if not _boxes_intersect(moved_min, moved_max, build_zone.min, build_zone.max):
+        return "Moved object runtime range does not overlap build_zone"
+    for i, axis in enumerate(("x", "y", "z")):
+        if moved_min[i] < build_zone.min[i] or moved_max[i] > build_zone.max[i]:
+            return f"Moved object runtime range exceeds build_zone on axis {axis}"
+
+    for zone in objectives.objectives.forbid_zones:
+        if _boxes_intersect(moved_min, moved_max, zone.min, zone.max):
+            return (
+                "Moved object runtime range intersects forbid zone "
+                f"'{zone.name}' across jitter/randomization"
+            )
+
+    return None
+
+
 def load_simulation_result(path: Path) -> SimulationResult | None:
     if not path.exists():
         return None
@@ -805,6 +855,9 @@ def validate(
 
                     data = yaml.safe_load(content)
                     obj_model = ObjectivesYaml(**data)
+                    objective_error = _validate_objectives_consistency(obj_model)
+                    if objective_error:
+                        return (False, f"Invalid objectives.yaml: {objective_error}")
                     effective_build_zone = obj_model.objectives.build_zone.model_dump()
             except Exception:
                 pass
