@@ -82,11 +82,13 @@ We track the following structured domain events to compute the evaluation metric
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineering plan reviewer, engineering execution reviewer, electronics reviewer) with decision, reason category, reviewer manifest filename, and evidence used (images viewed count, video viewed, files checked).
+21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineering plan reviewer, engineering execution reviewer, electronics reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
-24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, expected-minimal `dofs`, reviewer_stage).
+24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
 25. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
+26. Engineering plan reviewer deterministic validator execution (`plan_review_validation_run`) with input artifact revision, validator status, and mismatch reasons when rejected.
+27. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
 
 <!-- 20. Metric for "Jamming Rate"
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.

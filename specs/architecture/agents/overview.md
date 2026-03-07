@@ -25,4 +25,7 @@ The engineering flow has two separate review stages:
 3. `engineer_coder` (+ `electronics_engineer` and `electronics_reviewer`)
 4. `engineer_execution_reviewer` (post-validation/post-simulation execution gate)
 
-The split between plan and execution reviewers is mandatory. Plan review checks planning quality and contract completeness before implementation starts. Execution review checks implemented-solution robustness and plan adherence after successful validation/simulation handoff artifacts exist.
+The split between plan and execution reviewers is mandatory.
+
+- Plan review checks planning quality and contract completeness before implementation starts, and persists reviewer output to a stage-specific file (`reviews/engineering-plan-review-round-<n>.md`).
+- Execution review runs only after validation/simulation success artifacts are present for the latest revision, then checks robustness/non-flakiness and plan adherence, and persists reviewer output to `reviews/engineering-execution-review-round-<n>.md`.

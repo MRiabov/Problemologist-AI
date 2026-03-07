@@ -68,10 +68,10 @@ Each agent starts with a template, roughly defined in [Starting folder structure
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
 - Engineering plan reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/review-round-*/review.md` only
+  - write: `reviews/engineering-plan-review-round-*.md` only
 - Engineering execution reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/review-round-*/review.md` only
+  - write: `reviews/engineering-execution-review-round-*.md` only
 - Benchmark planner:
   - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
   - write: `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (benchmark-owned), `assembly_definition.yaml` (benchmark-local draft, not handed to engineering)
@@ -80,7 +80,10 @@ Each agent starts with a template, roughly defined in [Starting folder structure
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
 - Benchmark reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/review-round-*/review.md` only
+  - write: `reviews/benchmark-review-round-*.md` only
+- Electronics reviewer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - write: `reviews/electronics-review-round-*.md` only
 - COTS search subagent:
   - read: `parts.db` (read-only), COTS query helpers/CLI, constraints from caller, optional prior `journal.md`
   - write: `journal.md` (optional), structured COTS result payload returned to caller
@@ -95,6 +98,11 @@ System-only metadata:
   - `.manifests/engineering_plan_review_manifest.json`
   - `.manifests/engineering_execution_review_manifest.json`
   - `.manifests/electronics_review_manifest.json`
+- Reviewer decision persistence filenames are explicit and role-scoped:
+  - `reviews/benchmark-review-round-<n>.md`
+  - `reviews/engineering-plan-review-round-<n>.md`
+  - `reviews/engineering-execution-review-round-<n>.md`
+  - `reviews/electronics-review-round-<n>.md`
 - All LLM agent roles are denied read/write/edit on `.manifests/**` via `config/agents_config.yaml`.
 
 Locking rule:
@@ -127,8 +135,9 @@ Rules:
 3. If a path is not matched by `allow`, access is denied by default.
 4. Agent-specific rules override `defaults` (defaults are fallback only).
 5. Tool availability can be broad, but path permissions are enforced per role by this file.
-6. Reviewer roles (engineering plan reviewer, engineering execution reviewer, benchmark reviewer, electronics reviewer) get `write/edit` tools, but policy only allows writes under `reviews/review-round-*/`.
+6. Reviewer roles (engineering plan reviewer, engineering execution reviewer, benchmark reviewer, electronics reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review files (`reviews/engineering-plan-review-round-*.md`, `reviews/engineering-execution-review-round-*.md`, `reviews/benchmark-review-round-*.md`, `reviews/electronics-review-round-*.md`).
 7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
+8. Engineering plan reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
 
 Example (`config/agents_config.yaml`):
 
@@ -165,7 +174,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/engineering-plan-review-round-*.md"]
       deny: [".manifests/**"]
 
   engineer_execution_reviewer:
@@ -173,7 +182,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/engineering-execution-review-round-*.md"]
       deny: [".manifests/**"]
 
   benchmark_planner:
@@ -197,7 +206,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/benchmark-review-round-*.md"]
       deny: [".manifests/**"]
 
   cots_search:
@@ -245,7 +254,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/review-round-*/review.md"]
+      allow: ["reviews/electronics-review-round-*.md"]
       deny: [".manifests/**"]
 ```
 

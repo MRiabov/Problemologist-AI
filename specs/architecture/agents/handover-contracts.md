@@ -38,6 +38,21 @@ Validation rule:
 
 - Reviewer entry is blocked if the reviewer-specific manifest for that stage is missing, stale, or invalid for the latest revision.
 
+## Reviewer decision persistence naming contract
+
+Reviewer decisions are persisted as reviewer-scoped markdown files. We do not use a shared review filename or shared per-round folder.
+
+Required reviewer decision files:
+
+1. Benchmark reviewer: `reviews/benchmark-review-round-<n>.md`
+2. Engineering plan reviewer: `reviews/engineering-plan-review-round-<n>.md`
+3. Engineering execution reviewer: `reviews/engineering-execution-review-round-<n>.md`
+4. Electronics reviewer: `reviews/electronics-review-round-<n>.md`
+
+Validation rule:
+
+- Reviewer output is invalid if the decision is not persisted to the stage-specific file path for that reviewer/round.
+
 ## Benchmark generator Planner and Benchmark CAD designer
 
 The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
@@ -110,10 +125,14 @@ Planner gate requirements (`ENGINEER_PLAN_REVIEWER` / coder entry contract):
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
 - Required artifacts: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
+- Entry guard behavior:
+  - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
+  - Use node-entry validation with an engineering-plan-review custom check (parity with execution-review stale-revision checks).
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
   - Reject inconsistent, infeasible, ambiguous, or incomplete plans.
   - Reject excessive DOFs; motion metadata must be minimal and mechanism-necessary, not convenience-driven.
+  - Re-run `skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
   - Keep cost/weight target scrutiny as a mandatory realism check.
   - Optional future work: propose weight/cost optimization opportunities.
 
@@ -251,6 +270,7 @@ Minimum motion metadata fields inside `final_assembly.parts` entries:
 - DOF minimization contract:
   - `dofs: []` is the default for non-moving parts.
   - Non-empty `dofs` must be explicitly justified in `plan.md` (`## 3. Assembly Strategy` or `## 5. Risk Assessment`) with objective-linked rationale.
+  - Deterministic suspicion threshold: `len(dofs) > 3` is suspicious over-actuation and is rejected unless reviewer receives explicit mechanism-level justification and accepts it.
   - Unjustified or excessive DOF assignments are plan-review rejection criteria.
 
 Minimum per-manufactured-part fields:
@@ -353,12 +373,12 @@ The execution reviewer (`ENGINEER_EXECUTION_REVIEWER`) is a post-validation/post
 
 1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
    - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
-2. The execution reviewer has read-only access to implementation and evidence files, plus write/edit only under `reviews/review-round-[round number]/`.
-3. Primary review is robustness and realism: verify successful behavior is not flaky across runtime randomization and is likely repeatable.
+2. The execution reviewer has read-only access to implementation and evidence files, plus write/edit only to `reviews/engineering-execution-review-round-<n>.md`.
+3. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.
 4. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.
 5. Optional code-quality review is secondary and should only block for concrete correctness/safety risks.
 
-The goal is to persist the reviews into a persistent file which the agent can reference at any time (alongside previous reviews), and see it only once; and to avoid plumbing to route "reviews" text when required.
+The goal is to persist reviews into stage-specific review files (`reviews/engineering-plan-review-round-<n>.md`, `reviews/engineering-execution-review-round-<n>.md`, etc.) that agents can reference in later rounds, without routing free-form review text through in-memory-only state.
 
 Notably the Engineer will at this point already have passed the manufacturability constraint, cost constraint, and others.
 <!-- and others - I need to ideate/remember what else it should review for.  -->

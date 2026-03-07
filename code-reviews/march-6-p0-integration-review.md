@@ -11,9 +11,7 @@ This report documents the gap between the current integration test implementatio
 |---|---|---|---|
 | **INT-005** | Engineer planner artifact gate | **Drift** | `test_planner_gates.py` uses `benchmark/submit` for artifact checks. The spec requires verifying that `submit_plan` (tool-call) is the mandatory gate and that episode traces contain `TOOL_START` for `node_type=engineer_planner`. |
 | **INT-024** | Benchmark validation toolchain | **Missing** | Current tests in `test_architecture_p0.py` only check valid scripts. Missing verification that `/validate` catches intersecting/invalid objective setups across randomization ranges. |
-| **INT-026** | Mandatory event families | **Partial** | `test_int_026_030.py` manually emits events from a script. The spec requires verifying that the *system* emits tool calls, simulation results, manufacturability checks, and lint failures during real runs. |
 | **INT-126** | Wire tear behavior | **Missing** | No integrated test for `FAILED_WIRE_TORN` when tension exceeds tensile rating. |
-| **INT-127** | Pre-WP3 backward compat | **Missing** | No test ensuring existing benchmarks (without `electronics`) default to `is_powered = 1.0`. |
 | **INT-128** | Electronics schema gate | **Missing** | `objectives.yaml` validation for `electronics_requirements` is not exercised in integration. |
 
 ### 2. Frontend P0 (UI Delivery)
@@ -27,11 +25,6 @@ This report documents the gap between the current integration test implementatio
 | **INT-167** | Controller-proxied assets | **Missing** | No verification that CAD fetches use `/api/episodes/{id}/assets/` via controller proxy. |
 | **INT-170** | Post-run feedback UX | **Missing** | Thumbs up/down modal persistence and retrieve-back not tested. |
 
-## Implementation Violations
-- **Mocking Strategy:** `INT-026` violates the "Assert against containers" rule by manually emitting events rather than observing system behavior.
-- **Organization:** Several P0 tests are located in `tests/integration/frontend/` rather than the mandated `tests/integration/frontend/p0/` subdirectory.
-
 ## Recommendations
 1. Refactor `INT-005` and `INT-113/114` to strictly follow the trace-based submission gate logic.
 2. Implement missing Electronics P0s (`INT-126` to `INT-128`) to prevent regressions in the circuit validation logic.
-3. Consolidate misplaced frontend tests into `p0/` and implement the missing UI/API boundary contracts (`INT-167`, `INT-170`).

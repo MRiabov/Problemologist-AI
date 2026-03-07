@@ -252,14 +252,16 @@ The engineering loop has two reviewer stages with different responsibilities.
 2. Validate plan consistency across `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml`.
 3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
 4. Validate non-ambiguity and completeness of planner handoff artifacts.
-5. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
-6. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
+5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
+6. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
+7. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
+8. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
 
 `ENGINEER_EXECUTION_REVIEWER` responsibilities:
 
 1. Verify implementation follows the approved plan (or has justified, reviewable deviations).
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
-3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision).
+3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
 4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
 5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
 
@@ -267,6 +269,11 @@ Reviewer manifest naming in engineering:
 
 - Plan reviewer stage: `.manifests/engineering_plan_review_manifest.json`
 - Execution reviewer stage: `.manifests/engineering_execution_review_manifest.json`
+
+Reviewer decision persistence naming in engineering:
+
+- Plan reviewer writes: `reviews/engineering-plan-review-round-<n>.md`
+- Execution reviewer writes: `reviews/engineering-execution-review-round-<n>.md`
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
