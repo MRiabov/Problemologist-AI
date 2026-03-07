@@ -11,6 +11,7 @@ from shared.workers.schema import ReadFileRequest, WriteFileRequest
 from tests.integration.agent.helpers import (
     CONTROLLER_URL,
     get_controller_log_path,
+    get_temporal_worker_log_path,
     read_log_segment,
     run_agent_episode,
     strip_ansi,
@@ -219,3 +220,91 @@ async def test_int_183_steerability_queue_single_consumption():
         "Expected consumed steering log to include the run session_id."
     )
     assert steer_text in log_segment, "Expected steer text in consumption log entry."
+
+
+@pytest.mark.integration_agent
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
+    """INT-185: Agent-caused tool error is observed, no infra retry fan-out, and run continues."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        _, episode_id = await run_agent_episode(
+            client,
+            int_id="INT-185",
+            task="INT-185 agent failed tool routing contract",
+            agent_name=AgentName.ENGINEER_CODER,
+        )
+        episode = await wait_for_episode_terminal(client, episode_id)
+
+    assert episode["status"] != "FAILED", f"Episode failed: {_slim_episode(episode)}"
+    traces = episode.get("traces", [])
+    failed_forbidden_writes = [
+        (idx, t)
+        for idx, t in enumerate(traces)
+        if t.get("trace_type") == "TOOL_START"
+        and t.get("name") == "write_file"
+        and ".manifests/int185_forbidden.md" in (t.get("content") or "")
+        and "permission denied"
+        in str((t.get("metadata_vars") or {}).get("error") or "").lower()
+    ]
+    assert len(failed_forbidden_writes) == 1, (
+        "Expected exactly one deterministic agent-caused forbidden write failure."
+    )
+    failed_idx = failed_forbidden_writes[0][0]
+    subsequent_tool_starts = [
+        idx
+        for idx, t in enumerate(traces)
+        if idx > failed_idx and t.get("trace_type") == "TOOL_START"
+    ]
+    assert subsequent_tool_starts, (
+        "Expected subsequent tool calls after the failed tool observation."
+    )
+
+
+@pytest.mark.integration_agent
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
+    """INT-186: Infra tool failures retry up to 3 attempts then fail closed with infra terminal metadata."""
+    temporal_log = get_temporal_worker_log_path()
+    start_offset = temporal_log.stat().st_size if temporal_log.exists() else 0
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id, episode_id = await run_agent_episode(
+            client,
+            int_id="INT-186",
+            task="INT-186 system-failed retry cap contract",
+            agent_name=AgentName.ENGINEER_CODER,
+        )
+        episode = await wait_for_episode_terminal(client, episode_id, timeout_s=240.0)
+
+    assert episode["status"] == "FAILED", (
+        "Episode must fail closed after system tool retry exhaustion."
+    )
+    metadata = episode.get("metadata_vars") or {}
+    assert metadata.get("terminal_reason") == "SYSTEM_TOOL_RETRY_EXHAUSTED", metadata
+    assert metadata.get("failure_class") == "INFRA_DEVOPS_FAILURE", metadata
+
+    traces = episode.get("traces", [])
+    infra_calls = [
+        t
+        for t in traces
+        if t.get("trace_type") == "TOOL_START"
+        and t.get("name") == "execute_command"
+        and "INT186_FORCE_INFRA_UNAVAILABLE" in (t.get("content") or "")
+    ]
+    assert len(infra_calls) == 1, (
+        "Infra retries must stay infra-level and not duplicate LM tool-call traces."
+    )
+    infra_error = str((infra_calls[0].get("metadata_vars") or {}).get("error") or "")
+    assert "SYSTEM_TOOL_RETRY_EXHAUSTED" in infra_error, infra_calls[0]
+
+    log_segment = strip_ansi(read_log_segment(temporal_log, start_offset))
+    attempt_lines = [
+        line
+        for line in log_segment.splitlines()
+        if "execute_script_activity_attempt" in line and session_id in line
+    ]
+    assert len(attempt_lines) == 3, (
+        f"Expected exactly 3 infra retry attempts for session {session_id}, got {len(attempt_lines)}."
+    )
