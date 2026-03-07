@@ -54,9 +54,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 500
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 10
@@ -120,9 +120,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 500
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 10
@@ -142,7 +142,7 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
           - tool_name: "submit_plan"
@@ -485,18 +485,24 @@ scenarios:
       - node: engineer_coder
         steps:
           - thought: "Implementing the design."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                import os
+                import trimesh
+                os.makedirs('assets', exist_ok=True)
+                b = Box(10,10,10)
+                export_stl(b, 'assets/box.stl')
+                mesh = trimesh.load('assets/box.stl')
+                mesh.export('assets/box.glb', file_type='glb')
+                with open('script.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
             journal: "Implemented mechanism with MOCK-MOTOR-ID."
-            generated_code: |
-              from build123d import *
-              import os
-              import trimesh
-              os.makedirs('assets', exist_ok=True)
-              b = Box(10,10,10)
-              export_stl(b, 'assets/box.stl')
-              mesh = trimesh.load('assets/box.stl')
-              mesh.export('assets/box.glb', file_type='glb')
-              with open('script.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+            thought: "Implementation complete."
       - node: engineer_reviewer
         steps:
           - finished: true
@@ -562,7 +568,7 @@ scenarios:
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
           - finished: true
@@ -583,16 +589,28 @@ scenarios:
       - node: engineer_coder
         steps:
           - thought: "Implement deterministic oscillatory script."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+                def build():
+                    p = Box(0.2, 0.2, 0.2)
+                    p = p.moved(Location((6, 6, 6)))
+                    p.label = "obj"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=True,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
             journal: "Simulation stable for oscillatory controller scenario."
-            generated_code: |
-              from build123d import *
-              from shared.models.schemas import PartMetadata
-              def build():
-                  p = Box(10, 4, 4)
-                  p.label = "osc_arm"
-                  p.metadata = PartMetadata(material_id="abs", fixed=True)
-                  return p
+            thought: "Implementation complete."
       - node: engineer_reviewer
         steps:
           - finished: true
@@ -633,9 +651,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 500
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 10
@@ -672,20 +690,26 @@ scenarios:
       - node: engineer_coder
         steps:
           - thought: "I will implement the box in build123d and run simulation."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                import os
+                import trimesh
+                # Create GLB
+                os.makedirs('assets', exist_ok=True)
+                b = Box(10,10,10)
+                export_stl(b, 'assets/box.stl')
+                mesh = trimesh.load('assets/box.stl')
+                mesh.export('assets/box.glb', file_type='glb')
+                with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
+                with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
             journal: "Implemented box and ran simulation."
-            generated_code: |
-              from build123d import *
-              import os
-              import trimesh
-              # Create GLB
-              os.makedirs('assets', exist_ok=True)
-              b = Box(10,10,10)
-              export_stl(b, 'assets/box.stl')
-              mesh = trimesh.load('assets/box.stl')
-              mesh.export('assets/box.glb', file_type='glb')
-              with open('solution.py', 'w') as f: f.write('from build123d import *\\ndef build(): return Box(10,10,10)')
-              with open('simulation_result.json', 'w') as f: f.write('{"success": true}')
+            thought: "Implementation complete."
       - node: engineer_reviewer
         steps:
           - finished: true
@@ -1455,7 +1479,7 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
           - tool_name: "submit_plan"
@@ -1558,9 +1582,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 500
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 10
@@ -1580,7 +1604,7 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
           - finished: true
@@ -1601,16 +1625,28 @@ scenarios:
       - node: engineer_coder
         steps:
           - thought: "Emit simple script."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+                def build():
+                    p = Box(0.2, 0.2, 0.2)
+                    p = p.moved(Location((0.5, 0.5, 0.5)))
+                    p.label = "obj"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=True,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
             journal: "INT-181 coder output generated."
-            generated_code: |
-              from build123d import *
-              from shared.models.schemas import PartMetadata
-              def build():
-                  p = Box(8,8,8)
-                  p.label = "box"
-                  p.metadata = PartMetadata(material_id="abs", fixed=True)
-                  return p
+            thought: "Implementation complete."
       - node: engineer_reviewer
         steps:
           - finished: true
@@ -1650,9 +1686,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 500
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 10
@@ -1672,7 +1708,7 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
           - finished: true
@@ -1693,16 +1729,28 @@ scenarios:
       - node: engineer_coder
         steps:
           - thought: "Emit simple script."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+                def build():
+                    p = Box(0.2, 0.2, 0.2)
+                    p = p.moved(Location((0.5, 0.5, 0.5)))
+                    p.label = "obj"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=True,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
             journal: "INT-182 coder output generated."
-            generated_code: |
-              from build123d import *
-              from shared.models.schemas import PartMetadata
-              def build():
-                  p = Box(7,7,7)
-                  p.label = "box"
-                  p.metadata = PartMetadata(material_id="abs", fixed=True)
-                  return p
+            thought: "Implementation complete."
       - node: engineer_reviewer
         steps:
           - finished: true
@@ -1745,9 +1793,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 500
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 10
@@ -1767,7 +1815,7 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
           - finished: true
@@ -1788,16 +1836,28 @@ scenarios:
       - node: engineer_coder
         steps:
           - thought: "Emit simple script."
-            finished: true
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import *
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+                def build():
+                    p = Box(0.2, 0.2, 0.2)
+                    p = p.moved(Location((0.5, 0.5, 0.5)))
+                    p.label = "obj"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=True,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
             journal: "INT-183 coder output generated."
-            generated_code: |
-              from build123d import *
-              from shared.models.schemas import PartMetadata
-              def build():
-                  p = Box(6,6,6)
-                  p.label = "box"
-                  p.metadata = PartMetadata(material_id="abs", fixed=True)
-                  return p
+            thought: "Implementation complete."
       - node: engineer_reviewer
         steps:
           - finished: true

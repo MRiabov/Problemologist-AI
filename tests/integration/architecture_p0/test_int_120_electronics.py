@@ -405,7 +405,8 @@ def build():
         )
         assert resp.status_code == 200
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert data.success is True
+        if not data.success:
+            pytest.fail(f"Simulation failed: {data.message}")
 
         # 4. Verify totals in artifacts
         assert data.artifacts.total_cost is not None

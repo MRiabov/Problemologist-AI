@@ -104,7 +104,7 @@ async def test_int_002_controller_worker_execution_boundary():
                 completed = True
                 break
             if status == EpisodeStatus.FAILED:
-                pytest.fail(f"Agent failed: {s_resp.text}")
+                pytest.fail(f"Agent failed: {ep_data.model_dump(exclude={'traces'})}")
 
         assert completed, "Agent did not complete in time"
 
@@ -364,7 +364,8 @@ run()
         )
         assert success_resp.status_code == 200
         success_data = BenchmarkToolResponse.model_validate(success_resp.json())
-        assert success_data.success, success_data.message
+        if not success_data.success:
+            pytest.fail(f"Success path failed: {success_data.message}")
         assert (
             "goal achieved" in success_data.message.lower()
             or "goal zone" in success_data.message.lower()
@@ -441,7 +442,8 @@ def build():
         assert resp.status_code == 200
         data = BenchmarkToolResponse.model_validate(resp.json())
 
-        assert data.success
+        if not data.success:
+            pytest.fail(f"Verification failed: {data.message}")
         assert data.artifacts.verification_result is not None
         ver_result = data.artifacts.verification_result
         assert ver_result.num_runs == 3
@@ -525,4 +527,5 @@ def build():
         assert resp.status_code == 200
         data = BenchmarkToolResponse.model_validate(resp.json())
 
-        assert data.success
+        if not data.success:
+            pytest.fail(f"Fastener validation failed: {data.message}")

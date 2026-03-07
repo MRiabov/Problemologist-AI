@@ -45,6 +45,10 @@ def _trace_blob(episode_payload: dict) -> str:
     return json.dumps(traces, sort_keys=True)
 
 
+def _slim_episode(episode: dict) -> dict:
+    return {k: v for k, v in episode.items() if k != "traces"}
+
+
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
@@ -59,7 +63,7 @@ async def test_int_181_tool_loop_ordering_and_clean_termination():
         )
         episode = await wait_for_episode_terminal(client, episode_id)
 
-    assert episode["status"] != "FAILED", f"Episode failed: {episode}"
+    assert episode["status"] != "FAILED", f"Episode failed: {_slim_episode(episode)}"
 
     traces = episode.get("traces", [])
     list_files_idxs = _tool_trace_indexes(traces, name="list_files")
@@ -137,8 +141,12 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
             wait_for_episode_terminal(client, episode_b_id),
         )
 
-        assert episode_a["status"] != "FAILED", f"Episode A failed: {episode_a}"
-        assert episode_b["status"] != "FAILED", f"Episode B failed: {episode_b}"
+        assert episode_a["status"] != "FAILED", (
+            f"Episode A failed: {_slim_episode(episode_a)}"
+        )
+        assert episode_b["status"] != "FAILED", (
+            f"Episode B failed: {_slim_episode(episode_b)}"
+        )
 
         read_a_from_b = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
@@ -193,7 +201,9 @@ async def test_int_183_steerability_queue_single_consumption():
 
         await wait_for_queue_empty(client, session_id, timeout_s=90.0)
         episode = await wait_for_episode_terminal(client, episode_id)
-        assert episode["status"] != "FAILED", f"Episode failed: {episode}"
+        assert episode["status"] != "FAILED", (
+            f"Episode failed: {_slim_episode(episode)}"
+        )
 
         queue_after = await client.get(
             f"{CONTROLLER_URL}/api/v1/sessions/{session_id}/queue"

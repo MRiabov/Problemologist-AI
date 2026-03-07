@@ -66,9 +66,11 @@ async def test_simulation_concurrency_serialization():
     for i, (resp, start, end) in enumerate(results):
         assert resp.status_code == 200, f"Sim {i} failed: {resp.text}"
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert data.success, f"Sim {i} returned success=False: {data.message}"
+        if not data.success:
+            pytest.fail(f"Sim {i} returned success=False: {data.message}")
 
         duration = end - start
+
         durations.append(duration)
         intervals.append((start, end))
 

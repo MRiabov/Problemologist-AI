@@ -140,7 +140,8 @@ def build():
         data = BenchmarkToolResponse.model_validate(resp.json())
 
         # Verify artifacts in response (MP4, JSON, etc.)
-        assert data.success, f"Simulation failed: {data.message}"
+        if not data.success:
+            pytest.fail(f"Simulation failed: {data.message}")
         artifacts = data.artifacts
         assert artifacts is not None, (
             f"Artifacts missing in response. Message: {data.message}"

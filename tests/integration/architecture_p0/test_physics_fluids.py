@@ -231,7 +231,8 @@ def build():
         )
         assert resp.status_code == 200
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert data.success, f"Simulation failed: {data.message}"
+        if not data.success:
+            pytest.fail(f"Simulation failed: {data.message}")
 
         # Verify fluid metrics in result
         artifacts = data.artifacts
