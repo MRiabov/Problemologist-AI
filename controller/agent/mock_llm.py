@@ -6,6 +6,7 @@ from typing import Any
 import dspy
 import structlog
 import yaml
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
 from shared.enums import AgentName
 
@@ -26,6 +27,47 @@ REVIEWER_AGENTS = {
     AgentName.ELECTRONICS_REVIEWER,
     AgentName.ENGINEER_EXECUTION_REVIEWER,
 }
+
+
+class TranscriptStepSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    thought: str | None = None
+    tool_name: str | None = None
+    tool_args: dict[str, Any] | None = None
+    expected_observation: str | None = None
+    finished: bool | None = None
+    summary: str | None = None
+    journal: str | None = None
+    review: dict[str, Any] | None = None
+    plan: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def validate_step(self) -> "TranscriptStepSpec":
+        has_tool = self.tool_name is not None
+        is_finished = bool(self.finished)
+        if has_tool and is_finished:
+            raise ValueError(
+                "Transcript step cannot define both tool_name and finished."
+            )
+        if not has_tool and not is_finished:
+            raise ValueError(
+                "Transcript step must define either tool_name or finished."
+            )
+        return self
+
+
+class TranscriptNodeSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node: str
+    steps: list[TranscriptStepSpec]
+
+
+class TranscriptScenarioSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    transcript: list[TranscriptNodeSpec]
 
 
 class MockDSPyLM(dspy.LM):
@@ -60,7 +102,22 @@ class MockDSPyLM(dspy.LM):
         try:
             with self.responses_path.open("r") as f:
                 data = yaml.safe_load(f)
-                return data.get("scenarios", {})
+                scenarios = data.get("scenarios", {})
+                for scenario_id, scenario in scenarios.items():
+                    transcript = scenario.get("transcript")
+                    if transcript is None:
+                        continue
+                    try:
+                        TranscriptScenarioSpec.model_validate(
+                            {"transcript": transcript}
+                        )
+                    except ValidationError as exc:
+                        msg = (
+                            f"Invalid transcript schema in mock_responses.yaml "
+                            f"scenario '{scenario_id}': {exc}"
+                        )
+                        raise ValueError(msg) from exc
+                return scenarios
         except Exception as e:
             logger.warning("mock_responses_yaml_load_failed", error=str(e))
             return {}
@@ -129,7 +186,6 @@ class MockDSPyLM(dspy.LM):
                 "journal",
                 "plan",
                 "finished",
-                "generated_code",
             ]:
                 if field in full_text:
                     expected_fields.append(field)
@@ -345,6 +401,7 @@ class MockDSPyLM(dspy.LM):
 
         # Use tool_override if it's a tool-calling step
         tool_override = None
+        finished = step_data.get("finished", False)
         if not step_data.get("finished"):
             tool_name = step_data.get("tool_name")
             if tool_name:
@@ -354,7 +411,7 @@ class MockDSPyLM(dspy.LM):
             node_key,
             step_data,
             is_json,
-            finished=step_data.get("finished", False),
+            finished=finished,
             expected_fields=expected_fields,
             tool_override=tool_override,
         )
@@ -515,21 +572,14 @@ class MockDSPyLM(dspy.LM):
                     tool_name = tc.get("name")
                     tool_args = tc.get("input", {})
                 else:
-                    # Explicit tools exhausted, use generated_code if present
-                    code = node_data.get("generated_code")
-                    if code:
-                        tool_name = "execute_command"
-                        tool_args = {"command": code}
-                    else:
-                        tool_name = "finish"
-                        tool_args = {}
+                    tool_name = "finish"
+                    tool_args = {}
 
         # Base schema for DSPy JSONAdapter
         resp = {
             "thought": thought,
             "reasoning": reasoning,
             "finished": finished,
-            "generated_code": node_data.get("generated_code"),
         }
 
         # ReAct compatibility - handle intermediate tool calling phase
@@ -571,8 +621,6 @@ class MockDSPyLM(dspy.LM):
             )
         elif node_key in CODER_AGENTS:
             resp["journal"] = node_data.get("journal", "Work completed.")
-            if not finished and "generated_code" not in resp:
-                resp["generated_code"] = node_data.get("generated_code", "# No code")
         elif node_key == AgentName.JOURNALLING_AGENT:
             resp["summarized_journal"] = node_data.get(
                 "summarized_journal", "Journal summary."

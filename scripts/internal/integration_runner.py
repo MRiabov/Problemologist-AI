@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import concurrent.futures
 import os
 import shlex
 import shutil
@@ -62,8 +63,7 @@ def _check_tcp(host: str, port: int, *, timeout_s: float) -> bool:
 
 def _check_cmd(command: str) -> bool:
     completed = subprocess.run(
-        command,
-        shell=True,
+        ["bash", "-o", "pipefail", "-lc", command],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
@@ -161,11 +161,15 @@ def run_pytest_subprocess(
     log_file = _repo_root() / "logs" / "integration_tests" / "full_test_output.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Use a shell string to pipe output to tee for both console and file logging
-    cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
-    full_cmd = f"{cmd_str} 2>&1 | tee {shlex.quote(str(log_file))}"
-
-    process = subprocess.Popen(full_cmd, cwd=_repo_root(), env=env, shell=True)
+    process = subprocess.Popen(
+        cmd,
+        cwd=_repo_root(),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
 
     def _forward_signal(sig: int, _: object) -> None:
         if process.poll() is None:
@@ -173,6 +177,13 @@ def run_pytest_subprocess(
 
     signal.signal(signal.SIGINT, _forward_signal)
     signal.signal(signal.SIGTERM, _forward_signal)
+
+    assert process.stdout is not None
+    with log_file.open("w", encoding="utf-8") as log_handle:
+        for line in process.stdout:
+            print(line, end="")
+            log_handle.write(line)
+        process.stdout.close()
 
     return process.wait()
 
@@ -246,11 +257,30 @@ def _load_env_file(path: Path) -> None:
 
 def _ensure_postgres_database(db_name: str) -> None:
     escaped_db_name = db_name.replace("'", "''")
-    ensure_cmd = (
-        "psql -U postgres -d postgres -tAc "
-        f"\"SELECT 1 FROM pg_database WHERE datname='{escaped_db_name}'\" "
-        f'| grep -q 1 || psql -U postgres -d postgres -c "CREATE DATABASE {db_name}"'
+    check_db_cmd = [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.test.yaml",
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-tAc",
+        f"SELECT 1 FROM pg_database WHERE datname='{escaped_db_name}'",
+    ]
+    check_result = _run(
+        check_db_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
+    if check_result.stdout.decode("utf-8", errors="ignore").strip() == "1":
+        return
+
     _run(
         [
             "docker",
@@ -260,9 +290,13 @@ def _ensure_postgres_database(db_name: str) -> None:
             "exec",
             "-T",
             "postgres",
-            "sh",
-            "-lc",
-            ensure_cmd,
+            "psql",
+            "-U",
+            "postgres",
+            "-d",
+            "postgres",
+            "-c",
+            f"CREATE DATABASE {db_name}",
         ]
     )
 
@@ -367,6 +401,126 @@ def _should_rebuild_frontend(frontend_state_file: Path | None) -> bool:
     return _has_non_test_frontend_changes(changed_since)
 
 
+def _prepare_parts_db(repo_root: Path) -> None:
+    parts_db = repo_root / "parts.db"
+    if parts_db.exists() and parts_db.stat().st_size > 0:
+        return
+    print("parts.db missing or empty. Populating COTS database...")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    _run(["uv", "run", "python", "-m", "shared.cots.indexer"], env=env)
+
+
+def _wait_for_temporal_stable_tcp(
+    *,
+    host: str = "127.0.0.1",
+    port: int = 17233,
+    timeout_s: float = 20.0,
+    interval_s: float = 0.5,
+    consecutive_successes: int = 4,
+) -> None:
+    started = time.monotonic()
+    stable_count = 0
+    while True:
+        if _check_tcp(host, port, timeout_s=1.0):
+            stable_count += 1
+            if stable_count >= consecutive_successes:
+                return
+        else:
+            stable_count = 0
+
+        if time.monotonic() - started >= timeout_s:
+            raise TimeoutError(
+                f"Timed out waiting for temporal gRPC to become stable on {host}:{port}"
+            )
+        time.sleep(interval_s)
+
+
+def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
+    print("Spinning up infrastructure (Postgres, Temporal, Minio)...")
+    _run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "docker-compose.test.yaml",
+            "up",
+            "-d",
+            "--remove-orphans",
+        ]
+    )
+
+    print("Waiting for infra to be ready...")
+    infra_checks = [
+        HealthCheck(
+            name="postgres",
+            kind="cmd",
+            target="docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres",
+        ),
+        HealthCheck(
+            name="minio",
+            kind="http",
+            target="http://127.0.0.1:19000/minio/health/live",
+        ),
+        HealthCheck(name="temporal", kind="tcp", target="127.0.0.1:17233"),
+    ]
+    asyncio.run(
+        wait_for_checks_parallel(
+            infra_checks,
+            timeout_s=120.0,
+            interval_s=0.5,
+            probe_timeout_s=1.0,
+        )
+    )
+
+    print("Infrastructure is up. Verifying Temporal gRPC stability...")
+    _wait_for_temporal_stable_tcp()
+
+    print(f"Ensuring integration database exists ({integration_db_name})...")
+    _ensure_postgres_database(integration_db_name)
+
+    print("Running migrations...")
+    _run(["uv", "run", "alembic", "upgrade", "head"])
+
+
+def _prepare_frontend_dist(repo_root: Path, frontend_state_file: Path | None) -> None:
+    if _should_rebuild_frontend(frontend_state_file):
+        print(
+            "Building frontend (detected non-test frontend changes since last integration build or missing dist)..."
+        )
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "."
+        _run(["uv", "run", "python", "scripts/generate_openapi.py"], env=env)
+        _run(["npm", "run", "gen:api"], cwd=repo_root / "frontend")
+        production_env = repo_root / "frontend" / ".env.production"
+        production_env.write_text(
+            "VITE_API_URL=http://localhost:18000\nVITE_IS_INTEGRATION_TEST=true\n",
+            encoding="utf-8",
+        )
+        shutil.rmtree(repo_root / "frontend" / "dist", ignore_errors=True)
+        _run(["npm", "run", "build"], cwd=repo_root / "frontend")
+        if frontend_state_file is not None:
+            frontend_state_file.parent.mkdir(parents=True, exist_ok=True)
+            frontend_state_file.write_text(
+                _git_output(["git", "rev-parse", "HEAD"]) + "\n",
+                encoding="utf-8",
+            )
+    else:
+        print(
+            "Skipping frontend build (no non-test frontend changes since last integration build)."
+        )
+
+
+@dataclass(frozen=True)
+class ProcessSpec:
+    name: str
+    cmd: list[str]
+    log_file: Path
+    cwd: Path | None = None
+    env_updates: dict[str, str] | None = None
+    pid_file: Path | None = None
+
+
 def _start_process(
     name: str,
     cmd: list[str],
@@ -397,6 +551,28 @@ def _start_process(
 
     print(f"{name} started (PID: {process.pid})")
     return StartedProcess(name=name, process=process)
+
+
+def _start_processes_parallel(specs: list[ProcessSpec]) -> list[StartedProcess]:
+    ordered_results: list[StartedProcess | None] = [None] * len(specs)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(specs)) as pool:
+        future_to_index = {
+            pool.submit(
+                _start_process,
+                spec.name,
+                spec.cmd,
+                log_file=spec.log_file,
+                cwd=spec.cwd,
+                env_updates=spec.env_updates,
+                pid_file=spec.pid_file,
+            ): index
+            for index, spec in enumerate(specs)
+        }
+        for future in concurrent.futures.as_completed(future_to_index):
+            index = future_to_index[future]
+            ordered_results[index] = future.result()
+
+    return [result for result in ordered_results if result is not None]
 
 
 def _archive_log_dir(log_dir: Path, archive_dir: Path) -> None:
@@ -637,65 +813,33 @@ def _run_integration_command(
 
     pytest_args, _, _ = _normalize_pytest_args(passthrough_pytest_args)
     run_playwright = _should_run_playwright(pytest_args)
+    git_dir = _git_output(["git", "rev-parse", "--git-dir"]) if run_playwright else ""
+    frontend_state_file = (
+        Path(git_dir) / "problemologist_integration_frontend_build_commit"
+        if git_dir
+        else None
+    )
 
     _kill_port_occupants([15173, 18000, 18001, 18002, 15432, 17233, 19000])
 
     _run(["bash", "scripts/ensure_docker_vfs.sh"])
-    _run(["bash", "scripts/ensure_ngspice.sh"])
-
-    if (
-        not (repo_root / "parts.db").exists()
-        or (repo_root / "parts.db").stat().st_size == 0
-    ):
-        print("parts.db missing or empty. Populating COTS database...")
-        env = os.environ.copy()
-        env["PYTHONPATH"] = "."
-        _run(["uv", "run", "python", "-m", "shared.cots.indexer"], env=env)
-
-    print("Spinning up infrastructure (Postgres, Temporal, Minio)...")
-    _run(
-        [
-            "docker",
-            "compose",
-            "-f",
-            "docker-compose.test.yaml",
-            "up",
-            "-d",
-            "--remove-orphans",
+    print(
+        "Preparing prerequisites in parallel (infra, ngspice, parts DB"
+        + (", frontend build" if run_playwright else "")
+        + ")..."
+    )
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        prep_futures: list[concurrent.futures.Future[object]] = [
+            pool.submit(_bring_up_infra_and_migrate, integration_db_name),
+            pool.submit(_run, ["bash", "scripts/ensure_ngspice.sh"]),
+            pool.submit(_prepare_parts_db, repo_root),
         ]
-    )
-
-    print("Waiting for infra to be ready...")
-    infra_checks = [
-        HealthCheck(
-            name="postgres",
-            kind="cmd",
-            target="docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres",
-        ),
-        HealthCheck(
-            name="minio",
-            kind="http",
-            target="http://127.0.0.1:19000/minio/health/live",
-        ),
-        HealthCheck(name="temporal", kind="tcp", target="127.0.0.1:17233"),
-    ]
-    asyncio.run(
-        wait_for_checks_parallel(
-            infra_checks,
-            timeout_s=120.0,
-            interval_s=0.5,
-            probe_timeout_s=1.0,
-        )
-    )
-
-    print("Infrastructure is up. Giving Temporal a few seconds to settle...")
-    time.sleep(5)
-
-    print(f"Ensuring integration database exists ({integration_db_name})...")
-    _ensure_postgres_database(integration_db_name)
-
-    print("Running migrations...")
-    _run(["uv", "run", "alembic", "upgrade", "head"])
+        if run_playwright:
+            prep_futures.append(
+                pool.submit(_prepare_frontend_dist, repo_root, frontend_state_file)
+            )
+        for future in concurrent.futures.as_completed(prep_futures):
+            future.result()
 
     print("Starting Application Servers (Controller, Worker, Temporal Worker)...")
 
@@ -724,124 +868,90 @@ def _run_integration_command(
         else:
             print(f"Xvfb started (PID: {xvfb.pid}) on :99")
 
-        processes.append(
-            _start_process(
-                "Worker Light",
-                [
-                    "uv",
-                    "run",
-                    "uvicorn",
-                    "worker_light.app:app",
-                    "--host",
-                    "0.0.0.0",
-                    "--port",
-                    "18001",
-                ],
-                log_file=log_dir / "worker_light.log",
-                env_updates={
-                    "WORKER_TYPE": "light",
-                    "EXTRA_DEBUG_LOG": str(log_dir / "worker_light_debug.log"),
-                    "EXTRA_ERROR_LOG": str(log_dir / "worker_light_errors.log"),
-                },
-                pid_file=repo_root / "logs" / "worker_light.pid",
-            )
-        )
-
-        processes.append(
-            _start_process(
-                "Worker Heavy",
-                [
-                    "uv",
-                    "run",
-                    "uvicorn",
-                    "worker_heavy.app:app",
-                    "--host",
-                    "0.0.0.0",
-                    "--port",
-                    "18002",
-                ],
-                log_file=log_dir / "worker_heavy.log",
-                env_updates={
-                    "WORKER_TYPE": "heavy",
-                    "EXTRA_DEBUG_LOG": str(log_dir / "worker_heavy_debug.log"),
-                    "EXTRA_ERROR_LOG": str(log_dir / "worker_heavy_errors.log"),
-                },
-                pid_file=repo_root / "logs" / "worker_heavy.pid",
-            )
-        )
-
-        processes.append(
-            _start_process(
-                "Controller",
-                [
-                    "uv",
-                    "run",
-                    "uvicorn",
-                    "controller.api.main:app",
-                    "--host",
-                    "0.0.0.0",
-                    "--port",
-                    "18000",
-                ],
-                log_file=log_dir / "controller.log",
-                env_updates={
-                    "EXTRA_DEBUG_LOG": str(log_dir / "controller_debug.log"),
-                    "EXTRA_ERROR_LOG": str(log_dir / "controller_errors.log"),
-                },
-                pid_file=repo_root / "logs" / "controller.pid",
-            )
-        )
-
         pythonpath = os.environ.get("PYTHONPATH", "")
         combined_pythonpath = f"{pythonpath}:." if pythonpath else "."
-        processes.append(
-            _start_process(
-                "Temporal Worker",
-                ["uv", "run", "python", "-m", "controller.temporal_worker"],
-                log_file=log_dir / "temporal_worker.log",
-                env_updates={
-                    "PYTHONPATH": combined_pythonpath,
-                    "EXTRA_DEBUG_LOG": str(log_dir / "temporal_worker_debug.log"),
-                    "EXTRA_ERROR_LOG": str(log_dir / "temporal_worker_errors.log"),
-                },
-                pid_file=repo_root / "logs" / "temporal_worker.pid",
+        processes.extend(
+            _start_processes_parallel(
+                [
+                    ProcessSpec(
+                        name="Worker Light",
+                        cmd=[
+                            "uv",
+                            "run",
+                            "uvicorn",
+                            "worker_light.app:app",
+                            "--host",
+                            "0.0.0.0",
+                            "--port",
+                            "18001",
+                        ],
+                        log_file=log_dir / "worker_light.log",
+                        env_updates={
+                            "WORKER_TYPE": "light",
+                            "EXTRA_DEBUG_LOG": str(log_dir / "worker_light_debug.log"),
+                            "EXTRA_ERROR_LOG": str(log_dir / "worker_light_errors.log"),
+                        },
+                        pid_file=repo_root / "logs" / "worker_light.pid",
+                    ),
+                    ProcessSpec(
+                        name="Worker Heavy",
+                        cmd=[
+                            "uv",
+                            "run",
+                            "uvicorn",
+                            "worker_heavy.app:app",
+                            "--host",
+                            "0.0.0.0",
+                            "--port",
+                            "18002",
+                        ],
+                        log_file=log_dir / "worker_heavy.log",
+                        env_updates={
+                            "WORKER_TYPE": "heavy",
+                            "EXTRA_DEBUG_LOG": str(log_dir / "worker_heavy_debug.log"),
+                            "EXTRA_ERROR_LOG": str(log_dir / "worker_heavy_errors.log"),
+                        },
+                        pid_file=repo_root / "logs" / "worker_heavy.pid",
+                    ),
+                    ProcessSpec(
+                        name="Controller",
+                        cmd=[
+                            "uv",
+                            "run",
+                            "uvicorn",
+                            "controller.api.main:app",
+                            "--host",
+                            "0.0.0.0",
+                            "--port",
+                            "18000",
+                        ],
+                        log_file=log_dir / "controller.log",
+                        env_updates={
+                            "EXTRA_DEBUG_LOG": str(log_dir / "controller_debug.log"),
+                            "EXTRA_ERROR_LOG": str(log_dir / "controller_errors.log"),
+                        },
+                        pid_file=repo_root / "logs" / "controller.pid",
+                    ),
+                    ProcessSpec(
+                        name="Temporal Worker",
+                        cmd=["uv", "run", "python", "-m", "controller.temporal_worker"],
+                        log_file=log_dir / "temporal_worker.log",
+                        env_updates={
+                            "PYTHONPATH": combined_pythonpath,
+                            "EXTRA_DEBUG_LOG": str(
+                                log_dir / "temporal_worker_debug.log"
+                            ),
+                            "EXTRA_ERROR_LOG": str(
+                                log_dir / "temporal_worker_errors.log"
+                            ),
+                        },
+                        pid_file=repo_root / "logs" / "temporal_worker.pid",
+                    ),
+                ]
             )
         )
 
         if run_playwright:
-            git_dir = _git_output(["git", "rev-parse", "--git-dir"])
-            frontend_state_file = (
-                Path(git_dir) / "problemologist_integration_frontend_build_commit"
-                if git_dir
-                else None
-            )
-
-            if _should_rebuild_frontend(frontend_state_file):
-                print(
-                    "Building frontend (detected non-test frontend changes since last integration build or missing dist)..."
-                )
-                env = os.environ.copy()
-                env["PYTHONPATH"] = "."
-                _run(["uv", "run", "python", "scripts/generate_openapi.py"], env=env)
-                _run(["npm", "run", "gen:api"], cwd=repo_root / "frontend")
-                production_env = repo_root / "frontend" / ".env.production"
-                production_env.write_text(
-                    "VITE_API_URL=http://localhost:18000\nVITE_IS_INTEGRATION_TEST=true\n",
-                    encoding="utf-8",
-                )
-                shutil.rmtree(repo_root / "frontend" / "dist", ignore_errors=True)
-                _run(["npm", "run", "build"], cwd=repo_root / "frontend")
-                if frontend_state_file is not None:
-                    frontend_state_file.parent.mkdir(parents=True, exist_ok=True)
-                    frontend_state_file.write_text(
-                        _git_output(["git", "rev-parse", "HEAD"]) + "\n",
-                        encoding="utf-8",
-                    )
-            else:
-                print(
-                    "Skipping frontend build (no non-test frontend changes since last integration build)."
-                )
-
             processes.append(
                 _start_process(
                     "Frontend server",
