@@ -102,7 +102,7 @@ from build123d import *
 from shared.models.schemas import PartMetadata
 
 def build():
-    motor_1 = Box(8, 8, 8).move(Pos(-20, 0, 8))
+    motor_1 = Box(8, 8, 8).move(Pos(-20, 0, 20))
     motor_1.label = "motor_1"
     motor_1.metadata = PartMetadata(material_id="aluminum_6061")
 

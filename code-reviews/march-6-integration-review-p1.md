@@ -13,6 +13,8 @@ Review of P1 integration tests against `@specs/integration-tests.md` for spec dr
   - `grep_search` across `tests/integration/` returned 0 matches for these IDs.
 - Notes: These IDs cover the full `planner -> engineer -> reviewer` loops for fluids and `mech -> elec -> reviewer` iteration cycles.
 
+Human: Done.
+
 2. Benchmark-to-engineer handoff package (INT-032) is underspecified.
 - Severity: Medium
 - Why this matters: The test passes if any renders exist, but fails to verify that the engineer receives the full metadata bundle (DOFs, jitter, etc.) required for design stability.
@@ -20,12 +22,14 @@ Review of P1 integration tests against `@specs/integration-tests.md` for spec dr
   - `tests/integration/architecture_p1/test_handover.py:84`
 - Notes: Verification currently stops at `renders/` directory existence and `objectives.yaml` presence.
 
-3. Reviewer evidence completeness (INT-034) lacks strict field validation.
+Human: had singificant logic there.
+
+<!--3. Reviewer evidence completeness (INT-034) lacks strict field validation.
 - Severity: Medium
 - Why this matters: The spec requires `images_viewed` and `files_checked` as evidence, but the test only checks for a non-empty `comments` field in the frontmatter.
 - Evidence:
   - `tests/integration/architecture_p1/test_reviewer_evidence.py:165`
-- Notes: Current implementation uses `ReviewFrontmatter.model_validate`, which may pass even if specific evidence fields are missing or generic.
+- Notes: Current implementation uses `ReviewFrontmatter.model_validate`, which may pass even if specific evidence fields are missing or generic.-->
 
 4. Skill safety toggle (INT-065) is missing functional integration.
 - Severity: Medium
