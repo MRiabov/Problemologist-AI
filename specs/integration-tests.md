@@ -217,6 +217,8 @@ Determinism rule for this category:
 | INT-185 | P1 | Agent-failed tool error routing contract | Trigger a deterministic agent-caused tool failure (for example invalid write/edit arguments) through live APIs; assert tool error is surfaced back to the LM as an observation and the run continues with subsequent LM turn(s) under normal LM budgets. Assert no Temporal retry fan-out for the same failed tool request. |
 | INT-186 | P1 | System-failed tool retry cap + infra terminalization contract | Trigger infrastructure/transport unavailability for a live tool request; assert Temporal retries are capped at 3 attempts for the same tool request/stage, then fail closed. Assert terminal metadata reports `terminal_reason=SYSTEM_TOOL_RETRY_EXHAUSTED` and `failure_class=INFRA_DEVOPS_FAILURE`. Assert retry attempts are infra-level and do not inflate LM tool-call budget accounting. |
 
+INT-186 exception note: a deterministic mock scenario in `tests/integration/mock_responses.yaml` is acceptable for this case because the target is a devops/infra regression contract (system-tool transport failure and retry exhaustion), not product/business logic. This exception is scoped to INT-186 only and does not relax the no-mock rule for other integration tests.
+
 ### Frontend category: UI integration and delivery contract
 
 These are end-to-end frontend integration tests (browser + real APIs + real artifacts). They must run against the same compose stack and must not mock controller/worker API responses.
