@@ -246,9 +246,6 @@ async def test_temporal_recovery_int_041():
             "/ops/backup", headers={"X-Backup-Secret": "change-me-in-production"}
         )
 
-        if resp.status_code == 404:
-            pytest.skip("/ops/backup endpoint not found")
-
         assert resp.status_code == 202
         workflow = BackupWorkflowResponse.model_validate(resp.json())
         assert workflow.workflow_id.startswith("backup-")

@@ -28,17 +28,6 @@ def get_controller_log_path() -> Path:
     return candidates[0]
 
 
-def get_temporal_worker_log_path() -> Path:
-    candidates = [
-        Path("logs/integration_tests/temporal_worker.log"),
-        Path("logs/temporal_worker.log"),
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return candidates[0]
-
-
 def read_log_segment(path: Path, start_offset: int) -> str:
     if not path.exists():
         return ""

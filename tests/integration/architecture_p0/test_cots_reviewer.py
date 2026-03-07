@@ -43,11 +43,6 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
         query = "M3 screw"
         resp = await client.get(f"{CONTROLLER_URL}/cots/search", params={"q": query})
 
-        # If the endpoint doesn't exist yet, we might need to trigger it via an agent run
-        # but for a targeted integration test, we prefer direct API if it exists.
-        if resp.status_code == 404:
-            pytest.skip("COTS search endpoint not implemented on controller")
-
         assert resp.status_code == 200
         search_results = TypeAdapter(list[CotsSearchItem]).validate_python(resp.json())
         assert isinstance(search_results, list)

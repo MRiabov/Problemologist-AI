@@ -1,7 +1,9 @@
 import asyncio
 import json
 import os
+import signal
 import uuid
+from pathlib import Path
 
 import httpx
 import pytest
@@ -11,7 +13,6 @@ from shared.workers.schema import ReadFileRequest, WriteFileRequest
 from tests.integration.agent.helpers import (
     CONTROLLER_URL,
     get_controller_log_path,
-    get_temporal_worker_log_path,
     read_log_segment,
     run_agent_episode,
     strip_ansi,
@@ -224,6 +225,7 @@ async def test_int_183_steerability_queue_single_consumption():
 
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
+@pytest.mark.allow_backend_errors("filesystem_permission_denied.*int185_forbidden.md")
 @pytest.mark.asyncio
 async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
     """INT-185: Agent-caused tool error is observed, no infra retry fan-out, and run continues."""
@@ -263,11 +265,20 @@ async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
 
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
+@pytest.mark.allow_backend_errors(
+    "SYSTEM_TOOL_RETRY_EXHAUSTED|system_tool_retry_attempt|node_entry_validation_rejected|missing_artifact|reviewer_entry_blocked|connection refused|ConnectError|All connection attempts failed"
+)
 @pytest.mark.asyncio
 async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
-    """INT-186: Infra tool failures retry up to 3 attempts then fail closed with infra terminal metadata."""
-    temporal_log = get_temporal_worker_log_path()
-    start_offset = temporal_log.stat().st_size if temporal_log.exists() else 0
+    """INT-186: Infra tool failures retry up to 3 attempts then fail closed.
+
+    Exception note: this test intentionally uses a deterministic mock LLM/tool script
+    scenario (see `tests/integration/mock_responses.yaml`) because the contract under
+    test is a devops regression path (infra transport failure + retry exhaustion), not
+    product logic. This is a scoped exception for INT-186 only.
+    """
+    controller_log = get_controller_log_path()
+    start_offset = controller_log.stat().st_size if controller_log.exists() else 0
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id, episode_id = await run_agent_episode(
@@ -276,6 +287,38 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
             task="INT-186 system-failed retry cap contract",
             agent_name=AgentName.ENGINEER_CODER,
         )
+        # Intentional outage injection for devops regression coverage:
+        # once execute_command starts, drop worker-light mid-call so the same
+        # tool request exercises infra-level retries and terminalization.
+        saw_execute_start = False
+        deadline = asyncio.get_event_loop().time() + 60.0
+        while asyncio.get_event_loop().time() < deadline:
+            snapshot_resp = await client.get(
+                f"{CONTROLLER_URL}/api/episodes/{episode_id}"
+            )
+            assert snapshot_resp.status_code == 200, snapshot_resp.text
+            snapshot = snapshot_resp.json()
+            traces = snapshot.get("traces", [])
+            saw_execute_start = any(
+                t.get("trace_type") == "TOOL_START"
+                and t.get("name") == "execute_command"
+                and "time.sleep(20)" in (t.get("content") or "")
+                for t in traces
+            )
+            if saw_execute_start:
+                break
+            await asyncio.sleep(0.5)
+        assert saw_execute_start, (
+            "Timed out waiting for execute_command before outage injection."
+        )
+
+        worker_pid_path = Path("logs/worker_light.pid")
+        assert worker_pid_path.exists(), (
+            "Missing worker_light.pid for outage injection."
+        )
+        worker_pid = int(worker_pid_path.read_text(encoding="utf-8").strip())
+        os.kill(worker_pid, signal.SIGTERM)
+
         episode = await wait_for_episode_terminal(client, episode_id, timeout_s=240.0)
 
     assert episode["status"] == "FAILED", (
@@ -289,9 +332,7 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
     infra_calls = [
         t
         for t in traces
-        if t.get("trace_type") == "TOOL_START"
-        and t.get("name") == "execute_command"
-        and "INT186_FORCE_INFRA_UNAVAILABLE" in (t.get("content") or "")
+        if t.get("trace_type") == "TOOL_START" and t.get("name") == "execute_command"
     ]
     assert len(infra_calls) == 1, (
         "Infra retries must stay infra-level and not duplicate LM tool-call traces."
@@ -299,11 +340,11 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
     infra_error = str((infra_calls[0].get("metadata_vars") or {}).get("error") or "")
     assert "SYSTEM_TOOL_RETRY_EXHAUSTED" in infra_error, infra_calls[0]
 
-    log_segment = strip_ansi(read_log_segment(temporal_log, start_offset))
+    log_segment = strip_ansi(read_log_segment(controller_log, start_offset))
     attempt_lines = [
         line
         for line in log_segment.splitlines()
-        if "execute_script_activity_attempt" in line and session_id in line
+        if "system_tool_retry_attempt" in line and session_id in line
     ]
     assert len(attempt_lines) == 3, (
         f"Expected exactly 3 infra retry attempts for session {session_id}, got {len(attempt_lines)}."
