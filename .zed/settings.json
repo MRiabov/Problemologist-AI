@@ -2,29 +2,42 @@
   "project_name": "P-AI",
   "languages": {
     "Python": {
-      "language_servers": ["pyrefly", "ruff", "!pyright", "!pylsp"],
-    },
+      "language_servers": [
+        "pyrefly",
+        "ruff",
+        "!pyright",
+        "!pylsp"
+      ]
+    }
   },
   "lsp": {
     "pyrefly": {
-      // "binary": {
-      //   "path": ".venv/bin/pyrefly",
-      //   "arguments": ["lsp"]
-      // },
       "settings": {
         "python": {
-          "pythonPath": ".venv/bin/python",
+          "pythonPath": ".venv/bin/python"
         },
         "pyrefly": {
-          "project_includes": ["src/**/*.py", "tests/**/*.py"],
-          "project_excludes": ["**/.[!/.]*", "**/*venv/**"],
-          "search_path": ["src"],
-          "ignore_errors_in_generated_code": true,
-        },
-      },
-    },
+          "project_includes": [
+            "src/**/*.py",
+            "tests/**/*.py"
+          ],
+          "project_excludes": [
+            "**/.[!/.]*",
+            "**/*venv/**"
+          ],
+          "search_path": [
+            "src"
+          ],
+          "ignore_errors_in_generated_code": true
+        }
+      }
+    }
   },
-  "terminal":{
-    "pr"
-  }
+  "file_scan_exclusions": [
+    "**/.jules",
+    "**/.kittify",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/__pycache__"
+  ]
 }
