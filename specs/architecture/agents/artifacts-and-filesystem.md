@@ -90,6 +90,11 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 
 System-only metadata:
 - `.manifests/**` is reserved for deterministic handover/state metadata written by backend utilities.
+- Reviewer-stage manifest filenames are explicit and role-scoped:
+  - `.manifests/benchmark_review_manifest.json`
+  - `.manifests/engineering_plan_review_manifest.json`
+  - `.manifests/engineering_execution_review_manifest.json`
+  - `.manifests/electronics_review_manifest.json`
 - All LLM agent roles are denied read/write/edit on `.manifests/**` via `config/agents_config.yaml`.
 
 Locking rule:

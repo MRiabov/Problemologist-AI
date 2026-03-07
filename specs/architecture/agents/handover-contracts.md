@@ -23,6 +23,21 @@ In this case, the CAD modelling engineer must provide `plan_refusal.md` (with ro
 
 The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
 
+## Reviewer manifest naming contract
+
+Reviewer handoff manifests are reviewer-scoped. We do not use a shared generic filename.
+
+Required manifest filenames:
+
+1. Benchmark reviewer: `.manifests/benchmark_review_manifest.json`
+2. Engineering plan reviewer: `.manifests/engineering_plan_review_manifest.json`
+3. Engineering execution reviewer: `.manifests/engineering_execution_review_manifest.json`
+4. Electronics reviewer: `.manifests/electronics_review_manifest.json`
+
+Validation rule:
+
+- Reviewer entry is blocked if the reviewer-specific manifest for that stage is missing, stale, or invalid for the latest revision.
+
 ## Benchmark generator Planner and Benchmark CAD designer
 
 The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
@@ -94,6 +109,7 @@ Planner gate requirements (`ENGINEER_PLAN_REVIEWER` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
 - Required artifacts: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`
+- Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
   - Reject inconsistent, infeasible, ambiguous, or incomplete plans.
@@ -335,8 +351,8 @@ Validation requirement:
 
 The execution reviewer (`ENGINEER_EXECUTION_REVIEWER`) is a post-validation/post-simulation stage.
 
-1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/review_manifest.json`).
-   - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation.
+1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
+   - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
 2. The execution reviewer has read-only access to implementation and evidence files, plus write/edit only under `reviews/review-round-[round number]/`.
 3. Primary review is robustness and realism: verify successful behavior is not flaky across runtime randomization and is likely repeatable.
 4. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.

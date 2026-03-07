@@ -82,7 +82,7 @@ We track the following structured domain events to compute the evaluation metric
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineering plan reviewer, engineering execution reviewer, electronics reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
+21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineering plan reviewer, engineering execution reviewer, electronics reviewer) with decision, reason category, reviewer manifest filename, and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
 24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, expected-minimal `dofs`, reviewer_stage).

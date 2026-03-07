@@ -259,9 +259,14 @@ The engineering loop has two reviewer stages with different responsibilities.
 
 1. Verify implementation follows the approved plan (or has justified, reviewable deviations).
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
-3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/review_manifest.json` for latest revision).
+3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision).
 4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
 5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
+
+Reviewer manifest naming in engineering:
+
+- Plan reviewer stage: `.manifests/engineering_plan_review_manifest.json`
+- Execution reviewer stage: `.manifests/engineering_execution_review_manifest.json`
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
