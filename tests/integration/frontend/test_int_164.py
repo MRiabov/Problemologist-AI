@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -9,6 +10,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 @pytest.mark.integration_frontend
 def test_code_viewer_line_selection_and_mentions(page: Page):
+    """INT-164: Code viewer supports valid line mentions and rejects invalid ranges."""
     # 1. Navigate to the local development server
     page.goto(FRONTEND_URL, timeout=60000)
     page.wait_for_load_state("networkidle")
@@ -17,7 +19,6 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     benchmark_link = page.get_by_role("link", name="Benchmark")
     expect(benchmark_link).to_be_visible(timeout=30000)
     benchmark_link.click()
-    import re
 
     expect(page).to_have_url(re.compile(r".*/benchmark"))
 
@@ -85,11 +86,23 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     # Simulate line selection (clicking the line)
     line_one.click()
 
-    # 9. Type a mention in the chat input
+    # 9. Type a valid mention in the chat input
     prompt_input.fill("Please explain @script.py:1-5")
+    valid_mention = page.locator(".pointer-events-none span").filter(
+        has_text="@script.py:1-5"
+    )
+    expect(valid_mention).to_have_class(re.compile(r"text-primary"), timeout=10000)
+
+    # 9b. Invalid mention range should be rejected visually
+    prompt_input.fill("Please explain @script.py:99999-99998")
+    invalid_mention = page.locator(".pointer-events-none span").filter(
+        has_text="@script.py:99999-99998"
+    )
+    expect(invalid_mention).to_have_class(re.compile(r"text-red-400"), timeout=10000)
 
     # 10. Submit and verify mention is processed (check for highlighting or specific payload if possible)
     # For integration test, we mainly check if it doesn't crash and sends the message
+    prompt_input.fill("Please explain @script.py:1-5")
     # Wait for completion if needed (indicator: status changes to COMPLETED)
     page.wait_for_function(
         """() => {
@@ -104,7 +117,20 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     )
     send_button_after_mention = page.get_by_label("Send Message")
     expect(send_button_after_mention).to_be_enabled()
-    send_button_after_mention.click()
+    with page.expect_request(
+        re.compile(r".*/api/episodes/.*/messages|.*/api/sessions/.*/steer")
+    ) as mention_req:
+        send_button_after_mention.click()
+    payload = mention_req.value.post_data_json or {}
+    metadata_vars = payload.get("metadata_vars") if isinstance(payload, dict) else {}
+    mentions = []
+    if isinstance(metadata_vars, dict):
+        mentions = metadata_vars.get("mentions", []) or []
+    elif isinstance(payload, dict):
+        mentions = payload.get("mentions", []) or []
+    assert any("@script.py:1-5" in str(m) for m in mentions), (
+        f"Expected @script.py:1-5 mention in outgoing payload, got {mentions}"
+    )
 
     # 11. Verify the message was submitted by ensuring input clears.
     expect(prompt_input).to_have_value("", timeout=30000)

@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -20,6 +21,44 @@ from shared.enums import TraceType
 # Constants
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
+
+
+def _debug_info(page: Page) -> dict:
+    return page.evaluate(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return {};
+            try { return JSON.parse(el.textContent || "{}"); } catch (e) { return {}; }
+        }"""
+    )
+
+
+def _wait_for_status(
+    page: Page, statuses: list[str], timeout: int = 180000
+) -> str | None:
+    status_list = ",".join([f"'{s}'" for s in statuses])
+    page.wait_for_function(
+        f"""() => {{
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {{
+                const data = JSON.parse(el.textContent);
+                return [{status_list}].includes(data.episodeStatus);
+            }} catch (e) {{ return false; }}
+        }}""",
+        timeout=timeout,
+    )
+    return (_debug_info(page) or {}).get("episodeStatus")
+
+
+def _start_engineer_run(page: Page, prompt: str) -> None:
+    page.goto(FRONTEND_URL)
+    page.wait_for_load_state("networkidle")
+    page.get_by_test_id("create-new-button").click()
+    chat_input = page.locator("#chat-input")
+    expect(chat_input).to_be_visible(timeout=30000)
+    chat_input.fill(prompt)
+    page.get_by_label("Send Message").click()
 
 
 @pytest.mark.integration_frontend
@@ -310,3 +349,181 @@ def test_int_159_plan_approval_comment(page: Page):
         assert found_ep is not None, (
             f"Comment '{test_comment}' not found in any episode traces"
         )
+
+
+@pytest.mark.integration_frontend
+def test_int_162_interrupt_ux_propagation(page: Page):
+    """
+    INT-162: Stop action posts interrupt API and the run reaches cancelled state
+    without ongoing stream growth.
+    """
+    _start_engineer_run(page, f"INT-162 interrupt path {uuid.uuid4()}")
+    stop_button = page.get_by_label("Stop Agent")
+    expect(stop_button).to_be_visible(timeout=30000)
+
+    debug_before = _debug_info(page)
+    episode_id = debug_before.get("episodeId")
+    assert episode_id, "Episode ID missing in debug info before interrupt"
+    with httpx.Client(timeout=10.0) as client:
+        before_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert before_resp.status_code == 200
+        before_episode = EpisodeResponse.model_validate(before_resp.json())
+        before_trace_count = len(before_episode.traces or [])
+
+    with page.expect_request(re.compile(r".*/api/episodes/.*/interrupt")):
+        stop_button.click()
+
+    final_status = _wait_for_status(page, ["CANCELLED", "FAILED"], timeout=120000)
+    assert final_status == "CANCELLED", (
+        f"Expected cancelled status after interrupt, got {final_status}"
+    )
+    expect(page.get_by_label("Send Message")).to_be_visible(timeout=30000)
+
+    import time
+
+    time.sleep(2)
+    with httpx.Client(timeout=10.0) as client:
+        after_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert after_resp.status_code == 200
+        after_episode = EpisodeResponse.model_validate(after_resp.json())
+        after_trace_count = len(after_episode.traces or [])
+    assert after_trace_count <= before_trace_count + 1, (
+        "Trace stream continued to grow after interrupt; expected stream halt"
+    )
+
+
+@pytest.mark.integration_frontend
+def test_int_163_steerability_context_cards_multi_select(page: Page):
+    """
+    INT-163: Multiple topology selections create context cards and cards can be removed.
+    """
+    page.goto(FRONTEND_URL)
+    page.wait_for_load_state("networkidle")
+    page.get_by_role("link", name="Benchmark").click()
+    expect(page).to_have_url(re.compile(r".*/benchmark"))
+    page.get_by_test_id("create-new-button").click()
+    page.locator("#chat-input").fill(f"INT-163 context cards {uuid.uuid4()}")
+    page.get_by_label("Send Message").click()
+
+    status = _wait_for_status(page, ["PLANNED", "COMPLETED", "FAILED"], timeout=180000)
+    assert status in {"PLANNED", "COMPLETED"}, (
+        f"Run did not reach selectable state for context cards (status={status})"
+    )
+    if status == "PLANNED":
+        page.get_by_test_id("chat-confirm-button").click(force=True)
+        post_status = _wait_for_status(page, ["COMPLETED", "FAILED"], timeout=180000)
+        assert post_status == "COMPLETED", (
+            "Benchmark failed after confirmation; cannot verify context cards"
+        )
+
+    panel = page.get_by_test_id("model-browser-panel")
+    expect(panel).to_be_visible(timeout=60000)
+    nodes = page.locator('[data-testid="topology-node-row"]')
+    if nodes.count() < 2:
+        pytest.skip("Not enough topology nodes to verify multi-select context cards")
+
+    initial_cards = page.get_by_test_id("context-card").count()
+    nodes.nth(0).click(force=True)
+    nodes.nth(1).click(force=True)
+    page.wait_for_timeout(300)
+    updated_cards = page.get_by_test_id("context-card").count()
+    assert updated_cards >= initial_cards + 2, (
+        f"Expected at least two new context cards, got initial={initial_cards}, updated={updated_cards}"
+    )
+
+    first_card = page.get_by_test_id("context-card").first
+    first_card.locator("button").click(force=True)
+    page.wait_for_timeout(200)
+    assert page.get_by_test_id("context-card").count() == updated_cards - 1
+
+
+@pytest.mark.integration_frontend
+def test_int_167_controller_proxied_cad_assets(page: Page):
+    """
+    INT-167: CAD assets are fetched through controller proxy endpoints and non-GET is rejected.
+    """
+    asset_requests: list[str] = []
+
+    def _capture_asset_request(request):
+        if re.search(r"/api/episodes/.+/assets/", request.url):
+            asset_requests.append(f"{request.method} {request.url}")
+
+    page.on("request", _capture_asset_request)
+    page.goto(FRONTEND_URL)
+    page.wait_for_load_state("networkidle")
+    page.get_by_role("link", name="Benchmark").click()
+    page.get_by_test_id("create-new-button").click()
+    page.locator("#chat-input").fill(f"INT-167 proxy assets {uuid.uuid4()}")
+    page.get_by_label("Send Message").click()
+
+    status = _wait_for_status(page, ["PLANNED", "COMPLETED", "FAILED"], timeout=180000)
+    if status == "PLANNED":
+        page.get_by_test_id("chat-confirm-button").click(force=True)
+        status = _wait_for_status(page, ["COMPLETED", "FAILED"], timeout=180000)
+    if status != "COMPLETED":
+        pytest.skip(f"Run did not complete for asset proxy checks (status={status})")
+
+    page.wait_for_timeout(2000)
+    get_asset_requests = [r for r in asset_requests if r.startswith("GET ")]
+    assert get_asset_requests, "No controller asset proxy GET requests were captured"
+
+    info = _debug_info(page)
+    episode_id = info.get("episodeId")
+    assert episode_id, "Episode ID missing for asset method rejection check"
+    with httpx.Client(timeout=10.0) as client:
+        ep_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert ep_resp.status_code == 200
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        if not episode.assets:
+            pytest.skip("No assets available to verify non-GET rejection")
+        first_asset = episode.assets[0].s3_path
+        assert first_asset, "First asset missing s3_path"
+        encoded_path = quote(first_asset, safe="/")
+        reject_resp = client.post(
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/assets/{encoded_path}"
+        )
+        assert reject_resp.status_code in {403, 404, 405}, (
+            f"Expected non-GET to be rejected, got {reject_resp.status_code}"
+        )
+
+
+@pytest.mark.integration_frontend
+def test_int_170_post_run_feedback_ux_persistence(page: Page):
+    """
+    INT-170: Feedback controls appear only after completion and persist submitted feedback.
+    """
+    _start_engineer_run(page, f"INT-170 feedback path {uuid.uuid4()}")
+    expect(page.get_by_test_id("chat-thumbs-up")).not_to_be_visible()
+    expect(page.get_by_test_id("chat-thumbs-down")).not_to_be_visible()
+
+    status = _wait_for_status(
+        page, ["COMPLETED", "FAILED", "CANCELLED"], timeout=240000
+    )
+    if status != "COMPLETED":
+        pytest.skip(f"Feedback assertions require completed run, got {status}")
+
+    chat_thumbs_up = page.get_by_test_id("chat-thumbs-up").first
+    expect(chat_thumbs_up).to_be_visible(timeout=30000)
+    chat_thumbs_up.click()
+    modal = page.get_by_test_id("feedback-modal")
+    expect(modal).to_be_visible(timeout=10000)
+    topic_name = "Technical Error"
+    modal.get_by_role("button", name=topic_name).click()
+    note = f"INT-170 feedback note {uuid.uuid4()}"
+    modal.get_by_placeholder("How can the agent improve?").fill(note)
+    modal.get_by_role("button", name="Send Feedback").click()
+    expect(page.get_by_text("Feedback Received")).to_be_visible(timeout=30000)
+
+    with httpx.Client(timeout=10.0) as client:
+        info = _debug_info(page)
+        episode_id = info.get("episodeId")
+        assert episode_id, "Episode ID missing after feedback submit"
+        ep_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert ep_resp.status_code == 200
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+    assert any(
+        trace.feedback_score == 1
+        and trace.feedback_comment
+        and note in trace.feedback_comment
+        for trace in (episode.traces or [])
+    ), "Submitted post-run feedback was not persisted in episode traces"

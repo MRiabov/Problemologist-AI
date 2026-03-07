@@ -36,10 +36,16 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
         session_id=session_id,
         heavy_url=WORKER_HEAVY_URL,
     )
-    reviewer_fs = RemoteFilesystemMiddleware(
-        reviewer_client,
-        agent_role=AgentName.ENGINEER_PLAN_REVIEWER,
-    )
+    reviewer_path_by_role = {
+        AgentName.ENGINEER_PLAN_REVIEWER: "reviews/engineering-plan-review-round-1.md",
+        AgentName.ENGINEER_EXECUTION_REVIEWER: "reviews/engineering-execution-review-round-1.md",
+        AgentName.BENCHMARK_REVIEWER: "reviews/benchmark-review-round-1.md",
+        AgentName.ELECTRONICS_REVIEWER: "reviews/electronics-review-round-1.md",
+    }
+    reviewer_fs_by_role = {
+        role: RemoteFilesystemMiddleware(reviewer_client, agent_role=role)
+        for role in reviewer_path_by_role
+    }
 
     coder_client = WorkerClient(
         base_url=WORKER_LIGHT_URL,
@@ -50,20 +56,20 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
         coder_client,
         agent_role=AgentName.ENGINEER_CODER,
     )
-    # Reviewer write scope: only reviews/review-round-*/review.md
-    assert await reviewer_fs.write_file(
-        "reviews/review-round-1/review.md",
-        "Approved",
-    )
-    with pytest.raises(PermissionError):
-        await reviewer_fs.write_file("plan.md", "forbidden")
+    # Reviewer write scope: reviewer-specific stage files only.
+    for role, fs in reviewer_fs_by_role.items():
+        assert await fs.write_file(reviewer_path_by_role[role], "Approved")
+        with pytest.raises(PermissionError):
+            await fs.write_file("plan.md", "forbidden")
+        with pytest.raises(PermissionError):
+            await fs.write_file("reviews/review-round-1/review.md", "forbidden")
 
     # Agent override over defaults (defaults deny all writes, coder allows script.py)
     assert await coder_fs.write_file("script.py", "print('ok')")
 
     # Deny > allow precedence for coder (**/*.py allowed, reviews/** denied)
     with pytest.raises(PermissionError):
-        await coder_fs.write_file("reviews/review-round-2/notes.py", "x = 1")
+        await coder_fs.write_file("reviews/engineering-plan-review-round-2.md", "x")
 
     # Unmatched path is denied
     with pytest.raises(PermissionError):
@@ -75,9 +81,13 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     with pytest.raises(PermissionError):
         await coder_fs.write_file(".manifests/review_manifest.json", "{}")
     with pytest.raises(PermissionError):
-        await reviewer_fs.read_file(".manifests/review_manifest.json")
+        await reviewer_fs_by_role[AgentName.ENGINEER_PLAN_REVIEWER].read_file(
+            ".manifests/review_manifest.json"
+        )
     with pytest.raises(PermissionError):
-        await reviewer_fs.write_file(".manifests/review_manifest.json", "{}")
+        await reviewer_fs_by_role[AgentName.ENGINEER_PLAN_REVIEWER].write_file(
+            ".manifests/review_manifest.json", "{}"
+        )
 
     # Defense-in-depth filtering: list_files should not leak unreadable entry names.
     async with httpx.AsyncClient(timeout=30.0) as client:

@@ -214,6 +214,222 @@ scenarios:
           - finished: true
             summary: "INT-113 electronics planner artifacts generated and submitted."
 
+  INT-074-PLAN:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Seed an over-actuated plan with unjustified DOFs."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-074 plan reviewer DOF gate scenario.
+                ## 2. Parts List
+                - over_actuated_link
+                ## 3. Assembly Strategy
+                1. Baseline assembly.
+                ## 4. Cost & Weight Budget
+                - Within planner caps.
+                ## 5. Risk Assessment
+                - Over-actuation risk under review.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Baseline planning
+                - [x] Prepare review handoff
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 5000
+                  planner_target_max_unit_cost_usd: 250
+                  planner_target_max_weight_g: 2500
+                totals:
+                  estimated_unit_cost_usd: 25
+                  estimated_weight_g: 250
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly:
+                  - name: over_actuated_link
+                    config:
+                      dofs: [tx, ty, tz, rx]
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 250, max_weight_g: 2500.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-074 plan scenario: planner submitted unjustified over-actuated plan."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics changes; submit handoff."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-074 plan scenario: electronics planner submitted."
+
+  INT-074-EXEC:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Seed a justified planner DOF so plan-review can pass."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-074 execution reviewer over-actuation deviation scenario.
+                ## 2. Parts List
+                - planner_link
+                ## 3. Assembly Strategy
+                1. Baseline assembly.
+                ## 4. Cost & Weight Budget
+                - Within planner caps.
+                ## 5. Risk Assessment
+                - Over-actuation drift risk.
+
+                DOF_JUSTIFICATION:planner_link
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Baseline planning
+                - [x] Prepare review handoff
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 5000
+                  planner_target_max_unit_cost_usd: 250
+                  planner_target_max_weight_g: 2500
+                totals:
+                  estimated_unit_cost_usd: 25
+                  estimated_weight_g: 250
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly:
+                  - name: planner_link
+                    config:
+                      dofs: [tx, ty, tz, rx]
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 250, max_weight_g: 2500.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-074 execution scenario: planner submitted justified plan."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics changes; submit handoff."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-074 execution scenario: electronics planner submitted."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner justification accepted for planner_link."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Introduce over-actuated execution deviation."
+            tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 5000
+                  planner_target_max_unit_cost_usd: 250
+                  planner_target_max_weight_g: 2500
+                totals:
+                  estimated_unit_cost_usd: 25
+                  estimated_weight_g: 250
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly:
+                  - name: coder_link
+                    config:
+                      dofs: [tx, ty, tz, rx]
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    p = Box(1, 1, 1)
+                    p.label = "projectile_ball"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-074 execution scenario: coder wrote over-actuated assembly deviation."
+      - node: electronics_engineer
+        steps:
+          - finished: true
+            journal: "No electronics implementation required."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics stage is a no-op for this scenario."
+              required_fixes: []
+
   INT-114:
     transcript:
       - node: benchmark_planner

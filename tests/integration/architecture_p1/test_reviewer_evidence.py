@@ -120,15 +120,35 @@ async def test_reviewer_evidence_completeness():
             f"No reviews found in assets: {[a.s3_path for a in assets]}"
         )
         artifact_paths = [a.s3_path for a in assets]
-        manifest_paths = [
-            p for p in artifact_paths if p.endswith("review_manifest.json")
-        ]
+        manifest_paths = [p for p in artifact_paths if p.endswith("manifest.json")]
         assert manifest_paths, (
-            f"review_manifest.json missing. Artifacts: {artifact_paths}"
+            f"No review manifest artifacts found. Artifacts: {artifact_paths}"
+        )
+        assert any(
+            p.endswith("engineering_plan_review_manifest.json") for p in manifest_paths
+        ), (
+            "engineering_plan_review_manifest.json missing from artifacts. "
+            f"Found: {manifest_paths}"
         )
         assert any(
             "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
-        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
+        ), f"Review manifest must be in .manifests/. Found: {manifest_paths}"
+
+        stage_review_paths = [
+            p
+            for p in artifact_paths
+            if "reviews/" in p
+            and (
+                "benchmark-review-round-" in p
+                or "engineering-plan-review-round-" in p
+                or "engineering-execution-review-round-" in p
+                or "electronics-review-round-" in p
+            )
+        ]
+        assert stage_review_paths, (
+            "No reviewer-stage persisted review filepath found in artifacts. "
+            f"Artifacts: {artifact_paths}"
+        )
         manifest_resp = await client.get(
             f"/episodes/{episode_id}/assets/{manifest_paths[0]}"
         )

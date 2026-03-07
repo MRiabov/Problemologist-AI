@@ -413,3 +413,161 @@ def build():
         assert data.artifacts.total_cost > 0
         assert data.artifacts.total_weight_g is not None
         assert data.artifacts.total_weight_g > 0
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_126_wire_tear_behavior():
+    """INT-126: Simulation fails with FAILED_WIRE_TORN when wire tension exceeds tensile rating."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_worker_services(client)
+        session_id = get_session_id("126")
+
+        electronics = ElectronicsSection(
+            power_supply=PowerSupplyConfig(voltage_dc=12.0, max_current_a=10.0),
+            components=[
+                ElectronicComponent(
+                    component_id="m1",
+                    type=ElectronicComponentType.MOTOR,
+                    stall_current_a=1.0,
+                )
+            ],
+            wiring=[
+                WireConfig(
+                    wire_id="wire_torn_test",
+                    from_terminal=WireTerminal(component="supply", terminal="v+"),
+                    to_terminal=WireTerminal(component="m1", terminal="+"),
+                    gauge_awg=40,
+                    length_mm=50.0,
+                    routed_in_3d=True,
+                    waypoints=[(0.0, 0.0, 20.0), (500.0, 0.0, 20.0)],
+                ),
+                WireConfig(
+                    wire_id="wire_return",
+                    from_terminal=WireTerminal(component="m1", terminal="-"),
+                    to_terminal=WireTerminal(component="supply", terminal="0"),
+                    gauge_awg=40,
+                    length_mm=50.0,
+                    routed_in_3d=True,
+                    waypoints=[(0.0, 10.0, 20.0), (500.0, 10.0, 20.0)],
+                ),
+            ],
+        )
+        assembly_def = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                benchmark_max_unit_cost_usd=100.0,
+                benchmark_max_weight_g=1000.0,
+                planner_target_max_unit_cost_usd=80.0,
+                planner_target_max_weight_g=800.0,
+            ),
+            electronics=electronics,
+            totals=CostTotals(
+                estimated_unit_cost_usd=10.0,
+                estimated_weight_g=100.0,
+                estimate_confidence="high",
+            ),
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="assembly_definition.yaml",
+                content=yaml.dump(assembly_def.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(5, 5, 5).move(Location((0, 0, 10)))
+    p.label = "target_box"
+    p.metadata = PartMetadata(material_id='aluminum_6061')
+    return p
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py", content=script, overwrite=True
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert data.success is False
+        assert data.artifacts.failure is not None
+        assert str(data.artifacts.failure.reason).endswith("WIRE_TORN")
+        assert "wire_torn_test" in (data.artifacts.failure.detail or "")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_128_objectives_electronics_schema_gate():
+    """INT-128: objectives.yaml malformed electronics_requirements fails closed in /benchmark/validate."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_worker_services(client)
+        session_id = get_session_id("128")
+        script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "target_box"
+    p.metadata = PartMetadata(material_id='aluminum_6061')
+    return p
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py", content=script, overwrite=True
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        invalid_objectives = """
+objectives:
+  goal_zone: {min: [0, 0, 0], max: [1, 1, 1]}
+  forbid_zones: []
+  build_zone: {min: [-10, -10, -10], max: [10, 10, 10]}
+simulation_bounds: {min: [-20, -20, -20], max: [20, 20, 20]}
+moved_object:
+  label: target_box
+  shape: sphere
+  start_position: [0, 0, 0]
+  runtime_jitter: [0, 0, 0]
+constraints:
+  max_unit_cost: 100
+  max_weight_g: 1000
+electronics_requirements:
+  power_supply_available:
+    voltage_dc: 12
+  wiring_constraints: bad
+  circuit_validation_required: "sometimes"
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=invalid_objectives,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert data.success is False
+        assert "electronics_requirements" in (data.message or "")

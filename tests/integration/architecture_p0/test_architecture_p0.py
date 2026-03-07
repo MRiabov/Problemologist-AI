@@ -529,3 +529,120 @@ def build():
 
         if not data.success:
             pytest.fail(f"Fastener validation failed: {data.message}")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_024_worker_benchmark_validation_toolchain():
+    """INT-024: /benchmark/validate fails on invalid objective setups, including jitter-range conflicts."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-024-{uuid.uuid4().hex[:8]}"
+
+        script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(10, 10, 10).move(Location((0, 0, 5)))
+    p.label = "target_box"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+"""
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(path="script.py", content=script).model_dump(
+                mode="json"
+            ),
+            headers={"X-Session-ID": session_id},
+        )
+
+        overlap_objectives = ObjectivesYaml(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(0.0, 0.0, 0.0), max=(10.0, 10.0, 10.0)),
+                forbid_zones=[
+                    {
+                        "name": "goal_overlap",
+                        "min": (5.0, 5.0, 5.0),
+                        "max": (12.0, 12.0, 12.0),
+                    }
+                ],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=yaml.dump(overlap_objectives.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        overlap_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+        assert overlap_resp.status_code == 200
+        overlap_data = BenchmarkToolResponse.model_validate(overlap_resp.json())
+        assert overlap_data.success is False
+        assert "goal_zone overlaps forbid zone" in (overlap_data.message or "")
+
+        jitter_conflict_objectives = overlap_objectives.model_copy(
+            update={
+                "objectives": ObjectivesSection(
+                    goal_zone=BoundingBox(
+                        min=(12.0, 12.0, 0.0),
+                        max=(16.0, 16.0, 6.0),
+                    ),
+                    forbid_zones=[
+                        {
+                            "name": "spawn_conflict",
+                            "min": (-3.0, -3.0, 0.0),
+                            "max": (3.0, 3.0, 6.0),
+                        }
+                    ],
+                    build_zone=BoundingBox(
+                        min=(-20.0, -20.0, 0.0),
+                        max=(20.0, 20.0, 30.0),
+                    ),
+                ),
+                "moved_object": MovedObject(
+                    label="target_box",
+                    shape="sphere",
+                    start_position=(0.0, 0.0, 3.0),
+                    runtime_jitter=(2.0, 2.0, 1.0),
+                ),
+            }
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=yaml.dump(jitter_conflict_objectives.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        jitter_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=180.0,
+        )
+        assert jitter_resp.status_code == 200
+        jitter_data = BenchmarkToolResponse.model_validate(jitter_resp.json())
+        assert jitter_data.success is False
+        assert "runtime range intersects forbid zone" in (jitter_data.message or "")
