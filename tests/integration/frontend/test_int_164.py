@@ -100,7 +100,7 @@ def test_code_viewer_line_selection_and_mentions(page: Page):
     )
     expect(invalid_mention).to_have_class(re.compile(r"text-red-400"), timeout=10000)
 
-    # 10. Submit and verify mention is processed (check for highlighting or specific payload if possible)
+    # 10. Submit and verify mention is processed and payload includes the range
     # For integration test, we mainly check if it doesn't crash and sends the message
     prompt_input.fill("Please explain @script.py:1-5")
     # Wait for completion if needed (indicator: status changes to COMPLETED)

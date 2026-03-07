@@ -26,6 +26,7 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     ExecuteRequest,
     ExecuteResponse,
+    VerificationRequest,
     WriteFileRequest,
 )
 
@@ -187,6 +188,14 @@ async def test_int_132_full_electromechanical_path():
             validate_circuit_resp.json()
         )
         assert validate_circuit_data.success, validate_circuit_data.message
+        assert (
+            validate_circuit_data.artifacts is not None
+            and validate_circuit_data.artifacts.circuit_validation_result is not None
+        )
+        assert (
+            validate_circuit_data.artifacts.circuit_validation_result.get("valid")
+            is True
+        )
 
         validate_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
@@ -219,6 +228,23 @@ async def test_int_132_full_electromechanical_path():
                 FailureReason.OPEN_CIRCUIT,
                 FailureReason.OVERCURRENT,
             }, simulate_data.artifacts.failure.detail or simulate_data.message
+
+        verify_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/verify",
+            json=VerificationRequest(
+                script_path="script.py",
+                smoke_test_mode=True,
+                num_runs=2,
+                duration=0.5,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert verify_resp.status_code == 200, verify_resp.text
+        verify_data = BenchmarkToolResponse.model_validate(verify_resp.json())
+        assert verify_data.artifacts is not None
+        assert verify_data.artifacts.verification_result is not None
+        assert verify_data.artifacts.verification_result.num_runs >= 1
 
 
 @pytest.mark.integration_p1

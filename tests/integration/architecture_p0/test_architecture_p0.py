@@ -534,7 +534,10 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_024_worker_benchmark_validation_toolchain():
-    """INT-024: /benchmark/validate fails on invalid objective setups, including jitter-range conflicts."""
+    """
+    INT-024: /benchmark/validate fails on invalid objective setups,
+    including jitter-range conflicts.
+    """
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-024-{uuid.uuid4().hex[:8]}"
 

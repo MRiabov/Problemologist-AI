@@ -2,6 +2,7 @@ import contextlib
 import datetime
 import os
 import re
+import time
 from pathlib import Path
 
 import httpx
@@ -40,6 +41,63 @@ def _is_integration_test(request: pytest.FixtureRequest) -> bool:
         any(m.name.startswith("integration") for m in request.node.iter_markers())
         or "integration" in request.node.nodeid
     )
+
+
+def _should_enforce_integration_readiness(pytestconfig: pytest.Config) -> bool:
+    if os.getenv("IS_INTEGRATION_TEST", "").lower() == "true":
+        return True
+
+    markexpr = str(getattr(pytestconfig.option, "markexpr", "") or "")
+    if "integration" in markexpr:
+        return True
+
+    args = [str(arg) for arg in pytestconfig.invocation_params.args]
+    return any("tests/integration" in arg or "tests/e2e" in arg for arg in args)
+
+
+def _wait_for_service_health_stable(
+    service_url: str,
+    *,
+    client: httpx.Client,
+    timeout_s: float = 20.0,
+    interval_s: float = 0.25,
+    consecutive_successes: int = 3,
+) -> None:
+    deadline = time.monotonic() + timeout_s
+    stable = 0
+
+    while time.monotonic() < deadline:
+        try:
+            response = client.get(f"{service_url}/health")
+            if response.status_code == 200:
+                stable += 1
+                if stable >= consecutive_successes:
+                    return
+            else:
+                stable = 0
+        except Exception:
+            stable = 0
+        time.sleep(interval_s)
+
+    pytest.exit(
+        f"{service_url}/health did not become stable "
+        f"({consecutive_successes} consecutive successes required)",
+        returncode=1,
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_services_are_ready(pytestconfig: pytest.Config):
+    """
+    Integration-only startup gate.
+    Requires stable /health responses before tests execute to avoid cold-start races.
+    """
+    if not _should_enforce_integration_readiness(pytestconfig):
+        return
+
+    with httpx.Client(timeout=2.0) as client:
+        for service_url in SERVICES:
+            _wait_for_service_health_stable(service_url, client=client)
 
 
 def _strip_ansi(text: str) -> str:

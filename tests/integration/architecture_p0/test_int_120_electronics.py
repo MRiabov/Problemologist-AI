@@ -418,7 +418,10 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_126_wire_tear_behavior():
-    """INT-126: Simulation fails with FAILED_WIRE_TORN when wire tension exceeds tensile rating."""
+    """
+    INT-126: Simulation fails with FAILED_WIRE_TORN
+    when wire tension exceeds tensile rating.
+    """
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_worker_services(client)
         session_id = get_session_id("126")
@@ -511,7 +514,10 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_128_objectives_electronics_schema_gate():
-    """INT-128: objectives.yaml malformed electronics_requirements fails closed in /benchmark/validate."""
+    """
+    INT-128: malformed electronics_requirements in objectives.yaml
+    fails closed in /benchmark/validate.
+    """
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_worker_services(client)
         session_id = get_session_id("128")

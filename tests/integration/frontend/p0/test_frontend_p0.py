@@ -428,7 +428,8 @@ def test_int_163_steerability_context_cards_multi_select(page: Page):
     page.wait_for_timeout(300)
     updated_cards = page.get_by_test_id("context-card").count()
     assert updated_cards >= initial_cards + 2, (
-        f"Expected at least two new context cards, got initial={initial_cards}, updated={updated_cards}"
+        "Expected at least two new context cards, "
+        f"got initial={initial_cards}, updated={updated_cards}"
     )
 
     first_card = page.get_by_test_id("context-card").first
@@ -440,7 +441,8 @@ def test_int_163_steerability_context_cards_multi_select(page: Page):
 @pytest.mark.integration_frontend
 def test_int_167_controller_proxied_cad_assets(page: Page):
     """
-    INT-167: CAD assets are fetched through controller proxy endpoints and non-GET is rejected.
+    INT-167: CAD assets are fetched via controller proxy endpoints
+    and non-GET is rejected.
     """
     asset_requests: list[str] = []
 
@@ -490,7 +492,8 @@ def test_int_167_controller_proxied_cad_assets(page: Page):
 @pytest.mark.integration_frontend
 def test_int_170_post_run_feedback_ux_persistence(page: Page):
     """
-    INT-170: Feedback controls appear only after completion and persist submitted feedback.
+    INT-170: Feedback controls appear only after completion
+    and persist submitted feedback.
     """
     _start_engineer_run(page, f"INT-170 feedback path {uuid.uuid4()}")
     expect(page.get_by_test_id("chat-thumbs-up")).not_to_be_visible()
