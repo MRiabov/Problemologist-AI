@@ -860,9 +860,16 @@ class BaseNode:
                     "For every tool call, include a concise `next_thought` kwarg "
                     "with your immediate reasoning for that call."
                 )
+                react_output_contract = (
+                    "Return exactly one step per response using ONLY these fields: "
+                    "`next_thought`, `next_tool_name`, and `next_tool_args`. "
+                    "Do not emit batched trajectories (for example `tool_name_0`, "
+                    "`tool_args_0`, or `[[ ## completed ## ]]`)."
+                )
                 # Prepend for context, but keep structural instructions at the end
                 signature_cls = signature_cls.with_instructions(
-                    f"{instructions}\n\n{react_reasoning_instr}\n\n{current_instr}"
+                    f"{instructions}\n\n{react_reasoning_instr}\n\n"
+                    f"{react_output_contract}\n\n{current_instr}"
                 )
             else:
                 signature_cls = signature_cls.with_instructions(instructions)

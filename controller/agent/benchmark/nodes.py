@@ -63,10 +63,9 @@ def _has_submit_for_review_call(script: str) -> bool:
 
 class BenchmarkPlannerSignature(dspy.Signature):
     """
-    Planner node: Analyzes the user prompt and creates a randomization strategy.
-    You must use the provided tools to set up the objectives if necessary.
-    Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
-    When done, use SUBMIT to provide the final randomization strategy.
+    Planner node for benchmark generation.
+    Use tools to produce planner artifacts and call `submit_plan()` before `finish`.
+    Emit one tool step at a time (no multi-step batched transcripts).
     """
 
     prompt = dspy.InputField()
