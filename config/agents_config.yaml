@@ -148,7 +148,6 @@ agents:
           "plan.md",
           "objectives.yaml",
           "assembly_definition.yaml",
-          "reviews/**",
         ]
       deny: ["skills/**", "utils/**", "reviews/**/*.py", ".manifests/**"]
     tools:
