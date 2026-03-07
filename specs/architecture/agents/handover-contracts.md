@@ -422,10 +422,15 @@ The user is able to have the agent continue for another number of turns.
 
 All settings are configurable per-agent in @config/agents_config.yaml and should be rather permissive.
 
-## Agents retry as much as possible
+## LLM retries vs tool-call system retries
 
-Clarification: models will retry until their quota is exceeded, as in one cases in the parent section. Until then, whatever execution environment (meaning, a failed tool call, an invalid script they've written); they must retry. 
-Retries are still fail-closed by loop-detection and timeout guards; repeated identical failures must not spin forever.
+Clarification: LM generation retries and system tool-call retries are separate policies.
+
+1. LM generation may continue until LM hard-fail limits are reached (turn budget, token budget, timeout, loop-detection guard).
+2. Agent-failed tool errors are surfaced to the LM as observations; the LM may continue trying within LM hard-fail limits.
+3. System-failed tool execution retries are capped at 3 attempts via Temporal for the same tool request in the same stage.
+4. System-failed retries do not consume LM tool-call budget, but do consume episode wall-clock time.
+5. Repeated identical failures still fail closed via loop-detection and hard-fail guards; no infinite spin is allowed.
 
 ## Steerability
 

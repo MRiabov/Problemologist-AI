@@ -74,7 +74,7 @@ To avoid drift between services, common models and logic are in shared modules:
 - `shared/workers/workbench_models.py` - manufacturing/workbench contracts.
 - `shared/workers/loader.py`, `persistence.py`, `markdown_validator.py` - shared execution helpers.
 
-### Worker logi split
+### Worker logic split
 
 Worker-specific logic stays in:
 
@@ -201,3 +201,14 @@ Temporal is used to orchestrate the workers. It is not used to run or retry the 
 Temporal needs a database and we will use the Postgres database used by temporal, except under the different `DATABASE` partition.
 
 Because tasks like simulation (with involve both simulation and uploading to the database) could be long-running we are using webhooks and callbacks to report their completion.
+
+### Failed tool calls
+
+We classify tool-call failures into two types: agent-failed and system-failed.
+
+- Agent-failed: deterministic tool-contract or generated-artifact errors caused by LM output (for example invalid tool arguments, writing a file without required overwrite semantics, generated build123d code that fails to compile).
+- System-failed: infrastructure/transport failure where execution could not be attempted reliably (for example worker filesystem/API unreachable, transport timeout, transient worker/service 5xx).
+
+On agent-failed, we return a tool error observation to the LM so it can revise and continue within normal LM turn/token/time budgets. On system-failed, we retry with Temporal up to 3 times for all agents. If the same system-failed condition persists across 3 retries for the same tool request in the same stage, we log a `CRITICAL` error and terminate the episode.
+
+System-failed retries do not count toward LM tool-call budget because they are independent of LM quality. They still count toward episode wall-clock timeout.

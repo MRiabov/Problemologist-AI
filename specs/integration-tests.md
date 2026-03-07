@@ -214,6 +214,8 @@ Determinism rule for this category:
 | INT-181 | P1 | Tool-loop ordering + termination contract | Trace/event order is consistent (`LLM` -> `TOOL_START` -> tool result -> next `LLM` ... -> finish), and the run terminates cleanly once scripted tools are exhausted. |
 | INT-182 | P1 | Concurrent agent-run isolation (files + traces + context) | Parallel runs with different `X-Session-ID` do not leak files, steering context, or traces across sessions. |
 | INT-183 | P1 | Steerability queue single-consumption contract | Queued steering prompt is consumed once, affects subsequent node context in-run, and does not replay unexpectedly in later turns. |
+| INT-185 | P1 | Agent-failed tool error routing contract | Trigger a deterministic agent-caused tool failure (for example invalid write/edit arguments) through live APIs; assert tool error is surfaced back to the LM as an observation and the run continues with subsequent LM turn(s) under normal LM budgets. Assert no Temporal retry fan-out for the same failed tool request. |
+| INT-186 | P1 | System-failed tool retry cap + infra terminalization contract | Trigger infrastructure/transport unavailability for a live tool request; assert Temporal retries are capped at 3 attempts for the same tool request/stage, then fail closed. Assert terminal metadata reports `terminal_reason=SYSTEM_TOOL_RETRY_EXHAUSTED` and `failure_class=INFRA_DEVOPS_FAILURE`. Assert retry attempts are infra-level and do not inflate LM tool-call budget accounting. |
 
 ### Frontend category: UI integration and delivery contract
 
@@ -398,6 +400,8 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-181 | Execute a scripted multi-tool scenario through live APIs and assert persisted trace/event ordering and clean finish once tool list is exhausted. | Asserting mocked node transitions/tool arrays without runtime orchestration. |
 | INT-182 | Start parallel live agent runs with distinct sessions and assert no cross-session reads/writes/traces/context leakage. | Unit-testing session-keyed maps/locks without HTTP/system boundaries. |
 | INT-183 | Enqueue steering via live steerability endpoints during active run; assert single dequeue/consumption and downstream trace evidence in same episode. | Isolated queue unit test with mocked state transitions. |
+| INT-185 | Force a deterministic LM-caused invalid tool invocation over HTTP (for example invalid path/args policy violation), assert tool error observation reaches subsequent LM turn, and verify no Temporal retry loop is created for that request. | Calling runtime retry classifiers/helpers in-process without live controller-worker boundaries. |
+| INT-186 | Induce worker/API unavailability for a live tool request, assert exactly up-to-3 Temporal retries then fail-closed terminalization with `SYSTEM_TOOL_RETRY_EXHAUSTED` + `INFRA_DEVOPS_FAILURE`, and verify retries are infra-level (not LM-budget increments). | Unit tests that simulate retry counters without real Temporal/controller-worker execution traces. |
 
 ## Recommended suite organization
 
@@ -405,7 +409,7 @@ This section exists to force implementation as true integration tests, not unit 
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-074, INT-101..INT-114, INT-120..INT-128, INT-184.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
-- `tests/integration/agent/p1/`: INT-181, INT-182, INT-183.
+- `tests/integration/agent/p1/`: INT-181, INT-182, INT-183, INT-185, INT-186.
 - `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177.
 - `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171, INT-175, INT-176, INT-178, INT-179.
 - `tests/integration/frontend/p2/`: INT-169.

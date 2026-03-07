@@ -151,8 +151,8 @@ It is desirable to understand why the simulation/model has failing, so I propose
 
 1. `EpisodeStatus` stores the coarse lifecycle state (`RUNNING`, `PLANNED`, `WAITING_USER`, `COMPLETED`, `FAILED`, `CANCELLED`).
 2. `EpisodeMetadata` stores detailed execution details:
-   - `episode_phase` stores the current workflow phase (`BENCHMARK_PLANNING`, `BENCHMARK_CODING`, `BENCHMARK_REVIEWING`, `ENGINEERING_PLANNING`, `ENGINEERING_CODING`, `ENGINEERING_REVIEWING`).
-   - `terminal_reason` stores the concrete terminal cause (`APPROVED`, `REJECTED_BY_REVIEW`, `TIMEOUT`, `OUT_OF_TURN_BUDGET`, etc.).
+   - `episode_phase` stores the current workflow phase (`BENCHMARK_PLANNING`, `BENCHMARK_CODING`, `BENCHMARK_REVIEWING`, `ENGINEERING_PLANNING`, `ENGINEERING_PLAN_REVIEWING`, `ENGINEERING_CODING`, `ENGINEERING_EXECUTION_REVIEWING`).
+   - `terminal_reason` stores the concrete terminal cause (`APPROVED`, `REJECTED_BY_REVIEW`, `TIMEOUT`, `OUT_OF_TURN_BUDGET`, `OUT_OF_TOKEN_BUDGET`, `SYSTEM_TOOL_RETRY_EXHAUSTED`, etc.).
    - `failure_class` stores ownership classification (`AGENT_QUALITY_FAILURE`, `AGENT_SEMANTIC_FAILURE`, `APPLICATION_LOGIC_FAILURE`, `INFRA_DEVOPS_FAILURE`).
 
 During agent debugging, manual or self-improvement via GEPA we'll be able to use it to guide on how to fix the system.
@@ -164,6 +164,7 @@ The system enforces fail-closed behavior for terminal states.
 - Hard-fail limits terminalize episodes with `EpisodeStatus.FAILED` when turn, token, or time budgets are exceeded. Terminal reasons map to `OUT_OF_TURN_BUDGET`, `OUT_OF_TOKEN_BUDGET`, or `TIMEOUT`.
 - Handoff validation gates transitions between nodes (for example planner to coder) through strict structural and semantic checks. Failed checks produce a `REJECTED` session state and terminalize as `FAILED` if unrecovered.
 - Structured outcomes require `terminal_reason` for all terminal episodes. Failed terminal episodes also require `failure_class` for evaluation routing and infrastructure debugging.
+- System retry exhaustion maps to `terminal_reason=SYSTEM_TOOL_RETRY_EXHAUSTED` and `failure_class=INFRA_DEVOPS_FAILURE`.
 
 ### Bulk uploading events
 

@@ -1,4 +1,5 @@
-# Benchmark generator agent (or graph)
+# Agent roles
+<!--FIXME: in this document, incorrect heading levels due to automatic adjustment a while ago.-->
 
 ## Scope summary
 
@@ -6,6 +7,8 @@
 - Defines planner/implementer/reviewer responsibilities, expected artifacts, and quality expectations.
 - Includes concrete examples of `plan.md` and `objectives.yaml` style outputs.
 - Use alongside handover contracts when implementing agent transitions.
+
+## Benchmark generator agent (or graph)
 
 ## Agent purpose
 
@@ -306,28 +309,28 @@ An engineering agent(s) can invoke a COTS (Commercial-Off-The-Shelf) search agen
 
 Purpose: a lightweight subagent that performs catalog lookups and returns verified part candidates.
 
-## Model and runtime
+### Model and runtime
 
 - Uses a smaller/cheaper model than the primary planner/engineer.
 - Read-only access to the COTS catalog DB and/or CLI; no writes.
 - No file edits except optional `journal.md` logging of queries + results.
 
-## Inputs (from planner/engineer/benchmark planner/benchmark CAD engineer)
+### Inputs (from planner/engineer/benchmark planner/benchmark CAD engineer)
 
 - Part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608").
 - Constraints: quantity tier, max_unit_cost, size/torque/voltage limits, material, mounting/shaft constraints.
 
-## Tools
+### Tools
 
 - Read-only SQL queries against the COTS catalog database.
 - Read-only CLI helpers/scripts (if provided) for catalog search.
 
-Outputs (structured, concise):
+### Outputs (structured, concise):
 
 - 3-10 candidate parts with `part_id`, `manufacturer`, `key specs`, `unit_cost`, `quantity_tier`, `source`, `why it fits`.
 - If no match, explicitly say "no match" and list which constraints were too strict.
 
-## Invocation
+### Invocation
 
 - Engineering Planner, implementer, reviewers and benchmark Planner, implementer, reviewers call the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
 - The returned part IDs and prices must be used in the plan and cost estimates.
