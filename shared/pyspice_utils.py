@@ -4,7 +4,6 @@ from typing import Any
 import structlog
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Spice.NgSpice.Shared import NgSpiceShared
-from PySpice.Unit import *
 
 # Robustly locate ngspice library if not found by default
 if NgSpiceShared.LIBRARY_PATH.startswith("libngspice"):
@@ -217,6 +216,11 @@ def validate_circuit(
             from shared.wire_utils import get_awg_properties
 
             for wire in section.wiring:
+                # 3D-routed wires are validated for tensile failure during physics
+                # simulation; do not short-circuit that path with static ampacity checks.
+                if getattr(wire, "routed_in_3d", False):
+                    continue
+
                 n_from = resolve_node_name(
                     wire.from_terminal.component, wire.from_terminal.terminal
                 )

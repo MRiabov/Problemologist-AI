@@ -50,6 +50,7 @@ class GenesisBackend(PhysicsBackend):
         self.motors = []  # part_name -> dict
         self.mjcf_actuators = {}  # name -> {joint: str, force_range: tuple}
         self.cables = {}  # name -> gs.Entity
+        self.virtual_cable_tensions = {}  # name -> float fallback when Cable morph is unavailable
         self.applied_controls = {}  # name -> float
         self.electronics_names = []  # list of entity names marked as electronics
         self.current_time = 0.0
@@ -508,16 +509,36 @@ class GenesisBackend(PhysicsBackend):
                     # 4. Add Cables (Wiring)
                     for cable_cfg in data.cables:
                         name = cable_cfg.wire_id
-                        material = gs.materials.Rigid(rho=8960)  # Copper density
+                        has_cable_morph = hasattr(gs.morphs, "Cable")
+                        if has_cable_morph:
+                            material = gs.materials.Rigid(rho=8960)  # Copper density
+                            cable = self.scene.add_entity(
+                                gs.morphs.Cable(
+                                    points=cable_cfg.points,
+                                    radius=cable_cfg.radius,
+                                ),
+                                material=material,
+                            )
+                            self.cables[name] = cable
+                            continue
 
-                        cable = self.scene.add_entity(
-                            gs.morphs.Cable(
-                                points=cable_cfg.points,
-                                radius=cable_cfg.radius,
-                            ),
-                            material=material,
+                        # Genesis build without Cable morph: emulate tension from geometric stretch.
+                        points = cable_cfg.points or []
+                        path_len_m = 0.0
+                        for i in range(len(points) - 1):
+                            p0 = np.array(points[i], dtype=float)
+                            p1 = np.array(points[i + 1], dtype=float)
+                            # Scene points are in mm in our pipeline; convert to meters.
+                            path_len_m += float(np.linalg.norm(p1 - p0)) / 1000.0
+                        nominal_len_m = (
+                            float(getattr(cable_cfg, "length_mm", 0.0)) / 1000.0
                         )
-                        self.cables[name] = cable
+                        if nominal_len_m <= 0.0:
+                            nominal_len_m = path_len_m
+                        stretch_m = max(0.0, path_len_m - nominal_len_m)
+                        stiffness = float(getattr(cable_cfg, "stiffness", 100.0))
+                        self.virtual_cable_tensions[name] = stretch_m * stiffness
+                        self.cables[name] = None
 
                     # T014: Fluid Spawning from FluidDefinition (with WP06 color support)
                     for fluid_cfg in data.fluids:
@@ -1255,10 +1276,15 @@ class GenesisBackend(PhysicsBackend):
 
     def get_tendon_tension(self, tendon_name: str) -> float:
         """Returns the average tension along the cable."""
+        if tendon_name in self.virtual_cable_tensions:
+            return float(self.virtual_cable_tensions[tendon_name])
+
         if tendon_name not in self.cables:
             raise ValueError(f"Tendon '{tendon_name}' not found in scene")
 
         cable = self.cables[tendon_name]
+        if cable is None:
+            return 0.0
         try:
             # Genesis cables (MPM or Rigid) might have stress or force data.
             # For a Rigid cable, we can check forces between nodes.
@@ -1315,5 +1341,6 @@ class GenesisBackend(PhysicsBackend):
         self.scene = None
         self.entities = {}
         self.cables = {}
+        self.virtual_cable_tensions = {}
         self.cameras = {}
         self._is_built = False
