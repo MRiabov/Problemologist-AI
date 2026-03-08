@@ -1,6 +1,5 @@
-import structlog
-
 import numpy as np
+import structlog
 from build123d import Compound, Polyline, Spline, Vector, Vertex
 from pydantic import BaseModel
 
@@ -219,9 +218,7 @@ def check_wire_clearance(
 
         return True
     except Exception as e:
-        logger.error(
-            "check_wire_clearance_failed", error=str(e), session_id=session_id
-        )
+        logger.error("check_wire_clearance_failed", error=str(e), session_id=session_id)
         return False
 
 

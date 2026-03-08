@@ -992,12 +992,12 @@ def validate(
                     if wire_errors:
                         return (False, "; ".join(wire_errors))
 
-        except Exception as e:
-            logger.warning(
-                "wire_clearance_check_failed_during_validate",
-                error=str(e),
-                session_id=session_id,
-            )
+            except Exception as e:
+                logger.warning(
+                    "wire_clearance_check_failed_during_validate",
+                    error=str(e),
+                    session_id=session_id,
+                )
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None

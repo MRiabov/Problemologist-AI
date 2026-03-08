@@ -70,6 +70,7 @@ def get_physics_backend(
     BACKEND_CACHE[session_id] = backend
     return backend
 
+
 def _create_backend(
     backend_type: SimulatorBackendType,
     smoke_test_mode: bool = False,
@@ -87,7 +88,6 @@ def _create_backend(
 
         backend = GenesisBackend(session_id=session_id)
         backend.smoke_test_mode = smoke_test_mode
-...
 
         backend.particle_budget = particle_budget
         # Trigger re-init if needed with correct mode
