@@ -4,9 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import asyncio
 import concurrent.futures
+import json
 import os
+import re
+import select
 import shlex
 import shutil
 import signal
@@ -17,7 +21,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -38,8 +42,277 @@ class StartedProcess:
     process: subprocess.Popen[bytes]
 
 
+@dataclass
+class BackendErrorAllowRule:
+    allow_all: bool = False
+    patterns: list[re.Pattern[str]] = field(default_factory=list)
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _compile_backend_error_allowlist_from_env(
+    env: dict[str, str],
+) -> list[re.Pattern[str]]:
+    raw_patterns = [
+        p.strip()
+        for p in env.get("BACKEND_ERROR_ALLOWLIST_REGEXES", "").split(";;")
+        if p.strip()
+    ]
+    compiled: list[re.Pattern[str]] = []
+    for pattern in raw_patterns:
+        try:
+            compiled.append(re.compile(pattern, re.IGNORECASE))
+        except re.error:
+            print(
+                f"[integration-runner] Ignoring invalid BACKEND_ERROR_ALLOWLIST regex: {pattern!r}"
+            )
+    return compiled
+
+
+def _extract_backend_error_session_id(normalized_line: str) -> str | None:
+    patterns = [
+        r"session_id=UUID\('([^']+)'\)",
+        r'session_id="([^"]+)"',
+        r"session_id='([^']+)'",
+        r"session_id=([^\s]+)",
+        r'"session_id"\s*:\s*"([^"]+)"',
+        r"'session_id'\s*:\s*'([^']+)'",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, normalized_line)
+        if not match:
+            continue
+        candidate = (match.group(1) or "").strip().strip(",")
+        if candidate:
+            return candidate
+    return None
+
+
+def _extract_int_prefix_from_session_id(session_id: str | None) -> str | None:
+    if not session_id:
+        return None
+    match = re.search(r"(INT-\d{3})", session_id, re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1).upper()
+
+
+def _is_allow_backend_errors_decorator(expr: ast.expr) -> bool:
+    target = expr.func if isinstance(expr, ast.Call) else expr
+    return (
+        isinstance(target, ast.Attribute)
+        and target.attr == "allow_backend_errors"
+        and isinstance(target.value, ast.Attribute)
+        and target.value.attr == "mark"
+        and isinstance(target.value.value, ast.Name)
+        and target.value.value.id == "pytest"
+    )
+
+
+def _extract_int_ids_from_test_node(node: ast.AST) -> set[str]:
+    int_ids: set[str] = set()
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        name_match = re.search(r"test_int_(\d{3})", node.name, re.IGNORECASE)
+        if name_match:
+            int_ids.add(f"INT-{name_match.group(1)}")
+        doc = ast.get_docstring(node) or ""
+        for match in re.finditer(r"INT-(\d{3})", doc, re.IGNORECASE):
+            int_ids.add(f"INT-{match.group(1)}")
+    return {value.upper() for value in int_ids}
+
+
+def _extract_allow_backend_errors_from_decorator(
+    decorator: ast.expr,
+) -> tuple[bool, list[str]]:
+    if not isinstance(decorator, ast.Call):
+        return True, []
+
+    if not decorator.args and not decorator.keywords:
+        return True, []
+
+    patterns: list[str] = []
+    for arg in decorator.args:
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            value = arg.value.strip()
+            if value:
+                patterns.append(value)
+
+    for keyword in decorator.keywords:
+        if keyword.arg not in {"regexes", "patterns", "pattern"}:
+            continue
+        value = keyword.value
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            raw = value.value.strip()
+            if raw:
+                patterns.append(raw)
+            continue
+        if isinstance(value, (ast.List, ast.Tuple, ast.Set)):
+            for item in value.elts:
+                if isinstance(item, ast.Constant) and isinstance(item.value, str):
+                    raw = item.value.strip()
+                    if raw:
+                        patterns.append(raw)
+    return False, patterns
+
+
+def _build_test_level_backend_allowlist_payload_from_ast(
+    repo_root: Path,
+) -> dict[str, dict[str, object]]:
+    index: dict[str, dict[str, object]] = {}
+    test_roots = [repo_root / "tests" / "integration", repo_root / "tests" / "e2e"]
+
+    for test_root in test_roots:
+        if not test_root.exists():
+            continue
+        for path in test_root.rglob("test_*.py"):
+            try:
+                source = path.read_text(encoding="utf-8")
+                module = ast.parse(source, filename=str(path))
+            except (OSError, SyntaxError):
+                continue
+
+            for node in module.body:
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                int_ids = _extract_int_ids_from_test_node(node)
+                if not int_ids:
+                    continue
+
+                for decorator in node.decorator_list:
+                    if not _is_allow_backend_errors_decorator(decorator):
+                        continue
+                    allow_all, raw_patterns = (
+                        _extract_allow_backend_errors_from_decorator(decorator)
+                    )
+                    compiled_patterns: list[re.Pattern[str]] = []
+                    for pattern in raw_patterns:
+                        try:
+                            compiled_patterns.append(re.compile(pattern, re.IGNORECASE))
+                        except re.error:
+                            print(
+                                "[integration-runner] Ignoring invalid allow_backend_errors regex "
+                                f"in {path}: {pattern!r}"
+                            )
+
+                    for int_id in int_ids:
+                        rule = index.setdefault(
+                            int_id, {"allow_all": False, "patterns": []}
+                        )
+                        if allow_all:
+                            rule["allow_all"] = True
+                        if compiled_patterns:
+                            raw = [pattern.pattern for pattern in compiled_patterns]
+                            existing = rule.get("patterns")
+                            if not isinstance(existing, list):
+                                existing = []
+                                rule["patterns"] = existing
+                            existing.extend(raw)
+    return index
+
+
+def _allowlist_cache_path(repo_root: Path) -> Path:
+    return (
+        repo_root
+        / "logs"
+        / "integration_tests"
+        / "json"
+        / "backend_error_allowlisted_prefixes.json"
+    )
+
+
+def _latest_test_allowlist_source_mtime(repo_root: Path) -> float:
+    latest = 0.0
+    for test_root in (repo_root / "tests" / "integration", repo_root / "tests" / "e2e"):
+        if not test_root.exists():
+            continue
+        for path in test_root.rglob("test_*.py"):
+            try:
+                latest = max(latest, path.stat().st_mtime)
+            except OSError:
+                continue
+    return latest
+
+
+def _load_or_generate_test_level_backend_allowlist_payload(
+    repo_root: Path,
+) -> dict[str, dict[str, object]]:
+    cache_path = _allowlist_cache_path(repo_root)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    source_mtime = _latest_test_allowlist_source_mtime(repo_root)
+
+    if cache_path.exists():
+        try:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            cached_source_mtime = float(cached.get("source_mtime", 0.0))
+            by_int = cached.get("by_int")
+            if cached_source_mtime >= source_mtime and isinstance(by_int, dict):
+                return by_int
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    by_int = _build_test_level_backend_allowlist_payload_from_ast(repo_root)
+    payload = {
+        "generated_at_epoch_s": time.time(),
+        "source_mtime": source_mtime,
+        "by_int": by_int,
+    }
+    cache_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return by_int
+
+
+def _compile_test_level_backend_allowlist_by_int_id(
+    payload: dict[str, dict[str, object]],
+) -> dict[str, BackendErrorAllowRule]:
+    index: dict[str, BackendErrorAllowRule] = {}
+    for int_id, raw_rule in payload.items():
+        if not isinstance(raw_rule, dict):
+            continue
+        allow_all = bool(raw_rule.get("allow_all", False))
+        compiled_patterns: list[re.Pattern[str]] = []
+        raw_patterns = raw_rule.get("patterns", [])
+        if isinstance(raw_patterns, list):
+            for pattern in raw_patterns:
+                if not isinstance(pattern, str):
+                    continue
+                try:
+                    compiled_patterns.append(re.compile(pattern, re.IGNORECASE))
+                except re.error:
+                    print(
+                        "[integration-runner] Ignoring invalid cached allow_backend_errors regex "
+                        f"for {int_id}: {pattern!r}"
+                    )
+        index[int_id] = BackendErrorAllowRule(
+            allow_all=allow_all, patterns=compiled_patterns
+        )
+    return index
+
+
+def _backend_error_line_is_allowlisted(
+    normalized_line: str,
+    *,
+    env_allowlist: list[re.Pattern[str]],
+    int_allowlist: dict[str, BackendErrorAllowRule],
+    session_id: str | None = None,
+) -> bool:
+    if any(pattern.search(normalized_line) for pattern in env_allowlist):
+        return True
+
+    if not session_id:
+        session_id = _extract_backend_error_session_id(normalized_line)
+    int_id = _extract_int_prefix_from_session_id(session_id)
+    if not int_id:
+        return False
+
+    rule = int_allowlist.get(int_id)
+    if not rule:
+        return False
+    if rule.allow_all:
+        return True
+    return any(pattern.search(normalized_line) for pattern in rule.patterns)
 
 
 def _check_http(url: str, *, contains: str | None, timeout_s: float) -> bool:
@@ -136,6 +409,7 @@ def run_pytest_subprocess(
     reverse: bool = False,
     junit_xml: str = "test_output/junit.xml",
     extra_env: dict[str, str] | None = None,
+    early_stop_error_logs: list[Path] | None = None,
 ) -> int:
     cmd = [
         "uv",
@@ -156,6 +430,21 @@ def run_pytest_subprocess(
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
+    early_stop_enabled = (
+        env.get("INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS", "0").strip() == "1"
+    )
+    env_allowlist = _compile_backend_error_allowlist_from_env(env)
+    allowlist_payload = _load_or_generate_test_level_backend_allowlist_payload(
+        _repo_root()
+    )
+    int_allowlist = _compile_test_level_backend_allowlist_by_int_id(allowlist_payload)
+    error_log_offsets: dict[Path, int] = {}
+    if early_stop_error_logs:
+        for error_log in early_stop_error_logs:
+            try:
+                error_log_offsets[error_log] = error_log.stat().st_size
+            except OSError:
+                error_log_offsets[error_log] = 0
 
     # Ensure log directory exists
     log_file = _repo_root() / "logs" / "integration_tests" / "full_test_output.log"
@@ -178,11 +467,98 @@ def run_pytest_subprocess(
     signal.signal(signal.SIGINT, _forward_signal)
     signal.signal(signal.SIGTERM, _forward_signal)
 
+    def _find_early_stop_reason() -> str | None:
+        if not early_stop_enabled:
+            return None
+        if not early_stop_error_logs:
+            return None
+        for error_log in early_stop_error_logs:
+            if not error_log.exists():
+                continue
+            start_offset = error_log_offsets.get(error_log, 0)
+            try:
+                with error_log.open("r", encoding="utf-8", errors="ignore") as handle:
+                    handle.seek(start_offset)
+                    for raw_line in handle:
+                        try:
+                            record = json.loads(raw_line)
+                        except json.JSONDecodeError:
+                            continue
+                        if not isinstance(record, dict):
+                            continue
+                        normalized = str(record.get("line") or "").strip()
+                        if not normalized:
+                            parts: list[str] = []
+                            event_text = str(record.get("event") or "").strip()
+                            if event_text:
+                                parts.append(event_text)
+                            for key in sorted(record):
+                                if key == "event":
+                                    continue
+                                value = record.get(key)
+                                if isinstance(value, (dict, list)):
+                                    rendered = json.dumps(
+                                        value, ensure_ascii=False, sort_keys=True
+                                    )
+                                else:
+                                    rendered = str(value)
+                                parts.append(f"{key}={rendered}")
+                            normalized = " ".join(parts).strip()
+                        if not normalized:
+                            continue
+                        session_id = record.get("session_id")
+                        if not isinstance(session_id, str):
+                            session_id = None
+                        if _backend_error_line_is_allowlisted(
+                            normalized,
+                            env_allowlist=env_allowlist,
+                            int_allowlist=int_allowlist,
+                            session_id=session_id,
+                        ):
+                            continue
+                        truncated = (
+                            normalized[:220] + "..."
+                            if len(normalized) > 220
+                            else normalized
+                        )
+                        return (
+                            f"non-allowlisted backend error detected in {error_log}: "
+                            f"{truncated}"
+                        )
+                    error_log_offsets[error_log] = handle.tell()
+            except OSError:
+                continue
+        return None
+
     assert process.stdout is not None
     with log_file.open("w", encoding="utf-8") as log_handle:
-        for line in process.stdout:
-            print(line, end="")
-            log_handle.write(line)
+        early_stop_requested = False
+        while True:
+            if not early_stop_requested:
+                early_stop_reason = _find_early_stop_reason()
+                if early_stop_reason:
+                    early_stop_requested = True
+                    msg = (
+                        "\n[integration-runner] Early stopping pytest: "
+                        f"{early_stop_reason}\n"
+                    )
+                    print(msg, end="")
+                    log_handle.write(msg)
+                    if process.poll() is None:
+                        process.send_signal(signal.SIGINT)
+
+            if process.poll() is not None:
+                for line in process.stdout:
+                    print(line, end="")
+                    log_handle.write(line)
+                break
+
+            ready, _, _ = select.select([process.stdout], [], [], 0.5)
+            if ready:
+                line = process.stdout.readline()
+                if line:
+                    print(line, end="")
+                    log_handle.write(line)
         process.stdout.close()
 
     return process.wait()
@@ -693,15 +1069,22 @@ def _link_current_logs(run_playwright: bool) -> None:
         ("integration_tests/controller.log", "controller.log"),
         ("integration_tests/controller_debug.log", "controller_debug.log"),
         ("integration_tests/controller_errors.log", "controller_errors.log"),
+        ("integration_tests/json/controller_errors.json", "controller_errors.json"),
         ("integration_tests/worker_light.log", "worker_light.log"),
         ("integration_tests/worker_light_debug.log", "worker_light_debug.log"),
         ("integration_tests/worker_light_errors.log", "worker_light_errors.log"),
+        ("integration_tests/json/worker_light_errors.json", "worker_light_errors.json"),
         ("integration_tests/worker_heavy.log", "worker_heavy.log"),
         ("integration_tests/worker_heavy_debug.log", "worker_heavy_debug.log"),
         ("integration_tests/worker_heavy_errors.log", "worker_heavy_errors.log"),
+        ("integration_tests/json/worker_heavy_errors.json", "worker_heavy_errors.json"),
         ("integration_tests/temporal_worker.log", "temporal_worker.log"),
         ("integration_tests/temporal_worker_debug.log", "temporal_worker_debug.log"),
         ("integration_tests/temporal_worker_errors.log", "temporal_worker_errors.log"),
+        (
+            "integration_tests/json/temporal_worker_errors.json",
+            "temporal_worker_errors.json",
+        ),
         ("integration_tests/full_test_output.log", "full_test_output.log"),
     ]
     if run_playwright:
@@ -844,6 +1227,7 @@ def _run_integration_command(
     print("Starting Application Servers (Controller, Worker, Temporal Worker)...")
 
     log_dir = repo_root / "logs" / "integration_tests"
+    json_log_dir = log_dir / "json"
     archive_dir = repo_root / "logs" / "archives"
     _archive_log_dir(log_dir, archive_dir)
     _preemptive_cleanup()
@@ -890,6 +1274,9 @@ def _run_integration_command(
                             "WORKER_TYPE": "light",
                             "EXTRA_DEBUG_LOG": str(log_dir / "worker_light_debug.log"),
                             "EXTRA_ERROR_LOG": str(log_dir / "worker_light_errors.log"),
+                            "EXTRA_ERROR_JSON_LOG": str(
+                                json_log_dir / "worker_light_errors.json"
+                            ),
                         },
                         pid_file=repo_root / "logs" / "worker_light.pid",
                     ),
@@ -910,6 +1297,9 @@ def _run_integration_command(
                             "WORKER_TYPE": "heavy",
                             "EXTRA_DEBUG_LOG": str(log_dir / "worker_heavy_debug.log"),
                             "EXTRA_ERROR_LOG": str(log_dir / "worker_heavy_errors.log"),
+                            "EXTRA_ERROR_JSON_LOG": str(
+                                json_log_dir / "worker_heavy_errors.json"
+                            ),
                         },
                         pid_file=repo_root / "logs" / "worker_heavy.pid",
                     ),
@@ -929,6 +1319,9 @@ def _run_integration_command(
                         env_updates={
                             "EXTRA_DEBUG_LOG": str(log_dir / "controller_debug.log"),
                             "EXTRA_ERROR_LOG": str(log_dir / "controller_errors.log"),
+                            "EXTRA_ERROR_JSON_LOG": str(
+                                json_log_dir / "controller_errors.json"
+                            ),
                         },
                         pid_file=repo_root / "logs" / "controller.pid",
                     ),
@@ -943,6 +1336,9 @@ def _run_integration_command(
                             ),
                             "EXTRA_ERROR_LOG": str(
                                 log_dir / "temporal_worker_errors.log"
+                            ),
+                            "EXTRA_ERROR_JSON_LOG": str(
+                                json_log_dir / "temporal_worker_errors.json"
                             ),
                         },
                         pid_file=repo_root / "logs" / "temporal_worker.pid",
@@ -1033,6 +1429,12 @@ def _run_integration_command(
             pytest_args=pytest_args,
             reverse=args.reverse,
             junit_xml="test_output/junit.xml",
+            early_stop_error_logs=[
+                json_log_dir / "controller_errors.json",
+                json_log_dir / "worker_light_errors.json",
+                json_log_dir / "worker_heavy_errors.json",
+                json_log_dir / "temporal_worker_errors.json",
+            ],
         )
 
         _run(["uv", "run", "python", "scripts/persist_test_results.py"], check=False)
