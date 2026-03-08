@@ -2,7 +2,6 @@ import ast
 import asyncio
 import json
 import re
-import sys
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
@@ -817,7 +816,9 @@ class BaseNode:
         Returns (prediction, artifacts, journal_entry).
         """
         if max_retries is None:
-            max_retries = sys.maxsize
+            # Fail closed on repeated invalid/malformed outputs instead of
+            # retrying until the hard timeout window is exhausted.
+            max_retries = max(1, int(settings.dspy_program_max_retries))
 
         from controller.agent.dspy_utils import WorkerInterpreter
         from worker_heavy.utils.file_validation import validate_node_output

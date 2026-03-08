@@ -76,6 +76,7 @@ class AgentSettings(BaseSettings):
         _resolve_context_compaction_threshold_tokens_from_agents_config()
     )
     dspy_program_timeout_seconds: int = 300
+    dspy_program_max_retries: int = 2
     react_max_iters: int = 8
     react_planner_max_iters: int = 6
     require_reasoning_traces: bool = global_settings.require_reasoning_traces
