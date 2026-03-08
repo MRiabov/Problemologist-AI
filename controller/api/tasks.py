@@ -669,24 +669,21 @@ async def execute_agent_task(
                             broadcast_file_update,
                         )
 
-                        manifest_path = ".manifests/review_manifest.json"
-                        if await client.exists(
-                            manifest_path, bypass_agent_permissions=True
-                        ):
-                            manifest_content = await client.read_file(
+                        manifest_paths = (
+                            ".manifests/benchmark_review_manifest.json",
+                            ".manifests/engineering_plan_review_manifest.json",
+                            ".manifests/engineering_execution_review_manifest.json",
+                            ".manifests/electronics_review_manifest.json",
+                        )
+                        for manifest_path in manifest_paths:
+                            if await client.exists(
                                 manifest_path, bypass_agent_permissions=True
-                            )
-                            await broadcast_file_update(
-                                str(episode_id), manifest_path, manifest_content
-                            )
-                            for alias in (
-                                ".manifests/benchmark_review_manifest.json",
-                                ".manifests/engineering_plan_review_manifest.json",
-                                ".manifests/engineering_execution_review_manifest.json",
-                                ".manifests/electronics_review_manifest.json",
                             ):
+                                manifest_content = await client.read_file(
+                                    manifest_path, bypass_agent_permissions=True
+                                )
                                 await broadcast_file_update(
-                                    str(episode_id), alias, manifest_content
+                                    str(episode_id), manifest_path, manifest_content
                                 )
                     except Exception:
                         pass

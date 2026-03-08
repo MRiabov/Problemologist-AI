@@ -10,12 +10,17 @@ from controller.agent.context_usage import (
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.agent.node_entry_validation import (
+    ELECTRONICS_REVIEW_MANIFEST,
+    ELECTRONICS_REVIEWER_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     NodeEntryValidationError,
     ValidationGraph,
     build_engineer_node_contracts,
     evaluate_node_entry_contract,
     integration_mode_enabled,
+    plan_reviewer_handover_custom_check_from_session_id,
     reviewer_handover_custom_check_from_session_id,
 )
 from controller.clients.worker import WorkerClient
@@ -101,12 +106,29 @@ def _build_entry_rejection_feedback(
 
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
     custom_checks = {
+        ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: (
+                plan_reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
+                    session_id=getattr(state, "session_id", None),
+                )
+            )
+        ),
         ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK: (
             lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=getattr(state, "session_id", None),
                 reviewer_label="Execution",
+                manifest_path=ENGINEERING_EXECUTION_REVIEW_MANIFEST,
+                expected_stage="engineering_execution_reviewer",
             )
-        )
+        ),
+        ELECTRONICS_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
+                session_id=getattr(state, "session_id", None),
+                reviewer_label="Electronics",
+                manifest_path=ELECTRONICS_REVIEW_MANIFEST,
+                expected_stage="electronics_reviewer",
+            )
+        ),
     }
     contract = ENGINEER_NODE_CONTRACTS[target_node]
     return await evaluate_node_entry_contract(

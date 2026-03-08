@@ -303,7 +303,11 @@ class ExecutionReviewerNode(BaseNode):
             )
 
     async def _ensure_submit_for_review_succeeded(self) -> str | None:
-        handoff_err = await validate_reviewer_handover(self.ctx.worker_client)
+        handoff_err = await validate_reviewer_handover(
+            self.ctx.worker_client,
+            manifest_path=".manifests/engineering_execution_review_manifest.json",
+            expected_stage="engineering_execution_reviewer",
+        )
         if not handoff_err:
             return None
 
@@ -334,7 +338,10 @@ class ExecutionReviewerNode(BaseNode):
             )
 
         try:
-            submit_result = await self.ctx.worker_client.submit("script.py")
+            submit_result = await self.ctx.worker_client.submit(
+                "script.py",
+                reviewer_stage="engineering_execution_reviewer",
+            )
         except Exception as exc:
             return f"Execution review blocked: submit_for_review failed: {exc}"
         if not submit_result.success:
@@ -343,7 +350,11 @@ class ExecutionReviewerNode(BaseNode):
                 f"{submit_result.message or 'unknown submit failure'}"
             )
 
-        post_submit_err = await validate_reviewer_handover(self.ctx.worker_client)
+        post_submit_err = await validate_reviewer_handover(
+            self.ctx.worker_client,
+            manifest_path=".manifests/engineering_execution_review_manifest.json",
+            expected_stage="engineering_execution_reviewer",
+        )
         if post_submit_err:
             return f"Execution review blocked: {post_submit_err}"
         return None

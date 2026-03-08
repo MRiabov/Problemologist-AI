@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, model_validator
 
 from controller.agent.config import settings as agent_settings
-from controller.agent.review_handover import validate_reviewer_handover
+from controller.agent.review_handover import (
+    validate_plan_reviewer_handover,
+    validate_reviewer_handover,
+)
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
@@ -69,7 +72,6 @@ REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "script.py",
     "validation_results.json",
     "simulation_result.json",
-    ".manifests/review_manifest.json",
 )
 ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "plan.md",
@@ -77,8 +79,17 @@ ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "objectives.yaml",
     "assembly_definition.yaml",
 )
+ENGINEERING_PLAN_REVIEW_MANIFEST = ".manifests/engineering_plan_review_manifest.json"
+BENCHMARK_REVIEW_MANIFEST = ".manifests/benchmark_review_manifest.json"
+ENGINEERING_EXECUTION_REVIEW_MANIFEST = (
+    ".manifests/engineering_execution_review_manifest.json"
+)
+ELECTRONICS_REVIEW_MANIFEST = ".manifests/electronics_review_manifest.json"
+
 BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
+ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
 ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
+ELECTRONICS_REVIEWER_HANDOVER_CHECK = "electronics_reviewer_handover"
 
 
 class NodeEntryValidationError(BaseModel):
@@ -179,6 +190,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             node=AgentName.ENGINEER_PLAN_REVIEWER,
             required_state_fields=["episode_id"],
             required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
+            custom_check=ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_CODER: NodeEntryContract(
             node=AgentName.ENGINEER_CODER,
@@ -194,6 +206,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             node=AgentName.ELECTRONICS_REVIEWER,
             required_state_fields=["episode_id"],
             required_artifacts=["script.py"],
+            custom_check=ELECTRONICS_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_EXECUTION_REVIEWER,
@@ -223,6 +236,12 @@ async def reviewer_handover_custom_check_from_session_id(
     *,
     session_id: str | None,
     reviewer_label: str,
+    manifest_path: str,
+    expected_stage: Literal[
+        "benchmark_reviewer",
+        "engineering_execution_reviewer",
+        "electronics_reviewer",
+    ],
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -240,13 +259,26 @@ async def reviewer_handover_custom_check_from_session_id(
         session_id=normalized_session_id,
     )
     try:
-        handover_error = await validate_reviewer_handover(client)
-        if handover_error and reviewer_label.lower() == "execution":
-            materialization_error = await _materialize_execution_reviewer_handover(
-                client
+        handover_error = await validate_reviewer_handover(
+            client,
+            manifest_path=manifest_path,
+            expected_stage=expected_stage,
+        )
+        if handover_error and reviewer_label.lower() in {"execution", "electronics"}:
+            materialization_error = await _materialize_reviewer_handover(
+                client,
+                reviewer_stage=(
+                    "electronics_reviewer"
+                    if expected_stage == "electronics_reviewer"
+                    else "engineering_execution_reviewer"
+                ),
             )
             if materialization_error is None:
-                handover_error = await validate_reviewer_handover(client)
+                handover_error = await validate_reviewer_handover(
+                    client,
+                    manifest_path=manifest_path,
+                    expected_stage=expected_stage,
+                )
             else:
                 handover_error = materialization_error
     except Exception as exc:
@@ -262,13 +294,60 @@ async def reviewer_handover_custom_check_from_session_id(
             code=REASON_REVIEWER_ENTRY_BLOCKED,
             message=f"{reviewer_label} reviewer entry blocked: {handover_error}",
             source=EntryValidationSource.HANDOVER,
-            artifact_path=".manifests/review_manifest.json",
+            artifact_path=manifest_path,
         )
     ]
 
 
-async def _materialize_execution_reviewer_handover(
+async def plan_reviewer_handover_custom_check_from_session_id(
+    *,
+    session_id: str | None,
+) -> list[NodeEntryValidationError]:
+    normalized_session_id = (session_id or "").strip()
+    if not normalized_session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_REVIEWER_ENTRY_BLOCKED,
+                message="Plan reviewer handover check failed: missing session_id.",
+                source=EntryValidationSource.HANDOVER,
+            )
+        ]
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=normalized_session_id,
+    )
+    try:
+        handover_error = await validate_plan_reviewer_handover(
+            client,
+            manifest_path=ENGINEERING_PLAN_REVIEW_MANIFEST,
+        )
+    except Exception as exc:
+        handover_error = f"plan reviewer handover validation exception: {exc}"
+    finally:
+        await client.aclose()
+
+    if handover_error is None:
+        return []
+
+    return [
+        NodeEntryValidationError(
+            code=REASON_REVIEWER_ENTRY_BLOCKED,
+            message=f"Plan reviewer entry blocked: {handover_error}",
+            source=EntryValidationSource.HANDOVER,
+            artifact_path=ENGINEERING_PLAN_REVIEW_MANIFEST,
+        )
+    ]
+
+
+async def _materialize_reviewer_handover(
     client: WorkerClient,
+    *,
+    reviewer_stage: Literal[
+        "engineering_execution_reviewer",
+        "electronics_reviewer",
+    ] = "engineering_execution_reviewer",
 ) -> str | None:
     if not await client.exists("script.py"):
         return "script.py missing; cannot materialize review handover."
@@ -294,7 +373,10 @@ async def _materialize_execution_reviewer_handover(
         )
 
     try:
-        submit_result = await client.submit("script.py")
+        submit_result = await client.submit(
+            "script.py",
+            reviewer_stage=reviewer_stage,
+        )
     except Exception as exc:
         return f"submit_for_review failed while materializing handover: {exc}"
     if not submit_result.success:

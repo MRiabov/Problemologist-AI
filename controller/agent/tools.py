@@ -1,3 +1,5 @@
+import hashlib
+import json
 from collections.abc import Callable
 
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
@@ -6,6 +8,7 @@ from shared.cots.agent import search_cots_catalog
 from shared.enums import AgentName
 from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
+from shared.workers.schema import PlanReviewManifest
 
 
 def _tool_name(tool: Callable) -> str:
@@ -135,6 +138,24 @@ def get_engineer_planner_tools(
             return result.model_dump(mode="json")
 
         is_valid, errors = validate_node_output(AgentName.ENGINEER_PLANNER, artifacts)
+        if is_valid:
+            artifact_hashes = {
+                rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                for rel_path, content in artifacts.items()
+            }
+            manifest = PlanReviewManifest(
+                status="ready_for_review",
+                reviewer_stage="engineering_plan_reviewer",
+                session_id=fs.client.session_id,
+                planner_node_type=planner_node_type.value,
+                artifact_hashes=artifact_hashes,
+            )
+            await fs.client.write_file(
+                ".manifests/engineering_plan_review_manifest.json",
+                json.dumps(manifest.model_dump(mode="json"), indent=2),
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
         result = PlannerSubmissionResult(
             ok=is_valid,
             status="submitted" if is_valid else "rejected",

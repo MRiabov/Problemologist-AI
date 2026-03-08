@@ -26,6 +26,7 @@ from controller.agent.execution_limits import (
 )
 from controller.agent.initialization import initialize_agent_files
 from controller.agent.node_entry_validation import (
+    BENCHMARK_REVIEW_MANIFEST,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
     ValidationGraph,
@@ -251,6 +252,8 @@ async def _custom_benchmark_reviewer_handover_check(
     return await reviewer_handover_custom_check_from_session_id(
         session_id=str(state.session.session_id),
         reviewer_label="Benchmark",
+        manifest_path=BENCHMARK_REVIEW_MANIFEST,
+        expected_stage="benchmark_reviewer",
     )
 
 
@@ -1367,30 +1370,25 @@ async def _persist_session_assets(
             # through the routed backend. Read it directly through WorkerClient so
             # reviewer manifests are still surfaced as episode assets.
             try:
-                manifest_path = ".manifests/review_manifest.json"
-                if await asyncio.wait_for(
-                    client.exists(manifest_path, bypass_agent_permissions=True),
-                    timeout=5.0,
+                for manifest_path in (
+                    ".manifests/benchmark_review_manifest.json",
+                    ".manifests/engineering_plan_review_manifest.json",
+                    ".manifests/engineering_execution_review_manifest.json",
+                    ".manifests/electronics_review_manifest.json",
                 ):
-                    manifest_content = await asyncio.wait_for(
-                        client.read_file(manifest_path, bypass_agent_permissions=True),
+                    if await asyncio.wait_for(
+                        client.exists(manifest_path, bypass_agent_permissions=True),
                         timeout=5.0,
-                    )
-                    await asyncio.wait_for(
-                        broadcast_file_update(
-                            str(session_id), manifest_path, manifest_content
-                        ),
-                        timeout=2.0,
-                    )
-                    for alias in (
-                        ".manifests/benchmark_review_manifest.json",
-                        ".manifests/engineering_plan_review_manifest.json",
-                        ".manifests/engineering_execution_review_manifest.json",
-                        ".manifests/electronics_review_manifest.json",
                     ):
+                        manifest_content = await asyncio.wait_for(
+                            client.read_file(
+                                manifest_path, bypass_agent_permissions=True
+                            ),
+                            timeout=5.0,
+                        )
                         await asyncio.wait_for(
                             broadcast_file_update(
-                                str(session_id), alias, manifest_content
+                                str(session_id), manifest_path, manifest_content
                             ),
                             timeout=2.0,
                         )

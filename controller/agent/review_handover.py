@@ -1,8 +1,19 @@
 import hashlib
+from typing import Literal
 
 from controller.clients.worker import WorkerClient
 from shared.models.simulation import SimulationResult
-from shared.workers.schema import ReviewManifest, ValidationResultRecord
+from shared.workers.schema import (
+    PlanReviewManifest,
+    ReviewManifest,
+    ValidationResultRecord,
+)
+
+ReviewerStage = Literal[
+    "benchmark_reviewer",
+    "engineering_execution_reviewer",
+    "electronics_reviewer",
+]
 
 
 def _goal_reached(summary: str) -> bool:
@@ -10,23 +21,35 @@ def _goal_reached(summary: str) -> bool:
     return "goal achieved" in text or "green zone" in text or "goal zone" in text
 
 
-async def validate_reviewer_handover(worker_client: WorkerClient) -> str | None:
+async def validate_reviewer_handover(
+    worker_client: WorkerClient,
+    *,
+    manifest_path: str,
+    expected_stage: ReviewerStage,
+) -> str | None:
     """
     Validate that reviewer handoff artifacts are present and correspond to the
     latest script revision.
     """
-    manifest_path = ".manifests/review_manifest.json"
     if not await worker_client.exists(manifest_path):
-        return "review_manifest.json missing; call submit_for_review(compound) first."
+        return (
+            f"{manifest_path} missing; call submit_for_review(compound) "
+            "with the correct reviewer stage first."
+        )
 
     try:
         manifest_raw = await worker_client.read_file(manifest_path)
         manifest = ReviewManifest.model_validate_json(manifest_raw)
     except Exception as e:
-        return f"review_manifest.json invalid: {e}"
+        return f"{manifest_path} invalid: {e}"
 
     if manifest.status != "ready_for_review":
         return "review manifest status is not ready_for_review."
+    if manifest.reviewer_stage != expected_stage:
+        return (
+            f"review manifest stage mismatch: expected {expected_stage}, "
+            f"got {manifest.reviewer_stage}."
+        )
 
     if not await worker_client.exists(manifest.script_path):
         return f"script missing at manifest path: {manifest.script_path}"
@@ -66,5 +89,42 @@ async def validate_reviewer_handover(worker_client: WorkerClient) -> str | None:
 
     if not _goal_reached(manifest.simulation_summary):
         return "review manifest simulation summary does not confirm goal completion."
+
+    return None
+
+
+async def validate_plan_reviewer_handover(
+    worker_client: WorkerClient,
+    *,
+    manifest_path: str = ".manifests/engineering_plan_review_manifest.json",
+) -> str | None:
+    """Validate planner-to-plan-reviewer handoff using stage-specific manifest."""
+    if not await worker_client.exists(manifest_path):
+        return f"{manifest_path} missing; call submit_plan() first."
+
+    try:
+        manifest_raw = await worker_client.read_file(manifest_path)
+        manifest = PlanReviewManifest.model_validate_json(manifest_raw)
+    except Exception as e:
+        return f"{manifest_path} invalid: {e}"
+
+    if manifest.status != "ready_for_review":
+        return "plan review manifest status is not ready_for_review."
+    if manifest.reviewer_stage != "engineering_plan_reviewer":
+        return f"plan review manifest stage mismatch: got {manifest.reviewer_stage}."
+
+    if not manifest.artifact_hashes:
+        return "plan review manifest has no artifact_hashes."
+
+    for rel_path, expected_hash in manifest.artifact_hashes.items():
+        if not await worker_client.exists(rel_path):
+            return f"planner artifact missing: {rel_path}"
+        content = await worker_client.read_file(rel_path)
+        actual_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+        if actual_hash != expected_hash:
+            return (
+                f"planner artifact hash mismatch for {rel_path}; "
+                "re-run submit_plan() for latest planner revision."
+            )
 
     return None

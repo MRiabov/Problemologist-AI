@@ -431,7 +431,8 @@ class BenchmarkCoderNode(BaseNode):
                         # validate+simulate pass. The script itself must still
                         # contain an explicit submit_for_review(...) call.
                         submit_res = await self.ctx.worker_client.submit(
-                            script_path=SCRIPT_FILE
+                            script_path=SCRIPT_FILE,
+                            reviewer_stage="benchmark_reviewer",
                         )
                         if not submit_res.success:
                             state.session.status = SessionStatus.REJECTED
@@ -733,7 +734,11 @@ class BenchmarkReviewerNode(BaseNode):
         return state
 
     async def _ensure_submit_for_review_succeeded(self) -> str | None:
-        handoff_err = await validate_reviewer_handover(self.ctx.worker_client)
+        handoff_err = await validate_reviewer_handover(
+            self.ctx.worker_client,
+            manifest_path=".manifests/benchmark_review_manifest.json",
+            expected_stage="benchmark_reviewer",
+        )
         if handoff_err:
             return f"Benchmark reviewer blocked: {handoff_err}"
         return None
