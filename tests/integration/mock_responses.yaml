@@ -178,7 +178,7 @@ scenarios:
                 constraints:
                   benchmark_max_unit_cost_usd: 100
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 12
@@ -679,9 +679,11 @@ scenarios:
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "Plan with MOCK-MOTOR-ID generated."
             thought: "Plan is complete."
@@ -696,6 +698,8 @@ scenarios:
                 overwrite: true,
               }
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "No electronics needed."
       - node: engineer_coder
@@ -710,10 +714,10 @@ scenarios:
                 from shared.models.schemas import PartMetadata
 
                 def build():
-                    part = Box(10, 10, 10)
+                    part = Box(1, 1, 1).translate((7.5, 7.5, 7.5))
                     part.label = "projectile_ball"
                     part.metadata = PartMetadata(
-                        material_id="aluminum_6061",
+                        material_id="abs",
                         manufacturing_method=ManufacturingMethod.THREE_DP,
                     )
                     return part
@@ -893,6 +897,116 @@ scenarios:
               decision: "APPROVED"
               reason: "Planner artifacts are valid."
               required_fixes: []
+
+  INT-025:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Deterministic simulation test setup.
+                ## 2. Parts List
+                - small_static_block
+                ## 3. Assembly Strategy
+                1. Place one block in build zone.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low simulation risk.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Prepare simulation-ready artifacts
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 300
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 200
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-50,-50,0], max: [50,50,50]}
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0,0,20]
+                  runtime_jitter: [1,1,1]
+                simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-025 plan submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-025 electronics plan submitted."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Plan artifacts are valid."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.enums import ManufacturingMethod
+                from shared.models.schemas import PartMetadata
+
+                def build():
+                    part = Box(1, 1, 1).translate((7.5, 7.5, 7.5))
+                    part.label = "projectile_ball"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "Implemented deterministic simulation artifact."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Simulation evidence is acceptable."
+              required_fixes: []
       - node: engineer_coder
         steps:
           - tool_name: "write_file"
@@ -922,6 +1036,246 @@ scenarios:
             review:
               decision: "APPROVED"
               reason: "Execution artifacts are valid."
+              required_fixes: []
+
+  INT-053:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-053 observability deterministic simulation plan.
+                ## 2. Parts List
+                - Goal-zone block (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Place one part inside the goal zone.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Draft planner artifacts
+                - [x] Submit planning handoff
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1200
+                  planner_target_max_unit_cost_usd: 200
+                  planner_target_max_weight_g: 600
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0, 0, 0]
+                constraints:
+                  max_unit_cost: 200.0
+                  max_weight_g: 1200.0
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-053 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-053 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planning artifacts satisfy schema and handover requirements."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1).translate((8, 0, 0.5))
+                    part.label = "projectile_ball"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-053 coder output generated."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution artifacts are valid and satisfy objective constraints."
+              required_fixes: []
+
+  INT-055:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-055 artifact upload deterministic simulation plan.
+                ## 2. Parts List
+                - Goal-zone block (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Place one part inside the goal zone.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Draft planner artifacts
+                - [x] Submit planning handoff
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1200
+                  planner_target_max_unit_cost_usd: 200
+                  planner_target_max_weight_g: 600
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0, 0, 0]
+                constraints:
+                  max_unit_cost: 200.0
+                  max_weight_g: 1200.0
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-055 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-055 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planning artifacts satisfy schema and handover requirements."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1).translate((8, 0, 0.5))
+                    part.label = "projectile_ball"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-055 coder output generated."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution artifacts are valid and satisfy objective constraints."
               required_fixes: []
 
   INT-033:
@@ -1752,11 +2106,14 @@ scenarios:
             expected_observation: "ls: cannot access"
           - tool_name: "write_file"
             tool_args:
-              {
-                path: "script.py",
-                content: "# Recovered\n\ndef build():\n    from build123d import Box\n    return Box(1, 1, 1)",
-                overwrite: true,
-              }
+              path: "script.py"
+              content: |
+                # Recovered
+
+                def build():
+                    from build123d import Box
+                    return Box(1, 1, 1)
+              overwrite: true
             expected_observation: "success"
           - finished: true
             journal: "Observed failure but continued work."
@@ -1885,11 +2242,14 @@ scenarios:
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
-              {
-                path: "script.py",
-                content: "# Test script\n\ndef build():\n    from build123d import Box\n    return Box(1, 1, 1)",
-                overwrite: true,
-              }
+              path: "script.py"
+              content: |
+                # Test script
+
+                def build():
+                    from build123d import Box
+                    return Box(1, 1, 1)
+              overwrite: true
             expected_observation: "success"
           - finished: true
             journal: "Coding for INT-177 complete."
@@ -2018,11 +2378,23 @@ scenarios:
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
-              {
-                path: "script.py",
-                content: "# Test script for mentions\nfrom shared.models.schemas import PartMetadata\n# line 3\n# line 4\n# line 5\n# line 6\n# line 7\n# line 8\n# line 9\n# line 10\n\ndef build():\n    from build123d import Box\n    return Box(1, 1, 1)",
-                overwrite: true,
-              }
+              path: "script.py"
+              content: |
+                # Test script for mentions
+                from shared.models.schemas import PartMetadata
+                # line 3
+                # line 4
+                # line 5
+                # line 6
+                # line 7
+                # line 8
+                # line 9
+                # line 10
+
+                def build():
+                    from build123d import Box
+                    return Box(1, 1, 1)
+              overwrite: true
             expected_observation: "success"
           - finished: true
             journal: "Coding for INT-179 complete."

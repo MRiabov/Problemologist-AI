@@ -83,7 +83,7 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
         "node_entry_validation_rejected",
         "execution reviewer entry blocked",
         "reviewer handover",
-        "filesystem_permission_denied agent=electronics_engineer action=read path=script.py",
+        "filesystem_permission_denied.*electronics_engineer.*script.py",
     ]
 )
 @pytest.mark.asyncio
@@ -114,7 +114,7 @@ async def test_int_184_engineer_fail_fast_and_skip_target_node():
         assert episode.status == EpisodeStatus.FAILED
 
         entry = _entry_validation_from_episode(episode)
-        assert entry.node == AgentName.EXECUTION_REVIEWER
+        assert entry.node == AgentName.ENGINEER_EXECUTION_REVIEWER
         assert entry.disposition == EntryFailureDisposition.FAIL_FAST
         assert entry.reason_code == "reviewer_entry_blocked"
         assert entry.reroute_target == AgentName.ENGINEER_CODER
@@ -123,7 +123,9 @@ async def test_int_184_engineer_fail_fast_and_skip_target_node():
 
         additional_info = episode.metadata_vars.additional_info or {}
         assert additional_info.get("entry_validation_terminal") is True
-        assert not _node_start_traces(episode, AgentName.EXECUTION_REVIEWER.value)
+        assert not _node_start_traces(
+            episode, AgentName.ENGINEER_EXECUTION_REVIEWER.value
+        )
 
         failure_logs = [
             log
