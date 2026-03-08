@@ -67,11 +67,11 @@ ReAct is the first-line correction loop:
 
 If the 
 
-#### The "tools" as Python functions - Utils
+### The "tools" as Python functions - Utils
 
 I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
 
-##### Engineer tools
+#### Engineer tools
 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
   - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
@@ -84,7 +84,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 Note - used by default by
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
-##### Benchmark generator (CAD editor) tools
+#### Benchmark generator (CAD editor) tools
 
 - `validate(Compound) -> bool` the benchmark is validated to not be out of bounds, and not have intersecting:
     - Input object with environment
@@ -98,7 +98,7 @@ Note - used by default by
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
 <!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
 
-#### Planner tools
+### Planner tools
 
 `validate_costing_and_price`. Will:
 
@@ -115,19 +115,19 @@ Note - used by default by
 4. Be the only valid planner completion gate: planner transitions are `PLANNED` only when `ok=true`.
 5. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
-#### Exact tools logic
+### Exact tools logic
 
 I will define exact tool (function) logic to avoid confusion.
 
-##### `validate_and_price(component: Part|Compound)`
+#### `validate_and_price(component: Part|Compound)`
 
 Run the workbench interface to validate the part for manufacturability; if passes - also run the pricing, if not, return a validation error with fix suggestions. Detects both assemblies and individual parts.
 
-1. Check cache for if we need to reverify the solution, early exit if not.
-2. If there is the environment in the assembly (as required by `simulate` command), assert that it is in the correct position.
-3. Validate for the manufacturability as per the Workbench interface
-4. Validate for being in build zone bounds.
-5. Determine cost
+1. Check cache for if we need to reverify the solution, early exit if not,
+2. If there is the environment in the assembly (as required by `simulate` command), assert that it is in the correct position,
+3. Validate for the manufacturability as per the Workbench interface,
+4. Validate for being in build zone bounds,
+5. Determine cost,
 6. Validate for cost,
 7. Validate for weight.
 
@@ -145,7 +145,7 @@ So:
     The simulation will produce video. The issue is, it's expensive to render. 
 5. If doesn't, retry the simulation.
 
-##### submit_for_review(compound: Compound)
+#### submit_for_review(compound: Compound)
 
 The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts (including `.manifests/review_manifest.json`) and marks the submission candidate as ready for review.
 
@@ -165,6 +165,6 @@ Reviewer output contract is strict:
 1. Reviewer completion must produce a structured `review_decision`.
 2. Missing structured reviewer output is invalid reviewer output and stays in fail-closed routing (with explicit logs), never auto-promoted to acceptance.
 
-#### Dealing with latency
+### Dealing with latency
 
 All Python tools require all files to be uploaded. While this is a very rare edge case that an agent would run code tool before the file was edited, we should ensure that this doesn't happen.
