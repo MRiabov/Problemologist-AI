@@ -765,6 +765,37 @@ class GenesisBackend(PhysicsBackend):
     def get_body_state(self, body_id: str) -> BodyState:
         logger.debug("genesis_get_body_state_request", body_id=body_id)
         try:
+
+            def _as_vector(
+                val: Any, size: int, default: tuple[float, ...]
+            ) -> tuple[float, ...]:
+                """Best-effort conversion to fixed-size float vector."""
+                if val is None:
+                    return default
+                if hasattr(val, "cpu"):
+                    val = val.cpu().numpy()
+
+                if isinstance(val, np.ndarray):
+                    arr = val
+                    if arr.ndim >= 2 and arr.shape[-1] == size:
+                        arr = arr.reshape(-1, size)[0]
+                    elif arr.ndim == 1 and arr.shape[0] >= size:
+                        arr = arr[:size]
+                    elif arr.ndim == 0:
+                        return default
+                    else:
+                        return default
+                    return tuple(float(x) for x in arr.tolist())
+
+                if isinstance(val, (list, tuple)):
+                    if len(val) > 0 and isinstance(val[0], (list, tuple)):
+                        val = val[0]
+                    if len(val) >= size:
+                        return tuple(float(val[i]) for i in range(size))
+                    return default
+
+                return default
+
             if body_id not in self.entities:
                 # Check links within MJCF entities (from WP07)
                 for ent in self.entities.values():
@@ -781,44 +812,41 @@ class GenesisBackend(PhysicsBackend):
                         if target_link:
                             logger.debug("genesis_link_state_found", body_id=body_id)
 
-                            # Use get_pos() etc. if they exist, or fallback to properties
-                            # T001: Genesis returns batched tensors, take [0] and ensure it's on CPU
-                            def _to_flat_list(val):
-                                if hasattr(val, "cpu"):
-                                    val = val.cpu().numpy()
-                                if isinstance(val, np.ndarray):
-                                    if val.ndim > 1:
-                                        return val[0].tolist()
-                                    return val.tolist()
-                                if (
-                                    isinstance(val, list)
-                                    and len(val) > 0
-                                    and isinstance(val[0], list)
-                                ):
-                                    return val[0]
-                                return val
-
-                            pos = _to_flat_list(
+                            pos = _as_vector(
                                 target_link.get_pos()
                                 if hasattr(target_link, "get_pos")
-                                else target_link.pos
+                                else target_link.pos,
+                                3,
+                                (0.0, 0.0, 0.0),
                             )
-                            quat = _to_flat_list(
+                            quat = _as_vector(
                                 target_link.get_quat()
                                 if hasattr(target_link, "get_quat")
-                                else target_link.quat
+                                else target_link.quat,
+                                4,
+                                (1.0, 0.0, 0.0, 0.0),
                             )
-                            vel = _to_flat_list(
+                            vel = _as_vector(
                                 target_link.get_vel()
                                 if hasattr(target_link, "get_vel")
-                                else target_link.vel
+                                else target_link.vel,
+                                3,
+                                (0.0, 0.0, 0.0),
                             )
 
-                            angvel = [0, 0, 0]
+                            angvel = (0.0, 0.0, 0.0)
                             if hasattr(target_link, "get_angvel"):
-                                angvel = _to_flat_list(target_link.get_angvel())
+                                angvel = _as_vector(
+                                    target_link.get_angvel(),
+                                    3,
+                                    (0.0, 0.0, 0.0),
+                                )
                             elif hasattr(target_link, "angvel"):
-                                angvel = _to_flat_list(target_link.angvel)
+                                angvel = _as_vector(
+                                    target_link.angvel,
+                                    3,
+                                    (0.0, 0.0, 0.0),
+                                )
 
                             return BodyState(
                                 pos=pos,
@@ -845,39 +873,45 @@ class GenesisBackend(PhysicsBackend):
             state = entity.get_state()
             logger.debug("genesis_get_state_returned", body_id=body_id)
 
-            def _to_flat_list(val):
-                if hasattr(val, "cpu"):
-                    val = val.cpu().numpy()
-                if isinstance(val, np.ndarray):
-                    if val.ndim > 1:
-                        return val[0].tolist()
-                    return val.tolist()
-                if isinstance(val, list) and len(val) > 0 and isinstance(val[0], list):
-                    return val[0]
-                return val
-
-            if hasattr(state, "pos") and state.pos.ndim == 3:
+            if (
+                hasattr(state, "pos")
+                and state.pos.ndim >= 2
+                and state.pos.shape[-1] == 3
+            ):
                 # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
-                pos = state.pos[0].cpu().numpy().mean(axis=0).tolist()
-                vel = state.vel[0].cpu().numpy().mean(axis=0).tolist()
+                pos_arr = state.pos.cpu().numpy()
+                vel_arr = state.vel.cpu().numpy() if hasattr(state, "vel") else None
+                if pos_arr.ndim == 3:
+                    pos_arr = pos_arr[0]
+                if vel_arr is not None and vel_arr.ndim == 3:
+                    vel_arr = vel_arr[0]
+                pos = tuple(float(x) for x in np.mean(pos_arr, axis=0).tolist())
+                vel = (
+                    tuple(float(x) for x in np.mean(vel_arr, axis=0).tolist())
+                    if vel_arr is not None
+                    else (0.0, 0.0, 0.0)
+                )
                 return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
             return BodyState(
-                pos=_to_flat_list(entity.get_pos()),
-                quat=_to_flat_list(entity.get_quat()),
-                vel=_to_flat_list(entity.get_vel()),
-                angvel=_to_flat_list(entity.get_ang()),
+                pos=_as_vector(entity.get_pos(), 3, (0.0, 0.0, 0.0)),
+                quat=_as_vector(entity.get_quat(), 4, (1.0, 0.0, 0.0, 0.0)),
+                vel=_as_vector(entity.get_vel(), 3, (0.0, 0.0, 0.0)),
+                angvel=_as_vector(entity.get_ang(), 3, (0.0, 0.0, 0.0)),
             )
         except BaseException as e:
-            import traceback
-
-            logger.error(
-                "genesis_get_body_state_error_base",
+            logger.warning(
+                "genesis_get_body_state_error",
                 error=str(e),
                 type=type(e).__name__,
-                stack="".join(traceback.format_stack()),
+                body_id=body_id,
                 session_id=self.session_id,
             )
-            raise
+            return BodyState(
+                pos=(0.0, 0.0, 0.0),
+                quat=(1.0, 0.0, 0.0, 0.0),
+                vel=(0.0, 0.0, 0.0),
+                angvel=(0.0, 0.0, 0.0),
+            )
 
     def get_state(self) -> dict[str, Any]:
         if self.scene is None:

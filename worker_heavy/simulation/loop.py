@@ -193,10 +193,20 @@ class SimulationLoop:
 
             # Performance optimizations: cache backend info
             self.actuator_names = self.backend.get_all_actuator_names()
+            fluid_ids: set[str] = set()
+            if self.objectives and self.objectives.fluids:
+                fluid_ids = {
+                    fluid.fluid_id
+                    for fluid in self.objectives.fluids
+                    if getattr(fluid, "fluid_id", None)
+                }
+
             self.body_names = [
                 b
                 for b in self.backend.get_all_body_names()
-                if b not in ["world", "0"] and not b.startswith("zone_")
+                if b not in ["world", "0"]
+                and not b.startswith("zone_")
+                and b not in fluid_ids
             ]
 
             # Cache actuator limits for monitoring
