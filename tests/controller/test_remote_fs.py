@@ -27,7 +27,7 @@ async def test_remote_fs_middleware_ls():
     mock_client = AsyncMock()
     mock_client.list_files.return_value = [{"name": "test.txt", "type": "file"}]
 
-    middleware = RemoteFilesystemMiddleware(mock_client)
+    middleware = RemoteFilesystemMiddleware(mock_client, agent_role="engineer_planner")
     result = await middleware.list_files("/")
 
     assert result == [{"name": "test.txt", "type": "file"}]
@@ -47,7 +47,7 @@ async def test_remote_fs_middleware_ls_filters_unreadable_entries():
         },
     ]
 
-    middleware = RemoteFilesystemMiddleware(mock_client)
+    middleware = RemoteFilesystemMiddleware(mock_client, agent_role="engineer_planner")
     result = await middleware.list_files("/")
 
     assert len(result) == 1
@@ -76,13 +76,13 @@ async def test_fs_tools_execution():
     }
 
     tools = create_fs_tools(mock_middleware)
-    exec_tool = next(t for t in tools if t.name == "execute_python")
+    exec_tool = next(t for t in tools if t.__name__ == "execute_command")
 
-    result = await exec_tool.ainvoke({"code": "print('hello')", "timeout": 10})
+    result = await exec_tool("print('hello')")
 
     assert result == {"stdout": "hello", "stderr": "", "exit_code": 0}
     mock_middleware.run_command.assert_called_once_with(
-        code="print('hello')", timeout=10
+        command="print('hello')", timeout=30
     )
 
 
@@ -129,7 +129,7 @@ async def test_remote_fs_middleware_grep_filters_unreadable_matches():
         GrepMatch(path="/plan.md", line=1, text="ok"),
         GrepMatch(path="/script.py", line=2, text="blocked"),
     ]
-    middleware = RemoteFilesystemMiddleware(mock_client)
+    middleware = RemoteFilesystemMiddleware(mock_client, agent_role="engineer_planner")
 
     result = await middleware.grep("pattern", path="/")
 

@@ -142,7 +142,14 @@ class MockDSPyLM(dspy.LM):
         # Final check if session_id is a direct match but was missed by _get_scenario_id
         if scenario_id not in self.scenarios and self.session_id in self.scenarios:
             scenario_id = self.session_id
-        scenario = self.scenarios.get(scenario_id, self.scenarios.get("default", {}))
+
+        if scenario_id not in self.scenarios:
+            raise ValueError(
+                f"MockDSPyLM: Scenario '{scenario_id}' not found in mock_responses.yaml "
+                f"for session_id='{self.session_id}'. "
+                f"Available scenarios: {list(self.scenarios.keys())}"
+            )
+        scenario = self.scenarios[scenario_id]
 
         # 2. Node type must be explicit and map to AgentName exactly.
         node_key = self._normalize_agent_name(self.node_type)
@@ -158,26 +165,18 @@ class MockDSPyLM(dspy.LM):
             and "json" in low_text
         ) or "respond with a json object" in low_text
 
-        # Extract expected fields for ReAct compatibility
+        # Extract expected structured output fields for non-tool final responses.
         expected_fields = []
-
-        if "next_tool_name" in full_text or "next_thought" in full_text:
-            expected_fields.extend(["next_thought", "next_tool_name", "next_tool_args"])
 
         # Always try to detect fields from text if they exist
         match = re.search(
-            r"Expected to find output fields in the LM response: \[([^\]]+)\]",
+            r"(?:Expected to find output fields in the LM response|Expected output fields)\s*:\s*\[([^\]]+)\]",
             full_text,
+            flags=re.IGNORECASE,
         )
         if match:
             expected_fields = [f.strip() for f in match.group(1).split(",")]
         else:
-            # Detect from role/instructions
-            if "next_tool_name" in full_text or "next_thought" in full_text:
-                expected_fields.extend(
-                    ["next_thought", "next_tool_name", "next_tool_args"]
-                )
-
             for field in [
                 "reasoning",
                 "thought",
@@ -186,11 +185,18 @@ class MockDSPyLM(dspy.LM):
                 "journal",
                 "plan",
                 "finished",
+                "next_thought",
+                "next_tool_name",
+                "next_tool_args",
             ]:
                 if field in full_text:
                     expected_fields.append(field)
 
         expected_fields = list(dict.fromkeys(expected_fields))
+        legacy_next_fields = any(
+            f in expected_fields
+            for f in ("next_thought", "next_tool_name", "next_tool_args")
+        )
 
         # WP10: Detect expected fields from JSON template if empty
         if is_json_requested and not expected_fields:
@@ -429,9 +435,6 @@ class MockDSPyLM(dspy.LM):
 
         # Filter out common false positives if needed, but for now just take unique ones
         whitelist = [
-            "next_thought",
-            "next_tool_name",
-            "next_tool_args",
             "reasoning",
             "thought",
             "summary",
@@ -463,7 +466,7 @@ class MockDSPyLM(dspy.LM):
                 AgentName.BENCHMARK_REVIEWER,
             }:
                 return "benchmark"
-            return "default"
+            return self.session_id
 
         parts = self.session_id.split("-")
         if len(parts) > 1:
@@ -549,6 +552,10 @@ class MockDSPyLM(dspy.LM):
         thought = node_data.get("thought", "Task in progress.")
         reasoning = node_data.get("reasoning", "Verified all requirements.")
         expected_fields = expected_fields or []
+        legacy_next_fields = any(
+            f in expected_fields
+            for f in ("next_thought", "next_tool_name", "next_tool_args")
+        )
 
         tool_calls = node_data.get("tool_calls", [])
         # WP10: Support explicit tool calls in scenarios
@@ -571,9 +578,6 @@ class MockDSPyLM(dspy.LM):
                     thought = tc.get("thought", thought)
                     tool_name = tc.get("name")
                     tool_args = tc.get("input", {})
-                else:
-                    tool_name = "finish"
-                    tool_args = {}
 
         # Base schema for DSPy JSONAdapter
         resp = {
@@ -582,18 +586,65 @@ class MockDSPyLM(dspy.LM):
             "finished": finished,
         }
 
-        # ReAct compatibility - handle intermediate tool calling phase
-        # WP10: Always include these in JSON mode to be safe, as dspy adapters often expect them
-        force_tool_fields = bool(tool_calls) and not finished
-        if "next_tool_name" in expected_fields or is_json or force_tool_fields:
-            resp["next_thought"] = thought
-            if tool_name:
-                resp["next_tool_name"] = tool_name
-                resp["next_tool_args"] = tool_args
-            else:
-                # If finished or no tools left, finish
-                resp["next_tool_name"] = "finish"
-                resp["next_tool_args"] = {}
+        # DSPy ReAct (3.1.3) internal predictor fields.
+        if legacy_next_fields:
+            legacy_resp = {
+                "next_thought": thought,
+                "next_tool_name": (
+                    tool_name
+                    if (isinstance(tool_name, str) and tool_name.strip())
+                    else "finish"
+                ),
+                "next_tool_args": tool_args or {},
+            }
+            if is_json:
+                return [json.dumps(legacy_resp)]
+            lines = []
+            for field in expected_fields:
+                if field not in legacy_resp:
+                    continue
+                val = legacy_resp[field]
+                if isinstance(val, (dict, list)):
+                    val = json.dumps(val)
+                lines.append(f"[[ ## {field} ## ]]\n{val!s}")
+            if lines:
+                return ["\n\n".join(lines)]
+            return [json.dumps(legacy_resp)]
+
+        # Structured tool-turn output for thought/tool_name/tool_args predictors.
+        tool_fields = any(
+            f in expected_fields for f in ("thought", "tool_name", "tool_args")
+        )
+        if not finished and tool_name and tool_fields:
+            tool_resp = {
+                "thought": thought,
+                "tool_name": tool_name,
+                "tool_args": tool_args or {},
+            }
+            if is_json:
+                return [json.dumps(tool_resp)]
+            lines = []
+            for field in expected_fields:
+                if field not in tool_resp:
+                    continue
+                val = tool_resp[field]
+                if isinstance(val, (dict, list)):
+                    val = json.dumps(val)
+                lines.append(f"[[ ## {field} ## ]]\n{val!s}")
+            if lines:
+                return ["\n\n".join(lines)]
+            return [json.dumps(tool_resp)]
+
+        # Tool turns are emitted in plain ReAct format for native tool-call prompts.
+        if not finished and tool_name:
+            action_payload = json.dumps(tool_args or {})
+            return [
+                (
+                    f"Thought: {thought}\n"
+                    f"Action: {tool_name}\n"
+                    f"Action Input: {action_payload}"
+                )
+            ]
 
         # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses
@@ -665,12 +716,7 @@ class MockDSPyLM(dspy.LM):
                 AgentName.COTS_SEARCH: ["thought", "search_summary"],
             }.get(node_key, [])
 
-            # For ReAct tool-call turns, return only the explicitly requested fields.
-            # Extra signature fields here can cause parse/retry loops before tool execution.
-            if "next_tool_name" in expected_fields:
-                all_fields = list(dict.fromkeys(expected_fields))
-            else:
-                all_fields = list(dict.fromkeys(expected_fields + sig_fields))
+            all_fields = list(dict.fromkeys(expected_fields + sig_fields))
 
             if finished and "finished" not in all_fields:
                 all_fields.append("finished")
@@ -684,11 +730,7 @@ class MockDSPyLM(dspy.LM):
                 val = resp.get(field)
                 if val is None:
                     # Provide default values for missing expected fields to satisfy parser
-                    if field == "next_tool_name":
-                        val = "finish"
-                    elif field == "next_tool_args":
-                        val = {}
-                    elif field == "plan" and node_key in PLANNER_AGENTS:
+                    if field == "plan" and node_key in PLANNER_AGENTS:
                         val = node_data.get("plan", {})
                     elif field == "review" and node_key in REVIEWER_AGENTS:
                         val = node_data.get("review", {})
@@ -705,9 +747,6 @@ class MockDSPyLM(dspy.LM):
 
                 # TypedPredictor expects [[ ## field ## ]] followed by value on NEXT line
                 lines.append(f"[[ ## {field} ## ]]\n{val!s}")
-
-            # Keep the expected ReAct delimiter to avoid parser retries.
-            lines.append("[[ ## completed ## ]]\n")
 
             result = "\n\n".join(lines)
             logger.info("mock_dspy_returning_fields", text=result)

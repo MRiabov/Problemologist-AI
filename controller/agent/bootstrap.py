@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Callable
 
 import dspy
 import structlog
@@ -65,12 +66,26 @@ class AgentModule(dspy.Module):
             msg = f"Unsupported agent type: {agent_name}"
             raise ValueError(msg)
 
-        # Extract raw functions from tools for DSPy
-        self.tool_fns = {}
-        for t in self.tools:
-            func = getattr(t, "func", getattr(t, "_run", None))
-            if func:
-                self.tool_fns[t.name] = func
+        # Tools are plain callables in this runtime; keep compatibility with
+        # wrapper objects only when they expose a callable .func.
+        self.tool_fns: dict[str, Callable] = {}
+        for tool in self.tools:
+            if callable(tool):
+                name = getattr(tool, "__name__", str(tool))
+                self.tool_fns[name] = tool
+                continue
+
+            func = getattr(tool, "func", None)
+            if callable(func):
+                name = getattr(tool, "name", getattr(func, "__name__", str(func)))
+                self.tool_fns[name] = func
+
+        if not self.tool_fns:
+            logger.warning(
+                "agent_module_no_tools_resolved",
+                agent_name=agent_name,
+                session_id=self.session_id,
+            )
 
         self.program = dspy.ReAct(
             self.signature,

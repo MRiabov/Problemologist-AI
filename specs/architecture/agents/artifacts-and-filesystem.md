@@ -9,6 +9,16 @@
 
 We use DSPy.ReAct as the primary agent runtime (reasoning + tool use) and LangGraph to manage agent architecture/orchestration. Langfuse is used for observability.
 
+## DSPy adapter contract
+
+Adapter choice is an explicit runtime contract:
+
+1. Preferred/default adapter is `dspy.ChatAdapter`.
+2. We prefer `ChatAdapter` over `JSONAdapter` for ReAct-style agent nodes because it is the baseline behavior in our dependency/runtime and is the most stable path for mixed reasoning + tool-call trajectories.
+3. `JSONAdapter` is exception-only and must be justified by a node-specific structured-output requirement that cannot be met by normal typed parsing/validation after model output.
+4. Do not silently swap adapters per request. Adapter overrides must be explicit in code/config and visible in observability metadata.
+5. Fail-closed rule: if adapter selection is invalid/unsupported for a node, the node must fail with a deterministic runtime error instead of falling back silently.
+
 ## Implementation
 
 We create two LangGraph-managed workflows with DSPy.ReAct-driven agent nodes - a Benchmark Generator workflow, consisting of:

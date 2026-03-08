@@ -50,13 +50,9 @@ def test_transcript_multi_node_sequence(mock_scenarios):
         lm = MockDSPyLM(
             session_id="TRANSCRIPT-TEST", node_type=AgentName.ENGINEER_PLANNER
         )
-        # next_tool_name in prompt triggers ReAct tool selection fields
-        resp = lm(prompt="I need to plan. next_tool_name")
-        assert "[[ ## next_tool_name ## ]]\nwrite_file" in resp[0]
-        assert (
-            '[[ ## next_tool_args ## ]]\n{"path": "plan.md", "content": "Initial plan"}'
-            in resp[0]
-        )
+        resp = lm(prompt="I need to plan.")
+        assert "Action: write_file" in resp[0]
+        assert 'Action Input: {"path": "plan.md", "content": "Initial plan"}' in resp[0]
 
         # 2. Planner Turn - Step 1 (after observation)
         # summary in prompt triggers signature fields
@@ -81,11 +77,11 @@ def test_transcript_idempotency(mock_scenarios):
         )
 
         # Call multiple times with same prompt
-        resp1 = lm(prompt="Plan please next_tool_name")
-        resp2 = lm(prompt="Plan please next_tool_name")
+        resp1 = lm(prompt="Plan please")
+        resp2 = lm(prompt="Plan please")
 
         assert resp1 == resp2
-        assert "[[ ## next_tool_name ## ]]\nwrite_file" in resp1[0]
+        assert "Action: write_file" in resp1[0]
 
 
 def test_transcript_observation_validation(mock_scenarios):
@@ -96,7 +92,7 @@ def test_transcript_observation_validation(mock_scenarios):
         )
 
         # First call triggers step 0
-        lm(prompt="Plan please next_tool_name")
+        lm(prompt="Plan please")
 
         # Second call with WRONG observation should log error but continue for now
         lm(prompt="Observation: error occurred. summary")

@@ -444,8 +444,13 @@ class BenchmarkCoderNode(BaseNode):
                                 f"{submit_res.message or 'submit_for_review failed.'}"
                             )
             except Exception as e:
-                logger.error("integrated_validation_error", error=str(e))
-                state.session.status = SessionStatus.FAILED
+                # Cancellation during orchestration shutdown should not be recorded
+                # as a backend error-log regression.
+                if isinstance(e, asyncio.CancelledError):
+                    logger.info("integrated_validation_cancelled")
+                else:
+                    logger.error("integrated_validation_error", error=str(e))
+                    state.session.status = SessionStatus.FAILED
 
         return state
 

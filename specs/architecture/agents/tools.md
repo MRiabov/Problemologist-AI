@@ -41,6 +41,16 @@ print("Tool calls made:", result.trajectory)
 We allow DSPy and LiteLLM do all manipulations over said files. 
 In the end, the models will write `write_file` and not `next_tool_write_file` or whatever.
 
+### DSPy adapter preference for tool-calling nodes
+
+For DSPy ReAct nodes in this architecture:
+
+1. Use `dspy.ChatAdapter` by default.
+2. Prefer `ChatAdapter` over `JSONAdapter` as the standard runtime setting.
+3. Use `JSONAdapter` only for explicitly scoped cases where strict whole-response JSON is required and cannot be enforced by downstream validators/parsers.
+4. Adapter choice is part of node runtime configuration and should be observable (logged in trace metadata).
+5. Do not add permissive fallback logic from `ChatAdapter` failures to `JSONAdapter` (or vice versa) inside a run; treat adapter/runtime mismatch as a deterministic error and route fail-closed.
+
 ## Filesystem permissions
 
 Actual read/write/edit access is enforced per-role via `config/agents_config.yaml` path rules. A tool call targeting a forbidden path is rejected by policy (deterministic permission error).

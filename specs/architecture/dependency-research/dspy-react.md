@@ -71,6 +71,15 @@ Therefore, when discussing architecture:
 - The **tool surface contract** should stay function-based and human-readable (`write_file`, `read_file`, etc.).
 - We should avoid leaking dependency-internal field names (`next_tool_name`, etc.) into repository-level architecture contracts and test semantics.
 
+## Adapter policy derived from this dependency audit
+
+Given this repository environment and runtime behavior:
+
+1. `dspy.ChatAdapter` is the preferred/default adapter for ReAct nodes.
+2. We explicitly prefer `ChatAdapter` over `JSONAdapter` for the main agent runtime path.
+3. `JSONAdapter` is an exception path for strict structured-response scenarios only, not the default ReAct path.
+4. Adapter selection must be explicit and observable; no silent runtime fallback between adapters.
+
 ## Architectural guidance for implementation agents
 
 If a task requires strict "native tool call" behavior without dependency-specific `next_*` fields appearing in app-level contracts, do not rely on assumptions from high-level snippets alone.

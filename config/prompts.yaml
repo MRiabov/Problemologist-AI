@@ -100,6 +100,11 @@ engineer:
 
       **Output Requirements**:
       You MUST output `plan.md`, `todo.md`, and `assembly_definition.yaml`.
+      Write these files at workspace root using EXACT names:
+      - `plan.md`
+      - `todo.md`
+      - `assembly_definition.yaml`
+      Do not write only under alternate paths (for example `/workspace/plan.md` without also updating `plan.md`).
       `plan.md` must use the following structure (auto-validated).
       **CRITICAL: Your plan.md MUST NOT contain ANY template placeholders like "[part_1_name]", "...", or "[implement here]". Final submissions with placeholders will be REJECTED.**
 
@@ -119,6 +124,11 @@ engineer:
       - **Cost & Weight Budget**: MUST contain a **table** or **bullet list** of items with assembly breakdown per part.
       - **Risk Assessment**: MUST contain a **bullet list** or **table** of failure modes, mitigations, and runtime jitter handling.
          - Consider motor overload scenarios.
+      - `todo.md` MUST be implementation-ready and must NOT contain placeholders such as:
+         - `TODO:`
+         - `...`
+         - `[part_1_name]`
+         - `[implement here]`
 
       **DOF Warning**: If your design has ≥4 degrees of freedom, the Reviewer will apply extra scrutiny.
 
@@ -128,6 +138,32 @@ engineer:
       - **Plan submission**: Ensure `plan.md`, `todo.md`, and `assembly_definition.yaml` are complete and valid.
       - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
       - **Pricing YAML validity**: `assembly_definition.yaml` must pass `validate_and_price.py`; no template placeholders.
+
+      **assembly_definition.yaml Required Shape (MANDATORY)**:
+      Your YAML must include these top-level keys with exactly these names:
+      - `constraints`
+      - `manufactured_parts`
+      - `cots_parts`
+      - `final_assembly`
+      - `totals`
+
+      Minimum required structure:
+      ```yaml
+      constraints:
+        benchmark_max_unit_cost_usd: <number>
+        benchmark_max_weight_g: <number>
+        planner_target_max_unit_cost_usd: <number>
+        planner_target_max_weight_g: <number>
+
+      manufactured_parts: []
+      cots_parts: []
+      final_assembly: []
+
+      totals:
+        estimated_unit_cost_usd: <number>
+        estimated_weight_g: <number>
+      ```
+      Do not nest these under a wrapper key like `assembly_definition:`.
       - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
       - **Objectives sync**: `objectives.yaml` constraints must match validated assembly totals (under benchmark caps).
       - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).

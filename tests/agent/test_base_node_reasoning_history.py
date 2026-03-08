@@ -34,10 +34,15 @@ def test_log_lm_history_delta_emits_reasoning_from_string_and_dict_outputs() -> 
                 "Thought: inspect objectives first\nAction: read_file(path='/objectives.yaml')",
                 {"reasoning": "Now list config directory"},
                 {
-                    "text": "[[ ## next_thought ## ]]\nRead skills first\n[[ ## next_tool_name ## ]]\nread_file",
+                    "thought": "Read skills first",
                     "reasoning_content": "Internal long reasoning block",
                 },
-            ]
+            ],
+            "response": {
+                "choices": [
+                    {"message": {"reasoning_content": "OpenRouter native reasoning"}}
+                ]
+            },
         }
     ]
     ctx = SimpleNamespace(
@@ -60,6 +65,7 @@ def test_log_lm_history_delta_emits_reasoning_from_string_and_dict_outputs() -> 
     assert "Now list config directory" in emitted
     assert "Read skills first" in emitted
     assert "Internal long reasoning block" in emitted
+    assert "OpenRouter native reasoning" in emitted
     assert all(c["source"] == "lm_history" for c in recorder.calls)
 
 

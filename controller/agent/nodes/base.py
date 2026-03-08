@@ -178,7 +178,7 @@ class BaseNode:
 
         def extract_live_thought(*args: Any, **kwargs: Any) -> str | None:
             """Try to pull a current-thought string from ReAct tool call payload."""
-            direct_keys = ("next_thought", "thought", "reasoning")
+            direct_keys = ("thought", "reasoning", "reasoning_content")
             for key in direct_keys:
                 value = kwargs.get(key)
                 if isinstance(value, str) and value.strip():
@@ -203,7 +203,7 @@ class BaseNode:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
                     nonlocal live_reasoning_step_idx
-                    reasoning_keys = ("next_thought", "thought", "reasoning")
+                    reasoning_keys = ("thought", "reasoning", "reasoning_content")
                     sanitized_kwargs = dict(kwargs)
 
                     if db_callback and node_name:
@@ -414,6 +414,49 @@ class BaseNode:
             return None
         return round((completion_tokens * 60000.0) / latency_ms, 2)
 
+    @staticmethod
+    def _extract_reasoning_content(response: Any) -> list[str]:
+        """Extract provider-native reasoning content (for example litellm message.reasoning_content)."""
+        chunks: list[str] = []
+        if response is None:
+            return chunks
+
+        response_dict: dict[str, Any] | None = None
+        if hasattr(response, "model_dump"):
+            with suppress(Exception):
+                response_dict = response.model_dump(mode="json")
+        elif isinstance(response, dict):
+            response_dict = response
+
+        # Typed/object path first (common for litellm responses).
+        choices_obj = getattr(response, "choices", None)
+        if isinstance(choices_obj, list):
+            for choice in choices_obj:
+                message = getattr(choice, "message", None)
+                if message is None and isinstance(choice, dict):
+                    message = choice.get("message")
+                value = getattr(message, "reasoning_content", None)
+                if value is None and isinstance(message, dict):
+                    value = message.get("reasoning_content")
+                if isinstance(value, str) and value.strip():
+                    chunks.append(value.strip())
+
+        # Dict path fallback.
+        if isinstance(response_dict, dict):
+            choices = response_dict.get("choices")
+            if isinstance(choices, list):
+                for choice in choices:
+                    if not isinstance(choice, dict):
+                        continue
+                    message = choice.get("message")
+                    if not isinstance(message, dict):
+                        continue
+                    value = message.get("reasoning_content")
+                    if isinstance(value, str) and value.strip():
+                        chunks.append(value.strip())
+
+        return chunks
+
     def _log_lm_history_delta(
         self,
         *,
@@ -524,36 +567,10 @@ class BaseNode:
                             ]
                         )
                 elif isinstance(output, dict):
-                    for key in ("thought", "next_thought", "reasoning"):
+                    for key in ("thought", "reasoning", "reasoning_content"):
                         value = output.get(key)
                         if isinstance(value, str) and value.strip():
                             reasoning_chunks.append(value.strip())
-                    text_field = output.get("text")
-                    if isinstance(text_field, str) and text_field.strip():
-                        tagged_match = re.search(
-                            r"\[\[\s*##\s*next_thought\s*##\s*\]\]\s*(.+?)(?:\[\[\s*##|$)",
-                            text_field,
-                            flags=re.IGNORECASE | re.DOTALL,
-                        )
-                        if tagged_match and tagged_match.group(1).strip():
-                            reasoning_chunks.append(tagged_match.group(1).strip())
-                        else:
-                            for key in ("next_thought", "thought", "reasoning"):
-                                matches = re.findall(
-                                    rf"{key}\s*[:=]\s*(.+?)(?=\n[A-Za-z_]+\s*[:=]|\Z)",
-                                    text_field,
-                                    flags=re.IGNORECASE | re.DOTALL,
-                                )
-                                reasoning_chunks.extend(
-                                    [
-                                        m.strip()
-                                        for m in matches
-                                        if isinstance(m, str) and m.strip()
-                                    ]
-                                )
-                    reasoning_content = output.get("reasoning_content")
-                    if isinstance(reasoning_content, str) and reasoning_content.strip():
-                        reasoning_chunks.append(reasoning_content.strip())
 
                 for chunk in reasoning_chunks:
                     text = chunk.strip()
@@ -566,6 +583,19 @@ class BaseNode:
                         reasoning_text=text,
                         source="lm_history",
                     )
+
+            provider_reasoning = self._extract_reasoning_content(entry.get("response"))
+            for chunk in provider_reasoning:
+                text = chunk.strip()
+                if not text:
+                    continue
+                if len(text) > 2000:
+                    text = text[:2000] + "..."
+                db_callback.record_reasoning_text_sync(
+                    node_name=str(node_type),
+                    reasoning_text=text,
+                    source="lm_history",
+                )
 
     def _get_database_recorder(self, session_id: str) -> DatabaseCallbackHandler:
         return self.ctx.get_database_recorder(session_id)
@@ -854,24 +884,10 @@ class BaseNode:
         # Template names are now standardized to match node_type or explicit mappings
         instructions = self.ctx.pm.render(node_type)
         if instructions:
-            # If using ReAct, prepend our instructions to the existing ones
-            # to preserve the "Action: tool_name(args)" structural prompt.
             current_instr = getattr(signature_cls, "instructions", "")
-            if program_cls is dspy.ReAct:
-                react_reasoning_instr = (
-                    "For every tool call, include a concise `next_thought` kwarg "
-                    "with your immediate reasoning for that call."
-                )
-                react_output_contract = (
-                    "Return exactly one step per response using ONLY these fields: "
-                    "`next_thought`, `next_tool_name`, and `next_tool_args`. "
-                    "Do not emit batched trajectories (for example `tool_name_0`, "
-                    "`tool_args_0`, or `[[ ## completed ## ]]`)."
-                )
-                # Prepend for context, but keep structural instructions at the end
+            if current_instr:
                 signature_cls = signature_cls.with_instructions(
-                    f"{instructions}\n\n{react_reasoning_instr}\n\n"
-                    f"{react_output_contract}\n\n{current_instr}"
+                    f"{instructions}\n\n{current_instr}"
                 )
             else:
                 signature_cls = signature_cls.with_instructions(instructions)
@@ -935,7 +951,9 @@ class BaseNode:
                             node_type, input_data=str(node_input)
                         )
 
-                    with dspy.settings.context(lm=self.ctx.dspy_lm):
+                    with dspy.settings.context(
+                        lm=self.ctx.dspy_lm, adapter=dspy.ChatAdapter()
+                    ):
                         logger.info(
                             f"{node_type}_dspy_invoke_start",
                             session_id=self.ctx.session_id,
