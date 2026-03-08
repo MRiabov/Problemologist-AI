@@ -43,15 +43,17 @@ Note that we can bypass the agents_config by sending an admin header like `bypas
 
 ## Tool definitions
 
-- `execute` Execute a command in the sandbox and return ExecuteResponse.
-- `ls_info` Structured listing with file metadata using os.scandir.
-- `read` Read file content with line numbers using a single shell command.
-- `write` Create a new file. Returns WriteResult; error populated on failure.
-- `edit` Edit a file by replacing string occurrences. Returns EditResult.
-- `grep_raw` Structured search results or error string for invalid input.
-- `glob_info` Structured glob matching returning FileInfo dicts.
-- `upload_files` Upload multiple files to the sandbox.
-- `download_files` Download multiple files from the sandbox.
+- `execute_command` Execute a command in the sandbox and return command output.
+- `list_files` Structured listing with file metadata.
+- `read_file` Read file content.
+- `write_file` Create or overwrite a file.
+- `edit_file` Edit a file by replacing string occurrences.
+- `grep` Structured text search.
+- `inspect_topology` Inspect assembly/topology metadata.
+- `search_cots_catalog` Search COTS parts catalog.
+- `submit_plan` Validate and submit planner handoff artifacts.
+- `write_review_file` Persist reviewer decision output to the stage-specific file.
+- `save_suggested_skill` Persist skill-agent suggested skill output.
 
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 
