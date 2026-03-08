@@ -467,3 +467,10 @@ materials:
 ```
 
 The materials are only ever chosen from the config.
+
+## "Workbenches" - manufacturability verification
+
+The agents will have *Workbenches* - a set of tools they can use to:
+
+1. Verify their manufacturability.
+2. Calculate costs of their parts (and verify against the user-inputted goals)

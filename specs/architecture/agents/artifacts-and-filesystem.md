@@ -36,6 +36,7 @@ I decided to split the electrical planner because of complexity and different sk
 We trace all workflows with LangFuse.
 
 ### Actual implementation
+
 <!--This is because models implementing this produced something else.-->
 The pipeline is the simplest, proper way to call LLMs:
 DSPy (litellm) calls an endpoint, we get either reasoning, tool call, or both. We send it to frontend and to observability (and log it). that's all the intended logic.

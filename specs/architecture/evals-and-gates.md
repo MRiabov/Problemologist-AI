@@ -174,4 +174,4 @@ There are some episodes which can be take multiple episodes to run.
 1. Robustness to randomization - having solved 1 seed from a randomization batch, an engineer would be statistically 50% more likely to other episodes in the batch relative to average performance (would fail 50% less).
 2. If a reviewer said "this is acceptably the cheapest we can get" and then the model got cheaper by 50% unit cost at the same quantity (during subsequent planning) - the reviewer in fact didn't find an optimal quantity, and that shouldn't happen... (in which cases out of which?)
 
-##
+
