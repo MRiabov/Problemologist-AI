@@ -193,10 +193,6 @@ class MockDSPyLM(dspy.LM):
                     expected_fields.append(field)
 
         expected_fields = list(dict.fromkeys(expected_fields))
-        legacy_next_fields = any(
-            f in expected_fields
-            for f in ("next_thought", "next_tool_name", "next_tool_args")
-        )
 
         # WP10: Detect expected fields from JSON template if empty
         if is_json_requested and not expected_fields:
@@ -606,36 +602,41 @@ class MockDSPyLM(dspy.LM):
             "finished": finished,
         }
 
-        # DSPy ReAct (3.1.3) internal predictor fields.
+        # Legacy ReAct (3.1.3) internal predictor fields.
+        # For JSON mode we keep both legacy and modern fields to avoid brittle
+        # parser-mode mismatches across DSPy predictor variants.
+        legacy_resp = {
+            "next_thought": thought,
+            "next_tool_name": (
+                tool_name
+                if (isinstance(tool_name, str) and tool_name.strip())
+                else "finish"
+            ),
+            "next_tool_args": tool_args or {},
+        }
         if legacy_next_fields:
-            legacy_resp = {
-                "next_thought": thought,
-                "next_tool_name": (
-                    tool_name
-                    if (isinstance(tool_name, str) and tool_name.strip())
-                    else "finish"
-                ),
-                "next_tool_args": tool_args or {},
-            }
             if is_json:
+                # Keep going so node-specific fields (e.g. summary/review/journal)
+                # are also populated before returning JSON.
+                pass
+            else:
+                lines = []
+                for field in expected_fields:
+                    if field not in legacy_resp:
+                        continue
+                    val = legacy_resp[field]
+                    if isinstance(val, (dict, list)):
+                        val = json.dumps(val)
+                    lines.append(f"[[ ## {field} ## ]]\n{val!s}")
+                if lines:
+                    return ["\n\n".join(lines)]
                 return [json.dumps(legacy_resp)]
-            lines = []
-            for field in expected_fields:
-                if field not in legacy_resp:
-                    continue
-                val = legacy_resp[field]
-                if isinstance(val, (dict, list)):
-                    val = json.dumps(val)
-                lines.append(f"[[ ## {field} ## ]]\n{val!s}")
-            if lines:
-                return ["\n\n".join(lines)]
-            return [json.dumps(legacy_resp)]
 
         # Structured tool-turn output for thought/tool_name/tool_args predictors.
         tool_fields = any(
             f in expected_fields for f in ("thought", "tool_name", "tool_args")
         )
-        if not finished and tool_name and tool_fields:
+        if not finished and tool_name and tool_fields and not legacy_next_fields:
             tool_resp = {
                 "thought": thought,
                 "tool_name": tool_name,
@@ -657,14 +658,15 @@ class MockDSPyLM(dspy.LM):
 
         # Tool turns are emitted in plain ReAct format for native tool-call prompts.
         if not finished and tool_name:
-            action_payload = json.dumps(tool_args or {})
-            return [
-                (
-                    f"Thought: {thought}\n"
-                    f"Action: {tool_name}\n"
-                    f"Action Input: {action_payload}"
-                )
-            ]
+            # Prefer structured output for tool turns to keep DSPy adapters stable
+            # across prompt-format variations.
+            tool_turn_resp = {
+                "thought": thought,
+                "tool_name": tool_name,
+                "tool_args": tool_args or {},
+                **legacy_resp,
+            }
+            return [json.dumps(tool_turn_resp)]
 
         # Add node-specific fields (for ReAct extraction phase)
         # Signature fields should be present even in ReAct finish responses
@@ -708,8 +710,9 @@ class MockDSPyLM(dspy.LM):
         if is_json:
             # WP10: Do NOT filter JSON responses. dspy adapters are very sensitive to missing fields
             # but generally ignore extra ones. Filtering often causes AdapterParseError.
-            logger.info("mock_dspy_returning_json", json=resp)
-            return [json.dumps(resp)]
+            merged = {**resp, **legacy_resp}
+            logger.info("mock_dspy_returning_json", json=merged)
+            return [json.dumps(merged)]
 
         # Fallback for field-based format (common in non-JSON dspy.ReAct)
         if expected_fields:

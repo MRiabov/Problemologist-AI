@@ -206,8 +206,17 @@ async def review_episode(
     # Validate the review frontmatter
     # Routing checks for refusal decisions are handled below with concrete
     # plan_refusal.md validation and deterministic status codes.
+    review_validation_session_id = str(episode_id)
+    if episode.metadata_vars:
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars)
+        review_validation_session_id = (
+            metadata.worker_session_id or review_validation_session_id
+        )
+
     is_valid, review_data = validate_review_frontmatter(
-        request.review_content, cad_agent_refused=True
+        request.review_content,
+        cad_agent_refused=True,
+        session_id=review_validation_session_id,
     )
     if not is_valid:
         raise HTTPException(status_code=422, detail=f"Invalid review: {review_data}")
