@@ -173,18 +173,19 @@ The CAD engineer/coder calls `submit_for_review(compound)` after validation and 
 
 Manifest persistence contract:
 
-1. Canonical internal manifest: `.manifests/review_manifest.json`.
-2. Reviewer-scoped aliases (mirrors of the canonical manifest):
-   - `.manifests/benchmark_review_manifest.json`
-   - `.manifests/engineering_plan_review_manifest.json`
-   - `.manifests/engineering_execution_review_manifest.json`
-   - `.manifests/electronics_review_manifest.json`
+1. No canonical/central reviewer manifest is persisted.
+2. Exactly one reviewer-stage manifest is persisted per submission:
+   - Benchmark reviewer submission: `.manifests/benchmark_review_manifest.json`
+   - Engineering execution reviewer submission: `.manifests/engineering_execution_review_manifest.json`
+   - Electronics reviewer submission: `.manifests/electronics_review_manifest.json`
+3. Planner `submit_plan` persists the plan-review manifest:
+   - Engineering plan reviewer: `.manifests/engineering_plan_review_manifest.json`
 
 Reviewer entry preconditions are explicit and fail-closed:
 1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
 2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in  pass).
 3. The latest simulation artifact must indicate success and objective completion (target object reached the green/goal zone).
-4. The canonical manifest and the reviewer-stage alias must parse into a typed model (`ReviewManifest`) with `status=ready_for_review` and matching session/revision metadata.
+4. The reviewer-stage manifest must parse into a typed model (`ReviewManifest`) with `status=ready_for_review`, matching session/revision metadata, and correct `reviewer_stage`.
 5. Reviewer model access to `.manifests/**` is denied by policy; reviewer eligibility is evaluated by deterministic system checks, not model-side reads of manifest files.
 
 If any precondition is missing/invalid, it is a handoff invariant violation (not a reviewer decision). The system must:
