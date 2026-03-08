@@ -108,7 +108,7 @@ async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentStat
     custom_checks = {
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
             lambda *, contract, state: (
-                plan_reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
+                plan_reviewer_handover_custom_check_from_session_id(
                     session_id=getattr(state, "session_id", None),
                 )
             )
