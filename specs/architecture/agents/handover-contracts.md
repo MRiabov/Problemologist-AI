@@ -25,18 +25,22 @@ The "reviews" are made more deterministic by passing YAML frontmatter to markdow
 
 ## Reviewer manifest naming contract
 
-Reviewer handoff manifests are reviewer-scoped. We do not use a shared generic filename.
+Reviewer handoff manifests are reviewer-scoped at gate boundaries.
+Runtime also keeps a canonical internal manifest for compatibility/materialization.
 
 Required manifest filenames:
 
-1. Benchmark reviewer: `.manifests/benchmark_review_manifest.json`
-2. Engineering plan reviewer: `.manifests/engineering_plan_review_manifest.json`
-3. Engineering execution reviewer: `.manifests/engineering_execution_review_manifest.json`
-4. Electronics reviewer: `.manifests/electronics_review_manifest.json`
+1. Canonical internal manifest: `.manifests/review_manifest.json`
+2. Benchmark reviewer: `.manifests/benchmark_review_manifest.json`
+3. Engineering plan reviewer: `.manifests/engineering_plan_review_manifest.json`
+4. Engineering execution reviewer: `.manifests/engineering_execution_review_manifest.json`
+5. Electronics reviewer: `.manifests/electronics_review_manifest.json`
 
 Validation rule:
 
 - Reviewer entry is blocked if the reviewer-specific manifest for that stage is missing, stale, or invalid for the latest revision.
+- Canonical and reviewer-specific manifests must carry matching revision/session metadata; mismatch is a fail-closed handover error.
+- Review-content validation and `plan_refusal.md` checks must run against the worker filesystem session (`metadata.worker_session_id` when present, otherwise `episode_id` fallback) to prevent cross-session artifact lookups.
 
 ## Reviewer decision persistence naming contract
 

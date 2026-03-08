@@ -165,8 +165,32 @@ Rules:
 6. Reviewer roles (engineering plan reviewer, engineering execution reviewer, benchmark reviewer, electronics reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review files (`reviews/engineering-plan-review-round-*.md`, `reviews/engineering-execution-review-round-*.md`, `reviews/benchmark-review-round-*.md`, `reviews/electronics-review-round-*.md`).
 7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
 8. Engineering plan reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
+9. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
 
-Example (`config/agents_config.yaml`):
+Canonical minimal example (`config/agents_config.yaml`):
+
+```yaml
+defaults:
+  filesystem_permissions:
+    read:
+      allow: ["**"]
+      deny: [".manifests/**"]
+    write:
+      allow: []
+      deny: ["**"]
+
+agents:
+  engineer_planner:
+    filesystem_permissions:
+      read:
+        allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+        deny: [".manifests/**"]
+      write:
+        allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
+        deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py", ".manifests/**"]
+```
+
+Legacy expanded example (accepted by loader, not preferred for new edits):
 
 ```yaml
 version: "1.0"

@@ -45,6 +45,18 @@ Current implementation note (explicit bug):
 - This is a bug, because user session scope and workflow execution scope are different concerns.
 - Required fix direction: keep `episode_id` as workflow-run identity, introduce/propagate `user_session_id`, and store both on traces/events/assets for deterministic joins.
 
+### Machine-readable error stream
+
+Backend logging supports a machine-readable sidecar stream for error-level events.
+
+Contract:
+
+1. When `EXTRA_ERROR_JSON_LOG` is configured, services append JSON Lines records for `error`/`exception`/`critical` events.
+2. Each record includes `service` and must include at least one run-correlating identifier: `session_id` or `episode_id` (preferably both where available).
+3. This stream is used by integration/runtime triage tooling for deterministic early-stop/fail-fast behavior on non-allowlisted backend errors.
+4. Failure to write the sidecar stream must never block primary application logging.
+<!--Note: this is mostly integration test logic.-->
+
 ### All collected events
 
 We track the following structured domain events to compute the evaluation metrics defined in the [Agent Evaluations](#agent-evaluations) section:

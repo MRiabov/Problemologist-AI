@@ -55,7 +55,13 @@ For DSPy ReAct nodes in this architecture:
 
 Actual read/write/edit access is enforced per-role via `config/agents_config.yaml` path rules. A tool call targeting a forbidden path is rejected by policy (deterministic permission error).
 
-Note that we can bypass the agents_config by sending an admin header like `bypass_fs_policy` for system or integration test purposes validation.
+There is a mechanism for privileged filesystem-policy bypass, which is explicitly system-only and requires both:
+
+1. Request payload field `bypass_agent_permissions=true`.
+2. HTTP header `X-System-FS-Bypass: 1`.
+
+Header-only or payload-only requests remain policy-enforced (no bypass). 
+This is mostly for integration tests where such bypass is convenient (for system access, why not just access directly?).
 
 ## Tool definitions
 
@@ -82,8 +88,6 @@ ReAct is the first-line correction loop:
 1. The model produces output and calls tools.
 2. If a tool/validation response is not acceptable, ReAct continues the same node loop and retries.
 3. The agent converges on valid handoff output or exits due to hard limits (timeout/turn budget/token budget).
-
-If the 
 
 ### The "tools" as Python functions - Utils
 
@@ -165,13 +169,22 @@ So:
 
 #### submit_for_review(compound: Compound)
 
-The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts (including `.manifests/review_manifest.json`) and marks the submission candidate as ready for review.
+The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
+
+Manifest persistence contract:
+
+1. Canonical internal manifest: `.manifests/review_manifest.json`.
+2. Reviewer-scoped aliases (mirrors of the canonical manifest):
+   - `.manifests/benchmark_review_manifest.json`
+   - `.manifests/engineering_plan_review_manifest.json`
+   - `.manifests/engineering_execution_review_manifest.json`
+   - `.manifests/electronics_review_manifest.json`
 
 Reviewer entry preconditions are explicit and fail-closed:
 1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
 2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in  pass).
 3. The latest simulation artifact must indicate success and objective completion (target object reached the green/goal zone).
-4. `.manifests/review_manifest.json` must exist and parse into a typed model (`ReviewManifest`) with `status=ready_for_review` and matching session/revision metadata.
+4. The canonical manifest and the reviewer-stage alias must parse into a typed model (`ReviewManifest`) with `status=ready_for_review` and matching session/revision metadata.
 5. Reviewer model access to `.manifests/**` is denied by policy; reviewer eligibility is evaluated by deterministic system checks, not model-side reads of manifest files.
 
 If any precondition is missing/invalid, it is a handoff invariant violation (not a reviewer decision). The system must:
