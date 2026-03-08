@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -23,6 +24,7 @@ def configure_logging(service_name: str):
     # Extra debug log file
     extra_debug_log = os.getenv("EXTRA_DEBUG_LOG")
     extra_error_log = os.getenv("EXTRA_ERROR_LOG")
+    extra_error_json_log = os.getenv("EXTRA_ERROR_JSON_LOG")
 
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -46,6 +48,38 @@ def configure_logging(service_name: str):
         return event_dict
 
     processors.insert(0, add_service_context)
+
+    # Optional machine-readable dedicated error stream.
+    # Emit native structlog event dicts as JSON lines for integration tooling.
+    if extra_error_json_log:
+        extra_error_json_log_abs = os.path.abspath(extra_error_json_log)
+        os.makedirs(os.path.dirname(extra_error_json_log_abs), exist_ok=True)
+
+        def _json_safe(value):
+            if value is None or isinstance(value, (str, int, float, bool)):
+                return value
+            if isinstance(value, dict):
+                return {str(k): _json_safe(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple, set)):
+                return [_json_safe(item) for item in value]
+            return str(value)
+
+        def persist_error_json(logger, method_name, event_dict):
+            level = str(event_dict.get("level", method_name)).lower()
+            if level in {"error", "exception", "critical"}:
+                payload = _json_safe(dict(event_dict))
+                payload.setdefault("service", service_name)
+                try:
+                    with open(
+                        extra_error_json_log_abs, "a", encoding="utf-8"
+                    ) as handle:
+                        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+                except OSError:
+                    # Never block application logging if the sidecar file cannot be written.
+                    pass
+            return event_dict
+
+        processors.append(persist_error_json)
 
     if log_format == "json":
         processors.append(structlog.processors.dict_tracebacks)
