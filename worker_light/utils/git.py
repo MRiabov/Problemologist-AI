@@ -146,13 +146,16 @@ def abort_merge(path: Path) -> bool:
         return False
 
 
-def complete_merge(path: Path, message: str | None = None) -> str | None:
+def complete_merge(
+    path: Path, message: str | None = None, session_id: str | None = None
+) -> str | None:
     """
     Complete a merge after all conflicts are resolved.
 
     Args:
         path: Repository root path
         message: Optional commit message override
+        session_id: Optional session ID for logging
 
     Returns:
         Commit hash if successful, None otherwise
@@ -162,7 +165,9 @@ def complete_merge(path: Path, message: str | None = None) -> str | None:
 
         # Check if there are still conflicts
         if has_merge_conflicts(path):
-            logger.error("cannot_complete_merge_conflicts_remain")
+            logger.error(
+                "cannot_complete_merge_conflicts_remain", session_id=session_id
+            )
             return None
 
         # If we're in a merge state, conclude it
@@ -224,7 +229,12 @@ def _get_auth_url(repo_url: str, pat: str | None) -> str:
     return repo_url
 
 
-def sync_skills(repo_url: str | None, pat: str | None, skills_dir: Path):
+def sync_skills(
+    repo_url: str | None,
+    pat: str | None,
+    skills_dir: Path,
+    session_id: str | None = None,
+):
     """Clone or pull skills from git repo."""
     if not repo_url:
         logger.info("GIT_REPO_URL not set, skipping skills sync.")
@@ -252,4 +262,4 @@ def sync_skills(repo_url: str | None, pat: str | None, skills_dir: Path):
                 Repo.clone_from(auth_url, skills_dir)
             logger.info("skills_cloned_successfully")
     except Exception as e:
-        logger.error("failed_to_sync_skills", error=str(e))
+        logger.error("failed_to_sync_skills", error=str(e), session_id=session_id)

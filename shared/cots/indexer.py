@@ -1,4 +1,4 @@
-import logging
+import structlog
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +21,7 @@ from shared.type_checking import type_check
 from .database.init import init_db
 from .database.models import CatalogMetadataORM, COTSItemORM
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Density for steel in g/mm^3 (approx 7.85 g/cm^3)
 STEEL_DENSITY_G_MM3 = 0.00785
@@ -133,7 +132,11 @@ class Indexer:
             )
         except Exception as e:
             logger.error(
-                f"Failed to extract metadata for {part_class.__name__} {size}: {e}"
+                "failed_to_extract_metadata",
+                class_name=part_class.__name__,
+                size=size,
+                error=str(e),
+                session_id="system",
             )
             return None
 

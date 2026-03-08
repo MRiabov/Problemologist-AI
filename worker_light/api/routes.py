@@ -429,9 +429,15 @@ async def git_abort(fs_router=Depends(get_router)):
 
 
 @light_router.post("/git/merge/complete", response_model=GitCommitResponse)
-async def git_complete(request: GitMergeRequest, fs_router=Depends(get_router)):
+async def git_complete(
+    request: GitMergeRequest,
+    x_session_id: str = Header(...),
+    fs_router=Depends(get_router),
+):
     """Complete a merge."""
-    commit_hash = complete_merge(fs_router.local_backend.root, request.message)
+    commit_hash = complete_merge(
+        fs_router.local_backend.root, request.message, session_id=x_session_id
+    )
     if commit_hash:
         return GitCommitResponse(
             success=True,
@@ -461,6 +467,7 @@ async def execute_code(
         code=request.code,
         env={"SESSION_ID": x_session_id},
         config=config,
+        session_id=x_session_id,
     )
     events = _collect_events(fs_router)
 

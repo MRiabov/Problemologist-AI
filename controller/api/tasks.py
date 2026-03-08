@@ -250,7 +250,9 @@ async def execute_agent_task(
             episode = await db.get(Episode, episode_id)
             if not episode:
                 logger.error(
-                    "episode_not_found_for_background_task", episode_id=episode_id
+                    "episode_not_found_for_background_task",
+                    episode_id=episode_id,
+                    session_id=session_id,
                 )
                 return
 
@@ -305,6 +307,7 @@ async def execute_agent_task(
                         logger.error(
                             "failed_to_copy_benchmark_assets",
                             episode_id=episode_id,
+                            session_id=session_id,
                             benchmark_id=benchmark_id_str,
                             error=str(e),
                         )
@@ -547,7 +550,11 @@ async def execute_agent_task(
                                 aws_secret_access_key=s3_secret_key,
                             )
                         except Exception as e:
-                            logger.error("failed_to_init_s3_client", error=str(e))
+                            logger.error(
+                                "failed_to_init_s3_client",
+                                error=str(e),
+                                session_id=session_id,
+                            )
 
                     async def sync_dir(dir_path: str):
                         try:
@@ -647,6 +654,7 @@ async def execute_agent_task(
                                         "failed_to_upload_asset_to_s3",
                                         path=path,
                                         error=str(e),
+                                        session_id=session_id,
                                     )
 
                     simulation_success_text: str | None = None
@@ -717,7 +725,11 @@ async def execute_agent_task(
                     await db.commit()
                     logger.info("asset_sync_completed", episode_id=episode_id)
                 except Exception as e:
-                    logger.error("failed_to_sync_assets", error=str(e))
+                    logger.error(
+                        "failed_to_sync_assets",
+                        error=str(e),
+                        session_id=str(episode_id),
+                    )
 
                 # Mark completion after traces/assets are persisted.
                 await db.refresh(episode)
@@ -802,6 +814,7 @@ async def execute_agent_task(
                     error=str(e),
                     traceback=traceback.format_exc(),
                     episode_id=episode_id,
+                    session_id=session_id,
                 )
                 episode = await db.get(Episode, episode_id)
                 if episode:
@@ -854,7 +867,9 @@ async def continue_agent_task(
             episode = await db.get(Episode, episode_id)
             if not episode:
                 logger.error(
-                    "episode_not_found_for_continuation", episode_id=episode_id
+                    "episode_not_found_for_continuation",
+                    episode_id=episode_id,
+                    session_id=str(episode_id),
                 )
                 return
 
@@ -1117,6 +1132,7 @@ async def continue_agent_task(
                     error=str(e),
                     traceback=traceback.format_exc(),
                     episode_id=episode_id,
+                    session_id=session_id,
                 )
                 episode = await db.get(Episode, episode_id)
                 if episode:

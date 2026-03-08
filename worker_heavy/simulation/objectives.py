@@ -16,10 +16,11 @@ logger = structlog.get_logger(__name__)
 class ObjectiveEvaluator:
     """Evaluates simulation objectives (stress, fluid, breakage)."""
 
-    def __init__(self, objectives, material_lookup, config):
+    def __init__(self, objectives, material_lookup, config, session_id: str | None = None):
         self.objectives = objectives
         self.material_lookup = material_lookup
         self.config = config
+        self.session_id = session_id
         self.reset()
 
     def reset(self):
@@ -253,7 +254,11 @@ class ObjectiveEvaluator:
             if mat_def and mat_def.ultimate_stress_pa:
                 is_broken = False
                 if np.isnan(summary.max_von_mises_pa):
-                    logger.error("part_breakage_nan_detected", part=label)
+                    logger.error(
+                        "part_breakage_nan_detected",
+                        part=label,
+                        session_id=self.session_id,
+                    )
                     is_broken = True
                 elif summary.max_von_mises_pa > mat_def.ultimate_stress_pa:
                     is_broken = True

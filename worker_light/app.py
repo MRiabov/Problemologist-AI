@@ -65,6 +65,7 @@ async def lifespan(app: FastAPI):
             repo_url=settings.git_repo_url,
             pat=settings.git_pat,
             skills_dir=settings.skills_dir,
+            session_id="system",
         )
 
     # WP11: Support Temporal worker in unified mode

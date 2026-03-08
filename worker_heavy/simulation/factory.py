@@ -30,6 +30,7 @@ def get_physics_backend(
             backend_type,
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
+            session_id=session_id,
         )
 
     from worker_heavy.config import settings
@@ -61,28 +62,33 @@ def get_physics_backend(
         "creating_new_session_backend", session_id=session_id, backend_type=backend_type
     )
     backend = _create_backend(
-        backend_type, smoke_test_mode=smoke_test_mode, particle_budget=particle_budget
+        backend_type,
+        smoke_test_mode=smoke_test_mode,
+        particle_budget=particle_budget,
+        session_id=session_id,
     )
     BACKEND_CACHE[session_id] = backend
     return backend
-
 
 def _create_backend(
     backend_type: SimulatorBackendType,
     smoke_test_mode: bool = False,
     particle_budget: int | None = None,
+    session_id: str | None = None,
 ) -> PhysicsBackend:
     if backend_type == SimulatorBackendType.MUJOCO:
         from worker_heavy.simulation.mujoco_backend import MuJoCoBackend
 
-        backend = MuJoCoBackend()
+        backend = MuJoCoBackend(session_id=session_id)
         backend.smoke_test_mode = smoke_test_mode
         return backend
     if backend_type == SimulatorBackendType.GENESIS:
         from worker_heavy.simulation.genesis_backend import GenesisBackend
 
-        backend = GenesisBackend()
+        backend = GenesisBackend(session_id=session_id)
         backend.smoke_test_mode = smoke_test_mode
+...
+
         backend.particle_budget = particle_budget
         # Trigger re-init if needed with correct mode
         if hasattr(backend, "_ensure_initialized"):

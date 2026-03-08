@@ -71,7 +71,11 @@ class S3Client:
             return object_key
         except ClientError as e:
             logger.error(
-                "upload_failed", bucket=self.bucket, key=object_key, error=str(e)
+                "upload_failed",
+                bucket=self.bucket,
+                key=object_key,
+                error=str(e),
+                session_id="system",
             )
             raise
 
@@ -90,7 +94,11 @@ class S3Client:
             )
         except ClientError as e:
             logger.error(
-                "download_failed", bucket=self.bucket, key=object_key, error=str(e)
+                "download_failed",
+                bucket=self.bucket,
+                key=object_key,
+                error=str(e),
+                session_id="system",
             )
             raise
 
@@ -118,7 +126,11 @@ class S3Client:
             return files
         except ClientError as e:
             logger.error(
-                "list_files_failed", bucket=self.bucket, prefix=prefix, error=str(e)
+                "list_files_failed",
+                bucket=self.bucket,
+                prefix=prefix,
+                error=str(e),
+                session_id="system",
             )
             raise
 
@@ -134,6 +146,10 @@ class S3Client:
             return url
         except ClientError as e:
             logger.error(
-                "presigned_url_failed", bucket=self.bucket, key=object_key, error=str(e)
+                "presigned_url_failed",
+                bucket=self.bucket,
+                key=object_key,
+                error=str(e),
+                session_id="system",
             )
             raise

@@ -29,7 +29,7 @@ async def _run_generate(prompt: str):
 
     except Exception as e:
         print(f"Error: {e}")
-        logger.error("cli_error", error=str(e))
+        logger.error("cli_error", error=str(e), session_id="cli")
 
 
 @app.command()

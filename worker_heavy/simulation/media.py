@@ -10,9 +10,17 @@ logger = structlog.get_logger(__name__)
 class MediaRecorder:
     """Handles video recording for simulations."""
 
-    def __init__(self, video_path: Path | None, capture_interval: int = 15):
-        self.video_renderer = VideoRenderer(video_path) if video_path else None
+    def __init__(
+        self,
+        video_path: Path | None,
+        capture_interval: int = 15,
+        session_id: str | None = None,
+    ):
+        self.video_renderer = (
+            VideoRenderer(video_path, session_id=session_id) if video_path else None
+        )
         self.capture_interval = capture_interval
+        self.session_id = session_id
 
     def update(self, step_idx, backend):
         """Capture a frame if at the right interval."""

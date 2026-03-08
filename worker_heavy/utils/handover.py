@@ -41,14 +41,18 @@ def _latest_git_revision(cwd: Path) -> str | None:
         return None
 
 
-def submit_for_review(component: Compound, cwd: Path = Path()):
+def submit_for_review(
+    component: Compound, cwd: Path = Path(), session_id: str | None = None
+):
     """
     Standardized handover from Coder to Reviewer.
     Logic:
     - Persist temporary assets to the /renders/ folder.
     - Trigger a LangGraph event or update shared state for the Reviewer node.
     """
-    logger.info("handover_started", cwd=str(cwd), files=os.listdir(cwd))
+    logger.info(
+        "handover_started", cwd=str(cwd), files=os.listdir(cwd), session_id=session_id
+    )
 
     renders_dir = cwd / os.getenv("RENDERS_DIR", "renders")
     manifests_dir = cwd / ".manifests"
@@ -63,12 +67,19 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         plan_content = plan_path.read_text(encoding="utf-8")
         lowered = plan_content.lower()
         plan_type = "benchmark" if "learning objective" in lowered else "engineering"
-        is_valid, errors = validate_plan_md_structure(plan_content, plan_type=plan_type)
+        is_valid, errors = validate_plan_md_structure(
+            plan_content, plan_type=plan_type, session_id=session_id
+        )
         if not is_valid:
-            logger.error("plan_md_invalid", plan_type=plan_type, violations=errors)
+            logger.error(
+                "plan_md_invalid",
+                plan_type=plan_type,
+                violations=errors,
+                session_id=session_id,
+            )
             raise ValueError(f"plan.md invalid: {errors}")
     else:
-        logger.error("plan_md_missing")
+        logger.error("plan_md_missing", session_id=session_id)
         raise ValueError("plan.md is missing (required for submission)")
 
     # todo.md
@@ -79,10 +90,14 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         todo_content = todo_path.read_text(encoding="utf-8")
         todo_result = validate_todo_md(todo_content, require_completion=True)
         if not todo_result.is_valid:
-            logger.error("todo_md_invalid", violations=todo_result.violations)
+            logger.error(
+                "todo_md_invalid",
+                violations=todo_result.violations,
+                session_id=session_id,
+            )
             raise ValueError(f"todo.md invalid: {todo_result.violations}")
     else:
-        logger.error("todo_md_missing")
+        logger.error("todo_md_missing", session_id=session_id)
         raise ValueError("todo.md is missing (required for submission)")
 
     # objectives.yaml
@@ -91,20 +106,26 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         from .file_validation import validate_objectives_yaml
 
         objectives_content = objectives_path.read_text(encoding="utf-8")
-        is_valid, result = validate_objectives_yaml(objectives_content)
+        is_valid, result = validate_objectives_yaml(
+            objectives_content, session_id=session_id
+        )
         if not is_valid:
-            logger.error("objectives_yaml_invalid", errors=result)
+            logger.error(
+                "objectives_yaml_invalid", errors=result, session_id=session_id
+            )
             raise ValueError(f"objectives.yaml invalid: {result}")
 
         # INT-015: Verify immutability
         from .file_validation import validate_immutability
 
-        is_immutable, error_msg = validate_immutability(objectives_path)
+        is_immutable, error_msg = validate_immutability(
+            objectives_path, session_id=session_id
+        )
         if not is_immutable:
-            logger.error("objectives_yaml_modified")
+            logger.error("objectives_yaml_modified", session_id=session_id)
             raise ValueError(f"objectives.yaml violation: {error_msg}")
     else:
-        logger.error("objectives_yaml_missing")
+        logger.error("objectives_yaml_missing", session_id=session_id)
         raise ValueError("objectives.yaml is missing (required for submission)")
 
     # assembly_definition.yaml
@@ -113,12 +134,18 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         from .file_validation import validate_assembly_definition_yaml
 
         cost_content = cost_path.read_text(encoding="utf-8")
-        is_valid, estimation = validate_assembly_definition_yaml(cost_content)
+        is_valid, estimation = validate_assembly_definition_yaml(
+            cost_content, session_id=session_id
+        )
         if not is_valid:
-            logger.error("assembly_definition_yaml_invalid", errors=estimation)
+            logger.error(
+                "assembly_definition_yaml_invalid",
+                errors=estimation,
+                session_id=session_id,
+            )
             raise ValueError(f"assembly_definition.yaml invalid: {estimation}")
     else:
-        logger.error("assembly_definition_yaml_missing")
+        logger.error("assembly_definition_yaml_missing", session_id=session_id)
         raise ValueError(
             "assembly_definition.yaml is missing (required for submission)"
         )
@@ -126,14 +153,14 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     # 2. Verify prior validation (INT-018) for current script revision
     script_path = cwd / "script.py"
     if not script_path.exists():
-        logger.error("script_missing_for_handover")
+        logger.error("script_missing_for_handover", session_id=session_id)
         raise ValueError("script.py is missing (required for submission)")
     script_mtime = script_path.stat().st_mtime
     script_sha256 = _sha256_file(script_path)
 
     validation_results_path = cwd / "validation_results.json"
     if not validation_results_path.exists():
-        logger.error("prior_validation_missing")
+        logger.error("prior_validation_missing", session_id=session_id)
         raise ValueError(
             "Prior validation missing. Call /benchmark/validate before submission."
         )
@@ -141,12 +168,12 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         validation_results_path.read_text(encoding="utf-8")
     )
     if not validation_record.success:
-        logger.error("prior_validation_failed")
+        logger.error("prior_validation_failed", session_id=session_id)
         raise ValueError(
             "Prior validation failed. Fix validation errors before submission."
         )
     if validation_results_path.stat().st_mtime < script_mtime:
-        logger.error("prior_validation_stale_for_script")
+        logger.error("prior_validation_stale_for_script", session_id=session_id)
         raise ValueError(
             "Prior validation is stale for current script revision. Re-run validate."
         )
@@ -154,25 +181,31 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     # 2b. Verify prior simulation for current script revision and objective success.
     simulation_results_path = cwd / "simulation_result.json"
     if not simulation_results_path.exists():
-        logger.error("prior_simulation_missing")
+        logger.error("prior_simulation_missing", session_id=session_id)
         raise ValueError("Prior simulation missing. Call /benchmark/simulate first.")
     simulation_result = SimulationResult.model_validate_json(
         simulation_results_path.read_text(encoding="utf-8")
     )
     if not simulation_result.success:
-        logger.error("prior_simulation_failed", summary=simulation_result.summary)
+        logger.error(
+            "prior_simulation_failed",
+            summary=simulation_result.summary,
+            session_id=session_id,
+        )
         raise ValueError(
             "Prior simulation failed. Submission requires a successful simulation."
         )
     if not _goal_reached(simulation_result.summary):
         logger.error(
-            "goal_not_reached_in_simulation", summary=simulation_result.summary
+            "goal_not_reached_in_simulation",
+            summary=simulation_result.summary,
+            session_id=session_id,
         )
         raise ValueError(
             "Simulation did not report goal completion (green/goal zone reached)."
         )
     if simulation_results_path.stat().st_mtime < script_mtime:
-        logger.error("prior_simulation_stale_for_script")
+        logger.error("prior_simulation_stale_for_script", session_id=session_id)
         raise ValueError(
             "Prior simulation is stale for current script revision. Re-run simulate."
         )
@@ -199,11 +232,15 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
             logger.warning("invalid_manufacturing_method", method=raw_method)
 
     validation_result = validate_and_price(
-        component, method, dfm_config, build_zone=build_zone
+        component, method, dfm_config, build_zone=build_zone, session_id=session_id
     )
 
     if not validation_result.is_manufacturable:
-        logger.warning("submission_dfm_failed", violations=validation_result.violations)
+        logger.warning(
+            "submission_dfm_failed",
+            violations=validation_result.violations,
+            session_id=session_id,
+        )
         raise ValueError(f"Submission rejected (DFM): {validation_result.violations}")
 
     if constraints:
@@ -216,6 +253,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
                 "submission_cost_limit_exceeded",
                 cost=validation_result.unit_cost,
                 limit=constraints.max_unit_cost,
+                session_id=session_id,
             )
             raise ValueError(f"Submission rejected (Cost): {msg}")
 
@@ -229,12 +267,13 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
                 "submission_weight_limit_exceeded",
                 weight=weight_g,
                 limit=constraints.max_weight_g,
+                session_id=session_id,
             )
             raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
     render_paths = []
-    logger.info("renders_persisted", count=len(render_paths))
+    logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 
     cad_path = renders_dir / "model.step"
     export_step(component, str(cad_path))
@@ -249,7 +288,7 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
     manifest = ReviewManifest(
         status="ready_for_review",
         timestamp=os.getenv("TIMESTAMP"),
-        session_id=os.getenv("SESSION_ID", "default"),
+        session_id=session_id or os.getenv("SESSION_ID", "default"),
         revision=_latest_git_revision(cwd),
         script_path=str(script_path.relative_to(cwd)),
         script_sha256=script_sha256,
@@ -293,5 +332,6 @@ def submit_for_review(component: Compound, cwd: Path = Path()):
         "handover_complete",
         manifest=str(manifest_path),
         synced_manifest=str(synced_manifest_path),
+        session_id=session_id,
     )
     return True

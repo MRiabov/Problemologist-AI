@@ -43,9 +43,13 @@ def init_tracing() -> None:
             os.environ["LANGFUSE_HOST"] = host
 
             DSPyInstrumentor().instrument()
-            logger.info("Native DSPy tracing (Langfuse) initialized.")
+            logger.info("native_dspy_tracing_initialized", session_id="system")
         except Exception as e:
-            logger.error(f"Failed to initialize native DSPy instrumentation: {e}")
+            logger.error(
+                "failed_to_initialize_native_dspy_instrumentation",
+                error=str(e),
+                session_id="system",
+            )
 
 
 def get_langfuse_client() -> Langfuse | None:

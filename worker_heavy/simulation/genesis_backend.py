@@ -42,7 +42,7 @@ logger = structlog.get_logger(__name__)
 class GenesisBackend(PhysicsBackend):
     _lock = threading.Lock()
 
-    def __init__(self):
+    def __init__(self, session_id: str | None = None):
         self.scene = None
         self.entities = {}  # name -> gs.Entity
         self.entity_configs = {}  # name -> dict (from json)
@@ -59,6 +59,7 @@ class GenesisBackend(PhysicsBackend):
         self.particle_budget = None
         self.smoke_test_mode = False
         self._is_built = False
+        self.session_id = session_id
         self._ensure_initialized()
 
     def _ensure_initialized(self):
@@ -100,7 +101,9 @@ class GenesisBackend(PhysicsBackend):
 
                     if backend == gs.gpu:
                         logger.error(
-                            "genesis_gpu_init_failed_falling_back_to_cpu", error=str(e)
+                            "genesis_gpu_init_failed_falling_back_to_cpu",
+                            error=str(e),
+                            session_id=self.session_id,
                         )
                         backend = gs.cpu
                         start_t = time.time()
@@ -135,7 +138,9 @@ class GenesisBackend(PhysicsBackend):
             if self.mfg_config is None:
                 self.mfg_config = load_config()
         except Exception as e:
-            logger.error("failed_to_load_mfg_config", error=str(e))
+            logger.error(
+                "failed_to_load_mfg_config", error=str(e), session_id=self.session_id
+            )
 
     def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
@@ -222,10 +227,16 @@ class GenesisBackend(PhysicsBackend):
                         # Clean up and retry
                         self.close()
                         if attempt == max_retries - 1:
-                            logger.error("genesis_oom_persistent")
+                            logger.error(
+                                "genesis_oom_persistent", session_id=self.session_id
+                            )
                             raise
                     else:
-                        logger.error("failed_to_build_genesis_scene", error=str(e))
+                        logger.error(
+                            "failed_to_build_genesis_scene",
+                            error=str(e),
+                            session_id=self.session_id,
+                        )
                         raise
 
     def set_electronics(self, names: list[str]) -> None:
@@ -365,7 +376,11 @@ class GenesisBackend(PhysicsBackend):
                     actuators=list(self.mjcf_actuators.keys()),
                 )
             except Exception as e:
-                logger.error("failed_to_load_mjcf_in_genesis", error=str(e))
+                logger.error(
+                    "failed_to_load_mjcf_in_genesis",
+                    error=str(e),
+                    session_id=self.session_id,
+                )
 
         elif scene.scene_path and scene.scene_path.endswith(".json"):
             import json
@@ -558,7 +573,11 @@ class GenesisBackend(PhysicsBackend):
                             )
 
             except Exception as e:
-                logger.error("failed_to_parse_genesis_json", error=str(e))
+                logger.error(
+                    "failed_to_parse_genesis_json",
+                    error=str(e),
+                    session_id=self.session_id,
+                )
                 raise
 
         # In Genesis, we must call build() before step()
@@ -827,6 +846,7 @@ class GenesisBackend(PhysicsBackend):
                 error=str(e),
                 type=type(e).__name__,
                 stack="".join(traceback.format_stack()),
+                session_id=self.session_id,
             )
             raise
 
@@ -1102,7 +1122,11 @@ class GenesisBackend(PhysicsBackend):
         elif hasattr(entity, "set_dofs_force"):
             entity.set_dofs_force(forces)
         else:
-            logger.error("entity_missing_force_control_method", entity=str(entity))
+            logger.error(
+                "entity_missing_force_control_method",
+                entity=str(entity),
+                session_id=self.session_id,
+            )
 
     def apply_control(self, control_inputs: dict[str, float]) -> None:
         # control_inputs: motor_id -> value

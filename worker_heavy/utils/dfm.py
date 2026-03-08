@@ -97,6 +97,7 @@ def validate_and_price(
     build_zone: BoundingBox | None = None,
     quantity: int = 1,
     fem_required: bool = False,
+    session_id: str | None = None,
 ) -> WorkbenchResult:
     """
     Unified entry point for DFM (Design for Manufacturing) validation and pricing.
@@ -143,7 +144,9 @@ def validate_and_price(
     elif method == ManufacturingMethod.THREE_DP:
         result = analyze_3dp(part, config, quantity=quantity)
     else:
-        logger.error("unsupported_manufacturing_method", method=method)
+        logger.error(
+            "unsupported_manufacturing_method", method=method, session_id=session_id
+        )
         raise ValueError(f"Unsupported manufacturing method: {method}")
 
     # WP2: FEM Material Field Validation (INT-111)

@@ -1091,6 +1091,9 @@ class BaseNode:
                                 "reasoning_telemetry_missing",
                                 node_type=str(node_type),
                                 episode_id=str(episode_id),
+                                session_id=str(
+                                    episode_id
+                                ),  # session_id is episode_id here
                                 attempt=retry_count + 1,
                             )
                             retry_count += 1
@@ -1119,6 +1122,7 @@ class BaseNode:
                             last_lm_preview = str(last_entry.get("response"))[:600]
                     logger.error(
                         f"{node_type}_dspy_failed",
+                        session_id=self.ctx.session_id,
                         error=str(err),
                         retry_count=retry_count + 1,
                         max_retries=max_retries,

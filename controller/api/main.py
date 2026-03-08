@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
         app.state.temporal_client = temporal_client_instance
         logger.info("connected_to_temporal", url=TEMPORAL_URL)
     except Exception as e:
-        logger.error("failed_to_connect_to_temporal", error=str(e))
+        logger.error("failed_to_connect_to_temporal", error=str(e), session_id="system")
 
     yield
 

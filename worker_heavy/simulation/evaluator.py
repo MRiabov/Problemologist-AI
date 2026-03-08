@@ -15,11 +15,13 @@ class SuccessEvaluator:
         max_simulation_time: float,
         motor_overload_threshold: float = 2.0,
         simulation_bounds: BoundingBox | None = None,
+        session_id: str | None = None,
     ):
         self.max_simulation_time = max_simulation_time
         self.motor_overload_threshold = motor_overload_threshold
         self.motor_overload_timer: dict[str, float] = {}
         self.simulation_bounds = simulation_bounds
+        self.session_id = session_id
 
     def check_failure(
         self,
@@ -48,7 +50,11 @@ class SuccessEvaluator:
 
             # Extreme values (explosion)
             if np.any(np.abs(qpos) > 10000.0):
-                logger.error("physics_explosion_detected", pos=list(qpos))
+                logger.error(
+                    "physics_explosion_detected",
+                    pos=list(qpos),
+                    session_id=self.session_id,
+                )
                 return SimulationFailureMode.PHYSICS_INSTABILITY
 
         # 3. Fell off world / Out of Bounds

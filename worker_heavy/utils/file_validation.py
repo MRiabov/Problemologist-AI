@@ -60,12 +60,15 @@ TEMPLATE_PLACEHOLDERS = [
 ]
 
 
-def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[str]]:
+def validate_objectives_yaml(
+    content: str, session_id: str | None = None
+) -> tuple[bool, ObjectivesYaml | list[str]]:
     """
     Parse and validate objectives.yaml content.
 
     Args:
         content: Raw YAML string content
+        session_id: Optional session ID for logging
 
     Returns:
         (True, ObjectivesYaml) if valid
@@ -92,14 +95,16 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
                     "MuJoCo backend does not support fluids. Use Genesis instead."
                 ]
 
-        logger.info("objectives_yaml_valid")
+        logger.info("objectives_yaml_valid", session_id=session_id)
         return True, objectives
     except yaml.YAMLError as e:
-        logger.error("objectives_yaml_parse_error", error=str(e))
+        logger.error("objectives_yaml_parse_error", error=str(e), session_id=session_id)
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("objectives_yaml_validation_error", errors=errors)
+        logger.error(
+            "objectives_yaml_validation_error", errors=errors, session_id=session_id
+        )
         for error in errors:
             emit_event(
                 LogicFailureEvent(
@@ -112,13 +117,14 @@ def validate_objectives_yaml(content: str) -> tuple[bool, ObjectivesYaml | list[
 
 
 def validate_assembly_definition_yaml(
-    content: str,
+    content: str, session_id: str | None = None
 ) -> tuple[bool, AssemblyDefinition | list[str]]:
     """
     Parse and validate assembly_definition.yaml content.
 
     Args:
         content: Raw YAML string content
+        session_id: Optional session ID for logging
 
     Returns:
         (True, AssemblyDefinition) if valid
@@ -163,17 +169,27 @@ def validate_assembly_definition_yaml(
                     and comp.assembly_part_ref not in all_part_names
                 ):
                     msg = f"Electronic component '{comp.component_id}' references unknown part '{comp.assembly_part_ref}'"
-                    logger.error("electronics_reference_error", error=msg)
+                    logger.error(
+                        "electronics_reference_error",
+                        error=msg,
+                        session_id=session_id,
+                    )
                     return False, [msg]
 
-        logger.info("cost_estimation_yaml_valid")
+        logger.info("cost_estimation_yaml_valid", session_id=session_id)
         return True, estimation
     except yaml.YAMLError as e:
-        logger.error("cost_estimation_yaml_parse_error", error=str(e))
+        logger.error(
+            "cost_estimation_yaml_parse_error", error=str(e), session_id=session_id
+        )
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("cost_estimation_yaml_validation_error", errors=errors)
+        logger.error(
+            "cost_estimation_yaml_validation_error",
+            errors=errors,
+            session_id=session_id,
+        )
         for error in errors:
             emit_event(
                 LogicFailureEvent(
@@ -186,7 +202,7 @@ def validate_assembly_definition_yaml(
 
 
 def validate_review_frontmatter(
-    content: str, cad_agent_refused: bool = False
+    content: str, cad_agent_refused: bool = False, session_id: str | None = None
 ) -> tuple[bool, ReviewFrontmatter | list[str]]:
     """
     Parse and validate review markdown frontmatter.
@@ -195,6 +211,7 @@ def validate_review_frontmatter(
         content: Raw markdown content with YAML frontmatter
         cad_agent_refused: Whether the CAD agent refused the plan
             (determines if refusal decisions are valid)
+        session_id: Optional session ID for logging
 
     Returns:
         (True, ReviewFrontmatter) if valid
@@ -225,19 +242,27 @@ def validate_review_frontmatter(
                 "when CAD agent refused the plan"
             ]
 
-        logger.info("review_frontmatter_valid", decision=frontmatter.decision)
+        logger.info(
+            "review_frontmatter_valid",
+            decision=frontmatter.decision,
+            session_id=session_id,
+        )
         return True, frontmatter
     except yaml.YAMLError as e:
-        logger.error("review_frontmatter_parse_error", error=str(e))
+        logger.error(
+            "review_frontmatter_parse_error", error=str(e), session_id=session_id
+        )
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
-        logger.error("review_frontmatter_validation_error", errors=errors)
+        logger.error(
+            "review_frontmatter_validation_error", errors=errors, session_id=session_id
+        )
         return False, errors
 
 
 def validate_plan_refusal(
-    content: str,
+    content: str, session_id: str | None = None
 ) -> tuple[bool, PlanRefusalFrontmatter | list[str]]:
     """
     Parse and validate plan_refusal.md content.
@@ -259,11 +284,14 @@ def validate_plan_refusal(
 
         frontmatter = PlanRefusalFrontmatter(**data)
         logger.info(
-            "plan_refusal_valid", role=frontmatter.role, reasons=frontmatter.reasons
+            "plan_refusal_valid",
+            role=frontmatter.role,
+            reasons=frontmatter.reasons,
+            session_id=session_id,
         )
         return True, frontmatter
     except yaml.YAMLError as e:
-        logger.error("plan_refusal_parse_error", error=str(e))
+        logger.error("plan_refusal_parse_error", error=str(e), session_id=session_id)
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
@@ -272,7 +300,7 @@ def validate_plan_refusal(
 
 
 def validate_node_output(
-    node_type: str, files_content_map: dict[str, str]
+    node_type: str, files_content_map: dict[str, str], session_id: str | None = None
 ) -> tuple[bool, list[str]]:
     """
     Universally validate node output for required files and template placeholders.
@@ -280,6 +308,7 @@ def validate_node_output(
     Args:
         node_type: 'planner', 'coder', 'electronics_engineer', etc.
         files_content_map: Mapping of filename to string content.
+        session_id: Optional session ID for logging
 
     Returns:
         (True, []) if valid
@@ -291,7 +320,7 @@ def validate_node_output(
     # If plan_refusal.md is present and valid, skip regular required files check
     if "plan_refusal.md" in files_content_map:
         is_refusal_valid, _ = validate_plan_refusal(
-            files_content_map["plan_refusal.md"]
+            files_content_map["plan_refusal.md"], session_id=session_id
         )
         if is_refusal_valid:
             # Only validate plan_refusal.md and skip others
@@ -366,7 +395,9 @@ def validate_node_output(
             if "benchmark" in node_type or "# Learning Objective" in content:
                 plan_type = "benchmark"
 
-            is_valid, plan_errors = validate_plan_md_structure(content, plan_type)
+            is_valid, plan_errors = validate_plan_md_structure(
+                content, plan_type, session_id=session_id
+            )
             if not is_valid:
                 errors.extend([f"plan.md: {e}" for e in plan_errors])
         elif filename == "todo.md":
@@ -376,17 +407,21 @@ def validate_node_output(
             if not res.is_valid:
                 errors.extend([f"todo.md: {e}" for e in res.violations])
         elif filename == "objectives.yaml":
-            is_valid, obj_res = validate_objectives_yaml(content)
+            is_valid, obj_res = validate_objectives_yaml(content, session_id=session_id)
             if not is_valid:
                 # obj_res is list[str] on failure
                 errors.extend([f"objectives.yaml: {e}" for e in obj_res])
         elif filename == "assembly_definition.yaml":
-            is_valid, asm_res = validate_assembly_definition_yaml(content)
+            is_valid, asm_res = validate_assembly_definition_yaml(
+                content, session_id=session_id
+            )
             if not is_valid:
                 # asm_res is list[str] on failure
                 errors.extend([f"assembly_definition.yaml: {e}" for e in asm_res])
         elif filename == "plan_refusal.md":
-            is_valid, refusal_res = validate_plan_refusal(content)
+            is_valid, refusal_res = validate_plan_refusal(
+                content, session_id=session_id
+            )
             if not is_valid:
                 if isinstance(refusal_res, list):
                     errors.extend([f"plan_refusal.md: {e}" for e in refusal_res])
@@ -398,7 +433,7 @@ def validate_node_output(
 
 
 def validate_plan_md_structure(
-    content: str, plan_type: str = "benchmark"
+    content: str, plan_type: str = "benchmark", session_id: str | None = None
 ) -> tuple[bool, list[str]]:
     """
     Validate plan.md has required sections.
@@ -406,6 +441,7 @@ def validate_plan_md_structure(
     Args:
         content: Raw markdown content
         plan_type: "benchmark" or "engineering"
+        session_id: Optional session ID for logging
 
     Returns:
         (True, []) if valid
@@ -416,12 +452,16 @@ def validate_plan_md_structure(
 
         result = validate_plan_md(content)
         if not result.is_valid:
-            logger.error("plan_md_missing_sections", missing=result.violations)
+            logger.error(
+                "plan_md_missing_sections",
+                missing=result.violations,
+                session_id=session_id,
+            )
             for error in result.violations:
                 emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
             return False, result.violations
 
-        logger.info("plan_md_valid", plan_type=plan_type)
+        logger.info("plan_md_valid", plan_type=plan_type, session_id=session_id)
         return True, []
 
     required_sections = BENCHMARK_PLAN_REQUIRED_SECTIONS
@@ -438,13 +478,13 @@ def validate_plan_md_structure(
             missing.append(section)
 
     if missing:
-        logger.error("plan_md_missing_sections", missing=missing)
+        logger.error("plan_md_missing_sections", missing=missing, session_id=session_id)
         errors = [f"Missing required section: {s}" for s in missing]
         for error in errors:
             emit_event(LintFailureDocsEvent(file_path="plan.md", errors=[error]))
         return False, errors
 
-    logger.info("plan_md_valid", plan_type=plan_type)
+    logger.info("plan_md_valid", plan_type=plan_type, session_id=session_id)
     return True, []
 
 
@@ -460,7 +500,9 @@ def calculate_file_hash(path: Path) -> str:
     return sha256_hash.hexdigest()
 
 
-def validate_immutability(path: Path) -> tuple[bool, str | None]:
+def validate_immutability(
+    path: Path, session_id: str | None = None
+) -> tuple[bool, str | None]:
     """
     Verify that a file has not changed since the initial commit (or baseline).
 
@@ -510,7 +552,9 @@ def validate_immutability(path: Path) -> tuple[bool, str | None]:
                     f"Immutability violation: {path.name} has been modified "
                     "from the benchmark baseline."
                 )
-                logger.error("immutability_violation", path=str(path))
+                logger.error(
+                    "immutability_violation", path=str(path), session_id=session_id
+                )
                 emit_event(
                     LogicFailureEvent(
                         file_path=path.name,
@@ -530,6 +574,10 @@ def validate_immutability(path: Path) -> tuple[bool, str | None]:
         # Git not installed or not a repo, skip check
         pass
     except Exception as e:
-        logger.error("immutability_check_failed_internal", error=str(e))
+        logger.error(
+            "immutability_check_failed_internal",
+            error=str(e),
+            session_id=session_id,
+        )
 
     return True, None

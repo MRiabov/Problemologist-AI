@@ -1,10 +1,10 @@
-import logging
 from pathlib import Path
 
 import dspy
+import structlog
 from git import GitCommandError, Repo
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class GitResolver(dspy.Signature):
@@ -18,11 +18,16 @@ class GitManager:
     """Manages git operations for agent nodes."""
 
     def __init__(
-        self, repo_path: Path, repo_url: str | None = None, pat: str | None = None
+        self,
+        repo_path: Path,
+        repo_url: str | None = None,
+        pat: str | None = None,
+        session_id: str | None = None,
     ):
         self.repo_path = repo_path
         self.repo_url = repo_url
         self.pat = pat
+        self.session_id = session_id
         self.repo = None
 
     def _get_auth_url(self) -> str | None:
@@ -36,18 +41,20 @@ class GitManager:
     def ensure_repo(self):
         """Ensure the directory is a git repository and synced."""
         if not self.repo_url:
-            logger.warning("No repo URL provided, skipping git setup.")
+            logger.warning("git_no_repo_url_provided", session_id=self.session_id)
             return
 
         try:
             if (self.repo_path / ".git").exists():
                 self.repo = Repo(self.repo_path)
-                logger.info("Loaded existing git repo.")
+                logger.info("git_repo_loaded", session_id=self.session_id)
             else:
                 auth_url = self._get_auth_url()
-                logger.info(f"Cloning repo from {self.repo_url}...")
+                logger.info(
+                    "git_cloning_repo", url=self.repo_url, session_id=self.session_id
+                )
                 self.repo = Repo.clone_from(auth_url, self.repo_path)
-                logger.info("Repo cloned successfully.")
+                logger.info("git_repo_cloned", session_id=self.session_id)
 
             with self.repo.config_writer() as git_config:
                 if not git_config.has_option("user", "email"):
@@ -55,7 +62,7 @@ class GitManager:
                     git_config.set_value("user", "name", "Problemologist Agent")
 
         except Exception as e:
-            logger.error(f"Failed to initialize git repo: {e}")
+            logger.error("git_init_failed", error=str(e), session_id=self.session_id)
             self.repo = None
 
     async def sync_changes(self, commit_message: str, lm: dspy.LM = None):
@@ -70,27 +77,31 @@ class GitManager:
             try:
                 self.repo.git.pull("--rebase")
             except GitCommandError:
-                logger.warning("Rebase conflict detected. Attempting resolution...")
+                logger.warning("git_rebase_conflict", session_id=self.session_id)
                 if lm:
                     await self._resolve_conflicts(lm)
                     try:
                         self.repo.git.rebase("--continue")
-                        logger.info("Conflict resolved via LLM.")
+                        logger.info("git_conflict_resolved", session_id=self.session_id)
                     except Exception as ex:
-                        logger.error(f"Rebase continue failed: {ex}")
+                        logger.error(
+                            "git_rebase_continue_failed",
+                            error=str(ex),
+                            session_id=self.session_id,
+                        )
                         self.repo.git.rebase("--abort")
                 else:
                     logger.error(
-                        "No LLM provided for conflict resolution. Aborting rebase."
+                        "git_no_lm_for_conflict_resolution", session_id=self.session_id
                     )
                     self.repo.git.rebase("--abort")
                     return
 
             self.repo.git.push()
-            logger.info("Changes synced successfully.")
+            logger.info("git_changes_synced", session_id=self.session_id)
 
         except GitCommandError as e:
-            logger.error(f"Git sync failed: {e}")
+            logger.error("git_sync_failed", error=str(e), session_id=self.session_id)
 
     async def _resolve_conflicts(self, lm: dspy.LM):
         """Resolve git conflicts using LLM."""
@@ -104,7 +115,11 @@ class GitManager:
             content = full_path.read_text()
 
             # WP09: Use DSPy for conflict resolution
-            logger.info(f"Resolving conflict in {file_path}...")
+            logger.info(
+                "git_resolving_conflict",
+                file_path=file_path,
+                session_id=self.session_id,
+            )
 
             with dspy.settings.context(lm=lm):
                 resolver = dspy.ReAct(

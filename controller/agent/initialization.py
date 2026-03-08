@@ -51,6 +51,7 @@ async def _write_template(
             path=str(template_path),
             target=target_path,
             error=str(e),
+            session_id=backend.client.session_id,
         )
 
 

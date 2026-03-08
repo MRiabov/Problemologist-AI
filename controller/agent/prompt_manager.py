@@ -138,7 +138,10 @@ Output ONLY the resolved content. Do not include markdown code blocks (```) unle
                 )
             except Exception as e:
                 logger.error(
-                    "compiled_prompt_load_failed", agent_name=agent_name, error=str(e)
+                    "compiled_prompt_load_failed",
+                    agent_name=agent_name,
+                    error=str(e),
+                    session_id="system",
                 )
         else:
             logger.debug("no_compiled_prompt_found", agent_name=agent_name)

@@ -11,7 +11,9 @@ from shared.workers.schema import ValidationResultRecord
 logger = structlog.get_logger(__name__)
 
 
-def collect_and_cleanup_events(session_root: Path) -> list[dict[str, Any]]:
+def collect_and_cleanup_events(
+    session_root: Path, session_id: str | None = None
+) -> list[dict[str, Any]]:
     """Read and delete events.jsonl from the workspace root."""
     events = []
     events_path = session_root / "events.jsonl"
@@ -28,7 +30,7 @@ def collect_and_cleanup_events(session_root: Path) -> list[dict[str, Any]]:
             # Delete the file after reading to avoid cross-contamination between runs
             events_path.unlink()
     except Exception as e:
-        logger.error("failed_to_collect_events", error=str(e))
+        logger.error("failed_to_collect_events", error=str(e), session_id=session_id)
     return events
 
 
@@ -37,6 +39,7 @@ def record_validation_result(
     is_valid: bool,
     message: str | None,
     script_path: str = "script.py",
+    session_id: str | None = None,
 ) -> None:
     """Record validation results to satisfy the handover gate."""
     results_path = session_root / "validation_results.json"
@@ -57,4 +60,6 @@ def record_validation_result(
         )
         results_path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
     except Exception as e:
-        logger.error("failed_to_record_validation_result", error=str(e))
+        logger.error(
+            "failed_to_record_validation_result", error=str(e), session_id=session_id
+        )

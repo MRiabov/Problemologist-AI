@@ -59,7 +59,7 @@ def backup_postgres(
         logger.info("Postgres backup completed and uploaded", s3_key=s3_key)
         return s3_key
     except Exception as e:
-        logger.error("Postgres backup failed", error=str(e))
+        logger.error("Postgres backup failed", error=str(e), session_id="system")
         raise
     finally:
         # Cleanup temporary files
@@ -99,5 +99,5 @@ def backup_s3_files(
         )
         return count
     except Exception as e:
-        logger.error("S3 backup failed", error=str(e))
+        logger.error("S3 backup failed", error=str(e), session_id="system")
         raise

@@ -67,6 +67,7 @@ class SimulationLoop:
         )
         self.smoke_test_mode = smoke_test_mode
         self.backend_type = backend_type
+        self.session_id = session_id
         # Propagate smoke test mode to backend for optimization (in case of cache hit)
         if hasattr(self.backend, "smoke_test_mode"):
             self.backend.smoke_test_mode = smoke_test_mode
@@ -227,7 +228,9 @@ class SimulationLoop:
                 if hasattr(self.backend, "set_electronics"):
                     self.backend.set_electronics(elec_names)
 
-            self.electronics_manager = ElectronicsManager(self.electronics)
+            self.electronics_manager = ElectronicsManager(
+                self.electronics, session_id=session_id
+            )
             self._electronics_dirty = False
             self.metric_collector = MetricCollector()
             self.success_evaluator = SuccessEvaluator(
@@ -236,11 +239,13 @@ class SimulationLoop:
                 simulation_bounds=self.objectives.simulation_bounds
                 if self.objectives
                 else None,
+                session_id=session_id,
             )
             self.objective_evaluator = ObjectiveEvaluator(
                 objectives=self.objectives,
                 material_lookup=self.material_lookup,
                 config=self.config,
+                session_id=session_id,
             )
             self.objective_evaluator.initialize_flow_rate(self.backend)
 
@@ -260,6 +265,7 @@ class SimulationLoop:
                 "SimulationLoop_init_failed",
                 error=str(e),
                 traceback=traceback.format_exc(),
+                session_id=session_id,
             )
             raise
 
@@ -280,7 +286,9 @@ class SimulationLoop:
                 continue
 
             # Using default clearance of 2.0mm for now, or could come from constraints
-            if not check_wire_clearance(wire.waypoints, check_comp, clearance_mm=2.0):
+            if not check_wire_clearance(
+                wire.waypoints, check_comp, clearance_mm=2.0, session_id=self.session_id
+            ):
                 return f"Wire clearance violation detected for wire {wire.wire_id}."
 
         return None
@@ -334,7 +342,7 @@ class SimulationLoop:
             return metrics
 
         # 2. Setup recorders
-        media_recorder = MediaRecorder(video_path)
+        media_recorder = MediaRecorder(video_path, session_id=self.session_id)
 
         # 3. Apply initial controls
         self._apply_gated_controls(control_inputs)

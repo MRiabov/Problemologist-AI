@@ -79,6 +79,7 @@ def run_python_code(
     code: str,
     env: dict[str, str] | None = None,
     config: RuntimeConfig | None = None,
+    session_id: str | None = None,
 ) -> ExecutionResult:
     """Execute Python code in a subprocess."""
     if config is None:
@@ -88,6 +89,7 @@ def run_python_code(
         "runtime_execute",
         code_length=len(code),
         timeout=config.timeout_seconds,
+        session_id=session_id,
     )
 
     with _prepared_execution(code, env) as (script_args, actual_env):
@@ -126,7 +128,7 @@ def run_python_code(
                 timed_out=True,
             )
         except Exception as e:
-            logger.error("runtime_execute_error", error=str(e))
+            logger.error("runtime_execute_error", error=str(e), session_id=session_id)
             return ExecutionResult(
                 stdout="",
                 stderr=str(e),
@@ -140,6 +142,7 @@ async def run_python_code_async(
     code: str,
     env: dict[str, str] | None = None,
     config: RuntimeConfig | None = None,
+    session_id: str | None = None,
 ) -> ExecutionResult:
     """Execute Python code asynchronously in a subprocess."""
     if config is None:
@@ -149,6 +152,7 @@ async def run_python_code_async(
         "runtime_execute_async",
         code_length=len(code),
         timeout=config.timeout_seconds,
+        session_id=session_id,
     )
 
     with _prepared_execution(code, env) as (script_args, actual_env):
@@ -203,7 +207,9 @@ async def run_python_code_async(
                 )
 
         except Exception as e:
-            logger.error("runtime_execute_async_error", error=str(e))
+            logger.error(
+                "runtime_execute_async_error", error=str(e), session_id=session_id
+            )
             return ExecutionResult(
                 stdout="",
                 stderr=str(e),

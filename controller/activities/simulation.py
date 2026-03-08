@@ -129,7 +129,9 @@ async def update_trace_activity(params: UpdateTraceParams) -> bool:
     async with session_factory() as db:
         episode = await db.get(Episode, uuid.UUID(episode_id))
         if not episode:
-            logger.error("episode_not_found_in_db", episode_id=episode_id)
+            logger.error(
+                "episode_not_found_in_db", episode_id=episode_id, session_id=episode_id
+            )
             return False
 
         episode.status = target_status

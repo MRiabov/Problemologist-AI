@@ -10,11 +10,16 @@ logger = structlog.get_logger(__name__)
 class ElectronicsManager:
     """Handles electronics simulation (SPICE and connectivity-based fallback)."""
 
-    def __init__(self, electronics: ElectronicsSection | None = None):
+    def __init__(
+        self,
+        electronics: ElectronicsSection | None = None,
+        session_id: str | None = None,
+    ):
         self.electronics = electronics
         self.is_powered_map: dict[str, bool] = {}
         self.switch_states: dict[str, bool] = {}
         self.validation_error: SimulationFailure | str | None = None
+        self.session_id = session_id
 
         if self.electronics:
             for comp in self.electronics.components:
@@ -72,7 +77,9 @@ class ElectronicsManager:
 
         except Exception as e:
             self.validation_error = str(e)
-            logger.error("spice_sim_failed_falling_back", error=str(e))
+            logger.error(
+                "spice_sim_failed_falling_back", error=str(e), session_id=self.session_id
+            )
             self._fallback_update()
 
     def _fallback_update(self):

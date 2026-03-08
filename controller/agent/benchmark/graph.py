@@ -238,7 +238,7 @@ async def _artifact_exists_for_benchmark_state(
     except Exception as exc:
         logger.error(
             "benchmark_node_entry_artifact_lookup_failed",
-            session_id=session_id,
+            session_id=str(session_id),
             artifact_path=artifact_path,
             error=str(exc),
         )
@@ -356,7 +356,7 @@ def _guarded_node(target_node: AgentName, node_callable):
         logger.error(
             "benchmark_node_entry_validation_rejected",
             episode_id=state.episode_id,
-            session_id=state.session.session_id,
+            session_id=str(state.session.session_id),
             target_node=target_node.value,
             disposition=validation.disposition.value,
             reason_code=validation.reason_code,
@@ -596,7 +596,7 @@ def define_graph():
         if planner_errors:
             logger.error(
                 "planner_handoff_validation_failed",
-                session_id=state.session.session_id,
+                session_id=str(state.session.session_id),
                 errors=planner_errors,
             )
             state.session.status = SessionStatus.REJECTED
@@ -874,7 +874,7 @@ async def _execute_graph_streaming(
                 if planner_errors:
                     logger.error(
                         "planner_handoff_validation_failed",
-                        session_id=session_id,
+                        session_id=str(session_id),
                         errors=planner_errors,
                     )
                     final_state.session.validation_logs.extend(planner_errors)
@@ -925,7 +925,7 @@ async def _execute_graph_streaming(
                 else:
                     logger.error(
                         "benchmark_reviewer_missing_structured_decision",
-                        session_id=session_id,
+                        session_id=str(session_id),
                         feedback=final_state.review_feedback,
                     )
                     error_msg = "reviewer_execution: missing structured review_decision"
@@ -952,7 +952,7 @@ async def _execute_graph_streaming(
                     )
                     logger.error(
                         "integration_fail_fast_reviewer_handoff_loop",
-                        session_id=session_id,
+                        session_id=str(session_id),
                         handoff_block_count=final_state.reviewer_handoff_block_count,
                         review_feedback=final_state.review_feedback,
                     )
@@ -1002,7 +1002,11 @@ async def _execute_graph_streaming(
                     ),
                 )
             except Exception as e:
-                logger.error("failed_to_update_episode_persistence", error=str(e))
+                logger.error(
+                    "failed_to_update_episode_persistence",
+                    error=str(e),
+                    session_id=str(session_id),
+                )
 
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
@@ -1023,7 +1027,11 @@ async def _execute_graph_streaming(
             # as it doesn't map to a single agent reward config yet.
             pass
     except Exception as e:
-        logger.error("failed_to_report_benchmark_automated_score", error=str(e))
+        logger.error(
+            "failed_to_report_benchmark_automated_score",
+            error=str(e),
+            session_id=str(session_id),
+        )
 
     return final_state
 
@@ -1389,7 +1397,9 @@ async def _persist_session_assets(
             except Exception:
                 pass
     except Exception as e:
-        logger.error("failed_to_sync_assets_to_db", error=str(e))
+        logger.error(
+            "failed_to_sync_assets_to_db", error=str(e), session_id=str(session_id)
+        )
 
 
 async def _finalize_episode_terminal_status(
@@ -1621,7 +1631,7 @@ async def continue_generation_session(
             )
             logger.error(
                 "continue_generation_invalid_episode_status",
-                session_id=session_id,
+                session_id=str(session_id),
                 episode_status=observed_status,
             )
             return None

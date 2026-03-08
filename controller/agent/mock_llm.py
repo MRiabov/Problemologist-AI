@@ -293,6 +293,7 @@ class MockDSPyLM(dspy.LM):
                 call_count=call_index,
                 completed_tools=completed_tools,
                 expected_tool_calls=len(tool_calls),
+                session_id=self.session_id,
             )
             raise ValueError(
                 f"MockDSPyLM loop detected for node={lookup_key}: "

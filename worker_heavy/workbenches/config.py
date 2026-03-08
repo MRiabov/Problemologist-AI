@@ -30,7 +30,9 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
     logger.info("loading_manufacturing_config", path=str(config_path))
 
     if not config_path.exists():
-        logger.error("config_file_not_found", path=str(config_path))
+        logger.error(
+            "config_file_not_found", path=str(config_path), session_id="system"
+        )
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     try:

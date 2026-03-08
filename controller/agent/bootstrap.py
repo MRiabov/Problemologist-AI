@@ -62,7 +62,11 @@ class AgentModule(dspy.Module):
             )
             self.tools = get_engineer_tools(self.fs, self.session_id)
         else:
-            logger.error("unknown_agent_type_rejected", agent_name=agent_name)
+            logger.error(
+                "unknown_agent_type_rejected",
+                agent_name=agent_name,
+                session_id=self.session_id,
+            )
             msg = f"Unsupported agent type: {agent_name}"
             raise ValueError(msg)
 

@@ -1,4 +1,4 @@
-import logging
+import structlog
 
 import numpy as np
 from build123d import Compound, Polyline, Spline, Vector, Vertex
@@ -8,7 +8,7 @@ from shared.models.schemas import WireConfig, WireTerminal
 from shared.observability.events import emit_event
 from shared.observability.schemas import WireRoutingEvent
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # T013: Map AWG to physical properties (Industrial standard values for Copper)
 # Resistance at 20C (Ohm/km -> Ohm/m), Max Current (A, chassis wiring), Diameter (mm)
@@ -167,16 +167,18 @@ def check_wire_clearance(
     assembly_meshes: Compound,
     clearance_mm: float = 2.0,
     ignore_endpoints_dist: float = 5.0,
+    session_id: str | None = None,
 ) -> bool:
-    """
-    Check if a wire path intersects with any meshes in the assembly.
+    \"\"\"
+    Check if a wire path (waypoints) intersects with any geometry in the assembly.
 
     Args:
         wire_waypoints: Path points.
         assembly_meshes: Geometry to check against.
         clearance_mm: Minimum required distance.
         ignore_endpoints_dist: Distance from start/end where intersections are ignored (attachment points).
-    """
+        session_id: Optional session ID for logging attribution.
+    \"\"\"
     if not wire_waypoints or len(wire_waypoints) < 2:
         return True
 
@@ -217,7 +219,9 @@ def check_wire_clearance(
 
         return True
     except Exception as e:
-        logger.error(f"Error in check_wire_clearance: {e}")
+        logger.error(
+            "check_wire_clearance_failed", error=str(e), session_id=session_id
+        )
         return False
 
 

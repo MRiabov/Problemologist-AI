@@ -356,9 +356,11 @@ run()
             json=req_write_success_obj.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
         )
+        success_bundle64 = await get_bundle(client, session_id)
+        success_sim_req = sim_req.model_copy(update={"bundle_base64": success_bundle64})
         success_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json=sim_req.model_dump(mode="json"),
+            json=success_sim_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=600.0,
         )

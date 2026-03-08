@@ -1,14 +1,14 @@
-import logging
 import tempfile
 from pathlib import Path
 from typing import Literal
 
+import structlog
 import trimesh
 
 from shared.observability.events import emit_event
 from shared.observability.schemas import MeshingFailureEvent
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class MeshProcessingError(Exception):
@@ -78,6 +78,7 @@ def tetrahedralize(
     method: Literal["gmsh", "tetgen"] = "gmsh",
     refine_level: float = 1.0,
     part_label: str = "unknown",
+    session_id: str | None = None,
 ) -> Path:
     """Tetrahedralizes a surface mesh into a 3D volumetric mesh.
 
@@ -135,7 +136,12 @@ def tetrahedralize(
                     repaired = True
                     continue
                 except Exception as repair_error:
-                    logger.error(f"Mesh repair failed for {part_label}: {repair_error}")
+                    logger.error(
+                        "mesh_repair_failed",
+                        part_label=part_label,
+                        error=str(repair_error),
+                        session_id=session_id,
+                    )
                     raise MeshProcessingError(
                         f"Tetrahedralization failed and repair also failed: {e}"
                     ) from e

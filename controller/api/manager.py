@@ -59,6 +59,7 @@ class ConnectionManager:
                 logger.error(
                     "broadcast_id_type_mismatch_detected",
                     episode_id=str(episode_id),
+                    session_id=str(episode_id),
                     id_type=type(episode_id).__name__,
                 )
             return

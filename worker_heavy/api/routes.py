@@ -67,10 +67,12 @@ async def get_router(x_session_id: str = Header(...)):
         raise HTTPException(status_code=500, detail="Failed to initialize filesystem")
 
 
-def _collect_events(fs_router, root: Path | None = None) -> list[dict[str, Any]]:
+def _collect_events(
+    fs_router, root: Path | None = None, session_id: str | None = None
+) -> list[dict[str, Any]]:
     """Read and delete events.jsonl from the workspace."""
     search_root = root or fs_router.local_backend.root
-    return collect_and_cleanup_events(search_root)
+    return collect_and_cleanup_events(search_root, session_id=session_id)
 
 
 @contextlib.contextmanager
@@ -245,7 +247,7 @@ async def api_verify(
                     session_id=x_session_id,
                 )
 
-                events = _collect_events(fs_router, root=root)
+                events = _collect_events(fs_router, root=root, session_id=x_session_id)
 
                 # If consistent failure, we can return failure artifacts
                 fail_obj = None
@@ -326,7 +328,7 @@ async def api_simulate(
                         else f"Queued: wait position {wait_pos}"
                     )
 
-                events = _collect_events(fs_router, root=root)
+                events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts(
                     render_paths=result.render_paths,
                     mjcf_content=result.mjcf_content,
@@ -404,10 +406,14 @@ async def api_validate(
                     message = (message + "; " + fem_msg) if message else fem_msg
 
                 record_validation_result(
-                    root, is_valid, message, script_path=request.script_path
+                    root,
+                    is_valid,
+                    message,
+                    script_path=request.script_path,
+                    session_id=x_session_id,
                 )
 
-                events = _collect_events(fs_router, root=root)
+                events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts()
                 validation_result_path = root / "validation_results.json"
                 if validation_result_path.exists():
@@ -550,7 +556,7 @@ async def api_preview(
                     yaw=request.yaw,
                     output_dir=root / "renders",
                 )
-                events = _collect_events(fs_router, root=root)
+                events = _collect_events(fs_router, root=root, session_id=x_session_id)
 
                 return PreviewDesignResponse(
                     success=True,
@@ -598,7 +604,7 @@ async def api_build(
                     smoke_test_mode=request.smoke_test_mode,
                 )
 
-                events = _collect_events(fs_router, root=root)
+                events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 return BenchmarkToolResponse(
                     success=True,
                     message=f"Assets rebuilt. Scene saved to {scene_path.name}",
@@ -618,6 +624,7 @@ async def api_build(
 @heavy_router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
 async def api_submit(
     request: BenchmarkToolRequest,
+    x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
     """Handover to reviewer in isolated session (moved to heavy due to DFM dependencies)."""
@@ -633,7 +640,7 @@ async def api_submit(
                 script_content=request.script_content,
             )
             success = submit_for_review(component, cwd=root)
-            events = _collect_events(fs_router, root=root)
+            events = _collect_events(fs_router, root=root, session_id=x_session_id)
             artifacts = SimulationArtifacts()
             validation_result_path = root / "validation_results.json"
             if validation_result_path.exists():

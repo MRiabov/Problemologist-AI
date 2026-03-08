@@ -142,7 +142,7 @@ def save_simulation_result(result: SimulationResult, path: Path):
 
 
 def get_stress_report(
-    part_label: str, output_dir: Path | None = None
+    part_label: str, output_dir: Path | None = None, session_id: str | None = None
 ) -> StressSummary | None:
     """Returns the worst-case stress summary for a simulated FEM part."""
     # Try to load from disk
@@ -157,7 +157,9 @@ def get_stress_report(
             break
 
     if res is None:
-        logger.error("get_stress_report_called_before_simulation")
+        logger.error(
+            "get_stress_report_called_before_simulation", session_id=session_id
+        )
         return None
 
     worst_summary = None
@@ -171,7 +173,9 @@ def get_stress_report(
     if worst_summary:
         return worst_summary
 
-    logger.error("stress_report_part_not_found", part_label=part_label)
+    logger.error(
+        "stress_report_part_not_found", part_label=part_label, session_id=session_id
+    )
     return None
 
 
@@ -179,6 +183,7 @@ def preview_stress(
     _component: Compound,
     _view_angles: list[tuple[float, float]] | None = None,
     output_dir: Path | None = None,
+    session_id: str | None = None,
 ) -> list[str]:
     """Renders the component with a von Mises stress heatmap overlay."""
     # Try to load from disk
@@ -193,7 +198,7 @@ def preview_stress(
             break
 
     if res is None:
-        logger.error("preview_stress_called_before_simulation")
+        logger.error("preview_stress_called_before_simulation", session_id=session_id)
         return []
 
     logger.info("rendering_stress_heatmaps", count=len(res.stress_fields))
@@ -237,6 +242,7 @@ def define_fluid(
     surface_tension: float = 0.07,
     color: tuple[int, int, int] = (0, 0, 200),
     output_dir: Path | None = None,
+    session_id: str | None = None,
 ) -> FluidDefinition:
     """Defines a fluid type for use in the simulation."""
     props = FluidProperties(
@@ -267,7 +273,11 @@ def define_fluid(
             objs.fluids.append(fluid)
         obj_path.write_text(yaml.dump(objs.model_dump(mode="json")), encoding="utf-8")
     else:
-        logger.error("define_fluid_objectives_not_found", path=str(obj_path))
+        logger.error(
+            "define_fluid_objectives_not_found",
+            path=str(obj_path),
+            session_id=session_id,
+        )
 
     return fluid
 
@@ -324,6 +334,7 @@ def calculate_assembly_totals(
     component: Compound,
     electronics: ElectronicsSection | None = None,
     cots_parts: list[CotsPartEstimate] | None = None,
+    session_id: str | None = None,
 ) -> tuple[float, float]:
     """
     Calculate total cost and weight of the assembly including electronics and COTS.
@@ -352,7 +363,7 @@ def calculate_assembly_totals(
             if not method:
                 continue
 
-            res = validate_and_price(child, method, config)
+            res = validate_and_price(child, method, config, session_id=session_id)
             total_cost += res.unit_cost
             total_weight += res.weight_g
         except Exception as e:
@@ -360,6 +371,7 @@ def calculate_assembly_totals(
                 "failed_to_price_manufactured_part",
                 part=getattr(child, "label", "unknown"),
                 error=str(e),
+                session_id=session_id,
             )
 
     # 2. Electronics and COTS parts
@@ -377,6 +389,7 @@ def calculate_assembly_totals(
                         "failed_to_price_psu",
                         cots_id=comp.cots_part_id,
                         error=str(e),
+                        session_id=session_id,
                     )
             elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
                 from shared.cots.parts.electronics import ElectronicRelay
@@ -390,6 +403,7 @@ def calculate_assembly_totals(
                         "failed_to_price_relay",
                         cots_id=comp.cots_part_id,
                         error=str(e),
+                        session_id=session_id,
                     )
             elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
                 from shared.cots.parts.electronics import Switch
@@ -403,6 +417,7 @@ def calculate_assembly_totals(
                         "failed_to_price_switch",
                         cots_id=comp.cots_part_id,
                         error=str(e),
+                        session_id=session_id,
                     )
             elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
                 from shared.cots.parts.electronics import Connector
@@ -416,6 +431,7 @@ def calculate_assembly_totals(
                         "failed_to_price_connector",
                         cots_id=comp.cots_part_id,
                         error=str(e),
+                        session_id=session_id,
                     )
             elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
                 from shared.cots.parts.motors import ServoMotor
@@ -429,6 +445,7 @@ def calculate_assembly_totals(
                         "failed_to_price_motor",
                         cots_id=comp.cots_part_id,
                         error=str(e),
+                        session_id=session_id,
                     )
 
         for wire in electronics.wiring:
@@ -565,7 +582,9 @@ def simulate(
 
                 print(f"FAILED TO LOAD OBJECTIVES: {e}")
                 traceback.print_exc()
-                logger.error("failed_to_load_objectives", error=str(e))
+                logger.error(
+                    "failed_to_load_objectives", error=str(e), session_id=session_id
+                )
 
     cost_est_path = working_dir / "assembly_definition.yaml"
     if cost_est_path.exists():
@@ -573,7 +592,11 @@ def simulate(
             data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
             assembly_definition = AssemblyDefinition(**data)
         except Exception as e:
-            logger.error("failed_to_load_assembly_definition", error=str(e))
+            logger.error(
+                "failed_to_load_assembly_definition",
+                error=str(e),
+                session_id=session_id,
+            )
 
     backend_type = backend
     if backend_type is None:
@@ -596,7 +619,11 @@ def simulate(
             )
             if not cv_res.valid:
                 error_msg = "; ".join(cv_res.errors)
-                logger.error("electronics_validation_failed_gate", errors=error_msg)
+                logger.error(
+                    "electronics_validation_failed_gate",
+                    errors=error_msg,
+                    session_id=session_id,
+                )
                 return SimulationResult(
                     success=False,
                     summary=error_msg,
@@ -607,7 +634,11 @@ def simulate(
                     confidence="high",
                 )
         except Exception as e:
-            logger.error("electronics_pre_validation_skipped", error=str(e))
+            logger.error(
+                "electronics_pre_validation_skipped",
+                error=str(e),
+                session_id=session_id,
+            )
 
     scene_path = builder.build_from_assembly(
         component,
@@ -654,7 +685,11 @@ def simulate(
                             confidence="high",
                         )
         except Exception as e:
-            logger.error("fluid_electronics_preflight_skipped", error=str(e))
+            logger.error(
+                "fluid_electronics_preflight_skipped",
+                error=str(e),
+                session_id=session_id,
+            )
 
     loop = SimulationLoop(
         str(scene_path),
@@ -708,7 +743,7 @@ def simulate(
             from shared.observability.events import emit_event
             from shared.observability.schemas import GpuOomRetryEvent
 
-            logger.error("gpu_oom_detected_retrying_smoke_mode")
+            logger.error("gpu_oom_detected_retrying_smoke_mode", session_id=session_id)
 
             # Emit event for observability
             emit_event(
@@ -785,7 +820,9 @@ def simulate(
                 save_simulation_result(result, working_dir / "simulation_result.json")
             except Exception as e:
                 logger.error(
-                    "failed_to_save_simulation_result_pre_preview", error=str(e)
+                    "failed_to_save_simulation_result_pre_preview",
+                    error=str(e),
+                    session_id=session_id,
                 )
 
             stress_renders = preview_stress(component, output_dir=working_dir)
@@ -794,11 +831,15 @@ def simulate(
         try:
             save_simulation_result(result, working_dir / "simulation_result.json")
         except Exception as e:
-            logger.error("failed_to_save_simulation_result", error=str(e))
+            logger.error(
+                "failed_to_save_simulation_result",
+                error=str(e),
+                session_id=session_id,
+            )
 
         return result
     except Exception as e:
-        logger.error("simulation_error", error=str(e))
+        logger.error("simulation_error", error=str(e), session_id=session_id)
         return SimulationResult(
             success=False,
             summary=f"Simulation error: {e!s}",
@@ -923,7 +964,10 @@ def validate(
 
                             if routed_in_3d:
                                 if not check_wire_clearance(
-                                    pts, component, clearance_mm=2.0
+                                    pts,
+                                    component,
+                                    clearance_mm=2.0,
+                                    session_id=session_id,
                                 ):
                                     wire_errors.append(
                                         f"Wire clearance violation: {wire_id}"

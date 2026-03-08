@@ -1,9 +1,9 @@
 import asyncio
-import logging
 from pathlib import Path
 from typing import Literal
 
 import httpx
+import structlog
 from temporalio.client import Client
 
 from controller.clients.worker import WorkerClient
@@ -52,7 +52,7 @@ from shared.workers.schema import (
     ScriptExecutionRequest,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 
@@ -127,10 +127,11 @@ class RemoteFilesystemMiddleware:
                 "files allowed by your role's policy."
             )
             logger.error(
-                "filesystem_permission_denied agent=%s action=%s path=%s",
-                self.agent_role,
-                action,
-                str(path),
+                "filesystem_permission_denied",
+                agent=self.agent_role,
+                action=action,
+                path=str(path),
+                session_id=self.client.session_id,
             )
             raise PermissionError(msg)
 

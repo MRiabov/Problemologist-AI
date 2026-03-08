@@ -22,12 +22,13 @@ from shared.simulation.backends import (
 class MuJoCoBackend(PhysicsBackend):
     _lock = threading.Lock()
 
-    def __init__(self):
+    def __init__(self, session_id: str | None = None):
         self.model = None
         self.data = None
         self.renderer = None
         self.custom_cameras = {}  # name -> mjvCamera
         self.smoke_test_mode = False
+        self.session_id = session_id
 
         # ID caches to avoid expensive string lookups in loop
         self._body_id_cache = {}

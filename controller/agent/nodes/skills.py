@@ -51,6 +51,7 @@ class SkillsNode(BaseNode):
             repo_path=self.suggested_skills_dir,
             repo_url=os.getenv("GIT_REPO_URL"),
             pat=os.getenv("GIT_PAT"),
+            session_id=self.ctx.session_id,
         )
         self.git.ensure_repo()
 

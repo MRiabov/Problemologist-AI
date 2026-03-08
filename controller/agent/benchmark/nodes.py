@@ -449,7 +449,11 @@ class BenchmarkCoderNode(BaseNode):
                 if isinstance(e, asyncio.CancelledError):
                     logger.info("integrated_validation_cancelled")
                 else:
-                    logger.error("integrated_validation_error", error=str(e))
+                    logger.error(
+                        "integrated_validation_error",
+                        error=str(e),
+                        session_id=str(state.session.session_id),
+                    )
                     state.session.status = SessionStatus.FAILED
 
         return state

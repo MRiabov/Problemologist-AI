@@ -228,12 +228,18 @@ class VideoRenderer:
     """Handles video generation for simulations."""
 
     def __init__(
-        self, output_path: Path, width: int = 640, height: int = 480, fps: int = 30
+        self,
+        output_path: Path,
+        width: int = 640,
+        height: int = 480,
+        fps: int = 30,
+        session_id: str | None = None,
     ):
         self.output_path = output_path
         self.width = width
         self.height = height
         self.fps = fps
+        self.session_id = session_id
         self.frames = []
 
     def add_frame(self, frame: np.ndarray, particles: np.ndarray | None = None):
@@ -247,7 +253,7 @@ class VideoRenderer:
     def save(self):
         """Saves the frames as an MP4 video."""
         if not self.frames:
-            logger.error("video_render_no_frames")
+            logger.error("video_render_no_frames", session_id=self.session_id)
             return
 
         import cv2

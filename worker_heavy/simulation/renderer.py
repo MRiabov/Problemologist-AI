@@ -19,11 +19,13 @@ class Renderer:
         data: mujoco.MjData,
         width: int = 640,
         height: int = 480,
+        session_id: str | None = None,
     ):
         self.model = model
         self.data = data
         self.width = width
         self.height = height
+        self.session_id = session_id
         # Offscreen rendering initialization
         self.renderer = mujoco.Renderer(model, height, width)
         self.frames = []
@@ -75,9 +77,14 @@ class Renderer:
         video_path = renders_dir / "simulation.mp4"
         if self.frames:
             self._encode_video(video_path, fps)
-            logger.info("video_saved", path=str(video_path), frames=len(self.frames))
+            logger.info(
+                "video_saved",
+                path=str(video_path),
+                frames=len(self.frames),
+                session_id=self.session_id,
+            )
         else:
-            logger.error("no_frames_to_save")
+            logger.error("no_frames_to_save", session_id=self.session_id)
 
         # 2. Save 24-View Bundle
         views = self.render_24_views()
@@ -119,7 +126,9 @@ class Renderer:
         except BrokenPipeError:
             _, stderr = process.communicate()
             logger.error(
-                "ffmpeg_failed", stderr=stderr.decode() if stderr else "No stderr"
+                "ffmpeg_failed",
+                stderr=stderr.decode() if stderr else "No stderr",
+                session_id=self.session_id,
             )
             raise
 
