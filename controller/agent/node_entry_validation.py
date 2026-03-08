@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Any, Literal, Protocol
 
+import httpx
 from pydantic import BaseModel, Field, model_validator
 
 from controller.agent.config import settings as agent_settings
@@ -90,6 +92,8 @@ BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
 ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
 ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
 ELECTRONICS_REVIEWER_HANDOVER_CHECK = "electronics_reviewer_handover"
+_TRANSIENT_BUSY_MAX_RETRIES = 45
+_TRANSIENT_BUSY_BASE_DELAY_SECONDS = 1.0
 
 
 class NodeEntryValidationError(BaseModel):
@@ -349,11 +353,47 @@ async def _materialize_reviewer_handover(
         "electronics_reviewer",
     ] = "engineering_execution_reviewer",
 ) -> str | None:
+    async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
+        last_exc: Exception | None = None
+        for attempt in range(_TRANSIENT_BUSY_MAX_RETRIES):
+            try:
+                return await coro_factory()
+            except httpx.HTTPStatusError as exc:
+                status_code = exc.response.status_code if exc.response else None
+                if status_code != 503 or attempt >= (_TRANSIENT_BUSY_MAX_RETRIES - 1):
+                    raise
+                last_exc = exc
+                await asyncio.sleep(
+                    min(
+                        _TRANSIENT_BUSY_BASE_DELAY_SECONDS * float(attempt + 1),
+                        5.0,
+                    )
+                )
+            except (httpx.ConnectError, httpx.ReadTimeout) as exc:
+                if attempt >= (_TRANSIENT_BUSY_MAX_RETRIES - 1):
+                    raise
+                last_exc = exc
+                await asyncio.sleep(
+                    min(
+                        _TRANSIENT_BUSY_BASE_DELAY_SECONDS * float(attempt + 1),
+                        5.0,
+                    )
+                )
+            except Exception:
+                raise
+
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError(f"{operation_name} failed without exception")
+
     if not await client.exists("script.py"):
         return "script.py missing; cannot materialize review handover."
 
     try:
-        validate_result = await client.validate("script.py")
+        validate_result = await _run_with_transient_busy_retry(
+            "validate",
+            lambda: client.validate("script.py"),
+        )
     except Exception as exc:
         return f"validate failed while materializing handover: {exc}"
     if not validate_result.success:
@@ -363,7 +403,10 @@ async def _materialize_reviewer_handover(
         )
 
     try:
-        simulate_result = await client.simulate("script.py")
+        simulate_result = await _run_with_transient_busy_retry(
+            "simulate",
+            lambda: client.simulate("script.py"),
+        )
     except Exception as exc:
         return f"simulate failed while materializing handover: {exc}"
     if not simulate_result.success:
@@ -373,9 +416,12 @@ async def _materialize_reviewer_handover(
         )
 
     try:
-        submit_result = await client.submit(
-            "script.py",
-            reviewer_stage=reviewer_stage,
+        submit_result = await _run_with_transient_busy_retry(
+            "submit",
+            lambda: client.submit(
+                "script.py",
+                reviewer_stage=reviewer_stage,
+            ),
         )
     except Exception as exc:
         return f"submit_for_review failed while materializing handover: {exc}"
