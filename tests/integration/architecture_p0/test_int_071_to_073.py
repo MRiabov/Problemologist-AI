@@ -76,17 +76,18 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
         await coder_fs.write_file("unmatched.txt", "denied")
 
     # System-only manifests: denied to all agent roles
+    manifest_path = ".manifests/engineering_plan_review_manifest.json"
     with pytest.raises(PermissionError):
-        await coder_fs.read_file(".manifests/review_manifest.json")
+        await coder_fs.read_file(manifest_path)
     with pytest.raises(PermissionError):
-        await coder_fs.write_file(".manifests/review_manifest.json", "{}")
+        await coder_fs.write_file(manifest_path, "{}")
     with pytest.raises(PermissionError):
         await reviewer_fs_by_role[AgentName.ENGINEER_PLAN_REVIEWER].read_file(
-            ".manifests/review_manifest.json"
+            manifest_path
         )
     with pytest.raises(PermissionError):
         await reviewer_fs_by_role[AgentName.ENGINEER_PLAN_REVIEWER].write_file(
-            ".manifests/review_manifest.json", "{}"
+            manifest_path, "{}"
         )
 
     # Defense-in-depth filtering: list_files should not leak unreadable entry names.

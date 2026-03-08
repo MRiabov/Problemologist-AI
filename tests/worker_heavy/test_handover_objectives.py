@@ -130,12 +130,15 @@ totals:
             assert target_obj.read_text() == objectives_content
 
             # Check manifest
-            manifest_path = temp_dir / ".manifests" / "review_manifest.json"
+            manifest_path = (
+                temp_dir / ".manifests" / "engineering_execution_review_manifest.json"
+            )
             assert manifest_path.exists()
             with manifest_path.open() as f:
                 manifest = json.load(f)
 
             assert manifest["objectives_path"] == str(target_obj)
             assert manifest["session_id"] == "test_session"
+            assert manifest["reviewer_stage"] == "engineering_execution_reviewer"
     finally:
         os.chdir(old_cwd)

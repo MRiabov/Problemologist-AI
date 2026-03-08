@@ -113,13 +113,16 @@ totals:
     assert result is True
     mock_export_step.assert_called_once()
 
-    manifest_path = tmp_path / ".manifests" / "review_manifest.json"
+    manifest_path = (
+        tmp_path / ".manifests" / "engineering_execution_review_manifest.json"
+    )
     assert manifest_path.exists()
 
     with manifest_path.open() as f:
         manifest = json.load(f)
         assert manifest["status"] == "ready_for_review"
         assert manifest["session_id"] == "test-session"
+        assert manifest["reviewer_stage"] == "engineering_execution_reviewer"
 
 
 @patch("worker_heavy.utils.rendering.get_simulation_builder")

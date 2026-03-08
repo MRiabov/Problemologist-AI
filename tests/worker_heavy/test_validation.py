@@ -87,7 +87,7 @@ def test_handover():
     val_res_path = Path("validation_results.json")
     sim_res_path = Path("simulation_result.json")
     script_path = Path("script.py")
-    manifest_path = Path(".manifests") / "review_manifest.json"
+    manifest_path = Path(".manifests") / "engineering_execution_review_manifest.json"
     try:
         script_path.write_text("def build():\n    return None\n", encoding="utf-8")
         val_res_path.write_text('{"success": true, "timestamp": 1.0}')
@@ -191,6 +191,7 @@ Simple test plan
         manifest = json.load(f)
         assert manifest["status"] == "ready_for_review"
         assert manifest["session_id"] == "test_session"
+        assert manifest["reviewer_stage"] == "engineering_execution_reviewer"
         # Current prod code has a bug/omission where it returns 0 renders
         assert len(manifest["renders"]) == 0
 
