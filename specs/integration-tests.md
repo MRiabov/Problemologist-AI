@@ -41,9 +41,16 @@ Commonly, these models and enums would be in `shared/` folder.
 The integration suite is designed for high-velocity local execution and CI parity.
 
 - **`IS_INTEGRATION_TEST=true`**: This environment variable is automatically exported by the runner. It enables "smoke test mode" in simulation kernels, significantly reducing particle counts and simulation time for faster feedback.
+- **`INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS`**: Defaults to `1` in `scripts/run_integration_tests.sh`. When enabled, the runner interrupts pytest early only after machine-readable backend error JSON (`logs/integration_tests/json/*_errors.json`) receives a **non-allowlisted** error event. Matching uses global `BACKEND_ERROR_ALLOWLIST_REGEXES` and per-test `@pytest.mark.allow_backend_errors` patterns keyed by `session_id` `INT-xxx` prefixes. Set to `0` to keep full-duration runs.
 - **`tests/integration/mock_responses.yaml`**: Integration mode uses `MockDSPyLM` for agent-node LLM responses, and scenarios are loaded from this file. When `INT-xxx` behavior depends on deterministic mock outputs, keep the corresponding scenario entries current.
 - **`scripts/run_integration_tests.sh`**: The central entry point for the integration suite. It manages infrastructure spin-up (Docker), local service lifecycle, and `pytest` execution.
 - **`logs/integration_tests/`**: All service logs (Controller, Worker Light, Worker Heavy, Temporal Worker) and debug traces are persisted here for every run. Previous runs are archived in `logs/archives/`.
+- **`logs/integration_tests/json/`**: Machine-readable backend error files are emitted as JSON Lines from native structlog event dicts:
+  - `controller_errors.json`
+  - `worker_light_errors.json`
+  - `worker_heavy_errors.json`
+  - `temporal_worker_errors.json`
+  - `backend_error_allowlisted_prefixes.json` (auto-generated/cache file containing per-`INT-xxx` backend-error allowlist rules derived from test markers; consumed by integration-runner early-stop filtering)
 - **Backend error-log attribution contract**: Structured `ERROR` lines written to dedicated backend error logs must include `session_id` or `episode_id` (ideally both) so strict integration teardown can attribute failures to the owning test context and avoid cross-session leakage.
 - **`test_output/`**: Stores JUnit XML results and the persisted test history used for trend analysis.
 - **Worker FS read/write permissions bypass mechanism (`agents_config.yaml` enforcement tests)**: privileged bypass of per-agent filesystem policy is enabled only when both are present in the same HTTP request: request payload flag `bypass_agent_permissions=true` and header `X-System-FS-Bypass: 1`. Header-only and payload-only requests must remain policy-enforced (no bypass). 
@@ -233,6 +240,7 @@ Backend integration tests run in strict backend-log mode as well:
 - The suite uses dedicated per-service error logs (`controller_errors.log`, `worker_light_errors.log`, `worker_heavy_errors.log`, `temporal_worker_errors.log`) to avoid false positives from normal info/debug output.
 - Structured backend `ERROR` lines are required to include `session_id` or `episode_id`; strict teardown attributes by either field in integration mode.
 - The check is controlled by `STRICT_BACKEND_ERRORS` (default `1`) and supports explicit noise control via `@pytest.mark.allow_backend_errors` or `BACKEND_ERROR_ALLOWLIST_REGEXES` (regex patterns separated by `;;`).
+- Early-stop behavior is controlled by `INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS` (default `1` from the wrapper) and only triggers on non-allowlisted backend error events from `logs/integration_tests/json/*_errors.json`; allowlisted events are filtered using global + per-test rules. Use `INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS=0` when intentionally collecting full-run logs despite known backend errors.
 - `@pytest.mark.allow_backend_errors` with no arguments keeps legacy behavior (allow all backend errors for that test).
 - Argumented forms (for example `@pytest.mark.allow_backend_errors("fs failure")` or `@pytest.mark.allow_backend_errors(regexes=["fs failure"])`) allow only matching lines.
 - The backend-log teardown gate is skipped for tests already failing in call phase to avoid masking the primary failure.
