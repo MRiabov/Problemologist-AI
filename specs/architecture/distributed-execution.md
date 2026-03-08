@@ -56,7 +56,7 @@ The worker API is physically split into two specialized services to optimize res
   - Asset building (`/benchmark/build`).
   - Single-flight execution gate: one active heavy job per worker instance.
 - **HTTP Boundary**: Typically exposed on port 18002.
-- **Operational profile**: one job at a time per instance, no in-process job queue/thread pool/process pool.
+- **Operational profile**: one active external heavy job at a time per instance, no in-process multi-request scheduler.
 
 ### Routing Contract (Controller -> Workers)
 
@@ -65,6 +65,18 @@ The worker API is physically split into two specialized services to optimize res
 - All worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
 - Heavy-worker admission is fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
+
+### Heavy Execution Path Contract
+
+Heavy compute execution has one production path:
+
+- Controller tools call Temporal workflows for heavy operations.
+- Temporal workflows dispatch heavy activities on `heavy-tasks-queue`.
+- Heavy activity execution runs simulation/validation/render in isolated child process scope (crash containment boundary).
+
+Direct `worker-heavy` HTTP endpoints (`/benchmark/*`) are an adapter/debug surface, not an alternate orchestration model with independent queueing semantics.
+
+Temporal task delivery remains worker-poll based (long-poll task queues), while workflow completion is returned through Temporal result APIs. We do not define a Temporal-server-push webhook delivery mode for activity task dispatch in this architecture.
 
 ### Shared Worker Modules
 
@@ -122,7 +134,8 @@ Heavy-worker concurrency is a single-flight contract:
 - Any queueing, retries, and fan-out for concurrent demand are owned outside `worker-heavy` (Temporal/controller-worker orchestration and infrastructure load balancing), not by heavy-worker app internals.
 - Cross-worker fan-out/scaling policy is intentionally out of scope for this phase; the enforced contract here is per-instance single-flight admission plus deterministic busy behavior.
 - Runtime randomization (multi-seed checks inside one simulation request) executes within the admitted single job scope and may use backend-native parallel simulation inside that job when resources allow.
-- Temporal delivery mode for heavy jobs (polling task queue vs webhook-style trigger) is an orchestration detail; the heavy-worker contract remains the same deterministic single-flight HTTP admission boundary.
+- Temporal heavy-task dispatch is worker-poll task queue delivery. Webhook-style triggers, if used, are external orchestration inputs and not Temporal server task-delivery mode.
+- FastAPI API serving and Temporal heavy-activity polling/execution must be process-isolated (separate process/container boundary) so a simulation child-process crash cannot terminate the API process.
 - Optional startup pre-warming is still allowed per worker instance to reduce first-run backend/JIT latency.
 
 ## Persistent state and durable execution
@@ -205,7 +218,7 @@ Temporal is used to orchestrate the workers. It is not used to run or retry the 
 
 Temporal needs a database and we will use the Postgres database used by temporal, except under the different `DATABASE` partition.
 
-Because tasks like simulation (with involve both simulation and uploading to the database) could be long-running we are using webhooks and callbacks to report their completion.
+Because tasks like simulation can be long-running, completion is tracked through Temporal workflow/activity result state (and associated persisted events), not worker-local ad-hoc queue state.
 
 ### Failed tool calls
 

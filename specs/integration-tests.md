@@ -84,6 +84,7 @@ Priorities:
 | INT-002 | Controller-worker execution boundary | Agent-generated execution happens on worker only; controller never runs LLM-generated code. |
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Heavy-worker single-flight admission | Multiple agents may run, but each heavy-worker instance accepts only one active heavy job; concurrent requests to the same instance receive deterministic busy responses (no in-worker buffering/scheduling). Multi-worker throughput/fan-out behavior is out of scope for this test. |
+| INT-187 | Heavy-worker crash containment boundary | Force deterministic simulation child-process failure and assert fail-closed request failure while `worker-heavy` API health stays up and subsequent heavy requests can still be served (no whole-service crash from one simulation failure). |
 | INT-005 | Engineer planner mandatory artifact gate | Engineer planner must block handoff unless planner artifacts are present/valid (`plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`) and traces contain explicit `TOOL_START` for `submit_plan` with `node_type=engineer_planner`. After `submit_plan`, episode must reach `PLANNED`; if it reaches `FAILED`, test fails. Missing `submit_plan` must fail closed (no success-like status transition). |
 | INT-006 | `plan.md` structure validation | Exact required engineering plan headings enforced (`1..5` sections). |
 | INT-007 | `todo.md` checkbox integrity | Required checkbox format is enforced; deleted mandatory checklist entries are rejected. |
@@ -282,6 +283,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-002 | Trigger real run via API; verify worker-side execution evidence and controller non-execution. | Patching remote FS client or executor calls. |
 | INT-003 | Use two real session IDs via HTTP file APIs and assert isolation. | Calling router/helper methods directly in-process. |
 | INT-004 | Send parallel simulate requests over HTTP to the same heavy-worker instance; assert one request is admitted and concurrent request(s) receive deterministic busy responses (`503` + `WORKER_BUSY`) with no in-worker queueing/buffering. Do not assert cross-worker load distribution or cluster fan-out in this test. Ensure build scripts use `PartMetadata` class. | Mocking in-worker busy-gate behavior (instead of exercising live HTTP admission) or asserting horizontal scaling behavior from a single-instance test. |
+| INT-187 | Trigger a deterministic fatal simulation-child failure through live heavy execution; assert failed response, `worker-heavy /health` remains healthy, and a subsequent heavy request still succeeds without restarting the service. | Unit-testing exception handlers around simulation helpers without live subprocess/service/process-boundary verification. |
 | INT-005 | Submit with missing engineer-planner artifacts through API and assert rejection, then run engineer planner flow over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` and `node_type=engineer_planner`; after submission, assert episode reaches `PLANNED` and not `FAILED`. Assert missing submission trace cannot transition to success-like statuses. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
@@ -425,7 +427,7 @@ This section exists to force implementation as true integration tests, not unit 
 ## Recommended suite organization
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
-- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-074, INT-101..INT-114, INT-120..INT-128, INT-184.
+- `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-074, INT-101..INT-114, INT-120..INT-128, INT-184, INT-187.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 - `tests/integration/agent/p1/`: INT-181, INT-182, INT-183, INT-185, INT-186.
