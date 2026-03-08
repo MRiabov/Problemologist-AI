@@ -66,7 +66,7 @@ We track the following structured domain events to compute the evaluation metric
     - separate events for each tool call - easier to track later.
 3. Manufacturability and price check (engineer)
     - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
-4. Scene validation (Benchmark CAD engineer)
+4. Scene validation (Benchmark Coder)
 5. Render request (engineer)
 6. Render request (benchmark)
 7. Simulation request (engineer)
@@ -84,7 +84,7 @@ We track the following structured domain events to compute the evaluation metric
 9. COTS search (engineer/planner?)
 10. Plan submission (benchmark)
 11. Plan submission (Engineer)
-12. Price/weight failure escalation request (CAD engineer)
+12. Price/weight failure escalation request (Engineering Coder)
 13. Price/weight failure escalation decision (reviewer)
 14. Lint failure - code
 15. Lint failure - Markdown/YAML
@@ -94,12 +94,12 @@ We track the following structured domain events to compute the evaluation metric
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (benchmark reviewer, engineering plan reviewer, engineering execution reviewer, electronics reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
+21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
 24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
 25. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
-26. Engineering plan reviewer deterministic validator execution (`plan_review_validation_run`) with input artifact revision, validator status, and mismatch reasons when rejected.
+26. Engineering Plan Reviewer deterministic validator execution (`plan_review_validation_run`) with input artifact revision, validator status, and mismatch reasons when rejected.
 27. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
 
 <!-- 20. Metric for "Jamming Rate"
@@ -120,7 +120,7 @@ We persist lineage fields in episode metadata and DB for both benchmark generati
 - `seed_id`: canonical source item id.
 - `seed_dataset`: dataset/source path or identifier.
 - `seed_match_method`: enum describing linkage strategy (`runtime_explicit`, `exact_task`, `no_exact_task_match`, `ambiguous_exact_task`).
-- `generation_kind`: enum describing run origin (`seeded`, `derived`, `seeded_eval`, `integration_test`, `cots_search`, `skill_agent`).
+- `generation_kind`: enum describing run origin (`seeded`, `derived`, `seeded_eval`, `integration_test`, `COTS Search`, `Skill Agent`).
 - `parent_seed_id`: direct lineage parent (for derived runs).
 
 Integration/test tagging is part of the same metadata contract:

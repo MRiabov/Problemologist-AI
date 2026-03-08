@@ -12,18 +12,18 @@ We have two agents (or agent graphs): the benchmark generator and the engineer.
 
 The benchmark generator flow is:
 
-1. `benchmark_planner`
-2. `benchmark_coder`
-3. `benchmark_reviewer`
+1. `Benchmark Planner`
+2. `Benchmark Coder`
+3. `Benchmark Reviewer`
 
 ## Engineering workflow
 
 The engineering flow has two separate review stages:
 
-1. `engineer_planner` (+ `electronics_planner`)
-2. `engineer_plan_reviewer` (plan-quality gate before coding)
-3. `engineer_coder` (+ `electronics_engineer` and `electronics_reviewer`)
-4. `engineer_execution_reviewer` (post-validation/post-simulation execution gate)
+1. `Engineering Planner` (+ `Electronics Planner`)
+2. `Engineering Plan Reviewer` (plan-quality gate before coding)
+3. `Engineering Coder` (+ `Electronics Engineer` and `Electronics Reviewer`)
+4. `Engineering Execution Reviewer` (post-validation/post-simulation execution gate)
 
 The split between plan and execution reviewers is mandatory.
 

@@ -126,12 +126,12 @@ Note - used by default by
 
 1. Validate pricing YAML file,
 2. Output a price in the terminal and warn if the file,
-3. Autopopulate some fields to prevent forcing LLMs into calculating or inserting them (e.g., will populate max_unit_cost fields in the engineering planner.)
+3. Autopopulate some fields to prevent forcing LLMs into calculating or inserting them (e.g., will populate max_unit_cost fields in the Engineering Planner.)
 <!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
 
 `submit_plan()`. Will:
 
-1. Validate planner-required files for the planner role (engineering planner/electronics planner/benchmark planner).
+1. Validate planner-required files for the planner role (Engineering Planner/Electronics Planner/Benchmark Planner).
 2. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
 3. Be mandatory before planner completion/handoff.
 4. Be the only valid planner completion gate: planner transitions are `PLANNED` only when `ok=true`.
@@ -169,17 +169,17 @@ So:
 
 #### submit_for_review(compound: Compound)
 
-The CAD engineer/coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
+The Engineering Coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
 
 Manifest persistence contract:
 
 1. No canonical/central reviewer manifest is persisted.
 2. Exactly one reviewer-stage manifest is persisted per submission:
-   - Benchmark reviewer submission: `.manifests/benchmark_review_manifest.json`
-   - Engineering execution reviewer submission: `.manifests/engineering_execution_review_manifest.json`
-   - Electronics reviewer submission: `.manifests/electronics_review_manifest.json`
+   - Benchmark Reviewer submission: `.manifests/benchmark_review_manifest.json`
+   - Engineering Execution Reviewer submission: `.manifests/engineering_execution_review_manifest.json`
+   - Electronics Reviewer submission: `.manifests/electronics_review_manifest.json`
 3. Planner `submit_plan` persists the plan-review manifest:
-   - Engineering plan reviewer: `.manifests/engineering_plan_review_manifest.json`
+   - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
 
 Reviewer entry preconditions are explicit and fail-closed:
 1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.

@@ -4,7 +4,7 @@
 ## Scope summary
 
 - Primary focus: role-level behavior for benchmark generation and engineering execution.
-- Defines planner/implementer/reviewer responsibilities, expected artifacts, and quality expectations.
+- Defines Planner/Coder/Reviewer responsibilities, expected artifacts, and quality expectations.
 - Includes concrete examples of `plan.md` and `objectives.yaml` style outputs.
 - Use alongside handover contracts when implementing agent transitions.
 
@@ -17,7 +17,7 @@ The agent is to generate problems for an engineer to solve. This is important, a
 ## Agent subagents
 
 1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, friction, dynamic objects, motors, etc.
-2. A CAD engineer/coder that implements the benchmark from the plan
+2. A Benchmark Coder that implements the benchmark from the plan
 3. A reviewer that reviews the environment for
     - Feasibility of solution
     - Lack of violation of environment constraints (no significant, etc.)
@@ -56,7 +56,7 @@ Problems with motors and moving parts are verified more consistently because the
 (input: Test benchmark: drop a ball into a funnel)
 
 ```markdown
-`plan.md` (benchmark planner excerpt)
+`plan.md` (Benchmark Planner excerpt)
 
 1. **Learning objective**
    - Test spatial redirection with gravity: the engineer must route a falling ball into a goal while avoiding a forbidden vertical-drop path.
@@ -96,7 +96,7 @@ Problems with motors and moving parts are verified more consistently because the
 ```
 
 ```yaml
-# objectives.yaml (draft from benchmark planner)
+# objectives.yaml (draft from Benchmark Planner)
 objectives:
   goal_zone:
     min: [28, 6, 1]
@@ -154,12 +154,12 @@ Again, the execution runs in isolated containers to prevent accidental harmful c
 
 Engineer has explicit node roles:
 
-1. `ENGINEER_PLANNER` (mechanical plan author)
-2. `ELECTRONICS_PLANNER` (electrical planning companion stage)
-3. `ENGINEER_PLAN_REVIEWER` (plan-quality reviewer before coding)
-4. `ENGINEER_CODER` (mechanical implementation)
-5. `ELECTRONICS_ENGINEER` + `ELECTRONICS_REVIEWER` (electrical implementation and electrical review)
-6. `ENGINEER_EXECUTION_REVIEWER` (final execution reviewer after validated/simulated implementation handoff)
+1. `Engineering Planner` (mechanical plan author)
+2. `Electronics Planner` (electrical planning companion stage)
+3. `Engineering Plan Reviewer` (plan-quality reviewer before coding)
+4. `Engineering Coder` (mechanical implementation)
+5. `Electronics Engineer` + `Electronics Reviewer` (electrical implementation and electrical review)
+6. `Engineering Execution Reviewer` (final Execution Reviewer after validated/simulated implementation handoff)
 
 The architect will create and persist a TODO list. The engineer must implement. The agent will have easy access to the TODO list.
 
@@ -173,7 +173,7 @@ The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
    - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
-   - Do not read benchmark `assembly_definition.yaml`; benchmark cost estimation stays local to the benchmark planner.
+   - Do not read benchmark `assembly_definition.yaml`; benchmark cost estimation stays local to the Benchmark Planner.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
@@ -181,7 +181,7 @@ The Engineering Planner workflow is:
    - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
    - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
    - Minimize motion complexity: use the smallest DOF set needed to satisfy the objective; avoid unnecessary moving axes.
-   - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS search subagent and carry part IDs + catalog prices into the plan.
+   - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS Search subagent and carry part IDs + catalog prices into the plan.
 
 3. **Calculate the costs per part**:
 
@@ -239,17 +239,17 @@ The Engineering Planner workflow is:
 - Create `plan.md` using the strict engineering structure:
      `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
 - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
-- Create `todo.md` as an implementation checklist for the CAD engineer (initially `- [ ]` items).
+- Create `todo.md` as an implementation checklist for the Engineering Coder (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
 - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 
-At this point, the planner can handoff the documents to the CAD engineering agent. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
 
 ### Engineering reviewer split
 
 The engineering loop has two reviewer stages with different responsibilities.
 
-`ENGINEER_PLAN_REVIEWER` responsibilities:
+`Engineering Plan Reviewer` responsibilities:
 
 1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
 2. Validate plan consistency across `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml`.
@@ -260,7 +260,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 7. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
 8. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
 
-`ENGINEER_EXECUTION_REVIEWER` responsibilities:
+`Engineering Execution Reviewer` responsibilities:
 
 1. Verify implementation follows the approved plan (or has justified, reviewable deviations).
 2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
@@ -284,8 +284,8 @@ Reviewer decision persistence naming in engineering:
    - Planner submission is treated as invalid if required files are missing or malformed.
 
 5. **Handover and iteration loop**
-   - Handover `plan.md` + planner-constrained objectives + `todo.md` to the CAD engineer.
-   - CAD engineer implements and may request refusal only with proof that planner constraints/approach are infeasible.
+   - Handover `plan.md` + planner-constrained objectives + `todo.md` to the Engineering Coder.
+   - Engineering Coder implements and may request refusal only with proof that planner constraints/approach are infeasible.
    - Reviewer either confirms refusal (`confirm_plan_refusal`) and routes back to Planner for re-plan, or rejects refusal (`reject_plan_refusal`) and routes back to CAD implementation.
 
 6. **Observability**
@@ -301,9 +301,9 @@ The Engineer agent will verify its work by:
 2. Checking the cost of its solution; against the part count and unit cost as specified by the user.
 3. Checking the weight of its solution.
 4. Simulating - did the model achieve the goal as per the benchmark?
-5. The execution reviewer assesses whether the successful simulation is stable and non-flaky for realistic repeated runs.
+5. The Execution Reviewer assesses whether the successful simulation is stable and non-flaky for realistic repeated runs.
 
-## COTS search subagent
+## COTS Search subagent
 
 An engineering agent(s) can invoke a COTS (Commercial-Off-The-Shelf) search agent to delegate the search for off-the-shelf components. E.g.: search for motors.
 
@@ -315,7 +315,7 @@ Purpose: a lightweight subagent that performs catalog lookups and returns verifi
 - Read-only access to the COTS catalog DB and/or CLI; no writes.
 - No file edits except optional `journal.md` logging of queries + results.
 
-### Inputs (from planner/engineer/benchmark planner/benchmark CAD engineer)
+### Inputs (from planner/engineer/Benchmark Planner/Benchmark Coder)
 
 - Part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608").
 - Constraints: quantity tier, max_unit_cost, size/torque/voltage limits, material, mounting/shaft constraints.
@@ -332,10 +332,10 @@ Purpose: a lightweight subagent that performs catalog lookups and returns verifi
 
 ### Invocation
 
-- Engineering Planner, implementer, reviewers and benchmark Planner, implementer, reviewers call the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- Engineering Planner, Coder, reviewers and Benchmark Planner, Benchmark Coder, reviewers call the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
 - The returned part IDs and prices must be used in the plan and cost estimates.
 
-Notably the benchmark planner will need it too since they are also responsible for (hard cap) price estimation.
+Notably the Benchmark Planner will need it too since they are also responsible for (hard cap) price estimation.
 
 ### Reasons for invocation
 
@@ -345,7 +345,7 @@ Notably the benchmark planner will need it too since they are also responsible f
 
 ## COTS catalog database (spec 006)
 
-This system is backed by a SQL catalog built from `bd_warehouse`. The catalog is **read-only in workers** and queried only via the COTS search subagent.
+This system is backed by a SQL catalog built from `bd_warehouse`. The catalog is **read-only in workers** and queried only via the COTS Search subagent.
 
 Database:
 

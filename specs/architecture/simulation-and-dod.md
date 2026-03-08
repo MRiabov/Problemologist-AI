@@ -131,7 +131,7 @@ Genesis (which has parity with MuJoCo) constraints will only ever be spawned fro
 
 For each, the internal/external diameters must match, and there will be special commands on how to define these. In addition, the critic will be prompted to specifically scrutinize if the constraint is valid. In addition, parts will have to be close to each other physically - distance between both must be nearing <1 mm or so.
 
-This is to prevent the CAD designers from creating impossible constraints.
+This is to prevent Engineering Coder and Benchmark Coder from creating impossible constraints.
 
 To support moving parts (hinges, sliders, motors), we force build123d Joints from *to be created from predefined CAD components* almost always - e.g., again, revolute joints from bearings, rigid joints/weld constraints via fasteners.
 
@@ -387,7 +387,7 @@ The runtime randomization will run the simulation multiple times (e.g. 5) to ens
 Failure is achieved via either of:
 
 1. Timeout of the simulation
-    - How to define timeout of the simulation? that's a question. I suggest putting a hard cap of 30 seconds on all simulations and letting the benchmark planner decide how quickly a given goal should be achieved (with leeway); no more than 30 seconds though.
+    - How to define timeout of the simulation? that's a question. I suggest putting a hard cap of 30 seconds on all simulations and letting the Benchmark Planner decide how quickly a given goal should be achieved (with leeway); no more than 30 seconds though.
 2. Any of components going out of bounds of the workspace
 3. Instability in simulation (e.g. NaNs, parts interference)
 4. Any part going into forbid zones.

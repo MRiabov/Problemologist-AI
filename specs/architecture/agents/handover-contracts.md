@@ -2,7 +2,7 @@
 
 ## Scope summary
 
-- Primary focus: deterministic handoff contracts between planner, implementer, and reviewer roles.
+- Primary focus: deterministic handoff contracts between Planner, Coder, and Reviewer roles.
 - Defines which files are handed over, what each artifact must contain, and when refusals are valid.
 - Specifies routing behavior for review outcomes, replanning loops, and benchmark-to-engineer transition.
 - Use this file to validate inter-agent boundary correctness.
@@ -10,16 +10,16 @@
 ## All handovers that happen
 
 User prompt ->
-benchmark planner agent <-> Benchmark CAD agent <-> benchmark reviewer (If plan is not valid - e.g. it specifies a conflicting geometry, the CAD agent will refuse; and send back to benchmark planner agent. However, the benchmark CAD agent can not refuse because it fails to do CAD, it can only refuse if the model is in fact invalid.)
-(Benchmark reviewer to CAD agent - if the environment CAD 3d model does not adhere to the plan OR the environment CAD model has invalid geometry e.g. intersections OR it is impossible to solve, the benchmark reviewer agent can refuse)
+Benchmark Planner <-> Benchmark Coder <-> Benchmark Reviewer (If plan is not valid - for example, it specifies conflicting geometry, the Benchmark Coder can refuse and route back to Benchmark Planner. Benchmark Coder refusal is valid only for plan infeasibility, not for generic coding failure.)
+(Benchmark Reviewer to Benchmark Coder - if the environment CAD 3d model does not adhere to the plan OR the environment CAD model has invalid geometry e.g. intersections OR it is impossible to solve, Benchmark Reviewer can refuse)
 
-Benchmark reviewer "accepts" and passes the environment to the "lead engineer" - the Engineering Planner model. (indirect contact - no actual "communication")
+Benchmark Reviewer "accepts" and passes the environment to the Engineering Planner model. (indirect contact - no actual "communication")
 
-Lead engineer -> Engineering Plan Reviewer -> CAD modelling engineer -> Engineering Execution Reviewer
+Engineering Planner -> Engineering Plan Reviewer -> Engineering Coder -> Engineering Execution Reviewer
 
-The lead engineer will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info, build zones).
-CAD modelling engineer can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
-In this case, the CAD modelling engineer must provide `plan_refusal.md` (with role-specific reasons + evidence). The Engineering Plan Reviewer validates that refusal and either confirms (`CONFIRM_PLAN_REFUSAL`) and routes back to planner, or rejects (`REJECT_PLAN_REFUSAL`) and routes back to implementation.
+The Engineering Planner will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info, build zones).
+Engineering Coder can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
+In this case, the Engineering Coder must provide `plan_refusal.md` (with role-specific reasons + evidence). The Engineering Plan Reviewer validates that refusal and either confirms (`CONFIRM_PLAN_REFUSAL`) and routes back to planner, or rejects (`REJECT_PLAN_REFUSAL`) and routes back to coding.
 
 The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
 
@@ -30,10 +30,10 @@ There is no shared/canonical reviewer manifest file.
 
 Required manifest filenames:
 
-1. Benchmark reviewer: `.manifests/benchmark_review_manifest.json`
-2. Engineering plan reviewer: `.manifests/engineering_plan_review_manifest.json`
-3. Engineering execution reviewer: `.manifests/engineering_execution_review_manifest.json`
-4. Electronics reviewer: `.manifests/electronics_review_manifest.json`
+1. Benchmark Reviewer: `.manifests/benchmark_review_manifest.json`
+2. Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
+3. Engineering Execution Reviewer: `.manifests/engineering_execution_review_manifest.json`
+4. Electronics Reviewer: `.manifests/electronics_review_manifest.json`
 
 Validation rule:
 
@@ -47,16 +47,16 @@ Reviewer decisions are persisted as reviewer-scoped markdown files. We do not us
 
 Required reviewer decision files:
 
-1. Benchmark reviewer: `reviews/benchmark-review-round-<n>.md`
-2. Engineering plan reviewer: `reviews/engineering-plan-review-round-<n>.md`
-3. Engineering execution reviewer: `reviews/engineering-execution-review-round-<n>.md`
-4. Electronics reviewer: `reviews/electronics-review-round-<n>.md`
+1. Benchmark Reviewer: `reviews/benchmark-review-round-<n>.md`
+2. Engineering Plan Reviewer: `reviews/engineering-plan-review-round-<n>.md`
+3. Engineering Execution Reviewer: `reviews/engineering-execution-review-round-<n>.md`
+4. Electronics Reviewer: `reviews/electronics-review-round-<n>.md`
 
 Validation rule:
 
 - Reviewer output is invalid if the decision is not persisted to the stage-specific file path for that reviewer/round.
 
-## Benchmark generator Planner and Benchmark CAD designer
+## Benchmark Planner and Benchmark Coder
 
 The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
 
@@ -81,14 +81,14 @@ The agents' file must correspond to roughly the structure detailed above, with a
 2. A `todo.md` TODO list from the planner.
 3. A draft of `objectives.yaml` with rough values filled in.
 4. A draft of `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
-<!-- Note: it may be interesting that the implementer could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
+<!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
 If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `objectives.yaml` and must not silently mutate those constraints.
 
 ## Benchmark Generator with Engineer handover
 
-The Engineer agent(s) (for whom the first point of access is the Planner/lead engineer) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
+The Engineer agent(s) (for whom the first point of access is Engineering Planner) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
@@ -99,7 +99,7 @@ The engineer will also receive YAML files with:
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The benchmark planner's `assembly_definition.yaml` stays in the benchmark planner scope and is not handed over to engineering.
+The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The Benchmark Planner's `assembly_definition.yaml` stays in the Benchmark Planner scope and is not handed over to engineering.
 
 ### A benchmark is reused multiple times
 
@@ -113,8 +113,8 @@ For now, nothing. I'll filter it out via SQL or similar later and make a "price 
 
 Engineering handoff includes two review gates:
 
-1. Planner gate (`ENGINEER_PLAN_REVIEWER`): validates planner artifacts before coder entry.
-2. Execution gate (`ENGINEER_EXECUTION_REVIEWER`): validates latest implementation handoff after validation/simulation success.
+1. Planner gate (`Engineering Plan Reviewer`): validates planner artifacts before coder entry.
+2. Execution gate (`Engineering Execution Reviewer`): validates latest implementation handoff after validation/simulation success.
 
 Engineer sends four files to the coder agent who has to implement the plan:
 
@@ -123,7 +123,7 @@ Engineer sends four files to the coder agent who has to implement the plan:
 3. A `todo.md` TODO-list.
 4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
 
-Planner gate requirements (`ENGINEER_PLAN_REVIEWER` / coder entry contract):
+Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
 - Required artifacts: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`
@@ -372,11 +372,11 @@ Validation requirement:
 
 ## Coder and Execution Reviewer interaction
 
-The execution reviewer (`ENGINEER_EXECUTION_REVIEWER`) is a post-validation/post-simulation stage.
+The Execution Reviewer (`Engineering Execution Reviewer`) is a post-validation/post-simulation stage.
 
 1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
    - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
-2. The execution reviewer has read-only access to implementation and evidence files, plus write/edit only to `reviews/engineering-execution-review-round-<n>.md`.
+2. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to `reviews/engineering-execution-review-round-<n>.md`.
 3. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.
 4. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.
 5. Optional code-quality review is secondary and should only block for concrete correctness/safety risks.
@@ -401,8 +401,8 @@ As usual, the reviews will be strictly typed.
 ## Clarification - definition of constraints in planning
 
 1. Constraints are set first at the application level; e.g. the timeout of simulation is always 30 seconds
-2. Then the benchmark planner/implementer set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
-3. The engineering planner can set an even lower constraint. to force the engineering implementer to think on how to achieve a certain goal cost-effectively. The implementer won't pass the cost metric until it is done.
+2. Then the Benchmark Planner/Benchmark Coder set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
+3. Engineering Planner can set an even lower constraint to force Engineering Coder to think on how to achieve a certain goal cost-effectively. Engineering Coder won't pass the cost metric until it is done.
 
 ## Clarification: agents outputs will *never* be parsed via text heuristics.
 

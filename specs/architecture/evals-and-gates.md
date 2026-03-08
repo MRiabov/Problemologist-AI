@@ -43,16 +43,16 @@ We should be able to test evaluations on multiple tiers, specifically:
 ##### Medium evals - Engineer Planner evaluations
 
 <!-- We probably want to split this into further three sections below. -->
-1. Given a prompt, an engineering planner uses appropriate components to solve a problem, and creates plans that are physically achievable, does not have intersecting models, and actually passes.
+1. Given a prompt, an Engineering Planner uses appropriate components to solve a problem, and creates plans that are physically achievable, does not have intersecting models, and actually passes.
     - Validation:
         1. YAML
-        2. LLM-as-a-judge (plan reviewer).
-2. Given a prompt, the engineering planner uses accurate prices from the catalog and doesn't "come up" with prices.
-3. Given a prompt, an engineering planner does not generate plans for features outside of a build zone.
-4. Given a prompt, an engineering planner plans for a solution that is equal or lower to the `max_unit_cost`, `max_weight`, as well as other numeric constraints in 95% of cases.
-5. Given a prompt, the engineering planner produces plans with correct units (e.g. metric or US customary units in 95% of cases).
+        2. LLM-as-a-judge (Plan Reviewer).
+2. Given a prompt, the Engineering Planner uses accurate prices from the catalog and doesn't "come up" with prices.
+3. Given a prompt, an Engineering Planner does not generate plans for features outside of a build zone.
+4. Given a prompt, an Engineering Planner plans for a solution that is equal or lower to the `max_unit_cost`, `max_weight`, as well as other numeric constraints in 95% of cases.
+5. Given a prompt, the Engineering Planner produces plans with correct units (e.g. metric or US customary units in 95% of cases).
 
-##### Medium evals - CAD Engineer
+##### Medium evals - Engineering Coder
 
 1. Given a plan, the engineer will pass manufacturability checks in 70% during validation and pricing tool call. (note: lower than during submission because this is explicitly not submitting but validating the tool call).
 2. Given a plan, the engineer will pass manufacturability checks in 90% of tool calls when expected during simulation or submission (when they *expect* that it will definitely pass). On second and third attempts this will improve to 95% and 97% respectively.
@@ -62,22 +62,22 @@ We should be able to test evaluations on multiple tiers, specifically:
 
 ##### Medium evals - Engineering Plan Reviewer
 
-1. Given a viewed plan package, the plan reviewer would correctly identify plan issues in at least 70% of cases.
+1. Given a viewed plan package, the Plan Reviewer would correctly identify plan issues in at least 70% of cases.
     - Correctness: given a valid plan with an issue introduced by another LLM, a reviewer would spot the issue and the issue matches independent validation.
-2. Given a viewed plan package, the plan reviewer rejects unsupported/invented components or mechanisms in at least 97% of cases.
-3. Given a viewed plan package, the plan reviewer rejects inconsistent, infeasible, ambiguous, or incomplete plans in at least 90% of cases.
-4. Given a viewed plan package, the plan reviewer rejects excessive/unjustified DOFs in at least 90% of seeded over-actuation cases.
-5. Price/weight realism gate: if target budgets are set unrealistically, the plan reviewer rejects and requests concrete planner fixes.
+2. Given a viewed plan package, the Plan Reviewer rejects unsupported/invented components or mechanisms in at least 97% of cases.
+3. Given a viewed plan package, the Plan Reviewer rejects inconsistent, infeasible, ambiguous, or incomplete plans in at least 90% of cases.
+4. Given a viewed plan package, the Plan Reviewer rejects excessive/unjustified DOFs in at least 90% of seeded over-actuation cases.
+5. Price/weight realism gate: if target budgets are set unrealistically, the Plan Reviewer rejects and requests concrete planner fixes.
 6. Reviewer efficacy: plan-review feedback should lead to a corrected plan in at least 60% of failed first submissions.
 
 ##### Medium evals - Engineering Execution Reviewer
 
-1. Given a viewed model, the execution reviewer correctly navigates output evidence (would check at least 3 images) before decision.
-2. Given a successful handoff package, the execution reviewer identifies plan-vs-execution deviations and robustness risks in at least 70% of cases.
-3. Given a successful simulation result, the execution reviewer rejects flaky/non-robust solutions in at least 70% of known flaky cases.
-4. Given a successful simulation result, the execution reviewer flags over-actuated solutions (excessive moving axes/parts) in at least 80% of seeded over-actuation cases.
-5. Manufacturability awareness: the execution reviewer reports only changes appropriate to the manufacturing method in 97% of cases.
-6. Given a viewed model, the execution reviewer requests cheaper/lighter improvements where feasible in at least 15% of cases.
+1. Given a viewed model, the Execution Reviewer correctly navigates output evidence (would check at least 3 images) before decision.
+2. Given a successful handoff package, the Execution Reviewer identifies plan-vs-execution deviations and robustness risks in at least 70% of cases.
+3. Given a successful simulation result, the Execution Reviewer rejects flaky/non-robust solutions in at least 70% of known flaky cases.
+4. Given a successful simulation result, the Execution Reviewer flags over-actuated solutions (excessive moving axes/parts) in at least 80% of seeded over-actuation cases.
+5. Manufacturability awareness: the Execution Reviewer reports only changes appropriate to the manufacturing method in 97% of cases.
+6. Given a viewed model, the Execution Reviewer requests cheaper/lighter improvements where feasible in at least 15% of cases.
 7. Toolkit usage and diversity; the model will use:
     - fasteners in at least in 70% of builds
     - Motors in at least 20% of the builds
@@ -87,7 +87,7 @@ We should be able to test evaluations on multiple tiers, specifically:
     (this requirement is more so for prompt debugging - that we don't miss including something into the prompt/skill sections.)
 8. The model would be able to execute a search (or use a subagent) in COTS
 
-<!-- Future: Given a prompt, the engineering planner doesn't use components that are out of stock -->
+<!-- Future: Given a prompt, the Engineering Planner doesn't use components that are out of stock -->
 
 <!-- FIXME: Underspec: we don't define coordinate system starting point.I.e. is the center defined as (0,0,0)? Else how do we define it?
 Proposal: normalize the simulation to the center bottom of the build zone. So the bottom center of the simulation would be 0,0,0; whatever is under it would be -z, and everything would be normalized to it. I expect it'll help agents adjust the build. -->
@@ -96,7 +96,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 
 ##### Medium evals - Benchmark Generator Planner
 
-1. Given a prompt, a benchmark planner generates a plan that upon valid scrutinizing of a plan reviewer, passes in 80% of cases.
+1. Given a prompt, a Benchmark Planner generates a plan that upon valid scrutinizing of a Plan Reviewer, passes in 80% of cases.
 2. Given a prompt, a benchmark generator planner generates a plan that would have unimpeded objectives (objectives obstructed by obstacles by no more than 35%) in 97% of the cases (calculated by volume - shouldn't be obstructed.)
 3. Given a prompt, the benchmark generator will produce plans for various manufacturing quantities (prototype <5, small volume <100, mass-manufacturing - 3000)
 4. Given a prompt, we will include to the solution proposed by the prompt:
@@ -107,9 +107,9 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
       - And other numerical parameters specified in objectives.yaml.
 5. The benchmark generator would be able to predict the price and weight the engineer will solve the solution in the range of 80-120% (with 20% error) of the final price in 80% of the cases, within 50-150% in 97% of cases (this is the standard price, not the "safe" price)
 
-##### Medium evals - Benchmark Generator CAD engineer
+##### Medium evals - Benchmark Coder
 
-1. Given a plan, a benchmark CAD drafting agent generates a benchmark that is physically valid, uses features that actually exist in our pipeline (does correct constraints, etc) in 95% of cases after 30 turns, and 3 submissions to reviewer.
+1. Given a plan, a Benchmark Coder generates a benchmark that is physically valid, uses features that actually exist in our pipeline (does correct constraints, etc) in 95% of cases after 30 turns, and 3 submissions to reviewer.
 
 - First submission - 10 tool calls, 70% pass,
 - Second submission - 20 tool calls, 85% pass,
@@ -138,11 +138,11 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
     - First submission - 10 tool calls, 70% pass,
     - Second submission - 20 tool calls, 85% pass,
     - Third submission - 30 tool calls, 95% pass.
-2. The Engineer (Planner+CAD Engineer) agents would not create examples that would break parts in 90% of the cases (can estimate if it (only motors for now, soft bodies in the future) will break using a formula).
+2. The Engineer (Planner+Engineering Coder) agents would not create examples that would break parts in 90% of the cases (can estimate if it (only motors for now, soft bodies in the future) will break using a formula).
 
 ##### Engineering Planner
 
-##### CAD Engineer
+##### Engineering Coder
 
 1. Given a plan, an Engineer builds a build123d model that is valid and reaches the goal within 30 tool calls and three simulation attempts.
     - First submission - 10 tool calls, 70% pass,
@@ -160,7 +160,7 @@ Plans not rejected by
 
 #### Slow evals - Benchmark generator
 
-##### Slow evals - CAD Engineer
+##### Slow evals - Engineering Coder
 
 1. Given a correct plan, a benchmark generator builds a benchmark that an engineer would be able to solve within 30 turns in 70% of cases.
 2. Quality of Reasoning: The reasoning traces for benchmark generation are coherent and logically sound in >90% of cases (important for dataset quality).
