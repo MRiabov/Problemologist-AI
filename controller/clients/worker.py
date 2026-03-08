@@ -292,29 +292,20 @@ class WorkerClient:
             )
         if artifacts.simulation_result_json:
             writes.append(("simulation_result.json", artifacts.simulation_result_json))
-        if artifacts.review_manifest_json:
-            writes.append(
-                (".manifests/review_manifest.json", artifacts.review_manifest_json)
-            )
+        if artifacts.review_manifests_json:
             writes.extend(
                 [
-                    (
-                        ".manifests/benchmark_review_manifest.json",
-                        artifacts.review_manifest_json,
-                    ),
-                    (
-                        ".manifests/engineering_plan_review_manifest.json",
-                        artifacts.review_manifest_json,
-                    ),
-                    (
-                        ".manifests/engineering_execution_review_manifest.json",
-                        artifacts.review_manifest_json,
-                    ),
-                    (
-                        ".manifests/electronics_review_manifest.json",
-                        artifacts.review_manifest_json,
-                    ),
+                    (path, content)
+                    for path, content in artifacts.review_manifests_json.items()
                 ]
+            )
+        elif artifacts.review_manifest_json:
+            # Backward compatibility: keep honoring single-manifest payloads.
+            writes.append(
+                (
+                    ".manifests/engineering_execution_review_manifest.json",
+                    artifacts.review_manifest_json,
+                )
             )
 
         for path, content in writes:
@@ -541,7 +532,10 @@ class WorkerClient:
             await self._close_client(client)
 
     async def submit(
-        self, script_path: str = "script.py", script_content: str | None = None
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        reviewer_stage: str | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
         client = await self._get_client()
@@ -549,6 +543,8 @@ class WorkerClient:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
+            if reviewer_stage:
+                payload["reviewer_stage"] = reviewer_stage
 
             await self._add_bundle_to_payload(payload)
 

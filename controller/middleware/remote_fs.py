@@ -487,10 +487,25 @@ class RemoteFilesystemMiddleware:
 
         return res
 
-    async def submit(self, script_path: str | Path) -> BenchmarkToolResponse:
+    async def submit(
+        self,
+        script_path: str | Path,
+        reviewer_stage: str | None = None,
+    ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker client."""
         p_str = str(script_path)
-        res = await self.client.submit(p_str)
+        effective_stage = reviewer_stage
+        if effective_stage is None:
+            role_to_stage: dict[AgentName, str] = {
+                AgentName.BENCHMARK_CODER: "benchmark_reviewer",
+                AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
+                AgentName.ELECTRONICS_ENGINEER: "electronics_reviewer",
+                AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",
+                AgentName.ENGINEER_CODER: "engineering_execution_reviewer",
+                AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_reviewer",
+            }
+            effective_stage = role_to_stage.get(self.agent_role)
+        res = await self.client.submit(p_str, reviewer_stage=effective_stage)
 
         benchmark_roles = {
             AgentName.BENCHMARK_PLANNER,

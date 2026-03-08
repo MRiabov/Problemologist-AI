@@ -2475,6 +2475,23 @@
             "title": "Particle Budget",
             "description": "Optional particle budget override."
           },
+          "reviewer_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "benchmark_reviewer",
+                  "engineering_execution_reviewer",
+                  "electronics_reviewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Stage",
+            "description": "Reviewer stage when calling /benchmark/submit."
+          },
           "method": {
             "$ref": "#/components/schemas/ManufacturingMethod",
             "description": "Manufacturing method to analyze (cnc, 3dp, im)."
@@ -2554,6 +2571,23 @@
             ],
             "title": "Particle Budget",
             "description": "Optional particle budget override."
+          },
+          "reviewer_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "benchmark_reviewer",
+                  "engineering_execution_reviewer",
+                  "electronics_reviewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Stage",
+            "description": "Reviewer stage when calling /benchmark/submit."
           }
         },
         "type": "object",
@@ -3160,6 +3194,13 @@
               }
             ],
             "title": "Review Manifest Json"
+          },
+          "review_manifests_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Review Manifests Json"
           }
         },
         "additionalProperties": true,
@@ -3434,6 +3475,23 @@
             ],
             "title": "Particle Budget",
             "description": "Optional particle budget override."
+          },
+          "reviewer_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "benchmark_reviewer",
+                  "engineering_execution_reviewer",
+                  "electronics_reviewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Stage",
+            "description": "Reviewer stage when calling /benchmark/submit."
           },
           "jitter_range": {
             "prefixItems": [

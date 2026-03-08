@@ -198,6 +198,17 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Optional particle budget override.",
     )
+    reviewer_stage: (
+        Literal[
+            "benchmark_reviewer",
+            "engineering_execution_reviewer",
+            "electronics_reviewer",
+        ]
+        | None
+    ) = Field(
+        default=None,
+        description="Reviewer stage when calling /benchmark/submit.",
+    )
 
     @field_validator("backend", mode="before")
     @classmethod
@@ -255,6 +266,7 @@ class SimulationArtifacts(BaseModel):
     validation_results_json: StrictStr | None = None
     simulation_result_json: StrictStr | None = None
     review_manifest_json: StrictStr | None = None
+    review_manifests_json: dict[StrictStr, StrictStr] = Field(default_factory=dict)
 
     model_config = {"extra": "allow"}
 
@@ -283,6 +295,11 @@ class ReviewManifest(BaseModel):
     """Persisted handoff manifest used to gate reviewer entry."""
 
     status: Literal["ready_for_review"]
+    reviewer_stage: Literal[
+        "benchmark_reviewer",
+        "engineering_execution_reviewer",
+        "electronics_reviewer",
+    ]
     timestamp: str | None = None
     session_id: StrictStr
     revision: StrictStr | None = None
@@ -299,6 +316,16 @@ class ReviewManifest(BaseModel):
     cad_path: StrictStr
     objectives_path: StrictStr
     assembly_definition_path: StrictStr
+
+
+class PlanReviewManifest(BaseModel):
+    """Planner handoff manifest used to gate engineering plan reviewer entry."""
+
+    status: Literal["ready_for_review"]
+    reviewer_stage: Literal["engineering_plan_reviewer"]
+    session_id: StrictStr
+    planner_node_type: StrictStr
+    artifact_hashes: dict[StrictStr, StrictStr]
 
 
 class GitCommitRequest(BaseModel):
