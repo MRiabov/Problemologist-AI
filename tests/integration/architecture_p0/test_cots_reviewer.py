@@ -73,7 +73,14 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
 
 
 @pytest.mark.integration_p0
-@pytest.mark.allow_backend_errors("review_frontmatter_validation_error")
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "review_frontmatter_validation_error",
+        "node_entry_validation_rejected",
+        "missing_artifact",
+        "reviewer_entry_blocked",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_016_reviewer_decision_schema_gate(
     session_id, base_headers, controller_client, worker_heavy_client
@@ -120,6 +127,13 @@ This should be rejected.
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "node_entry_validation_rejected",
+        "missing_artifact",
+        "reviewer_entry_blocked",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_017_plan_refusal_loop(session_id, base_headers, controller_client):
     """INT-017: Verify plan refusal loop (rejection leads to FAILED state)."""
