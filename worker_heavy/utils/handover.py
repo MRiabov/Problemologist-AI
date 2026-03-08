@@ -42,7 +42,10 @@ def _latest_git_revision(cwd: Path) -> str | None:
 
 
 def submit_for_review(
-    component: Compound, cwd: Path = Path(), session_id: str | None = None
+    component: Compound,
+    cwd: Path = Path(),
+    session_id: str | None = None,
+    reviewer_stage: str = "engineering_execution_reviewer",
 ):
     """
     Standardized handover from Coder to Reviewer.
@@ -283,10 +286,22 @@ def submit_for_review(
     shutil.copy(objectives_path, renders_dir / "objectives.yaml")
     shutil.copy(cost_path, renders_dir / "assembly_definition.yaml")
 
-    # 5. Create manifest
-    manifest_path = manifests_dir / "review_manifest.json"
+    # 5. Create reviewer-stage manifest
+    stage_to_manifest = {
+        "benchmark_reviewer": "benchmark_review_manifest.json",
+        "engineering_execution_reviewer": "engineering_execution_review_manifest.json",
+        "electronics_reviewer": "electronics_review_manifest.json",
+    }
+    normalized_stage = (
+        reviewer_stage
+        if reviewer_stage in stage_to_manifest
+        else "engineering_execution_reviewer"
+    )
+    manifest_name = stage_to_manifest[normalized_stage]
+    manifest_path = manifests_dir / manifest_name
     manifest = ReviewManifest(
         status="ready_for_review",
+        reviewer_stage=normalized_stage,
         timestamp=os.getenv("TIMESTAMP"),
         session_id=session_id or os.getenv("SESSION_ID", "default"),
         revision=_latest_git_revision(cwd),
@@ -309,24 +324,10 @@ def submit_for_review(
     with manifest_path.open("w", encoding="utf-8") as f:
         f.write(manifest_json)
 
-    # Keep deterministic system manifest in .manifests and mirror to a synced folder
-    # so benchmark artifact collection can surface it in episode assets.
-    synced_manifest_path = renders_dir / "review_manifest.json"
+    # Mirror manifest to renders folder for artifact surfacing.
+    synced_manifest_path = renders_dir / manifest_name
     with synced_manifest_path.open("w", encoding="utf-8") as f:
         f.write(manifest_json)
-
-    # Stage-specific manifest aliases (INT-034/INT-071 hardening).
-    stage_manifest_names = [
-        "benchmark_review_manifest.json",
-        "engineering_plan_review_manifest.json",
-        "engineering_execution_review_manifest.json",
-        "electronics_review_manifest.json",
-    ]
-    for name in stage_manifest_names:
-        with (manifests_dir / name).open("w", encoding="utf-8") as f:
-            f.write(manifest_json)
-        with (renders_dir / name).open("w", encoding="utf-8") as f:
-            f.write(manifest_json)
 
     logger.info(
         "handover_complete",

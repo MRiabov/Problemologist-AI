@@ -639,7 +639,13 @@ async def api_submit(
                 session_root=root,
                 script_content=request.script_content,
             )
-            success = submit_for_review(component, cwd=root)
+            success = submit_for_review(
+                component,
+                cwd=root,
+                reviewer_stage=(
+                    request.reviewer_stage or "engineering_execution_reviewer"
+                ),
+            )
             events = _collect_events(fs_router, root=root, session_id=x_session_id)
             artifacts = SimulationArtifacts()
             validation_result_path = root / "validation_results.json"
@@ -652,11 +658,20 @@ async def api_submit(
                 artifacts.simulation_result_json = sim_result_path.read_text(
                     encoding="utf-8"
                 )
-            manifest_path = root / ".manifests" / "review_manifest.json"
-            if manifest_path.exists():
-                artifacts.review_manifest_json = manifest_path.read_text(
-                    encoding="utf-8"
-                )
+            stage_manifest_paths = (
+                ".manifests/benchmark_review_manifest.json",
+                ".manifests/engineering_plan_review_manifest.json",
+                ".manifests/engineering_execution_review_manifest.json",
+                ".manifests/electronics_review_manifest.json",
+            )
+            review_manifests: dict[str, str] = {}
+            for rel_path in stage_manifest_paths:
+                manifest_path = root / rel_path
+                if manifest_path.exists():
+                    review_manifests[rel_path] = manifest_path.read_text(
+                        encoding="utf-8"
+                    )
+            artifacts.review_manifests_json = review_manifests
             return BenchmarkToolResponse(
                 success=success,
                 message="Handover complete" if success else "Handover failed",
