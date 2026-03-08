@@ -150,6 +150,13 @@ TEMP_WORKER_PID=$!
 echo $TEMP_WORKER_PID > logs/temporal_worker.pid
 echo "Temporal Worker started (PID: $TEMP_WORKER_PID)"
 
+# Start Heavy Temporal Worker (separate from worker-heavy API process)
+export EXTRA_DEBUG_LOG="$LOG_DIR/worker_heavy_temporal_debug.log"
+nohup .venv/bin/python -m worker_heavy.temporal_worker > "$LOG_DIR/worker_heavy_temporal.log" 2>&1 &
+HEAVY_TEMP_WORKER_PID=$!
+echo $HEAVY_TEMP_WORKER_PID > logs/worker_heavy_temporal.pid
+echo "Heavy Temporal Worker started (PID: $HEAVY_TEMP_WORKER_PID)"
+
 # Start Frontend dev server if default port is available
 FRONTEND_PORT=15173
 FRONTEND_STARTED=false
@@ -182,6 +189,8 @@ ln -sf "$REL_LOG_DIR/worker_light.log" logs/worker_light.log
 ln -sf "$REL_LOG_DIR/worker_light_debug.log" logs/worker_light_debug.log
 ln -sf "$REL_LOG_DIR/worker_heavy.log" logs/worker_heavy.log
 ln -sf "$REL_LOG_DIR/worker_heavy_debug.log" logs/worker_heavy_debug.log
+ln -sf "$REL_LOG_DIR/worker_heavy_temporal.log" logs/worker_heavy_temporal.log
+ln -sf "$REL_LOG_DIR/worker_heavy_temporal_debug.log" logs/worker_heavy_temporal_debug.log
 ln -sf "$REL_LOG_DIR/temporal_worker.log" logs/temporal_worker.log
 ln -sf "$REL_LOG_DIR/temporal_worker_debug.log" logs/temporal_worker_debug.log
 ln -sf "$REL_LOG_DIR/frontend.log" logs/frontend.log
@@ -225,6 +234,7 @@ check_pid_alive "Worker Light" "$WORKER_LIGHT_PID" || FAIL=1
 check_pid_alive "Worker Heavy" "$WORKER_HEAVY_PID" || FAIL=1
 check_pid_alive "Controller" "$CONTROLLER_PID" || FAIL=1
 check_pid_alive "Temporal Worker" "$TEMP_WORKER_PID" || FAIL=1
+check_pid_alive "Heavy Temporal Worker" "$HEAVY_TEMP_WORKER_PID" || FAIL=1
 
 wait_for_health "Worker Light" "http://127.0.0.1:18001/health" || FAIL=1
 wait_for_health "Worker Heavy" "http://127.0.0.1:18002/health" || FAIL=1

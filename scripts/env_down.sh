@@ -35,6 +35,13 @@ if [ -f logs/temporal_worker.pid ]; then
   rm logs/temporal_worker.pid
 fi
 
+if [ -f logs/worker_heavy_temporal.pid ]; then
+  PID=$(cat logs/worker_heavy_temporal.pid)
+  echo "Stopping Heavy Temporal Worker (PID: $PID)..."
+  kill $PID 2>/dev/null || true
+  rm logs/worker_heavy_temporal.pid
+fi
+
 if [ -f logs/frontend.pid ]; then
   PID=$(cat logs/frontend.pid)
   echo "Stopping Frontend dev server (PID: $PID)..."
@@ -48,8 +55,10 @@ pkill -9 -f "uvicorn.*18001" || true
 pkill -9 -f "uvicorn.*18002" || true
 pkill -9 -f "fastapi run" || true
 pkill -9 -f "controller.temporal_worker" || true
+pkill -9 -f "worker_heavy.temporal_worker" || true
 pkill -9 -f "uv run uvicorn" || true
 pkill -9 -f "uv run python -m controller.temporal_worker" || true
+pkill -9 -f "uv run python -m worker_heavy.temporal_worker" || true
 
 echo "Bringing down infrastructure containers..."
 docker compose -f docker-compose.test.yaml down

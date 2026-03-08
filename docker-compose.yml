@@ -169,6 +169,26 @@ services:
       - ./worker_heavy:/app/worker_heavy
       - ./worker_light:/app/worker_light
       - ./shared:/app/shared
+
+  worker-heavy-temporal:
+    image: problemologist-ai-worker-heavy:latest
+    environment:
+      - TEMPORAL_URL=temporal:7233
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    networks:
+      - default
+    command: ["python", "-m", "worker_heavy.temporal_worker"]
+    env_file:
+      - .env
+    depends_on:
+      temporal:
+        condition: service_started
+      worker-heavy:
+        condition: service_started
+    volumes:
+      - ./worker_heavy:/app/worker_heavy
+      - ./worker_light:/app/worker_light
+      - ./shared:/app/shared
     # develop:
     #   watch:
     #     - action: sync
