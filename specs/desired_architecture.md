@@ -12,16 +12,22 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ## Architecture index
 
+### System goals
+
+- [Primary system objectives](./architecture/primary-system-objectives.md): end goals, expected outputs, and product-level purpose of the benchmark and engineer system.
+
 ### Agents
 
 - [Agents overview](./architecture/agents/overview.md): high-level map of benchmark generator and engineer graphs.
 - [Agent roles](./architecture/agents/roles.md): role responsibilities, required artifacts, and planner/implementer/reviewer behavior.
 - [Agent handovers and contracts](./architecture/agents/handover-contracts.md): file-level handoff contracts and refusal/review routing.
 - [Agentic framework, artifacts, and filesystem](./architecture/agents/artifacts-and-filesystem.md): DSPy/LangGraph runtime, trace requirements, and path-permission policy.
+- [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, and reviewer/planner submission gates.
 
 ### Runtime and infrastructure
 
 - [Distributed execution](./architecture/distributed-execution.md): controller/worker split, worker APIs, persistence, and Temporal boundary.
+- [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, schema contracts, and supporting infra assumptions.
 
 ### Evaluation and quality gates
 
