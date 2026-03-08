@@ -88,12 +88,9 @@ async def test_reviewer_evidence_completeness():
                 "electronics_reviewer": "reviews/electronics-review-round-*.md",
             }
             for role, expected in expected_paths.items():
-                patterns = set(
-                    cfg.get("agents", {})
-                    .get(role, {})
-                    .get("write", {})
-                    .get("allow", [])
-                )
+                role_cfg = cfg.get("agents", {}).get(role, {})
+                permissions = role_cfg.get("filesystem_permissions", role_cfg)
+                patterns = set(permissions.get("write", {}).get("allow", []))
                 assert expected in patterns, (
                     f"{role} missing reviewer-stage write scope {expected}. "
                     f"Found: {sorted(patterns)}"
