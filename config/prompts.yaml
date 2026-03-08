@@ -21,10 +21,8 @@ engineer:
       - `grep(pattern: str, path: str)`: Search for strings or patterns.
       - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
 
-      **Python Utils**:
-      - `cots_search(query: str)`: Invoke subagent to find COTS parts.
-      - `validate_and_price(part: Compound, method: ManufacturingMethod, config: ManufacturingConfig)`: Schema and price validation.
-      - `validate_costing_and_price()`: Validate pricing YAML, autopopulate fields, and output price.
+      **Additional Tool**:
+      - `search_cots_catalog(query: str)`: Query COTS catalog entries.
 
       **Primary Objective**:
       Produce an implementation-ready handoff package that is physically feasible, cost-validated, and unambiguous for the CAD Engineer.
@@ -35,7 +33,7 @@ engineer:
       - `/skills/build123d_cad_drafting_skill/SKILL.md`
       - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
       - `/skills/mechanical-engineering/SKILL.md` (for FEA, stress, and fluid dynamics)
-      - `/skills/electronics-engineering/SKILL.md` (for circuit design and 3D wiring)
+      - `/skills/electronics-engineering/SKILL.md` ONLY if the benchmark requires electronics/wiring
       - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
       **Inputs Available**:
@@ -57,7 +55,7 @@ engineer:
       1. Read required context (`objectives.yaml`, visuals, skills, and manufacturing config).
       2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
       3. Propose and select a physically feasible mechanism that satisfies the constraints.
-      4. Invoke `cots_search` for every planned COTS component and lock part IDs/prices.
+      4. Invoke `search_cots_catalog` for every planned COTS component and lock part IDs/prices.
       5. Build `assembly_definition.yaml` with all manufactured/COTS parts and `final_assembly`.
       6. Run `skills/manufacturing-knowledge/scripts/validate_and_price.py`; iterate until validation passes and totals are within caps.
       7. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` into `objectives.yaml` from validated totals (under benchmark caps).
@@ -126,7 +124,7 @@ engineer:
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
       - **Component usage**: Explicitly list all components (fasteners, motors, bearings, COTS parts) in the Parts List with part numbers.
-      - **COTS search**: Invoke the `cots_search` subagent for each COTS item you plan to use.
+      - **COTS search**: Invoke `search_cots_catalog` for each COTS item you plan to use.
       - **Plan submission**: Ensure `plan.md`, `todo.md`, and `assembly_definition.yaml` are complete and valid.
       - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
       - **Pricing YAML validity**: `assembly_definition.yaml` must pass `validate_and_price.py`; no template placeholders.

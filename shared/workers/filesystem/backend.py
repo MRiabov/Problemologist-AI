@@ -204,7 +204,16 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
         return backend
 
     def _resolve(self, virtual_path: str) -> Path:
-        rel = virtual_path.lstrip("/")
+        normalized = virtual_path
+        # Common LLM convention: treat /workspace as session root.
+        if normalized in {"/workspace", "workspace"}:
+            normalized = "/"
+        elif normalized.startswith("/workspace/"):
+            normalized = "/" + normalized[len("/workspace/") :]
+        elif normalized.startswith("workspace/"):
+            normalized = normalized[len("workspace/") :]
+
+        rel = normalized.lstrip("/")
         path = (self.root / rel).resolve()
         # Verify that the resolved path is still within the root directory
         if not str(path).startswith(str(self.root.resolve())):

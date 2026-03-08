@@ -114,6 +114,7 @@ agents:
         "write_file",
         "edit_file",
         "grep",
+        "execute_command",
         "submit_plan",
       ]
 
@@ -382,6 +383,7 @@ agents:
         "write_file",
         "edit_file",
         "grep",
+        "execute_command",
         "submit_plan",
       ]
 
@@ -463,6 +465,7 @@ agents:
         "write_file",
         "edit_file",
         "grep",
+        "execute_command",
         "submit_plan",
       ]
 
