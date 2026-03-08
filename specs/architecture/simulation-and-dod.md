@@ -380,7 +380,7 @@ Notably, the engineer is informed about runtime randomization to prevent unexpec
 
 ##### Runtime randomization verification
 
-The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. This is trivial to do, as Genesis/MuJoCo are made for parallel simulations with slightly varying input positions.
+The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. These runs may execute in parallel inside one admitted heavy-worker job when Genesis/MuJoCo backend parallelism is available.
 
 ### Failure
 

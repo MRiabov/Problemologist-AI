@@ -20,9 +20,9 @@ In the future we may well refactor to run on distributed nodes, perhaps even IPv
 ## Current service topology (main)
 
 - `controller` (FastAPI): public API, LLM/tool orchestration, business logic.
-- `controller-worker` (Temporal worker): durable execution for long-running workflows and retries.
+- `controller-worker` (Temporal worker): durable execution for long-running workflows/retries and heavy-task queue consumption/dispatch.
 - `worker-light` (FastAPI): session filesystem, git, linting, runtime execution, static asset serving.
-- `worker-heavy` (FastAPI + process pool): simulation, validation, rendering, manufacturability analysis, review handover.
+- `worker-heavy` (FastAPI single-flight executor): simulation, validation, rendering, manufacturability analysis, review handover.
 - Shared dependencies: `temporal`, `postgres`, `minio`.
 
 The split is intentional: keep fast, high-throughput operations on light infra while isolating heavy physics/render workloads onto dedicated nodes.
@@ -54,9 +54,9 @@ The worker API is physically split into two specialized services to optimize res
   - Manufacturing analysis (`/benchmark/analyze`).
   - Rendering and preview generation (`/benchmark/preview`).
   - Asset building (`/benchmark/build`).
-  - Temporal Activity Worker (consumes from `heavy-tasks-queue`).
+  - Single-flight execution gate: one active heavy job per worker instance.
 - **HTTP Boundary**: Typically exposed on port 18002.
-- **Operational profile**: low parallelism by design (`max_workers=1` for heavy simulation process pool on CPU-bound infra).
+- **Operational profile**: one job at a time per instance, no in-process job queue/thread pool/process pool.
 
 ### Routing Contract (Controller -> Workers)
 
@@ -64,6 +64,7 @@ The worker API is physically split into two specialized services to optimize res
 - Controller routes heavy operations to `WORKER_HEAVY_URL`.
 - All worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
+- Heavy-worker admission is fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
 
 ### Shared Worker Modules
 
@@ -112,13 +113,17 @@ Predominantly, worker light communicates with worker heavy directly; with except
 
 ### Concurrency and Parallelism
 
-To support concurrent simulation requests (e.g., during integration testing or parallel benchmarking), the worker utilizes a **Process-level isolation** strategy:
+Heavy-worker concurrency is a single-flight contract:
 
-- **ProcessPoolExecutor**: Simulations are offloaded to a `ProcessPoolExecutor`.
-- **Backend Isolation**: This is strictly required for the `Genesis` physics backend, which enforces execution on the "main thread" and has global state issues. Process isolation ensures each simulation runs in a fresh environment.
-- **Resource Cleanup**: We use `max_tasks_per_child=None` in the executor to allow for process reuse. This is critical for Genesis, as it enables the caching of JIT-compiled kernels across multiple simulation requests within the same process.
-- **Pre-warming**: To eliminate the ~50s JIT compilation delay during the first user request, the worker pool uses an `initializer` (`_init_genesis_worker`) that builds a tiny dummy scene immediately upon process startup.
-- **CPU Scaling**: On CPU-only hardware, `max_workers` is restricted to 1 for simulations to prevent resource contention during heavy kernel compilation and voxelization phases.
+- A heavy worker instance can execute exactly one active job at a time.
+- The heavy worker app does not own internal multi-job management (no in-process queue/semaphore/scheduler for multiple external jobs).
+- If a request arrives while a job is active, the heavy worker returns a deterministic busy response (`503` + machine-readable reason such as `WORKER_BUSY`) instead of buffering jobs.
+- `/ready` and equivalent readiness signals must report `not ready` while a job is active, so load balancers route only to idle instances.
+- Any queueing, retries, and fan-out for concurrent demand are owned outside `worker-heavy` (Temporal/controller-worker orchestration and infrastructure load balancing), not by heavy-worker app internals.
+- Cross-worker fan-out/scaling policy is intentionally out of scope for this phase; the enforced contract here is per-instance single-flight admission plus deterministic busy behavior.
+- Runtime randomization (multi-seed checks inside one simulation request) executes within the admitted single job scope and may use backend-native parallel simulation inside that job when resources allow.
+- Temporal delivery mode for heavy jobs (polling task queue vs webhook-style trigger) is an orchestration detail; the heavy-worker contract remains the same deterministic single-flight HTTP admission boundary.
+- Optional startup pre-warming is still allowed per worker instance to reduce first-run backend/JIT latency.
 
 ## Persistent state and durable execution
 
