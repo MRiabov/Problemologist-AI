@@ -357,12 +357,14 @@ class MockDSPyLM(dspy.LM):
         entry = transcript[found_idx]
         steps = entry.get("steps", [])
 
-        # Step selection by counting observations in history
-        custom_markers = re.findall(
-            r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", full_text
-        )
-        standard_markers = re.findall(r"Observation:", full_text, re.IGNORECASE)
-        completed_tools = len(custom_markers) + len(standard_markers)
+        # Step selection by counting observations in the trajectory only.
+        # Counting across full prompt text is unstable because prompt instructions
+        # often include "Observation:" examples that are not real tool results.
+        trajectory_text = self._extract_trajectory_text(full_text)
+        standard_markers = re.findall(r"Observation:", trajectory_text, re.IGNORECASE)
+        completed_tools = len(
+            re.findall(r"\[\[\s*##\s*observation_\d+\s*##\s*\]\]", trajectory_text)
+        ) + len(standard_markers)
 
         step_idx = min(completed_tools, len(steps) - 1)
         step_data = steps[step_idx]
@@ -422,6 +424,23 @@ class MockDSPyLM(dspy.LM):
             expected_fields=expected_fields,
             tool_override=tool_override,
         )
+
+    @staticmethod
+    def _extract_trajectory_text(full_text: str) -> str:
+        marker_pattern = re.compile(
+            r"\[\[\s*##\s*trajectory\s*##\s*\]\]", re.IGNORECASE
+        )
+        matches = list(marker_pattern.finditer(full_text))
+        if matches:
+            return full_text[matches[-1].end() :]
+
+        # ReAct prompts often place tool history under this header.
+        lower = full_text.lower()
+        idx = lower.rfind("past interactions:")
+        if idx != -1:
+            return full_text[idx:]
+
+        return full_text
 
     def _detect_expected_fields_from_json(self, text: str) -> list[str]:
         """Detect expected JSON keys from a template in the prompt."""

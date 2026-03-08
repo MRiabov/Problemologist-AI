@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import signal
+import subprocess
 import uuid
 from pathlib import Path
 
@@ -279,6 +280,10 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
     """
     controller_log = get_controller_log_path()
     start_offset = controller_log.stat().st_size if controller_log.exists() else 0
+    worker_light_debug_log = Path("logs/worker_light_debug.log")
+    worker_debug_start_offset = (
+        worker_light_debug_log.stat().st_size if worker_light_debug_log.exists() else 0
+    )
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id, episode_id = await run_agent_episode(
@@ -290,34 +295,45 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
         # Intentional outage injection for devops regression coverage:
         # once execute_command starts, drop worker-light mid-call so the same
         # tool request exercises infra-level retries and terminalization.
+        # We detect command start via worker log because episode trace sync can lag.
         saw_execute_start = False
         deadline = asyncio.get_event_loop().time() + 60.0
         while asyncio.get_event_loop().time() < deadline:
-            snapshot_resp = await client.get(
-                f"{CONTROLLER_URL}/api/episodes/{episode_id}"
-            )
-            assert snapshot_resp.status_code == 200, snapshot_resp.text
-            snapshot = snapshot_resp.json()
-            traces = snapshot.get("traces", [])
-            saw_execute_start = any(
-                t.get("trace_type") == "TOOL_START"
-                and t.get("name") == "execute_command"
-                and "time.sleep(20)" in (t.get("content") or "")
-                for t in traces
-            )
+            if worker_light_debug_log.exists():
+                blob = worker_light_debug_log.read_text(
+                    encoding="utf-8", errors="ignore"
+                )
+                # Integration runner may truncate logs between runs; if so, read from start.
+                delta = (
+                    blob[worker_debug_start_offset:]
+                    if len(blob) >= worker_debug_start_offset
+                    else blob
+                )
+                delta = strip_ansi(delta)
+                saw_execute_start = (
+                    "runtime_execute_async" in delta
+                    and f"session_id={session_id}" in delta
+                )
             if saw_execute_start:
                 break
             await asyncio.sleep(0.5)
         assert saw_execute_start, (
-            "Timed out waiting for execute_command before outage injection."
+            "Timed out waiting for worker execute_command start before outage injection."
         )
 
-        worker_pid_path = Path("logs/worker_light.pid")
-        assert worker_pid_path.exists(), (
-            "Missing worker_light.pid for outage injection."
+        pid_lookup = subprocess.run(
+            ["pgrep", "-f", r"worker_light\.main:app.*18001"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
-        worker_pid = int(worker_pid_path.read_text(encoding="utf-8").strip())
-        os.kill(worker_pid, signal.SIGTERM)
+        assert pid_lookup.returncode == 0 and pid_lookup.stdout.strip(), (
+            "Unable to resolve live worker-light PID for outage injection."
+        )
+        worker_pid = int(pid_lookup.stdout.strip().splitlines()[-1])
+        # Force immediate process death so the in-flight tool call experiences
+        # transport failure (SIGTERM can shut down gracefully after request completes).
+        os.kill(worker_pid, signal.SIGKILL)
 
         episode = await wait_for_episode_terminal(client, episode_id, timeout_s=240.0)
 
