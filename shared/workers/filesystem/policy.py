@@ -9,7 +9,7 @@ from shared.enums import AgentName
 PolicyAction = Literal["read", "write"]
 
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class PathPolicy(BaseModel):
@@ -17,10 +17,50 @@ class PathPolicy(BaseModel):
     deny: list[str] = Field(default_factory=list)
 
 
-class AgentPolicy(BaseModel):
+class FilesystemPermissions(BaseModel):
     read: PathPolicy = Field(default_factory=PathPolicy)
     write: PathPolicy = Field(default_factory=PathPolicy)
+
+
+class AgentPolicy(BaseModel):
+    filesystem_permissions: FilesystemPermissions = Field(
+        default_factory=FilesystemPermissions
+    )
     tools: list[str] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_filesystem_permissions(
+        cls, value: object
+    ) -> dict[str, object] | object:
+        if not isinstance(value, dict):
+            return value
+
+        has_legacy = "read" in value or "write" in value
+        has_new = "filesystem_permissions" in value
+        if has_legacy and has_new:
+            raise ValueError(
+                "AgentPolicy cannot define both legacy read/write and "
+                "filesystem_permissions keys."
+            )
+
+        if not has_legacy:
+            return value
+
+        normalized = dict(value)
+        normalized["filesystem_permissions"] = {
+            "read": normalized.pop("read", {}),
+            "write": normalized.pop("write", {}),
+        }
+        return normalized
+
+    @property
+    def read(self) -> PathPolicy:
+        return self.filesystem_permissions.read
+
+    @property
+    def write(self) -> PathPolicy:
+        return self.filesystem_permissions.write
 
 
 class LLMPolicyConfig(BaseModel):
