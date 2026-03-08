@@ -34,15 +34,18 @@ async def run_simulation(session_id: str):
             headers={"X-Session-ID": session_id},
         )
         end_time = time.time()
-        return resp, start_time, end_time
+        try:
+            payload = resp.json()
+        except Exception:
+            payload = {"raw_text": resp.text}
+        return resp.status_code, payload, start_time, end_time
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_simulation_concurrency_serialization():
-    # We want to verify that simulations are SERIALIZED.
-    # Even if we launch 3 concurrent requests, they should happen one after another
-    # because of the HEAVY_OPERATION_LOCK.
+async def test_simulation_concurrency_single_flight_busy_admission():
+    # INT-004: one external heavy job is admitted, concurrent requests fail fast
+    # with deterministic WORKER_BUSY responses (no in-worker queueing).
 
     session_ids = [f"sess_serialize_{i}_{int(time.time())}" for i in range(3)]
 
@@ -61,44 +64,44 @@ async def test_simulation_concurrency_serialization():
 
     total_duration = global_end - global_start
 
-    durations = []
-    intervals = []
-    for i, (resp, start, end) in enumerate(results):
-        assert resp.status_code == 200, f"Sim {i} failed: {resp.text}"
-        data = BenchmarkToolResponse.model_validate(resp.json())
-        if not data.success:
-            pytest.fail(f"Sim {i} returned success=False: {data.message}")
+    successes: list[BenchmarkToolResponse] = []
+    busy_payloads: list[dict] = []
+    unexpected: list[str] = []
 
-        duration = end - start
+    for i, (status_code, payload, _start, _end) in enumerate(results):
+        if status_code == 200:
+            parsed = BenchmarkToolResponse.model_validate(payload)
+            if parsed.success:
+                successes.append(parsed)
+            else:
+                unexpected.append(
+                    f"request[{i}] returned 200 but success=false: {parsed.message}"
+                )
+            continue
 
-        durations.append(duration)
-        intervals.append((start, end))
+        if status_code == 503:
+            detail = payload.get("detail") if isinstance(payload, dict) else None
+            if isinstance(detail, dict) and detail.get("code") == "WORKER_BUSY":
+                busy_payloads.append(payload)
+            else:
+                unexpected.append(
+                    f"request[{i}] returned 503 without WORKER_BUSY payload: {payload}"
+                )
+            continue
 
-    sum_durations = sum(durations)
+        unexpected.append(f"request[{i}] unexpected status={status_code}: {payload}")
 
-    # If serialized, total_duration should be >= sum_durations (roughly)
-    # If parallel, total_duration would be ~ max(durations)
-    assert total_duration >= sum_durations * 0.9, (
-        f"Simulations appeared parallel. Total: {total_duration:.2f}s, Sum: {sum_durations:.2f}s, Durations: {durations}"
+    assert not unexpected, "\n".join(unexpected)
+    assert len(successes) == 1, (
+        f"expected exactly 1 admitted request, got {len(successes)}"
+    )
+    assert len(busy_payloads) >= 1, (
+        "expected concurrent requests to fail fast with WORKER_BUSY"
     )
 
-    # Check for significant overlaps
-    sorted_intervals = sorted(intervals, key=lambda x: x[0])
-    overlaps = []
-    for i in range(len(sorted_intervals) - 1):
-        prev_end = sorted_intervals[i][1]
-        next_start = sorted_intervals[i + 1][0]
-        # Allowing 0.5s for network/FastAPI overhead
-        if next_start < prev_end - 0.5:
-            overlaps.append(
-                f"Overlap detected: Sim {i} ended at {prev_end - global_start:.2f}s, "
-                f"Sim {i + 1} started at {next_start - global_start:.2f}s"
-            )
-
-    assert not overlaps, (
-        f"Serialization failed: {len(overlaps)} overlaps detected: {overlaps}"
-    )
+    # Fail-fast behavior should reduce total wall time vs serialized queueing.
+    assert total_duration < 240, f"run took unexpectedly long ({total_duration:.2f}s)"
 
 
 if __name__ == "__main__":
-    asyncio.run(test_simulation_concurrency_serialization())
+    asyncio.run(test_simulation_concurrency_single_flight_busy_admission())

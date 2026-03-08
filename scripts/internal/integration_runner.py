@@ -1071,6 +1071,7 @@ def _cleanup_pid_files(repo_root: Path) -> None:
     for pid_file in [
         repo_root / "logs" / "controller.pid",
         repo_root / "logs" / "temporal_worker.pid",
+        repo_root / "logs" / "worker_heavy_temporal.pid",
         repo_root / "logs" / "worker_light.pid",
         repo_root / "logs" / "worker_heavy.pid",
         repo_root / "logs" / "worker.pid",
@@ -1148,6 +1149,19 @@ def _link_current_logs(run_playwright: bool) -> None:
         ("integration_tests/worker_heavy_debug.log", "worker_heavy_debug.log"),
         ("integration_tests/worker_heavy_errors.log", "worker_heavy_errors.log"),
         ("integration_tests/json/worker_heavy_errors.json", "worker_heavy_errors.json"),
+        ("integration_tests/worker_heavy_temporal.log", "worker_heavy_temporal.log"),
+        (
+            "integration_tests/worker_heavy_temporal_debug.log",
+            "worker_heavy_temporal_debug.log",
+        ),
+        (
+            "integration_tests/worker_heavy_temporal_errors.log",
+            "worker_heavy_temporal_errors.log",
+        ),
+        (
+            "integration_tests/json/worker_heavy_temporal_errors.json",
+            "worker_heavy_temporal_errors.json",
+        ),
         ("integration_tests/temporal_worker.log", "temporal_worker.log"),
         ("integration_tests/temporal_worker_debug.log", "temporal_worker_debug.log"),
         ("integration_tests/temporal_worker_errors.log", "temporal_worker_errors.log"),
@@ -1379,6 +1393,30 @@ def _run_integration_command(
                         pid_file=repo_root / "logs" / "worker_heavy.pid",
                     ),
                     ProcessSpec(
+                        name="Worker Heavy Temporal",
+                        cmd=[
+                            "uv",
+                            "run",
+                            "python",
+                            "-m",
+                            "worker_heavy.temporal_worker",
+                        ],
+                        log_file=log_dir / "worker_heavy_temporal.log",
+                        env_updates={
+                            "PYTHONPATH": combined_pythonpath,
+                            "EXTRA_DEBUG_LOG": str(
+                                log_dir / "worker_heavy_temporal_debug.log"
+                            ),
+                            "EXTRA_ERROR_LOG": str(
+                                log_dir / "worker_heavy_temporal_errors.log"
+                            ),
+                            "EXTRA_ERROR_JSON_LOG": str(
+                                json_log_dir / "worker_heavy_temporal_errors.json"
+                            ),
+                        },
+                        pid_file=repo_root / "logs" / "worker_heavy_temporal.pid",
+                    ),
+                    ProcessSpec(
                         name="Controller",
                         cmd=[
                             "uv",
@@ -1497,6 +1535,18 @@ def _run_integration_command(
                         ).splitlines()
                         for line in lines[-20:]:
                             print(line, file=sys.stderr)
+                if started.name == "Worker Heavy Temporal":
+                    heavy_temporal_log = log_dir / "worker_heavy_temporal.log"
+                    if heavy_temporal_log.exists():
+                        print(
+                            "--- LAST 20 LINES OF HEAVY TEMPORAL WORKER LOG ---",
+                            file=sys.stderr,
+                        )
+                        lines = heavy_temporal_log.read_text(
+                            encoding="utf-8", errors="ignore"
+                        ).splitlines()
+                        for line in lines[-20:]:
+                            print(line, file=sys.stderr)
                 return 1
 
         (repo_root / "test_output").mkdir(parents=True, exist_ok=True)
@@ -1508,6 +1558,7 @@ def _run_integration_command(
                 json_log_dir / "controller_errors.json",
                 json_log_dir / "worker_light_errors.json",
                 json_log_dir / "worker_heavy_errors.json",
+                json_log_dir / "worker_heavy_temporal_errors.json",
                 json_log_dir / "temporal_worker_errors.json",
             ],
         )
