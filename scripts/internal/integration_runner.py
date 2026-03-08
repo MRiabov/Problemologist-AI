@@ -130,7 +130,10 @@ def _extract_allow_backend_errors_from_decorator(
         return True, []
 
     if not decorator.args and not decorator.keywords:
-        return True, []
+        raise ValueError(
+            "@pytest.mark.allow_backend_errors requires explicit regex patterns; "
+            "catch-all usage is forbidden."
+        )
 
     patterns: list[str] = []
     for arg in decorator.args:
@@ -183,9 +186,12 @@ def _build_test_level_backend_allowlist_payload_from_ast(
                 for decorator in node.decorator_list:
                     if not _is_allow_backend_errors_decorator(decorator):
                         continue
-                    allow_all, raw_patterns = (
-                        _extract_allow_backend_errors_from_decorator(decorator)
-                    )
+                    try:
+                        allow_all, raw_patterns = (
+                            _extract_allow_backend_errors_from_decorator(decorator)
+                        )
+                    except ValueError as exc:
+                        raise RuntimeError(f"{path}:{node.lineno}: {exc}") from exc
                     compiled_patterns: list[re.Pattern[str]] = []
                     for pattern in raw_patterns:
                         try:
@@ -1062,6 +1068,71 @@ def _stop_processes(processes: list[StartedProcess]) -> None:
             started.process.kill()
 
 
+def _cleanup_pid_files(repo_root: Path) -> None:
+    for pid_file in [
+        repo_root / "logs" / "controller.pid",
+        repo_root / "logs" / "temporal_worker.pid",
+        repo_root / "logs" / "worker_light.pid",
+        repo_root / "logs" / "worker_heavy.pid",
+        repo_root / "logs" / "worker.pid",
+        repo_root / "logs" / "frontend.pid",
+    ]:
+        pid_file.unlink(missing_ok=True)
+
+
+def _cleanup_sessions_dir(sessions_dir: str) -> None:
+    if Path(sessions_dir).exists():
+        shutil.rmtree(sessions_dir, ignore_errors=True)
+
+
+def _spawn_async_cleanup(
+    *,
+    repo_root: Path,
+    sessions_dir: str,
+    down: bool,
+) -> None:
+    cleanup_log = repo_root / "logs" / "integration_tests" / "cleanup.log"
+    cleanup_log.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "cleanup",
+        "--repo-root",
+        str(repo_root),
+        "--sessions-dir",
+        sessions_dir,
+    ]
+    if down:
+        cmd.append("--down")
+    with cleanup_log.open("ab") as handle:
+        subprocess.Popen(
+            cmd,
+            cwd=repo_root,
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+
+def _run_cleanup_command(args: argparse.Namespace) -> int:
+    repo_root = Path(args.repo_root).resolve()
+    os.chdir(repo_root)
+
+    print("Cleaning up processes...")
+    _final_force_cleanup()
+    _cleanup_pid_files(repo_root)
+    _cleanup_sessions_dir(args.sessions_dir)
+
+    compose_cmd = ["docker", "compose", "-f", "docker-compose.test.yaml"]
+    if args.down:
+        print("Bringing down infrastructure containers (--down flag provided)...")
+        _run([*compose_cmd, "down", "--remove-orphans"], check=False)
+    else:
+        print("Stopping infrastructure containers...")
+        _run([*compose_cmd, "stop"], check=False)
+    return 0
+
+
 def _link_current_logs(run_playwright: bool) -> None:
     repo_root = _repo_root()
     logs_root = repo_root / "logs"
@@ -1234,6 +1305,11 @@ def _run_integration_command(
 
     processes: list[StartedProcess] = []
     frontend_pid_path = repo_root / "logs" / "frontend.pid"
+
+    async_cleanup_enabled = (
+        os.environ.get("INTEGRATION_ASYNC_CLEANUP", "0").strip() == "1"
+        and not args.wait_cleanup
+    )
 
     try:
         print("Starting Xvfb for headless rendering...")
@@ -1447,30 +1523,22 @@ def _run_integration_command(
         print(f"Integration Tests Finished at: {time.ctime()}")
         return pytest_exit
     finally:
-        print("Cleaning up processes...")
         _stop_processes(processes)
-        _final_force_cleanup()
-
-        for pid_file in [
-            repo_root / "logs" / "controller.pid",
-            repo_root / "logs" / "temporal_worker.pid",
-            repo_root / "logs" / "worker_light.pid",
-            repo_root / "logs" / "worker_heavy.pid",
-            repo_root / "logs" / "worker.pid",
-            repo_root / "logs" / "frontend.pid",
-        ]:
-            pid_file.unlink(missing_ok=True)
-
-        if Path(sessions_dir).exists():
-            shutil.rmtree(sessions_dir, ignore_errors=True)
-
-        compose_cmd = ["docker", "compose", "-f", "docker-compose.test.yaml"]
-        if args.down:
-            print("Bringing down infrastructure containers (--down flag provided)...")
-            _run([*compose_cmd, "down", "--remove-orphans"], check=False)
+        if async_cleanup_enabled:
+            print("Scheduling async teardown in background...")
+            _spawn_async_cleanup(
+                repo_root=repo_root,
+                sessions_dir=sessions_dir,
+                down=args.down,
+            )
         else:
-            print("Stopping infrastructure containers...")
-            _run([*compose_cmd, "stop"], check=False)
+            _run_cleanup_command(
+                argparse.Namespace(
+                    repo_root=str(repo_root),
+                    sessions_dir=sessions_dir,
+                    down=args.down,
+                )
+            )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -1509,6 +1577,18 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--reverse", action="store_true")
     run_parser.add_argument("--down", action="store_true")
     run_parser.add_argument("--no-smoke", action="store_true")
+    run_parser.add_argument(
+        "--wait-cleanup",
+        action="store_true",
+        help="Wait for teardown instead of scheduling cleanup in the background.",
+    )
+
+    cleanup_parser = sub.add_parser(
+        "cleanup", help="Internal: perform integration teardown."
+    )
+    cleanup_parser.add_argument("--repo-root", required=True)
+    cleanup_parser.add_argument("--sessions-dir", required=True)
+    cleanup_parser.add_argument("--down", action="store_true")
 
     return parser
 
@@ -1536,6 +1616,14 @@ def main() -> int:
         if passthrough and passthrough[0] == "--":
             passthrough = passthrough[1:]
         return _run_integration_command(args, passthrough)
+
+    if args.command == "cleanup":
+        if unknown:
+            parser.error(
+                "Unrecognized arguments for cleanup: "
+                f"{' '.join(shlex.quote(arg) for arg in unknown)}"
+            )
+        return _run_cleanup_command(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2

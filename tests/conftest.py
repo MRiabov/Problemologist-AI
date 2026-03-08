@@ -260,7 +260,7 @@ def _compile_marker_regex_allowlist(
 ) -> tuple[bool, list[re.Pattern[str]]]:
     """
     Parse marker-provided regex allowlist.
-    - No-arg marker means "allow all" (legacy behavior).
+    - No-arg marker is forbidden; explicit regexes are required.
     - Marker args/kwargs define scoped regex allowlist.
     """
     patterns: list[str] = []
@@ -268,8 +268,10 @@ def _compile_marker_regex_allowlist(
 
     for marker in request.node.iter_markers(name=marker_name):
         if not marker.args and not marker.kwargs:
-            has_allow_all = True
-            continue
+            raise pytest.UsageError(
+                f"@{marker_name} requires explicit regex patterns; "
+                "catch-all usage is forbidden."
+            )
 
         for arg in marker.args:
             if isinstance(arg, str) and arg.strip():

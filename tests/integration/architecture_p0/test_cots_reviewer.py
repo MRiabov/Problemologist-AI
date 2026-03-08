@@ -73,7 +73,7 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
 
 
 @pytest.mark.integration_p0
-@pytest.mark.allow_backend_errors
+@pytest.mark.allow_backend_errors("review_frontmatter_validation_error")
 @pytest.mark.asyncio
 async def test_int_016_reviewer_decision_schema_gate(
     session_id, base_headers, controller_client, worker_heavy_client

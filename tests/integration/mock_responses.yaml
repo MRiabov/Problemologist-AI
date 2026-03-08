@@ -1436,9 +1436,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 300
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 8
@@ -1458,7 +1458,7 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 50, max_weight_g: 500.0}
+                constraints: {max_unit_cost: 200, max_weight_g: 500.0}
               overwrite: true
             expected_observation: "success"
           - tool_name: "submit_plan"
@@ -1508,6 +1508,18 @@ scenarios:
               decision: "APPROVED"
               reason: "Execution accepted."
               required_fixes: []
+
+  INT-030:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Run a long deterministic command so the interrupt endpoint can cancel active execution."
+            tool_name: "execute_command"
+            tool_args:
+              command: "import time; time.sleep(20); print('INT-030-running')"
+            expected_observation: "INT-030-running"
+          - finished: true
+            summary: "INT-030 planner completed."
 
   test-trace:
     transcript:
