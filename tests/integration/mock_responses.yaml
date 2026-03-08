@@ -178,7 +178,7 @@ scenarios:
                 constraints:
                   benchmark_max_unit_cost_usd: 100
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 200
+                  planner_target_max_unit_cost_usd: 80
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 12

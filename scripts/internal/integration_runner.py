@@ -545,13 +545,12 @@ def run_pytest_subprocess(
                 if early_stop_reason:
                     early_stop_requested = True
                     msg = (
-                        "\n[integration-runner] Early stopping pytest: "
+                        "\n[integration-runner] Non-allowlisted backend error detected "
+                        "(pytest fixture will fail the active test): "
                         f"{early_stop_reason}\n"
                     )
                     print(msg, end="")
                     log_handle.write(msg)
-                    if process.poll() is None:
-                        process.send_signal(signal.SIGINT)
 
             if process.poll() is not None:
                 for line in process.stdout:

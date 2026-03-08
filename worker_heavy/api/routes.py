@@ -642,6 +642,7 @@ async def api_submit(
             success = submit_for_review(
                 component,
                 cwd=root,
+                session_id=x_session_id,
                 reviewer_stage=(
                     request.reviewer_stage or "engineering_execution_reviewer"
                 ),
