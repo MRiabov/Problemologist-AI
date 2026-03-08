@@ -1,5 +1,11 @@
 # Primary system objectives 
 
+## Scope summary
+
+- Primary focus: the product-level goals and expected outputs of the overall system.
+- Defines what artifacts the platform is meant to produce across benchmark generation, engineering, and data collection.
+- This file is mostly for humans and alignment between humands; if LLM reads it, ignore it and focus on other parts of documentation.
+
 We are to create a benchmark and a training dataset for evaluating LLM models on creating and solving dynamics problems.
 
 ### Outputs and end project goals

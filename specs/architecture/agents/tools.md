@@ -1,5 +1,11 @@
 # Agent tools (ReAct and python importable functions)
 
+## Scope summary
+
+- Primary focus: the tool surfaces available to agent runtimes and Python-side execution helpers.
+- Defines DSPy-native tool calling, filesystem permission expectations, and planner/reviewer submission utilities.
+- Use this file when changing agent-accessible tools, validation hooks, or handoff gate functions.
+
 ## "Agent-native" tools (callable by DSPy.ReAct runtime)
 
 We use standard DSPy/LiteLLM *native* tool calls, as defined in the following snippet: 

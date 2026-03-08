@@ -39,7 +39,7 @@ We trace all workflows with LangFuse.
 
 <!--This is because models implementing this produced something else.-->
 The pipeline is the simplest, proper way to call LLMs:
-DSPy (litellm) calls an endpoint, we get either reasoning, tool call, or both. We send it to frontend and to observability (and log it). that's all the intended logic.
+DSPy (LiteLLM) calls an endpoint, we get either reasoning, tool call, or both. We send it to frontend and to observability (and log it). that's all the intended logic.
 
 Reasoning and tool observability are strict runtime contracts:
 
@@ -51,6 +51,22 @@ Reasoning and tool observability are strict runtime contracts:
 6. `trace_type` values such as `LLM_END` are observability event labels, not workflow termination signals. Episode termination is controlled only by workflow outcomes (success/failure/timeout/cancel).
 7. Reasoning traces should carry optional metadata `reasoning_step_index` and `reasoning_source` for deterministic ordering/provenance in frontend and evaluations.
 
+#### Extracting reasoning
+
+As an implementation detail, here is how we extract reasoning:
+
+```py
+from litellm import completion  
+import os  
+  
+os.environ['OPENROUTER_API_KEY'] = ""  
+resp = completion(  
+ model="openrouter/provider-name/model-name",  
+ messages=[{"role": "user", "content": "Tell me a joke."}],  
+)  
+  
+print(resp.choices[0].message.reasoning_content)  
+```
 ## Filesystem
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.

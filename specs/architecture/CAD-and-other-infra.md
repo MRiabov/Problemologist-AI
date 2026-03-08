@@ -1,5 +1,11 @@
 # CAD and other infrastructure; dependencies.
 
+## Scope summary
+
+- Primary focus: CAD metadata requirements and supporting infrastructure assumptions outside the main agent workflow docs.
+- Defines part metadata, rendering direction, schema strictness, and logging/tooling expectations that support CAD execution.
+- Use this file when changing CAD model contracts or shared infra assumptions that are not specific to distributed execution.
+
 ## CAD 
 
 ### Part metadata
