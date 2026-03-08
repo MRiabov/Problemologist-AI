@@ -169,19 +169,20 @@ def _update_episode_entry_validation_metadata(
 async def _episode_has_system_tool_retry_exhausted(
     *, db, episode_id: uuid.UUID
 ) -> bool:
-    """Detect infra retry exhaustion marker from tool-error traces."""
+    """Detect infra retry exhaustion marker from any persisted trace payload."""
     from sqlalchemy import select
 
-    rows = await db.execute(
-        select(Trace).where(
-            Trace.episode_id == episode_id,
-            Trace.trace_type == TraceType.TOOL_START,
-        )
-    )
+    rows = await db.execute(select(Trace).where(Trace.episode_id == episode_id))
     for trace_row in rows.scalars():
         metadata = trace_row.metadata_vars or {}
         error = str(metadata.get("error") or "")
-        if SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in error:
+        # Retry-exhaustion marker may appear in different trace families depending
+        # on where the failure is surfaced (tool start/end, error log, etc.).
+        if (
+            SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in error
+            or SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(trace_row.content or "")
+            or SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(metadata)
+        ):
             return True
     return False
 
