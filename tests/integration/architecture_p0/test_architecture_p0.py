@@ -138,11 +138,9 @@ async def test_int_003_session_filesystem_isolation(worker_light_client):
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_004_simulation_serialization():
-    """INT-004: Verify simulation serialization schema and concurrency."""
+    """INT-004: heavy worker admits one job and rejects concurrent requests with WORKER_BUSY."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Create two sessions
-        session_id_1 = f"test-ser-1-{int(time.time())}"
-        session_id_2 = f"test-ser-2-{int(time.time())}"
+        session_ids = [f"test-ser-{i}-{int(time.time())}" for i in range(3)]
 
         script = """
 from build123d import *
@@ -153,64 +151,85 @@ def build():
     b.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return b
 """
-        # Write scripts
         req_write = WriteFileRequest(path="box.py", content=script)
         await asyncio.gather(
-            client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=req_write.model_dump(mode="json"),
-                headers={"X-Session-ID": session_id_1},
-            ),
-            client.post(
-                f"{WORKER_LIGHT_URL}/fs/write",
-                json=req_write.model_dump(mode="json"),
-                headers={"X-Session-ID": session_id_2},
-            ),
+            *[
+                client.post(
+                    f"{WORKER_LIGHT_URL}/fs/write",
+                    json=req_write.model_dump(mode="json"),
+                    headers={"X-Session-ID": sid},
+                )
+                for sid in session_ids
+            ]
         )
 
-        # Launch two simulations concurrently
-        bundle1 = await get_bundle(client, session_id_1)
-        bundle2 = await get_bundle(client, session_id_2)
+        bundles = [await get_bundle(client, sid) for sid in session_ids]
 
-        sim_req = BenchmarkToolRequest(
-            script_path="box.py",
-            backend=SimulatorBackendType.GENESIS,
-            bundle_base64=bundle1,
-            smoke_test_mode=True,
-        )
-        sim_req2 = sim_req.model_copy(update={"bundle_base64": bundle2})
+        # Avoid cross-test overlap by waiting for an idle heavy worker before INT-004 starts.
+        for _ in range(120):
+            ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready", timeout=5.0)
+            if ready_resp.status_code == 200:
+                break
+            await asyncio.sleep(0.5)
+        else:
+            pytest.fail("worker-heavy did not become ready before INT-004")
 
-        res1, res2 = await asyncio.gather(
-            client.post(
+        async def _simulate(session_id: str, bundle_base64: str):
+            sim_req = BenchmarkToolRequest(
+                script_path="box.py",
+                backend=SimulatorBackendType.GENESIS,
+                bundle_base64=bundle_base64,
+                smoke_test_mode=True,
+            )
+            resp = await client.post(
                 f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 json=sim_req.model_dump(mode="json"),
-                headers={"X-Session-ID": session_id_1},
+                headers={"X-Session-ID": session_id},
                 timeout=600.0,
-            ),
-            client.post(
-                f"{WORKER_HEAVY_URL}/benchmark/simulate",
-                json=sim_req2.model_dump(mode="json"),
-                headers={"X-Session-ID": session_id_2},
-                timeout=600.0,
-            ),
-        )
-        # Verify both succeeded
-        assert res1.status_code == 200, f"Sim 1 failed: {res1.text}"
-        assert res2.status_code == 200, f"Sim 2 failed: {res2.text}"
+            )
+            try:
+                payload = resp.json()
+            except Exception:
+                payload = {"raw_text": resp.text}
+            return resp.status_code, payload
 
-        data1 = BenchmarkToolResponse.model_validate(res1.json())
-        data2 = BenchmarkToolResponse.model_validate(res2.json())
-
-        assert data1.success or "Simulation stable" in data1.message, (
-            f"Sim 1 marked failure: {data1.message}"
-        )
-        assert data2.success or "Simulation stable" in data2.message, (
-            f"Sim 2 marked failure: {data2.message}"
+        results = await asyncio.gather(
+            *[_simulate(sid, bundle) for sid, bundle in zip(session_ids, bundles)]
         )
 
-        # Check artifacts
-        assert data1.artifacts.mjcf_content is not None
-        assert data2.artifacts.mjcf_content is not None
+        admitted_successes = 0
+        busy_count = 0
+        unexpected: list[str] = []
+        for idx, (status_code, payload) in enumerate(results):
+            if status_code == 200:
+                parsed = BenchmarkToolResponse.model_validate(payload)
+                if parsed.success:
+                    admitted_successes += 1
+                else:
+                    unexpected.append(
+                        f"request[{idx}] returned 200 but success=false: {parsed.message}"
+                    )
+                continue
+
+            if status_code == 503:
+                detail = payload.get("detail") if isinstance(payload, dict) else None
+                if isinstance(detail, dict) and detail.get("code") == "WORKER_BUSY":
+                    busy_count += 1
+                else:
+                    unexpected.append(
+                        f"request[{idx}] returned 503 without WORKER_BUSY: {payload}"
+                    )
+                continue
+
+            unexpected.append(
+                f"request[{idx}] unexpected status={status_code}: {payload}"
+            )
+
+        assert not unexpected, "\n".join(unexpected)
+        assert admitted_successes == 1, (
+            f"expected exactly 1 admitted request, got {admitted_successes}"
+        )
+        assert busy_count >= 1, "expected one or more WORKER_BUSY responses"
 
 
 @pytest.mark.integration_p0

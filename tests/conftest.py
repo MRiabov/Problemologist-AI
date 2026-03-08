@@ -13,6 +13,7 @@ SERVICES = [
     "http://127.0.0.1:18001",  # Worker Light
     "http://127.0.0.1:18002",  # Worker Heavy
 ]
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 # Temporary baseline allowlist for known frontend noise.
 # Goal: keep strict mode actionable while we iteratively eliminate existing issues.
@@ -526,3 +527,58 @@ def log_test_marker(request):
         for service_url in SERVICES:
             with contextlib.suppress(Exception):
                 client.get(f"{service_url}/health", params={"marker": marker_finish})
+
+
+def _wait_for_worker_heavy_idle(
+    client: httpx.Client,
+    *,
+    timeout_s: float = 120.0,
+    interval_s: float = 0.5,
+) -> None:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            response = client.get(f"{WORKER_HEAVY_URL}/ready", timeout=2.0)
+            if response.status_code == 200:
+                return
+        except Exception:
+            pass
+        time.sleep(interval_s)
+    raise RuntimeError("worker-heavy did not become idle before teardown cleanup")
+
+
+def _cleanup_worker_heavy_simulation_state(client: httpx.Client) -> None:
+    response = client.post(
+        f"{WORKER_HEAVY_URL}/internal/simulation/cleanup",
+        timeout=10.0,
+    )
+    if response.status_code != 200:
+        raise RuntimeError(
+            "worker-heavy cleanup failed "
+            f"(status={response.status_code}, body={response.text})"
+        )
+
+
+@pytest.fixture(autouse=True)
+def cleanup_heavy_sim_after_each_integration_test(request):
+    """
+    Ensure worker-heavy simulation state is cleaned after each integration test.
+
+    This enforces test-level quiescence for Genesis/MuJoCo state in the long-lived
+    worker-heavy process.
+    """
+    if not _is_integration_test(request):
+        yield
+        return
+
+    yield
+
+    with httpx.Client(timeout=2.0) as client:
+        rep_call = getattr(request.node, "rep_call", None)
+        test_call_failed = bool(rep_call and rep_call.failed)
+        try:
+            _wait_for_worker_heavy_idle(client)
+            _cleanup_worker_heavy_simulation_state(client)
+        except Exception as exc:
+            if not test_call_failed:
+                pytest.fail(f"worker-heavy post-test simulation cleanup failed: {exc}")

@@ -49,6 +49,44 @@ async def _require_service(client: httpx.AsyncClient, name: str, url: str):
         pytest.skip(f"{name} is not reachable at {url}")
 
 
+async def _post_with_busy_retry(
+    client: httpx.AsyncClient,
+    *,
+    url: str,
+    json_payload: dict,
+    headers: dict[str, str],
+    timeout: float,
+    max_attempts: int = 120,
+) -> httpx.Response:
+    """
+    Retry transient heavy-worker busy responses (503) using readiness polling.
+    This keeps the test deterministic under single-flight admission contention.
+    """
+    response: httpx.Response | None = None
+    for attempt in range(max_attempts):
+        response = await client.post(
+            url,
+            json=json_payload,
+            headers=headers,
+            timeout=timeout,
+        )
+        if response.status_code != 503:
+            return response
+
+        try:
+            ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready", timeout=5.0)
+            if ready_resp.status_code == 200:
+                continue
+        except Exception:
+            # Keep retrying on transient readiness probe failures.
+            pass
+
+        await asyncio.sleep(1.0)
+
+    assert response is not None
+    return response
+
+
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_026_mandatory_event_families():
@@ -114,9 +152,10 @@ def build():
 
         # 3. Trigger simulation
         sim_req = BenchmarkToolRequest(script_path="script.py")
-        resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json=sim_req.model_dump(mode="json"),
+        resp = await _post_with_busy_retry(
+            client,
+            url=f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json_payload=sim_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
             timeout=300.0,
         )
