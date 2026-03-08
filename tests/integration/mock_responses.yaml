@@ -2387,4 +2387,3 @@ scenarios:
               decision: "APPROVED"
               reason: "The design satisfies all requirements."
               required_fixes: []
-

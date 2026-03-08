@@ -122,6 +122,87 @@ def _match_backend_issue(line: str, allowlist: list[re.Pattern[str]]) -> str | N
     return normalized
 
 
+def _backend_error_requires_session_id(normalized_line: str) -> bool:
+    """Return True when a structured backend error line must include session_id."""
+    low = normalized_line.lower()
+    # Dedicated backend error logs are structured; enforce only on structured records.
+    return "[error" in low and "service=" in normalized_line
+
+
+def _backend_error_has_session_id(normalized_line: str) -> bool:
+    """Accept either key=value or JSON-style key formatting."""
+    return (
+        "session_id=" in normalized_line
+        or '"session_id":' in normalized_line
+        or "'session_id':" in normalized_line
+    )
+
+
+def _extract_backend_error_session_id(normalized_line: str) -> str | None:
+    """Extract session_id from a structured error log line, if present."""
+    patterns = [
+        r"session_id=UUID\('([^']+)'\)",
+        r"session_id=\"([^\"]+)\"",
+        r"session_id='([^']+)'",
+        r"session_id=([^\s]+)",
+        r'"session_id"\s*:\s*"([^"]+)"',
+        r"'session_id'\s*:\s*'([^']+)'",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, normalized_line)
+        if not match:
+            continue
+        candidate = (match.group(1) or "").strip().strip(",")
+        if candidate:
+            return candidate
+    return None
+
+
+def _collect_expected_test_session_ids(request: pytest.FixtureRequest) -> set[str]:
+    """Best-effort extraction of current test-owned session ids from fixture values."""
+    sessions: set[str] = set()
+    funcargs = getattr(request.node, "funcargs", {}) or {}
+
+    def _add(value: str | None) -> None:
+        if not isinstance(value, str):
+            return
+        v = value.strip()
+        if not v:
+            return
+        sessions.add(v)
+        sessions.add(v.lower())
+
+    for name, value in funcargs.items():
+        if isinstance(value, str) and name in {"session_id", "user_session_id"}:
+            _add(value)
+            continue
+
+        if isinstance(value, dict):
+            header_sid = value.get("X-Session-ID")
+            if isinstance(header_sid, str):
+                _add(header_sid)
+            for key in ("session_id", "user_session_id"):
+                sid = value.get(key)
+                if isinstance(sid, str):
+                    _add(sid)
+
+    # Some fixtures are not populated in request.node.funcargs at this autouse stage.
+    # Pull common session-bearing fixtures explicitly when declared on the test.
+    for fixture_name in ("session_id", "base_headers"):
+        if fixture_name not in request.fixturenames:
+            continue
+        with contextlib.suppress(Exception):
+            value = request.getfixturevalue(fixture_name)
+            if isinstance(value, str) and fixture_name == "session_id":
+                _add(value)
+            elif isinstance(value, dict):
+                header_sid = value.get("X-Session-ID")
+                if isinstance(header_sid, str):
+                    _add(header_sid)
+
+    return sessions
+
+
 def _compile_browser_error_allowlist() -> list[re.Pattern[str]]:
     """
     Build an allowlist of browser error regexes.
@@ -290,6 +371,8 @@ def capture_backend_errors(request):
         request, "allow_backend_errors"
     )
     allowlist = [*_compile_backend_error_allowlist(), *marker_allowlist]
+    expected_session_ids = _collect_expected_test_session_ids(request)
+    expected_session_ids_lower = {sid.lower() for sid in expected_session_ids}
     start_offsets: dict[str, int] = {}
 
     for service, path in BACKEND_ERROR_LOG_FILES.items():
@@ -306,6 +389,7 @@ def capture_backend_errors(request):
         return
 
     issues: list[str] = []
+    missing_session_id_issues: list[str] = []
     for service, path in BACKEND_ERROR_LOG_FILES.items():
         if not path.exists():
             continue
@@ -313,9 +397,34 @@ def capture_backend_errors(request):
         with path.open("r", encoding="utf-8", errors="ignore") as handle:
             handle.seek(start_offset)
             for raw_line in handle:
+                normalized = _strip_ansi(raw_line).strip()
+                if (
+                    normalized
+                    and _backend_error_requires_session_id(normalized)
+                    and not _backend_error_has_session_id(normalized)
+                ):
+                    missing_session_id_issues.append(f"{service}: {normalized}")
                 matched = _match_backend_issue(raw_line, allowlist)
                 if matched:
+                    if expected_session_ids:
+                        line_session_id = _extract_backend_error_session_id(normalized)
+                        if (
+                            line_session_id
+                            and line_session_id.lower()
+                            not in expected_session_ids_lower
+                        ):
+                            continue
                     issues.append(f"{service}: {matched}")
+
+    if missing_session_id_issues:
+        sample = "\n".join(f"- {line}" for line in missing_session_id_issues[:12])
+        overflow = len(missing_session_id_issues) - 12
+        suffix = f"\n- ... and {overflow} more" if overflow > 0 else ""
+        pytest.fail(
+            "Structured backend error logs must include session_id for integration-mode traceability.\n"
+            f"{sample}{suffix}\n"
+            "Add session_id=<...> to every structured ERROR log line in the emitting service."
+        )
 
     if issues:
         sample = "\n".join(f"- {line}" for line in issues[:12])

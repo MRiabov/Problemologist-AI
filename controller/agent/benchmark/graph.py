@@ -356,6 +356,7 @@ def _guarded_node(target_node: AgentName, node_callable):
         logger.error(
             "benchmark_node_entry_validation_rejected",
             episode_id=state.episode_id,
+            session_id=state.session.session_id,
             target_node=target_node.value,
             disposition=validation.disposition.value,
             reason_code=validation.reason_code,
