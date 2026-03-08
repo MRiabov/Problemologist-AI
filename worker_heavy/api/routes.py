@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import contextlib
+import gc
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,7 @@ from shared.workers.schema import (
 )
 from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
+from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.simulation.verification import verify_with_jitter
 from worker_heavy.utils import (
     submit_for_review,
@@ -661,3 +663,16 @@ async def api_submit(
     except Exception as e:
         logger.warning("api_benchmark_submit_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
+
+
+@heavy_router.post("/internal/simulation/cleanup")
+async def api_simulation_cleanup():
+    """
+    Internal cleanup endpoint for integration teardown.
+
+    Closes cached simulation backends so long-lived worker processes do not keep
+    Genesis/MuJoCo state across tests.
+    """
+    closed_backends = close_all_session_backends()
+    gc.collect()
+    return {"success": True, "closed_backends": closed_backends}

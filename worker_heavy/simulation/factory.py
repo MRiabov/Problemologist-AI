@@ -120,3 +120,17 @@ def close_session_backend(session_id: str):
         backend = BACKEND_CACHE.pop(session_id)
         backend.close()
         logger.info("session_backend_closed", session_id=session_id)
+
+
+def close_all_session_backends() -> int:
+    """Close and clear all cached session backends."""
+    closed_count = 0
+    for session_id in list(BACKEND_CACHE.keys()):
+        backend = BACKEND_CACHE.pop(session_id)
+        try:
+            backend.close()
+            closed_count += 1
+            logger.info("session_backend_closed", session_id=session_id)
+        except Exception as e:
+            logger.warning("backend_close_failed", session_id=session_id, error=str(e))
+    return closed_count
