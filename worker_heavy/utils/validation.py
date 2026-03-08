@@ -133,7 +133,12 @@ def load_simulation_result(path: Path) -> SimulationResult | None:
         data = json.loads(path.read_text(encoding="utf-8"))
         return SimulationResult.model_validate(data)
     except Exception as e:
-        logger.warning("failed_to_load_simulation_result", path=str(path), error=str(e))
+        logger.warning(
+            "failed_to_load_simulation_result",
+            path=str(path),
+            error=str(e),
+            session_id=None,
+        )
         return None
 
 
@@ -987,10 +992,12 @@ def validate(
                     if wire_errors:
                         return (False, "; ".join(wire_errors))
 
-            except Exception as e:
-                logger.warning(
-                    "wire_clearance_check_failed_during_validate", error=str(e)
-                )
+        except Exception as e:
+            logger.warning(
+                "wire_clearance_check_failed_during_validate",
+                error=str(e),
+                session_id=session_id,
+            )
 
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
@@ -1019,13 +1026,15 @@ def validate(
             particle_budget=particle_budget,
         )
     except Exception as e:
-        logger.warning("validate_render_capture_failed", error=str(e))
+        logger.warning(
+            "validate_render_capture_failed", error=str(e), session_id=session_id
+        )
 
     return True, None
 
 
 def validate_fem_manufacturability(
-    component: Compound, session_root: Path
+    component: Compound, session_root: Path, session_id: str | None = None
 ) -> tuple[bool, str | None]:
     """Check if FEM material validation is required and if it passes."""
     obj_path = session_root / "objectives.yaml"
@@ -1052,6 +1061,7 @@ def validate_fem_manufacturability(
                 ManufacturingMethod.CNC,
                 config,
                 fem_required=True,
+                session_id=session_id,
             )
             if not val_report.is_manufacturable:
                 msg = "Material validation failed: " + "; ".join(
@@ -1059,7 +1069,9 @@ def validate_fem_manufacturability(
                 )
                 return False, msg
     except Exception as e:
-        logger.warning("fem_manufacturability_check_failed", error=str(e))
+        logger.warning(
+            "fem_manufacturability_check_failed", error=str(e), session_id=session_id
+        )
         return False, f"FEM manufacturability check failed: {e!s}"
 
     return True, None

@@ -16,7 +16,9 @@ logger = structlog.get_logger(__name__)
 class ObjectiveEvaluator:
     """Evaluates simulation objectives (stress, fluid, breakage)."""
 
-    def __init__(self, objectives, material_lookup, config, session_id: str | None = None):
+    def __init__(
+        self, objectives, material_lookup, config, session_id: str | None = None
+    ):
         self.objectives = objectives
         self.material_lookup = material_lookup
         self.config = config
@@ -80,9 +82,14 @@ class ObjectiveEvaluator:
                     part=so.part_label,
                     current=summary.max_von_mises_pa,
                     limit=so.max_von_mises_mpa * 1e6,
+                    session_id=self.session_id,
                 )
             else:
-                logger.warning("DEBUG_stress_summary_missing", part=so.part_label)
+                logger.warning(
+                    "DEBUG_stress_summary_missing",
+                    part=so.part_label,
+                    session_id=self.session_id,
+                )
 
             if summary and summary.max_von_mises_pa > (so.max_von_mises_mpa * 1e6):
                 self.fail_reason = SimulationFailure(
@@ -94,6 +101,7 @@ class ObjectiveEvaluator:
                     part=so.part_label,
                     stress=summary.max_von_mises_pa,
                     limit=so.max_von_mises_mpa * 1e6,
+                    session_id=self.session_id,
                 )
                 return self.fail_reason
 
@@ -114,6 +122,7 @@ class ObjectiveEvaluator:
                             logger.info(
                                 "stress_objective_exceeded_via_breakage",
                                 part=broken_part,
+                                session_id=self.session_id,
                             )
                             break
 
@@ -280,6 +289,7 @@ class ObjectiveEvaluator:
                         part=label,
                         stress=summary.max_von_mises_pa,
                         limit=mat_def.ultimate_stress_pa,
+                        session_id=self.session_id,
                     )
                     return label
         return None

@@ -49,6 +49,7 @@ async def _artifact_exists_for_state(state: AgentState, artifact_path: str) -> b
             "node_entry_validation_session_missing",
             artifact_path=artifact_path,
             target_node=getattr(state, "current_step", ""),
+            session_id=None,
         )
         return False
 
@@ -173,6 +174,7 @@ def _guarded_node(target_node: AgentName, node_callable):
         logger.error(
             "node_entry_validation_rejected",
             episode_id=state.episode_id,
+            session_id=str(state.session_id),
             target_node=target_node.value,
             disposition=validation.disposition.value,
             reason_code=validation.reason_code,

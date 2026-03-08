@@ -44,7 +44,7 @@ The integration suite is designed for high-velocity local execution and CI parit
 - **`tests/integration/mock_responses.yaml`**: Integration mode uses `MockDSPyLM` for agent-node LLM responses, and scenarios are loaded from this file. When `INT-xxx` behavior depends on deterministic mock outputs, keep the corresponding scenario entries current.
 - **`scripts/run_integration_tests.sh`**: The central entry point for the integration suite. It manages infrastructure spin-up (Docker), local service lifecycle, and `pytest` execution.
 - **`logs/integration_tests/`**: All service logs (Controller, Worker Light, Worker Heavy, Temporal Worker) and debug traces are persisted here for every run. Previous runs are archived in `logs/archives/`.
-- **Backend error-log session attribution contract**: Structured `ERROR` lines written to dedicated backend error logs must include `session_id` so strict integration teardown can attribute failures to the owning test session and avoid cross-session leakage.
+- **Backend error-log attribution contract**: Structured `ERROR` lines written to dedicated backend error logs must include `session_id` or `episode_id` (ideally both) so strict integration teardown can attribute failures to the owning test context and avoid cross-session leakage.
 - **`test_output/`**: Stores JUnit XML results and the persisted test history used for trend analysis.
 - **Worker FS read/write permissions bypass mechanism (`agents_config.yaml` enforcement tests)**: privileged bypass of per-agent filesystem policy is enabled only when both are present in the same HTTP request: request payload flag `bypass_agent_permissions=true` and header `X-System-FS-Bypass: 1`. Header-only and payload-only requests must remain policy-enforced (no bypass). 
 <!--Note: the bypass logic is to bypass permissions that restrict agents, but agents shouldn't be able to (obviously) use the bypass.-->
@@ -231,7 +231,7 @@ Backend integration tests run in strict backend-log mode as well:
 
 - Unexpected backend exceptions/error-level signals during a test fail that test.
 - The suite uses dedicated per-service error logs (`controller_errors.log`, `worker_light_errors.log`, `worker_heavy_errors.log`, `temporal_worker_errors.log`) to avoid false positives from normal info/debug output.
-- Structured backend `ERROR` lines are required to include `session_id`; strict teardown uses this field for session-scoped error attribution in integration mode.
+- Structured backend `ERROR` lines are required to include `session_id` or `episode_id`; strict teardown attributes by either field in integration mode.
 - The check is controlled by `STRICT_BACKEND_ERRORS` (default `1`) and supports explicit noise control via `@pytest.mark.allow_backend_errors` or `BACKEND_ERROR_ALLOWLIST_REGEXES` (regex patterns separated by `;;`).
 - `@pytest.mark.allow_backend_errors` with no arguments keeps legacy behavior (allow all backend errors for that test).
 - Argumented forms (for example `@pytest.mark.allow_backend_errors("fs failure")` or `@pytest.mark.allow_backend_errors(regexes=["fs failure"])`) allow only matching lines.

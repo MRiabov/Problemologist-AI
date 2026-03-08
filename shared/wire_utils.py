@@ -169,7 +169,7 @@ def check_wire_clearance(
     ignore_endpoints_dist: float = 5.0,
     session_id: str | None = None,
 ) -> bool:
-    \"\"\"
+    """
     Check if a wire path (waypoints) intersects with any geometry in the assembly.
 
     Args:
@@ -178,7 +178,7 @@ def check_wire_clearance(
         clearance_mm: Minimum required distance.
         ignore_endpoints_dist: Distance from start/end where intersections are ignored (attachment points).
         session_id: Optional session ID for logging attribution.
-    \"\"\"
+    """
     if not wire_waypoints or len(wire_waypoints) < 2:
         return True
 

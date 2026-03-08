@@ -17,12 +17,15 @@ class MeshProcessingError(Exception):
     pass
 
 
-def repair_mesh(mesh: trimesh.Trimesh, max_attempts: int = 3) -> trimesh.Trimesh:
+def repair_mesh(
+    mesh: trimesh.Trimesh, max_attempts: int = 3, session_id: str | None = None
+) -> trimesh.Trimesh:
     """Repairs a mesh to ensure it is watertight and manifold.
 
     Args:
         mesh: Input trimesh object.
         max_attempts: Number of times to try repairing the mesh.
+        session_id: Optional session ID for logging attribution.
 
     Returns:
         Repaired trimesh object.
@@ -35,7 +38,8 @@ def repair_mesh(mesh: trimesh.Trimesh, max_attempts: int = 3) -> trimesh.Trimesh
             return mesh
 
         logger.info(
-            f"Attempt {attempt + 1}/{max_attempts}: Mesh is not watertight or has inconsistent winding, attempting repair"
+            f"Attempt {attempt + 1}/{max_attempts}: Mesh is not watertight or has inconsistent winding, attempting repair",
+            session_id=session_id,
         )
 
         # process() merges vertices, removes duplicate/degenerate faces and unreferenced vertices
@@ -53,12 +57,15 @@ def repair_mesh(mesh: trimesh.Trimesh, max_attempts: int = 3) -> trimesh.Trimesh
     return mesh
 
 
-def repair_mesh_file(input_path: Path, output_path: Path) -> Path:
+def repair_mesh_file(
+    input_path: Path, output_path: Path, session_id: str | None = None
+) -> Path:
     """Reads a mesh file, repairs it, and writes it back.
 
     Args:
         input_path: Path to input mesh (STL, OBJ, etc.)
         output_path: Path to write repaired mesh (typically STL for Gmsh)
+        session_id: Optional session ID for logging attribution.
 
     Returns:
         Path to the repaired mesh file.
@@ -67,7 +74,7 @@ def repair_mesh_file(input_path: Path, output_path: Path) -> Path:
     if isinstance(mesh, trimesh.Scene):
         mesh = mesh.dump(concatenate=True)
 
-    repaired = repair_mesh(mesh)
+    repaired = repair_mesh(mesh, session_id=session_id)
     repaired.export(str(output_path))
     return output_path
 
@@ -114,7 +121,8 @@ def tetrahedralize(
             raise ValueError(f"Unknown tetrahedralization method: {method}")
         except Exception as e:
             logger.warning(
-                f"Tetrahedralization attempt {attempt} failed for {part_label} using {method}: {e}"
+                f"Tetrahedralization attempt {attempt} failed for {part_label} using {method}: {e}",
+                session_id=session_id,
             )
 
             # Emit MeshingFailureEvent per INT-108
@@ -128,11 +136,14 @@ def tetrahedralize(
             )
 
             if attempt < max_retries:
-                logger.info(f"Attempting mesh repair and retry for {part_label}")
+                logger.info(
+                    f"Attempting mesh repair and retry for {part_label}",
+                    session_id=session_id,
+                )
                 try:
                     # Create a temporary repaired file to avoid overwriting original input if needed,
                     # but here we'll just overwrite it for simplicity in the pipeline
-                    repair_mesh_file(input_path, input_path)
+                    repair_mesh_file(input_path, input_path, session_id=session_id)
                     repaired = True
                     continue
                 except Exception as repair_error:

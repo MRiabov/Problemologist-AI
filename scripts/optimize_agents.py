@@ -31,7 +31,7 @@ def optimize_agent(
     # 1. Load Dataset
     dataset = load_benchmark_dataset(agent_name)
     if not dataset:
-        logger.error("empty_dataset", agent_name=agent_name)
+        logger.error("empty_dataset", agent_name=agent_name, session_id="system")
         return None
 
     trainset = dataset[:trainset_size]

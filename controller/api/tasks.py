@@ -561,13 +561,13 @@ async def execute_agent_task(
                             # Use new session for sync to avoid sharing with main loop
                             files = await client.list_files(dir_path)
                         except Exception as e:
-                            logger.warning(
+                            logger.error(
                                 "failed_to_list_dir_during_sync",
                                 dir=dir_path,
                                 error=str(e),
+                                session_id=session_id,
                             )
                             return
-
                         for file_info in files:
                             path = file_info.path
                             if file_info.is_dir:
@@ -644,10 +644,11 @@ async def execute_agent_task(
                                                 Body=blob_content,
                                             )
                                         except Exception as e:
-                                            logger.warning(
+                                            logger.error(
                                                 "failed_to_read_blob_for_upload",
                                                 path=path,
                                                 error=str(e),
+                                                session_id=session_id,
                                             )
                                 except Exception as e:
                                     logger.error(

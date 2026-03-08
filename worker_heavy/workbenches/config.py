@@ -39,7 +39,7 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
         with config_path.open() as f:
             data = yaml.safe_load(f)
     except Exception as e:
-        logger.warning("config_load_failed", error=str(e))
+        logger.warning("config_load_failed", error=str(e), session_id="system")
         raise
 
     try:
@@ -49,8 +49,8 @@ def load_config(config_path: str | None = None) -> ManufacturingConfig:
             for m in ["cnc", "injection_molding", "three_dp"]
             if getattr(config, m) is not None
         ]
-        logger.info("manufacturing_config_loaded", methods=methods)
+        logger.info("manufacturing_config_loaded", methods=methods, session_id="system")
         return config
     except Exception as e:
-        logger.warning("config_validation_failed", error=str(e))
+        logger.warning("config_validation_failed", error=str(e), session_id="system")
         raise

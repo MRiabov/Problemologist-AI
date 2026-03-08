@@ -90,7 +90,9 @@ class Renderer:
         views = self.render_24_views()
         bundle_path = renders_dir / "preview_bundle.zip"
         self._create_preview_bundle(bundle_path, views)
-        logger.info("preview_bundle_saved", path=str(bundle_path))
+        logger.info(
+            "preview_bundle_saved", path=str(bundle_path), session_id=self.session_id
+        )
 
         return video_path, bundle_path
 

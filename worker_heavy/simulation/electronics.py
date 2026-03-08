@@ -72,13 +72,19 @@ class ElectronicsManager:
                     if validation.failures
                     else ", ".join(validation.errors)
                 )
-                logger.warning("circuit_validation_failed", errors=validation.errors)
+                logger.warning(
+                    "circuit_validation_failed",
+                    errors=validation.errors,
+                    session_id=self.session_id,
+                )
                 self._fallback_update()
 
         except Exception as e:
             self.validation_error = str(e)
             logger.error(
-                "spice_sim_failed_falling_back", error=str(e), session_id=self.session_id
+                "spice_sim_failed_falling_back",
+                error=str(e),
+                session_id=self.session_id,
             )
             self._fallback_update()
 

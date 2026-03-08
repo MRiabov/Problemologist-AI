@@ -122,19 +122,28 @@ def _match_backend_issue(line: str, allowlist: list[re.Pattern[str]]) -> str | N
     return normalized
 
 
-def _backend_error_requires_session_id(normalized_line: str) -> bool:
-    """Return True when a structured backend error line must include session_id."""
+def _backend_error_requires_attribution_id(normalized_line: str) -> bool:
+    """Return True when a structured backend error line must include an attribution id."""
     low = normalized_line.lower()
     # Dedicated backend error logs are structured; enforce only on structured records.
     return "[error" in low and "service=" in normalized_line
 
 
 def _backend_error_has_session_id(normalized_line: str) -> bool:
-    """Accept either key=value or JSON-style key formatting."""
+    """Accept either key=value or JSON-style key formatting for session_id."""
     return (
         "session_id=" in normalized_line
         or '"session_id":' in normalized_line
         or "'session_id':" in normalized_line
+    )
+
+
+def _backend_error_has_episode_id(normalized_line: str) -> bool:
+    """Accept either key=value or JSON-style key formatting for episode_id."""
+    return (
+        "episode_id=" in normalized_line
+        or '"episode_id":' in normalized_line
+        or "'episode_id':" in normalized_line
     )
 
 
@@ -147,6 +156,26 @@ def _extract_backend_error_session_id(normalized_line: str) -> str | None:
         r"session_id=([^\s]+)",
         r'"session_id"\s*:\s*"([^"]+)"',
         r"'session_id'\s*:\s*'([^']+)'",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, normalized_line)
+        if not match:
+            continue
+        candidate = (match.group(1) or "").strip().strip(",")
+        if candidate:
+            return candidate
+    return None
+
+
+def _extract_backend_error_episode_id(normalized_line: str) -> str | None:
+    """Extract episode_id from a structured error log line, if present."""
+    patterns = [
+        r"episode_id=UUID\('([^']+)'\)",
+        r"episode_id=\"([^\"]+)\"",
+        r"episode_id='([^']+)'",
+        r"episode_id=([^\s]+)",
+        r'"episode_id"\s*:\s*"([^"]+)"',
+        r"'episode_id'\s*:\s*'([^']+)'",
     ]
     for pattern in patterns:
         match = re.search(pattern, normalized_line)
@@ -367,12 +396,16 @@ def capture_backend_errors(request):
         return
 
     strict_mode = os.getenv("STRICT_BACKEND_ERRORS", "1") == "1"
+    integration_runtime_mode = os.getenv("IS_INTEGRATION_TEST", "").lower() == "true"
     allow_all_backend_errors, marker_allowlist = _compile_marker_regex_allowlist(
         request, "allow_backend_errors"
     )
     allowlist = [*_compile_backend_error_allowlist(), *marker_allowlist]
-    expected_session_ids = _collect_expected_test_session_ids(request)
-    expected_session_ids_lower = {sid.lower() for sid in expected_session_ids}
+    expected_session_ids_lower: set[str] = set()
+    if integration_runtime_mode:
+        expected_session_ids = _collect_expected_test_session_ids(request)
+        expected_session_ids_lower = {sid.lower() for sid in expected_session_ids}
+    expected_episode_ids_lower: set[str] = set()
     start_offsets: dict[str, int] = {}
 
     for service, path in BACKEND_ERROR_LOG_FILES.items():
@@ -389,7 +422,7 @@ def capture_backend_errors(request):
         return
 
     issues: list[str] = []
-    missing_session_id_issues: list[str] = []
+    missing_attribution_id_issues: list[str] = []
     for service, path in BACKEND_ERROR_LOG_FILES.items():
         if not path.exists():
             continue
@@ -398,32 +431,52 @@ def capture_backend_errors(request):
             handle.seek(start_offset)
             for raw_line in handle:
                 normalized = _strip_ansi(raw_line).strip()
+                line_session_id = _extract_backend_error_session_id(normalized)
+                line_episode_id = _extract_backend_error_episode_id(normalized)
+
+                # Learn episode ids owned by this test from lines that contain both ids.
                 if (
-                    normalized
-                    and _backend_error_requires_session_id(normalized)
-                    and not _backend_error_has_session_id(normalized)
+                    line_session_id
+                    and line_episode_id
+                    and line_session_id.lower() in expected_session_ids_lower
                 ):
-                    missing_session_id_issues.append(f"{service}: {normalized}")
+                    expected_episode_ids_lower.add(line_episode_id.lower())
+
+                if integration_runtime_mode:
+                    if (
+                        normalized
+                        and _backend_error_requires_attribution_id(normalized)
+                        and not (
+                            _backend_error_has_session_id(normalized)
+                            or _backend_error_has_episode_id(normalized)
+                        )
+                    ):
+                        missing_attribution_id_issues.append(f"{service}: {normalized}")
                 matched = _match_backend_issue(raw_line, allowlist)
                 if matched:
-                    if expected_session_ids:
-                        line_session_id = _extract_backend_error_session_id(normalized)
-                        if (
+                    if integration_runtime_mode and (
+                        expected_session_ids_lower or expected_episode_ids_lower
+                    ):
+                        owns_by_session = bool(
                             line_session_id
-                            and line_session_id.lower()
-                            not in expected_session_ids_lower
-                        ):
+                            and line_session_id.lower() in expected_session_ids_lower
+                        )
+                        owns_by_episode = bool(
+                            line_episode_id
+                            and line_episode_id.lower() in expected_episode_ids_lower
+                        )
+                        if not (owns_by_session or owns_by_episode):
                             continue
                     issues.append(f"{service}: {matched}")
 
-    if missing_session_id_issues:
-        sample = "\n".join(f"- {line}" for line in missing_session_id_issues[:12])
-        overflow = len(missing_session_id_issues) - 12
+    if integration_runtime_mode and missing_attribution_id_issues:
+        sample = "\n".join(f"- {line}" for line in missing_attribution_id_issues[:12])
+        overflow = len(missing_attribution_id_issues) - 12
         suffix = f"\n- ... and {overflow} more" if overflow > 0 else ""
         pytest.fail(
-            "Structured backend error logs must include session_id for integration-mode traceability.\n"
+            "Structured backend error logs must include session_id or episode_id for integration-mode traceability.\n"
             f"{sample}{suffix}\n"
-            "Add session_id=<...> to every structured ERROR log line in the emitting service."
+            "Add session_id=<...> and/or episode_id=<...> to every structured ERROR log line in the emitting service."
         )
 
     if issues:

@@ -151,6 +151,7 @@ def prerender_24_views(
                                 error=str(e),
                                 angle=angle,
                                 elevation=elevation,
+                                session_id=session_id,
                             )
                             # If rendering fails once due to EGL, it likely will fail for all views.
                             # We can break or continue. Let's continue to be safe, but it'll probably fail for all.
@@ -161,12 +162,17 @@ def prerender_24_views(
             if not session_id:
                 backend.close()
 
-        logger.info("prerender_complete", count=len(saved_files))
+        logger.info("prerender_complete", count=len(saved_files), session_id=session_id)
         return saved_files
     except Exception as e:
         import traceback
 
-        logger.warning("prerender_failed", error=str(e), stack=traceback.format_exc())
+        logger.warning(
+            "prerender_failed",
+            error=str(e),
+            stack=traceback.format_exc(),
+            session_id=session_id,
+        )
         raise
 
 
@@ -274,4 +280,8 @@ class VideoRenderer:
             bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             out.write(bgr_frame)
         out.release()
-        logger.info("video_render_complete", path=str(self.output_path))
+        logger.info(
+            "video_render_complete",
+            path=str(self.output_path),
+            session_id=self.session_id,
+        )

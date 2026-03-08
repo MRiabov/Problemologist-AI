@@ -387,6 +387,7 @@ electronics_requirements:
                     "eval_trigger_failed",
                     status_code=resp.status_code,
                     response_text=resp.text,
+                    session_id=session_id,
                 )
                 stats[agent_name]["total"] += 1
                 return
@@ -450,6 +451,7 @@ electronics_requirements:
                                 log.error(
                                     "eval_failed_missing_traces",
                                     missing_traces=missing_traces,
+                                    session_id=session_id,
                                 )
                             else:
                                 log.info("eval_planned")
@@ -464,6 +466,7 @@ electronics_requirements:
                                 "benchmark_confirm_failed",
                                 status_code=confirm_resp.status_code,
                                 response_text=confirm_resp.text,
+                                session_id=session_id,
                             )
                             break
 
@@ -476,6 +479,7 @@ electronics_requirements:
                             log.error(
                                 "eval_failed_missing_traces",
                                 missing_traces=missing_traces,
+                                session_id=session_id,
                             )
                         else:
                             log.info("eval_completed")
@@ -483,7 +487,7 @@ electronics_requirements:
                         break
 
                     if status == EpisodeStatus.FAILED:
-                        log.error("eval_failed")
+                        log.error("eval_failed", session_id=session_id)
                         break
 
                     if status == EpisodeStatus.CANCELLED:
@@ -662,14 +666,14 @@ async def main():
         try:
             requested_agent = AgentName(requested_agent)
         except ValueError:
-            logger.error("unknown_agent", agent=requested_agent)
+            logger.error("unknown_agent", agent=requested_agent, session_id="eval")
             logger.info("available_agents")
             for name in available_agents:
                 logger.info("agent", name=name)
             sys.exit(1)
 
     if requested_agent != "all" and requested_agent not in AGENT_SPECS:
-        logger.error("agent_not_in_specs", agent=requested_agent)
+        logger.error("agent_not_in_specs", agent=requested_agent, session_id="eval")
         sys.exit(1)
 
     # Check health

@@ -116,10 +116,18 @@ class GenesisBackend(PhysicsBackend):
                             )
                             break
                         except Exception as e2:
-                            logger.warning("genesis_init_failed", error=str(e2))
+                            logger.warning(
+                                "genesis_init_failed",
+                                error=str(e2),
+                                session_id=self.session_id,
+                            )
                             raise
                     else:
-                        logger.warning("genesis_init_failed", error=str(e))
+                        logger.warning(
+                            "genesis_init_failed",
+                            error=str(e),
+                            session_id=self.session_id,
+                        )
                         raise
 
     def _load_mfg_config(self, config_dir: Optional["Path"] = None):

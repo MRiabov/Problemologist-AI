@@ -1,7 +1,7 @@
-import structlog
 from pathlib import Path
 from typing import Any
 
+import structlog
 from bd_warehouse.bearing import SingleRowDeepGrooveBallBearing
 from bd_warehouse.fastener import HexNut, PlainWasher, SocketHeadCapScrew
 from sqlalchemy import create_engine

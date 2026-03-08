@@ -40,6 +40,7 @@ class SuccessEvaluator:
                 "timeout_triggered",
                 total_time=total_time,
                 max_simulation_time=self.max_simulation_time,
+                session_id=self.session_id,
             )
             return SimulationFailureMode.TIMEOUT
 
@@ -94,6 +95,7 @@ class SuccessEvaluator:
                         motor=name,
                         force=forces[i],
                         limit=limit,
+                        session_id=self.session_id,
                     )
                     return True
             else:
