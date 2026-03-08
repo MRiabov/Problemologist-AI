@@ -203,19 +203,54 @@ async def run_agent(request: AgentRunRequest):
     )
 
     async with session_factory() as db:
-        episode = Episode(
-            id=get_episode_id(request.session_id),
-            task=request.task,
-            status=EpisodeStatus.RUNNING,
-            metadata_vars=metadata.model_dump(),
-            skill_git_hash=request.skill_git_hash,
-            user_session_id=request.user_session_id,
-        )
-        db.add(episode)
-        await db.commit()
-        await db.refresh(episode)
-
-        episode_id = episode.id
+        episode_id = get_episode_id(request.session_id)
+        existing = await db.get(Episode, episode_id)
+        if existing:
+            # Keep deterministic integration/test session IDs re-runnable.
+            await db.execute(delete(Trace).where(Trace.episode_id == episode_id))
+            await db.execute(delete(Asset).where(Asset.episode_id == episode_id))
+            existing.task = request.task
+            existing.status = EpisodeStatus.RUNNING
+            existing.metadata_vars = metadata.model_dump()
+            existing.skill_git_hash = request.skill_git_hash
+            existing.user_session_id = request.user_session_id
+            existing.todo_list = None
+            existing.journal = None
+            existing.plan = None
+            await db.commit()
+            await db.refresh(existing)
+        else:
+            episode = Episode(
+                id=episode_id,
+                task=request.task,
+                status=EpisodeStatus.RUNNING,
+                metadata_vars=metadata.model_dump(),
+                skill_git_hash=request.skill_git_hash,
+                user_session_id=request.user_session_id,
+            )
+            db.add(episode)
+            try:
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
+                existing = await db.get(Episode, episode_id)
+                if existing is None:
+                    raise
+                # Late collision: treat same as deterministic rerun.
+                await db.execute(delete(Trace).where(Trace.episode_id == episode_id))
+                await db.execute(delete(Asset).where(Asset.episode_id == episode_id))
+                existing.task = request.task
+                existing.status = EpisodeStatus.RUNNING
+                existing.metadata_vars = metadata.model_dump()
+                existing.skill_git_hash = request.skill_git_hash
+                existing.user_session_id = request.user_session_id
+                existing.todo_list = None
+                existing.journal = None
+                existing.plan = None
+                await db.commit()
+                await db.refresh(existing)
+            else:
+                await db.refresh(episode)
 
     # Create task and register it
     import asyncio

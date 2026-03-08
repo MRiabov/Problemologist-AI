@@ -1,13 +1,9 @@
 import uuid
 
-import structlog
-
 from .integration import (
     apply_integration_test_metadata as apply_integration_test_metadata,
 )
 from .integration import infer_integration_test_id as infer_integration_test_id
-
-logger = structlog.get_logger(__name__)
 
 
 def get_episode_id(session_id: str | uuid.UUID) -> uuid.UUID:
@@ -27,7 +23,4 @@ def get_episode_id(session_id: str | uuid.UUID) -> uuid.UUID:
         # 2. Handle prefixes like INT-xxx-, sim-, sess- etc.
         # If it's a known non-UUID format, we use uuid5 to derive it deterministically.
         # This is critical for integration tests and benchmarks.
-        logger.debug(
-            "deriving_deterministic_uuid_from_session_id", session_id=session_id
-        )
         return uuid.uuid5(uuid.NAMESPACE_DNS, session_id)
