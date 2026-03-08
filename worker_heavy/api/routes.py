@@ -1,9 +1,7 @@
 import asyncio
 import base64
 import contextlib
-import multiprocessing
 import tempfile
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +35,7 @@ from shared.workers.schema import (
     VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
+from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
 from worker_heavy.simulation.verification import verify_with_jitter
 from worker_heavy.utils import (
     submit_for_review,
@@ -124,50 +123,47 @@ def bundle_context(bundle_base64: str | None, default_root: Path):
         yield tmp_root
 
 
-# Global lock to ensure only one simulation/render runs at a time cross-session
-HEAVY_OPERATION_LOCK = asyncio.Lock()
-SIMULATION_QUEUE_DEPTH = 0
+# Single-flight admission gate for external heavy jobs.
+_HEAVY_ADMISSION_LOCK = asyncio.Lock()
+_HEAVY_BUSY = False
+_HEAVY_BUSY_CONTEXT: dict[str, str] = {}
 
 
-def _init_genesis_worker():
-    """Pre-warm Genesis in the worker process."""
+def is_heavy_busy() -> bool:
+    return _HEAVY_BUSY
+
+
+def heavy_busy_context() -> dict[str, str]:
+    return dict(_HEAVY_BUSY_CONTEXT)
+
+
+def _busy_detail() -> dict[str, Any]:
+    return {
+        "code": "WORKER_BUSY",
+        "message": "Heavy worker already has an active job",
+        "active_job": heavy_busy_context(),
+    }
+
+
+@contextlib.asynccontextmanager
+async def heavy_operation_admission(operation: str, session_id: str):
+    global _HEAVY_BUSY, _HEAVY_BUSY_CONTEXT
+
+    async with _HEAVY_ADMISSION_LOCK:
+        if _HEAVY_BUSY:
+            raise HTTPException(status_code=503, detail=_busy_detail())
+        _HEAVY_BUSY = True
+        _HEAVY_BUSY_CONTEXT = {
+            "operation": operation,
+            "session_id": session_id,
+        }
+
     try:
-        import os
-
-        # Force headless mode for pyglet (used by genesis/pyrender)
-        os.environ["PYGLET_HEADLESS"] = "1"
-        # Force EGL platform for headless rendering
-        if "PYOPENGL_PLATFORM" not in os.environ:
-            os.environ["PYOPENGL_PLATFORM"] = "egl"
-
-        import time
-
-        import genesis as gs
-        import torch
-
-        # Basic init
-        has_gpu = torch.cuda.is_available()
-        gs.init(backend=gs.gpu if has_gpu else gs.cpu, logging_level="warning")
-        time.sleep(1.0)  # Give it a second to stabilize
-
-        # Build a tiny scene to trigger kernel compilation
-        scene = gs.Scene(show_viewer=False)
-        scene.add_entity(gs.morphs.Plane())
-        scene.build()
-
-        logger.info(
-            "genesis_worker_prewarmed", pid=multiprocessing.current_process().pid
-        )
-    except Exception as e:
-        logger.warning("genesis_worker_prewarm_failed", error=str(e))
-
-
-SIMULATION_EXECUTOR = ProcessPoolExecutor(
-    max_workers=1,
-    max_tasks_per_child=None,
-    mp_context=multiprocessing.get_context("spawn"),
-    initializer=_init_genesis_worker,
-)
+        yield
+    finally:
+        async with _HEAVY_ADMISSION_LOCK:
+            _HEAVY_BUSY = False
+            _HEAVY_BUSY_CONTEXT = {}
 
 
 async def run_simulation_task(
@@ -179,21 +175,16 @@ async def run_simulation_task(
     x_session_id,
     particle_budget,
 ):
-    """Helper to run simulation in executor, allows easier mocking in tests."""
-    from worker_heavy.utils.validation import simulate_subprocess
-
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        SIMULATION_EXECUTOR,
-        simulate_subprocess,
-        script_path,
-        root,
-        script_content,
-        root,
-        smoke_test_mode,
-        backend_type,
-        x_session_id,
-        particle_budget,
+    """Run simulation in an isolated child process (crash containment boundary)."""
+    return await run_simulation_in_isolated_process(
+        script_path=script_path,
+        session_root=root,
+        script_content=script_content,
+        output_dir=root,
+        smoke_test_mode=smoke_test_mode,
+        backend=backend_type,
+        session_id=x_session_id,
+        particle_budget=particle_budget,
     )
 
 
@@ -204,8 +195,6 @@ async def api_verify(
     fs_router=Depends(get_router),
 ):
     """Run multi-seed verification with runtime jitter."""
-    global SIMULATION_QUEUE_DEPTH
-    SIMULATION_QUEUE_DEPTH += 1
     try:
         from shared.simulation.schemas import SimulatorBackendType
         from worker_heavy.simulation.factory import get_simulation_builder
@@ -214,7 +203,7 @@ async def api_verify(
         if isinstance(backend_type, str):
             backend_type = SimulatorBackendType(backend_type)
 
-        async with HEAVY_OPERATION_LOCK:
+        async with heavy_operation_admission("verify", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
@@ -272,6 +261,8 @@ async def api_verify(
                     events=events,
                 )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_verify_failed", error=str(e))
         return BenchmarkToolResponse(
@@ -283,8 +274,6 @@ async def api_verify(
                 )
             ),
         )
-    finally:
-        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/simulate", response_model=BenchmarkToolResponse)
@@ -294,9 +283,6 @@ async def api_simulate(
     fs_router=Depends(get_router),
 ):
     """Physics-backed stability check in isolated session."""
-    global SIMULATION_QUEUE_DEPTH
-    SIMULATION_QUEUE_DEPTH += 1
-    wait_pos = SIMULATION_QUEUE_DEPTH
     try:
         from shared.simulation.schemas import SimulatorBackendType
 
@@ -304,7 +290,7 @@ async def api_simulate(
         if isinstance(backend_type, str):
             backend_type = SimulatorBackendType(backend_type)
 
-        async with HEAVY_OPERATION_LOCK:
+        async with heavy_operation_admission("simulate", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
@@ -321,12 +307,6 @@ async def api_simulate(
                 )
 
                 summary = result.summary
-                if wait_pos > 1:
-                    summary = (
-                        f"{summary} (Queued: wait position {wait_pos})"
-                        if summary
-                        else f"Queued: wait position {wait_pos}"
-                    )
 
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts(
@@ -351,6 +331,8 @@ async def api_simulate(
                     events=events,
                 )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_simulate_failed", error=str(e))
         return BenchmarkToolResponse(
@@ -362,8 +344,6 @@ async def api_simulate(
                 )
             ),
         )
-    finally:
-        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/validate", response_model=BenchmarkToolResponse)
@@ -373,10 +353,8 @@ async def api_validate(
     fs_router=Depends(get_router),
 ):
     """Geometric validity check in isolated session."""
-    global SIMULATION_QUEUE_DEPTH
-    SIMULATION_QUEUE_DEPTH += 1
     try:
-        async with HEAVY_OPERATION_LOCK:
+        async with heavy_operation_admission("validate", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
@@ -433,6 +411,8 @@ async def api_validate(
                     artifacts=artifacts,
                 )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_validate_failed", error=str(e))
         return BenchmarkToolResponse(
@@ -444,8 +424,6 @@ async def api_validate(
                 )
             ),
         )
-    finally:
-        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/validate_circuit", response_model=BenchmarkToolResponse)
@@ -455,28 +433,31 @@ async def api_validate_circuit(
 ):
     """Run SPICE validation on the provided electronics section."""
     try:
-        from shared.circuit_builder import build_circuit_from_section
-        from shared.pyspice_utils import validate_circuit
+        async with heavy_operation_admission("validate_circuit", x_session_id):
+            from shared.circuit_builder import build_circuit_from_section
+            from shared.pyspice_utils import validate_circuit
 
-        circuit = build_circuit_from_section(request.section)
-        res = validate_circuit(
-            circuit, request.section.power_supply, section=request.section
-        )
-
-        artifacts = SimulationArtifacts(
-            circuit_validation_result=res.model_dump(),
-        )
-        if not res.valid:
-            artifacts.failure = SimulationFailure(
-                reason=FailureReason.VALIDATION_FAILED,
-                detail="; ".join(res.errors),
+            circuit = build_circuit_from_section(request.section)
+            res = validate_circuit(
+                circuit, request.section.power_supply, section=request.section
             )
 
-        return BenchmarkToolResponse(
-            success=res.valid,
-            message="; ".join(res.errors) if not res.valid else "Circuit is valid",
-            artifacts=artifacts,
-        )
+            artifacts = SimulationArtifacts(
+                circuit_validation_result=res.model_dump(),
+            )
+            if not res.valid:
+                artifacts.failure = SimulationFailure(
+                    reason=FailureReason.VALIDATION_FAILED,
+                    detail="; ".join(res.errors),
+                )
+
+            return BenchmarkToolResponse(
+                success=res.valid,
+                message="; ".join(res.errors) if not res.valid else "Circuit is valid",
+                artifacts=artifacts,
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_validate_circuit_failed", error=str(e))
         return BenchmarkToolResponse(
@@ -497,10 +478,8 @@ async def api_analyze(
     fs_router=Depends(get_router),
 ):
     """Component analysis (topology, material, weight) in isolated session."""
-    global SIMULATION_QUEUE_DEPTH
-    SIMULATION_QUEUE_DEPTH += 1
     try:
-        async with HEAVY_OPERATION_LOCK:
+        async with heavy_operation_admission("analyze", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
@@ -518,13 +497,13 @@ async def api_analyze(
                     method=request.method,
                     quantity=request.quantity,
                 )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_analyze_failed", error=str(e))
         return WorkbenchResult(
             is_manufacturable=False, unit_cost=0.0, violations=[str(e)]
         )
-    finally:
-        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/preview", response_model=PreviewDesignResponse)
@@ -534,10 +513,8 @@ async def api_preview(
     fs_router=Depends(get_router),
 ):
     """Render a preview of the CAD design from specified camera angles."""
-    global SIMULATION_QUEUE_DEPTH
-    SIMULATION_QUEUE_DEPTH += 1
     try:
-        async with HEAVY_OPERATION_LOCK:
+        async with heavy_operation_admission("preview", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
@@ -565,11 +542,11 @@ async def api_preview(
                     events=events,
                 )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_preview_failed", error=str(e))
         return PreviewDesignResponse(success=False, message=str(e))
-    finally:
-        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/build", response_model=BenchmarkToolResponse)
@@ -579,10 +556,8 @@ async def api_build(
     fs_router=Depends(get_router),
 ):
     """Rebuild simulation assets (GLB) from source without running full simulation."""
-    global SIMULATION_QUEUE_DEPTH
-    SIMULATION_QUEUE_DEPTH += 1
     try:
-        async with HEAVY_OPERATION_LOCK:
+        async with heavy_operation_admission("build", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
@@ -614,11 +589,11 @@ async def api_build(
                     events=events,
                 )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_build_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))
-    finally:
-        SIMULATION_QUEUE_DEPTH -= 1
 
 
 @heavy_router.post("/benchmark/submit", response_model=BenchmarkToolResponse)
@@ -629,57 +604,60 @@ async def api_submit(
 ):
     """Handover to reviewer in isolated session (moved to heavy due to DFM dependencies)."""
     try:
-        with bundle_context(
-            request.bundle_base64, fs_router.local_backend.root
-        ) as root:
-            component = load_component_from_script(
-                script_path=root / request.script_path
-                if request.bundle_base64
-                else fs_router.local_backend._resolve(request.script_path),
-                session_root=root,
-                script_content=request.script_content,
-            )
-            success = submit_for_review(
-                component,
-                cwd=root,
-                session_id=x_session_id,
-                reviewer_stage=(
-                    request.reviewer_stage or "engineering_execution_reviewer"
-                ),
-            )
-            events = _collect_events(fs_router, root=root, session_id=x_session_id)
-            artifacts = SimulationArtifacts()
-            validation_result_path = root / "validation_results.json"
-            if validation_result_path.exists():
-                artifacts.validation_results_json = validation_result_path.read_text(
-                    encoding="utf-8"
+        async with heavy_operation_admission("submit", x_session_id):
+            with bundle_context(
+                request.bundle_base64, fs_router.local_backend.root
+            ) as root:
+                component = load_component_from_script(
+                    script_path=root / request.script_path
+                    if request.bundle_base64
+                    else fs_router.local_backend._resolve(request.script_path),
+                    session_root=root,
+                    script_content=request.script_content,
                 )
-            sim_result_path = root / "simulation_result.json"
-            if sim_result_path.exists():
-                artifacts.simulation_result_json = sim_result_path.read_text(
-                    encoding="utf-8"
+                success = submit_for_review(
+                    component,
+                    cwd=root,
+                    session_id=x_session_id,
+                    reviewer_stage=(
+                        request.reviewer_stage or "engineering_execution_reviewer"
+                    ),
                 )
-            stage_manifest_paths = (
-                ".manifests/benchmark_review_manifest.json",
-                ".manifests/engineering_plan_review_manifest.json",
-                ".manifests/engineering_execution_review_manifest.json",
-                ".manifests/electronics_review_manifest.json",
-            )
-            review_manifests: dict[str, str] = {}
-            for rel_path in stage_manifest_paths:
-                manifest_path = root / rel_path
-                if manifest_path.exists():
-                    review_manifests[rel_path] = manifest_path.read_text(
+                events = _collect_events(fs_router, root=root, session_id=x_session_id)
+                artifacts = SimulationArtifacts()
+                validation_result_path = root / "validation_results.json"
+                if validation_result_path.exists():
+                    artifacts.validation_results_json = (
+                        validation_result_path.read_text(encoding="utf-8")
+                    )
+                sim_result_path = root / "simulation_result.json"
+                if sim_result_path.exists():
+                    artifacts.simulation_result_json = sim_result_path.read_text(
                         encoding="utf-8"
                     )
-            artifacts.review_manifests_json = review_manifests
-            return BenchmarkToolResponse(
-                success=success,
-                message="Handover complete" if success else "Handover failed",
-                artifacts=artifacts,
-                events=events,
-            )
+                stage_manifest_paths = (
+                    ".manifests/benchmark_review_manifest.json",
+                    ".manifests/engineering_plan_review_manifest.json",
+                    ".manifests/engineering_execution_review_manifest.json",
+                    ".manifests/electronics_review_manifest.json",
+                )
+                review_manifests: dict[str, str] = {}
+                for rel_path in stage_manifest_paths:
+                    manifest_path = root / rel_path
+                    if manifest_path.exists():
+                        review_manifests[rel_path] = manifest_path.read_text(
+                            encoding="utf-8"
+                        )
+                artifacts.review_manifests_json = review_manifests
+                return BenchmarkToolResponse(
+                    success=success,
+                    message="Handover complete" if success else "Handover failed",
+                    artifacts=artifacts,
+                    events=events,
+                )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning("api_benchmark_submit_failed", error=str(e))
         return BenchmarkToolResponse(success=False, message=str(e))

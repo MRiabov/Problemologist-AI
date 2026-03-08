@@ -71,9 +71,9 @@ async def lifespan(app: FastAPI):
     # WP11: Support Temporal worker in unified mode
     if os.getenv("WORKER_TYPE") == "unified":
         try:
-            from worker_heavy.app import start_temporal_worker
+            from worker_heavy.temporal_worker import main as heavy_temporal_worker_main
 
-            app.state.temporal_task = asyncio.create_task(start_temporal_worker())
+            app.state.temporal_task = asyncio.create_task(heavy_temporal_worker_main())
         except ImportError:
             pass
 

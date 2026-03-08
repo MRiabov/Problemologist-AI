@@ -1628,6 +1628,23 @@
           }
         }
       }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Ready Check",
+        "description": "Readiness endpoint for external admission/routing.",
+        "operationId": "ready_check_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

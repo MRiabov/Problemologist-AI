@@ -1,13 +1,16 @@
-import asyncio
-import os
 from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from shared.logging import configure_logging, log_marker_middleware
-from worker_heavy.api.routes import heavy_router
+from worker_heavy.api.routes import (
+    heavy_busy_context,
+    heavy_router,
+    is_heavy_busy,
+)
 
 # Configure structured logging
 configure_logging("worker-heavy")
@@ -15,44 +18,9 @@ configure_logging("worker-heavy")
 logger = structlog.get_logger(__name__)
 
 
-async def start_temporal_worker():
-    """Start Temporal worker for heavy tasks."""
-    try:
-        from temporalio.client import Client
-        from temporalio.worker import Worker
-
-        from worker_heavy.activities.heavy_tasks import (
-            preview_design_activity,
-            run_simulation_activity,
-            validate_design_activity,
-        )
-
-        temporal_url = os.getenv("TEMPORAL_URL", "temporal:7233")
-        client = await Client.connect(temporal_url)
-
-        worker = Worker(
-            client,
-            task_queue="heavy-tasks-queue",
-            activities=[
-                run_simulation_activity,
-                validate_design_activity,
-                preview_design_activity,
-            ],
-        )
-        logger.info("temporal_worker_started", queue="heavy-tasks-queue")
-        await worker.run()
-    except Exception as e:
-        logger.warning("temporal_worker_failed", error=str(e))
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Heavy worker always runs Temporal worker
-    app.state.temporal_task = asyncio.create_task(start_temporal_worker())
     yield
-    # Shutdown
-    if hasattr(app.state, "temporal_task"):
-        app.state.temporal_task.cancel()
 
 
 app = FastAPI(
@@ -94,6 +62,21 @@ app.include_router(heavy_router, tags=["worker-heavy"])
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.get("/ready")
+async def ready_check():
+    """Readiness endpoint for external admission/routing."""
+    if is_heavy_busy():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "busy",
+                "code": "WORKER_BUSY",
+                "active_job": heavy_busy_context(),
+            },
+        )
+    return {"status": "ready"}
 
 
 @app.get("/")

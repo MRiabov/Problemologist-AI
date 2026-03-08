@@ -15,8 +15,9 @@ from shared.workers.schema import (
     HeavyValidationParams,
     HeavyValidationResponse,
 )
+from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
 from worker_heavy.utils.preview import preview_design
-from worker_heavy.utils.validation import simulate_subprocess, validate
+from worker_heavy.utils.validation import validate
 
 logger = structlog.get_logger(__name__)
 
@@ -59,14 +60,15 @@ async def run_simulation_activity(params: HeavySimulationParams) -> SimulationRe
         # backend might be a string from temporal, convert to enum
         backend_type = SimulatorBackendType(backend)
 
-        return await asyncio.to_thread(
-            simulate_subprocess,
+        return await run_simulation_in_isolated_process(
             script_path=str(root / script_path),
             session_root=str(root),
+            script_content=None,
             output_dir=root,
             smoke_test_mode=smoke_test_mode,
             backend=backend_type,
-            session_id=session_id,
+            session_id=session_id or "",
+            particle_budget=None,
         )
 
 
