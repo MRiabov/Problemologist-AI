@@ -37,6 +37,7 @@ from shared.workers.schema import (
 )
 from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.runtime.simulation_runner import (
+    cleanup_simulation_executor,
     run_simulation_in_isolated_process,
     run_validation_in_isolated_process,
 )
@@ -678,9 +679,22 @@ async def api_simulation_cleanup():
     """
     Internal cleanup endpoint for integration teardown.
 
-    Closes cached simulation backends so long-lived worker processes do not keep
-    Genesis/MuJoCo state across tests.
+    Closes cached simulation backends in both the parent process and the
+    persistent simulation child so long-lived worker processes do not keep
+    session state across tests.
     """
-    closed_backends = close_all_session_backends()
-    gc.collect()
-    return {"success": True, "closed_backends": closed_backends}
+    parent_closed_backends = close_all_session_backends()
+    parent_gc_collected = gc.collect()
+    child_cleanup = await cleanup_simulation_executor()
+    return {
+        "success": True,
+        "closed_backends": parent_closed_backends + child_cleanup.child_closed_backends,
+        "parent_closed_backends": parent_closed_backends,
+        "parent_gc_collected": parent_gc_collected,
+        "child_cleanup": {
+            "had_executor": child_cleanup.had_executor,
+            "child_closed_backends": child_cleanup.child_closed_backends,
+            "child_gc_collected": child_cleanup.child_gc_collected,
+            "executor_reset": child_cleanup.executor_reset,
+        },
+    }

@@ -1,15 +1,19 @@
 import asyncio
+import gc
 import inspect
 import multiprocessing
 import os
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 import structlog
 
 from shared.models.simulation import SimulationResult
+from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.utils.validation import (
     simulate_subprocess,
     validate_subprocess,
@@ -18,6 +22,14 @@ from worker_heavy.utils.validation import (
 logger = structlog.get_logger(__name__)
 
 _SPAWN_CONTEXT = multiprocessing.get_context("spawn")
+
+
+@dataclass(frozen=True)
+class SimulationExecutorCleanupResult:
+    had_executor: bool
+    child_closed_backends: int
+    child_gc_collected: int
+    executor_reset: bool
 
 
 def _parse_compile_kernels_env() -> bool | None:
@@ -70,6 +82,187 @@ def init_genesis_worker() -> None:
         logger.warning("genesis_child_prewarm_failed", error=str(exc))
 
 
+def cleanup_simulation_child_state() -> tuple[int, int]:
+    """Clear child-local cached backends while keeping the warm process alive."""
+    closed_backends = close_all_session_backends()
+    gc_collected = gc.collect()
+    return closed_backends, gc_collected
+
+
+class SimulationExecutorManager:
+    """Own the long-lived spawned child used by simulate and validate."""
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._executor: ProcessPoolExecutor | None = None
+        self._generation = 0
+        self._recreate_after_crash = False
+
+    def _get_or_create_executor_locked(
+        self,
+    ) -> tuple[ProcessPoolExecutor, int, bool, bool]:
+        if self._executor is not None:
+            return self._executor, self._generation, False, False
+
+        self._generation += 1
+        generation = self._generation
+        self._executor = ProcessPoolExecutor(
+            max_workers=1,
+            mp_context=_SPAWN_CONTEXT,
+            initializer=init_genesis_worker,
+        )
+        recreated = self._recreate_after_crash
+        self._recreate_after_crash = False
+        return self._executor, generation, True, recreated
+
+    def _mark_broken_locked(self) -> tuple[ProcessPoolExecutor | None, int]:
+        executor = self._executor
+        generation = self._generation
+        self._executor = None
+        self._recreate_after_crash = True
+        return executor, generation
+
+    async def submit(
+        self,
+        operation: str,
+        crash_message: str,
+        fn: Any,
+        *args: Any,
+    ) -> Any:
+        loop = asyncio.get_running_loop()
+        with self._lock:
+            executor, generation, created, recreated = (
+                self._get_or_create_executor_locked()
+            )
+
+        if created and recreated:
+            logger.info(
+                "simulation_executor_recreated",
+                generation=generation,
+                operation=operation,
+            )
+        elif created:
+            logger.info(
+                "simulation_executor_started",
+                generation=generation,
+                operation=operation,
+            )
+        else:
+            logger.info(
+                "simulation_executor_reused",
+                generation=generation,
+                operation=operation,
+            )
+
+        try:
+            return await loop.run_in_executor(executor, fn, *args)
+        except BrokenProcessPool as exc:
+            with self._lock:
+                broken_executor, broken_generation = self._mark_broken_locked()
+            if broken_executor is not None:
+                try:
+                    broken_executor.shutdown(wait=False, cancel_futures=True)
+                except Exception:
+                    logger.warning(
+                        "simulation_executor_shutdown_after_crash_failed",
+                        generation=broken_generation,
+                    )
+            logger.error(
+                "simulation_child_process_crashed",
+                error=str(exc),
+                generation=broken_generation,
+                operation=operation,
+            )
+            logger.error(
+                "simulation_executor_crashed",
+                error=str(exc),
+                generation=broken_generation,
+                operation=operation,
+            )
+            raise RuntimeError(crash_message) from exc
+
+    async def cleanup(self) -> SimulationExecutorCleanupResult:
+        loop = asyncio.get_running_loop()
+        with self._lock:
+            executor = self._executor
+            generation = self._generation
+
+        if executor is None:
+            return SimulationExecutorCleanupResult(
+                had_executor=False,
+                child_closed_backends=0,
+                child_gc_collected=0,
+                executor_reset=False,
+            )
+
+        try:
+            closed_backends, gc_collected = await loop.run_in_executor(
+                executor,
+                cleanup_simulation_child_state,
+            )
+            logger.info(
+                "simulation_executor_cleanup",
+                generation=generation,
+                child_closed_backends=closed_backends,
+                child_gc_collected=gc_collected,
+            )
+            return SimulationExecutorCleanupResult(
+                had_executor=True,
+                child_closed_backends=closed_backends,
+                child_gc_collected=gc_collected,
+                executor_reset=False,
+            )
+        except BrokenProcessPool as exc:
+            with self._lock:
+                broken_executor, broken_generation = self._mark_broken_locked()
+            if broken_executor is not None:
+                try:
+                    broken_executor.shutdown(wait=False, cancel_futures=True)
+                except Exception:
+                    logger.warning(
+                        "simulation_executor_shutdown_after_cleanup_crash_failed",
+                        generation=broken_generation,
+                    )
+            logger.error(
+                "simulation_executor_crashed",
+                error=str(exc),
+                generation=broken_generation,
+                operation="cleanup",
+            )
+            return SimulationExecutorCleanupResult(
+                had_executor=True,
+                child_closed_backends=0,
+                child_gc_collected=0,
+                executor_reset=True,
+            )
+
+    async def shutdown(self) -> bool:
+        with self._lock:
+            executor = self._executor
+            generation = self._generation
+            self._executor = None
+
+        if executor is None:
+            return False
+
+        logger.info("simulation_executor_shutdown", generation=generation)
+        await asyncio.to_thread(
+            lambda: executor.shutdown(wait=True, cancel_futures=True)
+        )
+        return True
+
+
+_SIMULATION_EXECUTOR_MANAGER = SimulationExecutorManager()
+
+
+async def cleanup_simulation_executor() -> SimulationExecutorCleanupResult:
+    return await _SIMULATION_EXECUTOR_MANAGER.cleanup()
+
+
+async def shutdown_simulation_executor() -> bool:
+    return await _SIMULATION_EXECUTOR_MANAGER.shutdown()
+
+
 async def run_simulation_in_isolated_process(
     *,
     script_path: str | Path,
@@ -82,34 +275,24 @@ async def run_simulation_in_isolated_process(
     particle_budget: int | None,
 ) -> SimulationResult:
     """
-    Run one simulation task in a fresh child process.
+    Run one simulation task in the persistent spawned child process.
 
-    This provides crash containment for heavy physics calls and avoids keeping
-    a long-lived in-process executor that can become permanently broken.
+    The parent process remains isolated from heavy physics calls, while the
+    child process stays warm across requests until crash or shutdown.
     """
-    loop = asyncio.get_running_loop()
-    try:
-        with ProcessPoolExecutor(
-            max_workers=1,
-            max_tasks_per_child=1,
-            mp_context=_SPAWN_CONTEXT,
-            initializer=init_genesis_worker,
-        ) as executor:
-            return await loop.run_in_executor(
-                executor,
-                simulate_subprocess,
-                script_path,
-                session_root,
-                script_content,
-                output_dir,
-                smoke_test_mode,
-                backend,
-                session_id,
-                particle_budget,
-            )
-    except BrokenProcessPool as exc:
-        logger.error("simulation_child_process_crashed", error=str(exc))
-        raise RuntimeError("SIMULATION_CHILD_PROCESS_CRASHED") from exc
+    return await _SIMULATION_EXECUTOR_MANAGER.submit(
+        "simulate",
+        "SIMULATION_CHILD_PROCESS_CRASHED",
+        simulate_subprocess,
+        script_path,
+        session_root,
+        script_content,
+        output_dir,
+        smoke_test_mode,
+        backend,
+        session_id,
+        particle_budget,
+    )
 
 
 async def run_validation_in_isolated_process(
@@ -123,30 +306,20 @@ async def run_validation_in_isolated_process(
     particle_budget: int | None,
 ) -> tuple[bool, str | None]:
     """
-    Run one validation task in a fresh child process.
+    Run one validation task in the persistent spawned child process.
 
-    Validation prerenders native Genesis/OpenGL views, so it needs the same
-    crash-containment boundary as simulation.
+    Validation shares the same warm child/runtime path as simulation while
+    preserving parent-process crash containment.
     """
-    loop = asyncio.get_running_loop()
-    try:
-        with ProcessPoolExecutor(
-            max_workers=1,
-            max_tasks_per_child=1,
-            mp_context=_SPAWN_CONTEXT,
-            initializer=init_genesis_worker,
-        ) as executor:
-            return await loop.run_in_executor(
-                executor,
-                validate_subprocess,
-                script_path,
-                session_root,
-                script_content,
-                output_dir,
-                smoke_test_mode,
-                session_id,
-                particle_budget,
-            )
-    except BrokenProcessPool as exc:
-        logger.error("validation_child_process_crashed", error=str(exc))
-        raise RuntimeError("VALIDATION_CHILD_PROCESS_CRASHED") from exc
+    return await _SIMULATION_EXECUTOR_MANAGER.submit(
+        "validate",
+        "VALIDATION_CHILD_PROCESS_CRASHED",
+        validate_subprocess,
+        script_path,
+        session_root,
+        script_content,
+        output_dir,
+        smoke_test_mode,
+        session_id,
+        particle_budget,
+    )

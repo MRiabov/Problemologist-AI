@@ -11,6 +11,7 @@ from worker_heavy.api.routes import (
     heavy_router,
     is_heavy_busy,
 )
+from worker_heavy.runtime.simulation_runner import shutdown_simulation_executor
 
 # Configure structured logging
 configure_logging("worker-heavy")
@@ -19,8 +20,11 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
+async def lifespan(_app: FastAPI):
+    try:
+        yield
+    finally:
+        await shutdown_simulation_executor()
 
 
 app = FastAPI(
