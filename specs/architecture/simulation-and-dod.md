@@ -11,6 +11,8 @@
 
 While this platform has notable downsides for future use, we pick Genesis because it supports fluid interaction and Finite Element analysis; being fast enough to work.
 
+Operational benchmarking notes, runtime optimization attempts, and dated performance measurements for the simulation stack are tracked in [auxillary/simulation-optimization-attempts.md](./auxillary/simulation-optimization-attempts.md).
+
 <!-- Downsides of MuJoCo?
 
 - we won't support deformation (finite element analysis)
