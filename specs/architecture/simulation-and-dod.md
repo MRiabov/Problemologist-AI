@@ -380,7 +380,18 @@ Notably, the engineer is informed about runtime randomization to prevent unexpec
 
 ##### Runtime randomization verification
 
-The runtime randomization will run the simulation multiple times (e.g. 5) to ensure consistency. These runs may execute in parallel inside one admitted heavy-worker job when Genesis/MuJoCo backend parallelism is available.
+The runtime randomization verifies robustness across multiple jittered initial scenes (e.g. 5) inside one backend execution.
+
+Execution contract:
+
+1. A verification request is one admitted heavy-worker job.
+2. That job performs one MuJoCo/Genesis scene build/load step for the requested design, or uses an equivalent compiled-scene cache hit.
+3. The job then spawns `num_scenes` parallel scene/environment instances from that compiled state.
+4. Each parallel scene receives its own runtime-jittered initial condition.
+5. The backend advances those jittered scenes as one batched simulation run and aggregates outcomes at the end.
+6. `num_scenes` means batch width inside one backend run. It does not mean serialized reruns of the whole simulation.
+7. Serial full-scene replay over jitter seeds is non-compliant where backend-supported scene batching/reuse is available.
+8. Parallel batched execution is mandatory for runtime-randomization verification when backend-supported reuse is available and the worker has enough RAM for the requested batch.
 
 ### Failure
 

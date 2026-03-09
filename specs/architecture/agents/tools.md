@@ -97,7 +97,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
   - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
-- `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Should run multiple simulations with slightly perturbed object spawn position; to make sure the engineer agents generate robust solutions.
+- `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Robustness checking uses runtime randomization by executing one heavy-worker job with one backend scene build/load and `num_scenes` parallel jittered scene instances inside that one backend run. `num_scenes` is batch width, not permission for serialized whole-scene reruns or multiple heavy jobs on one worker; nor multithreaded implementation - only batch width.
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
 <!-- should it contain its environment model or only the generated model?  -->
 - `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.

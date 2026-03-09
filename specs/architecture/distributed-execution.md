@@ -133,7 +133,12 @@ Heavy-worker concurrency is a single-flight contract:
 - `/ready` and equivalent readiness signals must report `not ready` while a job is active, so load balancers route only to idle instances.
 - Any queueing, retries, and fan-out for concurrent demand are owned outside `worker-heavy` (Temporal/controller-worker orchestration and infrastructure load balancing), not by heavy-worker app internals.
 - Cross-worker fan-out/scaling policy is intentionally out of scope for this phase; the enforced contract here is per-instance single-flight admission plus deterministic busy behavior.
-- Runtime randomization (multi-seed checks inside one simulation request) executes within the admitted single job scope and may use backend-native parallel simulation inside that job when resources allow.
+- Runtime randomization executes within one admitted heavy-worker job.
+- That admitted job corresponds to one backend simulation run over a batched set of parallel scenes/environments, not to N serialized full simulation replays.
+- The heavy worker must compile/build/load the simulation scene once per admitted runtime-randomization request (or reuse an equivalent compiled-scene cache hit), then instantiate `num_scenes` jittered scene variants from that compiled state.
+- `num_scenes` is batch width inside one backend run. It is not permission to run multiple heavy jobs on one worker instance.
+- The jittered scene variants execute in parallel inside that one admitted job when enough RAM is available. Parallel batched execution is mandatory when backend-supported reuse is available.
+- Recompiling or replaying the entire scene serially per jitter seed is non-compliant with this architecture.
 - Temporal heavy-task dispatch is worker-poll task queue delivery. Webhook-style triggers, if used, are external orchestration inputs and not Temporal server task-delivery mode.
 - FastAPI API serving and Temporal heavy-activity polling/execution must be process-isolated (separate process/container boundary) so a simulation child-process crash cannot terminate the API process.
 - Optional startup pre-warming is still allowed per worker instance to reduce first-run backend/JIT latency.

@@ -68,6 +68,52 @@ The integration suite is designed for high-velocity local execution and CI parit
 ./scripts/run_integration_tests.sh tests/integration/test_full_workflow.py
 ```
 
+### Simulation Backend Matrix Execution Contract
+
+The simulation-facing integration suite must run as a two-backend matrix aligned with `specs/architecture/distributed-execution.md` and `specs/architecture/simulation-and-dod.md`.
+
+- Discovery scope: include tests that call `/benchmark/simulate` or `/benchmark/verify` (directly or via helper wrappers).
+- Run order: execute MuJoCo first, then Genesis, to surface compatibility regressions before Genesis-only feature checks.
+- Backend selection: use `SIMULATION_DEFAULT_BACKEND` in the integration runner environment and resolve backend in tests through `tests/integration/backend_utils.py:selected_backend()`.
+- Portable tests: when a test is expected to pass on both backends, the test payload must set backend from `selected_backend()` instead of hardcoding `"GENESIS"`/`"MUJOCO"`.
+- Backend-specific tests: when a test asserts behavior that is intentionally unavailable on one backend, gate it explicitly for that backend.
+- MuJoCo exclusion rule: softbody and dynamic-wire behavior tests (for example INT-126 wire-tear dynamics) are not required on MuJoCo and must be skipped there.
+
+Recommended execution pattern:
+
+```bash
+# MuJoCo pass
+SIMULATION_DEFAULT_BACKEND=MUJOCO ./scripts/run_integration_tests.sh <simulation-test-nodes>
+
+# Genesis pass
+SIMULATION_DEFAULT_BACKEND=GENESIS ./scripts/run_integration_tests.sh <simulation-test-nodes>
+```
+
+### Backend Skip Policy (`skipif` vs `skip`)
+
+Use explicit backend gating in test definitions.
+
+- Preferred: `@pytest.mark.skipif(...)` for backend exclusions that are known at collection/import time.
+- Allowed: `pytest.skip(...)` inside test bodies only when the skip condition depends on runtime-only state (for example downstream service health or artifact/runtime capability discovered after setup).
+- Every backend skip must include a concrete reason mentioning the unsupported contract.
+
+Recommended pattern:
+
+```python
+import pytest
+from shared.simulation.schemas import SimulatorBackendType
+from tests.integration.backend_utils import selected_backend
+
+@pytest.mark.skipif(
+    selected_backend() != SimulatorBackendType.GENESIS,
+    reason="INT-126 requires backend-supported dynamic wire/softbody behavior",
+)
+async def test_int_126_wire_tear_behavior():
+    ...
+```
+
+This keeps backend intent explicit in pytest collection output and reduces ambiguity during matrix triage.
+
 ## Required integration test suite
 
 Priorities:
@@ -101,7 +147,7 @@ Priorities:
 | INT-018 | `validate_and_price` integration gate | `simulate` and coder `submit_for_review(Compound)` are hard-blocked unless the latest `validate_and_price` for the same revision succeeded and produced valid handover artifacts (`validation_results.json`, `simulation_result.json`). `submit_for_review(Compound)` must then produce a valid latest-revision stage-specific manifest (`.manifests/engineering_execution_review_manifest.json` for engineering execution review; `.manifests/benchmark_review_manifest.json` for benchmark review). No fallback or inferred success is allowed. |
 | INT-019 | Cost/weight/build-zone hard failure | Validation/simulation/review-submission are blocked when price, weight, or build-zone constraints fail, or when required handover artifacts are missing/invalid for the latest revision. Fail closed with explicit reason codes. |
 | INT-020 | Simulation success/failure taxonomy | Goal-hit, forbid-hit, out-of-bounds, timeout, and instability are correctly classified in response payloads/events; reviewer handoff eligibility is granted only for the goal-hit/green-zone success path. |
-| INT-021 | Runtime randomization robustness check | Multi-seed runtime jitter execution occurs and aggregates pass/fail statistics correctly. |
+| INT-021 | Runtime randomization robustness check | One admitted heavy-worker job executes one backend run with batched parallel jittered scenes (`num_scenes`) and aggregates pass/fail statistics correctly. |
 | INT-022 | Motor overload + forcerange behavior | Force clamping behaves correctly; sustained overload produces `motor_overload` failure reason. |
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
 | INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges. |
@@ -201,7 +247,7 @@ Priorities:
 | INT-050 | Dataset readiness completeness | A completed episode has all mandatory artifacts/traces/validation markers for training readiness. |
 | INT-051 | Journal quality integration checks | Journal entries are linked to observation IDs and satisfy required structure at ingestion time. |
 | INT-052 | Skill effectiveness tracking | Performance delta before/after skill version updates is measurable from stored metadata. |
-| INT-151 | Breakage prevention eval | Engineer solutions do not cause `PART_BREAKAGE` failure in 90% of cases across multi-seed runs. |
+| INT-151 | Breakage prevention eval | Engineer solutions do not cause `PART_BREAKAGE` failure in 90% of cases across runtime-randomization batches of jittered scenes. |
 | INT-152 | Safety factor range eval | Average safety factor across all parts is between 1.5 and 5.0 in 80% of solutions (no overdesign, no under-design). |
 | INT-153 | End-to-end fluid benchmark eval | Planner designs fluid challenge → engineer solves → passes containment metric — 50% success rate target. |
 | INT-154 | Elec agent circuit success rate | Given a mechanism with motors, the Elec Engineer produces a valid circuit in 80% (first attempt), 95% after one retry. |
@@ -301,7 +347,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-018 | Call `simulate` and coder review-submission endpoints without latest successful `validate_and_price` artifacts and assert deterministic hard block; then provide valid artifacts and assert unblock only when `submit_for_review(Compound)` emits a valid latest-revision stage-specific manifest (`.manifests/engineering_execution_review_manifest.json` or `.manifests/benchmark_review_manifest.json`, as applicable). | Directly testing function precondition checks only. |
 | INT-019 | Submit overweight/overbudget/out-of-zone or missing-artifact latest revision via API and assert fail-closed reason codes at validation/simulation/review-submission boundaries. | Testing only local numeric comparison helpers. |
 | INT-020 | Execute scenarios over HTTP and assert taxonomy in response + events, and assert reviewer handoff remains blocked for all non-goal-hit outcomes. Build scripts must include `PartMetadata` for all parts. | Mocking simulation result enums. |
-| INT-021 | Run multi-seed runtime jitter simulations via API and assert aggregated robustness output. | Single mocked seed result assertion. |
+| INT-021 | Run runtime-randomization verification via API and assert one admitted heavy job produces one backend run with batched jittered scenes plus aggregated robustness output. | Single mocked seed result assertion. |
 | INT-022 | Run overload scenario in real simulation path and assert `motor_overload` behavior. | Synthetic return object with overload flag. |
 | INT-023 | Submit invalid fastener/joint setup via run flow and assert validation failure. Verify `PartMetadata` is used for joint definitions. | Unit-test of fastener rule function only. |
 | INT-024 | Run benchmark validation endpoint on conflicting geometry/objectives and assert failure. | Calling validation module directly in process. |
@@ -391,7 +437,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-139 | Run fluid simulation via API; assert only MP4/JSON/stress uploaded to S3; assert raw particle data absent from S3. | Checking local filesystem directly. |
 | INT-140 | Call `validate_and_price` on assembly with wires and electrical COTS parts; assert wire and elec costs included in total. | Calling pricing helper function directly. |
 | INT-141 | Run `simulate_circuit_transient` via API; assert motor ON/OFF timeline matches expected switching sequence. | Importing transient solver directly. |
-| INT-151 | Run multi-seed engineer episodes via API; assert <10% produce `PART_BREAKAGE`. | Single mock seed assertion. |
+| INT-151 | Run engineer episodes via API with runtime-randomization batches; assert <10% of jittered scenes produce `PART_BREAKAGE`. | Single mock seed assertion. |
 | INT-152 | Collect safety factors from multi-episode runs via API; assert average 1.5–5.0 in ≥80%. | Manual safety factor calculation. |
 | INT-153 | Execute planner→engineer fluid benchmark end-to-end via APIs; assert ≥50% pass containment metric. | Offline metric analysis only. |
 | INT-154 | Execute Elec Engineer on motor-mechanism benchmark via APIs; assert ≥80% valid circuit first attempt. | Mocking circuit validation result. |
