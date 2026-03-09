@@ -613,6 +613,46 @@ class MockDSPyLM(dspy.LM):
             "finished": finished,
         }
 
+        # Keep node-signature fields present even during JSON tool turns.
+        # Some DSPy predictor paths still expect signature outputs while a tool
+        # action is being selected, and they tolerate extra fields better than
+        # missing required ones.
+        if node_key in PLANNER_AGENTS:
+            default_plan = {
+                "theme": "benchmark_test",
+                "target_object_properties": {},
+                "environment_perturbations": {},
+                "difficulty_score": 0.5,
+                "reasoning": "Default mock benchmark plan.",
+            }
+            resp["plan"] = node_data.get("plan", default_plan)
+            resp["summary"] = node_data.get("summary", "Plan generated.")
+            if "plan" in node_data and isinstance(node_data["plan"], dict):
+                resp["plan"] = node_data["plan"]
+        elif node_key in REVIEWER_AGENTS:
+            resp["review"] = node_data.get(
+                "review",
+                {
+                    "decision": "APPROVED",
+                    "reason": "Verified.",
+                    "required_fixes": [],
+                },
+            )
+        elif node_key in CODER_AGENTS:
+            resp["journal"] = node_data.get("journal", "Work completed.")
+        elif node_key == AgentName.JOURNALLING_AGENT:
+            resp["summarized_journal"] = node_data.get(
+                "summarized_journal", "Journal summary."
+            )
+        elif node_key == AgentName.SKILL_AGENT:
+            resp["summary"] = node_data.get("summary", "Skills identified.")
+            resp["journal"] = node_data.get("journal", "Learning complete.")
+        elif node_key == AgentName.COTS_SEARCH:
+            resp["search_summary"] = node_data.get("search_summary", "Search complete.")
+        elif node_key == AgentName.ELECTRONICS_PLANNER:
+            resp["reasoning"] = reasoning
+            resp["summary"] = node_data.get("summary", "Electronics plan added.")
+
         # Legacy ReAct (3.1.3) internal predictor fields.
         # For JSON mode we keep both legacy and modern fields to avoid brittle
         # parser-mode mismatches across DSPy predictor variants.
@@ -649,6 +689,7 @@ class MockDSPyLM(dspy.LM):
         )
         if not finished and tool_name and tool_fields and not legacy_next_fields:
             tool_resp = {
+                **resp,
                 "thought": thought,
                 "tool_name": tool_name,
                 "tool_args": tool_args or {},
@@ -672,51 +713,13 @@ class MockDSPyLM(dspy.LM):
             # Prefer structured output for tool turns to keep DSPy adapters stable
             # across prompt-format variations.
             tool_turn_resp = {
+                **resp,
                 "thought": thought,
                 "tool_name": tool_name,
                 "tool_args": tool_args or {},
                 **legacy_resp,
             }
             return [json.dumps(tool_turn_resp)]
-
-        # Add node-specific fields (for ReAct extraction phase)
-        # Signature fields should be present even in ReAct finish responses
-        if node_key in PLANNER_AGENTS:
-            default_plan = {
-                "theme": "benchmark_test",
-                "target_object_properties": {},
-                "environment_perturbations": {},
-                "difficulty_score": 0.5,
-                "reasoning": "Default mock benchmark plan.",
-            }
-            resp["plan"] = node_data.get("plan", default_plan)
-            resp["summary"] = node_data.get("summary", "Plan generated.")
-            # Support BenchmarkPlannerSignature
-            if "plan" in node_data and isinstance(node_data["plan"], dict):
-                resp["plan"] = node_data["plan"]
-        elif node_key in REVIEWER_AGENTS:
-            resp["review"] = node_data.get(
-                "review",
-                {
-                    "decision": "APPROVED",
-                    "reason": "Verified.",
-                    "required_fixes": [],
-                },
-            )
-        elif node_key in CODER_AGENTS:
-            resp["journal"] = node_data.get("journal", "Work completed.")
-        elif node_key == AgentName.JOURNALLING_AGENT:
-            resp["summarized_journal"] = node_data.get(
-                "summarized_journal", "Journal summary."
-            )
-        elif node_key == AgentName.SKILL_AGENT:
-            resp["summary"] = node_data.get("summary", "Skills identified.")
-            resp["journal"] = node_data.get("journal", "Learning complete.")
-        elif node_key == AgentName.COTS_SEARCH:
-            resp["search_summary"] = node_data.get("search_summary", "Search complete.")
-        elif node_key == AgentName.ELECTRONICS_PLANNER:
-            resp["reasoning"] = reasoning
-            resp["summary"] = node_data.get("summary", "Electronics plan added.")
 
         if is_json:
             # WP10: Do NOT filter JSON responses. dspy adapters are very sensitive to missing fields
