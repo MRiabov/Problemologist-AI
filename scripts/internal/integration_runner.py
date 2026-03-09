@@ -1315,11 +1315,11 @@ def _run_integration_command(
 
     _load_env_file(repo_root / ".env")
 
-    if args.full_sim:
-        os.environ["SIMULATION_DEFAULT_BACKEND"] = "GENESIS"
-        print("Full simulation backend selected: Genesis")
+    if args.fast_sim:
+        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
+        print("Fast simulation backend selected: MuJoCo")
     else:
-        os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "MUJOCO")
+        os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
         print(
             "Integration default simulation backend: "
             f"{os.environ['SIMULATION_DEFAULT_BACKEND']}"
@@ -1679,9 +1679,9 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--down", action="store_true")
     run_parser.add_argument("--no-smoke", action="store_true")
     run_parser.add_argument(
-        "--full-sim",
+        "--fast-sim",
         action="store_true",
-        help="Use Genesis as the default simulation backend for this run.",
+        help="Use MuJoCo as the simulation backend for this run (faster, reduced fidelity).",
     )
     run_parser.add_argument(
         "--wait-cleanup",
