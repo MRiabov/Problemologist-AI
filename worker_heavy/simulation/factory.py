@@ -11,8 +11,8 @@ from shared.simulation.schemas import (
 logger = structlog.get_logger(__name__)
 
 # Global cache for session-isolated backends
-# session_id -> PhysicsBackend
-BACKEND_CACHE: dict[str, PhysicsBackend] = {}
+# session_id -> backend_type -> PhysicsBackend
+BACKEND_CACHE: dict[str, dict[SimulatorBackendType, PhysicsBackend]] = {}
 MAX_ACTIVE_SESSIONS = 4
 
 
@@ -41,9 +41,12 @@ def get_physics_backend(
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode
 
-    if session_id in BACKEND_CACHE:
-        logger.debug("backend_cache_hit", session_id=session_id)
-        backend = BACKEND_CACHE[session_id]
+    session_cache = BACKEND_CACHE.get(session_id)
+    if session_cache and backend_type in session_cache:
+        logger.debug(
+            "backend_cache_hit", session_id=session_id, backend_type=backend_type
+        )
+        backend = session_cache[backend_type]
         if hasattr(backend, "smoke_test_mode"):
             backend.smoke_test_mode = smoke_test_mode
         if hasattr(backend, "particle_budget"):
@@ -51,15 +54,11 @@ def get_physics_backend(
         return backend
 
     # Enforce session limit
-    if len(BACKEND_CACHE) >= MAX_ACTIVE_SESSIONS:
+    if session_id not in BACKEND_CACHE and len(BACKEND_CACHE) >= MAX_ACTIVE_SESSIONS:
         # Evict oldest session (simple FIFO for now)
         oldest_sid = next(iter(BACKEND_CACHE))
         logger.info("evicting_oldest_session", session_id=oldest_sid)
-        backend = BACKEND_CACHE.pop(oldest_sid)
-        try:
-            backend.close()
-        except Exception as e:
-            logger.warning("backend_close_failed", session_id=oldest_sid, error=str(e))
+        close_session_backend(oldest_sid)
 
     logger.info(
         "creating_new_session_backend", session_id=session_id, backend_type=backend_type
@@ -70,7 +69,8 @@ def get_physics_backend(
         particle_budget=particle_budget,
         session_id=session_id,
     )
-    BACKEND_CACHE[session_id] = backend
+    session_cache = BACKEND_CACHE.setdefault(session_id, {})
+    session_cache[backend_type] = backend
     return backend
 
 
@@ -120,21 +120,45 @@ def get_simulation_builder(
 
 def close_session_backend(session_id: str):
     """Explicitly close and remove a backend from cache."""
-    if session_id in BACKEND_CACHE:
-        backend = BACKEND_CACHE.pop(session_id)
-        backend.close()
-        logger.info("session_backend_closed", session_id=session_id)
+    session_cache = BACKEND_CACHE.pop(session_id, None)
+    if session_cache:
+        for backend_type, backend in session_cache.items():
+            try:
+                backend.close()
+                logger.info(
+                    "session_backend_closed",
+                    session_id=session_id,
+                    backend_type=backend_type,
+                )
+            except Exception as e:
+                logger.warning(
+                    "backend_close_failed",
+                    session_id=session_id,
+                    backend_type=backend_type,
+                    error=str(e),
+                )
+        return
 
 
 def close_all_session_backends() -> int:
     """Close and clear all cached session backends."""
     closed_count = 0
     for session_id in list(BACKEND_CACHE.keys()):
-        backend = BACKEND_CACHE.pop(session_id)
-        try:
-            backend.close()
-            closed_count += 1
-            logger.info("session_backend_closed", session_id=session_id)
-        except Exception as e:
-            logger.warning("backend_close_failed", session_id=session_id, error=str(e))
+        session_cache = BACKEND_CACHE.pop(session_id)
+        for backend_type, backend in session_cache.items():
+            try:
+                backend.close()
+                closed_count += 1
+                logger.info(
+                    "session_backend_closed",
+                    session_id=session_id,
+                    backend_type=backend_type,
+                )
+            except Exception as e:
+                logger.warning(
+                    "backend_close_failed",
+                    session_id=session_id,
+                    backend_type=backend_type,
+                    error=str(e),
+                )
     return closed_count

@@ -1050,20 +1050,17 @@ def validate(
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
 
-        # Heuristic: use MuJoCo for validation preview unless Genesis is requested
-        backend_type = get_default_simulator_backend()
-        if output_dir:
-            obj_path = output_dir / "objectives.yaml"
-            if obj_path.exists():
-                try:
-                    data = yaml.safe_load(obj_path.read_text(encoding="utf-8"))
-                    from shared.models.schemas import ObjectivesYaml
-
-                    objs = ObjectivesYaml(**data)
-                    if objs.physics and objs.physics.backend:
-                        backend_type = SimulatorBackendType(objs.physics.backend)
-                except Exception:
-                    pass
+        # Validation preview is intentionally routed to MuJoCo regardless of
+        # the requested simulation backend to avoid Genesis render compilation.
+        backend_type = SimulatorBackendType.MUJOCO
+        emit_event(
+            {
+                "event_type": "render_request_benchmark",
+                "num_views": 24,
+                "backend": backend_type.value,
+                "purpose": "validation_static_preview",
+            }
+        )
 
         prerender_24_views(
             component,

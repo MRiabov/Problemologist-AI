@@ -82,6 +82,25 @@ The persistent-child refactor therefore has to preserve the existing behavior co
 
 The detailed dated plan for this refactor is recorded in `auxillary/simulation-optimization-attempts.md`.
 
+### Warm-child backend cache split
+
+The persistent child keeps backend caches split by both session and backend type.
+
+The cache rule is:
+
+1. A session may hold a warm MuJoCo backend and a warm Genesis backend at the same time.
+2. `/benchmark/validate` static preview reuse must not overwrite or alias the backend instance later used by `/benchmark/simulate`.
+3. Backend cache lookup is therefore keyed by `(session_id, backend_type)`, not by `session_id` alone.
+4. Session cleanup closes all cached backend instances for that session, not only the most recent one.
+
+The reason is architectural rather than incidental:
+
+- `/benchmark/validate` now uses MuJoCo for static preview by default,
+- `/benchmark/simulate` may still use Genesis for the same session,
+- a single shared per-session backend cache would let the validation-preview path poison the later simulation path with the wrong backend instance.
+
+This split preserves warm-process reuse while keeping the validate-preview/backend-selection contract correct.
+
 ### Backend responsibility split
 
 We do not use one backend for every purpose.
