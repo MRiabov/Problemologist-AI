@@ -6,7 +6,10 @@ import httpx
 import structlog
 
 from shared.enums import ResponseStatus
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import (
     BenchmarkToolResponse,
@@ -451,12 +454,13 @@ class WorkerClient:
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
-        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
+        backend: SimulatorBackendType | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
         client = await self._get_client()
         try:
-            payload = {"script_path": script_path, "backend": backend}
+            resolved_backend = backend or get_default_simulator_backend()
+            payload = {"script_path": script_path, "backend": resolved_backend}
             if script_content is not None:
                 payload["script_content"] = script_content
 

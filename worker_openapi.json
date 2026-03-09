@@ -2485,8 +2485,7 @@
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "GENESIS"
+            "description": "Physics backend to use."
           },
           "smoke_test_mode": {
             "anyOf": [
@@ -2582,8 +2581,7 @@
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "GENESIS"
+            "description": "Physics backend to use."
           },
           "smoke_test_mode": {
             "anyOf": [
@@ -3486,8 +3484,7 @@
           },
           "backend": {
             "$ref": "#/components/schemas/SimulatorBackendType",
-            "description": "Physics backend to use.",
-            "default": "GENESIS"
+            "description": "Physics backend to use."
           },
           "smoke_test_mode": {
             "anyOf": [

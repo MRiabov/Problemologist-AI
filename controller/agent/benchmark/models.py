@@ -8,6 +8,7 @@ from shared.simulation.schemas import (
     AssetMetadata,
     CustomObjectives,
     SimulatorBackendType,
+    get_default_simulator_backend,
 )
 
 
@@ -38,6 +39,6 @@ class GenerationSession(BaseModel):
     session_id: UUID
     prompt: str
     status: SessionStatus = SessionStatus.PLANNING
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     validation_logs: list[str] = Field(default_factory=list)
     custom_objectives: CustomObjectives = Field(default_factory=CustomObjectives)

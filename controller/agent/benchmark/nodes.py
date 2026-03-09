@@ -23,6 +23,7 @@ from shared.observability.schemas import ConversationLengthExceededEvent
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
+    get_default_simulator_backend,
 )
 from shared.type_checking import type_check
 from shared.workers.schema import SimulationArtifacts
@@ -350,7 +351,7 @@ class BenchmarkCoderNode(BaseNode):
                     )
                 else:
                     # physics simulation
-                    backend = SimulatorBackendType.GENESIS
+                    backend = get_default_simulator_backend()
                     try:
                         obj_data = yaml.safe_load(objectives_yaml)
                         if (

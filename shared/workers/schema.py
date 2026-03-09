@@ -11,7 +11,10 @@ from shared.models.simulation import (
     StressSummary,
 )
 from shared.observability.schemas import BaseEvent
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 from shared.workers.workbench_models import ManufacturingMethod
 
 
@@ -187,7 +190,7 @@ class BenchmarkToolRequest(BaseModel):
         description="Gzipped tarball of the session workspace (base64 encoded).",
     )
     backend: SimulatorBackendType = Field(
-        default=SimulatorBackendType.GENESIS,
+        default_factory=get_default_simulator_backend,
         description="Physics backend to use.",
     )
     smoke_test_mode: bool | None = Field(

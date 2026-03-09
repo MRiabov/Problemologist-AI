@@ -3,7 +3,10 @@ from pathlib import Path
 import structlog
 
 from shared.simulation.backends import PhysicsBackend
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -99,7 +102,7 @@ def _create_backend(
 
 def get_simulation_builder(
     output_dir: Path,
-    backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    backend_type: SimulatorBackendType | None = None,
     use_vhacd: bool = False,
 ):
     from worker_heavy.simulation.builder import (
@@ -107,11 +110,12 @@ def get_simulation_builder(
         MuJoCoSimulationBuilder,
     )
 
-    if backend_type == SimulatorBackendType.MUJOCO:
+    resolved_backend_type = backend_type or get_default_simulator_backend()
+    if resolved_backend_type == SimulatorBackendType.MUJOCO:
         return MuJoCoSimulationBuilder(output_dir, use_vhacd)
-    if backend_type == SimulatorBackendType.GENESIS:
+    if resolved_backend_type == SimulatorBackendType.GENESIS:
         return GenesisSimulationBuilder(output_dir, use_vhacd)
-    raise ValueError(f"Unknown backend type: {backend_type}")
+    raise ValueError(f"Unknown backend type: {resolved_backend_type}")
 
 
 def close_session_backend(session_id: str):

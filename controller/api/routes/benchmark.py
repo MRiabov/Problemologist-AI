@@ -24,7 +24,10 @@ from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
 from shared.enums import GenerationKind, ResponseStatus
 from shared.models.schemas import CustomObjectives
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 
 router = APIRouter(prefix="/benchmark", tags=["benchmark"])
 logger = structlog.get_logger(__name__)
@@ -40,7 +43,7 @@ class BenchmarkGenerateRequest(BaseModel):
     seed_id: str | None = None
     seed_dataset: str | None = None
     generation_kind: GenerationKind | None = None
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
 
     @field_validator("prompt")
     @classmethod

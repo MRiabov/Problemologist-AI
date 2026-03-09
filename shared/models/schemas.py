@@ -39,7 +39,11 @@ from shared.enums import (
     TerminalReason,
 )
 from shared.models.simulation import SimulationFailure
-from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
+from shared.simulation.schemas import (
+    CustomObjectives,
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 
 # =============================================================================
 # Common Types
@@ -284,7 +288,7 @@ class SceneDefinition(BaseModel):
 class PhysicsConfig(BaseModel):
     """Configuration for the physics engine."""
 
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     fem_enabled: bool = False
     compute_target: str = "auto"  # "auto" | "cpu" | "gpu"
 

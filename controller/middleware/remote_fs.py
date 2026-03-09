@@ -34,7 +34,10 @@ from shared.observability.schemas import (
     SkillReadEvent,
     WriteFileToolEvent,
 )
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.filesystem.policy import FilesystemPolicy
 from shared.workers.schema import (
@@ -385,10 +388,11 @@ class RemoteFilesystemMiddleware:
     async def simulate(
         self,
         script_path: str | Path,
-        backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
+        backend: SimulatorBackendType | None = None,
     ) -> BenchmarkToolResponse | SimulationResult:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
+        resolved_backend = backend or get_default_simulator_backend()
         # Record request
         await record_events(
             episode_id=self.client.session_id,
@@ -405,7 +409,7 @@ class RemoteFilesystemMiddleware:
                 HeavySimulationParams(
                     bundle_bytes=bundle,
                     script_path=p_str,
-                    backend=backend,
+                    backend=resolved_backend,
                     smoke_test_mode=False,
                     session_id=self.client.session_id,
                 ),
@@ -415,7 +419,7 @@ class RemoteFilesystemMiddleware:
             await record_simulation_result(self.client.session_id, res)
             return res
 
-        return await self.client.simulate(p_str, backend=backend)
+        return await self.client.simulate(p_str, backend=resolved_backend)
 
     async def preview(
         self,

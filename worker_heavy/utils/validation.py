@@ -30,7 +30,10 @@ from shared.models.simulation import (
 from shared.observability.events import emit_event
 from shared.observability.schemas import WireRoutingEvent
 from shared.simulation.backends import StressField
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 from worker_heavy.simulation.factory import get_simulation_builder
 from worker_heavy.workbenches.config import load_config
@@ -605,7 +608,7 @@ def simulate(
 
     backend_type = backend
     if backend_type is None:
-        backend_type = SimulatorBackendType.GENESIS
+        backend_type = get_default_simulator_backend()
         if objectives and getattr(objectives, "physics", None):
             backend_type = SimulatorBackendType(objectives.physics.backend)
 
@@ -1003,7 +1006,7 @@ def validate(
         renders_dir = str(output_dir / "renders") if output_dir else None
 
         # Heuristic: use MuJoCo for validation preview unless Genesis is requested
-        backend_type = SimulatorBackendType.GENESIS
+        backend_type = get_default_simulator_backend()
         if output_dir:
             obj_path = output_dir / "objectives.yaml"
             if obj_path.exists():

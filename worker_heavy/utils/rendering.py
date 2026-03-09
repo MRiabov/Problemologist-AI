@@ -14,7 +14,10 @@ from PIL import Image
 from shared.simulation.backends import (
     StressField,
 )
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 from worker_heavy.simulation.factory import get_simulation_builder
 
 logger = structlog.get_logger(__name__)
@@ -23,7 +26,7 @@ logger = structlog.get_logger(__name__)
 def prerender_24_views(
     component: Compound,
     output_dir: str | None = None,
-    backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    backend_type: SimulatorBackendType | None = None,
     session_id: str | None = None,
     scene_path: str | Path | None = None,
     smoke_test_mode: bool | None = None,
@@ -37,6 +40,7 @@ def prerender_24_views(
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode
+    resolved_backend_type = backend_type or get_default_simulator_backend()
 
     if output_dir is None:
         output_dir = os.getenv("RENDERS_DIR", "./renders")
@@ -45,7 +49,7 @@ def prerender_24_views(
     logger.info(
         "prerender_24_views_start",
         output_dir=str(output_path),
-        backend=backend_type,
+        backend=resolved_backend_type,
         session_id=session_id,
         scene_path=str(scene_path) if scene_path else None,
         smoke_test_mode=smoke_test_mode,
@@ -63,7 +67,7 @@ def prerender_24_views(
             else:
                 build_dir = Path(temp_build_dir)
                 builder = get_simulation_builder(
-                    output_dir=build_dir, backend_type=backend_type
+                    output_dir=build_dir, backend_type=resolved_backend_type
                 )
                 final_scene_path = builder.build_from_assembly(
                     component, smoke_test_mode=smoke_test_mode
@@ -74,7 +78,7 @@ def prerender_24_views(
             from worker_heavy.simulation.factory import get_physics_backend
 
             backend = get_physics_backend(
-                backend_type,
+                resolved_backend_type,
                 session_id=session_id,
                 smoke_test_mode=smoke_test_mode,
                 particle_budget=particle_budget,

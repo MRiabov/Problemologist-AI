@@ -1,7 +1,8 @@
+import os
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from shared.enums import FailureReason as SimulationFailureMode
 
@@ -11,11 +12,22 @@ class SimulatorBackendType(StrEnum):
     GENESIS = "GENESIS"  # FEM + MPM fluids, requires more compute
 
 
+def get_default_simulator_backend() -> SimulatorBackendType:
+    """Resolve default backend from environment with a safe Genesis fallback."""
+    raw_value = os.getenv("SIMULATION_DEFAULT_BACKEND", "").strip().upper()
+    if not raw_value:
+        return SimulatorBackendType.GENESIS
+    try:
+        return SimulatorBackendType(raw_value)
+    except ValueError:
+        return SimulatorBackendType.GENESIS
+
+
 class SimulationRequest(BaseModel):
     session_id: str
     mjcf_content: str | None = None
     compound_json: str | None = None
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     dt: float = 0.01
     duration: float = 5.0
     randomize: bool = False

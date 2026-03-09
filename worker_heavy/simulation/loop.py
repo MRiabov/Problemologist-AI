@@ -17,7 +17,10 @@ from shared.observability.schemas import (
     SimulationBackendSelectedEvent,
 )
 from shared.simulation.backends import SimulationScene
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 from shared.wire_utils import check_wire_clearance, get_awg_properties
 from shared.workers.workbench_models import ManufacturingMethod
 from worker_heavy.simulation.electronics import ElectronicsManager
@@ -38,7 +41,7 @@ class SimulationLoop:
         xml_path: str | Path,
         component: Part | Compound | None = None,
         max_simulation_time: float = simulation_settings.max_simulation_time_seconds,
-        backend_type: SimulatorBackendType = SimulatorBackendType.GENESIS,
+        backend_type: SimulatorBackendType | None = None,
         electronics: ElectronicsSection | None = None,
         objectives: ObjectivesYaml | None = None,
         smoke_test_mode: bool | None = None,
@@ -47,11 +50,12 @@ class SimulationLoop:
     ):
         from worker_heavy.config import settings
 
+        resolved_backend_type = backend_type or get_default_simulator_backend()
         if smoke_test_mode is None:
             smoke_test_mode = settings.smoke_test_mode
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if (
-            backend_type == SimulatorBackendType.MUJOCO
+            resolved_backend_type == SimulatorBackendType.MUJOCO
             and objectives
             and objectives.fluids
         ):
@@ -60,13 +64,13 @@ class SimulationLoop:
             )
 
         self.backend = get_physics_backend(
-            backend_type,
+            resolved_backend_type,
             session_id=session_id,
             smoke_test_mode=smoke_test_mode,
             particle_budget=particle_budget,
         )
         self.smoke_test_mode = smoke_test_mode
-        self.backend_type = backend_type
+        self.backend_type = resolved_backend_type
         self.session_id = session_id
         # Propagate smoke test mode to backend for optimization (in case of cache hit)
         if hasattr(self.backend, "smoke_test_mode"):
@@ -80,9 +84,9 @@ class SimulationLoop:
             # Emit backend selection event (WP2)
             emit_event(
                 SimulationBackendSelectedEvent(
-                    backend=backend_type.value
-                    if hasattr(backend_type, "value")
-                    else backend_type,
+                    backend=resolved_backend_type.value
+                    if hasattr(resolved_backend_type, "value")
+                    else resolved_backend_type,
                     fem_enabled=objectives.physics.fem_enabled if objectives else False,
                     compute_target=objectives.physics.compute_target
                     if objectives
@@ -223,7 +227,7 @@ class SimulationLoop:
                     ):
                         self._monitor_names.append(name)
                         self._monitor_limits.append(state.forcerange[1])
-                    elif backend_type != SimulatorBackendType.MUJOCO:
+                    elif self.backend_type != SimulatorBackendType.MUJOCO:
                         # Default for other backends (e.g. Genesis)
                         self._monitor_names.append(name)
                         self._monitor_limits.append(1000.0)

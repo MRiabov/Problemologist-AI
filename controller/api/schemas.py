@@ -14,7 +14,10 @@ from shared.enums import (
 )
 from shared.models.schemas import EpisodeMetadata, TraceMetadata
 from shared.models.steerability import CodeReference, GeometricSelection
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 
 
 class StandardResponse(BaseModel):
@@ -241,7 +244,7 @@ class BenchmarkGenerateRequest(BaseModel):
     seed_id: str | None = None
     seed_dataset: str | None = None
     generation_kind: str | None = None
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
 
     @field_validator("prompt")
     @classmethod
@@ -267,7 +270,7 @@ class UpdateObjectivesRequest(BaseModel):
 class RunSimulationRequest(BaseModel):
     session_id: str
     compound_json: str = "{}"
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
 
 
 class FeedbackRequest(BaseModel):

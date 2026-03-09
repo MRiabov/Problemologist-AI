@@ -55,7 +55,11 @@ from shared.enums import (
 from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.events import emit_event
 from shared.observability.schemas import NodeEntryValidationFailedEvent
-from shared.simulation.schemas import CustomObjectives, SimulatorBackendType
+from shared.simulation.schemas import (
+    CustomObjectives,
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 
 from .models import GenerationSession, SessionStatus
 from .nodes import (
@@ -1046,7 +1050,7 @@ async def run_generation_session(
     seed_id: str | None = None,
     seed_dataset: str | None = None,
     generation_kind: GenerationKind | None = None,
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS,
+    backend: SimulatorBackendType | None = None,
 ) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.
@@ -1056,8 +1060,9 @@ async def run_generation_session(
         "running_generation_session",
         session_id=session_id,
         prompt=prompt,
-        backend=backend,
+        backend=(backend or get_default_simulator_backend()),
     )
+    backend = backend or get_default_simulator_backend()
 
     # 1. Create DB entry (Episode)
     from controller.config.settings import settings

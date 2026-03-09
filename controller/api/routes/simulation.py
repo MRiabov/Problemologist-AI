@@ -1,11 +1,14 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from controller.agent.benchmark.graph import run_generation_session
 from shared.enums import ResponseStatus
-from shared.simulation.schemas import SimulatorBackendType
+from shared.simulation.schemas import (
+    SimulatorBackendType,
+    get_default_simulator_backend,
+)
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
 
@@ -13,7 +16,7 @@ router = APIRouter(prefix="/simulation", tags=["simulation"])
 class RunSimulationRequest(BaseModel):
     session_id: str
     compound_json: str = "{}"
-    backend: SimulatorBackendType = SimulatorBackendType.GENESIS
+    backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
 
 
 @router.post("/run", status_code=202)
