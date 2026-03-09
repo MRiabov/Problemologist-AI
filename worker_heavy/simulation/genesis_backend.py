@@ -42,7 +42,7 @@ logger = structlog.get_logger(__name__)
 class GenesisBackend(PhysicsBackend):
     _lock = threading.Lock()
 
-    def __init__(self, session_id: str | None = None):
+    def __init__(self, session_id: str | None = None, num_envs: int = 1):
         self.scene = None
         self.entities = {}  # name -> gs.Entity
         self.entity_configs = {}  # name -> dict (from json)
@@ -61,6 +61,7 @@ class GenesisBackend(PhysicsBackend):
         self.smoke_test_mode = False
         self._is_built = False
         self.session_id = session_id
+        self.num_envs = max(1, num_envs)
         self._ensure_initialized()
 
     def _ensure_initialized(self):
@@ -628,7 +629,7 @@ class GenesisBackend(PhysicsBackend):
 
             try:
                 logger.info("genesis_building_scene")
-                self.scene.build(n_envs=1)
+                self.scene.build(n_envs=self.num_envs)
             except Exception as e:
                 if "already built" not in str(e).lower():
                     logger.warning("genesis_build_failed", error=str(e))
@@ -762,9 +763,10 @@ class GenesisBackend(PhysicsBackend):
 
         return None
 
-    def get_body_state(self, body_id: str) -> BodyState:
-        logger.debug("genesis_get_body_state_request", body_id=body_id)
+    def get_body_state(self, body_id: str, env_idx: int | None = None) -> BodyState:
+        logger.debug("genesis_get_body_state_request", body_id=body_id, env_idx=env_idx)
         try:
+            envs_idx = None if env_idx is None else [env_idx]
 
             def _as_vector(
                 val: Any, size: int, default: tuple[float, ...]
@@ -813,21 +815,21 @@ class GenesisBackend(PhysicsBackend):
                             logger.debug("genesis_link_state_found", body_id=body_id)
 
                             pos = _as_vector(
-                                target_link.get_pos()
+                                target_link.get_pos(envs_idx=envs_idx)
                                 if hasattr(target_link, "get_pos")
                                 else target_link.pos,
                                 3,
                                 (0.0, 0.0, 0.0),
                             )
                             quat = _as_vector(
-                                target_link.get_quat()
+                                target_link.get_quat(envs_idx=envs_idx)
                                 if hasattr(target_link, "get_quat")
                                 else target_link.quat,
                                 4,
                                 (1.0, 0.0, 0.0, 0.0),
                             )
                             vel = _as_vector(
-                                target_link.get_vel()
+                                target_link.get_vel(envs_idx=envs_idx)
                                 if hasattr(target_link, "get_vel")
                                 else target_link.vel,
                                 3,
@@ -837,7 +839,7 @@ class GenesisBackend(PhysicsBackend):
                             angvel = (0.0, 0.0, 0.0)
                             if hasattr(target_link, "get_angvel"):
                                 angvel = _as_vector(
-                                    target_link.get_angvel(),
+                                    target_link.get_angvel(envs_idx=envs_idx),
                                     3,
                                     (0.0, 0.0, 0.0),
                                 )
@@ -881,6 +883,10 @@ class GenesisBackend(PhysicsBackend):
                 # FEM or MPM entity: state.pos is [1, n_nodes, 3] or [1, n_particles, 3]
                 pos_arr = state.pos.cpu().numpy()
                 vel_arr = state.vel.cpu().numpy() if hasattr(state, "vel") else None
+                if env_idx is not None and pos_arr.ndim >= 2:
+                    pos_arr = pos_arr[env_idx]
+                    if vel_arr is not None and vel_arr.ndim >= 2:
+                        vel_arr = vel_arr[env_idx]
                 if pos_arr.ndim == 3:
                     pos_arr = pos_arr[0]
                 if vel_arr is not None and vel_arr.ndim == 3:
@@ -893,10 +899,14 @@ class GenesisBackend(PhysicsBackend):
                 )
                 return BodyState(pos=pos, quat=(1, 0, 0, 0), vel=vel, angvel=(0, 0, 0))
             return BodyState(
-                pos=_as_vector(entity.get_pos(), 3, (0.0, 0.0, 0.0)),
-                quat=_as_vector(entity.get_quat(), 4, (1.0, 0.0, 0.0, 0.0)),
-                vel=_as_vector(entity.get_vel(), 3, (0.0, 0.0, 0.0)),
-                angvel=_as_vector(entity.get_ang(), 3, (0.0, 0.0, 0.0)),
+                pos=_as_vector(entity.get_pos(envs_idx=envs_idx), 3, (0.0, 0.0, 0.0)),
+                quat=_as_vector(
+                    entity.get_quat(envs_idx=envs_idx), 4, (1.0, 0.0, 0.0, 0.0)
+                ),
+                vel=_as_vector(entity.get_vel(envs_idx=envs_idx), 3, (0.0, 0.0, 0.0)),
+                angvel=_as_vector(
+                    entity.get_ang(envs_idx=envs_idx), 3, (0.0, 0.0, 0.0)
+                ),
             )
         except BaseException as e:
             logger.warning(
@@ -1259,9 +1269,16 @@ class GenesisBackend(PhysicsBackend):
     def get_all_camera_names(self) -> list[str]:
         return list(self.cameras.keys())
 
-    def check_collision(self, body_name: str, site_name: str) -> bool:
+    def check_collision(
+        self, body_name: str, site_name: str, env_idx: int | None = None
+    ) -> bool:
         """Checks if a body is in collision with another body or site (zone)."""
-        logger.debug("genesis_check_collision_start", body=body_name, site=site_name)
+        logger.debug(
+            "genesis_check_collision_start",
+            body=body_name,
+            site=site_name,
+            env_idx=env_idx,
+        )
         # In Genesis, sites are often just entities or zones.
         # If site_name is an entity, check contact.
         target_entity = self.entities.get(body_name)
@@ -1279,7 +1296,7 @@ class GenesisBackend(PhysicsBackend):
 
             if ent_cfg and ent_cfg.get("is_zone"):
                 # Check if target body pos is within zone
-                state = self.get_body_state(body_name)
+                state = self.get_body_state(body_name, env_idx=env_idx)
                 pos = state.pos
 
                 # Handle both min/max and pos/size representations
@@ -1332,21 +1349,31 @@ class GenesisBackend(PhysicsBackend):
         except Exception:
             return 0.0
 
-    def apply_jitter(self, body_name: str, jitter: tuple[float, float, float]) -> None:
+    def apply_jitter(
+        self,
+        body_name: str,
+        jitter: tuple[float, float, float],
+        env_idx: int | None = None,
+    ) -> None:
         """Apply position jitter to a body in Genesis using qpos."""
         import torch
 
+        envs_idx = None if env_idx is None else [env_idx]
+
         if body_name in self.entities:
             entity = self.entities[body_name]
-            qpos = entity.get_qpos()  # Returns a torch tensor [n_dofs]
+            qpos = entity.get_qpos(envs_idx=envs_idx)
             # Assuming first 3 are position for free bodies or similar
             # If it has DOFs, jitter the first 3 (which are usually root translations)
-            if qpos.shape[0] >= 3:
+            if qpos.shape[-1] >= 3:
                 jitter_tensor = torch.tensor(
                     jitter, dtype=qpos.dtype, device=qpos.device
                 )
-                qpos[:3] += jitter_tensor
-                entity.set_qpos(qpos)
+                if qpos.ndim == 2:
+                    qpos[:, :3] += jitter_tensor
+                else:
+                    qpos[:3] += jitter_tensor
+                entity.set_qpos(qpos, envs_idx=envs_idx)
         else:
             # Check links within entities
             for ent in self.entities.values():
@@ -1354,14 +1381,29 @@ class GenesisBackend(PhysicsBackend):
                     for link in ent.links:
                         if link.name == body_name:
                             # link.q_start/q_end give indices into entity qpos
-                            qpos = ent.get_qpos()
-                            if link.q_start + 3 <= qpos.shape[0]:
+                            qpos = ent.get_qpos(envs_idx=envs_idx)
+                            q_extent = qpos.shape[-1]
+                            if link.q_start + 3 <= q_extent:
                                 jitter_tensor = torch.tensor(
                                     jitter, dtype=qpos.dtype, device=qpos.device
                                 )
-                                qpos[link.q_start : link.q_start + 3] += jitter_tensor
-                                ent.set_qpos(qpos)
+                                if qpos.ndim == 2:
+                                    qpos[:, link.q_start : link.q_start + 3] += (
+                                        jitter_tensor
+                                    )
+                                else:
+                                    qpos[link.q_start : link.q_start + 3] += (
+                                        jitter_tensor
+                                    )
+                                ent.set_qpos(qpos, envs_idx=envs_idx)
                             return
+
+    def reset(self) -> None:
+        """Reset Genesis state without rebuilding the compiled scene."""
+        if self.scene is None or not self.is_built:
+            raise RuntimeError("Scene not loaded")
+
+        self.scene.reset()
 
     def close(self) -> None:
         try:

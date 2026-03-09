@@ -479,6 +479,19 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def heavy_ready(self) -> bool:
+        """Check whether the heavy worker is ready to accept a new job."""
+        client = await self._get_client()
+        try:
+            response = await client.get(
+                f"{self.heavy_url}/ready",
+                headers=self.headers,
+                timeout=5.0,
+            )
+            return response.status_code == 200
+        finally:
+            await self._close_client(client)
+
     async def validate(
         self, script_path: str = "script.py", script_content: str | None = None
     ) -> BenchmarkToolResponse:
@@ -495,7 +508,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/validate",
                 json=payload,
                 headers=self.headers,
-                timeout=30.0,
+                timeout=60.0,
             )
             response.raise_for_status()
             parsed = BenchmarkToolResponse.model_validate(response.json())
@@ -556,7 +569,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/submit",
                 json=payload,
                 headers=self.headers,
-                timeout=30.0,
+                timeout=60.0,
             )
             response.raise_for_status()
             parsed = BenchmarkToolResponse.model_validate(response.json())

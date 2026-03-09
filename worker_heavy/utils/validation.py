@@ -536,6 +536,51 @@ def simulate_subprocess(
     )
 
 
+def validate_subprocess(
+    script_path: Path | str,
+    session_root: Path | str,
+    script_content: str | None = None,
+    output_dir: Path | None = None,
+    smoke_test_mode: bool | None = None,
+    session_id: str | None = None,
+    particle_budget: int | None = None,
+) -> tuple[bool, str | None]:
+    """Serializable entry point for ProcessPoolExecutor validation runs."""
+    if session_root:
+        os.environ["EVENTS_FILE"] = str(Path(session_root) / "events.jsonl")
+
+    from shared.workers.loader import load_component_from_script
+    from worker_heavy.config import settings
+
+    if smoke_test_mode is None:
+        smoke_test_mode = settings.smoke_test_mode
+
+    component = load_component_from_script(
+        script_path=Path(script_path),
+        session_root=Path(session_root),
+        script_content=script_content,
+    )
+    is_valid, message = validate(
+        component,
+        output_dir=output_dir,
+        session_id=session_id,
+        smoke_test_mode=smoke_test_mode,
+        particle_budget=particle_budget,
+    )
+    fem_valid, fem_message = validate_fem_manufacturability(
+        component,
+        Path(session_root),
+        session_id=session_id,
+    )
+    if is_valid and not fem_valid:
+        is_valid = False
+        message = (
+            f"{message}; {fem_message}" if message and fem_message else fem_message
+        )
+
+    return is_valid, message
+
+
 def simulate(
     component: Compound,
     output_dir: Path | None = None,

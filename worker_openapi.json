@@ -1211,7 +1211,7 @@
           "worker-heavy"
         ],
         "summary": "Api Verify",
-        "description": "Run multi-seed verification with runtime jitter.",
+        "description": "Run batched runtime-randomization verification.",
         "operationId": "api_verify_benchmark_verify_post",
         "parameters": [
           {
@@ -2905,9 +2905,9 @@
       },
       "MultiRunResult": {
         "properties": {
-          "num_runs": {
+          "num_scenes": {
             "type": "integer",
-            "title": "Num Runs"
+            "title": "Num Scenes"
           },
           "success_count": {
             "type": "integer",
@@ -2934,11 +2934,26 @@
             },
             "type": "array",
             "title": "Fail Reasons"
+          },
+          "scene_build_count": {
+            "type": "integer",
+            "title": "Scene Build Count",
+            "default": 1
+          },
+          "backend_run_count": {
+            "type": "integer",
+            "title": "Backend Run Count",
+            "default": 1
+          },
+          "batched_execution": {
+            "type": "boolean",
+            "title": "Batched Execution",
+            "default": true
           }
         },
         "type": "object",
         "required": [
-          "num_runs",
+          "num_scenes",
           "success_count",
           "success_rate",
           "is_consistent",
@@ -2946,7 +2961,7 @@
           "fail_reasons"
         ],
         "title": "MultiRunResult",
-        "description": "Result of multi-run verification."
+        "description": "Result of batched runtime-randomization verification."
       },
       "PowerSupplyConfig": {
         "properties": {
@@ -3550,11 +3565,11 @@
               0.001
             ]
           },
-          "num_runs": {
+          "num_scenes": {
             "type": "integer",
             "minimum": 1.0,
-            "title": "Num Runs",
-            "description": "Number of runs.",
+            "title": "Num Scenes",
+            "description": "Number of parallel jittered scene instances in one backend run.",
             "default": 5
           },
           "duration": {
@@ -3573,7 +3588,7 @@
         },
         "type": "object",
         "title": "VerificationRequest",
-        "description": "Request to run multi-seed verification with jitter."
+        "description": "Request to run batched runtime-randomization verification."
       },
       "WireConfig": {
         "properties": {

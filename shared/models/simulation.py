@@ -85,11 +85,14 @@ class SimulationResult(BaseModel):
 
 
 class MultiRunResult(BaseModel):
-    """Result of multi-run verification."""
+    """Result of batched runtime-randomization verification."""
 
-    num_runs: int
+    num_scenes: int
     success_count: int
     success_rate: float
     is_consistent: bool  # True if all runs agree on success/fail
     individual_results: list[SimulationMetrics]
     fail_reasons: list[str]  # Unique failure reasons across runs
+    scene_build_count: int = 1
+    backend_run_count: int = 1
+    batched_execution: bool = True

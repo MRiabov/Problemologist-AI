@@ -236,13 +236,17 @@ class AnalyzeRequest(BenchmarkToolRequest):
 
 
 class VerificationRequest(BenchmarkToolRequest):
-    """Request to run multi-seed verification with jitter."""
+    """Request to run batched runtime-randomization verification."""
 
     jitter_range: tuple[float, float, float] = Field(
         default=(0.002, 0.002, 0.001),
         description="(x, y, z) position jitter range in meters.",
     )
-    num_runs: int = Field(default=5, ge=1, description="Number of runs.")
+    num_scenes: int = Field(
+        default=5,
+        ge=1,
+        description="Number of parallel jittered scene instances in one backend run.",
+    )
     duration: float = Field(default=10.0, ge=0.1, description="Duration per run.")
     seed: int = Field(default=42, description="Random seed.")
 

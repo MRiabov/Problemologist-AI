@@ -92,8 +92,8 @@ BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
 ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
 ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
 ELECTRONICS_REVIEWER_HANDOVER_CHECK = "electronics_reviewer_handover"
-_TRANSIENT_BUSY_MAX_RETRIES = 12
 _TRANSIENT_BUSY_BASE_DELAY_SECONDS = 1.0
+_TRANSIENT_BUSY_MAX_WAIT_SECONDS = 180.0
 
 
 class NodeEntryValidationError(BaseModel):
@@ -354,23 +354,30 @@ async def _materialize_reviewer_handover(
     ] = "engineering_execution_reviewer",
 ) -> str | None:
     async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
+        deadline = asyncio.get_running_loop().time() + _TRANSIENT_BUSY_MAX_WAIT_SECONDS
         last_exc: Exception | None = None
-        for attempt in range(_TRANSIENT_BUSY_MAX_RETRIES):
+        attempt = 0
+        while True:
             try:
                 return await coro_factory()
             except httpx.HTTPStatusError as exc:
                 status_code = exc.response.status_code if exc.response else None
-                if status_code != 503 or attempt >= (_TRANSIENT_BUSY_MAX_RETRIES - 1):
+                if status_code != 503:
                     raise
                 last_exc = exc
-                await asyncio.sleep(
-                    min(
-                        _TRANSIENT_BUSY_BASE_DELAY_SECONDS * float(attempt + 1),
-                        5.0,
-                    )
-                )
+                if asyncio.get_running_loop().time() >= deadline:
+                    raise
+                while asyncio.get_running_loop().time() < deadline:
+                    try:
+                        if await client.heavy_ready():
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(1.0)
+                else:
+                    raise
             except (httpx.ConnectError, httpx.ReadTimeout) as exc:
-                if attempt >= (_TRANSIENT_BUSY_MAX_RETRIES - 1):
+                if asyncio.get_running_loop().time() >= deadline:
                     raise
                 last_exc = exc
                 await asyncio.sleep(
@@ -381,6 +388,7 @@ async def _materialize_reviewer_handover(
                 )
             except Exception:
                 raise
+            attempt += 1
 
         if last_exc is not None:
             raise last_exc

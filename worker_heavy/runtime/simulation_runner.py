@@ -9,7 +9,10 @@ from typing import Any
 import structlog
 
 from shared.models.simulation import SimulationResult
-from worker_heavy.utils.validation import simulate_subprocess
+from worker_heavy.utils.validation import (
+    simulate_subprocess,
+    validate_subprocess,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -78,3 +81,43 @@ async def run_simulation_in_isolated_process(
     except BrokenProcessPool as exc:
         logger.error("simulation_child_process_crashed", error=str(exc))
         raise RuntimeError("SIMULATION_CHILD_PROCESS_CRASHED") from exc
+
+
+async def run_validation_in_isolated_process(
+    *,
+    script_path: str | Path,
+    session_root: str | Path,
+    script_content: str | None,
+    output_dir: Path,
+    smoke_test_mode: bool,
+    session_id: str,
+    particle_budget: int | None,
+) -> tuple[bool, str | None]:
+    """
+    Run one validation task in a fresh child process.
+
+    Validation prerenders native Genesis/OpenGL views, so it needs the same
+    crash-containment boundary as simulation.
+    """
+    loop = asyncio.get_running_loop()
+    try:
+        with ProcessPoolExecutor(
+            max_workers=1,
+            max_tasks_per_child=1,
+            mp_context=_SPAWN_CONTEXT,
+            initializer=init_genesis_worker,
+        ) as executor:
+            return await loop.run_in_executor(
+                executor,
+                validate_subprocess,
+                script_path,
+                session_root,
+                script_content,
+                output_dir,
+                smoke_test_mode,
+                session_id,
+                particle_budget,
+            )
+    except BrokenProcessPool as exc:
+        logger.error("validation_child_process_crashed", error=str(exc))
+        raise RuntimeError("VALIDATION_CHILD_PROCESS_CRASHED") from exc

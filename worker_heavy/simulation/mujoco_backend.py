@@ -453,6 +453,14 @@ class MuJoCoBackend(PhysicsBackend):
             self.data.qpos[0:3] += np.array(jitter)
             mujoco.mj_forward(self.model, self.data)
 
+    def reset(self) -> None:
+        """Reset MuJoCo state without recompiling the model."""
+        if self.model is None or self.data is None:
+            raise RuntimeError("Scene not loaded")
+
+        mujoco.mj_resetData(self.model, self.data)
+        mujoco.mj_forward(self.model, self.data)
+
     def close(self) -> None:
         """Close MuJoCo backend and release resources."""
         if self.renderer:

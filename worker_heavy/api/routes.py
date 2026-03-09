@@ -36,16 +36,15 @@ from shared.workers.schema import (
     VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
-from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
+from worker_heavy.runtime.simulation_runner import (
+    run_simulation_in_isolated_process,
+    run_validation_in_isolated_process,
+)
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.simulation.verification import verify_with_jitter
-from worker_heavy.utils import (
-    submit_for_review,
-    validate,
-)
+from worker_heavy.utils import submit_for_review
 from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.topology import analyze_component
-from worker_heavy.utils.validation import validate_fem_manufacturability
 
 logger = structlog.get_logger(__name__)
 heavy_router = APIRouter()
@@ -196,7 +195,7 @@ async def api_verify(
     x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
-    """Run multi-seed verification with runtime jitter."""
+    """Run batched runtime-randomization verification."""
     try:
         from shared.simulation.schemas import SimulatorBackendType
         from worker_heavy.simulation.factory import get_simulation_builder
@@ -210,6 +209,24 @@ async def api_verify(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
                 # 1. Load and build the scene
+                objectives = None
+                objectives_path = root / "objectives.yaml"
+                if objectives_path.exists():
+                    try:
+                        import yaml
+
+                        from shared.models.schemas import ObjectivesYaml
+
+                        raw = objectives_path.read_text(encoding="utf-8")
+                        if "[TEMPLATE]" not in raw:
+                            objectives = ObjectivesYaml(**yaml.safe_load(raw))
+                    except Exception as e:
+                        logger.warning(
+                            "verify_objectives_load_failed",
+                            error=str(e),
+                            session_id=x_session_id,
+                        )
+
                 component = load_component_from_script(
                     script_path=root / request.script_path
                     if request.bundle_base64
@@ -222,6 +239,7 @@ async def api_verify(
                 scene_path = await asyncio.to_thread(
                     builder.build_from_assembly,
                     component,
+                    objectives,
                     smoke_test_mode=request.smoke_test_mode,
                 )
 
@@ -231,9 +249,10 @@ async def api_verify(
                     xml_path=str(scene_path),
                     control_inputs={},  # Static inputs for now
                     jitter_range=request.jitter_range,
-                    num_runs=request.num_runs,
+                    num_scenes=request.num_scenes,
                     duration=request.duration,
                     seed=request.seed,
+                    smoke_test_mode=request.smoke_test_mode,
                     backend_type=backend_type.value,
                     session_id=x_session_id,
                 )
@@ -257,8 +276,8 @@ async def api_verify(
                 return BenchmarkToolResponse(
                     success=result.success_rate
                     > 0.9,  # Strict success criteria? Or report rate?
-                    message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_runs})",
-                    confidence="high" if result.num_runs >= 5 else "medium",
+                    message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_scenes})",
+                    confidence="high" if result.num_scenes >= 5 else "medium",
                     artifacts=artifacts,
                     events=events,
                 )
@@ -360,30 +379,19 @@ async def api_validate(
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
-                component = load_component_from_script(
-                    script_path=root / request.script_path
-                    if request.bundle_base64
-                    else fs_router.local_backend._resolve(request.script_path),
+                is_valid, message = await run_validation_in_isolated_process(
+                    script_path=(
+                        str(root / request.script_path)
+                        if request.bundle_base64
+                        else fs_router.local_backend._resolve(request.script_path)
+                    ),
                     session_root=root,
                     script_content=request.script_content,
-                )
-                is_valid, message = await asyncio.to_thread(
-                    validate,
-                    component,
                     output_dir=root,
-                    session_id=x_session_id,
                     smoke_test_mode=request.smoke_test_mode,
+                    session_id=x_session_id,
                     particle_budget=request.particle_budget,
                 )
-
-                fem_valid, fem_msg = await asyncio.to_thread(
-                    validate_fem_manufacturability,
-                    component,
-                    root,
-                )
-                if is_valid and not fem_valid:
-                    is_valid = False
-                    message = (message + "; " + fem_msg) if message else fem_msg
 
                 record_validation_result(
                     root,

@@ -333,6 +333,8 @@ class SimulationLoop:
         self.success = False
         self.fail_reason = None
         self.overloaded_motors: list[str] = []
+        self.actuator_clamp_duration = {}
+        self.success_evaluator.motor_overload_timer = {}
         self.objective_evaluator.reset()
         # WP2: Re-initialize flow rate capture after reset to ensure first-step crossings are caught
         if hasattr(self, "backend") and self.backend:
