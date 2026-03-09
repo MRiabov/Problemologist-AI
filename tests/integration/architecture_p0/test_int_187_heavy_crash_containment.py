@@ -31,7 +31,12 @@ def _session_id() -> str:
 
 @pytest.mark.integration
 @pytest.mark.integration_p0
-@pytest.mark.allow_backend_errors(regexes=[r"simulation_child_process_crashed"])
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        r"simulation_child_process_crashed",
+        r"simulation_executor_crashed",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_187_heavy_worker_crash_containment_boundary():
     crash_sid = _session_id()
