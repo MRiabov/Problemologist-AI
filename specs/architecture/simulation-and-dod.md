@@ -104,11 +104,7 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
    - runs the selected physics backend,
    - remains the runtime path for Genesis-specific behavior when Genesis is selected.
 
-Genesis parity is therefore enforced elsewhere:
-
-1. by backend-selection and parity integration coverage,
-2. by actual Genesis simulation runs where Genesis behavior is required,
-3. not by duplicating a Genesis render/build check inside fast validation.
+Genesis-specific runtime behavior is therefore established by actual Genesis simulation runs where Genesis behavior is required, not by duplicating a Genesis render/build check inside fast validation.
 
 <!-- Downsides of MuJoCo?
 

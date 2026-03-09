@@ -79,7 +79,7 @@ Backend responsibility is split by operation purpose:
 1. `/benchmark/simulate` uses the selected physics backend.
 2. `/benchmark/validate` performs fast validation plus static preview generation.
 3. Static preview generation for `/benchmark/validate` uses MuJoCo by default even when `physics.backend=genesis`.
-4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis parity is covered by dedicated backend-parity tests and by actual Genesis simulation runs where Genesis behavior is required.
+4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 
 Direct `worker-heavy` HTTP endpoints (`/benchmark/*`) are an adapter/debug surface, not an alternate orchestration model with independent queueing semantics.
 

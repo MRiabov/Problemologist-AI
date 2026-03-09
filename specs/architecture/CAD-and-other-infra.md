@@ -56,9 +56,9 @@ The rendering backend is not a single global choice. We split rendering by purpo
 2. Dynamic simulation artifacts use the active physics backend.
 3. Genesis-native visual outputs remain Genesis-side when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
 
-This split is intentional. Static 24-view preview does not require Genesis runtime features and is significantly faster in MuJoCo in our 2026-03-09 benchmark log.
+This split is intentional. Static 24-view preview does not require Genesis runtime features and is significantly faster in MuJoCo.
 
-Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
+Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
 #### Rendering views
 
@@ -68,7 +68,7 @@ For the standard benchmark handoff package, we render 24 static preview views. T
 
 1. `/benchmark/validate` generates those 24 static preview views through MuJoCo.
 2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend.
-3. We do not add a separate Genesis load/render gate to `/benchmark/validate` just to regenerate the same static preview.
+3. We do not use `/benchmark/validate` to regenerate the same static preview through Genesis only for parity.
 
 ### Workbench technical details
 

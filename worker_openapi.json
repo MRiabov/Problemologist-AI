@@ -1635,7 +1635,7 @@
           "worker-heavy"
         ],
         "summary": "Api Simulation Cleanup",
-        "description": "Internal cleanup endpoint for integration teardown.\n\nCloses cached simulation backends so long-lived worker processes do not keep\nGenesis/MuJoCo state across tests.",
+        "description": "Internal cleanup endpoint for integration teardown.\n\nCloses cached simulation backends in both the parent process and the\npersistent simulation child so long-lived worker processes do not keep\nsession state across tests.",
         "operationId": "api_simulation_cleanup_internal_simulation_cleanup_post",
         "responses": {
           "200": {
