@@ -481,7 +481,11 @@ class MockDSPyLM(dspy.LM):
                 AgentName.BENCHMARK_CODER,
                 AgentName.BENCHMARK_REVIEWER,
             }:
-                return "benchmark"
+                return "INT-129"
+            return self.session_id
+
+        # Prefer exact scenario key before any normalization.
+        if self.session_id in self.scenarios:
             return self.session_id
 
         parts = self.session_id.split("-")
@@ -494,9 +498,16 @@ class MockDSPyLM(dspy.LM):
             ) or last.isdigit()
             if is_noise and len(parts) > 2:
                 scenario = "-".join(parts[:-1])
-                # Normalize INT-002-xyz -> INT-002
+                # Prefer exact stripped scenario key to avoid prefix/substring ambiguity.
+                if scenario in self.scenarios:
+                    return scenario
+                # Normalize INT scenario IDs.
+                # Examples:
+                # - INT-002-abcd -> INT-002
+                # - INT-184-benchmark-abcd -> INT-184
                 if scenario.startswith("INT-"):
-                    return scenario.split("-")[0] + "-" + scenario.split("-")[1]
+                    scenario_parts = scenario.split("-")
+                    return scenario_parts[0] + "-" + scenario_parts[1]
                 return scenario
 
             # Special case: INT-002 should stay INT-002

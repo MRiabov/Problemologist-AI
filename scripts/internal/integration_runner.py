@@ -1085,6 +1085,30 @@ def _cleanup_sessions_dir(sessions_dir: str) -> None:
         shutil.rmtree(sessions_dir, ignore_errors=True)
 
 
+def _spawn_async_force_cleanup(
+    *,
+    repo_root: Path,
+    delay_seconds: float,
+) -> None:
+    cleanup_log = repo_root / "logs" / "integration_tests" / "cleanup.log"
+    cleanup_log.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "force-kill",
+        "--delay-seconds",
+        str(delay_seconds),
+    ]
+    with cleanup_log.open("ab") as handle:
+        subprocess.Popen(
+            cmd,
+            cwd=repo_root,
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+
 def _spawn_async_cleanup(
     *,
     repo_root: Path,
@@ -1119,7 +1143,16 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
     os.chdir(repo_root)
 
     print("Cleaning up processes...")
-    _final_force_cleanup()
+    _preemptive_cleanup()
+    force_kill_grace_s = max(
+        0.0,
+        float(os.environ.get("INTEGRATION_FINAL_KILL_GRACE_SECONDS", "8")),
+    )
+    _spawn_async_force_cleanup(
+        repo_root=repo_root,
+        delay_seconds=force_kill_grace_s,
+    )
+    print(f"Scheduled detached force-kill fallback (grace={force_kill_grace_s:.1f}s).")
     _cleanup_pid_files(repo_root)
     _cleanup_sessions_dir(args.sessions_dir)
 
@@ -1130,6 +1163,14 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
     else:
         print("Stopping infrastructure containers...")
         _run([*compose_cmd, "stop"], check=False)
+    return 0
+
+
+def _run_force_kill_command(args: argparse.Namespace) -> int:
+    delay_seconds = max(0.0, args.delay_seconds)
+    if delay_seconds > 0:
+        time.sleep(delay_seconds)
+    _final_force_cleanup()
     return 0
 
 
@@ -1640,6 +1681,12 @@ def _build_parser() -> argparse.ArgumentParser:
     cleanup_parser.add_argument("--sessions-dir", required=True)
     cleanup_parser.add_argument("--down", action="store_true")
 
+    force_kill_parser = sub.add_parser(
+        "force-kill",
+        help="Internal: force-kill leftover integration processes (SIGKILL).",
+    )
+    force_kill_parser.add_argument("--delay-seconds", type=float, default=0.0)
+
     return parser
 
 
@@ -1674,6 +1721,14 @@ def main() -> int:
                 f"{' '.join(shlex.quote(arg) for arg in unknown)}"
             )
         return _run_cleanup_command(args)
+
+    if args.command == "force-kill":
+        if unknown:
+            parser.error(
+                "Unrecognized arguments for force-kill: "
+                f"{' '.join(shlex.quote(arg) for arg in unknown)}"
+            )
+        return _run_force_kill_command(args)
 
     parser.error(f"Unknown command: {args.command}")
     return 2
