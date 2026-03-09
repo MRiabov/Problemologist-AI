@@ -17,12 +17,15 @@ from shared.models.schemas import (
     MovedObject,
     ObjectivesSection,
     ObjectivesYaml,
+    PhysicsConfig,
 )
+from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     ExecuteRequest,
     ExecuteResponse,
+    ListFilesRequest,
     ReadFileRequest,
     VerificationRequest,
     WriteFileRequest,
@@ -673,3 +676,100 @@ def build():
         jitter_data = BenchmarkToolResponse.model_validate(jitter_resp.json())
         assert jitter_data.success is False
         assert "runtime range intersects forbid zone" in (jitter_data.message or "")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_188_validation_preview_uses_mujoco_even_for_genesis_objectives():
+    """
+    INT-188: /benchmark/validate routes static preview rendering to MuJoCo
+    even when objectives request Genesis for physics simulation.
+    """
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+        headers = {"X-Session-ID": session_id}
+
+        script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(10, 10, 10).move(Location((0, 0, 5)))
+    p.label = "target_box"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+"""
+        write_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py", content=script, overwrite=True
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_resp.status_code == 200, write_resp.text
+
+        objectives = ObjectivesYaml(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
+                forbid_zones=[],
+                build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
+            ),
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            simulation_bounds=BoundingBox(
+                min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
+            ),
+            moved_object=MovedObject(
+                label="target_box",
+                shape="sphere",
+                start_position=(0.0, 0.0, 10.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        )
+        objectives_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="objectives.yaml",
+                content=yaml.dump(objectives.model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert objectives_resp.status_code == 200, objectives_resp.text
+
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_payload = validate_resp.json()
+        validate_data = BenchmarkToolResponse.model_validate(validate_payload)
+        assert validate_data.success, validate_data.message
+        assert validate_data.artifacts is not None
+        assert validate_data.artifacts.validation_results_json is not None
+
+        benchmark_render_events = [
+            event
+            for event in validate_payload.get("events", [])
+            if event.get("event_type") == "render_request_benchmark"
+        ]
+        assert benchmark_render_events, validate_payload.get("events", [])
+        assert any(
+            event.get("backend") == SimulatorBackendType.MUJOCO.value
+            and event.get("purpose") == "validation_static_preview"
+            for event in benchmark_render_events
+        ), benchmark_render_events
+
+        ls_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/ls",
+            json=ListFilesRequest(path="renders").model_dump(mode="json"),
+            headers=headers,
+        )
+        assert ls_resp.status_code == 200, ls_resp.text
+        render_entries = ls_resp.json()
+        render_names = [
+            entry["name"] for entry in render_entries if not entry["is_dir"]
+        ]
+        png_renders = [name for name in render_names if name.endswith(".png")]
+        assert png_renders, render_names

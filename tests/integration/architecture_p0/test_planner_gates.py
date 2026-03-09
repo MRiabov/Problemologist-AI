@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import uuid
 from contextlib import suppress
 
@@ -41,8 +42,10 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
 @pytest.fixture
-def session_id():
-    return f"test-gates-{uuid.uuid4().hex[:8]}"
+def session_id(request):
+    match = re.search(r"test_int_(\d{3})", request.node.name, re.IGNORECASE)
+    prefix = f"INT-{match.group(1)}" if match else "test-gates"
+    return f"{prefix}-{uuid.uuid4().hex[:8]}"
 
 
 @pytest.fixture
