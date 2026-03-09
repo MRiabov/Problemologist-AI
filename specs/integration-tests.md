@@ -239,12 +239,12 @@ Frontend integration tests run in strict browser-error mode: any significant une
 Backend integration tests run in strict backend-log mode as well:
 
 - Unexpected backend exceptions/error-level signals during a test fail that test.
-- The suite uses dedicated per-service error logs (`controller_errors.log`, `worker_light_errors.log`, `worker_heavy_errors.log`, `temporal_worker_errors.log`) to avoid false positives from normal info/debug output.
+- The suite uses dedicated per-service machine-readable error JSON logs (`logs/integration_tests/json/{controller,worker_light,worker_heavy,temporal_worker}_errors.json`) to avoid false positives from normal info/debug output.
 - Structured backend `ERROR` lines are required to include `session_id` or `episode_id`; strict teardown attributes by either field in integration mode.
 - The check is controlled by `STRICT_BACKEND_ERRORS` (default `1`) and supports explicit noise control via `@pytest.mark.allow_backend_errors` or `BACKEND_ERROR_ALLOWLIST_REGEXES` (regex patterns separated by `;;`).
 - Early-stop behavior is controlled by `INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS` (default `1` from the wrapper) and detects non-allowlisted backend error events from `logs/integration_tests/json/*_errors.json`; allowlisted events are filtered using global + per-test rules. Detection is surfaced by the runner, and the active test is failed by pytest fixture logic (not by runner SIGINT). Use `INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS=0` when intentionally collecting full-run logs despite known backend errors.
-- `@pytest.mark.allow_backend_errors` with no arguments keeps legacy behavior (allow all backend errors for that test).
-- Argumented forms (for example `@pytest.mark.allow_backend_errors("fs failure")` or `@pytest.mark.allow_backend_errors(regexes=["fs failure"])`) allow only matching lines.
+- `@pytest.mark.allow_backend_errors` requires explicit regex patterns.
+- Accepted forms include `@pytest.mark.allow_backend_errors("fs failure")` and `@pytest.mark.allow_backend_errors(regexes=["fs failure"])`.
 - The backend-log teardown gate is skipped for tests already failing in call phase to avoid masking the primary failure.
 Logging-level policy for integration observability: conditions that represent true contract/logic failures must be emitted at error level so strict backend-log checks can detect them; deviations from expected logic must not be logged as warnings. In particular, fallback paths that bypass or weaken intended behavior are failure signals and must be logged at error level. Warnings should be reserved for non-failing, recoverable, or advisory conditions.
 
