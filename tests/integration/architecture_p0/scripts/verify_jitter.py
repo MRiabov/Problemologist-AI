@@ -31,7 +31,7 @@ async def run(_ctx=None):
         result = verify_with_jitter(
             xml_path=str(tmp_path),
             control_inputs={},
-            num_runs=3,
+            num_scenes=3,
             duration=1.0,
             seed=42,
         )

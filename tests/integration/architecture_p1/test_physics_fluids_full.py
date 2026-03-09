@@ -33,6 +33,7 @@ from shared.workers.workbench_models import (
     ManufacturingConfig,
     MaterialDefinition,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
@@ -84,6 +85,7 @@ async def test_int_131_full_fluid_objective_path():
     Integration coverage here validates fluid objective handling through
     worker boundaries: objectives.yaml -> /benchmark/simulate -> fluid metrics.
     """
+    skip_unless_genesis("INT-131 requires Genesis fluid simulation.")
     import torch
 
     if not torch.cuda.is_available():
@@ -185,6 +187,9 @@ async def test_int_133_elec_to_mech_conflict_signal():
     INT-133: Wire routing conflict signal for Elec -> Mech iteration path.
     We validate deterministic conflict detection (wire clearance violation) via /benchmark/validate.
     """
+    skip_unless_genesis(
+        "INT-133 currently targets Genesis electromechanical validation."
+    )
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_service(client, "worker-light", WORKER_LIGHT_URL)
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
@@ -272,6 +277,7 @@ totals:
 @pytest.mark.asyncio
 async def test_int_134_stress_heatmap_render_artifact():
     """INT-134: Stress heatmap render artifacts are generated and discoverable."""
+    skip_unless_genesis("INT-134 requires Genesis FEM stress rendering.")
     async with httpx.AsyncClient(timeout=600.0) as client:
         await _require_service(client, "worker-light", WORKER_LIGHT_URL)
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
@@ -381,6 +387,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_135_wire_clearance_validation():
     """INT-135: Wire route that intersects solids is rejected by validation."""
+    skip_unless_genesis("INT-135 currently targets Genesis wire-clearance validation.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_service(client, "worker-light", WORKER_LIGHT_URL)
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)

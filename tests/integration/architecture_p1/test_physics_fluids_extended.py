@@ -13,6 +13,7 @@ from shared.workers.schema import (
     SimulationArtifacts,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -24,6 +25,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 @pytest.mark.asyncio
 async def test_int_138_smoke_test_mode():
     """INT-138: Verify smoke-test mode for Genesis."""
+    skip_unless_genesis("INT-138 targets Genesis smoke-test behavior.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-138-{uuid.uuid4().hex[:8]}"
 
@@ -87,6 +89,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_139_fluid_storage_policy():
     """INT-139: Verify fluid data storage policy."""
+    skip_unless_genesis("INT-139 requires Genesis fluid artifact generation.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-139-{uuid.uuid4().hex[:8]}"
 

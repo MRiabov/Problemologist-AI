@@ -18,7 +18,6 @@ from shared.models.schemas import (
     ObjectivesSection,
     ObjectivesYaml,
 )
-from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
@@ -28,6 +27,7 @@ from shared.workers.schema import (
     VerificationRequest,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import selected_backend
 from tests.integration.contracts import HealthResponse
 
 # Constants
@@ -177,7 +177,7 @@ def build():
         async def _simulate(session_id: str, bundle_base64: str):
             sim_req = BenchmarkToolRequest(
                 script_path="box.py",
-                backend=SimulatorBackendType.GENESIS,
+                backend=selected_backend(),
                 bundle_base64=bundle_base64,
                 smoke_test_mode=True,
             )
@@ -334,7 +334,7 @@ run()
 
         sim_req = BenchmarkToolRequest(
             script_path="fail.py",
-            backend=SimulatorBackendType.GENESIS,
+            backend=selected_backend(),
             bundle_base64=bundle64,
             smoke_test_mode=True,
         )
@@ -448,10 +448,10 @@ def build():
             script_path="script.py",
             bundle_base64=bundle64,
             jitter_range=(0.002, 0.002, 0.001),
-            num_runs=3,
+            num_scenes=3,
             duration=1.0,
             seed=42,
-            backend=SimulatorBackendType.MUJOCO,
+            backend=selected_backend(),
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/verify",
@@ -467,8 +467,11 @@ def build():
             pytest.fail(f"Verification failed: {data.message}")
         assert data.artifacts.verification_result is not None
         ver_result = data.artifacts.verification_result
-        assert ver_result.num_runs == 3
+        assert ver_result.num_scenes == 3
         assert ver_result.success_rate == 1.0
+        assert ver_result.scene_build_count == 1
+        assert ver_result.backend_run_count == 1
+        assert ver_result.batched_execution is True
 
 
 @pytest.mark.integration_p0

@@ -19,6 +19,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -41,6 +42,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
     """
     INT-110: GPU OOM retry with particle reduction.
     """
+    skip_unless_genesis("INT-110 targets Genesis GPU OOM retry behavior.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         objectives = ObjectivesYaml(
             physics=PhysicsConfig(

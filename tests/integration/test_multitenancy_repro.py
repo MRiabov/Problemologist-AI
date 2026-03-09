@@ -4,6 +4,8 @@ import json
 import httpx
 import pytest
 
+from tests.integration.backend_utils import selected_backend
+
 WORKER_LIGHT_URL = "http://localhost:18001"
 WORKER_HEAVY_URL = "http://localhost:18002"
 
@@ -41,7 +43,7 @@ async def run_simulation(script: str, name: str):
                 json={
                     "session_id": f"test-multi-{name}",
                     "script_content": script,
-                    "backend": "genesis",
+                    "backend": selected_backend().value,
                     "smoke_test_mode": True,
                 },
                 timeout=60.0,
@@ -64,9 +66,8 @@ async def run_simulation(script: str, name: str):
 
 async def _run_multitenancy_repro() -> None:
     # Pre-warm: the first simulation on a fresh worker always takes long due to kernel compilation.
-    # We run a tiny dummy simulation to warm up the pool
-    # and we include both Box and Sphere to trigger all needed kernels.
-    print("Pre-warming Genesis cache...")
+    # We run a tiny dummy simulation to warm up the selected backend.
+    print(f"Pre-warming {selected_backend().value} cache...")
     warmup_script = """
 from build123d import Box, Sphere, Compound
 from shared.models.schemas import PartMetadata

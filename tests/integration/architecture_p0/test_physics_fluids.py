@@ -26,6 +26,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -61,6 +62,7 @@ async def _require_service(client: httpx.AsyncClient, name: str, url: str):
 @pytest.mark.asyncio
 async def test_int_101_physics_backend_selection():
     """INT-101: Verify physics backend selection and event emission."""
+    skip_unless_genesis("INT-101 requires Genesis FEM/backend metadata.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_service(client, "worker-light", WORKER_LIGHT_URL)
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
@@ -149,6 +151,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_105_fluid_containment_evaluation():
     """INT-105: Verify fluid containment objective evaluation."""
+    skip_unless_genesis("INT-105 requires Genesis fluid simulation.")
     import torch
 
     if not torch.cuda.is_available():
@@ -273,6 +276,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_106_flow_rate_evaluation():
     """INT-106: Verify flow rate objective evaluation (stub)."""
+    skip_unless_genesis("INT-106 requires Genesis fluid objective handling.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-106-{int(time.time())}"
 

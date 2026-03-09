@@ -22,6 +22,7 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 # Constants
 WORKER_LIGHT_URL = os.getenv(
@@ -422,6 +423,9 @@ async def test_int_126_wire_tear_behavior():
     INT-126: Simulation fails with FAILED_WIRE_TORN
     when wire tension exceeds tensile rating.
     """
+    skip_unless_genesis(
+        "INT-126 requires backend-supported dynamic wire/softbody behavior"
+    )
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_worker_services(client)
         session_id = get_session_id("126")

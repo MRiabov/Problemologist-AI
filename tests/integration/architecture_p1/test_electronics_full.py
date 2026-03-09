@@ -29,6 +29,7 @@ from shared.workers.schema import (
     VerificationRequest,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import selected_backend
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
@@ -78,7 +79,7 @@ async def _write_file(
 def _base_objectives_yaml() -> str:
     objectives = ObjectivesYaml.model_validate(
         {
-            "physics": {"backend": "GENESIS"},
+            "physics": {"backend": selected_backend().value},
             "objectives": {
                 "goal_zone": {"min": [20, -10, 0], "max": [40, 10, 20]},
                 "build_zone": {"min": [-100, -100, -10], "max": [100, 100, 100]},
@@ -234,7 +235,7 @@ async def test_int_132_full_electromechanical_path():
             json=VerificationRequest(
                 script_path="script.py",
                 smoke_test_mode=True,
-                num_runs=2,
+                num_scenes=2,
                 duration=0.5,
             ).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
@@ -244,7 +245,7 @@ async def test_int_132_full_electromechanical_path():
         verify_data = BenchmarkToolResponse.model_validate(verify_resp.json())
         assert verify_data.artifacts is not None
         assert verify_data.artifacts.verification_result is not None
-        assert verify_data.artifacts.verification_result.num_runs >= 1
+        assert verify_data.artifacts.verification_result.num_scenes >= 1
 
 
 @pytest.mark.integration_p1

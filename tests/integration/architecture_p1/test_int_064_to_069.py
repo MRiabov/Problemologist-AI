@@ -23,6 +23,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     WriteFileRequest,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -96,6 +97,7 @@ async def test_int_065_skills_safety():
 @pytest.mark.asyncio
 async def test_int_066_fluid_electronics_coupling():
     """INT-066: Fluid-on-electronics failure coupling."""
+    skip_unless_genesis("INT-066 requires Genesis fluid-electronics coupling.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-066-{int(time.time())}"
 

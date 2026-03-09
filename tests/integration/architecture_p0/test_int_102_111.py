@@ -24,6 +24,7 @@ from shared.workers.workbench_models import (
     ManufacturingConfig,
     MaterialDefinition,
 )
+from tests.integration.backend_utils import skip_unless_genesis
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -78,6 +79,7 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
     INT-102: FEM material config validation before simulation.
     INT-111: validate_and_price FEM material gate.
     """
+    skip_unless_genesis("INT-102/111 require Genesis FEM support.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Setup objectives with FEM enabled and genesis backend
         objectives = ObjectivesYaml(
@@ -173,6 +175,7 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
     """
     INT-103: Verify simulation abort on ultimate_stress_pa violation.
     """
+    skip_unless_genesis("INT-103 requires Genesis FEM breakage handling.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Setup custom material config with very low ultimate_stress_pa
         custom_config = ManufacturingConfig(
@@ -264,6 +267,7 @@ async def test_int_104_stress_reporting(session_id, base_headers):
     """
     INT-104: Verify SimulationResult.stress_summaries is populated.
     """
+    skip_unless_genesis("INT-104 requires Genesis FEM stress reporting.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Setup material with FEM fields
         custom_config = ManufacturingConfig(
@@ -356,6 +360,7 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
     """
     INT-107: Verify STRESS_OBJECTIVE_EXCEEDED failure reason.
     """
+    skip_unless_genesis("INT-107 requires Genesis FEM stress objectives.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Use a material that is strong but we set a very LOW stress objective
         from shared.models.schemas import MaxStressObjective
@@ -448,6 +453,7 @@ async def test_int_109_physics_instability_abort(session_id, base_headers):
     """
     INT-109: Verify kinetics energy abort.
     """
+    skip_unless_genesis("INT-109 currently targets Genesis instability handling.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         objectives = ObjectivesYaml(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),

@@ -3,7 +3,7 @@
 import pytest
 
 from worker_heavy.simulation.verification import (
-    DEFAULT_NUM_RUNS,
+    DEFAULT_NUM_SCENES,
     MultiRunResult,
     verify_with_jitter,
 )
@@ -35,22 +35,22 @@ def success_xml_path(tmp_path):
 
 @patch("worker_heavy.simulation.verification.logger")
 class TestMultiRunVerification:
-    def test_default_num_runs(self, mock_logger):
+    def test_default_num_scenes(self, mock_logger):
         """Default is 5 runs per architecture spec."""
-        assert DEFAULT_NUM_RUNS == 5
+        assert DEFAULT_NUM_SCENES == 5
 
     def test_consistent_success_all_pass(self, mock_logger, success_xml_path):
         """All runs succeed for a robust design."""
         result = verify_with_jitter(
             success_xml_path,
             control_inputs={},
-            num_runs=3,
+            num_scenes=3,
             duration=2.0,
             seed=42,
         )
 
         assert isinstance(result, MultiRunResult)
-        assert result.num_runs == 3
+        assert result.num_scenes == 3
         assert len(result.individual_results) == 3
 
     def test_deterministic_with_seed(self, mock_logger, success_xml_path):
@@ -58,7 +58,7 @@ class TestMultiRunVerification:
         result1 = verify_with_jitter(
             success_xml_path,
             control_inputs={},
-            num_runs=3,
+            num_scenes=3,
             duration=1.0,
             seed=123,
         )
@@ -66,7 +66,7 @@ class TestMultiRunVerification:
         result2 = verify_with_jitter(
             success_xml_path,
             control_inputs={},
-            num_runs=3,
+            num_scenes=3,
             duration=1.0,
             seed=123,
         )
@@ -79,7 +79,7 @@ class TestMultiRunVerification:
         result = verify_with_jitter(
             success_xml_path,
             control_inputs={},
-            num_runs=2,
+            num_scenes=2,
             duration=1.0,
         )
 
@@ -97,8 +97,8 @@ class TestMultiRunVerification:
         result = verify_with_jitter(
             success_xml_path,
             control_inputs={},
-            num_runs=1,
+            num_scenes=1,
             duration=0.5,
         )
 
-        assert result.num_runs == 1
+        assert result.num_scenes == 1
