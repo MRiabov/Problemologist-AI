@@ -6,11 +6,7 @@ import httpx
 import pytest
 from temporalio.client import Client, WorkflowFailureError
 
-from controller.api.schemas import (
-    AgentRunResponse,
-    EpisodeCreateResponse,
-    EpisodeResponse,
-)
+from controller.api.schemas import EpisodeCreateResponse, EpisodeResponse
 from controller.api.tasks import AgentRunRequest
 from shared.enums import AssetType, EpisodeStatus
 
@@ -23,21 +19,17 @@ TEMPORAL_URL = os.getenv("TEMPORAL_URL", "127.0.0.1:17233")
 async def test_int_053_temporal_workflow_lifecycle():
     """INT-053: Verify Temporal workflow lifecycle persistence."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # 1. Create a dummy episode to link to
-        task = "Test Temporal Workflow Lifecycle"
+        # 1. Create a dummy episode to link to without starting a background agent run.
         req = AgentRunRequest(
-            task=task, session_id=f"INT-053-obs-{uuid.uuid4().hex[:8]}"
+            task="Test Temporal Workflow Lifecycle",
+            session_id=f"INT-053-obs-{uuid.uuid4().hex[:8]}",
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/api/agent/run",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=req.model_dump(mode="json"),
         )
-        if resp.status_code != 202:
-            pytest.skip(
-                f"/api/agent/run unavailable in this run ({resp.status_code}): {resp.text}"
-            )
-        agent_run_resp = AgentRunResponse.model_validate(resp.json())
-        episode_id = agent_run_resp.episode_id
+        assert resp.status_code == 201, resp.text
+        episode_id = EpisodeCreateResponse.model_validate(resp.json()).episode_id
 
         # 2. Connect to Temporal and start SimulationWorkflow
         temporal = await Client.connect(TEMPORAL_URL)
@@ -68,21 +60,16 @@ async def test_int_053_temporal_workflow_lifecycle():
 async def test_int_055_s3_artifact_upload_logging():
     """INT-055: Verify S3 artifact upload logging and linkage."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # 1. Create episode
-        # Manual insert or use agent/run
+        # 1. Create an isolated episode without starting a background agent run.
         req = AgentRunRequest(
             task="Test S3 Upload", session_id=f"INT-055-s3-{uuid.uuid4().hex[:8]}"
         )
         resp = await client.post(
-            f"{CONTROLLER_URL}/api/agent/run",
+            f"{CONTROLLER_URL}/api/test/episodes",
             json=req.model_dump(mode="json"),
         )
-        if resp.status_code != 202:
-            pytest.skip(
-                f"/api/agent/run unavailable in this run ({resp.status_code}): {resp.text}"
-            )
-        agent_run_resp = AgentRunResponse.model_validate(resp.json())
-        episode_id = agent_run_resp.episode_id
+        assert resp.status_code == 201, resp.text
+        episode_id = EpisodeCreateResponse.model_validate(resp.json()).episode_id
 
         # 2. Trigger workflow
         temporal = await Client.connect(TEMPORAL_URL)

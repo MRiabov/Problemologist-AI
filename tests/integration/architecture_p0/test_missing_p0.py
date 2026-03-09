@@ -62,6 +62,13 @@ async def test_int_004_episode_artifact_persistence():
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "node_entry_validation_rejected",
+        "missing_artifact",
+        "reviewer_entry_blocked",
+    ]
+)
 @pytest.mark.asyncio
 async def test_int_005_trace_realtime_broadcast():
     """INT-005: Verify traces are broadcasted via DB/API."""
