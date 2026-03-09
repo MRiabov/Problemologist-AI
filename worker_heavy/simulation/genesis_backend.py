@@ -1,3 +1,4 @@
+import inspect
 import os
 import threading
 from pathlib import Path
@@ -37,6 +38,19 @@ from shared.simulation.backends import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+def _parse_compile_kernels_env() -> bool | None:
+    """Parse optional GENESIS_COMPILE_KERNELS override from environment."""
+    raw = os.getenv("GENESIS_COMPILE_KERNELS", "").strip().lower()
+    if not raw:
+        return None
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    logger.warning("invalid_genesis_compile_kernels_env", value=raw)
+    return None
 
 
 class GenesisBackend(PhysicsBackend):
@@ -628,8 +642,26 @@ class GenesisBackend(PhysicsBackend):
                 logger.info("genesis_building_scene_for_render_only")
 
             try:
+                compile_kernels = _parse_compile_kernels_env()
+                build_kwargs: dict[str, bool | int] = {"n_envs": self.num_envs}
+                if compile_kernels is not None:
+                    sig = inspect.signature(self.scene.build)
+                    if "compile_kernels" in sig.parameters:
+                        build_kwargs["compile_kernels"] = compile_kernels
+                        logger.info(
+                            "genesis_scene_build_compile_kernels_override",
+                            compile_kernels=compile_kernels,
+                            render_only=render_only,
+                            session_id=self.session_id,
+                        )
+                    else:
+                        logger.info(
+                            "genesis_scene_build_compile_kernels_unsupported",
+                            compile_kernels=compile_kernels,
+                            session_id=self.session_id,
+                        )
                 logger.info("genesis_building_scene")
-                self.scene.build(n_envs=self.num_envs)
+                self.scene.build(**build_kwargs)
             except Exception as e:
                 if "already built" not in str(e).lower():
                     logger.warning("genesis_build_failed", error=str(e))

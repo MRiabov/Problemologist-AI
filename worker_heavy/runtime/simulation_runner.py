@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import multiprocessing
 import os
 from concurrent.futures import ProcessPoolExecutor
@@ -19,6 +20,19 @@ logger = structlog.get_logger(__name__)
 _SPAWN_CONTEXT = multiprocessing.get_context("spawn")
 
 
+def _parse_compile_kernels_env() -> bool | None:
+    """Parse optional GENESIS_COMPILE_KERNELS override from environment."""
+    raw = os.getenv("GENESIS_COMPILE_KERNELS", "").strip().lower()
+    if not raw:
+        return None
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    logger.warning("invalid_genesis_compile_kernels_env", value=raw)
+    return None
+
+
 def init_genesis_worker() -> None:
     """Best-effort Genesis pre-warm inside simulation child process."""
     try:
@@ -36,7 +50,22 @@ def init_genesis_worker() -> None:
         # Tiny scene build to trigger first-use compilation in child.
         scene = gs.Scene(show_viewer=False)
         scene.add_entity(gs.morphs.Plane())
-        scene.build()
+        compile_kernels = _parse_compile_kernels_env()
+        build_kwargs: dict[str, bool | int] = {}
+        if compile_kernels is not None:
+            sig = inspect.signature(scene.build)
+            if "compile_kernels" in sig.parameters:
+                build_kwargs["compile_kernels"] = compile_kernels
+                logger.info(
+                    "genesis_child_prewarm_compile_kernels_override",
+                    compile_kernels=compile_kernels,
+                )
+            else:
+                logger.info(
+                    "genesis_child_prewarm_compile_kernels_unsupported",
+                    compile_kernels=compile_kernels,
+                )
+        scene.build(**build_kwargs)
     except Exception as exc:  # pragma: no cover - best effort prewarm
         logger.warning("genesis_child_prewarm_failed", error=str(exc))
 
