@@ -33,9 +33,10 @@ The benchmarks are randomized to ensure data distribution.
 The benchmarks are consisting of CAD models which are converted into XML.
 
 - The execution runs in isolated containers to prevent accidental harmful code execution in the main system.
-- The benchmarks are verified for being creatable in Genesis. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
+- The benchmarks are verified for geometric validity and fast preview generation before they are handed to engineering. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
   - Validity means no intersections and other problems; it also means that the code will compile in the first place.
-  - MJCF is verified for the correctness by XML schema. And also by running a few frames of a simulation
+  - MJCF is verified for correctness by XML schema and by backend-parity coverage in dedicated simulation tests.
+  - The fast validation-preview path uses MuJoCo for static handoff renders by default; it is not itself a Genesis-runtime proof path.
 - MJCF is created programmatically, not by a LLM.
 <!-- I will need to experiment, but I don't think the LLM should be able to edit it.  ->
 

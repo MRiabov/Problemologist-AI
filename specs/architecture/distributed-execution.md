@@ -49,7 +49,7 @@ The worker API is physically split into two specialized services to optimize res
 - **Purpose**: Handles compute-intensive, long-running tasks.
 - **Responsibilities**:
   - Physics simulation (`/benchmark/simulate`).
-  - Geometric validation (`/benchmark/validate`).
+  - Geometric validation plus static preview generation (`/benchmark/validate`).
   - Design handover and DFM checks (`/benchmark/submit`).
   - Manufacturing analysis (`/benchmark/analyze`).
   - Rendering and preview generation (`/benchmark/preview`).
@@ -73,6 +73,13 @@ Heavy compute execution has one production path:
 - Controller tools call Temporal workflows for heavy operations.
 - Temporal workflows dispatch heavy activities on `heavy-tasks-queue`.
 - Heavy activity execution runs simulation/validation/render in isolated child process scope (crash containment boundary).
+
+Backend responsibility is split by operation purpose:
+
+1. `/benchmark/simulate` uses the selected physics backend.
+2. `/benchmark/validate` performs fast validation plus static preview generation.
+3. Static preview generation for `/benchmark/validate` uses MuJoCo by default even when `physics.backend=genesis`.
+4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis parity is covered by dedicated backend-parity tests and by actual Genesis simulation runs where Genesis behavior is required.
 
 Direct `worker-heavy` HTTP endpoints (`/benchmark/*`) are an adapter/debug surface, not an alternate orchestration model with independent queueing semantics.
 
@@ -103,6 +110,8 @@ Worker-specific logic stays in:
   - validation
   - rendering.
   - any GPU work, if necessary.
+
+Validation is still part of `worker-heavy`, but the static preview part of validation is intentionally lighter than Genesis simulation. The point of the split is to avoid paying unnecessary Genesis render cost on validation-only requests.
 
 Note: we want to offload work from `worker_heavy` as much as possible because:
 

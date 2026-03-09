@@ -114,6 +114,23 @@ async def test_int_126_wire_tear_behavior():
 
 This keeps backend intent explicit in pytest collection output and reduces ambiguity during matrix triage.
 
+### Validation Preview Backend Contract
+
+`/benchmark/validate` is not the simulation-backend parity path.
+
+The architecture contract is:
+
+1. `/benchmark/validate` performs geometric validation plus static preview generation.
+2. The static preview generation path uses MuJoCo by default, even when `physics.backend=GENESIS`.
+3. `/benchmark/validate` does not perform an extra Genesis load/render/build gate solely for backend parity.
+4. Genesis parity remains covered by the simulation-facing backend matrix and by Genesis simulation tests where Genesis behavior is required.
+
+Validation-preview tests should therefore assert:
+
+1. the preview artifact contract still holds,
+2. the preview backend routing is correct,
+3. the selected simulation backend is not silently mutated for `/benchmark/simulate`.
+
 ## Required integration test suite
 
 Priorities:
@@ -151,6 +168,7 @@ Priorities:
 | INT-022 | Motor overload + forcerange behavior | Force clamping behaves correctly; sustained overload produces `motor_overload` failure reason. |
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
 | INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges. |
+| INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through MuJoCo by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
 | INT-026 | Mandatory event families emitted | Tool calls, simulation request/result, manufacturability checks, lint failures, plan submissions, and review decisions are emitted in real runs. |
 | INT-027 | Seed/variant observability | Static variant ID + runtime seed tracked for every simulation run. |

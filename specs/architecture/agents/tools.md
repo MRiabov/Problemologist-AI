@@ -114,6 +114,9 @@ Note - used by default by
     - Input objective with goal or forbid objectives.
     
     Validated under all environment randomization.
+    - The validation tool also generates the standard 24-view static preview package.
+    - That static preview package uses the validation-preview renderer, which is MuJoCo by default.
+    - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline. This call is valid only after current-revision validation/simulation succeed.

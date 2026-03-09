@@ -50,11 +50,25 @@ The project needs to render the models in images (for preview) and for rendering
 To simplify matters *(actually, I couldn't debug pyvista, so I'm doing this)*, the CAD will be rendered by porting to MuJoCo/Genesis and rendering in there. It'll also provide a unified view for the model.
 Alternatively, we could use some simple GLB renderer, but MuJoCo/Gensis already do it for us!
 
-Note that in genesis, some tricks can be achieved to not build the scene fully and only use it for one-off rendering.
+The rendering backend is not a single global choice. We split rendering by purpose:
+
+1. Static validation preview renders use MuJoCo by default.
+2. Dynamic simulation artifacts use the active physics backend.
+3. Genesis-native visual outputs remain Genesis-side when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
+
+This split is intentional. Static 24-view preview does not require Genesis runtime features and is significantly faster in MuJoCo in our 2026-03-09 benchmark log.
+
+Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
 
 #### Rendering views
 
 I presume the model will need to render a view or a set of views to get an understanding of what's happening during the simulation. Allow an extra `view_angles` parameter on `simulate` to trigger simulation from different sides, which would essentially reposition a camera (or a multiple) to render.
+
+For the standard benchmark handoff package, we render 24 static preview views. The default policy is:
+
+1. `/benchmark/validate` generates those 24 static preview views through MuJoCo.
+2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend.
+3. We do not add a separate Genesis load/render gate to `/benchmark/validate` just to regenerate the same static preview.
 
 ### Workbench technical details
 

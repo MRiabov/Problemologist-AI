@@ -13,6 +13,103 @@ While this platform has notable downsides for future use, we pick Genesis becaus
 
 Operational benchmarking notes, runtime optimization attempts, and dated performance measurements for the simulation stack are tracked in [auxillary/simulation-optimization-attempts.md](./auxillary/simulation-optimization-attempts.md).
 
+### Runtime cost model
+
+For architecture and optimization decisions, we treat simulation runtime cost as three separate layers:
+
+1. Process-global cold cost.
+   - Python child startup.
+   - module import and runtime setup.
+   - Genesis runtime initialization.
+   - process-local compiler and backend warmup.
+2. Scene-specific build cost.
+   - scene creation,
+   - mesh conversion,
+   - geometry-specific build work,
+   - collision and backend scene preparation,
+   - object-family-specific compilation work when it occurs.
+3. Actual simulation execution cost.
+   - stepping the physics scene,
+   - rendering or artifact creation if requested,
+   - result extraction and validation logic.
+
+This distinction is mandatory for future optimization work because different changes affect different layers.
+
+- A persistent dedicated simulation child removes repeated process-global cold cost across requests on the same worker instance.
+- A persistent child does not, by itself, remove scene-specific build cost for materially different scenes.
+- Scene-specific cost reduction requires separate caching or reuse strategies such as compiled-scene caching, mesh caching, or geometry-hash caches.
+
+The optimization log dated 2026-03-09 records the evidence for this split. In particular:
+
+- the earlier init benchmark showed that literal `gs.init()` is not the dominant repeated cost by itself,
+- the follow-up warm-process benchmark showed that different-scene-next cost is real, but still does not fully reset to the original cold-process cost for the primitive case,
+- the minimal mesh case showed nearly identical warm-process cost for same-versus-different OBJ scenes in that experiment.
+- the direct `simulate_subprocess(...)` benchmark on two distinct successful bundles, using distinct `session_id` values and both bundle orders, measured fresh-child totals of `125.8s` to `127.9s` and reused-child totals of `80.2s` to `80.9s`,
+- the same direct benchmark measured second-request wall-clock time dropping from `31.4s` to `32.1s` in fresh-child mode down to `2.4s` to `2.5s` in reused-child mode, which is the strongest current evidence that the repeated cost is in process lifecycle and warm-runtime loss rather than same-session backend caching.
+
+The architecture implication is explicit:
+
+- we should not discuss "simulation startup cost" as if it were one number,
+- we should separately measure and optimize process-global cold cost and scene-specific build cost,
+- we should not reject the persistent-child design merely because different scenes still pay real rebuild cost.
+
+### Persistent child runtime direction
+
+The current optimization direction is now concrete enough to treat as an implementation plan rather than only a hypothesis.
+
+The runtime direction is:
+
+1. Keep `worker-heavy` single-flight.
+2. Keep the process boundary between the FastAPI parent and the simulation runtime.
+3. Replace one-fresh-child-per-request execution in `simulation_runner.py` with one persistent dedicated child executor per worker instance for `simulate` and `validate`.
+4. Recreate that executor fail-closed after `BrokenProcessPool` or explicit shutdown.
+5. Add explicit child-side cleanup functions that clear backend or session state without killing the warm process.
+
+The benchmark evidence makes one point explicit:
+
+- the implementation target is process reuse,
+- not thread reuse,
+- not repeated same-session backend reuse,
+- and not a narrow micro-optimization around the literal `gs.init()` call.
+
+The persistent-child refactor therefore has to preserve the existing behavior contracts while changing only the child lifecycle:
+
+1. Public `/benchmark/*` request and response contracts stay unchanged.
+2. `/ready` and heavy-admission semantics stay unchanged.
+3. The current request fails closed if the child crashes.
+4. The next request recreates a fresh child.
+5. Child cleanup is explicit and observable rather than being an accidental side effect of process exit.
+
+The detailed dated plan for this refactor is recorded in `auxillary/simulation-optimization-attempts.md`.
+
+### Backend responsibility split
+
+We do not use one backend for every purpose.
+
+The backend contract is:
+
+1. `physics.backend` selects the physics simulation backend.
+2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
+3. Static 24-view validation preview rendering uses MuJoCo by default.
+4. The static validation preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
+
+This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
+
+1. `/benchmark/validate`
+   - checks geometry/objective consistency,
+   - generates static preview artifacts,
+   - uses MuJoCo for that static preview by default,
+   - does not add an extra Genesis load/render/build gate solely for parity checking.
+2. `/benchmark/simulate`
+   - runs the selected physics backend,
+   - remains the runtime path for Genesis-specific behavior when Genesis is selected.
+
+Genesis parity is therefore enforced elsewhere:
+
+1. by backend-selection and parity integration coverage,
+2. by actual Genesis simulation runs where Genesis behavior is required,
+3. not by duplicating a Genesis render/build check inside fast validation.
+
 <!-- Downsides of MuJoCo?
 
 - we won't support deformation (finite element analysis)

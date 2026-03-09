@@ -101,6 +101,16 @@ The engineer will also receive YAML files with:
 
 The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The Benchmark Planner's `assembly_definition.yaml` stays in the Benchmark Planner scope and is not handed over to engineering.
 
+#### Renders 
+
+These 24-view handoff renders are static preview/context artifacts. The default generation policy is:
+
+1. benchmark validation generates them through the fast validation-preview path,
+2. that preview path uses MuJoCo by default,
+3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis rendering is very, very heavy (12x slower than MuJoCo, as per research in @specs/architecture/auxillary/simulation-optimization-attempts.md - 5s vs 70s - very significant.)), 
+4. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
+
+
 ### A benchmark is reused multiple times
 
 Notably, the benchmarks are randomized and reused multiple times under different variations. The Engineering agent only receives a "runtime" randomization - (as in the list of the relevant heading) currently only a (relatively) small jitter in the environment.

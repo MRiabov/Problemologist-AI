@@ -101,6 +101,8 @@ We track the following structured domain events to compute the evaluation metric
 25. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
 26. Engineering Plan Reviewer deterministic validator execution (`plan_review_validation_run`) with input artifact revision, validator status, and mismatch reasons when rejected.
 27. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
+28. Validation preview backend selection (`validation_preview_backend_selected`) with requested physics backend, actual preview backend, and render purpose (`validation_static_preview`).
+29. Validation preview render completion (`validation_preview_render_complete`) with preview backend, image count, elapsed render time, and artifact paths.
 
 <!-- 20. Metric for "Jamming Rate"
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
@@ -147,6 +149,7 @@ We define (a growing list of) (aggregate) metrics:
 12. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
 13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
 14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
+15. Validation preview latency by backend and purpose: median/static-preview time split by `validation_static_preview` backend versus selected simulation backend.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->

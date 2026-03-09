@@ -26,8 +26,8 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Runtime and infrastructure
 
-- [Distributed execution](./architecture/distributed-execution.md): controller/worker split, worker APIs, persistence, and Temporal boundary.
-- [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, schema contracts, and supporting infra assumptions.
+- [Distributed execution](./architecture/distributed-execution.md): controller/worker split, worker APIs, persistence, Temporal boundary, and backend-routing rules such as fast validation preview versus physics simulation.
+- [CAD and other infrastructure](./architecture/CAD-and-other-infra.md): CAD metadata, rendering direction, validation-preview rendering policy, schema contracts, and supporting infra assumptions.
 
 ### Evaluation and quality gates
 
@@ -35,7 +35,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Simulation
 
-- [Simulation and Definitions of Done](./architecture/simulation-and-dod.md): physics assumptions, constraints model, and success/failure definitions.
+- [Simulation and Definitions of Done](./architecture/simulation-and-dod.md): physics assumptions, backend responsibility split, constraints model, and success/failure definitions.
 
 ### Observability
 
