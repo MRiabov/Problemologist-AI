@@ -30,13 +30,9 @@ async def run(_ctx=None):
 
         from shared.simulation.schemas import SimulatorBackendType
 
-        # Use MUJOCO if GENESIS is not available (common in CI/sandbox)
-        try:
-            import genesis
-
-            backend = SimulatorBackendType.GENESIS
-        except ImportError:
-            backend = SimulatorBackendType.MUJOCO
+        # This test only validates overload detection logic; force MuJoCo so the
+        # runtime/execute path stays deterministic and does not pay Genesis init cost.
+        backend = SimulatorBackendType.MUJOCO
 
         loop = SimulationLoop(str(tmp_path), backend_type=backend)
 
