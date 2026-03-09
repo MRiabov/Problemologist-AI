@@ -214,7 +214,7 @@ scenarios:
           - finished: true
             summary: "INT-113 electronics planner artifacts generated and submitted."
 
-  INT-074-PLAN:
+  INT-074:
     transcript:
       - node: engineer_planner
         steps:
@@ -289,7 +289,7 @@ scenarios:
           - finished: true
             summary: "INT-074 plan scenario: electronics planner submitted."
 
-  INT-074-EXEC:
+  INT-075:
     transcript:
       - node: engineer_planner
         steps:
@@ -1521,7 +1521,7 @@ scenarios:
           - finished: true
             summary: "INT-030 planner completed."
 
-  test-trace:
+  INT-115:
     transcript:
       - node: engineer_planner
         steps:
@@ -2419,7 +2419,7 @@ scenarios:
               required_fixes: []
 
   # Benchmark workflow (detected by prompt or UUID session_id)
-  benchmark:
+  INT-129:
     transcript:
       - node: benchmark_planner
         steps:
@@ -3174,7 +3174,7 @@ scenarios:
             journal: "INT-186 execute command forced infra failure."
             thought: "Infra failure handled."
 
-  EVAL-EE:
+  INT-142:
     transcript:
       - node: benchmark_planner
         steps:

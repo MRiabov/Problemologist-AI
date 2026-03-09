@@ -1,5 +1,6 @@
 import asyncio
 import os
+import uuid
 
 import httpx
 import pytest
@@ -47,7 +48,7 @@ async def test_int_074_engineering_dof_minimization_review_gate():
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         # Plan reviewer stage gate
-        plan_session = "INT-074-PLAN"
+        plan_session = f"INT-074-{uuid.uuid4().hex[:8]}"
         plan_episode = await _run_and_wait(
             client,
             agent_name=AgentName.ENGINEER_CODER,
@@ -65,7 +66,7 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         )
 
         # Execution reviewer stage gate (must still flag over-actuation)
-        exec_session = "INT-074-EXEC"
+        exec_session = f"INT-075-{uuid.uuid4().hex[:8]}"
         exec_episode = await _run_and_wait(
             client,
             agent_name=AgentName.ENGINEER_CODER,

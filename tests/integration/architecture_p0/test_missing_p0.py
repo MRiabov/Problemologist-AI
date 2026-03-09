@@ -66,7 +66,9 @@ async def test_int_004_episode_artifact_persistence():
 async def test_int_005_trace_realtime_broadcast():
     """INT-005: Verify traces are broadcasted via DB/API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        session_id = f"test-trace-{uuid.uuid4().hex[:8]}"
+        # Use the INT-005 mock scenario prefix to avoid cross-test backend-error
+        # leakage from another scenario's tighter cost caps.
+        session_id = f"INT-005-{uuid.uuid4().hex[:8]}"
 
         # Run a very short agent task
         run_req = AgentRunRequest(task="Say hello", session_id=session_id)

@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+import yaml
 
 SERVICES = [
     "http://127.0.0.1:18000",  # Controller
@@ -35,6 +36,8 @@ BACKEND_ERROR_LOG_FILES = {
     "worker_heavy": Path("logs/integration_tests/worker_heavy_errors.log"),
     "temporal_worker": Path("logs/integration_tests/temporal_worker_errors.log"),
 }
+INTEGRATION_MOCK_RESPONSES_PATH = Path("tests/integration/mock_responses.yaml")
+INTEGRATION_SCENARIO_ID_PATTERN = re.compile(r"^INT-\d{3}$")
 
 
 def _is_integration_test(request: pytest.FixtureRequest) -> bool:
@@ -99,6 +102,43 @@ def ensure_services_are_ready(pytestconfig: pytest.Config):
     with httpx.Client(timeout=2.0) as client:
         for service_url in SERVICES:
             _wait_for_service_health_stable(service_url, client=client)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_integration_mock_scenario_ids(pytestconfig: pytest.Config):
+    """
+    Integration-only startup gate.
+    Enforce strict scenario IDs in tests/integration/mock_responses.yaml.
+    """
+    if not _should_enforce_integration_readiness(pytestconfig):
+        return
+
+    if not INTEGRATION_MOCK_RESPONSES_PATH.exists():
+        pytest.fail(
+            f"Missing required integration mock responses file: {INTEGRATION_MOCK_RESPONSES_PATH}"
+        )
+
+    with INTEGRATION_MOCK_RESPONSES_PATH.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+    scenarios = data.get("scenarios")
+    if not isinstance(scenarios, dict):
+        pytest.fail(
+            "Invalid tests/integration/mock_responses.yaml: expected top-level 'scenarios' mapping."
+        )
+
+    invalid_scenario_ids = [
+        str(scenario_id)
+        for scenario_id in scenarios.keys()
+        if not isinstance(scenario_id, str)
+        or INTEGRATION_SCENARIO_ID_PATTERN.fullmatch(scenario_id) is None
+    ]
+    if invalid_scenario_ids:
+        invalid_list = ", ".join(sorted(invalid_scenario_ids))
+        pytest.fail(
+            "Invalid integration mock scenario IDs found in tests/integration/mock_responses.yaml. "
+            f"Expected strict INT-### IDs only. Invalid: {invalid_list}"
+        )
 
 
 def _strip_ansi(text: str) -> str:
