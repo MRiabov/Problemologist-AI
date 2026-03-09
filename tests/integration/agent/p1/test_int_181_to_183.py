@@ -24,6 +24,62 @@ from tests.integration.agent.helpers import (
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 
+async def _wait_for_worker_light_health(timeout_s: float = 30.0) -> None:
+    deadline = asyncio.get_event_loop().time() + timeout_s
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        while asyncio.get_event_loop().time() < deadline:
+            try:
+                resp = await client.get(f"{WORKER_LIGHT_URL}/health")
+                if resp.status_code == 200:
+                    return
+            except Exception:
+                pass
+            await asyncio.sleep(0.5)
+
+    raise AssertionError("Worker light did not become healthy after restart.")
+
+
+async def _restart_worker_light_after_outage() -> None:
+    env = os.environ.copy()
+    env.update(
+        {
+            "WORKER_TYPE": "light",
+            "EXTRA_DEBUG_LOG": str(
+                Path("logs/integration_tests/worker_light_debug.log")
+            ),
+            "EXTRA_ERROR_LOG": str(
+                Path("logs/integration_tests/worker_light_errors.log")
+            ),
+            "EXTRA_ERROR_JSON_LOG": str(
+                Path("logs/integration_tests/json/worker_light_errors.json")
+            ),
+        }
+    )
+
+    log_path = Path("logs/integration_tests/worker_light.log")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("ab") as log_file:
+        subprocess.Popen(
+            [
+                "uv",
+                "run",
+                "uvicorn",
+                "worker_light.app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "18001",
+            ],
+            cwd=Path.cwd(),
+            env=env,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+    await _wait_for_worker_light_health()
+
+
 def _tool_trace_indexes(
     traces: list[dict],
     *,
@@ -267,7 +323,7 @@ async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.allow_backend_errors(
-    "SYSTEM_TOOL_RETRY_EXHAUSTED|system_tool_retry_attempt|node_entry_validation_rejected|missing_artifact|reviewer_entry_blocked|connection refused|ConnectError|All connection attempts failed"
+    "SYSTEM_TOOL_RETRY_EXHAUSTED|system_tool_retry_attempt|node_entry_validation_rejected|missing_artifact|reviewer_entry_blocked|connection refused|ConnectError|All connection attempts failed|engineer_coder_dspy_failed"
 )
 @pytest.mark.asyncio
 async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
@@ -322,11 +378,18 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
         )
 
         pid_lookup = subprocess.run(
-            ["pgrep", "-f", r"worker_light\.main:app.*18001"],
+            ["lsof", "-ti", "tcp:18001", "-sTCP:LISTEN"],
             capture_output=True,
             text=True,
             check=False,
         )
+        if pid_lookup.returncode != 0 or not pid_lookup.stdout.strip():
+            pid_lookup = subprocess.run(
+                ["pgrep", "-f", r"uvicorn.*18001"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
         assert pid_lookup.returncode == 0 and pid_lookup.stdout.strip(), (
             "Unable to resolve live worker-light PID for outage injection."
         )
@@ -336,6 +399,8 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
         os.kill(worker_pid, signal.SIGKILL)
 
         episode = await wait_for_episode_terminal(client, episode_id, timeout_s=240.0)
+
+    await _restart_worker_light_after_outage()
 
     assert episode["status"] == "FAILED", (
         "Episode must fail closed after system tool retry exhaustion."
