@@ -1315,6 +1315,16 @@ def _run_integration_command(
 
     _load_env_file(repo_root / ".env")
 
+    if args.full_sim:
+        os.environ["SIMULATION_DEFAULT_BACKEND"] = "GENESIS"
+        print("Full simulation backend selected: Genesis")
+    else:
+        os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "MUJOCO")
+        print(
+            "Integration default simulation backend: "
+            f"{os.environ['SIMULATION_DEFAULT_BACKEND']}"
+        )
+
     # Keep integration-test infra deterministic even when .env defines DB URLs.
     os.environ["POSTGRES_URL"] = integration_db_url
     os.environ["DATABASE_URL"] = integration_db_url
@@ -1668,6 +1678,11 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--reverse", action="store_true")
     run_parser.add_argument("--down", action="store_true")
     run_parser.add_argument("--no-smoke", action="store_true")
+    run_parser.add_argument(
+        "--full-sim",
+        action="store_true",
+        help="Use Genesis as the default simulation backend for this run.",
+    )
     run_parser.add_argument(
         "--wait-cleanup",
         action="store_true",
