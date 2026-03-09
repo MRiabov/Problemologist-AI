@@ -1663,9 +1663,9 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 100
+                  benchmark_max_unit_cost_usd: 250
                   benchmark_max_weight_g: 1000
-                  planner_target_max_unit_cost_usd: 50
+                  planner_target_max_unit_cost_usd: 150
                   planner_target_max_weight_g: 500
                 totals:
                   estimated_unit_cost_usd: 12
@@ -1685,22 +1685,15 @@ scenarios:
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
-                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
+                constraints: {max_unit_cost: 250, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
-            summary: "INT-038 planner artifacts generated."
+            summary: "INT-038 planner artifacts generated and submitted."
       - node: electronics_planner
         steps:
-          - thought: "No electronics needed."
-            tool_name: "write_file"
-            tool_args:
-              {
-                path: "todo.md",
-                content: "- [x] Build oscillating arm\n- [x] Electronics N/A",
-                overwrite: true,
-              }
-            expected_observation: "success"
           - finished: true
             summary: "No electronics required."
       - node: engineer_coder
@@ -1734,6 +1727,116 @@ scenarios:
             review:
               decision: "APPROVED"
               reason: "Controller-family validation scenario is complete."
+              required_fixes: []
+
+  INT-043:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create deterministic planner artifacts for batch-execution isolation."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                Batch execution isolation scenario.
+                ## 2. Parts List
+                - Test cube (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build a simple cube.
+                ## 4. Cost & Weight Budget
+                - $8
+                ## 5. Risk Assessment
+                - Low.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              {
+                path: "todo.md",
+                content: "- [ ] Build batch-isolation cube",
+                overwrite: true,
+              }
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 250
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 150
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 80
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [5,5,5], max: [10,10,10]}
+                  build_zone: {min: [-20,-20,-20], max: [20,20,20]}
+                simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 250, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-043 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - finished: true
+            summary: "Batch execution scenario requires no electronics."
+      - node: skill_agent
+        steps:
+          - finished: true
+            summary: "No additional skills required."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner output is valid for isolation testing."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    p = Box(1, 1, 1)
+                    p.label = "batch_cube"
+                    p.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=True,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return p
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "Batch execution isolation scenario implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution output is valid for isolation testing."
               required_fixes: []
 
   # INT-002: Engineering execution boundary
@@ -2731,6 +2834,8 @@ scenarios:
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "INT-181 ordering scenario generated."
       - node: electronics_planner
@@ -2744,6 +2849,8 @@ scenarios:
                 overwrite: true,
               }
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
       - node: engineer_coder
@@ -2835,6 +2942,8 @@ scenarios:
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "INT-182 concurrent-isolation scenario generated."
       - node: electronics_planner
@@ -2848,6 +2957,8 @@ scenarios:
                 overwrite: true,
               }
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
       - node: engineer_coder
@@ -2942,6 +3053,8 @@ scenarios:
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "INT-183 steerability queue scenario generated."
       - node: electronics_planner
@@ -2955,6 +3068,8 @@ scenarios:
                 overwrite: true,
               }
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
       - node: engineer_coder
@@ -3055,6 +3170,8 @@ scenarios:
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "INT-185 planner recovered after agent-caused tool failure."
       - node: electronics_planner
@@ -3068,6 +3185,8 @@ scenarios:
                 overwrite: true,
               }
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
       - node: engineer_coder
@@ -3151,6 +3270,8 @@ scenarios:
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "INT-186 planner artifacts generated."
       - node: electronics_planner
@@ -3159,6 +3280,8 @@ scenarios:
             tool_args:
               { path: "todo.md", content: "- [x] Build\n- [x] Electronics N/A", overwrite: true }
             expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
       - node: engineer_coder
