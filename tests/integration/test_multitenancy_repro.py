@@ -69,15 +69,13 @@ async def _run_multitenancy_repro() -> None:
     # We run a tiny dummy simulation to warm up the selected backend.
     print(f"Pre-warming {selected_backend().value} cache...")
     warmup_script = """
-from build123d import Box, Sphere, Compound
+from build123d import Box
 from shared.models.schemas import PartMetadata
 from shared.enums import ManufacturingMethod
 def build():
-    b = Box(1, 1, 1)
-    b.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
-    s = Sphere(1)
-    s.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
-    return b + s
+    part = Box(1, 1, 1)
+    part.metadata = PartMetadata(material_id="aluminum_6061", manufacturing_method=ManufacturingMethod.THREE_DP)
+    return part
 """
     async with httpx.AsyncClient(timeout=300.0) as client:
         print("Warmup round...")
