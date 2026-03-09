@@ -510,6 +510,13 @@ def capture_backend_errors(request):
                         )
                         if not (owns_by_session or owns_by_episode):
                             continue
+                    elif integration_runtime_mode and (
+                        line_session_id or line_episode_id
+                    ):
+                        # This test did not expose ownership ids to the fixture, so do
+                        # not misattribute structured backend errors from another test's
+                        # session that happened to finish during this test's runtime.
+                        continue
                     issues.append(f"{service}: {matched}")
 
     if integration_runtime_mode and missing_attribution_id_issues:
