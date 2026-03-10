@@ -97,6 +97,11 @@ async def test_benchmark_planner_cad_reviewer_path():
             for t in traces
             if t.trace_type.value == "TOOL_START" and t.name == "submit_plan"
         ]
+        inspect_media_traces = [
+            t
+            for t in traces
+            if t.trace_type.value == "TOOL_START" and t.name == "inspect_media"
+        ]
 
         assert any(p.endswith("plan.md") for p in artifact_paths), (
             f"plan.md missing. Artifacts: {artifact_paths}"
@@ -106,6 +111,15 @@ async def test_benchmark_planner_cad_reviewer_path():
         )
         assert submit_plan_traces, (
             "Expected planner to call submit_plan before workflow completion."
+        )
+        assert inspect_media_traces, (
+            "Expected benchmark reviewer to inspect a render before approval."
+        )
+        assert any(t.name == "media_inspection" for t in traces), (
+            "media_inspection event missing from benchmark reviewer run."
+        )
+        assert any(t.name == "llm_media_attached" for t in traces), (
+            "llm_media_attached event missing from benchmark reviewer run."
         )
         assert any(p.endswith("validation_results.json") for p in artifact_paths), (
             f"validation_results.json missing. Artifacts: {artifact_paths}"
