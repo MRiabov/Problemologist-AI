@@ -1,12 +1,14 @@
 [
   {
     "id": "bc-011-sideways-ball",
-    "task": "Implement this benchmark plan:\n\nLearning objective: test lateral transfer over 1 meter.\nMoved object: steel sphere radius 40 mm, spawn near X=-500 mm.\nGoal: center around X=+500 mm, same height band.\nEnvironment: fixed supports and guide geometry only inside build zone.\nSuccess: sphere enters goal zone without leaving simulation bounds.\n\nCreate benchmark artifacts and implementation code for the scenario.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `script.py`. Keep planner files consistent, update `todo.md`/`journal.md`, and include an explicit `submit_for_review(...)` call in the script.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball",
     "expected_criteria": "Writes benchmark implementation artifacts and runnable benchmark code consistent with 40mm-radius steel sphere moved 1m sideways."
   },
   {
     "id": "bc-002-tunnel",
-    "task": "Implement Benchmark Plan: Tunnel\n\nGeometry: hollow tunnel and exit goal for a rolling sphere.",
+    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `script.py`. Keep planner files consistent, update `todo.md`/`journal.md`, and include an explicit `submit_for_review(...)` call in the script.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-tunnel",
     "expected_criteria": "Implements geometry and goal artifacts without planner-file regressions."
   }
 ]

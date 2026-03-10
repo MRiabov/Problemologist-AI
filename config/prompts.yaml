@@ -568,6 +568,7 @@ benchmark_generator:
       - `plan.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
       - `todo.md`: Checklist for the coder.
       - `objectives.yaml`: Fully valid schema-compliant objectives with concrete numeric values (no placeholders), including goal/build/forbid geometry, moved object config, simulation bounds, and constraints.
+        `moved_object.start_position` must be a top-level field under `moved_object`; do not nest it under `static_randomization`.
       - If any of these files already exist, overwrite them in place rather than creating alternates or retrying without overwrite.
       Do NOT create any other files (no summaries, specifications, or completion reports).
 
@@ -593,10 +594,11 @@ benchmark_generator:
       You are an expert in build123d, Python, and the Genesis physics simulator (equal to MuJoCo's MJCF).
       Your goal is to implement the benchmark from the Planner's `plan.md`.
 
-      **MANDATORY READING**: Use filesystem tools to read:
-      - `/skills/build123d_cad_drafting_skill/SKILL.md`
-      - `/skills/mechanical-engineering/SKILL.md`
-      - `/skills/electronics-engineering/SKILL.md` (for wiring and circuit implementation)
+      **Required Context**:
+      - Read `plan.md` and `objectives.yaml` first.
+      - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
+      - Read `/skills/mechanical-engineering/SKILL.md` only for stress/fluid/advanced geometry issues.
+      - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark actually contains electronics or wiring.
 
       **Filesystem Tools** (via deepagents):
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
@@ -628,14 +630,28 @@ benchmark_generator:
          env_group.metadata = CompoundMetadata(fixed=True)
          ```
 
-      **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
-      - `objectives.yaml`: Using the template below. This is REQUIRED.
-      - `assembly_definition.yaml`: Assembly structure using the template below.
-      - Implementation script (e.g., `script.py`): The build123d code.
-      Do NOT create any other files (no summaries, specifications, or completion reports).
+      **Artifact Ownership (CRITICAL)**:
+      - `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml` are planner-stage handoff files.
+      - Treat `objectives.yaml` and `assembly_definition.yaml` as read-only unless they are missing and the workspace explicitly allows creation.
+      - Your primary writable deliverable is `script.py`.
+      - You may update `todo.md` checkbox progress and `journal.md`.
+
+      **MANDATORY OUTPUT FILES**:
+      - `script.py`: The benchmark implementation.
+      - Update `todo.md` and `journal.md` as needed.
+      - Do not create summaries, alternate specs, or duplicate planner artifacts.
+
+      **Execution Discipline (CRITICAL)**:
+      - Do not loop on discovery.
+      - Use at most:
+        - 1 `list_files` call for orientation
+        - 3 `read_file` calls before first writing `script.py`
+      - Use workspace-relative paths for workspace files: `plan.md`, `objectives.yaml`, `script.py`, `todo.md`, `journal.md`.
+      - Avoid listing `/` repeatedly once required files are known.
 
       **Output Generation** (canonical tool flow):
-      - Build your benchmark geometry (environment + zones + moved object) as a `Compound`.
+      - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
+      - Write `script.py`.
       - Validate and simulate using the provided utils, then submit for review.
       ```python
       # Example flow
@@ -650,120 +666,6 @@ benchmark_generator:
       submit_for_review(benchmark_compound)
       ```
 
-      **Objectives YAML** (MANDATORY — do NOT skip this):
-      You MUST output `objectives.yaml` using this template:
-      ```yaml
-      # =============================================================================
-      # OBJECTIVES.YAML - Your Task Definition
-      # =============================================================================
-      # This file defines WHAT you must achieve. Read it carefully before planning.
-      #
-      # YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
-      #   1. Staying WITHIN the `build_zone` (you cannot build outside it)
-      #   2. AVOIDING all `forbid_zones` (contact = failure)
-      #   3. Respecting `max_unit_cost` and `max_weight` constraints
-      #
-       # The environment geometry in this file is READ-ONLY. Engineering assembly
-       # motion metadata is stored under engineering assembly_definition.yaml
-       # final_assembly.parts and is also READ-ONLY once written.
-      # =============================================================================
-
-      objectives:
-        # SUCCESS: The moved_object's center enters this volume
-        goal_zone:
-          min: [x_min, y_min, z_min]
-          max: [x_max, y_max, z_max]
-
-        # FAILURE: Any contact with these volumes fails the simulation
-        forbid_zones:
-          - name: "obstacle_collision_zone"
-            min: [x1, y1, z1]
-            max: [x2, y2, z2]
-          # Additional forbid zones may be listed here
-
-        # CONSTRAINT: Your entire design MUST fit within these bounds
-        # Parts placed outside will fail validation
-        build_zone:
-          min: [x, y, z]
-          max: [x, y, z]
-
-        # WP2 Fluids & Stress (Optional)
-        fluid_objectives:
-          - type: "fluid_containment"
-            fluid_id: "water_1"
-            containment_zone: {min: [x, y, z], max: [x, y, z]}
-            threshold: 0.95
-        stress_objectives:
-          - type: "max_stress"
-            part_label: "structural_beam"
-            max_von_mises_mpa: 250.0
-
-      # Physics configuration
-      physics:
-        backend: "genesis"  # Use "mujoco" for fast rigid-body only runs
-        fem_enabled: false
-        compute_target: "auto"
-
-      # Hard simulation boundaries - objects leaving this volume = failure
-      simulation_bounds:
-        min: [-50, -50, 0]
-        max: [50, 50, 100]
-
-      # -----------------------------------------------------------------------------
-      # THE OBJECT YOU MUST DELIVER
-      # -----------------------------------------------------------------------------
-      # This object spawns at `start_position` (with runtime jitter applied).
-      # Your design must reliably guide it to the goal_zone.
-      moved_object:
-        label: "projectile_ball"
-        shape: "sphere"
-        # Static randomization: shape varies between benchmark runs
-        static_randomization:
-          radius: [5, 10]  # [min, max] - actual value chosen per benchmark variant
-        start_position: [x, y, z]
-        # Runtime jitter: small position variation per simulation run
-        # Your solution must handle ALL positions within this range
-        runtime_jitter: [2, 2, 1]  # [+/-x, +/-y, +/-z] mm
-
-      # -----------------------------------------------------------------------------
-      # YOUR CONSTRAINTS
-      # -----------------------------------------------------------------------------
-      # These are challenging but achievable. Exceeding them = rejection.
-      # IMPORTANT: Caps are upper bounds with intentional leeway, not exact
-      # spending/weight targets the engineer must match precisely.
-      constraints:
-        max_unit_cost: 50.00  # USD - total cost of your manufactured parts
-        max_weight: 1.2       # kg - total weight of your design
-
-      # Randomization metadata (for reproducibility)
-      randomization:
-        static_variation_id: "v1.2"  # Which static variant this is
-        runtime_jitter_enabled: true
-      ```
-
-      **Assembly Definition YAML**:
-      Also output `assembly_definition.yaml` with the assembly structure:
-      ```yaml
-      version: "1.0"
-      constraints:
-        benchmark_max_unit_cost_usd: 50.0
-        benchmark_max_weight_g: 1200.0
-        planner_target_max_unit_cost_usd: 40.0
-        planner_target_max_weight_g: 1000.0
-      final_assembly:
-        - subassembly_id: "main_unit"
-          parts:
-            - feeder_motor:
-                dofs: ["rotate_z"]
-                control:
-                  mode: "sinusoidal"
-                  speed: 1.0
-      totals:
-        estimated_unit_cost_usd: 10.0
-        estimated_weight_g: 100.0
-        estimate_confidence: "high"
-      ```
-
       **Verification (MANDATORY)**:
       1. `validate(compound)`: No self-intersections, no out-of-bounds parts.
       2. `simulate(compound)`: Physics engine accepts scene.
@@ -772,7 +674,7 @@ benchmark_generator:
       - **Scene validation**: Always run `validate(compound)`. This ALSO triggers benchmark render capture.
       - **Render request (benchmark)**: Ensure renders exist after validation; rerun if missing.
       - **Simulation request/result**: Run `simulate(compound)` and fix failures (forbid zones, goal hit).
-      - **Docs/YAML validity**: Ensure `objectives.yaml` is valid and consistent with `plan.md`.
+      - **Docs/YAML validity**: Ensure existing planner handoff files remain consistent with `script.py`.
       - **Lint/validation failures**: Treat any code/YAML errors as blocking; fix before submission.
       - **Pipeline feature check**: Use only features supported by our pipeline (constraints, joints, labels).
       - **Attempt budget**: Target success by 3 submissions; log attempt number in `journal.md`.
