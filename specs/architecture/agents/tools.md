@@ -67,7 +67,7 @@ This is mostly for integration tests where such bypass is convenient (for system
 
 ## Tool definitions
 
-- `execute_command` Execute a command in the sandbox and return command output.
+- `execute_command` Execute raw Python code in the session runtime and return stdout/stderr/exit status.
 - `list_files` Structured listing with file metadata.
 - `read_file` Read file content.
 - `write_file` Create or overwrite a file.
@@ -80,6 +80,8 @@ This is mostly for integration tests where such bypass is convenient (for system
 - `save_suggested_skill` Persist skill-agent suggested skill output.
 
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
+
+`execute_command` is a runtime Python executor, not a shell wrapper. Agent prompts/examples must pass Python source directly and must not wrap it in `python -c ...`, `python script.py`, or similar shell syntax.
 
 The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as described below)
 
@@ -152,11 +154,12 @@ Run the workbench interface to validate the part for manufacturability; if passe
 
 1. Check cache for if we need to reverify the solution, early exit if not,
 2. If there is the environment in the assembly (as required by `simulate` command), assert that it is in the correct position,
-3. Validate for the manufacturability as per the Workbench interface,
-4. Validate for being in build zone bounds,
-5. Determine cost,
-6. Validate for cost,
-7. Validate for weight.
+3. Split the assembly into benchmark-owned read-only fixtures versus engineer-owned manufactured parts / COTS parts.
+4. Validate manufacturability as per the Workbench interface only for engineer-owned manufactured parts. Do not reject because benchmark environment/input-objective fixtures lack manufacturing metadata.
+5. Validate full-assembly placement and build-zone bounds, including interactions with the benchmark environment/objectives.
+6. Determine cost for engineer-owned manufactured parts and selected COTS parts only,
+7. Validate for cost,
+8. Validate for weight.
 
 ##### `simulate(Compound)`
 

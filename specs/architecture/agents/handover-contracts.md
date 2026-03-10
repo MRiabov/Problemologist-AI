@@ -90,6 +90,8 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 The Engineer agent(s) (for whom the first point of access is Engineering Planner) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
+The benchmark-owned environment, benchmark input objects, and benchmark objective markers are read-only task fixtures. They are validated for geometry correctness, placement, randomization, and benchmark solvability, but they are not validated for manufacturability or priced as manufactured outputs. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
+
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
 The engineer will also receive YAML files with:

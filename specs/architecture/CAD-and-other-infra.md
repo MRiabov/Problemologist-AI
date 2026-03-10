@@ -14,9 +14,18 @@ Parts and Assemblies have metadata, e.g. `cots_id` for COTS parts, `material_id`
 
 Define a classes `PartMetadata` and `CompoundMetadata` that can store all properties related to them. Without these mandatory fields, validation will fail.
 
+Metadata validation is ownership-sensitive:
+
+1. Engineer-created manufactured parts and planner-declared manufactured parts must carry the manufacturing/workbench metadata required for manufacturability validation and pricing.
+2. Benchmark-owned environment geometry, benchmark input objects, and benchmark objective markers are not treated as manufactured outputs.
+3. Those benchmark-owned read-only fixtures may carry physics/render metadata, but they are excluded from manufacturability validation and pricing.
+4. Missing `manufacturing_method` / `material_id` is therefore a hard validation failure only for engineer-owned manufactured parts (and planner-owned manufactured-part definitions), not for benchmark fixtures.
+
 ### Assigning a part to workbenches
 
-The agent must assign a part manufacturing method to the part. If not, the parts can not be priced or sent for manufacturing. 
+The agent must assign a part manufacturing method to every part it expects to price or send for manufacturing. If not, the parts can not be priced or sent for manufacturing.
+
+This rule does not apply to the benchmark-owned environment or other benchmark input fixtures handed to the engineer. Those objects are validated as geometry/physics context only, not as manufacturable outputs.
 
 The verification is done by a method.
 
