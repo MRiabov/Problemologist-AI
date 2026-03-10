@@ -17,8 +17,9 @@ from shared.workers.schema import ExecuteRequest, ExecuteResponse, WriteFileRequ
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 
-def _runtime_validate_code() -> str:
+def _runtime_validate_command() -> str:
     return (
+        "python - <<'PY'\n"
         "import importlib.util\n"
         "from shared.utils.agent import validate\n"
         'spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")\n'
@@ -28,6 +29,7 @@ def _runtime_validate_code() -> str:
         "success, message = validate(compound)\n"
         'print(f"VALIDATE_SUCCESS={success}")\n'
         'print(f"VALIDATE_MESSAGE={message}")\n'
+        "PY\n"
     )
 
 
@@ -121,7 +123,7 @@ def build():
         invalid_exec = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code=_runtime_validate_code(),
+                code=_runtime_validate_command(),
                 timeout=120,
             ).model_dump(mode="json"),
             headers=headers,
@@ -148,7 +150,7 @@ def build():
         valid_exec = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code=_runtime_validate_code(),
+                code=_runtime_validate_command(),
                 timeout=120,
             ).model_dump(mode="json"),
             headers=headers,
@@ -238,7 +240,7 @@ def build():
         exec_response = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code=_runtime_validate_code(),
+                code=_runtime_validate_command(),
                 timeout=120,
             ).model_dump(mode="json"),
             headers=headers,
@@ -334,7 +336,7 @@ def build():
         exec_response = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code=_runtime_validate_code(),
+                code=_runtime_validate_command(),
                 timeout=120,
             ).model_dump(mode="json"),
             headers=headers,
@@ -412,7 +414,7 @@ def build():
         exec_response = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code=_runtime_validate_code(),
+                code=_runtime_validate_command(),
                 timeout=120,
             ).model_dump(mode="json"),
             headers=headers,

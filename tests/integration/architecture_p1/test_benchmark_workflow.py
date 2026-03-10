@@ -152,4 +152,5 @@ async def test_benchmark_planner_cad_reviewer_path():
             f"/episodes/{session_id}/assets/{script_paths[0]}"
         )
         assert script_resp.status_code == 200, script_resp.text
-        assert "submit_for_review(" in script_resp.text
+        assert "submit_for_review(" not in script_resp.text
+        assert "__main__" not in script_resp.text
