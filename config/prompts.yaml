@@ -604,18 +604,48 @@ benchmark_generator:
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
       - `execute_command(command: str)`, `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
-      **Python Utils** (import in your script):
-      - `validate(compound: Compound)`: Check intersections and bounds under all environment randomization.
-      - `simulate(compound: Compound)`: Run physics test with environment constraints.
-      - `submit_for_review(compound: Compound)`: Submits the whole benchmark compound to the Reviewer.
+      **Python Utils**:
+      - `shared.utils.agent.validate(compound: Compound)`: Check intersections and bounds under all environment randomization.
+      - `shared.utils.agent.simulate(compound: Compound)`: Run physics test with environment constraints.
+      - `shared.utils.agent.submit_for_review(compound: Compound)`: Submit the whole benchmark compound to the Reviewer.
       - `get_docs_for(type: str)`: Find documentation via subagent.
 
       **Rules**:
-      1. **CSG First**: Use Box, Cylinder, Sphere with booleans. Sketches only for complex 2D profiles.
+      1. **Builder Mode First**: Prefer `with BuildPart()` for authored solids, using Box/Cylinder/Sphere and booleans inside the builder. Sketches are still for complex 2D profiles. Use direct shape algebra only when assembling already-built parts or for a very small/simple moved object where a builder adds no value.
       2. **Scaling**: Use `scale(obj, by=scale_factors)` FUNCTION for non-uniform. The `.scale()` METHOD only takes a single float.
       3. **Locations**: Use `with Locations(...):` (plural, context manager). `Location(...)` (singular) is NOT a context manager.
-      4. **Labels**: Apply correct labels per the labeling convention.
-      5. **Part & Compound Metadata (MANDATORY)**:
+      4. **Primitive Placement**: Build123d primitives should be created at the origin, then placed with `.translate((x, y, z))` or `.moved(Location((x, y, z)))`. Do NOT pass `position=...` or `loc=...` into `Box`, `Cylinder`, or `Sphere`.
+      5. **Constructor Contract (CRITICAL)**:
+         - `Box` in this runtime uses positional dimensions: `Box(length, width, height)`. Do NOT call `Box(width=..., height=..., length=...)`.
+         - Do NOT pass `label=` into any build123d constructor (`Box`, `Sphere`, `Cylinder`, `Compound`, etc.).
+         - Create the object first, then assign labels/metadata as attributes:
+         ```python
+         from build123d import Align, Box, BuildPart, Compound
+
+         with BuildPart() as rail_builder:
+             Box(1.0, 0.02, 0.02, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+
+         rail = rail_builder.part.translate((0, 0.06, 0.09))
+         rail.label = "obstacle_rail_upper"
+         rail.metadata = PartMetadata(material_id="steel_cold_rolled", part_type="static")
+
+         benchmark = Compound(children=[rail])
+         benchmark.label = "sideways_ball_benchmark"
+         benchmark.metadata = CompoundMetadata(fixed=True)
+         ```
+      6. **Labels**: Apply correct labels per the labeling convention.
+      7. **Script Contract (MANDATORY)**:
+         `script.py` must define a top-level `build()` function that returns the final benchmark `Compound`.
+         The runtime imports your module and calls `build()` in isolation. Do NOT rely on a `__main__` block for validation or submission.
+         Do NOT import from a local `utils` module. Use `shared.utils.agent` for helper utilities when needed.
+         Keep an explicit `submit_for_review(...)` call in `script.py` by defining a helper such as:
+         ```python
+         from shared.utils.agent import submit_for_review
+
+         def reviewer_handoff_contract(compound: Compound) -> None:
+             submit_for_review(compound)
+         ```
+      8. **Part & Compound Metadata (MANDATORY)**:
          Every part and assembly (Compound) MUST have a `.metadata` attribute.
          ```python
          from shared.models.schemas import PartMetadata, CompoundMetadata
@@ -639,7 +669,7 @@ benchmark_generator:
       **MANDATORY OUTPUT FILES**:
       - `script.py`: The benchmark implementation.
       - Update `todo.md` and `journal.md` as needed.
-      - Do not create summaries, alternate specs, or duplicate planner artifacts.
+      - Do not create summaries, alternate specs, duplicate planner artifacts, or temporary script files such as `test_script.py`, `solution.py`, or `main.py`.
 
       **Execution Discipline (CRITICAL)**:
       - Do not loop on discovery.
@@ -647,33 +677,39 @@ benchmark_generator:
         - 1 `list_files` call for orientation
         - 3 `read_file` calls before first writing `script.py`
       - Use workspace-relative paths for workspace files: `plan.md`, `objectives.yaml`, `script.py`, `todo.md`, `journal.md`.
+      - Never write or copy to scratch Python files for verification. Reuse the existing `script.py` directly in `execute_command(...)`.
       - Avoid listing `/` repeatedly once required files are known.
 
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
-      - Write `script.py`.
-      - Validate and simulate using the provided utils, then submit for review.
+      - Write `script.py` with a top-level `build()` function that returns that compound.
+      - Self-check after writing `script.py` by using `execute_command(...)`, not by embedding validation/simulation in a temporary file or scratch script.
+      - Do NOT create verifier files such as `test_run.py`, `check.py`, `tmp_validate.py`, or any other extra Python file. Reuse only `script.py`.
+      - Use `shared.utils.agent` imports in those commands.
       ```python
-      # Example flow
-      is_valid, error = validate(benchmark_compound) # raises if is invalid
-      if not is_valid:
-          raise ValueError("Benchmark validation failed.", error)
+      import importlib.util
+      from shared.utils.agent import validate, simulate, submit_for_review
 
-      sim_result = simulate(benchmark_compound)
-      if not sim_result.success:
-          raise ValueError(f"Simulation failed: {sim_result.summary}")
-
-      submit_for_review(benchmark_compound)
+      spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+      mod = importlib.util.module_from_spec(spec)
+      spec.loader.exec_module(mod)
+      compound = mod.build()
+      print(validate(compound))
+      print(simulate(compound).success)
+      print(submit_for_review(compound))
       ```
+      - Use `script.py` exactly as written above. Do not create `/test_script.py` or any alternate filename for self-checks.
 
       **Verification (MANDATORY)**:
-      1. `validate(compound)`: No self-intersections, no out-of-bounds parts.
-      2. `simulate(compound)`: Physics engine accepts scene.
+      1. `shared.utils.agent.validate(compound)`: No self-intersections, no out-of-bounds parts.
+      2. `shared.utils.agent.simulate(compound)`: Physics engine accepts scene.
+      3. `shared.utils.agent.submit_for_review(compound)`: Must succeed for the latest revision to create the benchmark review manifest.
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Scene validation**: Always run `validate(compound)`. This ALSO triggers benchmark render capture.
+      - **Scene validation**: Always run `shared.utils.agent.validate(compound)`. This ALSO triggers benchmark render capture.
       - **Render request (benchmark)**: Ensure renders exist after validation; rerun if missing.
-      - **Simulation request/result**: Run `simulate(compound)` and fix failures (forbid zones, goal hit).
+      - **Simulation request/result**: Run `shared.utils.agent.simulate(compound)` and fix failures (forbid zones, goal hit).
+      - **Review manifest**: Run `shared.utils.agent.submit_for_review(compound)` after validation/simulation pass so `.manifests/benchmark_review_manifest.json` exists for reviewer handoff.
       - **Docs/YAML validity**: Ensure existing planner handoff files remain consistent with `script.py`.
       - **Lint/validation failures**: Treat any code/YAML errors as blocking; fix before submission.
       - **Pipeline feature check**: Use only features supported by our pipeline (constraints, joints, labels).

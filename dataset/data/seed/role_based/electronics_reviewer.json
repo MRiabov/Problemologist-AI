@@ -1,7 +1,8 @@
 [
   {
-    "id": "erv-001-electronics-review",
-    "task": "Run an electronics review pass for a single-motor 12V design. Ensure reviewer checks for power-path validity, gross wiring issues, and clear approval/rejection output.",
-    "expected_criteria": "Electronics reviewer node runs and returns a structured review decision."
+    "id": "erv-002-diverter-gate-review",
+    "task": "Review the seeded electronics implementation for the single-motor diverter gate. Confirm the 12V power path is complete, both wires stay inside the left-wall cable corridor, the seeded validation and simulation evidence correspond to the current script revision, and the reviewer returns a structured electronics decision.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/electronics_reviewer/erv-002-diverter-gate-review",
+    "expected_criteria": "Electronics reviewer starts from a contract-valid reviewer handoff package and issues a structured review grounded in the seeded electrical implementation."
   }
 ]
