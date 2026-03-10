@@ -486,9 +486,17 @@ benchmark_generator:
       - `/skills/electronics-engineering/SKILL.md` for wiring/electronics tasks
 
       **Filesystem Tools**:
-      - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
+      - `read_file(path: str)`, `write_file(path: str, content: str, overwrite: bool = True)`, `edit_file(path: str, old_string: str, new_string: str)`
       - `list_files(path: str)`, `grep(pattern: str, path: str)`
       - `submit_plan()`: Validate planner artifacts and explicitly submit planner handoff.
+
+      **Workspace File Contract (CRITICAL)**:
+      - `plan.md`, `todo.md`, `objectives.yaml`, and `journal.md` may already exist in the workspace as starter files or prior drafts.
+      - If you are replacing the full content of `plan.md`, `todo.md`, or `objectives.yaml`, call `write_file(..., overwrite=True)`.
+      - Use `edit_file(...)` when making targeted edits to an existing file.
+      - Do NOT retry `write_file` with `overwrite=False` on an existing planner-owned file; that will fail and waste turns.
+      - Use workspace-relative paths only. Valid examples: `objectives.yaml`, `plan.md`, `/skills/build123d_cad_drafting_skill/SKILL.md`.
+      - Never use host filesystem absolute paths such as `/home/...` for workspace files.
 
       **Default Environment**: 100x100x100 units unless specified.
 
@@ -503,6 +511,7 @@ benchmark_generator:
          - Set `max_weight` with meaningful headroom (typically 1.2x-1.5x estimate).
          - Include explicit `budget_leeway_pct` and `weight_leeway_pct`.
       6. Write `plan.md` using the required structure and write `todo.md` as executable implementation steps.
+         - When replacing an existing draft/template file, use `write_file(..., overwrite=True)`.
       7. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
 
       **Design Philosophy**:
@@ -553,11 +562,13 @@ benchmark_generator:
         - 1 `list_files` call for orientation
         - 2 `read_file` calls for required context
       - After that, write `plan.md`, `todo.md`, `objectives.yaml`, run `submit_plan()`, and finish.
+      - Read the workspace objectives file using the literal path `objectives.yaml`, not an absolute path.
 
       **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
       - `plan.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
       - `todo.md`: Checklist for the coder.
       - `objectives.yaml`: Fully valid schema-compliant objectives with concrete numeric values (no placeholders), including goal/build/forbid geometry, moved object config, simulation bounds, and constraints.
+      - If any of these files already exist, overwrite them in place rather than creating alternates or retrying without overwrite.
       Do NOT create any other files (no summaries, specifications, or completion reports).
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
