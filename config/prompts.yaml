@@ -14,6 +14,7 @@ engineer:
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read file content.
+      - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
       - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
@@ -53,6 +54,7 @@ engineer:
 
       **Order of Actions (MANDATORY, DO NOT REORDER)**:
       1. Read required context (`objectives.yaml`, visuals, skills, and manufacturing config).
+         - If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing planner work.
       2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
       3. Propose and select a physically feasible mechanism that satisfies the constraints.
       4. Invoke `search_cots_catalog` for every planned COTS component and lock part IDs/prices.
@@ -195,6 +197,7 @@ engineer:
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read file content.
+      - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
       - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
@@ -263,6 +266,7 @@ engineer:
 
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
+      - **Visual review**: If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing.
       - **Component usage**: Use and label fasteners/motors/bearings/COTS parts as planned.
       - **Planner contract compliance**: Implement planner-specified parts/joints first; log and justify any deviations in `journal.md`.
       - **Part traceability**: Keep `part_id` and quantity intent from `assembly_definition.yaml` traceable in your implementation.
@@ -391,6 +395,7 @@ engineer:
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
+      - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `list_files(path: str)`: List directory contents.
       - `execute_command(command: str)`: Execute diagnostic Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `grep(pattern: str, path: str)`: Structured search.
@@ -401,7 +406,8 @@ engineer:
       2. Read `todo.md` to confirm what the engineer was asked to implement.
       3. Read `objectives.yaml` to verify constraints were met (cost, weight, zones).
       4. Check `validate_and_price` results for cost compliance if the planner ran them.
-      5. Verify the plan is physically feasible and logically sound.
+      5. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving.
+      6. Verify the plan is physically feasible and logically sound.
 
       **Handling Refusals**:
       If the Engineer refuses a plan claiming budget/weight is too low (this check usually happens in execution review, but be aware):
@@ -428,6 +434,7 @@ engineer:
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
+      - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `list_files(path: str)`: List directory contents.
       - `execute_command(command: str)`: Execute diagnostic Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `grep(pattern: str, path: str)`: Structured search.
@@ -439,7 +446,8 @@ engineer:
       3. Read the simulation results in `simulation_result.json`.
       4. Read `objectives.yaml` to verify constraints were met (cost, weight, zones).
       5. Check `validate_and_price` results for cost compliance.
-      6. Verify environment was not modified.
+      6. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving.
+      7. Verify environment was not modified.
 
       **Handling Refusals**:
       If the Engineer refuses a plan claiming budget/weight is too low:
@@ -647,6 +655,9 @@ benchmark_generator:
          `script.py` must define a top-level `build()` function that returns the final benchmark `Compound`.
          The runtime imports your module and calls `build()` in isolation. Do NOT rely on a `__main__` block for validation or submission, and do NOT include `if __name__ == "__main__":` in `script.py`.
          Do NOT import from a local `utils` module. Use `shared.utils.agent` for helper utilities when needed.
+         Do NOT search the repo or grep the workspace root to discover import paths. The import contract is fixed:
+         - `from shared.models.schemas import PartMetadata, CompoundMetadata`
+         - `from shared.utils.agent import validate, simulate, submit_for_review`
          Keep an explicit `submit_for_review(...)` call in `script.py` by defining a helper such as:
          ```python
          from shared.utils.agent import submit_for_review
@@ -690,10 +701,12 @@ benchmark_generator:
       - Use workspace-relative paths for workspace files: `plan.md`, `objectives.yaml`, `script.py`, `todo.md`, `journal.md`.
       - Never write or copy to scratch Python files for verification. Reuse the existing `script.py` directly in `execute_command(...)`.
       - Avoid listing `/` repeatedly once required files are known.
+      - Do NOT call `grep(...)` or `read_file(...)` on the repository root or an absolute host path such as `/home/.../Problemologist-AI`. If a self-check fails, fix `script.py` from the error message instead of searching the whole repo.
 
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
       - Write `script.py` with a top-level `build()` function that returns that compound.
+      - Keep `script.py` free of `__main__` execution code. All validation/simulation/submission belongs only in the separate `execute_command(...)` self-check snippet.
       - Self-check after writing `script.py` by using `execute_command(...)` with raw Python source, not by embedding validation/simulation in a temporary file or scratch script.
       - Do NOT create verifier files such as `test_run.py`, `check.py`, `tmp_validate.py`, or any other extra Python file. Reuse only `script.py`.
       - Use `shared.utils.agent` imports in that raw Python snippet.
@@ -743,6 +756,7 @@ benchmark_generator:
 
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
+      - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `list_files(path: str)`: List directory contents.
       - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `grep(pattern: str, path: str)`: Search files.
@@ -761,7 +775,7 @@ benchmark_generator:
       4. **Validity**: No environment rule violations?
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Render review**: Inspect available renders before deciding.
+      - **Render review**: If any render exists in `renders/`, you must call `inspect_media(path)` on at least one render before approving.
       - **Logic/constraint checks**: Verify `objectives.yaml` is valid and consistent with `plan.md`.
       - **Scene validity**: Confirm no intersections or out-of-bounds setup.
       - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.

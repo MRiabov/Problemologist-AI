@@ -31,9 +31,13 @@ from controller.observability.langfuse import (
     init_tracing,
     report_usage_to_current_observation,
 )
+from controller.observability.tracing import record_worker_events
 from controller.persistence.models import Trace
 from shared.enums import AgentName, TraceType
 from shared.models.schemas import CodeReference, TraceMetadata
+from shared.observability.schemas import LlmMediaAttachedEvent
+from shared.workers.filesystem.policy import VisualInspectionPolicy
+from shared.workers.schema import MediaInspectionResult
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -168,6 +172,99 @@ class BaseNode:
 
     def __init__(self, context: SharedNodeContext):
         self.ctx = context
+        self._tool_usage_counts: dict[str, int] = {}
+        self._inspected_media_paths: list[str] = []
+
+    def _reset_tool_usage_tracking(self) -> None:
+        self._tool_usage_counts = {}
+        self._inspected_media_paths = []
+
+    def _record_tool_usage(self, tool_name: str, result: Any) -> None:
+        self._tool_usage_counts[tool_name] = (
+            self._tool_usage_counts.get(tool_name, 0) + 1
+        )
+        if (
+            tool_name == "inspect_media"
+            and isinstance(result, MediaInspectionResult)
+            and result.media_kind == "image"
+        ):
+            self._inspected_media_paths.append(result.path)
+
+    def _used_tool(self, tool_name: str) -> bool:
+        return self._tool_usage_counts.get(tool_name, 0) > 0
+
+    def _inspected_media_path_count(self) -> int:
+        return len(self._inspected_media_paths)
+
+    def _inspected_unique_media_path_count(self) -> int:
+        return len(set(self._inspected_media_paths))
+
+    def _get_visual_inspection_policy(
+        self, node_type: AgentName
+    ) -> VisualInspectionPolicy:
+        return self.ctx.fs.policy.get_visual_inspection_policy(node_type)
+
+    @staticmethod
+    def _is_image_media_path(path: str) -> bool:
+        return path.lower().endswith((".png", ".jpg", ".jpeg"))
+
+    async def _list_render_media_paths(self) -> list[str]:
+        with suppress(Exception):
+            entries = await self.ctx.worker_client.list_files("/renders")
+            media_paths: list[str] = []
+            for entry in entries:
+                path = getattr(entry, "path", "") or ""
+                if self._is_image_media_path(path):
+                    media_paths.append(path.lstrip("/"))
+            return media_paths
+        return []
+
+    def _list_render_media_paths_sync(self) -> list[str]:
+        with suppress(Exception):
+            future = asyncio.run_coroutine_threadsafe(
+                self._list_render_media_paths(),
+                self.ctx.main_loop,
+            )
+            return future.result(timeout=10.0)
+        return []
+
+    async def _get_visual_inspection_context(
+        self, node_type: AgentName
+    ) -> tuple[VisualInspectionPolicy, list[str]]:
+        policy = self._get_visual_inspection_policy(node_type)
+        if not policy.required:
+            return policy, []
+        return policy, await self._list_render_media_paths()
+
+    def _build_visual_inspection_reminder(
+        self,
+        *,
+        policy: VisualInspectionPolicy,
+        media_paths: list[str],
+    ) -> str:
+        inspected = self._inspected_unique_media_path_count()
+        examples = ", ".join(media_paths[: min(3, len(media_paths))])
+        return (
+            "Visual inspection is mandatory for this node. "
+            f"Inspect at least {policy.min_images} distinct render image(s) with "
+            f"`inspect_media(path)` before finishing. Already inspected: "
+            f"{inspected}/{policy.min_images}. Available render paths: {examples}."
+        )
+
+    def _get_visual_inspection_requirement_message(
+        self,
+        *,
+        policy: VisualInspectionPolicy,
+        media_paths: list[str],
+    ) -> str | None:
+        if not policy.required or not media_paths:
+            return None
+        if self._inspected_unique_media_path_count() >= policy.min_images:
+            return None
+        return self._build_visual_inspection_reminder(
+            policy=policy,
+            media_paths=media_paths,
+        )
 
     def _create_dspy_adapter(
         self, *, use_native_function_calling: bool = False
@@ -196,6 +293,11 @@ class BaseNode:
         return program_cls is dspy.ReAct and node_type in {
             AgentName.BENCHMARK_PLANNER,
             AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_REVIEWER,
+            AgentName.ENGINEER_PLANNER,
+            AgentName.ENGINEER_CODER,
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
         }
 
     def _build_native_tool_signature(
@@ -499,6 +601,8 @@ class BaseNode:
         tool_fns: dict[str, Callable],
         node_type: AgentName,
         max_iters: int,
+        visual_policy: VisualInspectionPolicy,
+        render_media_paths: list[str],
         db_callback: DatabaseCallbackHandler | None = None,
     ) -> dspy.Prediction:
         instructions = getattr(signature_cls, "instructions", "") or ""
@@ -522,10 +626,27 @@ class BaseNode:
         tool_schemas = self._build_native_tool_schemas(
             tool_fns, extra_schemas=[finish_schema]
         )
+        self._reset_tool_usage_tracking()
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
+        current_render_media_paths = list(render_media_paths)
+
+        def refresh_render_media_paths() -> list[str]:
+            nonlocal current_render_media_paths
+            if not visual_policy.required:
+                return current_render_media_paths
+            current_render_media_paths = self._list_render_media_paths_sync()
+            return current_render_media_paths
+
+        current_render_media_paths = refresh_render_media_paths()
+        unmet_visual_requirement = self._get_visual_inspection_requirement_message(
+            policy=visual_policy,
+            media_paths=current_render_media_paths,
+        )
+        if unmet_visual_requirement:
+            messages.append({"role": "user", "content": unmet_visual_requirement})
         litellm_model, api_key, api_base = self._resolve_native_litellm_model()
         if not api_key:
             raise RuntimeError(f"Missing API key for native tool loop: {node_type}")
@@ -605,6 +726,28 @@ class BaseNode:
                             + ", ".join(missing_fields)
                         )
                         raise ValueError(msg)
+                    unmet_visual_requirement = (
+                        self._get_visual_inspection_requirement_message(
+                            policy=visual_policy,
+                            media_paths=refresh_render_media_paths(),
+                        )
+                    )
+                    if unmet_visual_requirement and node_type not in {
+                        AgentName.BENCHMARK_REVIEWER,
+                        AgentName.ENGINEER_EXECUTION_REVIEWER,
+                    }:
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": call.get("id", ""),
+                                "name": "finish",
+                                "content": unmet_visual_requirement,
+                            }
+                        )
+                        messages.append(
+                            {"role": "user", "content": unmet_visual_requirement}
+                        )
+                        continue
                     return dspy.Prediction.from_completions(
                         {
                             field_name: [payload.get(field_name)]
@@ -618,6 +761,7 @@ class BaseNode:
                     raise ValueError(f"Unknown tool requested: {tool_name}")
 
                 observation = tool(**payload)
+                self._record_tool_usage(tool_name, observation)
                 messages.append(
                     {
                         "role": "tool",
@@ -626,6 +770,30 @@ class BaseNode:
                         "content": self._serialize_tool_observation(observation),
                     }
                 )
+                messages.extend(
+                    self._build_media_attachment_messages(
+                        node_type=node_type,
+                        tool_name=tool_name,
+                        result=observation,
+                    )
+                )
+                current_render_media_paths = refresh_render_media_paths()
+                if (
+                    current_render_media_paths
+                    and visual_policy.required
+                    and self._inspected_unique_media_path_count()
+                    < visual_policy.min_images
+                    and (iteration + 1) % visual_policy.reminder_interval == 0
+                ):
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": self._build_visual_inspection_reminder(
+                                policy=visual_policy,
+                                media_paths=current_render_media_paths,
+                            ),
+                        }
+                    )
 
         msg = (
             f"Native tool loop for {node_type.value} exhausted {max_iters} iterations."
@@ -752,6 +920,8 @@ class BaseNode:
                         else:
                             result = func(*args, **sanitized_kwargs)
 
+                        self._record_tool_usage(tool_name, result)
+
                         # WP10: Explicitly record tool success
                         if db_callback and trace_id:
                             db_callback.record_tool_end_sync(
@@ -773,6 +943,56 @@ class BaseNode:
             wrapped.__name__ = name
             tool_fns[name] = wrapped
         return tool_fns
+
+    def _build_media_attachment_messages(
+        self,
+        *,
+        node_type: AgentName,
+        tool_name: str,
+        result: Any,
+    ) -> list[dict[str, Any]]:
+        if tool_name != "inspect_media" or not isinstance(
+            result, MediaInspectionResult
+        ):
+            return []
+        if not result.attached_to_model or not result.data_url:
+            return []
+
+        with suppress(Exception):
+            future = asyncio.run_coroutine_threadsafe(
+                record_worker_events(
+                    episode_id=self.ctx.episode_id,
+                    events=[
+                        LlmMediaAttachedEvent(
+                            path=result.path,
+                            mime_type=result.mime_type,
+                            media_kind=result.media_kind,
+                            node_name=node_type,
+                        )
+                    ],
+                ),
+                self.ctx.main_loop,
+            )
+            future.result(timeout=5.0)
+
+        return [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Visual evidence from {tool_name}('{result.path}'). "
+                            "Inspect this media directly before your next decision."
+                        ),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": result.data_url},
+                    },
+                ],
+            }
+        ]
 
     @staticmethod
     def _serialize_tool_observation(result: Any) -> str:
@@ -1422,6 +1642,7 @@ class BaseNode:
                         if db_callback
                         else 0
                     )
+                    self._reset_tool_usage_tracking()
                     # WP10: Explicitly record node start for UI
                     if db_callback:
                         node_input = (
@@ -1495,6 +1716,10 @@ class BaseNode:
                         try:
                             if use_native_tool_loop:
                                 max_iters = self._max_iters_for_node(node_type)
+                                (
+                                    visual_policy,
+                                    render_media_paths,
+                                ) = await self._get_visual_inspection_context(node_type)
                                 prediction = await asyncio.wait_for(
                                     asyncio.to_thread(
                                         self._run_native_tool_loop,
@@ -1503,6 +1728,8 @@ class BaseNode:
                                         tool_fns=tool_fns,
                                         node_type=node_type,
                                         max_iters=max_iters,
+                                        visual_policy=visual_policy,
+                                        render_media_paths=render_media_paths,
                                         db_callback=db_callback,
                                     ),
                                     timeout=dspy_timeout,

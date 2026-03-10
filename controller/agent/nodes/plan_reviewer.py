@@ -158,7 +158,7 @@ class PlanReviewerNode(BaseNode):
                 }
             )
 
-        review = prediction.review
+        review = ReviewResult.model_validate(prediction.review)
         decision = review.decision
         feedback = review.reason
         if review.required_fixes:

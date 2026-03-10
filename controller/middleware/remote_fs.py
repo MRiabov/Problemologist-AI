@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from pathlib import Path
 from typing import Literal
 
@@ -23,9 +24,11 @@ from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
+    InspectMediaToolEvent,
     LibraryUsageEvent,
     LsFilesToolEvent,
     ManufacturabilityCheckEvent,
+    MediaInspectionEvent,
     PlanSubmissionBenchmarkEvent,
     PlanSubmissionEngineerEvent,
     ReadFileToolEvent,
@@ -51,12 +54,21 @@ from shared.workers.schema import (
     HeavyValidationParams,
     HeavyValidationResponse,
     InspectTopologyResponse,
+    MediaInspectionResult,
     PreviewDesignResponse,
     ScriptExecutionRequest,
 )
 
 logger = structlog.get_logger(__name__)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
+_IMAGE_MEDIA_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+}
+_VIDEO_MEDIA_TYPES = {
+    ".mp4": "video/mp4",
+}
 
 
 # Global policy instance (cached)
@@ -151,6 +163,26 @@ class RemoteFilesystemMiddleware:
         """Boolean read check helper to avoid raising during result filtering."""
         return self.policy.check_permission(self.agent_role, "read", path)
 
+    @staticmethod
+    def _normalized_suffix(path: str | Path) -> str:
+        return Path(str(path).lower()).suffix
+
+    @classmethod
+    def _media_metadata_for_path(
+        cls, path: str | Path
+    ) -> tuple[str, Literal["image", "video", "unsupported"]]:
+        suffix = cls._normalized_suffix(path)
+        if suffix in _IMAGE_MEDIA_TYPES:
+            return _IMAGE_MEDIA_TYPES[suffix], "image"
+        if suffix in _VIDEO_MEDIA_TYPES:
+            return _VIDEO_MEDIA_TYPES[suffix], "video"
+        return "application/octet-stream", "unsupported"
+
+    @classmethod
+    def _is_visual_media_path(cls, path: str | Path) -> bool:
+        _mime_type, media_kind = cls._media_metadata_for_path(path)
+        return media_kind in {"image", "video"}
+
     async def list_files(self, path: str | Path = "/") -> list[FileInfo]:
         """List files via the Worker client."""
         self._check_perm("read", path)
@@ -185,6 +217,20 @@ class RemoteFilesystemMiddleware:
     async def read_file(self, path: str | Path) -> str:
         """Read file via the Worker client."""
         self._check_perm("read", path)
+        if self._is_visual_media_path(path):
+            mime_type, media_kind = self._media_metadata_for_path(path)
+            msg = (
+                f"{path} is {media_kind} media ({mime_type}). "
+                "read_file() is text-only. Use inspect_media(path) instead."
+            )
+            logger.warning(
+                "read_file_rejected_visual_media",
+                path=str(path),
+                mime_type=mime_type,
+                media_kind=media_kind,
+                session_id=self.client.session_id,
+            )
+            raise ValueError(msg)
         p_str = str(path).lstrip("/")
         events = [ReadFileToolEvent(path=p_str)]
         if p_str.startswith("skills/"):
@@ -209,6 +255,71 @@ class RemoteFilesystemMiddleware:
             )
 
         return await self.client.read_file(str(path))
+
+    async def inspect_media(self, path: str | Path) -> MediaInspectionResult:
+        """Read supported visual media and prepare it for multimodal inspection."""
+        self._check_perm("read", path)
+        path_str = str(path)
+        mime_type, media_kind = self._media_metadata_for_path(path_str)
+        binary = await self.client.read_file_binary(path_str)
+
+        if media_kind == "image":
+            data_url = (
+                f"data:{mime_type};base64,{base64.b64encode(binary).decode('ascii')}"
+            )
+            result = MediaInspectionResult(
+                path=path_str.lstrip("/"),
+                mime_type=mime_type,
+                media_kind=media_kind,
+                attached_to_model=True,
+                size_bytes=len(binary),
+                note="Image attached for multimodal review.",
+                data_url=data_url,
+            )
+        elif media_kind == "video":
+            result = MediaInspectionResult(
+                path=path_str.lstrip("/"),
+                mime_type=mime_type,
+                media_kind=media_kind,
+                attached_to_model=False,
+                size_bytes=len(binary),
+                note=(
+                    "Video inspection is not yet attached to the model. "
+                    "Inspect still recorded for observability."
+                ),
+            )
+        else:
+            result = MediaInspectionResult(
+                path=path_str.lstrip("/"),
+                mime_type=mime_type,
+                media_kind=media_kind,
+                attached_to_model=False,
+                size_bytes=len(binary),
+                note=(
+                    "Unsupported media type for inspect_media(). "
+                    "Supported types: .png, .jpg, .jpeg, .mp4."
+                ),
+            )
+
+        await record_events(
+            episode_id=self.client.session_id,
+            events=[
+                InspectMediaToolEvent(
+                    path=result.path,
+                    mime_type=result.mime_type,
+                    media_kind=result.media_kind,
+                    attached_to_model=result.attached_to_model,
+                ),
+                MediaInspectionEvent(
+                    path=result.path,
+                    mime_type=result.mime_type,
+                    media_kind=result.media_kind,
+                    attached_to_model=result.attached_to_model,
+                    review_stage=str(self.agent_role.value),
+                ),
+            ],
+        )
+        return result
 
     async def write_file(
         self, path: str | Path, content: str, overwrite: bool = True

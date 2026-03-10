@@ -39,6 +39,10 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """Read a file's content from the workspace."""
         return await fs.read_file(path)
 
+    async def inspect_media(path: str):
+        """Inspect an image/video artifact from the workspace."""
+        return await fs.inspect_media(path)
+
     async def write_file(path: str, content: str, overwrite: bool = False):
         """Write content to a file in the workspace."""
         return await fs.write_file(path, content, overwrite=overwrite)
@@ -72,6 +76,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
     tools = [
         list_files,
         read_file,
+        inspect_media,
         write_file,
         edit_file,
         grep,

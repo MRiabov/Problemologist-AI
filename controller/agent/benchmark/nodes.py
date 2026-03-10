@@ -1248,6 +1248,39 @@ class BenchmarkReviewerSignature(dspy.Signature):
 class BenchmarkReviewerNode(BaseNode):
     """Refactored Benchmark Reviewer using BaseNode."""
 
+    async def _workspace_has_render_media(self) -> bool:
+        with suppress(Exception):
+            entries = await self.ctx.worker_client.list_files("/renders")
+            for entry in entries:
+                path = getattr(entry, "path", "") or ""
+                if path.lower().endswith((".png", ".jpg", ".jpeg")):
+                    return True
+        return False
+
+    async def _enforce_render_inspection_gate(
+        self, review: ReviewResult
+    ) -> ReviewResult:
+        if review.decision != ReviewDecision.APPROVED:
+            return review
+        if not await self._workspace_has_render_media():
+            return review
+        if self._used_tool("inspect_media"):
+            return review
+        fixes = list(review.required_fixes or [])
+        fixes.append(
+            "Inspect at least one render via inspect_media(path) before approving."
+        )
+        return review.model_copy(
+            update={
+                "decision": ReviewDecision.REJECTED,
+                "reason": (
+                    "Approval blocked: renders exist but the reviewer did not use "
+                    "inspect_media(path) to inspect visual evidence."
+                ),
+                "required_fixes": fixes,
+            }
+        )
+
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         logger.info("reviewer_node_start", round=state.review_round)
 
@@ -1321,7 +1354,8 @@ class BenchmarkReviewerNode(BaseNode):
                 state.journal += f"\n[Reviewer] Failed: {journal_entry}"
                 return state
 
-            review = prediction.review
+            review = ReviewResult.model_validate(prediction.review)
+            review = await self._enforce_render_inspection_gate(review)
             state.review_decision = review.decision
             state.review_feedback = f"{review.decision.value}: {review.reason}"
             state.journal += f"\n[Reviewer] {state.review_feedback}\n{journal_entry}"

@@ -55,6 +55,39 @@ class ExecutionReviewerNode(BaseNode):
     Engineer Execution Reviewer node: Evaluates the implementation after simulation.
     """
 
+    async def _workspace_has_render_media(self) -> bool:
+        with suppress(Exception):
+            entries = await self.ctx.worker_client.list_files("/renders")
+            for entry in entries:
+                path = getattr(entry, "path", "") or ""
+                if path.lower().endswith((".png", ".jpg", ".jpeg")):
+                    return True
+        return False
+
+    async def _enforce_render_inspection_gate(
+        self, review: ReviewResult
+    ) -> ReviewResult:
+        if review.decision != ReviewDecision.APPROVED:
+            return review
+        if not await self._workspace_has_render_media():
+            return review
+        if self._used_tool("inspect_media"):
+            return review
+        fixes = list(review.required_fixes or [])
+        fixes.append(
+            "Inspect at least one render via inspect_media(path) before approving."
+        )
+        return review.model_copy(
+            update={
+                "decision": ReviewDecision.REJECTED,
+                "reason": (
+                    "Approval blocked: renders exist but the reviewer did not use "
+                    "inspect_media(path) to inspect visual evidence."
+                ),
+                "required_fixes": fixes,
+            }
+        )
+
     async def __call__(self, state: AgentState) -> AgentState:
         with suppress(Exception):
             if await self.ctx.worker_client.exists("assembly_definition.yaml"):
@@ -184,7 +217,8 @@ class ExecutionReviewerNode(BaseNode):
                 }
             )
 
-        review = prediction.review
+        review = ReviewResult.model_validate(prediction.review)
+        review = await self._enforce_render_inspection_gate(review)
         decision = review.decision
         feedback = review.reason
         if review.required_fixes:
