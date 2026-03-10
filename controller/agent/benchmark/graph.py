@@ -472,11 +472,6 @@ async def _auto_continue_planned_session(
     session_id: uuid.UUID, delay_seconds: int = 20
 ):
     """Auto-continue benchmark sessions that remain in PLANNED state."""
-    from controller.config.settings import settings as agent_settings
-
-    if agent_settings.is_integration_test:
-        delay_seconds = 0
-
     await asyncio.sleep(delay_seconds)
 
     session_factory = get_sessionmaker()
@@ -1159,7 +1154,7 @@ async def run_generation_session(
     if final_state.session.status == SessionStatus.PLANNED:
         from controller.config.settings import settings
 
-        if settings.is_integration_test:
+        if not settings.is_integration_test:
             asyncio.create_task(_auto_continue_planned_session(session_id))
 
     # 4. Final Asset Persistence
