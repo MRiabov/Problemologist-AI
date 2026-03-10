@@ -8,6 +8,10 @@ from typing import Any, Literal, Protocol
 import httpx
 from pydantic import BaseModel, Field, model_validator
 
+from controller.agent.benchmark_handover_validation import (
+    extract_custom_objectives_from_state,
+    validate_benchmark_planner_handoff_artifacts,
+)
 from controller.agent.config import settings as agent_settings
 from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
@@ -16,6 +20,7 @@ from controller.agent.review_handover import (
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
+from shared.simulation.schemas import CustomObjectives
 
 REASON_OK = "ok"
 REASON_STATE_INVALID = "state_invalid"
@@ -89,6 +94,7 @@ ENGINEERING_EXECUTION_REVIEW_MANIFEST = (
 ELECTRONICS_REVIEW_MANIFEST = ".manifests/electronics_review_manifest.json"
 
 BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
+BENCHMARK_CODER_HANDOVER_CHECK = "benchmark_coder_handover"
 ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
 ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
 ELECTRONICS_REVIEWER_HANDOVER_CHECK = "electronics_reviewer_handover"
@@ -154,6 +160,7 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
             node=AgentName.BENCHMARK_CODER,
             required_state_fields=["session", "episode_id"],
             required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
+            custom_check=BENCHMARK_CODER_HANDOVER_CHECK,
         ),
         AgentName.BENCHMARK_REVIEWER: NodeEntryContract(
             node=AgentName.BENCHMARK_REVIEWER,
@@ -301,6 +308,63 @@ async def reviewer_handover_custom_check_from_session_id(
             artifact_path=manifest_path,
         )
     ]
+
+
+async def benchmark_coder_handover_custom_check_from_session_id(
+    *,
+    session_id: str | None,
+    custom_objectives: CustomObjectives | None = None,
+) -> list[NodeEntryValidationError]:
+    normalized_session_id = (session_id or "").strip()
+    if not normalized_session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_HANDOVER_INVALID,
+                message="Benchmark coder handover check failed: missing session_id.",
+                source=EntryValidationSource.HANDOVER,
+            )
+        ]
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=normalized_session_id,
+    )
+    try:
+        handoff_errors = await validate_benchmark_planner_handoff_artifacts(
+            client,
+            custom_objectives=custom_objectives,
+        )
+    except Exception as exc:
+        handoff_errors = [f"benchmark planner handoff validation exception: {exc}"]
+    finally:
+        await client.aclose()
+
+    return [
+        NodeEntryValidationError(
+            code=REASON_HANDOVER_INVALID,
+            message=f"Benchmark coder entry blocked: {error}",
+            source=EntryValidationSource.HANDOVER,
+            artifact_path=None,
+        )
+        for error in handoff_errors
+    ]
+
+
+async def benchmark_coder_handover_custom_check(
+    *,
+    contract: NodeEntryContract,  # noqa: ARG001
+    state: BaseModel | Mapping[str, Any],
+) -> list[NodeEntryValidationError]:
+    session = _get_state_value(state, "session")
+    if isinstance(session, Mapping):
+        session_id = session.get("session_id")
+    else:
+        session_id = getattr(session, "session_id", None)
+    return await benchmark_coder_handover_custom_check_from_session_id(
+        session_id=str(session_id) if session_id else None,
+        custom_objectives=extract_custom_objectives_from_state(state),
+    )
 
 
 async def plan_reviewer_handover_custom_check_from_session_id(
@@ -595,6 +659,7 @@ async def evaluate_node_entry_contract(
 
 
 __all__ = [
+    "BENCHMARK_CODER_HANDOVER_CHECK",
     "BENCHMARK_PLANNER_HANDOFF_ARTIFACTS",
     "BENCHMARK_PREVIOUS_NODE_MAP",
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
@@ -615,6 +680,8 @@ __all__ = [
     "NodeEntryValidationError",
     "NodeEntryValidationResult",
     "ValidationGraph",
+    "benchmark_coder_handover_custom_check",
+    "benchmark_coder_handover_custom_check_from_session_id",
     "build_benchmark_node_contracts",
     "build_engineer_node_contracts",
     "evaluate_node_entry_contract",
