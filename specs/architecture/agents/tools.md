@@ -69,10 +69,11 @@ This is mostly for integration tests where such bypass is convenient (for system
 
 - `execute_command` Execute raw Python code in the session runtime and return stdout/stderr/exit status.
 - `list_files` Structured listing with file metadata.
-- `read_file` Read file content.
+- `read_file` Read UTF-8 text file content.
 - `write_file` Create or overwrite a file.
 - `edit_file` Edit a file by replacing string occurrences.
 - `grep` Structured text search.
+- `inspect_media` Read visual evidence (`.png`, `.jpg`, `.jpeg`, and supported video frame bundles) and attach it to the model as media input for the current tool step.
 - `inspect_topology` Inspect assembly/topology metadata.
 - `search_cots_catalog` Search COTS parts catalog.
 - `submit_plan` Validate and submit planner handoff artifacts.
@@ -82,6 +83,8 @@ This is mostly for integration tests where such bypass is convenient (for system
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 
 `execute_command` is a runtime Python executor, not a shell wrapper. Agent prompts/examples must pass Python source directly and must not wrap it in `python -c ...`, `python script.py`, or similar shell syntax.
+
+`read_file` is a text-only contract. It must not be overloaded to return image bytes, base64 blobs, or multimodal payloads for binary assets. Agents must use `inspect_media(...)` for visual evidence. If a binary/media path is passed to `read_file`, runtime should fail closed with a deterministic error telling the agent to use `inspect_media(...)` instead.
 
 The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as described below)
 
@@ -109,6 +112,35 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 - `preview_design` - a way to render the CAD files. Used for the engineer to get a visual inspection of its work. Probably doesn't need to render all 24 pictures (maybe, allow a `pitch=180, yaw = 45` parameter to look from a specific side.)
 Note - used by default by
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
+
+#### Reviewer / media-inspection tool
+
+- `inspect_media(path: str) -> dict` is the explicit visual-evidence tool.
+  - It is the only agent-facing tool allowed to feed images/video-derived frames back into the model.
+  - Supported first-line inputs are image files (`.png`, `.jpg`, `.jpeg`).
+  - For videos such as `simulation.mp4`, runtime may expose representative extracted frames through the same tool contract, but that remains a media-inspection action, not a text-file read.
+  - The tool returns structured metadata (for example path, media kind, frame/image count, attach success), while the actual image/frame content is attached to the LLM call through the runtime's multimodal message path.
+  - Merely listing `renders/` or reading `simulation_result.json` does not count as visual inspection.
+
+#### Config-driven visual-inspection policy
+
+- Visual-inspection requirements are configured in `config/agents_config.yaml`, not hardcoded in prompts alone.
+- Policy shape:
+  - `visual_inspection.required`: whether the role must inspect render images when available.
+  - `visual_inspection.min_images`: minimum number of distinct render images the role must inspect.
+  - `visual_inspection.reminder_interval`: how often runtime injects reminder messages while the role keeps operating without satisfying the image requirement.
+- Current required roles are:
+  - `benchmark_reviewer`
+  - `engineer_planner`
+  - `engineer_coder`
+  - `engineer_plan_reviewer`
+  - `engineer_execution_reviewer`
+- `min_images` is policy-driven. Current implementation uses `1` for the roles above.
+- The gate is conditional on actual image availability in `renders/`. If no render images exist for the current node/revision, the media requirement does not trigger.
+- Runtime behavior is fail-closed:
+  - for required non-reviewer roles in native tool-loop mode, `finish` is blocked until the configured image minimum is satisfied
+  - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt
+- `read_file(...)` never satisfies visual-inspection policy, even if it points at a render path.
 
 #### Benchmark generator (CAD editor) tools
 
@@ -204,6 +236,9 @@ If any precondition is missing/invalid, it is a handoff invariant violation (not
 Reviewer output contract is strict:
 1. Reviewer completion must produce a structured `review_decision`.
 2. Missing structured reviewer output is invalid reviewer output and stays in fail-closed routing (with explicit logs), never auto-promoted to acceptance.
+3. If renders/media are available for the current latest revision, reviewer approval is invalid unless the reviewer has called `inspect_media(...)` on that evidence during the current review attempt.
+4. `list_files("/renders")` or equivalent text-only inspection does not satisfy the media-review requirement.
+5. The exact minimum number of required inspected render images comes from the reviewer's `visual_inspection.min_images` policy in `config/agents_config.yaml`.
 
 ### Dealing with latency
 

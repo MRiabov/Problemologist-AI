@@ -103,6 +103,14 @@ We track the following structured domain events to compute the evaluation metric
 27. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
 28. Validation preview backend selection (`validation_preview_backend_selected`) with requested physics backend, actual preview backend, and render purpose (`validation_static_preview`).
 29. Validation preview render completion (`validation_preview_render_complete`) with preview backend, image count, elapsed render time, and artifact paths.
+30. Media inspection event (`media_inspection`) for every agent media-view action, with node/reviewer stage, requested path, resolved artifact path, media kind (`image`, `video_frames`), attached image/frame count, and attach result (`attached`, `missing`, `unsupported_format`, `failed`).
+31. LLM media attachment event (`llm_media_attached`) whenever a model request includes media parts, with node name, provider/model, attachment count, media kinds, and source artifact paths.
+
+Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
+
+1. When a role is subject to config-driven visual inspection (`config/agents_config.yaml`), the trace should make it possible to determine whether images existed, whether `inspect_media(...)` was called, and whether the configured minimum image count was satisfied.
+2. Runtime-injected reminder messages and fail-closed finish/approval refusals for missing visual inspection should therefore remain visible in persisted conversation/tool traces.
+3. `media_inspection` and `llm_media_attached` are the primary structured observability events for this path; reminder text may remain trace-visible rather than becoming a separate domain event unless later metrics require it.
 
 <!-- 20. Metric for "Jamming Rate"
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
@@ -150,6 +158,8 @@ We define (a growing list of) (aggregate) metrics:
 13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
 14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
 15. Validation preview latency by backend and purpose: median/static-preview time split by `validation_static_preview` backend versus selected simulation backend.
+16. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
+17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->

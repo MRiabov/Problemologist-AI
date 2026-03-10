@@ -94,6 +94,18 @@ The benchmark-owned environment, benchmark input objects, and benchmark objectiv
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
+These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect them through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.
+
+The source of truth for which roles must perform visual inspection is `config/agents_config.yaml` under each role's `visual_inspection` policy. Current required roles in engineering/benchmark handoff flow are:
+
+1. `benchmark_reviewer`
+2. `engineer_planner`
+3. `engineer_coder`
+4. `engineer_plan_reviewer`
+5. `engineer_execution_reviewer`
+
+The requirement is conditional on actual render-image availability for the current node/revision. If no render images exist yet in `renders/`, the role is not considered in violation merely because the policy is enabled.
+
 The engineer will also receive YAML files with:
     1. Exact positions (boundaries) of objectives.
     2. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
@@ -111,6 +123,14 @@ These 24-view handoff renders are static preview/context artifacts. The default 
 2. that preview path uses MuJoCo by default,
 3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis rendering is very, very heavy (12x slower than MuJoCo, as per research in @specs/architecture/auxillary/simulation-optimization-attempts.md - 5s vs 70s - very significant.)), 
 4. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
+
+Reviewer evidence contract for renders:
+
+1. If render assets exist for the latest revision, review stages that claim visual inspection must call the media-inspection tool on those assets.
+2. The review decision must be attributable to the exact latest-revision render assets, not stale prior-run images.
+3. Text summaries such as `simulation_result.json` complement but do not replace visual inspection where the review contract says images must be checked.
+4. The required number of distinct images inspected is config-driven (`visual_inspection.min_images`); current production policy is `1`, but this must remain adjustable without code changes.
+5. Runtime reminder messages may be injected during long-running tool loops when required visual inspection has not yet been satisfied; these reminders are deterministic policy enforcement, not free-form prompt advice.
 
 
 ### A benchmark is reused multiple times

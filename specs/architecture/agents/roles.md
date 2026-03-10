@@ -260,6 +260,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 6. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
 7. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
 8. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
+9. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Engineering Execution Reviewer` responsibilities:
 
@@ -268,6 +269,13 @@ The engineering loop has two reviewer stages with different responsibilities.
 3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
 4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
 5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
+6. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+
+Engineer-side visual-inspection policy:
+
+1. `Engineering Planner`, `Engineering Coder`, `Engineering Plan Reviewer`, and `Engineering Execution Reviewer` are all policy-configured visual-inspection roles.
+2. The requirement is conditional on render-image availability in `renders/`.
+3. The current policy minimum is one distinct image per required node, but the architecture treats this as config-owned rather than hardcoded.
 
 Reviewer manifest naming in engineering:
 

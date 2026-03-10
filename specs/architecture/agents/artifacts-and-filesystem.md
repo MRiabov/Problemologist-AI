@@ -169,6 +169,12 @@ Rules:
 10. The preferred workspace path contract is workspace-relative paths such as `plan.md`, `script.py`, `todo.md`, and `journal.md`. Agent prompts and new code must treat these relative paths as canonical.
 11. `/workspace` path aliasing is a compatibility fallback, not a normative contract. It exists because some earlier runtime/tooling behavior accidentally taught agents to address the session root as `/workspace`, and we are temporarily preserving that alias to avoid immediate refactoring cost.
 12. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
+13. `config/agents_config.yaml` is also the source of truth for per-role visual-inspection policy, not only path permissions.
+14. Visual-inspection policy is structured as `visual_inspection: {required, min_images, reminder_interval}` under each role.
+15. Current required-visual roles are: `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
+16. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
+17. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
+18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
@@ -191,6 +197,10 @@ agents:
       write:
         allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
         deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py", ".manifests/**"]
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
 ```
 
 Legacy expanded example (accepted by loader, not preferred for new edits):

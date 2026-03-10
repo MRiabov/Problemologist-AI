@@ -51,6 +51,7 @@ We should be able to test evaluations on multiple tiers, specifically:
 3. Given a prompt, an Engineering Planner does not generate plans for features outside of a build zone.
 4. Given a prompt, an Engineering Planner plans for a solution that is equal or lower to the `max_unit_cost`, `max_weight`, as well as other numeric constraints in 95% of cases.
 5. Given a prompt, the Engineering Planner produces plans with correct units (e.g. metric or US customary units in 95% of cases).
+6. If render images exist for the current revision, the Engineering Planner inspects at least the config-driven minimum number of images through `inspect_media(...)` before finishing. Current production policy is `min_images=1`.
 
 ##### Medium evals - Engineering Coder
 
@@ -59,6 +60,7 @@ We should be able to test evaluations on multiple tiers, specifically:
 3. The engineer would adhere to requests of the user (passed indirectly to plan) about availability or forbid of drilling of the surrounding environment (note: it should be per-surface, not globally. E.g. one may drill into the floor but may not drill into another machine; but that will come later)
 4. The engineer, after simulation, would interpret the simulation results correctly [...] (how to enforce it? they wouldn't always need to view the results, they can use final positions table that should be output or text too.)
 5. The engineer will prefer CSG over sketches in 70% of the cases (soft requirement, but it makes it actually easier to build with code).
+6. If render images exist for the current revision, the Engineering Coder inspects at least the config-driven minimum number of images through `inspect_media(...)` before finishing. Current production policy is `min_images=1`.
 
 ##### Medium evals - Engineering Plan Reviewer
 
@@ -69,10 +71,11 @@ We should be able to test evaluations on multiple tiers, specifically:
 4. Given a viewed plan package, the Plan Reviewer rejects excessive/unjustified DOFs in at least 90% of seeded over-actuation cases.
 5. Price/weight realism gate: if target budgets are set unrealistically, the Plan Reviewer rejects and requests concrete planner fixes.
 6. Reviewer efficacy: plan-review feedback should lead to a corrected plan in at least 60% of failed first submissions.
+7. If render images exist for the current revision, the Plan Reviewer inspects at least the config-driven minimum number of images through `inspect_media(...)` before approval. Current production policy is `min_images=1`.
 
 ##### Medium evals - Engineering Execution Reviewer
 
-1. Given a viewed model, the Execution Reviewer correctly navigates output evidence (would check at least 3 images) before decision.
+1. Given a viewed model with renders available, the Execution Reviewer correctly navigates output evidence and checks at least the config-driven minimum number of images through `inspect_media(...)` before decision. Current production policy is `min_images=1`.
 2. Given a successful handoff package, the Execution Reviewer identifies plan-vs-execution deviations and robustness risks in at least 70% of cases.
 3. Given a successful simulation result, the Execution Reviewer rejects flaky/non-robust solutions in at least 70% of known flaky cases.
 4. Given a successful simulation result, the Execution Reviewer flags over-actuated solutions (excessive moving axes/parts) in at least 80% of seeded over-actuation cases.
@@ -86,6 +89,7 @@ We should be able to test evaluations on multiple tiers, specifically:
     - Other tools will be used at least reasonably often, or at least sometimes (3%?)
     (this requirement is more so for prompt debugging - that we don't miss including something into the prompt/skill sections.)
 8. The model would be able to execute a search (or use a subagent) in COTS
+9. If render evidence exists, approval is valid only when the reviewer used the dedicated media-inspection tool rather than text-only file inspection.
 
 <!-- Future: Given a prompt, the Engineering Planner doesn't use components that are out of stock -->
 
@@ -114,6 +118,14 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 - First submission - 10 tool calls, 70% pass,
 - Second submission - 20 tool calls, 85% pass,
 - Third submission - 30 tool calls, 95% pass.
+
+##### Medium evals - Benchmark Reviewer
+
+1. Given a benchmark package with renders available, the Benchmark Reviewer inspects at least the config-driven minimum number of images through the dedicated media-inspection tool before approval. Current production policy is `min_images=1`.
+2. Given a benchmark package with misleading text summaries but invalid visual geometry, the Benchmark Reviewer catches the issue in at least 70% of cases.
+3. Listing `renders/` without actual media inspection does not satisfy reviewer-evidence criteria.
+
+All visual-inspection evals above are config-driven rather than prompt-only. The source of truth for required roles and image-count thresholds is `config/agents_config.yaml` (`visual_inspection.required`, `visual_inspection.min_images`, `visual_inspection.reminder_interval`), and the requirement is conditional on actual render-image availability for the current node/revision.
 
 #### Medium evals - Skill Learning Agent (Async)
 
@@ -173,5 +185,3 @@ There are some episodes which can be take multiple episodes to run.
 <!-- That said, I'm not sure if it's necessary. -->
 1. Robustness to randomization - having solved 1 seed from a randomization batch, an engineer would be statistically 50% more likely to other episodes in the batch relative to average performance (would fail 50% less).
 2. If a reviewer said "this is acceptably the cheapest we can get" and then the model got cheaper by 50% unit cost at the same quantity (during subsequent planning) - the reviewer in fact didn't find an optimal quantity, and that shouldn't happen... (in which cases out of which?)
-
-
