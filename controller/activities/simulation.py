@@ -44,9 +44,8 @@ async def run_simulation_activity(
     client = WorkerClient(
         base_url=WORKER_LIGHT_URL, session_id="simulation", heavy_url=WORKER_HEAVY_URL
     )
-    # This is a placeholder for the actual simulation execution on the worker
-    code = "print('Running simulation...')"
-    await client.execute_python(code)
+    # This is a placeholder for the actual simulation execution on the worker.
+    await client.execute_command("python -c \"print('Running simulation...')\"")
     return "sim_results"
 
 

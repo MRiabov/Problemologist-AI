@@ -412,14 +412,14 @@ class RemoteFilesystemMiddleware:
                 pass
         return success
 
-    async def run_command(self, code: str, timeout: int = 30) -> ExecuteResponse:
+    async def run_command(self, command: str, timeout: int = 30) -> ExecuteResponse:
         """
-        Execute raw Python code via the Worker client,
-        wrapped in Temporal for durability.
+        Execute a shell command via the Worker client, wrapped in Temporal for
+        durability.
         """
         await record_events(
             episode_id=self.client.session_id,
-            events=[RunCommandToolEvent(command=code)],
+            events=[RunCommandToolEvent(command=command)],
         )
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
@@ -429,15 +429,15 @@ class RemoteFilesystemMiddleware:
                     return await self.temporal_client.execute_workflow(
                         ScriptExecutionWorkflow.run,
                         ScriptExecutionRequest(
-                            code=code,
+                            code=command,
                             session_id=self.client.session_id,
                             timeout=timeout,
                         ),
-                        id=f"exec-{self.client.session_id}-{hash(code) % 10**8}",
+                        id=f"exec-{self.client.session_id}-{hash(command) % 10**8}",
                         task_queue="simulation-task-queue",
                     )
                 # Fallback to direct client call if Temporal is not available
-                return await self.client.execute_python(code, timeout=timeout)
+                return await self.client.execute_command(command, timeout=timeout)
             except Exception as exc:
                 is_infra = isinstance(exc, (httpx.HTTPError, TimeoutError))
                 if not is_infra:
@@ -474,8 +474,8 @@ class RemoteFilesystemMiddleware:
         raise RuntimeError(_SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER)
 
     # Adding alias for consistency with deepagents naming if needed
-    async def execute(self, code: str, timeout: int = 30) -> ExecuteResponse:
-        return await self.run_command(code, timeout=timeout)
+    async def execute(self, command: str, timeout: int = 30) -> ExecuteResponse:
+        return await self.run_command(command, timeout=timeout)
 
     async def grep(
         self, pattern: str, path: str | Path | None = None, glob: str | None = None
