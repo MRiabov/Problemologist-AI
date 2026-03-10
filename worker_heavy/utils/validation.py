@@ -38,7 +38,7 @@ from shared.wire_utils import calculate_path_length, check_wire_clearance
 from worker_heavy.simulation.factory import get_simulation_builder
 from worker_heavy.workbenches.config import load_config
 
-from .dfm import validate_and_price
+from .dfm import validate_and_price, validate_and_price_assembly
 from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
@@ -127,6 +127,91 @@ def _validate_objectives_consistency(objectives: ObjectivesYaml) -> str | None:
             )
 
     return None
+
+
+def _metadata_is_fixed(metadata: Any) -> bool:
+    """Resolve fixed/static intent from PartMetadata/CompoundMetadata-like values."""
+    if metadata is None:
+        return False
+    value = getattr(metadata, "is_fixed", None)
+    if value is not None:
+        return bool(value)
+    if isinstance(metadata, dict):
+        return bool(metadata.get("is_fixed", metadata.get("fixed", False)))
+    return False
+
+
+def _validate_parent_fixed_contract(
+    component: Compound, objectives: ObjectivesYaml | None
+) -> str | None:
+    """Reject the misleading parent-only fixed pattern for benchmark fixtures."""
+    if not _metadata_is_fixed(getattr(component, "metadata", None)):
+        return None
+
+    moved_label = None
+    if objectives and objectives.moved_object:
+        moved_label = objectives.moved_object.label
+
+    unfixed_children: list[str] = []
+    for child in getattr(component, "children", []) or []:
+        label = getattr(child, "label", "") or "<unlabeled>"
+        if label.startswith("zone_") or label == moved_label:
+            continue
+        if not _metadata_is_fixed(getattr(child, "metadata", None)):
+            unfixed_children.append(label)
+
+    if not unfixed_children:
+        return None
+
+    joined = ", ".join(unfixed_children[:5])
+    if len(unfixed_children) > 5:
+        joined = f"{joined}, ..."
+    return (
+        "CompoundMetadata(fixed=True) on the parent assembly does not make child "
+        "parts static. Mark each static benchmark fixture with "
+        "PartMetadata(..., fixed=True). Offending children: "
+        f"{joined}"
+    )
+
+
+def _validate_top_level_location_contract(component: Compound) -> str | None:
+    """Reject top-level translated geometry that will collapse to origin in MJCF."""
+    offenders: list[str] = []
+    for child in getattr(component, "children", []) or []:
+        label = getattr(child, "label", "") or "<unlabeled>"
+        if label.startswith("zone_"):
+            continue
+
+        position = getattr(getattr(child, "location", None), "position", None)
+        if position is None:
+            continue
+        if any(abs(coord) > 1e-6 for coord in (position.X, position.Y, position.Z)):
+            continue
+
+        bbox = child.bounding_box()
+        center = (
+            (bbox.min.X + bbox.max.X) / 2,
+            (bbox.min.Y + bbox.max.Y) / 2,
+            (bbox.min.Z + bbox.max.Z) / 2,
+        )
+        if max(abs(axis) for axis in center) <= 0.05:
+            continue
+        offenders.append(label)
+
+    if not offenders:
+        return None
+
+    joined = ", ".join(offenders[:5])
+    if len(offenders) > 5:
+        joined = f"{joined}, ..."
+    return (
+        "Top-level parts appear translated in geometry while their location "
+        "remains at the origin. Use `.move(Location(...))` or "
+        "`.moved(Location(...))` for part placement, and do not use "
+        "`.translate(...)` for benchmark assembly placement because the "
+        "simulation exporter recenters meshes before applying `child.location`. "
+        f"Offending parts: {joined}"
+    )
 
 
 def load_simulation_result(path: Path) -> SimulationResult | None:
@@ -624,6 +709,32 @@ def simulate(
             try:
                 data = yaml.safe_load(content)
                 objectives = ObjectivesYaml(**data)
+                fixed_contract_error = _validate_parent_fixed_contract(
+                    component, objectives
+                )
+                if fixed_contract_error:
+                    return SimulationResult(
+                        success=False,
+                        summary=fixed_contract_error,
+                        failure=SimulationFailure(
+                            reason=FailureReason.VALIDATION_FAILED,
+                            detail=fixed_contract_error,
+                        ),
+                        confidence="high",
+                    )
+                location_contract_error = _validate_top_level_location_contract(
+                    component
+                )
+                if location_contract_error:
+                    return SimulationResult(
+                        success=False,
+                        summary=location_contract_error,
+                        failure=SimulationFailure(
+                            reason=FailureReason.VALIDATION_FAILED,
+                            detail=location_contract_error,
+                        ),
+                        confidence="high",
+                    )
                 logger.info(
                     "DEBUG_objectives_loaded",
                     physics=objectives.physics.model_dump()
@@ -660,6 +771,11 @@ def simulate(
     builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
     moving_parts = assembly_definition.moving_parts if assembly_definition else []
     electronics = assembly_definition.electronics if assembly_definition else None
+    manufactured_part_labels = (
+        {part.part_name for part in assembly_definition.manufactured_parts}
+        if assembly_definition
+        else set()
+    )
 
     # T021: Proactive electronics validation before starting expensive physics backend (INT-120)
     if electronics:
@@ -753,6 +869,7 @@ def simulate(
         smoke_test_mode=smoke_test_mode,
         session_id=session_id,
         particle_budget=particle_budget,
+        manufactured_part_labels=manufactured_part_labels,
     )
 
     dynamic_controllers = {}
@@ -955,6 +1072,16 @@ def validate(
                     objective_error = _validate_objectives_consistency(obj_model)
                     if objective_error:
                         return (False, f"Invalid objectives.yaml: {objective_error}")
+                    fixed_contract_error = _validate_parent_fixed_contract(
+                        component, obj_model
+                    )
+                    if fixed_contract_error:
+                        return (False, fixed_contract_error)
+                    location_contract_error = _validate_top_level_location_contract(
+                        component
+                    )
+                    if location_contract_error:
+                        return (False, location_contract_error)
                     effective_build_zone = obj_model.objectives.build_zone.model_dump()
             except Exception:
                 pass
@@ -970,9 +1097,28 @@ def validate(
             or b_max[1] < bbox.max.Y
             or b_max[2] < bbox.max.Z
         ):
+            offenders: list[str] = []
+            children = getattr(component, "children", []) or [component]
+            for child in children:
+                child_bbox = child.bounding_box()
+                if (
+                    child_bbox.min.X < b_min[0]
+                    or child_bbox.min.Y < b_min[1]
+                    or child_bbox.min.Z < b_min[2]
+                    or child_bbox.max.X > b_max[0]
+                    or child_bbox.max.Y > b_max[1]
+                    or child_bbox.max.Z > b_max[2]
+                ):
+                    label = getattr(child, "label", None) or "<unlabeled>"
+                    offenders.append(f"{label}: {child_bbox}")
+            offender_text = ""
+            if offenders:
+                offender_text = f"; offending parts: {', '.join(offenders[:5])}"
             return (
                 False,
-                f"Build zone violation: bbox {bbox} outside build_zone {build_zone}",
+                "Build zone violation: "
+                f"bbox {bbox} outside build_zone {effective_build_zone}"
+                f"{offender_text}",
             )
     else:
         if bbox.size.X > 1000.0 or bbox.size.Y > 1000.0 or bbox.size.Z > 1000.0:
@@ -1101,12 +1247,26 @@ def validate_fem_manufacturability(
 
             from shared.workers.workbench_models import ManufacturingMethod
 
-            val_report = validate_and_price(
+            assembly_definition_path = session_root / "assembly_definition.yaml"
+            manufactured_labels: set[str] = set()
+            if assembly_definition_path.exists():
+                assembly_data = yaml.safe_load(
+                    assembly_definition_path.read_text(encoding="utf-8")
+                )
+                assembly = AssemblyDefinition(**assembly_data)
+                manufactured_labels = {
+                    part.part_name for part in assembly.manufactured_parts
+                }
+            if not manufactured_labels:
+                return True, None
+
+            val_report = validate_and_price_assembly(
                 component,
-                ManufacturingMethod.CNC,
                 config,
+                part_labels=manufactured_labels,
                 fem_required=True,
                 session_id=session_id,
+                default_method=ManufacturingMethod.CNC,
             )
             if not val_report.is_manufacturable:
                 msg = "Material validation failed: " + "; ".join(

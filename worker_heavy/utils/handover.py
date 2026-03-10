@@ -10,8 +10,7 @@ from build123d import Compound, export_step
 from shared.models.schemas import ObjectivesYaml
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import ReviewManifest, ValidationResultRecord
-from shared.workers.workbench_models import ManufacturingMethod
-from worker_heavy.utils.dfm import validate_and_price
+from worker_heavy.utils.dfm import validate_and_price_assembly
 from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
@@ -223,56 +222,52 @@ def submit_for_review(
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
-    # T016: Extract method from assembly definition to avoid hardcoded CNC
-    method = ManufacturingMethod.CNC
-    if estimation.manufactured_parts:
-        # Use primary method from first part
-        raw_method = estimation.manufactured_parts[0].manufacturing_method
-        try:
-            # Handle common case variations (CNC vs cnc, 3DP vs 3dp)
-            method = ManufacturingMethod(raw_method.lower())
-        except ValueError:
-            logger.warning("invalid_manufacturing_method", method=raw_method)
-
-    validation_result = validate_and_price(
-        component, method, dfm_config, build_zone=build_zone, session_id=session_id
-    )
-
-    if not validation_result.is_manufacturable:
-        logger.warning(
-            "submission_dfm_failed",
-            violations=validation_result.violations,
+    manufactured_labels = {part.part_name for part in estimation.manufactured_parts}
+    if reviewer_stage != "benchmark_reviewer" and manufactured_labels:
+        method = estimation.manufactured_parts[0].manufacturing_method
+        validation_result = validate_and_price_assembly(
+            component,
+            dfm_config,
+            part_labels=manufactured_labels,
+            build_zone=build_zone,
             session_id=session_id,
+            default_method=method,
         )
-        raise ValueError(f"Submission rejected (DFM): {validation_result.violations}")
 
-    if constraints:
-        if (
-            constraints.max_unit_cost
-            and validation_result.unit_cost > constraints.max_unit_cost
-        ):
-            msg = f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit ${constraints.max_unit_cost:.2f}"
-            logger.error(
-                "submission_cost_limit_exceeded",
-                cost=validation_result.unit_cost,
-                limit=constraints.max_unit_cost,
+        if not validation_result.is_manufacturable:
+            logger.warning(
+                "submission_dfm_failed",
+                violations=validation_result.violations,
                 session_id=session_id,
             )
-            raise ValueError(f"Submission rejected (Cost): {msg}")
+            raise ValueError(
+                f"Submission rejected (DFM): {validation_result.violations}"
+            )
 
-        # T019: Fix AttributeError by using weight_g from result instead of invalid metadata.get()
-        weight_g = validation_result.weight_g
-        if constraints.max_weight_g and weight_g > constraints.max_weight_g:
-            msg = (
-                f"Weight {weight_g:.1f}g exceeds limit {constraints.max_weight_g:.1f}g"
-            )
-            logger.error(
-                "submission_weight_limit_exceeded",
-                weight=weight_g,
-                limit=constraints.max_weight_g,
-                session_id=session_id,
-            )
-            raise ValueError(f"Submission rejected (Weight): {msg}")
+        if constraints:
+            if (
+                constraints.max_unit_cost
+                and validation_result.unit_cost > constraints.max_unit_cost
+            ):
+                msg = f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit ${constraints.max_unit_cost:.2f}"
+                logger.error(
+                    "submission_cost_limit_exceeded",
+                    cost=validation_result.unit_cost,
+                    limit=constraints.max_unit_cost,
+                    session_id=session_id,
+                )
+                raise ValueError(f"Submission rejected (Cost): {msg}")
+
+            weight_g = validation_result.weight_g
+            if constraints.max_weight_g and weight_g > constraints.max_weight_g:
+                msg = f"Weight {weight_g:.1f}g exceeds limit {constraints.max_weight_g:.1f}g"
+                logger.error(
+                    "submission_weight_limit_exceeded",
+                    weight=weight_g,
+                    limit=constraints.max_weight_g,
+                    session_id=session_id,
+                )
+                raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
     render_paths = []

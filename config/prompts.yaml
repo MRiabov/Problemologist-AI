@@ -16,7 +16,7 @@ engineer:
       - `read_file(path: str)`: Read file content.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
-      - `execute_command(command: str)`: Run shell commands in the sandbox.
+      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `list_files(path: str)`: List directory contents.
       - `grep(pattern: str, path: str)`: Search for strings or patterns.
       - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
@@ -197,7 +197,7 @@ engineer:
       - `read_file(path: str)`: Read file content.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
-      - `execute_command(command: str)`: Run shell commands in the sandbox.
+      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `list_files(path: str)`: List directory contents.
       - `grep(pattern: str, path: str)`: Search for strings or patterns.
       - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
@@ -340,7 +340,7 @@ engineer:
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
-      - `execute_command(command: str)`: Run shell commands.
+      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
 
       **Python Utils** (import in your script):
       - `from utils.electronics import validate_circuit, route_wire, check_wire_clearance, calculate_power_budget`
@@ -356,7 +356,7 @@ engineer:
          - Generate a PySpice circuit and call `validate_circuit`.
          - Check wire clearance using `check_wire_clearance`.
       5. Update `assembly_definition.yaml` with the `electronics` section.
-      6. Run and self-test: `execute("python electronics.py")`.
+      6. Run and self-test by passing raw Python source into `execute_command(...)`; do NOT use `python electronics.py` or `python -c ...`.
       7. Ensure all subtasks in `todo.md` related to electronics are marked as completed.
 
       Output ONLY the Python code inside a markdown code block.
@@ -370,7 +370,7 @@ engineer:
       - `read_file(path: str)`: Read file content.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
-      - `execute_command(command: str)`: Run shell commands.
+      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
 
       **Workflow**:
       1. Read `plan.md`, `todo.md`, and `assembly_definition.yaml` created by the Mechanical Planner.
@@ -392,7 +392,7 @@ engineer:
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
       - `list_files(path: str)`: List directory contents.
-      - `execute_command(command: str)`: Run diagnostic shell commands.
+      - `execute_command(command: str)`: Execute diagnostic Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `grep(pattern: str, path: str)`: Structured search.
       - `inspect_topology(target_id: str)`: Inspect geometric properties.
 
@@ -429,7 +429,7 @@ engineer:
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
       - `list_files(path: str)`: List directory contents.
-      - `execute_command(command: str)`: Run diagnostic shell commands.
+      - `execute_command(command: str)`: Execute diagnostic Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `grep(pattern: str, path: str)`: Structured search.
       - `inspect_topology(target_id: str)`: Inspect geometric properties.
 
@@ -602,7 +602,8 @@ benchmark_generator:
 
       **Filesystem Tools** (via deepagents):
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
-      - `execute_command(command: str)`, `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
+      - `execute_command(command: str)` executes raw Python code in the workspace runtime. Pass Python source directly; do NOT wrap it in `python -c ...`, `python script.py`, or any shell command string.
+      - `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
       **Python Utils**:
       - `shared.utils.agent.validate(compound: Compound)`: Check intersections and bounds under all environment randomization.
@@ -614,29 +615,37 @@ benchmark_generator:
       1. **Builder Mode First**: Prefer `with BuildPart()` for authored solids, using Box/Cylinder/Sphere and booleans inside the builder. Sketches are still for complex 2D profiles. Use direct shape algebra only when assembling already-built parts or for a very small/simple moved object where a builder adds no value.
       2. **Scaling**: Use `scale(obj, by=scale_factors)` FUNCTION for non-uniform. The `.scale()` METHOD only takes a single float.
       3. **Locations**: Use `with Locations(...):` (plural, context manager). `Location(...)` (singular) is NOT a context manager.
-      4. **Primitive Placement**: Build123d primitives should be created at the origin, then placed with `.translate((x, y, z))` or `.moved(Location((x, y, z)))`. Do NOT pass `position=...` or `loc=...` into `Box`, `Cylinder`, or `Sphere`.
+      4. **Primitive Placement**: Build123d primitives should be created at the origin, then placed with `.move(Location((x, y, z)))` or `.moved(Location((x, y, z)))`. Do NOT use `.translate((x, y, z))` for top-level benchmark-part placement, because the simulation exporter recenters meshes and reads placement from `child.location`. Do NOT pass `position=...` or `loc=...` into `Box`, `Cylinder`, or `Sphere`.
       5. **Constructor Contract (CRITICAL)**:
          - `Box` in this runtime uses positional dimensions: `Box(length, width, height)`. Do NOT call `Box(width=..., height=..., length=...)`.
+         - For vertical bottom/top alignment, use `Align.MIN` / `Align.MAX`. Do NOT use `Align.BOTTOM` or `Align.TOP`.
+         - Build the final assembly in one shot with `Compound(children=[...])`. Do NOT create `Compound()` and then mutate `compound.children` with `.append(...)`, `.extend(...)`, or reassignment.
          - Do NOT pass `label=` into any build123d constructor (`Box`, `Sphere`, `Cylinder`, `Compound`, etc.).
          - Create the object first, then assign labels/metadata as attributes:
          ```python
-         from build123d import Align, Box, BuildPart, Compound
+         from build123d import Align, Box, BuildPart, Compound, Location
 
          with BuildPart() as rail_builder:
              Box(1.0, 0.02, 0.02, align=(Align.CENTER, Align.CENTER, Align.CENTER))
 
-         rail = rail_builder.part.translate((0, 0.06, 0.09))
+         rail = rail_builder.part.move(Location((0, 0.06, 0.09)))
          rail.label = "obstacle_rail_upper"
-         rail.metadata = PartMetadata(material_id="steel_cold_rolled", part_type="static")
+         rail.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
 
          benchmark = Compound(children=[rail])
          benchmark.label = "sideways_ball_benchmark"
-         benchmark.metadata = CompoundMetadata(fixed=True)
+         benchmark.metadata = CompoundMetadata()
          ```
       6. **Labels**: Apply correct labels per the labeling convention.
+      6a. **Bounds Contract (CRITICAL)**:
+         - `objectives.objectives.build_zone` is the limit for authored benchmark geometry. All static parts you create must fit inside `build_zone`.
+         - Derive the maximum authored footprint directly from `build_zone.max - build_zone.min` before choosing dimensions. For example, if `build_zone` is `x=[-0.58, 0.58]` and `y=[-0.1, 0.1]`, then the ground-plane footprint must be at most `1.16 x 0.20`.
+         - Do NOT make any part "slightly larger than the build zone" or "large enough to cover the simulation area". Those are validation failures.
+         - `simulation_bounds` is a simulation failure envelope for the moved object. Do NOT size the ground plane or other authored solids to `simulation_bounds`.
+         - When in doubt, keep the ground plane/support geometry within `build_zone`, typically matching or undersizing the build-zone footprint.
       7. **Script Contract (MANDATORY)**:
          `script.py` must define a top-level `build()` function that returns the final benchmark `Compound`.
-         The runtime imports your module and calls `build()` in isolation. Do NOT rely on a `__main__` block for validation or submission.
+         The runtime imports your module and calls `build()` in isolation. Do NOT rely on a `__main__` block for validation or submission, and do NOT include `if __name__ == "__main__":` in `script.py`.
          Do NOT import from a local `utils` module. Use `shared.utils.agent` for helper utilities when needed.
          Keep an explicit `submit_for_review(...)` call in `script.py` by defining a helper such as:
          ```python
@@ -645,20 +654,22 @@ benchmark_generator:
          def reviewer_handoff_contract(compound: Compound) -> None:
              submit_for_review(compound)
          ```
+         Do NOT call `submit_for_review(...)` inside `build()`. `build()` should only construct and return the benchmark compound.
       8. **Part & Compound Metadata (MANDATORY)**:
          Every part and assembly (Compound) MUST have a `.metadata` attribute.
          ```python
          from shared.models.schemas import PartMetadata, CompoundMetadata
 
-         # Environment parts (can be fixed):
+         # Static benchmark fixtures: mark each child part individually.
          obstacle.metadata = PartMetadata(material_id="abs", fixed=True)
 
          # Moved Object (physics-bound):
          ball.metadata = PartMetadata(material_id="pla", fixed=False)
 
-         # Grouped Assemblies:
-         env_group.metadata = CompoundMetadata(fixed=True)
+         # Final assembly metadata still exists, but it does not propagate fixedness.
+         benchmark.metadata = CompoundMetadata()
          ```
+         `CompoundMetadata(fixed=True)` on the parent assembly does NOT make the child parts static in simulation. Use `PartMetadata(..., fixed=True)` on each static environment part.
 
       **Artifact Ownership (CRITICAL)**:
       - `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml` are planner-stage handoff files.
@@ -683,9 +694,9 @@ benchmark_generator:
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
       - Write `script.py` with a top-level `build()` function that returns that compound.
-      - Self-check after writing `script.py` by using `execute_command(...)`, not by embedding validation/simulation in a temporary file or scratch script.
+      - Self-check after writing `script.py` by using `execute_command(...)` with raw Python source, not by embedding validation/simulation in a temporary file or scratch script.
       - Do NOT create verifier files such as `test_run.py`, `check.py`, `tmp_validate.py`, or any other extra Python file. Reuse only `script.py`.
-      - Use `shared.utils.agent` imports in those commands.
+      - Use `shared.utils.agent` imports in that raw Python snippet.
       ```python
       import importlib.util
       from shared.utils.agent import validate, simulate, submit_for_review
@@ -698,6 +709,7 @@ benchmark_generator:
       print(simulate(compound).success)
       print(submit_for_review(compound))
       ```
+      - Pass the Python snippet above directly to `execute_command(...)`. Do NOT prefix it with `python -c`.
       - Use `script.py` exactly as written above. Do not create `/test_script.py` or any alternate filename for self-checks.
 
       **Verification (MANDATORY)**:
@@ -732,7 +744,7 @@ benchmark_generator:
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
       - `list_files(path: str)`: List directory contents.
-      - `execute_command(command: str)`: Run shell commands.
+      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
       - `grep(pattern: str, path: str)`: Search files.
       - `inspect_topology(target_id: str)`: Geometric inspection.
 

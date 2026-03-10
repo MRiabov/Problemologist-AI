@@ -5,6 +5,7 @@ from shared.models.schemas import BoundingBox
 from shared.workers.workbench_models import (
     ManufacturingConfig,
     ManufacturingMethod,
+    WorkbenchMetadata,
     WorkbenchResult,
 )
 from worker_heavy.workbenches.cnc import analyze_cnc
@@ -12,6 +13,17 @@ from worker_heavy.workbenches.injection_molding import analyze_im
 from worker_heavy.workbenches.print_3d import analyze_3dp
 
 logger = structlog.get_logger()
+
+
+def _part_reports_for_analysis(part: Part | Compound) -> list[Part | Compound]:
+    children = getattr(part, "children", [])
+    if not children:
+        return [part]
+    return [
+        child
+        for child in children
+        if not getattr(child, "label", "").startswith("zone_")
+    ]
 
 
 def _is_within_bounds(
@@ -205,4 +217,108 @@ def validate_and_price(
         weight_g=result.weight_g,
         violations=all_violations,
         metadata=result_metadata,
+    )
+
+
+def validate_and_price_assembly(
+    part: Part | Compound,
+    config: ManufacturingConfig,
+    part_labels: set[str] | None = None,
+    build_zone: BoundingBox | None = None,
+    quantity: int = 1,
+    fem_required: bool = False,
+    session_id: str | None = None,
+    default_method: ManufacturingMethod = ManufacturingMethod.CNC,
+) -> WorkbenchResult:
+    """
+    Validate compound assemblies per child instead of as one fused stock block.
+
+    Benchmark/environment compounds usually represent separate manufactured parts.
+    Treating the whole assembly as one CNC stock body creates false undercut and
+    corner violations across disconnected children.
+    """
+    reports = _part_reports_for_analysis(part)
+    if part_labels is not None:
+        reports = [
+            child
+            for child in reports
+            if (getattr(child, "label", None) or "") in part_labels
+        ]
+    if not reports:
+        return WorkbenchResult(
+            is_manufacturable=True,
+            unit_cost=0.0,
+            weight_g=0.0,
+            violations=[],
+            metadata=WorkbenchMetadata(
+                additional_info={
+                    "part_reports": [],
+                    "part_count": 0,
+                }
+            ),
+        )
+    if len(reports) == 1 and reports[0] is part:
+        metadata = getattr(part, "metadata", None)
+        method = getattr(metadata, "manufacturing_method", None) or default_method
+        if isinstance(method, str):
+            method = ManufacturingMethod(method)
+        return validate_and_price(
+            part,
+            method,
+            config,
+            build_zone=build_zone,
+            quantity=quantity,
+            fem_required=fem_required,
+            session_id=session_id,
+        )
+
+    total_cost = 0.0
+    total_weight = 0.0
+    violations: list[str] = []
+    per_part: list[dict[str, object]] = []
+    overall_ok = True
+
+    for child in reports:
+        label = getattr(child, "label", None) or "unnamed_part"
+        metadata = getattr(child, "metadata", None)
+        method = getattr(metadata, "manufacturing_method", None) or default_method
+        if isinstance(method, str):
+            method = ManufacturingMethod(method)
+
+        child_result = validate_and_price(
+            child,
+            method,
+            config,
+            build_zone=build_zone,
+            quantity=quantity,
+            fem_required=fem_required,
+            session_id=session_id,
+        )
+        total_cost += child_result.unit_cost
+        total_weight += child_result.weight_g
+        overall_ok = overall_ok and child_result.is_manufacturable
+        per_part.append(
+            {
+                "label": label,
+                "method": method.value,
+                "is_manufacturable": child_result.is_manufacturable,
+                "unit_cost": child_result.unit_cost,
+                "weight_g": child_result.weight_g,
+            }
+        )
+        violations.extend(
+            f"{label}: {violation}" for violation in child_result.violations
+        )
+
+    return WorkbenchResult(
+        is_manufacturable=overall_ok,
+        unit_cost=total_cost,
+        weight_g=total_weight,
+        violations=violations,
+        metadata=WorkbenchMetadata(
+            additional_info={
+                "part_reports": per_part,
+                "part_count": len(reports),
+            }
+        ),
     )

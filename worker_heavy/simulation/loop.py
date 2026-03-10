@@ -29,7 +29,7 @@ from worker_heavy.simulation.factory import get_physics_backend
 from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.simulation.objectives import ObjectiveEvaluator
-from worker_heavy.utils.dfm import validate_and_price
+from worker_heavy.utils.dfm import validate_and_price_assembly
 from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
@@ -47,6 +47,7 @@ class SimulationLoop:
         smoke_test_mode: bool | None = None,
         session_id: str | None = None,
         particle_budget: int | None = None,
+        manufactured_part_labels: set[str] | None = None,
     ):
         from worker_heavy.config import settings
 
@@ -113,6 +114,7 @@ class SimulationLoop:
             self.is_powered_map = {}
             self.validation_report = None
             self.electronics_validation_error = None
+            self.manufactured_part_labels = manufactured_part_labels or set()
 
             if self.component:
                 # WP2: Load custom configuration from working directory if present
@@ -140,27 +142,33 @@ class SimulationLoop:
                     else False
                 )
 
-                # Resolve manufacturing method from component metadata
-                mfg_method = ManufacturingMethod.CNC
-                children = getattr(self.component, "children", [])
-                if not children:
-                    children = [self.component]
-
-                for child in children:
-                    meta = getattr(child, "metadata", None)
-                    if meta and getattr(meta, "manufacturing_method", None):
-                        mfg_method = meta.manufacturing_method
-                        break
-
-                self.validation_report = validate_and_price(
-                    self.component,
-                    mfg_method,
-                    self.config,
-                    fem_required=fem_required,
-                )
+                if self.manufactured_part_labels:
+                    mfg_method = ManufacturingMethod.CNC
+                    if self.manufactured_part_labels:
+                        for child in getattr(self.component, "children", []) or [
+                            self.component
+                        ]:
+                            if (
+                                getattr(child, "label", None)
+                                in self.manufactured_part_labels
+                            ):
+                                meta = getattr(child, "metadata", None)
+                                if meta and getattr(meta, "manufacturing_method", None):
+                                    mfg_method = meta.manufacturing_method
+                                    break
+                    self.validation_report = validate_and_price_assembly(
+                        self.component,
+                        self.config,
+                        part_labels=self.manufactured_part_labels,
+                        fem_required=fem_required,
+                        default_method=mfg_method,
+                    )
+                else:
+                    self.validation_report = None
 
                 # Build material lookup
                 self.material_lookup = {}
+                self.fixed_body_names = set()
                 children = getattr(self.component, "children", [])
                 if not children:
                     children = [self.component]
@@ -171,9 +179,16 @@ class SimulationLoop:
                         self.material_lookup[label] = getattr(
                             metadata, "material_id", None
                         )
+                        if getattr(metadata, "is_fixed", False):
+                            self.fixed_body_names.add(label)
             else:
                 self.config = None
                 self.material_lookup = {}
+                self.fixed_body_names = set()
+
+            self.fixed_body_prefixes = tuple(
+                f"{label}_" for label in sorted(self.fixed_body_names)
+            )
 
             # Cache zone names for forbidden zones
             self.forbidden_sites = []
@@ -622,6 +637,11 @@ class SimulationLoop:
                 current_time, bstate.pos, bstate.vel
             )
             if eval_fail_reason:
+                if eval_fail_reason == FailureReason.OUT_OF_BOUNDS and (
+                    bname in self.fixed_body_names
+                    or bname.startswith(self.fixed_body_prefixes)
+                ):
+                    continue
                 if eval_fail_reason == FailureReason.OUT_OF_BOUNDS:
                     logger.warning(
                         "out_of_bounds_detected",

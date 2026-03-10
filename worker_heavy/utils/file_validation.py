@@ -30,6 +30,7 @@ from shared.models.schemas import (
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 from shared.simulation.schemas import SimulatorBackendType
+from worker_heavy.utils.validation import _validate_objectives_consistency
 
 logger = structlog.get_logger(__name__)
 
@@ -123,6 +124,22 @@ def validate_objectives_yaml(
                 return False, [
                     "MuJoCo backend does not support fluids. Use Genesis instead."
                 ]
+
+        objective_error = _validate_objectives_consistency(objectives)
+        if objective_error:
+            logger.error(
+                "objectives_yaml_invalid",
+                errors=[objective_error],
+                session_id=session_id,
+            )
+            emit_event(
+                LogicFailureEvent(
+                    file_path="objectives.yaml",
+                    constraint_name="objectives_consistency",
+                    error_message=objective_error,
+                )
+            )
+            return False, [objective_error]
 
         logger.info("objectives_yaml_valid", session_id=session_id)
         return True, objectives
