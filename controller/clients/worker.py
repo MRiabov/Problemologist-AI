@@ -434,14 +434,14 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def execute_python(self, code: str, timeout: int = 30) -> ExecuteResponse:
-        """Execute Python code in the sandboxed runtime."""
+    async def execute_command(self, command: str, timeout: int = 30) -> ExecuteResponse:
+        """Execute a shell command in the session runtime."""
         client = await self._get_client()
         try:
             http_timeout = float(timeout) + 5.0
             response = await client.post(
                 f"{self.base_url}/runtime/execute",
-                json={"code": code, "timeout": timeout},
+                json={"code": command, "timeout": timeout},
                 headers=self.headers,
                 timeout=http_timeout,
             )
@@ -449,6 +449,10 @@ class WorkerClient:
             return ExecuteResponse.model_validate(response.json())
         finally:
             await self._close_client(client)
+
+    async def execute_python(self, code: str, timeout: int = 30) -> ExecuteResponse:
+        """Legacy compatibility wrapper around shell-command execution."""
+        return await self.execute_command(code, timeout=timeout)
 
     async def simulate(
         self,
