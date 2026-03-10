@@ -10,8 +10,10 @@ Validates the structure and content of:
 
 # T015: Hashing for immutability checks
 import hashlib
+import io
 import re
 import subprocess
+import tokenize
 from pathlib import Path
 
 import structlog
@@ -60,6 +62,33 @@ TEMPLATE_PLACEHOLDERS = [
 ]
 
 
+def _find_template_placeholders(filename: str, content: str) -> list[str]:
+    """Return template placeholder markers, with Python-aware handling for ellipses."""
+    found_placeholders = [
+        p for p in TEMPLATE_PLACEHOLDERS if p != "..." and p in content
+    ]
+
+    if "..." not in content:
+        return found_placeholders
+
+    # Python code often contains valid ellipses in strings or type hints. Treat
+    # `...` as a placeholder only when it appears in comments for Python files.
+    if filename.endswith(".py"):
+        try:
+            for token in tokenize.generate_tokens(io.StringIO(content).readline):
+                if token.type == tokenize.COMMENT and "..." in token.string:
+                    found_placeholders.append("...")
+                    break
+        except tokenize.TokenError:
+            # Fail closed for malformed Python content that still contains
+            # template-style ellipses.
+            found_placeholders.append("...")
+        return found_placeholders
+
+    found_placeholders.append("...")
+    return found_placeholders
+
+
 def validate_objectives_yaml(
     content: str, session_id: str | None = None
 ) -> tuple[bool, ObjectivesYaml | list[str]]:
@@ -80,7 +109,7 @@ def validate_objectives_yaml(
             return False, ["Empty or invalid YAML content"]
 
         # 1. Enforce that file is not the template
-        found_placeholders = [p for p in TEMPLATE_PLACEHOLDERS if p in content]
+        found_placeholders = _find_template_placeholders("objectives.yaml", content)
         if found_placeholders:
             return False, [
                 f"objectives.yaml still contains template placeholders: {found_placeholders}"
@@ -136,7 +165,9 @@ def validate_assembly_definition_yaml(
             return False, ["Empty or invalid YAML content"]
 
         # 1. Check for template placeholders in cost estimation too
-        found_placeholders = [p for p in TEMPLATE_PLACEHOLDERS if p in content]
+        found_placeholders = _find_template_placeholders(
+            "assembly_definition.yaml", content
+        )
         if found_placeholders:
             return False, [
                 f"assembly_definition.yaml still contains template placeholders: {found_placeholders}"
@@ -381,7 +412,7 @@ def validate_node_output(
 
     # 2. Template placeholder check
     for filename, content in files_content_map.items():
-        found_placeholders = [p for p in TEMPLATE_PLACEHOLDERS if p in content]
+        found_placeholders = _find_template_placeholders(filename, content)
         if found_placeholders:
             placeholder_list = ", ".join(found_placeholders)
             errors.append(
