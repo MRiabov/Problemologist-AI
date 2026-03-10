@@ -119,7 +119,7 @@ class WorkerInterpreter:
         # T025: Add timeout to prevent thread leak in BaseNode (Issue 1)
         # 600s provides a safe buffer for complex simulations.
         return await asyncio.wait_for(
-            self.worker_client.execute_python(code), timeout=600.0
+            self.worker_client.execute_command(code), timeout=600.0
         )
 
     def shutdown(self):

@@ -52,19 +52,36 @@ def extract_python_code(text: str) -> str:
     return text.strip()
 
 
-def _has_submit_for_review_call(script: str) -> bool:
-    """Return True when script contains an explicit submit_for_review(...) call."""
+def _script_contract_violations(script: str) -> list[str]:
+    """Return benchmark script contract violations that must fail closed."""
+    violations: list[str] = []
+    parsed = False
+    if 'if __name__ == "__main__"' in script or "if __name__ == '__main__'" in script:
+        violations.append("script.py must not contain a __main__ block")
+
     with suppress(Exception):
         tree = ast.parse(script)
+        parsed = True
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if isinstance(func, ast.Name) and func.id == "submit_for_review":
-                return True
-            if isinstance(func, ast.Attribute) and func.attr == "submit_for_review":
-                return True
-    return "submit_for_review(" in script
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Name) and func.id == "submit_for_review":
+                    violations.append(
+                        "script.py must not call submit_for_review(...); "
+                        "review handoff is executed by the control plane"
+                    )
+                if isinstance(func, ast.Attribute) and func.attr == "submit_for_review":
+                    violations.append(
+                        "script.py must not call submit_for_review(...); "
+                        "review handoff is executed by the control plane"
+                    )
+    if not parsed and "submit_for_review(" in script:
+        violations.append(
+            "script.py must not call submit_for_review(...); "
+            "review handoff is executed by the control plane"
+        )
+
+    return list(dict.fromkeys(violations))
 
 
 class BenchmarkPlannerSignature(dspy.Signature):
@@ -903,16 +920,16 @@ class BenchmarkCoderNode(BaseNode):
         # Run Verification (Geometric + Physics)
         script = state.current_script
         if script:
-            if not _has_submit_for_review_call(script):
+            script_contract_violations = _script_contract_violations(script)
+            if script_contract_violations:
                 state.session.status = SessionStatus.REJECTED
-                state.review_feedback = (
-                    "Coder handoff blocked: script.py must include an explicit "
-                    "submit_for_review(...) call."
+                state.review_feedback = "Coder handoff blocked: " + "; ".join(
+                    script_contract_violations
                 )
-                state.session.validation_logs.append(
-                    "reviewer_submission: missing explicit submit_for_review(...) "
-                    "call in script.py"
-                )
+                for violation in script_contract_violations:
+                    state.session.validation_logs.append(
+                        "reviewer_submission: " + violation
+                    )
                 return state
 
             logger.info("running_integrated_validation", session_id=session_id)
@@ -1030,8 +1047,8 @@ class BenchmarkCoderNode(BaseNode):
                         )
 
                         # Control-plane handoff submit is executed only after
-                        # validate+simulate pass. The script itself must still
-                        # contain an explicit submit_for_review(...) call.
+                        # validate+simulate pass. script.py itself stays a pure
+                        # importable module with no in-module submission path.
                         submit_res = await self.ctx.worker_client.submit(
                             script_path=SCRIPT_FILE,
                             reviewer_stage="benchmark_reviewer",
