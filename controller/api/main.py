@@ -100,8 +100,8 @@ app.include_router(simulation.router)
 app.include_router(steerability.router, prefix="/api/v1")
 
 
+from controller.api.request_models import AgentRunRequest
 from controller.api.schemas import (
-    AgentRunRequest,
     AgentRunResponse,
     EpisodeCreateResponse,
 )
