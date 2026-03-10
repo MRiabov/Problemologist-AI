@@ -19,6 +19,7 @@ from shared.enums import TraceType
 from shared.models.schemas import TraceMetadata
 
 logger = structlog.get_logger(__name__)
+_SYNC_TRACE_TIMEOUT_SECONDS = 0.25
 
 
 class TraceBroadcast(BaseModel):
@@ -409,10 +410,14 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 future = asyncio.run_coroutine_threadsafe(
                     self.record_tool_start(tool_name, input_data), self.loop
                 )
-                return future.result(timeout=10)
+                return future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
             return asyncio.run(self.record_tool_start(tool_name, input_data))
         except Exception as e:
-            logger.warning("database_tool_start_sync_failed", error=str(e))
+            logger.warning(
+                "database_tool_start_sync_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             return 0
 
     def record_reasoning_text_sync(
@@ -434,7 +439,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                     ),
                     self.loop,
                 )
-                future.result(timeout=10)
+                future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
             else:
                 asyncio.run(
                     self.record_reasoning_text(
@@ -445,7 +450,11 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                     )
                 )
         except Exception as e:
-            logger.warning("database_reasoning_trace_sync_failed", error=str(e))
+            logger.warning(
+                "database_reasoning_trace_sync_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
     def record_tool_end_sync(
         self, trace_id: int, output_data: str, is_error: bool = False
@@ -458,11 +467,15 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 future = asyncio.run_coroutine_threadsafe(
                     self.record_tool_end(trace_id, output_data, is_error), self.loop
                 )
-                future.result(timeout=10)
+                future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
             else:
                 asyncio.run(self.record_tool_end(trace_id, output_data, is_error))
         except Exception as e:
-            logger.warning("database_tool_end_sync_failed", error=str(e))
+            logger.warning(
+                "database_tool_end_sync_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
 
     # Keep generic event recording
     async def record_events(self, events: list[dict[str, Any]]) -> None:
