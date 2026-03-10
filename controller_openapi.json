@@ -2266,6 +2266,29 @@
             "type": "string",
             "title": "Prompt"
           },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "start_node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Node"
+          },
           "max_cost": {
             "anyOf": [
               {

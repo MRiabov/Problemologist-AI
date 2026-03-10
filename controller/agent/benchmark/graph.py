@@ -14,6 +14,9 @@ from langgraph.types import Command
 from opentelemetry import trace
 from sqlalchemy import select
 
+from controller.agent.benchmark_handover_validation import (
+    validate_benchmark_planner_handoff_artifacts,
+)
 from controller.agent.config import settings as agent_settings
 from controller.agent.context_usage import (
     estimate_text_tokens,
@@ -26,10 +29,12 @@ from controller.agent.execution_limits import (
 )
 from controller.agent.initialization import initialize_agent_files
 from controller.agent.node_entry_validation import (
+    BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_REVIEW_MANIFEST,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
     ValidationGraph,
+    benchmark_coder_handover_custom_check,
     build_benchmark_node_contracts,
     evaluate_node_entry_contract,
     integration_mode_enabled,
@@ -57,6 +62,7 @@ from shared.observability.events import emit_event
 from shared.observability.schemas import NodeEntryValidationFailedEvent
 from shared.simulation.schemas import (
     CustomObjectives,
+    RandomizationStrategy,
     SimulatorBackendType,
     get_default_simulator_backend,
 )
@@ -295,11 +301,12 @@ async def _evaluate_benchmark_node_entry(
     state: BenchmarkGeneratorState,
 ):
     custom_checks = {
+        BENCHMARK_CODER_HANDOVER_CHECK: benchmark_coder_handover_custom_check,
         BENCHMARK_REVIEWER_HANDOVER_CHECK: (
             lambda *, contract, state: _custom_benchmark_reviewer_handover_check(  # noqa: ARG005
                 state=state
             )
-        )
+        ),
     }
     contract = BENCHMARK_NODE_CONTRACTS[target_node]
     return await evaluate_node_entry_contract(
@@ -437,105 +444,39 @@ async def _validate_planner_handoff(
     - Structured planner output (`plan`) is present and schema-valid.
     - User-provided objective overrides are reflected in objectives constraints.
     """
-    from shared.models.schemas import ObjectivesYaml
-    from shared.simulation.schemas import RandomizationStrategy
-    from worker_heavy.utils.file_validation import validate_node_output
-
-    errors: list[str] = []
-    files_to_check = ("plan.md", "todo.md", "objectives.yaml")
-    artifacts: dict[str, str] = {}
-
-    for rel_path in files_to_check:
-        content = await _read_session_markdown(session_id, rel_path)
-        if content is None:
-            errors.append(f"Missing planner artifact: {rel_path}")
-            continue
-        artifacts[rel_path] = content
-
-    if artifacts:
-        is_valid, structural_errors = validate_node_output(
-            AgentName.BENCHMARK_PLANNER, artifacts
-        )
-        if not is_valid:
-            errors.extend([f"planner_structural: {msg}" for msg in structural_errors])
-
-    objectives_text = artifacts.get("objectives.yaml")
-    if objectives_text:
-        try:
-            import yaml
-
-            parsed = yaml.safe_load(objectives_text)
-            objectives = ObjectivesYaml.model_validate(parsed or {})
-            if custom_objectives:
-                if custom_objectives.max_unit_cost is not None:
-                    observed = objectives.constraints.max_unit_cost
-                    expected = custom_objectives.max_unit_cost
-                    if abs(observed - expected) > 1e-6:
-                        errors.append(
-                            "planner_semantic: objectives.constraints.max_unit_cost "
-                            f"({observed}) does not match custom objective ({expected})"
-                        )
-                if custom_objectives.max_weight is not None:
-                    observed = objectives.constraints.max_weight_g
-                    expected = custom_objectives.max_weight
-                    if abs(observed - expected) > 1e-6:
-                        errors.append(
-                            "planner_semantic: objectives.constraints.max_weight_g "
-                            f"({observed}) does not match custom objective ({expected})"
-                        )
-                if custom_objectives.target_quantity is not None:
-                    observed = objectives.constraints.target_quantity
-                    expected = custom_objectives.target_quantity
-                    if observed != expected:
-                        errors.append(
-                            "planner_semantic: objectives.constraints.target_quantity "
-                            f"({observed}) does not match custom objective ({expected})"
-                        )
-        except Exception as exc:
-            errors.append(f"planner_semantic: Failed to parse objectives.yaml ({exc})")
-
     submission, submission_error = await _get_latest_planner_submission_result(
         session_id
     )
-    if submission is not None:
-        if not submission.ok or submission.status != "submitted":
-            errors.append("planner_submission: submit_plan() did not return submitted")
-        if submission.node_type != AgentName.BENCHMARK_PLANNER:
-            errors.append(
-                "planner_submission: submission node_type is not benchmark_planner"
-            )
-        if submission.errors:
-            errors.extend([f"planner_submission: {msg}" for msg in submission.errors])
-    elif submission_error:
-        errors.append(f"planner_submission: {submission_error}")
+    from controller.config.settings import settings as global_settings
 
-    if plan is None:
-        errors.append(
-            "planner_execution: missing structured planner output. "
-            "Retry planner and call submit_plan() before handoff."
+    client = WorkerClient(
+        base_url=global_settings.worker_light_url,
+        heavy_url=global_settings.worker_heavy_url,
+        session_id=str(session_id),
+    )
+    try:
+        return await validate_benchmark_planner_handoff_artifacts(
+            client,
+            custom_objectives=custom_objectives,
+            submission=submission,
+            submission_error=submission_error,
+            plan_output=plan,
+            require_submission=True,
+            require_structured_plan=True,
         )
-    elif isinstance(plan, dict):
-        is_plan_valid = False
-        with suppress(Exception):
-            RandomizationStrategy.model_validate(plan)
-            is_plan_valid = True
-        if not is_plan_valid:
-            errors.append(
-                "planner_execution: planner output does not match RandomizationStrategy"
-            )
-    elif not isinstance(plan, RandomizationStrategy):
-        errors.append(
-            "planner_execution: planner output has unexpected type; "
-            "expected RandomizationStrategy"
-        )
-
-    return errors
+    finally:
+        await client.aclose()
 
 
 async def _auto_continue_planned_session(
     session_id: uuid.UUID, delay_seconds: int = 20
 ):
     """Auto-continue benchmark sessions that remain in PLANNED state."""
+    from controller.config.settings import settings as agent_settings
+
+    if agent_settings.is_integration_test:
+        delay_seconds = 0
+
     await asyncio.sleep(delay_seconds)
 
     session_factory = get_sessionmaker()
@@ -585,7 +526,13 @@ def define_graph():
     # Define transitions
     def route_start(
         state: BenchmarkGeneratorState,
-    ) -> Literal[AgentName.BENCHMARK_PLANNER, AgentName.BENCHMARK_CODER]:
+    ) -> Literal[
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_CODER,
+        AgentName.BENCHMARK_REVIEWER,
+    ]:
+        if state.session.status == SessionStatus.VALIDATING:
+            return AgentName.BENCHMARK_REVIEWER
         if state.session.status in [SessionStatus.EXECUTING, SessionStatus.PLANNED]:
             return AgentName.BENCHMARK_CODER
         return AgentName.BENCHMARK_PLANNER
@@ -1051,6 +998,7 @@ async def run_generation_session(
     seed_dataset: str | None = None,
     generation_kind: GenerationKind | None = None,
     backend: SimulatorBackendType | None = None,
+    start_node: str | AgentName | None = None,
 ) -> BenchmarkGeneratorState:
     """
     Entry point to run the full generation pipeline with persistence.
@@ -1060,9 +1008,30 @@ async def run_generation_session(
         "running_generation_session",
         session_id=session_id,
         prompt=prompt,
+        start_node=(
+            start_node.value if isinstance(start_node, AgentName) else start_node
+        ),
         backend=(backend or get_default_simulator_backend()),
     )
     backend = backend or get_default_simulator_backend()
+
+    normalized_start_node: AgentName
+    if start_node is None:
+        normalized_start_node = AgentName.BENCHMARK_PLANNER
+    elif isinstance(start_node, AgentName):
+        normalized_start_node = start_node
+    else:
+        normalized_start_node = AgentName(start_node)
+
+    if normalized_start_node == AgentName.BENCHMARK_CODER:
+        initial_session_status = SessionStatus.EXECUTING
+        initial_episode_phase = EpisodePhase.BENCHMARK_CODING
+    elif normalized_start_node == AgentName.BENCHMARK_REVIEWER:
+        initial_session_status = SessionStatus.VALIDATING
+        initial_episode_phase = EpisodePhase.BENCHMARK_REVIEWING
+    else:
+        initial_session_status = SessionStatus.PLANNING
+        initial_episode_phase = EpisodePhase.BENCHMARK_PLANNING
 
     # 1. Create DB entry (Episode)
     from controller.config.settings import settings
@@ -1073,8 +1042,8 @@ async def run_generation_session(
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         metadata = EpisodeMetadata(
-            detailed_status=SessionStatus.PLANNING,
-            episode_phase=EpisodePhase.BENCHMARK_PLANNING,
+            detailed_status=initial_session_status,
+            episode_phase=initial_episode_phase,
             validation_logs=[],
             prompt=prompt,
             custom_objectives=custom_objectives,
@@ -1104,7 +1073,7 @@ async def run_generation_session(
     session = GenerationSession(
         session_id=session_id,
         prompt=prompt,
-        status=SessionStatus.PLANNING,
+        status=initial_session_status,
         custom_objectives=custom_objectives or {},
         backend=backend,
     )
@@ -1639,6 +1608,11 @@ async def continue_generation_session(
             )
             return None
 
+        restored_plan = None
+        if metadata.plan:
+            with suppress(Exception):
+                restored_plan = RandomizationStrategy.model_validate(metadata.plan)
+
         # Reconstruct session with status 'EXECUTING' so define_graph routes to 'coder'
         session = GenerationSession(
             session_id=session_id,
@@ -1662,7 +1636,7 @@ async def continue_generation_session(
         review_feedback=None,
         review_round=0,
         turn_count=saved_turn_count,
-        plan=None,
+        plan=restored_plan,
         messages=[],
     )
 

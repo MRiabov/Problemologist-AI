@@ -37,6 +37,8 @@ _PROMPT_LOG_PREVIEW_LIMIT = 500
 
 class BenchmarkGenerateRequest(BaseModel):
     prompt: str
+    session_id: uuid.UUID | None = None
+    start_node: str | None = None
     max_cost: float | None = None
     max_weight: float | None = None
     target_quantity: int | None = None
@@ -60,7 +62,7 @@ async def generate_benchmark(
     """
     # We use the graph's run_generation_session which handles its own persistence
     # but we wrap it in a background task to return immediately.
-    session_id = uuid.uuid4()
+    session_id = request.session_id or uuid.uuid4()
     logger.info(
         "benchmark_generate_requested",
         session_id=str(session_id),
@@ -75,6 +77,7 @@ async def generate_benchmark(
         generation_kind=request.generation_kind.value
         if request.generation_kind
         else None,
+        start_node=request.start_node,
         backend=request.backend.value,
     )
 
@@ -94,6 +97,7 @@ async def generate_benchmark(
         seed_dataset=request.seed_dataset,
         generation_kind=request.generation_kind,
         backend=request.backend,
+        start_node=request.start_node,
     )
 
     return BenchmarkGenerateResponse(

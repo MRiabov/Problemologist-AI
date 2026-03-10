@@ -350,6 +350,8 @@ class BenchmarkPlannerNode(BaseNode):
             + "- Do not emit `next_tool_name`, `next_tool_args`, `[[ ## ... ## ]]`, or raw JSON tool transcripts.\n"
             + "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
             + '- Stop after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
+            + "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
+            + "- In `objectives.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
         )
         user_prompt = "Benchmark planner inputs:\n" + json.dumps(
             inputs, indent=2, ensure_ascii=True, default=str
@@ -363,29 +365,34 @@ class BenchmarkPlannerNode(BaseNode):
     def _coerce_message_text(content: Any) -> str:
         if isinstance(content, str):
             return content.strip()
+        if isinstance(content, list):
+            text_chunks: list[str] = []
+            for block in content:
+                if isinstance(block, str):
+                    if block.strip():
+                        text_chunks.append(block.strip())
+                    continue
+                if isinstance(block, dict):
+                    text_value = block.get("text")
+                    if isinstance(text_value, str) and text_value.strip():
+                        text_chunks.append(text_value.strip())
+                        continue
+                    nested_text = block.get("content")
+                    if isinstance(nested_text, str) and nested_text.strip():
+                        text_chunks.append(nested_text.strip())
+                        continue
+                text_value = getattr(block, "text", None)
+                if isinstance(text_value, str) and text_value.strip():
+                    text_chunks.append(text_value.strip())
+                    continue
+                nested_text = getattr(block, "content", None)
+                if isinstance(nested_text, str) and nested_text.strip():
+                    text_chunks.append(nested_text.strip())
+            if text_chunks:
+                return "\n".join(text_chunks)
         if content is None:
             return ""
         return str(content).strip()
-
-    def _assistant_message_with_tool_calls(self, message: Any) -> dict[str, Any]:
-        tool_calls_payload = []
-        for tool_call in getattr(message, "tool_calls", []) or []:
-            function = getattr(tool_call, "function", None)
-            tool_calls_payload.append(
-                {
-                    "id": getattr(tool_call, "id", ""),
-                    "type": getattr(tool_call, "type", "function"),
-                    "function": {
-                        "name": getattr(function, "name", ""),
-                        "arguments": getattr(function, "arguments", "{}") or "{}",
-                    },
-                }
-            )
-        return {
-            "role": "assistant",
-            "content": self._coerce_message_text(getattr(message, "content", None)),
-            "tool_calls": tool_calls_payload,
-        }
 
     def _derive_randomization_strategy(
         self,
@@ -447,37 +454,52 @@ class BenchmarkPlannerNode(BaseNode):
         if not isinstance(data, dict):
             return False
 
-        assembly_totals = data.get("assembly_totals")
-        if not isinstance(assembly_totals, dict):
-            return False
-
+        changed = False
         normalized_totals: dict[str, float] = {}
         removed_keys: list[str] = []
-        changed = False
 
-        for key, value in assembly_totals.items():
-            if isinstance(value, bool):
-                removed_keys.append(key)
-                changed = True
-                continue
-            if isinstance(value, (int, float)):
-                normalized_totals[key] = float(value)
-                continue
-            if isinstance(value, str):
-                with suppress(ValueError):
-                    normalized_totals[key] = float(value)
+        moved_object = data.get("moved_object")
+        if isinstance(moved_object, dict):
+            static_randomization = moved_object.get("static_randomization")
+            if isinstance(static_randomization, dict):
+                nested_start_position = static_randomization.pop("start_position", None)
+                if (
+                    nested_start_position is not None
+                    and "start_position" not in moved_object
+                ):
+                    moved_object["start_position"] = nested_start_position
+                    changed = True
+                elif nested_start_position is not None:
+                    static_randomization["start_position"] = nested_start_position
+
+        assembly_totals = data.get("assembly_totals")
+        if isinstance(assembly_totals, dict):
+            for key, value in assembly_totals.items():
+                if isinstance(value, bool):
+                    removed_keys.append(key)
                     changed = True
                     continue
-            removed_keys.append(key)
-            changed = True
+                if isinstance(value, (int, float)):
+                    normalized_totals[key] = float(value)
+                    continue
+                if isinstance(value, str):
+                    with suppress(ValueError):
+                        normalized_totals[key] = float(value)
+                        changed = True
+                        continue
+                removed_keys.append(key)
+                changed = True
 
-        if not changed and normalized_totals == assembly_totals:
+            if normalized_totals:
+                if normalized_totals != assembly_totals:
+                    changed = True
+                data["assembly_totals"] = normalized_totals
+            elif assembly_totals:
+                data.pop("assembly_totals", None)
+                changed = True
+
+        if not changed:
             return False
-
-        if normalized_totals:
-            data["assembly_totals"] = normalized_totals
-        else:
-            data.pop("assembly_totals", None)
 
         await self.ctx.fs.write_file(
             OBJECTIVES_FILE,
@@ -489,6 +511,52 @@ class BenchmarkPlannerNode(BaseNode):
             session_id=self.ctx.session_id,
             removed_keys=removed_keys,
             kept_keys=sorted(normalized_totals.keys()),
+            promoted_start_position=bool(
+                isinstance(data.get("moved_object"), dict)
+                and data["moved_object"].get("start_position") is not None
+            ),
+        )
+        return True
+
+    async def _normalize_todo_markdown_artifact(self) -> bool:
+        todo_path = "todo.md"
+        if not await self.ctx.fs.exists(todo_path):
+            return False
+
+        raw_content = await self.ctx.fs.read_file(todo_path)
+        if not raw_content.strip():
+            return False
+
+        lines = raw_content.splitlines()
+        normalized_lines: list[str] = []
+        changed = False
+
+        for line in lines:
+            stripped = line.lstrip()
+            indent = line[: len(line) - len(stripped)]
+            if stripped.startswith("- ") and not stripped.startswith(
+                ("- [ ] ", "- [x] ", "- [-] ")
+            ):
+                normalized_lines.append(f"{indent}- [ ] {stripped[2:]}")
+                changed = True
+            else:
+                normalized_lines.append(line)
+
+        if not changed:
+            return False
+
+        normalized_content = "\n".join(normalized_lines)
+        if raw_content.endswith("\n"):
+            normalized_content += "\n"
+
+        await self.ctx.fs.write_file(
+            todo_path,
+            normalized_content,
+            overwrite=True,
+        )
+        logger.info(
+            "benchmark_planner_normalized_todo_md",
+            session_id=self.ctx.session_id,
         )
         return True
 
@@ -547,8 +615,9 @@ class BenchmarkPlannerNode(BaseNode):
                         tool_choice="auto",
                     )
                     message = response.choices[0].message
-                    assistant_text = self._coerce_message_text(
-                        getattr(message, "content", None)
+                    assistant_text, tool_calls = self._extract_native_tool_calls(
+                        message,
+                        model_name=litellm_model,
                     )
                     if assistant_text:
                         reasoning_chunks.append(assistant_text)
@@ -560,23 +629,29 @@ class BenchmarkPlannerNode(BaseNode):
                                 source="native_tool_loop",
                             )
 
-                    tool_calls = getattr(message, "tool_calls", None) or []
                     if not tool_calls:
                         raise ValueError(
                             "Native benchmark planner returned no tool calls before submit_plan."
                         )
 
-                    messages.append(self._assistant_message_with_tool_calls(message))
+                    messages.append(
+                        self._assistant_message_with_tool_calls(
+                            message,
+                            model_name=litellm_model,
+                            assistant_text=assistant_text,
+                            tool_calls_payload=tool_calls,
+                        )
+                    )
 
                     for tool_call in tool_calls:
-                        function = getattr(tool_call, "function", None)
-                        tool_name = getattr(function, "name", None)
+                        function = tool_call.get("function", {})
+                        tool_name = function.get("name")
                         if not tool_name or tool_name not in tool_fns:
                             raise ValueError(
                                 f"Native benchmark planner requested unknown tool: {tool_name}"
                             )
 
-                        raw_arguments = getattr(function, "arguments", "{}") or "{}"
+                        raw_arguments = function.get("arguments", "{}") or "{}"
                         arguments = json.loads(raw_arguments)
                         if not isinstance(arguments, dict):
                             raise ValueError(
@@ -585,6 +660,7 @@ class BenchmarkPlannerNode(BaseNode):
 
                         if tool_name == "submit_plan":
                             await self._normalize_objectives_yaml_artifact()
+                            await self._normalize_todo_markdown_artifact()
                         result = await asyncio.to_thread(
                             tool_fns[tool_name], **arguments
                         )
@@ -593,7 +669,7 @@ class BenchmarkPlannerNode(BaseNode):
                         messages.append(
                             {
                                 "role": "tool",
-                                "tool_call_id": getattr(tool_call, "id", ""),
+                                "tool_call_id": tool_call.get("id", ""),
                                 "name": tool_name,
                                 "content": result_text,
                             }
@@ -614,12 +690,28 @@ class BenchmarkPlannerNode(BaseNode):
                     if submitted:
                         break
 
+                await self._normalize_objectives_yaml_artifact()
+                await self._normalize_todo_markdown_artifact()
+
+                if not submitted:
+                    submit_tool = tool_fns.get("submit_plan")
+                    if submit_tool is not None:
+                        submission = await asyncio.to_thread(submit_tool)
+                        if isinstance(submission, str):
+                            with suppress(Exception):
+                                submission = json.loads(submission)
+                        if (
+                            isinstance(submission, dict)
+                            and submission.get("ok") is True
+                            and submission.get("status") == "submitted"
+                        ):
+                            submitted = True
+
                 if not submitted:
                     raise ValueError(
                         "Native benchmark planner exhausted tool loop without successful submit_plan()."
                     )
 
-                await self._normalize_objectives_yaml_artifact()
                 results = await asyncio.gather(
                     *[self.ctx.fs.read_file(f) for f in validate_files],
                     return_exceptions=True,
@@ -735,10 +827,17 @@ class BenchmarkCoderNode(BaseNode):
                 objectives_yaml = await self.ctx.worker_client.read_file(
                     OBJECTIVES_FILE
                 )
+        plan_input = (
+            state.plan.model_dump_json() if state.plan else "# No plan.md found."
+        )
+        if plan_input == "# No plan.md found.":
+            with suppress(Exception):
+                if await self.ctx.worker_client.exists("plan.md"):
+                    plan_input = await self.ctx.worker_client.read_file("plan.md")
 
         inputs = {
             "prompt": state.session.prompt,
-            "plan": state.plan.model_dump_json() if state.plan else "None",
+            "plan": plan_input,
             "objectives_yaml": objectives_yaml,
             "review_feedback": (
                 state.review_feedback
@@ -760,6 +859,11 @@ class BenchmarkCoderNode(BaseNode):
         )
 
         if not prediction and not artifacts:
+            state.session.status = SessionStatus.REJECTED
+            state.review_feedback = "Coder failed before producing required artifacts."
+            state.session.validation_logs.append(
+                "coder_execution: no prediction and no artifacts returned"
+            )
             state.journal += f"\n[Coder] Failed: {journal_entry}"
             return state
 
@@ -780,6 +884,16 @@ class BenchmarkCoderNode(BaseNode):
                     SCRIPT_FILE
                 )
 
+        if not state.current_script or not state.current_script.strip():
+            state.session.status = SessionStatus.REJECTED
+            state.review_feedback = (
+                "Coder handoff blocked: script.py is missing after coder execution."
+            )
+            state.session.validation_logs.append(
+                "reviewer_submission: missing script.py after coder execution"
+            )
+            return state
+
         # Run Verification (Geometric + Physics)
         script = state.current_script
         if script:
@@ -799,6 +913,17 @@ class BenchmarkCoderNode(BaseNode):
             try:
                 val_res = await self.ctx.worker_client.validate(script_path=SCRIPT_FILE)
                 if not val_res.success:
+                    validation_error = (
+                        val_res.message or "geometric validation failed before submit"
+                    )
+                    state.session.status = SessionStatus.REJECTED
+                    state.review_feedback = (
+                        "Coder handoff blocked: geometric validation failed. "
+                        + validation_error
+                    )
+                    state.session.validation_logs.append(
+                        "reviewer_submission: " + validation_error
+                    )
                     from shared.simulation.schemas import ValidationResult
 
                     state.simulation_result = ValidationResult(
@@ -839,6 +964,17 @@ class BenchmarkCoderNode(BaseNode):
                             )
 
                     if not sim_res.success:
+                        simulation_error = (
+                            sim_res.message or "physics simulation failed before submit"
+                        )
+                        state.session.status = SessionStatus.REJECTED
+                        state.review_feedback = (
+                            "Coder handoff blocked: physics simulation failed. "
+                            + simulation_error
+                        )
+                        state.session.validation_logs.append(
+                            "reviewer_submission: " + simulation_error
+                        )
                         from shared.simulation.schemas import ValidationResult
 
                         state.simulation_result = ValidationResult(
