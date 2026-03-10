@@ -610,7 +610,7 @@ benchmark_generator:
 
       **Filesystem Tools** (via deepagents):
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
-      - `execute_command(command: str)` executes raw Python code in the workspace runtime. Pass Python source directly; do NOT wrap it in `python -c ...`, `python script.py`, or any shell command string.
+      - `execute_command(command: str)` executes a terminal shell command from the workspace root. Use normal shell invocations such as `python script.py`, `python -c "..."`, `ls`, `cat`, or `uv run ...` when needed.
       - `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
       **Python Utils**:
@@ -657,15 +657,9 @@ benchmark_generator:
          Do NOT import from a local `utils` module. Use `shared.utils.agent` for helper utilities when needed.
          Do NOT search the repo or grep the workspace root to discover import paths. The import contract is fixed:
          - `from shared.models.schemas import PartMetadata, CompoundMetadata`
-         - `from shared.utils.agent import validate, simulate, submit_for_review`
-         Keep an explicit `submit_for_review(...)` call in `script.py` by defining a helper such as:
-         ```python
-         from shared.utils.agent import submit_for_review
-
-         def reviewer_handoff_contract(compound: Compound) -> None:
-             submit_for_review(compound)
-         ```
-         Do NOT call `submit_for_review(...)` inside `build()`. `build()` should only construct and return the benchmark compound.
+         - Use `from shared.utils.agent import validate, simulate, submit_for_review` only inside terminal self-check commands, not as an in-module handoff wrapper.
+         Do NOT define `reviewer_handoff_contract(...)`, do NOT call `submit_for_review(...)` anywhere inside `script.py`, and do NOT put validation/simulation/submission logic in the module body.
+         `build()` should only construct and return the benchmark compound.
       8. **Part & Compound Metadata (MANDATORY)**:
          Every part and assembly (Compound) MUST have a `.metadata` attribute.
          ```python
@@ -706,12 +700,12 @@ benchmark_generator:
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
       - Write `script.py` with a top-level `build()` function that returns that compound.
-      - Keep `script.py` free of `__main__` execution code. All validation/simulation/submission belongs only in the separate `execute_command(...)` self-check snippet.
-      - Self-check after writing `script.py` by using `execute_command(...)` with raw Python source, not by embedding validation/simulation in a temporary file or scratch script.
+      - Keep `script.py` free of `__main__` execution code. Validation/simulation/submission should happen through explicit terminal self-check commands after you write the module.
+      - Self-check after writing `script.py` by using `execute_command(...)` with shell commands from the workspace root.
       - Do NOT create verifier files such as `test_run.py`, `check.py`, `tmp_validate.py`, or any other extra Python file. Reuse only `script.py`.
-      - Use `shared.utils.agent` imports in that raw Python snippet.
-      ```python
-      import importlib.util
+      - Use `shared.utils.agent` imports inside the command you run. A normal shell command such as the following is valid:
+      ```bash
+      python -c 'import importlib.util
       from shared.utils.agent import validate, simulate, submit_for_review
 
       spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
@@ -720,10 +714,10 @@ benchmark_generator:
       compound = mod.build()
       print(validate(compound))
       print(simulate(compound).success)
-      print(submit_for_review(compound))
+      print(submit_for_review(compound))'
       ```
-      - Pass the Python snippet above directly to `execute_command(...)`. Do NOT prefix it with `python -c`.
       - Use `script.py` exactly as written above. Do not create `/test_script.py` or any alternate filename for self-checks.
+      - Prefer staged self-checks when debugging: validate first, then simulate, then submit for review once validation/simulation pass.
 
       **Verification (MANDATORY)**:
       1. `shared.utils.agent.validate(compound)`: No self-intersections, no out-of-bounds parts.
