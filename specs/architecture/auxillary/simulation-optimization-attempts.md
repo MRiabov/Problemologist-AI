@@ -945,6 +945,154 @@ The reason is scope control:
 - the benchmark evidence already justifies process reuse,
 - while thread-sharing and scene-caching introduce different risks and should not be conflated with the first runtime lifecycle fix.
 
+### 2026-03-09 21:15:49 GMT - integration cache-path stability benchmark
+
+#### Goal
+
+The goal of this benchmark was to answer the cache-identity question raised by integration-test reruns:
+
+1. whether stable `INT-###` session identifiers materially improve repeated Genesis reuse across fresh-child requests,
+2. whether stable workspace and bundle extraction paths matter more than the `session_id`,
+3. whether both dimensions are required before on-disk cache reuse appears.
+
+This benchmark was intentionally narrower than a full integration run.
+
+It is meant to separate cache-key hypotheses before changing the real integration runner or heavy-worker request plumbing.
+
+#### Script or code path
+
+The experiment assets are:
+
+- `scripts/experiments/integration-cache-path-stability/README.md`
+- `scripts/experiments/integration-cache-path-stability/benchmark_integration_cache_path_stability.py`
+- `scripts/experiments/integration-cache-path-stability/results-int101-like-20260309T210926Z.json`
+- `scripts/experiments/integration-cache-path-stability/results-int133-like-20260309T211549Z.json`
+
+The benchmark drives the real `simulate_subprocess(...)` path in fresh child processes.
+
+It compares four stability modes:
+
+1. random workspace path plus random `INT-###-uuid8` session id,
+2. stable workspace path plus random `INT-###-uuid8` session id,
+3. random workspace path plus stable `INT-###` session id,
+4. stable workspace path plus stable `INT-###` session id.
+
+The benchmark keeps the cache root stable within each scenario and mode while clearing the workspace contents between repetitions. This is intended to preserve path identity without allowing stale output files to become an accidental shortcut.
+
+#### Command
+
+The executed commands were:
+
+```bash
+GENESIS_FORCE_CPU=1 .venv/bin/python scripts/experiments/integration-cache-path-stability/benchmark_integration_cache_path_stability.py --force-cpu --backend GENESIS --scenario int101_like --repetitions 2 --output /tmp/int101-cache-path-stability.json
+
+GENESIS_FORCE_CPU=1 .venv/bin/python scripts/experiments/integration-cache-path-stability/benchmark_integration_cache_path_stability.py --force-cpu --backend GENESIS --scenario int133_like --repetitions 2 --output /tmp/int133-cache-path-stability.json
+```
+
+#### Environment caveats
+
+- The run was CPU-mode only.
+- The benchmark is a subprocess harness, not an HTTP-level integration test.
+- The benchmark intentionally uses small successful smoke-style scenarios so repeated runs are feasible.
+- The benchmark isolates cache roots per scenario and mode to avoid cross-mode contamination while still allowing repeated-run reuse inside one scenario-mode lane.
+- The benchmark exercises the real `simulate_subprocess(...)` path, not the full controller -> bundle -> heavy-worker HTTP path.
+- The benchmark explicitly set deterministic `HOME`, `XDG_CACHE_HOME`, Taichi cache variables, and temp directories inside each scenario-mode lane. This means the benchmark did control the Genesis/Taichi disk-cache root explicitly.
+
+#### Measurements
+
+`int101_like`:
+
+- random workspace + random session
+  - first run: `70.347s`
+  - repeat run: `12.142s`
+- stable workspace + random session
+  - first run: `68.585s`
+  - repeat run: `13.134s`
+  - repeat speedup vs baseline: `0.924x`
+- random workspace + stable session
+  - first run: `68.433s`
+  - repeat run: `11.508s`
+  - repeat speedup vs baseline: `1.055x`
+- stable workspace + stable session
+  - first run: `67.637s`
+  - repeat run: `12.624s`
+  - repeat speedup vs baseline: `0.962x`
+
+`int133_like`:
+
+- random workspace + random session
+  - first run: `64.928s`
+  - repeat run: `11.293s`
+- stable workspace + random session
+  - first run: `68.105s`
+  - repeat run: `12.129s`
+  - repeat speedup vs baseline: `0.931x`
+- random workspace + stable session
+  - first run: `69.655s`
+  - repeat run: `11.929s`
+  - repeat speedup vs baseline: `0.947x`
+- stable workspace + stable session
+  - first run: `69.681s`
+  - repeat run: `12.082s`
+  - repeat speedup vs baseline: `0.935x`
+
+#### Interpretation
+
+The benchmark answers one architectural question clearly enough for the current subprocess path:
+
+1. repeated fresh-child runs already collapse from roughly `65s` to `70s` down to roughly `11s` to `13s` on the second run even in the all-random baseline,
+2. neither stable workspace path nor stable `INT-###` session id provides a material repeat-run improvement over that baseline on these two scenarios,
+3. the measured differences between modes are small enough to treat as noise for the present decision.
+
+The current hypothesis therefore narrows to:
+
+- random `session_id` values are not the dominant blocker for cache reuse on this direct `simulate_subprocess(...)` path,
+- stable workspace paths are also not showing a useful win on this direct path for these scenarios,
+- the remaining integration slowness is more likely explained by another layer such as process lifecycle, a different runtime path, or a cache key dimension not exercised by these small smoke scenarios.
+
+The runtime-plumbing clarification from the follow-up review is:
+
+1. integration tests now do preserve heavy-worker process reuse because the persistent simulation child stays alive across requests and across tests unless it crashes,
+2. integration teardown still clears cached backend instances after each test, so integration tests do not preserve same-session backend-object reuse across tests,
+3. this benchmark therefore rules out session-id and workspace-path identity as the dominant factor on the direct subprocess path, but it does not answer the full integration-path question where bundle extraction, worker session-root routing, and other HTTP-layer plumbing are involved,
+4. this benchmark also does not prove that ten materially different Genesis scenes will all receive the same benefit; it only shows that identical repeated smoke workloads already reuse enough lower-level cache even in the all-random baseline.
+
+#### Decision state
+
+The hypothesis "integration rerun slowness is primarily caused by random `INT-###-uuid8` session ids or random workspace paths on the direct `simulate_subprocess(...)` path" is not supported by this benchmark.
+
+The benchmark supports a narrower decision:
+
+1. do not implement stable `INT-###` session-id canonicalization solely on the basis of this cache hypothesis,
+2. do not implement stable workspace-path canonicalization solely on the basis of this benchmark.
+
+This decision is specific to the direct `simulate_subprocess(...)` path with controlled cache roots. It is not a blanket statement about every higher-level integration path.
+
+#### Follow-up
+
+The next concrete step is:
+
+1. if integration reruns are still observably slow, benchmark the full HTTP integration path where bundle extraction and worker session-root routing are involved,
+2. separately continue prioritizing the persistent-child runtime work, because the earlier direct subprocess benchmark already showed that process lifecycle dominates repeated cost,
+3. if the unresolved question is "does the tenth materially different Genesis scene still benefit after the first one", run a separate benchmark over many distinct randomized scenes instead of repeating one smoke scenario,
+4. only revisit path/session canonicalization if a higher-level benchmark shows a regression that this direct subprocess benchmark does not capture.
+
+#### Cache configuration note
+
+The current local Genesis `0.4.1` cache lookup in this environment is:
+
+1. `GS_CACHE_FILE_PATH` when set,
+2. on Linux, `XDG_CACHE_HOME/genesis` when `XDG_CACHE_HOME` is set,
+3. otherwise `~/.cache/genesis`.
+
+The `gsd` cache directory is `<cache_dir>/gsd`.
+
+This matters for runtime diagnosis because:
+
+1. the experiment did set cache-root environment variables explicitly,
+2. the current integration runner does not set `GS_CACHE_FILE_PATH` or `XDG_CACHE_HOME`,
+3. therefore real integration runs currently inherit the Genesis disk-cache root from the ambient process environment unless a wrapper or shell setup overrides it.
+
 ## Template for future entries
 
 Use the following structure for future simulation optimization records.
