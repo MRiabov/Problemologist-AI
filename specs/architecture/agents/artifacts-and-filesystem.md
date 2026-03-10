@@ -166,6 +166,9 @@ Rules:
 7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
 8. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
 9. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
+10. The preferred workspace path contract is workspace-relative paths such as `plan.md`, `script.py`, `todo.md`, and `journal.md`. Agent prompts and new code must treat these relative paths as canonical.
+11. `/workspace` path aliasing is a compatibility fallback, not a normative contract. It exists because some earlier runtime/tooling behavior accidentally taught agents to address the session root as `/workspace`, and we are temporarily preserving that alias to avoid immediate refactoring cost.
+12. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
