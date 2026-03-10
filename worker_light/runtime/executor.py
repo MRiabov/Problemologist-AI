@@ -1,14 +1,10 @@
-"""Python runtime executor for sandboxed code execution.
-
-Provides secure execution of Python code with timeout enforcement
-and subprocess isolation.
-"""
+"""Shell-command runtime executor for session-isolated command execution."""
 
 import asyncio
 import contextlib
 import os
 import subprocess
-import tempfile
+import sys
 from collections.abc import Generator
 from pathlib import Path
 
@@ -24,7 +20,7 @@ DEFAULT_TIMEOUT_SECONDS = 30
 
 
 class ExecutionResult(BaseModel):
-    """Result of a Python code execution."""
+    """Result of a shell command execution."""
 
     stdout: StrictStr
     stderr: StrictStr
@@ -33,18 +29,18 @@ class ExecutionResult(BaseModel):
 
 
 class RuntimeConfig(BaseModel):
-    """Configuration for the Python runtime executor."""
+    """Configuration for the session runtime executor."""
 
     timeout_seconds: StrictInt = DEFAULT_TIMEOUT_SECONDS
-    python_executable: StrictStr = "python3"
+    shell_executable: StrictStr = "/bin/bash"
     working_directory: StrictStr | None = None
 
 
 @contextlib.contextmanager
 def _prepared_execution(
-    code: str, env: dict[str, str] | None = None
-) -> Generator[tuple[list[str], dict[str, str]], None, None]:
-    """Helper to prepare environment and temporary file for execution."""
+    env: dict[str, str] | None = None,
+) -> Generator[dict[str, str], None, None]:
+    """Prepare a shell environment rooted in the project virtualenv."""
     actual_env = os.environ.copy()
     if env:
         actual_env.update(env)
@@ -59,42 +55,41 @@ def _prepared_execution(
     else:
         actual_env["PYTHONPATH"] = worker_package_parent
 
-    # Write code to a temporary file
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".py",
-        delete=False,
-    ) as f:
-        f.write(code)
-        script_path = f.name
+    python_bin = str(Path(sys.executable).resolve().parent)
+    current_path = actual_env.get("PATH", "")
+    if current_path:
+        actual_env["PATH"] = f"{python_bin}:{current_path}"
+    else:
+        actual_env["PATH"] = python_bin
 
-    try:
-        yield [script_path], actual_env
-    finally:
-        Path(script_path).unlink(missing_ok=True)
+    actual_env.setdefault("PYTHONEXECUTABLE", sys.executable)
+    if sys.prefix != sys.base_prefix:
+        actual_env.setdefault("VIRTUAL_ENV", sys.prefix)
+
+    yield actual_env
 
 
 @type_check
-def run_python_code(
-    code: str,
+def run_command(
+    command: str,
     env: dict[str, str] | None = None,
     config: RuntimeConfig | None = None,
     session_id: str | None = None,
 ) -> ExecutionResult:
-    """Execute Python code in a subprocess."""
+    """Execute a shell command in a subprocess."""
     if config is None:
         config = RuntimeConfig()
 
     logger.debug(
         "runtime_execute",
-        code_length=len(code),
+        command_length=len(command),
         timeout=config.timeout_seconds,
         session_id=session_id,
     )
 
-    with _prepared_execution(code, env) as (script_args, actual_env):
+    with _prepared_execution(env) as actual_env:
         try:
-            cmd = [config.python_executable, *script_args]
+            cmd = [config.shell_executable, "-lc", command]
 
             result = subprocess.run(
                 cmd,
@@ -138,28 +133,29 @@ def run_python_code(
 
 
 @type_check
-async def run_python_code_async(
-    code: str,
+async def run_command_async(
+    command: str,
     env: dict[str, str] | None = None,
     config: RuntimeConfig | None = None,
     session_id: str | None = None,
 ) -> ExecutionResult:
-    """Execute Python code asynchronously in a subprocess."""
+    """Execute a shell command asynchronously in a subprocess."""
     if config is None:
         config = RuntimeConfig()
 
     logger.debug(
         "runtime_execute_async",
-        code_length=len(code),
+        command_length=len(command),
         timeout=config.timeout_seconds,
         session_id=session_id,
     )
 
-    with _prepared_execution(code, env) as (script_args, actual_env):
+    with _prepared_execution(env) as actual_env:
         try:
             process = await asyncio.create_subprocess_exec(
-                config.python_executable,
-                *script_args,
+                config.shell_executable,
+                "-lc",
+                command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=actual_env,
@@ -216,3 +212,23 @@ async def run_python_code_async(
                 exit_code=-1,
                 timed_out=False,
             )
+
+
+def run_python_code(
+    code: str,
+    env: dict[str, str] | None = None,
+    config: RuntimeConfig | None = None,
+    session_id: str | None = None,
+) -> ExecutionResult:
+    """Legacy compatibility wrapper for callers still using the old name."""
+    return run_command(code, env=env, config=config, session_id=session_id)
+
+
+async def run_python_code_async(
+    code: str,
+    env: dict[str, str] | None = None,
+    config: RuntimeConfig | None = None,
+    session_id: str | None = None,
+) -> ExecutionResult:
+    """Legacy compatibility wrapper for callers still using the old name."""
+    return await run_command_async(code, env=env, config=config, session_id=session_id)

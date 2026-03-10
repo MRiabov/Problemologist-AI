@@ -1021,7 +1021,7 @@
           "worker-light"
         ],
         "summary": "Execute Code",
-        "description": "Execute Python code in session-isolated environment.",
+        "description": "Execute a shell command in the session-isolated environment.",
         "operationId": "execute_code_runtime_execute_post",
         "parameters": [
           {

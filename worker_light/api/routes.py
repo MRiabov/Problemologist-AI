@@ -43,7 +43,7 @@ from shared.workers.schema import (
     StatusResponse,
     WriteFileRequest,
 )
-from worker_light.runtime.executor import RuntimeConfig, run_python_code_async
+from worker_light.runtime.executor import RuntimeConfig, run_command_async
 from worker_light.utils.assets import get_media_type, validate_asset_source
 from worker_light.utils.git import (
     abort_merge,
@@ -456,7 +456,7 @@ async def execute_code(
     x_session_id: str = Header(...),
     fs_router=Depends(get_router),
 ):
-    """Execute Python code in session-isolated environment."""
+    """Execute a shell command in the session-isolated environment."""
     session_dir = fs_router.local_backend.root
 
     config = RuntimeConfig(
@@ -465,8 +465,8 @@ async def execute_code(
     )
     from worker_light.config import settings
 
-    result = await run_python_code_async(
-        code=request.code,
+    result = await run_command_async(
+        command=request.code,
         env={
             "SESSION_ID": x_session_id,
             "WORKER_HEAVY_URL": settings.worker_heavy_url,
