@@ -22,11 +22,20 @@ class FilesystemPermissions(BaseModel):
     write: PathPolicy = Field(default_factory=PathPolicy)
 
 
+class VisualInspectionPolicy(BaseModel):
+    required: bool = False
+    min_images: int = Field(default=1, ge=1)
+    reminder_interval: int = Field(default=2, ge=1)
+
+
 class AgentPolicy(BaseModel):
     filesystem_permissions: FilesystemPermissions = Field(
         default_factory=FilesystemPermissions
     )
     tools: list[str] | None = None
+    visual_inspection: VisualInspectionPolicy = Field(
+        default_factory=VisualInspectionPolicy
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -235,3 +244,14 @@ class FilesystemPolicy:
         if tools is None:
             return None
         return {str(t).strip() for t in tools if str(t).strip()}
+
+    def get_visual_inspection_policy(
+        self, agent_role: AgentName | str
+    ) -> VisualInspectionPolicy:
+        role = (
+            agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        )
+        agent_rules = self.config.agents.get(role)
+        if agent_rules:
+            return agent_rules.visual_inspection
+        return self.config.defaults.visual_inspection

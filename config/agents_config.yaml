@@ -88,6 +88,7 @@ agents:
             "plan.md",
             "todo.md",
             "journal.md",
+            "renders/**",
           ]
         deny: [".manifests/**"]
       write:
@@ -113,12 +114,17 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "write_file",
         "edit_file",
         "grep",
         "execute_command",
         "submit_plan",
       ]
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
 
   engineer_coder:
     filesystem_permissions:
@@ -159,6 +165,7 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "write_file",
         "edit_file",
         "grep",
@@ -212,6 +219,7 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "write_file",
         "edit_file",
         "grep",
@@ -267,6 +275,7 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "write_file",
         "edit_file",
         "grep",
@@ -274,6 +283,10 @@ agents:
         "inspect_topology",
         "search_cots_catalog",
       ]
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
 
   engineer_plan_reviewer:
     filesystem_permissions:
@@ -306,11 +319,16 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "grep",
         "execute_command",
         "inspect_topology",
         "search_cots_catalog",
       ]
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
 
   engineer_execution_reviewer:
     filesystem_permissions:
@@ -343,11 +361,16 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "grep",
         "execute_command",
         "inspect_topology",
         "search_cots_catalog",
       ]
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
 
   benchmark_planner:
     filesystem_permissions:
@@ -429,12 +452,17 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "grep",
         "execute_command",
         "inspect_topology",
         "search_cots_catalog",
         "write_review_file",
       ]
+    visual_inspection:
+      required: true
+      min_images: 1
+      reminder_interval: 2
 
   electronics_planner:
     filesystem_permissions:
@@ -513,6 +541,7 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "grep",
         "execute_command",
         "inspect_topology",

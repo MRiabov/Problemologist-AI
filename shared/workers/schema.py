@@ -495,6 +495,18 @@ class InspectTopologyResponse(BaseModel):
     message: StrictStr | None = None
 
 
+class MediaInspectionResult(BaseModel):
+    """Structured result for agent-facing visual media inspection."""
+
+    path: StrictStr
+    mime_type: StrictStr
+    media_kind: Literal["image", "video", "unsupported"]
+    attached_to_model: bool = False
+    size_bytes: StrictInt = Field(ge=0)
+    note: StrictStr
+    data_url: StrictStr | None = Field(default=None, exclude=True, repr=False)
+
+
 class PlanRefusal(BaseModel):
     """Information about a refused plan."""
 

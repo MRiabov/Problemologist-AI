@@ -58,6 +58,7 @@ class ObservabilityEventType(StrEnum):
     TOOL_LS_FILES = "ls_files_tool"
     TOOL_GREP = "grep_tool"
     TOOL_READ_FILE = "read_file_tool"
+    TOOL_INSPECT_MEDIA = "inspect_media_tool"
     TOOL_WRITE_FILE = "write_file_tool"
     TOOL_EDIT_FILE = "edit_files_tool"
     TOOL_RUN_COMMAND = "run_command_tool"
@@ -96,6 +97,8 @@ class ObservabilityEventType(StrEnum):
     GPU_OOM_RETRY = "gpu_oom_retry"
     CONVERSATION_LENGTH_EXCEEDED = "conversation_length_exceeded"
     NODE_ENTRY_VALIDATION_FAILED = "node_entry_validation_failed"
+    MEDIA_INSPECTION = "media_inspection"
+    LLM_MEDIA_ATTACHED = "llm_media_attached"
 
 
 class BaseEvent(BaseModel):
@@ -266,6 +269,14 @@ class GrepToolEvent(BaseEvent):
 class ReadFileToolEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.TOOL_READ_FILE
     path: str
+
+
+class InspectMediaToolEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.TOOL_INSPECT_MEDIA
+    path: str
+    mime_type: str
+    media_kind: str
+    attached_to_model: bool = False
 
 
 class WriteFileToolEvent(BaseEvent):
@@ -512,3 +523,21 @@ class NodeEntryValidationFailedEvent(BaseEvent):
     reason_code: str
     errors: list[dict[str, Any]] = Field(default_factory=list)
     reroute_target: AgentName | None = None
+
+
+class MediaInspectionEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.MEDIA_INSPECTION
+    path: str
+    mime_type: str
+    media_kind: str
+    attached_to_model: bool = False
+    review_stage: str | None = None
+
+
+class LlmMediaAttachedEvent(BaseEvent):
+    event_type: ObservabilityEventType = ObservabilityEventType.LLM_MEDIA_ATTACHED
+    path: str
+    mime_type: str
+    media_kind: str
+    node_name: AgentName
+    tool_name: str = "inspect_media"
