@@ -294,7 +294,10 @@ class BenchmarkPlannerNode(BaseNode):
         return "string"
 
     def _build_native_tool_schemas(
-        self, tool_fns: dict[str, Any]
+        self,
+        tool_fns: dict[str, Any],
+        *,
+        extra_schemas: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         schemas: list[dict[str, Any]] = []
         for tool_name, tool_fn in tool_fns.items():
@@ -336,6 +339,9 @@ class BenchmarkPlannerNode(BaseNode):
                     },
                 }
             )
+
+        if extra_schemas:
+            schemas.extend(extra_schemas)
 
         return schemas
 

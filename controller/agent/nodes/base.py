@@ -193,15 +193,10 @@ class BaseNode:
         self, *, node_type: AgentName, program_cls: type[dspy.Module]
     ) -> bool:
         """Native tool calls are enabled incrementally for unstable ReAct nodes."""
-        return (
-            program_cls is dspy.ReAct
-            and node_type
-            in {
-                AgentName.BENCHMARK_PLANNER,
-                AgentName.BENCHMARK_CODER,
-            }
-            and not settings.is_integration_test
-        )
+        return program_cls is dspy.ReAct and node_type in {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_CODER,
+        }
 
     def _build_native_tool_signature(
         self,
@@ -536,17 +531,27 @@ class BaseNode:
             raise RuntimeError(f"Missing API key for native tool loop: {node_type}")
 
         for iteration in range(max_iters):
-            response = completion(
-                model=litellm_model,
-                api_key=api_key,
-                api_base=api_base,
-                timeout=settings.llm_timeout_seconds,
-                max_tokens=min(settings.llm_max_tokens, 2048),
-                messages=messages,
-                tools=tool_schemas,
-                tool_choice="auto",
+            native_mock_completion = getattr(
+                self.ctx.dspy_lm, "native_tool_completion", None
             )
-            message = response.choices[0].message
+            if callable(native_mock_completion):
+                message = native_mock_completion(
+                    messages=messages,
+                    node_type=node_type,
+                    finish_fields=finish_fields,
+                )
+            else:
+                response = completion(
+                    model=litellm_model,
+                    api_key=api_key,
+                    api_base=api_base,
+                    timeout=settings.llm_timeout_seconds,
+                    max_tokens=min(settings.llm_max_tokens, 2048),
+                    messages=messages,
+                    tools=tool_schemas,
+                    tool_choice="auto",
+                )
+                message = response.choices[0].message
             assistant_text, tool_calls = self._extract_native_tool_calls(
                 message,
                 model_name=litellm_model,

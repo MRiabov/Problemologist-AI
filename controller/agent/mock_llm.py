@@ -1,6 +1,8 @@
 import json
 import re
+from contextlib import suppress
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import dspy
@@ -387,18 +389,17 @@ class MockDSPyLM(dspy.LM):
                 )
                 if obs_matches:
                     actual_obs = obs_matches[-1].strip()
-
-                    # Normalize common observation values for easier matching
-                    if actual_obs.startswith("True"):
-                        actual_obs = "success"
-
-                    if expected_obs not in actual_obs:
+                    matches, preview = self._observation_matches_expected(
+                        expected=expected_obs,
+                        actual=actual_obs,
+                    )
+                    if not matches:
                         logger.warning(
                             "mock_transcript_observation_mismatch",
                             node=node_key.value,
                             step=step_idx - 1,
                             expected=expected_obs,
-                            actual=actual_obs,
+                            actual=preview,
                         )
 
         # If this step is 'finished', we prepare to move to next entry on NEXT call
@@ -472,6 +473,140 @@ class MockDSPyLM(dspy.LM):
                 text += str(msg.get("content", ""))
         return text
 
+    @staticmethod
+    def _message_content_text(content: Any) -> str:
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            chunks: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    chunks.append(item)
+                elif isinstance(item, dict):
+                    text = item.get("text")
+                    if isinstance(text, str):
+                        chunks.append(text)
+            return "\n".join(chunks)
+        if content is None:
+            return ""
+        return str(content)
+
+    def _native_messages_text(self, messages: list[dict[str, Any]]) -> str:
+        chunks: list[str] = []
+        for msg in messages:
+            role = str(msg.get("role") or "")
+            content = self._message_content_text(msg.get("content"))
+            if content:
+                chunks.append(f"{role}: {content}")
+        return "\n".join(chunks)
+
+    def _native_tool_observations(self, messages: list[dict[str, Any]]) -> list[str]:
+        observations: list[str] = []
+        for msg in messages:
+            if str(msg.get("role")) != "tool":
+                continue
+            content = self._message_content_text(msg.get("content")).strip()
+            observations.append(content)
+        return observations
+
+    @classmethod
+    def _observation_candidates(cls, observation: Any) -> list[str]:
+        candidates: list[str] = []
+
+        def add(value: Any) -> None:
+            if value is None:
+                return
+            text = str(value).strip()
+            if not text:
+                return
+            if text not in candidates:
+                candidates.append(text)
+            lowered = text.lower()
+            if lowered not in candidates:
+                candidates.append(lowered)
+
+        def collect(value: Any) -> None:
+            if value is None:
+                return
+
+            if isinstance(value, bool):
+                add("true" if value else "false")
+                add("success" if value else "failure")
+                return
+
+            if isinstance(value, (int, float)):
+                add(value)
+                return
+
+            if isinstance(value, str):
+                text = value.strip()
+                if not text:
+                    return
+                add(text)
+                lowered = text.lower()
+                if lowered == "true":
+                    collect(True)
+                    return
+                if lowered == "false":
+                    collect(False)
+                    return
+
+                with suppress(Exception):
+                    parsed = json.loads(text)
+                    if parsed != value:
+                        collect(parsed)
+
+                lines = [line.strip() for line in text.splitlines() if line.strip()]
+                if len(lines) > 1:
+                    collect(lines[0])
+                    collect(lines[-1])
+                return
+
+            if isinstance(value, dict):
+                for key in ("success", "ok"):
+                    if isinstance(value.get(key), bool):
+                        collect(value[key])
+                for key in ("status", "message", "reason", "detail"):
+                    if key in value:
+                        collect(value[key])
+
+                stdout = value.get("stdout")
+                if isinstance(stdout, str):
+                    collect(stdout)
+                stderr = value.get("stderr")
+                if isinstance(stderr, str) and stderr.strip():
+                    collect(stderr)
+                return
+
+            add(value)
+
+        collect(observation)
+        return candidates
+
+    @classmethod
+    def _observation_matches_expected(
+        cls, *, expected: str, actual: Any
+    ) -> tuple[bool, str]:
+        normalized_expected = str(expected).strip()
+        if not normalized_expected:
+            return True, ""
+
+        candidates = cls._observation_candidates(actual)
+        expected_candidates = cls._observation_candidates(normalized_expected)
+        expected_lowers = {candidate.lower() for candidate in expected_candidates}
+
+        for candidate in candidates:
+            candidate_lower = candidate.lower()
+            if candidate_lower in expected_lowers:
+                return True, candidate
+            if any(
+                expected_lower in candidate_lower for expected_lower in expected_lowers
+            ):
+                return True, candidate
+
+        preview = candidates[0] if candidates else str(actual).strip()
+        return False, preview
+
     def _get_scenario_id(self) -> str:
         """Extract scenario ID from session_id, handling UUIDs and test prefixes."""
         # Check for UUID (roughly xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
@@ -515,6 +650,224 @@ class MockDSPyLM(dspy.LM):
             return self.session_id
 
         return self.session_id
+
+    def _native_call_index(self, node_key: str, full_text: str) -> int:
+        count = self._call_counts.get(node_key, 0)
+        last_prompt = getattr(self, "_last_prompt", {}).get(node_key)
+        if last_prompt == full_text:
+            logger.info("mock_native_tool_idempotent_call", node=node_key)
+        else:
+            self._call_counts[node_key] = count + 1
+            if not hasattr(self, "_last_prompt"):
+                self._last_prompt = {}
+            self._last_prompt[node_key] = full_text
+        return self._call_counts.get(node_key, 0)
+
+    @staticmethod
+    def _native_message(
+        *, assistant_text: str, tool_name: str, tool_args: dict[str, Any], call_id: str
+    ) -> SimpleNamespace:
+        return SimpleNamespace(
+            content=assistant_text,
+            tool_calls=[
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": json.dumps(tool_args or {}),
+                    },
+                }
+            ],
+        )
+
+    def _native_finish_payload(
+        self,
+        *,
+        node_key: AgentName,
+        node_data: dict[str, Any],
+        finish_fields: list[str],
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        for field in finish_fields:
+            if field == "reasoning":
+                payload[field] = node_data.get(
+                    "reasoning", "Verified all requirements."
+                )
+            elif field == "summary":
+                payload[field] = node_data.get("summary", "Task complete.")
+            elif field == "journal":
+                payload[field] = node_data.get("journal", "Work completed.")
+            elif field == "review":
+                payload[field] = node_data.get(
+                    "review",
+                    {
+                        "decision": "APPROVED",
+                        "reason": "Verified.",
+                        "required_fixes": [],
+                    },
+                )
+            elif field == "plan":
+                payload[field] = node_data.get(
+                    "plan",
+                    {
+                        "theme": "benchmark_test",
+                        "target_object_properties": {},
+                        "environment_perturbations": {},
+                        "difficulty_score": 0.5,
+                        "reasoning": "Default mock benchmark plan.",
+                    },
+                )
+            else:
+                payload[field] = node_data.get(field)
+
+        if (
+            node_key in PLANNER_AGENTS
+            and "plan" in finish_fields
+            and not payload.get("plan")
+        ):
+            payload["plan"] = {
+                "theme": "benchmark_test",
+                "target_object_properties": {},
+                "environment_perturbations": {},
+                "difficulty_score": 0.5,
+                "reasoning": "Default mock benchmark plan.",
+            }
+
+        return payload
+
+    def native_tool_completion(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        node_type: AgentName,
+        finish_fields: list[str],
+    ) -> SimpleNamespace:
+        scenario_id = self._get_scenario_id()
+        if scenario_id not in self.scenarios:
+            raise ValueError(
+                f"MockDSPyLM: Scenario '{scenario_id}' not found in mock_responses.yaml "
+                f"for session_id='{self.session_id}'. "
+                f"Available scenarios: {list(self.scenarios.keys())}"
+            )
+
+        scenario = self.scenarios[scenario_id]
+        node_key = self._normalize_agent_name(node_type)
+        if node_key is None:
+            raise ValueError("native_tool_completion requires explicit node_type.")
+
+        full_text = self._native_messages_text(messages)
+        call_index = self._native_call_index(node_key.value, full_text)
+        node_data: dict[str, Any] = scenario.get(node_key.value, {})
+
+        self._validate_expected_llm_inputs(
+            node_key=node_key.value,
+            node_data=node_data,
+            full_text=full_text,
+            call_index=call_index,
+        )
+
+        observations = self._native_tool_observations(messages)
+        completed_tools = len(observations)
+        self._tool_progress[node_key.value] = completed_tools
+
+        if "transcript" in scenario:
+            transcript = scenario.get("transcript", [])
+            entry_idx = self._transcript_states.get(self.session_id, 0)
+            found_idx = -1
+            for i in range(entry_idx, len(transcript)):
+                if transcript[i].get("node") == node_key.value:
+                    found_idx = i
+                    break
+
+            if found_idx == -1:
+                raise ValueError(
+                    f"MockDSPyLM transcript node not found for native tool call: {node_key.value}"
+                )
+
+            self._transcript_states[self.session_id] = found_idx
+            entry = transcript[found_idx]
+            steps = entry.get("steps", [])
+            step_idx = min(completed_tools, len(steps) - 1)
+            step_data = steps[step_idx]
+
+            logger.info(
+                "mock_native_transcript_step",
+                node=node_key.value,
+                entry_idx=found_idx,
+                step_idx=step_idx,
+                completed_tools=completed_tools,
+            )
+
+            if step_idx > 0:
+                prev_step = steps[step_idx - 1]
+                expected_obs = prev_step.get("expected_observation")
+                if expected_obs and observations:
+                    actual_obs = observations[-1].strip()
+                    matches, preview = self._observation_matches_expected(
+                        expected=expected_obs,
+                        actual=actual_obs,
+                    )
+                    if not matches:
+                        logger.warning(
+                            "mock_native_transcript_observation_mismatch",
+                            node=node_key.value,
+                            step=step_idx - 1,
+                            expected=expected_obs,
+                            actual=preview,
+                        )
+
+            assistant_text = step_data.get("thought") or step_data.get(
+                "reasoning", "Task in progress."
+            )
+            if step_data.get("finished"):
+                self._transcript_states[self.session_id] = found_idx + 1
+                return self._native_message(
+                    assistant_text=assistant_text,
+                    tool_name="finish",
+                    tool_args=self._native_finish_payload(
+                        node_key=node_key,
+                        node_data=step_data,
+                        finish_fields=finish_fields,
+                    ),
+                    call_id=f"mock_finish_{node_key.value}_{step_idx}",
+                )
+
+            tool_name = step_data.get("tool_name")
+            if not tool_name:
+                raise ValueError(
+                    f"Transcript step missing tool_name for native tool call: {node_key.value}"
+                )
+            return self._native_message(
+                assistant_text=assistant_text,
+                tool_name=tool_name,
+                tool_args=step_data.get("tool_args", {}) or {},
+                call_id=f"mock_tool_{node_key.value}_{step_idx}",
+            )
+
+        tool_calls = node_data.get("tool_calls", [])
+        tool_progress = self._tool_progress.get(node_key.value, 0)
+        thought = node_data.get("thought", "Task in progress.")
+
+        if tool_progress < len(tool_calls):
+            tc = tool_calls[tool_progress]
+            return self._native_message(
+                assistant_text=tc.get("thought", thought),
+                tool_name=tc.get("name"),
+                tool_args=tc.get("input", {}) or {},
+                call_id=f"mock_tool_{node_key.value}_{tool_progress}",
+            )
+
+        return self._native_message(
+            assistant_text=thought,
+            tool_name="finish",
+            tool_args=self._native_finish_payload(
+                node_key=node_key,
+                node_data=node_data,
+                finish_fields=finish_fields,
+            ),
+            call_id=f"mock_finish_{node_key.value}_{tool_progress}",
+        )
 
     def _is_finishing(self, text: str) -> bool:
         low_text = text.lower()
