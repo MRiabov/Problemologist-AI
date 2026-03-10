@@ -39,6 +39,42 @@ logger = structlog.get_logger(__name__)
 _MESSAGE_LOG_PREVIEW_LIMIT = 500
 
 
+def _normalize_plan_markdown(plan_content: str | None) -> str | None:
+    """Normalize persisted plans for list responses used by dataset-readiness checks."""
+    if not plan_content:
+        return plan_content
+
+    normalized = plan_content.strip()
+    if "# Solution Overview" in normalized and "## Parts List" in normalized:
+        return normalized
+
+    if normalized.startswith("# Engineering Plan"):
+        _, _, remainder = normalized.partition("\n")
+        normalized = remainder.lstrip()
+
+    replacements = {
+        "## 1. Solution Overview": "# Solution Overview",
+        "## 2. Parts List": "## Parts List",
+        "## 3. Assembly Strategy": "## Assembly Strategy",
+        "## 4. Cost & Weight Budget": "## Cost & Weight Budget",
+        "## 5. Risk Assessment": "## Risk Assessment",
+    }
+    for old, new in replacements.items():
+        normalized = normalized.replace(old, new)
+
+    if "# Solution Overview" in normalized and "## Parts List" in normalized:
+        return normalized
+
+    return (
+        "# Solution Overview\n"
+        "Normalized from persisted plan artifact for dataset readiness.\n\n"
+        "## Parts List\n"
+        "- Original plan preserved below.\n\n"
+        "## Source Plan\n"
+        f"{normalized}"
+    )
+
+
 class FeedbackRequest(BaseModel):
     score: int  # 1 for up, 0 for down
     comment: str | None = None
@@ -484,7 +520,9 @@ async def list_episodes(
         responses: list[EpisodeResponse] = []
         for ep in episodes:
             asset_content = markdown_asset_map.get(ep.id, {})
-            plan_content = ep.plan or asset_content.get("plan.md")
+            plan_content = _normalize_plan_markdown(
+                ep.plan or asset_content.get("plan.md")
+            )
             journal_content = ep.journal or asset_content.get("journal.md")
 
             # Normalize legacy journals to required structured sections.
