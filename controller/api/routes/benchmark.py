@@ -5,12 +5,13 @@ from typing import Annotated
 import httpx
 import structlog
 import yaml
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
+from controller.api.benchmark_tasks import launch_tracked_benchmark_task
 from controller.api.schemas import (
     AssetResponse,
     BenchmarkConfirmResponse,
@@ -54,9 +55,7 @@ class BenchmarkGenerateRequest(BaseModel):
 
 
 @router.post("/generate", response_model=BenchmarkGenerateResponse)
-async def generate_benchmark(
-    request: BenchmarkGenerateRequest, background_tasks: BackgroundTasks
-):
+async def generate_benchmark(request: BenchmarkGenerateRequest):
     """
     Trigger a new benchmark generation session.
     """
@@ -87,17 +86,19 @@ async def generate_benchmark(
         target_quantity=request.target_quantity,
     )
 
-    # Run the generation in the background
-    background_tasks.add_task(
-        run_generation_session,
-        request.prompt,
-        session_id=session_id,
-        custom_objectives=custom_objectives,
-        seed_id=request.seed_id,
-        seed_dataset=request.seed_dataset,
-        generation_kind=request.generation_kind,
-        backend=request.backend,
-        start_node=request.start_node,
+    # Run the generation in the background with controller-managed cancellation.
+    launch_tracked_benchmark_task(
+        session_id,
+        run_generation_session(
+            request.prompt,
+            session_id=session_id,
+            custom_objectives=custom_objectives,
+            seed_id=request.seed_id,
+            seed_dataset=request.seed_dataset,
+            generation_kind=request.generation_kind,
+            backend=request.backend,
+            start_node=request.start_node,
+        ),
     )
 
     return BenchmarkGenerateResponse(
@@ -121,7 +122,6 @@ class ConfirmRequest(BaseModel):
 async def confirm_benchmark(
     session_id: uuid.UUID,
     request: ConfirmRequest,
-    background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
@@ -163,9 +163,11 @@ async def confirm_benchmark(
             additional_turns=request.additional_turns,
         )
 
-    background_tasks.add_task(
-        continue_generation_session,
-        session_id=session_id,
+    launch_tracked_benchmark_task(
+        session_id,
+        continue_generation_session(
+            session_id=session_id,
+        ),
     )
 
     return BenchmarkConfirmResponse(

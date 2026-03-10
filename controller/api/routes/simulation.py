@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from controller.agent.benchmark.graph import run_generation_session
+from controller.api.benchmark_tasks import launch_tracked_benchmark_task
 from shared.enums import ResponseStatus
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -58,12 +59,11 @@ async def run_simulation(request: RunSimulationRequest):
 
         prompt = "Generate a benchmark simulation"
 
-        import asyncio
-
-        asyncio.create_task(
+        launch_tracked_benchmark_task(
+            real_session_id,
             run_generation_session(
                 prompt=prompt, session_id=real_session_id, backend=request.backend
-            )
+            ),
         )
 
         return {
