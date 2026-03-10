@@ -8,6 +8,7 @@ from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from controller.api.tasks import AgentRunRequest
@@ -15,6 +16,70 @@ from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller
 CONTROLLER_URL = "http://localhost:18000"
+
+
+async def _wait_for_benchmark_completion(
+    client: AsyncClient,
+    *,
+    session_id: str,
+    max_attempts: int = 60,
+) -> EpisodeResponse:
+    latest: EpisodeResponse | None = None
+    confirmed = False
+
+    for _ in range(max_attempts):
+        status_resp = await client.get(f"/benchmark/{session_id}")
+        if status_resp.status_code == 404:
+            await asyncio.sleep(1)
+            continue
+
+        assert status_resp.status_code == 200, status_resp.text
+        latest = EpisodeResponse.model_validate(status_resp.json())
+
+        if latest.status == EpisodeStatus.PLANNED and not confirmed:
+            confirm_resp = await client.post(
+                f"/benchmark/{session_id}/confirm",
+                json=ConfirmRequest(comment="Proceed").model_dump(),
+            )
+            assert confirm_resp.status_code in {200, 202}, confirm_resp.text
+            confirmed = True
+        elif latest.status == EpisodeStatus.COMPLETED:
+            return latest
+        elif latest.status == EpisodeStatus.FAILED:
+            pytest.fail(f"Benchmark generation failed. Episode data: {latest}")
+
+        await asyncio.sleep(1)
+
+    assert latest is not None
+    return latest
+
+
+async def _wait_for_engineer_completion(
+    client: AsyncClient,
+    *,
+    episode_id: str,
+    expected_user_session_id: uuid.UUID,
+    max_attempts: int = 60,
+) -> EpisodeResponse:
+    latest: EpisodeResponse | None = None
+
+    for _ in range(max_attempts):
+        ep_resp = await client.get(f"/episodes/{episode_id}")
+        assert ep_resp.status_code == 200, ep_resp.text
+        latest = EpisodeResponse.model_validate(ep_resp.json())
+        assert latest.user_session_id == expected_user_session_id, (
+            "user_session_id mismatch"
+        )
+
+        if latest.status == EpisodeStatus.COMPLETED:
+            return latest
+        if latest.status == EpisodeStatus.FAILED:
+            pytest.fail(f"Engineer agent failed. Episode data: {latest}")
+
+        await asyncio.sleep(1)
+
+    assert latest is not None
+    return latest
 
 
 @pytest.mark.integration
@@ -39,32 +104,12 @@ async def test_full_workflow_end_to_end():
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
         session_id = benchmark_resp.session_id
 
-        # 2. Poll for completion
-        max_retries = 30
-        benchmark_completed = False
-        last_benchmark_status = None
-
-        for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{session_id}")
-            if status_resp.status_code == 200:
-                sess_data = EpisodeResponse.model_validate(status_resp.json())
-                last_benchmark_status = sess_data.status
-
-                if last_benchmark_status == EpisodeStatus.COMPLETED:
-                    benchmark_completed = True
-                    break
-                if (
-                    last_benchmark_status == "REJECTED"
-                    or last_benchmark_status == EpisodeStatus.FAILED
-                ):
-                    pytest.fail("Benchmark generation was rejected.")
-
-            await asyncio.sleep(2)
-
-        if not benchmark_completed:
-            pytest.fail(
-                f"Benchmark generation timed out. Last status: {last_benchmark_status}"
-            )
+        benchmark_episode = await _wait_for_benchmark_completion(
+            client, session_id=str(session_id)
+        )
+        assert benchmark_episode.status == EpisodeStatus.COMPLETED, (
+            f"Benchmark generation timed out. Last status: {benchmark_episode.status}"
+        )
 
         engineer_task = (
             f"Solve this benchmark: {session_id}. Constraints: Use standard parts."
@@ -88,27 +133,11 @@ async def test_full_workflow_end_to_end():
         agent_run_resp = AgentRunResponse.model_validate(run_resp.json())
         episode_id = agent_run_resp.episode_id
 
-        # 5. Poll for Engineer completion
-        engineer_completed = False
-        last_engineer_status = None
-        for _ in range(max_retries):
-            ep_resp = await client.get(f"/episodes/{episode_id}")
-            if ep_resp.status_code == 200:
-                ep_data = EpisodeResponse.model_validate(ep_resp.json())
-                assert ep_data.user_session_id == user_session_id, (
-                    "user_session_id mismatch"
-                )
-                last_engineer_status = ep_data.status
-
-                if last_engineer_status == EpisodeStatus.COMPLETED:
-                    engineer_completed = True
-                    break
-                if last_engineer_status == EpisodeStatus.FAILED:
-                    pytest.fail(f"Engineer agent failed. Episode data: {ep_data}")
-
-            await asyncio.sleep(2)
-
-        if not engineer_completed:
-            pytest.fail(
-                f"Engineer agent timed out. Last status: {last_engineer_status}"
-            )
+        engineer_episode = await _wait_for_engineer_completion(
+            client,
+            episode_id=str(episode_id),
+            expected_user_session_id=user_session_id,
+        )
+        assert engineer_episode.status == EpisodeStatus.COMPLETED, (
+            f"Engineer agent timed out. Last status: {engineer_episode.status}"
+        )

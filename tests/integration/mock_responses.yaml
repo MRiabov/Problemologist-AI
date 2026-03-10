@@ -4026,6 +4026,12 @@ scenarios:
           - tool_name: "execute_command"
             tool_args:
               {
+                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
+              }
+            expected_observation: "True"
+          - tool_name: "execute_command"
+            tool_args:
+              {
                 command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
               }
             expected_observation: "True"
