@@ -7,7 +7,7 @@ Test lateral transfer over 1 meter distance. The benchmark should move a 40 mm s
 - Ground plane at Z=0 made from HDPE.
 - Left and right support platforms centered near X=-0.5 m and X=+0.5 m.
 - Two guide rails along the X axis around Y=+/-0.06 m to contain the sphere.
-- Build zone limited to X=[-0.5, 0.5], Y=[-0.1, 0.1], Z=[0, 0.15].
+- Build zone limited to X=[-0.58, 0.58], Y=[-0.1, 0.1], Z=[0, 0.18].
 
 ## 3. Objectives
 
