@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
+from pydantic import TypeAdapter
 from sqlalchemy import func, select
 
 from controller.agent.config import settings
@@ -164,6 +165,206 @@ class BaseNode:
 
     def __init__(self, context: SharedNodeContext):
         self.ctx = context
+
+    def _create_dspy_adapter(
+        self, *, use_native_function_calling: bool = False
+    ) -> dspy.ChatAdapter:
+        """Use the explicit ChatAdapter contract and fail closed on parse mismatch."""
+        return dspy.ChatAdapter(
+            use_native_function_calling=use_native_function_calling,
+            use_json_adapter_fallback=False,
+        )
+
+    @staticmethod
+    def _field_desc(field_info: Any) -> str | None:
+        extra = getattr(field_info, "json_schema_extra", None) or {}
+        desc = extra.get("desc")
+        return desc if isinstance(desc, str) and desc.strip() else None
+
+    @staticmethod
+    def _field_type(field_info: Any, fallback: type[Any] = str) -> type[Any]:
+        annotation = getattr(field_info, "annotation", None)
+        return annotation if isinstance(annotation, type) or annotation else fallback
+
+    def _should_use_native_tool_loop(
+        self, *, node_type: AgentName, program_cls: type[dspy.Module]
+    ) -> bool:
+        """Native tool calls are enabled incrementally, starting with benchmark planner."""
+        return (
+            program_cls is dspy.ReAct
+            and node_type == AgentName.BENCHMARK_PLANNER
+            and not settings.is_integration_test
+        )
+
+    def _build_native_tool_signature(
+        self,
+        *,
+        signature_cls: type[dspy.Signature],
+        inputs: dict[str, Any],
+        node_type: AgentName,
+    ) -> type[dspy.Signature]:
+        output_fields = ", ".join(signature_cls.output_fields.keys())
+        instructions = getattr(signature_cls, "instructions", "") or ""
+        native_instructions = (
+            "Use provider-native tool calls.\n"
+            "Call the provided tools to inspect and modify the workspace.\n"
+            "Always call `submit_plan` before finishing planner work.\n"
+            "When all required work is complete, call `finish` with these output "
+            f"fields: {output_fields}.\n"
+            "Do not emit textual tool-call markers such as `next_tool_name` or "
+            "`next_tool_args`."
+        )
+
+        field_defs: dict[str, tuple[type[Any], Any]] = {}
+        for name, value in inputs.items():
+            field_info = signature_cls.input_fields.get(name)
+            field_defs[name] = (
+                self._field_type(
+                    field_info,
+                    fallback=(type(value) if value is not None else str),
+                ),
+                dspy.InputField(desc=self._field_desc(field_info)),
+            )
+
+        field_defs["trajectory"] = (
+            str,
+            dspy.InputField(
+                desc="Prior tool calls and observations for the current node."
+            ),
+        )
+        field_defs["tools"] = (
+            list[dspy.Tool],
+            dspy.InputField(desc="Available tools for native function calling."),
+        )
+        field_defs["tool_calls"] = (
+            dspy.ToolCalls,
+            dspy.OutputField(desc="Native tool call(s) to execute this turn."),
+        )
+
+        signature_name = (
+            f"{node_type.value.title().replace(' ', '').replace('_', '')}"
+            "NativeToolSignature"
+        )
+        return dspy.make_signature(
+            field_defs,
+            instructions=(
+                f"{instructions}\n\n{native_instructions}"
+                if instructions
+                else native_instructions
+            ),
+            signature_name=signature_name,
+        )
+
+    def _build_finish_tool(
+        self, signature_cls: type[dspy.Signature]
+    ) -> tuple[dspy.Tool, list[str]]:
+        output_field_names = list(signature_cls.output_fields.keys())
+        properties: dict[str, Any] = {}
+        for name, field_info in signature_cls.output_fields.items():
+            field_type = self._field_type(field_info)
+            try:
+                schema = TypeAdapter(field_type).json_schema()
+            except Exception:
+                schema = {"type": "string"}
+            desc = self._field_desc(field_info)
+            if desc:
+                schema["description"] = desc
+            properties[name] = schema
+
+        def finish(**kwargs: Any) -> dict[str, Any]:
+            return kwargs
+
+        finish_tool = dspy.Tool(
+            finish,
+            name="finish",
+            desc=(
+                "Call this exactly once when the planner is done. "
+                "Provide the final output fields for the node."
+            ),
+            args=properties,
+        )
+        return finish_tool, output_field_names
+
+    def _run_native_tool_loop(
+        self,
+        *,
+        signature_cls: type[dspy.Signature],
+        inputs: dict[str, Any],
+        tool_fns: dict[str, Callable],
+        node_type: AgentName,
+        max_iters: int,
+    ) -> dspy.Prediction:
+        tool_signature = self._build_native_tool_signature(
+            signature_cls=signature_cls,
+            inputs=inputs,
+            node_type=node_type,
+        )
+        predictor = dspy.Predict(tool_signature)
+        tool_objects = [dspy.Tool(func) for func in tool_fns.values()]
+        finish_tool, finish_fields = self._build_finish_tool(signature_cls)
+        tool_objects.append(finish_tool)
+        tool_lookup = {tool.name: tool for tool in tool_objects}
+        trajectory_parts: list[str] = []
+
+        for iteration in range(max_iters):
+            prediction = predictor(
+                **inputs,
+                trajectory=(
+                    "\n\n".join(trajectory_parts)
+                    if trajectory_parts
+                    else "No tools have been called yet."
+                ),
+                tools=tool_objects,
+            )
+            tool_calls = getattr(prediction, "tool_calls", None)
+            if not isinstance(tool_calls, dspy.ToolCalls) or not tool_calls.tool_calls:
+                msg = (
+                    f"Native tool loop for {node_type.value} produced no tool calls "
+                    f"on iteration {iteration + 1}."
+                )
+                raise ValueError(msg)
+
+            for call in tool_calls.tool_calls:
+                if call.name == "finish":
+                    payload = call.args or {}
+                    missing_fields = [
+                        field_name
+                        for field_name in finish_fields
+                        if field_name not in payload
+                    ]
+                    if missing_fields:
+                        msg = (
+                            "finish tool call is missing required output fields: "
+                            + ", ".join(missing_fields)
+                        )
+                        raise ValueError(msg)
+                    return dspy.Prediction.from_completions(
+                        {
+                            field_name: [payload.get(field_name)]
+                            for field_name in finish_fields
+                        },
+                        signature=signature_cls,
+                    )
+
+                tool = tool_lookup.get(call.name)
+                if tool is None:
+                    raise ValueError(f"Unknown tool requested: {call.name}")
+
+                observation = call.execute(functions=tool_objects)
+                trajectory_parts.append(
+                    "\n".join(
+                        [
+                            f"Tool: {call.name}",
+                            f"Args: {json.dumps(call.args or {}, sort_keys=True)}",
+                            f"Observation: {self._serialize_tool_observation(observation)}",
+                        ]
+                    )
+                )
+
+        msg = (
+            f"Native tool loop for {node_type.value} exhausted {max_iters} iterations."
+        )
+        raise RuntimeError(msg)
 
     def _get_tool_functions(
         self,
@@ -892,7 +1093,13 @@ class BaseNode:
             else:
                 signature_cls = signature_cls.with_instructions(instructions)
 
-        if program_cls is dspy.ReAct:
+        use_native_tool_loop = self._should_use_native_tool_loop(
+            node_type=node_type,
+            program_cls=program_cls,
+        )
+
+        program = None
+        if program_cls is dspy.ReAct and not use_native_tool_loop:
             max_iters = settings.react_max_iters
             if node_type in {
                 AgentName.ENGINEER_PLANNER,
@@ -903,11 +1110,12 @@ class BaseNode:
             program = program_cls(
                 signature_cls, tools=list(tool_fns.values()), max_iters=max_iters
             )
-        else:
+        elif not use_native_tool_loop:
             program = program_cls(signature_cls, tools=list(tool_fns.values()))
 
         # WP07: Try to load compiled prompt if available
-        self.ctx.pm.load_compiled_program(node_type, program)
+        if not use_native_tool_loop:
+            self.ctx.pm.load_compiled_program(node_type, program)
 
         # WP08: Set node_type on mock LM if available for explicit lookup
         if hasattr(self.ctx.dspy_lm, "node_type"):
@@ -951,9 +1159,26 @@ class BaseNode:
                             node_type, input_data=str(node_input)
                         )
 
-                    with dspy.settings.context(
-                        lm=self.ctx.dspy_lm, adapter=dspy.ChatAdapter()
-                    ):
+                    adapter = self._create_dspy_adapter(
+                        use_native_function_calling=use_native_tool_loop
+                    )
+                    logger.info(
+                        "dspy_adapter_selected",
+                        session_id=self.ctx.session_id,
+                        episode_id=episode_id,
+                        node_type=str(node_type),
+                        runtime_mode=(
+                            "native_tool_loop" if use_native_tool_loop else "react"
+                        ),
+                        adapter=type(adapter).__name__,
+                        use_json_adapter_fallback=getattr(
+                            adapter, "use_json_adapter_fallback", None
+                        ),
+                        use_native_function_calling=getattr(
+                            adapter, "use_native_function_calling", None
+                        ),
+                    )
+                    with dspy.settings.context(lm=self.ctx.dspy_lm, adapter=adapter):
                         logger.info(
                             f"{node_type}_dspy_invoke_start",
                             session_id=self.ctx.session_id,
@@ -993,10 +1218,24 @@ class BaseNode:
                         )
                         # Add a timeout to prevent infinite hangs in DSPy ReAct
                         try:
-                            prediction = await asyncio.wait_for(
-                                asyncio.to_thread(program, **inputs),
-                                timeout=dspy_timeout,
-                            )
+                            if use_native_tool_loop:
+                                max_iters = settings.react_planner_max_iters
+                                prediction = await asyncio.wait_for(
+                                    asyncio.to_thread(
+                                        self._run_native_tool_loop,
+                                        signature_cls=signature_cls,
+                                        inputs=inputs,
+                                        tool_fns=tool_fns,
+                                        node_type=node_type,
+                                        max_iters=max_iters,
+                                    ),
+                                    timeout=dspy_timeout,
+                                )
+                            else:
+                                prediction = await asyncio.wait_for(
+                                    asyncio.to_thread(program, **inputs),
+                                    timeout=dspy_timeout,
+                                )
                             logger.info(
                                 f"{node_type}_raw_prediction",
                                 prediction=str(prediction),

@@ -1,13 +1,18 @@
 import ast
 import asyncio
+import inspect
+import json
 import re
 from contextlib import suppress
+from dataclasses import dataclass
+from typing import Any
 
 import dspy
 import httpx
 import structlog
 import yaml
 from langchain_core.messages import AIMessage, HumanMessage
+from litellm import completion
 
 from controller.agent.config import settings
 from controller.agent.context_usage import (
@@ -79,6 +84,23 @@ class BenchmarkPlannerSignature(dspy.Signature):
     )
 
 
+@dataclass
+class NativePlannerPrediction:
+    reasoning: str
+    plan: dict[str, Any]
+
+
+def _extract_markdown_section(markdown: str, heading: str) -> str:
+    if not markdown.strip():
+        return ""
+
+    pattern = rf"{re.escape(heading)}\s*\n(.*?)(?=\n##\s+\d+\.|\Z)"
+    match = re.search(pattern, markdown, flags=re.DOTALL)
+    if not match:
+        return ""
+    return match.group(1).strip()
+
+
 @type_check
 class BenchmarkPlannerNode(BaseNode):
     """Refactored Benchmark Planner using BaseNode for prompt injection."""
@@ -142,15 +164,21 @@ class BenchmarkPlannerNode(BaseNode):
             ),
         }
 
-        prediction, _, journal_entry = await self._run_program(
-            dspy.ReAct,
-            BenchmarkPlannerSignature,
-            state,
-            inputs,
-            get_benchmark_planner_tools,
-            ["plan.md", "todo.md", "objectives.yaml"],
-            AgentName.BENCHMARK_PLANNER,
-        )
+        if settings.is_integration_test:
+            prediction, _, journal_entry = await self._run_program(
+                dspy.ReAct,
+                BenchmarkPlannerSignature,
+                state,
+                inputs,
+                get_benchmark_planner_tools,
+                ["plan.md", "todo.md", "objectives.yaml"],
+                AgentName.BENCHMARK_PLANNER,
+            )
+        else:
+            prediction, _, journal_entry = await self._run_native_planner(
+                state=state,
+                inputs=inputs,
+            )
 
         if not prediction:
             state.plan = None
@@ -224,6 +252,437 @@ class BenchmarkPlannerNode(BaseNode):
             HumanMessage(content=f"Generated plan: {state.plan.theme}")
         )
         return state
+
+    def _resolve_native_litellm_model(self) -> tuple[str, str | None, str | None]:
+        api_base = settings.openai_api_base
+        use_openrouter = bool(settings.openrouter_api_key) or bool(
+            api_base and "openrouter.ai" in api_base
+        )
+        model_name = settings.llm_model
+        if "/" in model_name and model_name.split("/", 1)[0] in {
+            "openai",
+            "openrouter",
+            "anthropic",
+            "azure",
+            "gemini",
+        }:
+            litellm_model = model_name
+        elif use_openrouter:
+            litellm_model = f"openrouter/{model_name}"
+        else:
+            litellm_model = f"openai/{model_name}"
+
+        api_key = (
+            (settings.openrouter_api_key or settings.openai_api_key)
+            if use_openrouter
+            else settings.openai_api_key
+        )
+        return litellm_model, api_key, api_base
+
+    @staticmethod
+    def _native_schema_type(annotation: Any) -> str:
+        if annotation is bool:
+            return "boolean"
+        if annotation is int:
+            return "integer"
+        if annotation is float:
+            return "number"
+        if annotation in {dict, dict[str, Any]}:
+            return "object"
+        if annotation in {list, list[str], list[Any]}:
+            return "array"
+        return "string"
+
+    def _build_native_tool_schemas(
+        self, tool_fns: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        schemas: list[dict[str, Any]] = []
+        for tool_name, tool_fn in tool_fns.items():
+            signature = inspect.signature(tool_fn)
+            properties: dict[str, Any] = {}
+            required: list[str] = []
+
+            for param_name, param in signature.parameters.items():
+                if param.kind not in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                ):
+                    continue
+                annotation = (
+                    param.annotation
+                    if param.annotation is not inspect.Signature.empty
+                    else str
+                )
+                properties[param_name] = {
+                    "type": self._native_schema_type(annotation),
+                }
+                if param.default is inspect.Signature.empty:
+                    required.append(param_name)
+                else:
+                    properties[param_name]["default"] = param.default
+
+            schemas.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "description": inspect.getdoc(tool_fn) or "",
+                        "parameters": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": required,
+                            "additionalProperties": False,
+                        },
+                    },
+                }
+            )
+
+        return schemas
+
+    def _build_native_planner_messages(
+        self, inputs: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        system_prompt = (
+            self.ctx.pm.render(AgentName.BENCHMARK_PLANNER).strip()
+            + "\n\n"
+            + "Runtime tool-calling contract:\n"
+            + "- Use provider-native tool calls only.\n"
+            + "- Do not emit `next_tool_name`, `next_tool_args`, `[[ ## ... ## ]]`, or raw JSON tool transcripts.\n"
+            + "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
+            + '- Stop after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
+        )
+        user_prompt = "Benchmark planner inputs:\n" + json.dumps(
+            inputs, indent=2, ensure_ascii=True, default=str
+        )
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    @staticmethod
+    def _coerce_message_text(content: Any) -> str:
+        if isinstance(content, str):
+            return content.strip()
+        if content is None:
+            return ""
+        return str(content).strip()
+
+    def _assistant_message_with_tool_calls(self, message: Any) -> dict[str, Any]:
+        tool_calls_payload = []
+        for tool_call in getattr(message, "tool_calls", []) or []:
+            function = getattr(tool_call, "function", None)
+            tool_calls_payload.append(
+                {
+                    "id": getattr(tool_call, "id", ""),
+                    "type": getattr(tool_call, "type", "function"),
+                    "function": {
+                        "name": getattr(function, "name", ""),
+                        "arguments": getattr(function, "arguments", "{}") or "{}",
+                    },
+                }
+            )
+        return {
+            "role": "assistant",
+            "content": self._coerce_message_text(getattr(message, "content", None)),
+            "tool_calls": tool_calls_payload,
+        }
+
+    def _derive_randomization_strategy(
+        self,
+        *,
+        task_prompt: str,
+        artifacts: dict[str, Any],
+        reasoning: str,
+    ) -> dict[str, Any]:
+        objectives_raw = artifacts.get("objectives.yaml", "")
+        objectives_data = {}
+        with suppress(Exception):
+            parsed = yaml.safe_load(objectives_raw)
+            if isinstance(parsed, dict):
+                objectives_data = parsed
+
+        plan_markdown = str(artifacts.get("plan.md", "") or "")
+        learning_objective = _extract_markdown_section(
+            plan_markdown, "## 1. Learning Objective"
+        )
+        static_geometry = _extract_markdown_section(
+            plan_markdown, "## 2. Static Geometry"
+        )
+        randomization = _extract_markdown_section(plan_markdown, "## 6. Randomization")
+
+        theme = (
+            (learning_objective.splitlines()[0].strip() if learning_objective else "")
+            or task_prompt.strip()
+            or "Benchmark planning task"
+        )
+
+        environment_perturbations: dict[str, Any] = {}
+        if randomization:
+            environment_perturbations["randomization_plan"] = randomization
+        if static_geometry:
+            environment_perturbations["static_geometry"] = static_geometry
+
+        moved_object = objectives_data.get("moved_object")
+        target_object_properties = (
+            moved_object if isinstance(moved_object, dict) else {}
+        )
+
+        return RandomizationStrategy(
+            theme=theme[:200],
+            target_object_properties=target_object_properties,
+            environment_perturbations=environment_perturbations,
+            difficulty_score=0.5,
+            reasoning=reasoning.strip() or None,
+        ).model_dump(mode="json")
+
+    async def _normalize_objectives_yaml_artifact(self) -> bool:
+        if not await self.ctx.fs.exists(OBJECTIVES_FILE):
+            return False
+
+        raw_content = await self.ctx.fs.read_file(OBJECTIVES_FILE)
+        if not raw_content.strip():
+            return False
+
+        data = yaml.safe_load(raw_content)
+        if not isinstance(data, dict):
+            return False
+
+        assembly_totals = data.get("assembly_totals")
+        if not isinstance(assembly_totals, dict):
+            return False
+
+        normalized_totals: dict[str, float] = {}
+        removed_keys: list[str] = []
+        changed = False
+
+        for key, value in assembly_totals.items():
+            if isinstance(value, bool):
+                removed_keys.append(key)
+                changed = True
+                continue
+            if isinstance(value, (int, float)):
+                normalized_totals[key] = float(value)
+                continue
+            if isinstance(value, str):
+                with suppress(ValueError):
+                    normalized_totals[key] = float(value)
+                    changed = True
+                    continue
+            removed_keys.append(key)
+            changed = True
+
+        if not changed and normalized_totals == assembly_totals:
+            return False
+
+        if normalized_totals:
+            data["assembly_totals"] = normalized_totals
+        else:
+            data.pop("assembly_totals", None)
+
+        await self.ctx.fs.write_file(
+            OBJECTIVES_FILE,
+            yaml.safe_dump(data, sort_keys=False),
+            overwrite=True,
+        )
+        logger.info(
+            "benchmark_planner_normalized_objectives_yaml",
+            session_id=self.ctx.session_id,
+            removed_keys=removed_keys,
+            kept_keys=sorted(normalized_totals.keys()),
+        )
+        return True
+
+    async def _run_native_planner(
+        self,
+        *,
+        state: BenchmarkGeneratorState,
+        inputs: dict[str, Any],
+    ) -> tuple[NativePlannerPrediction | None, dict[str, Any], str]:
+        from worker_heavy.utils.file_validation import validate_node_output
+
+        max_retries = max(1, int(settings.dspy_program_max_retries))
+        validate_files = ["plan.md", "todo.md", "objectives.yaml"]
+        episode_id = getattr(state, "episode_id", None) or self.ctx.episode_id
+        db_callback = None
+        if episode_id and str(episode_id).strip():
+            db_callback = self.ctx.get_database_recorder(str(episode_id))
+
+        tool_fns = self._get_tool_functions(
+            get_benchmark_planner_tools,
+            db_callback=db_callback,
+            node_name=AgentName.BENCHMARK_PLANNER,
+        )
+        tool_schemas = self._build_native_tool_schemas(tool_fns)
+        journal_entry = ""
+        artifacts: dict[str, Any] = {}
+
+        for retry_count in range(max_retries):
+            try:
+                trace_watermark = (
+                    await self._get_latest_trace_id(db_callback) if db_callback else 0
+                )
+                if db_callback:
+                    await db_callback.record_node_start(
+                        AgentName.BENCHMARK_PLANNER,
+                        input_data=str(inputs.get("prompt", "")),
+                    )
+
+                reasoning_chunks: list[str] = []
+                messages = self._build_native_planner_messages(inputs)
+                litellm_model, api_key, api_base = self._resolve_native_litellm_model()
+                if not api_key:
+                    raise RuntimeError("Missing API key for native benchmark planner")
+
+                submitted = False
+                for step_idx in range(settings.react_planner_max_iters):
+                    response = await asyncio.to_thread(
+                        completion,
+                        model=litellm_model,
+                        api_key=api_key,
+                        api_base=api_base,
+                        timeout=settings.llm_timeout_seconds,
+                        max_tokens=min(settings.llm_max_tokens, 2048),
+                        messages=messages,
+                        tools=tool_schemas,
+                        tool_choice="auto",
+                    )
+                    message = response.choices[0].message
+                    assistant_text = self._coerce_message_text(
+                        getattr(message, "content", None)
+                    )
+                    if assistant_text:
+                        reasoning_chunks.append(assistant_text)
+                        if db_callback:
+                            await db_callback.record_reasoning_text(
+                                node_name=str(AgentName.BENCHMARK_PLANNER),
+                                reasoning_text=assistant_text,
+                                step_index=step_idx,
+                                source="native_tool_loop",
+                            )
+
+                    tool_calls = getattr(message, "tool_calls", None) or []
+                    if not tool_calls:
+                        raise ValueError(
+                            "Native benchmark planner returned no tool calls before submit_plan."
+                        )
+
+                    messages.append(self._assistant_message_with_tool_calls(message))
+
+                    for tool_call in tool_calls:
+                        function = getattr(tool_call, "function", None)
+                        tool_name = getattr(function, "name", None)
+                        if not tool_name or tool_name not in tool_fns:
+                            raise ValueError(
+                                f"Native benchmark planner requested unknown tool: {tool_name}"
+                            )
+
+                        raw_arguments = getattr(function, "arguments", "{}") or "{}"
+                        arguments = json.loads(raw_arguments)
+                        if not isinstance(arguments, dict):
+                            raise ValueError(
+                                f"Tool arguments for {tool_name} must be a JSON object."
+                            )
+
+                        if tool_name == "submit_plan":
+                            await self._normalize_objectives_yaml_artifact()
+                        result = await asyncio.to_thread(
+                            tool_fns[tool_name], **arguments
+                        )
+                        result_text = self._serialize_tool_observation(result)
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": getattr(tool_call, "id", ""),
+                                "name": tool_name,
+                                "content": result_text,
+                            }
+                        )
+
+                        if tool_name == "submit_plan":
+                            submission = result
+                            if isinstance(submission, str):
+                                with suppress(Exception):
+                                    submission = json.loads(submission)
+                            if (
+                                isinstance(submission, dict)
+                                and submission.get("ok") is True
+                                and submission.get("status") == "submitted"
+                            ):
+                                submitted = True
+
+                    if submitted:
+                        break
+
+                if not submitted:
+                    raise ValueError(
+                        "Native benchmark planner exhausted tool loop without successful submit_plan()."
+                    )
+
+                await self._normalize_objectives_yaml_artifact()
+                results = await asyncio.gather(
+                    *[self.ctx.fs.read_file(f) for f in validate_files],
+                    return_exceptions=True,
+                )
+                artifacts = {
+                    f: res
+                    for f, res in zip(validate_files, results, strict=False)
+                    if not isinstance(res, Exception)
+                }
+
+                is_valid, validation_errors = validate_node_output(
+                    AgentName.BENCHMARK_PLANNER, artifacts
+                )
+                if not is_valid:
+                    raise ValueError(
+                        "benchmark_planner validation failed: "
+                        + "; ".join(validation_errors)
+                    )
+
+                if settings.require_reasoning_traces and db_callback:
+                    reasoning_count = await self._count_reasoning_traces_since(
+                        db_callback,
+                        node_type=AgentName.BENCHMARK_PLANNER,
+                        min_trace_id=trace_watermark,
+                    )
+                    if reasoning_count == 0:
+                        raise ValueError(
+                            "benchmark_planner produced no reasoning traces in native tool loop."
+                        )
+
+                prediction = NativePlannerPrediction(
+                    reasoning="\n".join(chunk for chunk in reasoning_chunks if chunk),
+                    plan=self._derive_randomization_strategy(
+                        task_prompt=str(inputs.get("prompt", "")),
+                        artifacts=artifacts,
+                        reasoning="\n".join(
+                            chunk for chunk in reasoning_chunks if chunk
+                        ),
+                    ),
+                )
+
+                if db_callback:
+                    await db_callback.record_node_end(
+                        AgentName.BENCHMARK_PLANNER,
+                        output_data=str(prediction),
+                        output_obj=prediction,
+                    )
+                return prediction, artifacts, journal_entry
+            except Exception as err:
+                logger.error(
+                    "benchmark_planner_native_failed",
+                    session_id=self.ctx.session_id,
+                    error=str(err),
+                    retry_count=retry_count + 1,
+                    max_retries=max_retries,
+                )
+                journal_entry += f"\n[System Error] {err}"
+                if retry_count + 1 >= max_retries:
+                    break
+                await asyncio.sleep(1)
+
+        journal_entry += "\nMax retries reached."
+        return None, artifacts, journal_entry
 
 
 @type_check
