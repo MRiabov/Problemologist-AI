@@ -1402,6 +1402,1394 @@ scenarios:
               reason: "Execution artifacts are valid and satisfy objective constraints."
               required_fixes: []
 
+  INT-034:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create deterministic planner artifacts for reviewer evidence coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-034 reviewer evidence completeness scenario.
+                ## 2. Parts List
+                - Goal-zone guide block (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Place a simple guide that moves the object into the goal zone.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $11
+                - Estimated weight: 110g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Draft planner artifacts
+                - [x] Submit planner handoff
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1200
+                  planner_target_max_unit_cost_usd: 220
+                  planner_target_max_weight_g: 650
+                totals:
+                  estimated_unit_cost_usd: 11
+                  estimated_weight_g: 110
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0, 0, 0]
+                constraints:
+                  max_unit_cost: 220.0
+                  max_weight_g: 1200.0
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-034 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics changes required; preserve planner handoff and submit."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-034 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts and reviewer evidence meet the handover contract."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Implement a minimal metadata-compliant script for reviewer evidence coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1).translate((8, 0, 0.5))
+                    part.label = "projectile_ball"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-034 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution evidence is complete and review artifacts are present."
+              required_fixes: []
+
+  INT-042:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create deterministic planner artifacts for async callback completion coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-042 async completion scenario.
+                ## 2. Parts List
+                - Goal-zone guide block (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Use a simple static part so the episode reaches completion quickly.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $9
+                - Estimated weight: 90g
+                ## 5. Risk Assessment
+                - Minimal runtime risk.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Draft planner artifacts
+                - [x] Submit planner handoff
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1200
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 550
+                totals:
+                  estimated_unit_cost_usd: 9
+                  estimated_weight_g: 90
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone:
+                    min: [6, -2, 0]
+                    max: [10, 2, 4]
+                  build_zone:
+                    min: [-10, -10, -10]
+                    max: [10, 10, 10]
+                simulation_bounds:
+                  min: [-30, -30, -30]
+                  max: [30, 30, 30]
+                moved_object:
+                  label: "projectile_ball"
+                  shape: "sphere"
+                  start_position: [0, 0, 0]
+                  runtime_jitter: [0, 0, 0]
+                constraints:
+                  max_unit_cost: 180.0
+                  max_weight_g: 1200.0
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-042 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics changes required; submit planning handoff."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-042 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts satisfy the async callback completion scenario."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Implement a minimal script that yields a fast successful run."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1).translate((8, 0, 0.5))
+                    part.label = "projectile_ball"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-042 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution artifacts are complete and async terminalization can finish."
+              required_fixes: []
+
+  INT-003:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create deterministic planner artifacts for concurrent session isolation."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-003 session isolation scenario.
+                ## 2. Parts List
+                - Isolated cube (manufactured, abs)
+                ## 3. Assembly Strategy
+                1. Build a simple isolated part.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $8
+                - Estimated weight: 80g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build isolated part
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 80
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-003 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-003 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for isolation coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple isolated script."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "isolated_cube"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-003 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed cleanly for isolation coverage."
+              required_fixes: []
+
+  INT-035:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for invalid-material graceful handling."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-035 material enforcement scenario.
+                ## 2. Parts List
+                - Material test block
+                ## 3. Assembly Strategy
+                1. Build a single block and preserve workbench outputs.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $9
+                - Estimated weight: 90g
+                ## 5. Risk Assessment
+                - Material mismatch should not crash the run.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build material test block
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 9
+                  estimated_weight_g: 90
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-035 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-035 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for material enforcement coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple material test script."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "material_test_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-035 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed without crashing despite material constraints."
+              required_fixes: []
+
+  INT-036:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for workbench and manufacturing coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-036 manufacturing workbench scenario.
+                ## 2. Parts List
+                - CNC-compatible test block
+                ## 3. Assembly Strategy
+                1. Build a single manufacturable part.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $12
+                - Estimated weight: 120g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build manufacturing test part
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 220
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 12
+                  estimated_weight_g: 120
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 220, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-036 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-036 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for manufacturing coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple manufacturing test script."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "manufacturing_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-036 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Workbench-related execution completed successfully."
+              required_fixes: []
+
+  INT-037:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for MJCF mapping coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-037 MJCF mapping scenario.
+                ## 2. Parts List
+                - Door panel
+                - Door frame
+                ## 3. Assembly Strategy
+                1. Build a simple door assembly placeholder.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $14
+                - Estimated weight: 140g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build door assembly placeholder
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 220
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 14
+                  estimated_weight_g: 140
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 220, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-037 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-037 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for MJCF coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple script and MJCF artifact placeholder."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    panel = Box(1, 1, 0.2)
+                    panel.label = "door_panel"
+                    panel.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return panel
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "renders/scene.xml"
+              content: |
+                <mujoco>
+                  <worldbody></worldbody>
+                </mujoco>
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-037 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed with MJCF artifact placeholder."
+              required_fixes: []
+
+  INT-039:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for render discoverability coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-039 render artifact scenario.
+                ## 2. Parts List
+                - Renderable cube
+                ## 3. Assembly Strategy
+                1. Build a simple cube and emit preview artifacts.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build renderable cube
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 200
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-039 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-039 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for render coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit script plus discoverable render artifacts."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "render_cube"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "renders/preview.png"
+              content: "placeholder render"
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "renders/scene.xml"
+              content: |
+                <mujoco>
+                  <worldbody></worldbody>
+                </mujoco>
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-039 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed with discoverable render artifacts."
+              required_fixes: []
+
+  INT-040:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for asset persistence linkage coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-040 asset persistence scenario.
+                ## 2. Parts List
+                - Linkage test part
+                ## 3. Assembly Strategy
+                1. Build a simple part and emit scene artifacts.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $10
+                - Estimated weight: 100g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build linkage test part
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 200
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 10
+                  estimated_weight_g: 100
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-040 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-040 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for asset persistence coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit script and persistent scene assets."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "linkage_test"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "renders/preview.png"
+              content: "placeholder render"
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "renders/scene.xml"
+              content: |
+                <mujoco>
+                  <worldbody></worldbody>
+                </mujoco>
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-040 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed with scene and render assets linked."
+              required_fixes: []
+
+  INT-045:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for skills sync lifecycle coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-045 skills sync scenario.
+                ## 2. Parts List
+                - Skill-aware test block
+                ## 3. Assembly Strategy
+                1. Build a simple part after skills are synchronized.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $8
+                - Estimated weight: 80g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build skill-aware test block
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 80
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-045 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-045 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for skill sync coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple script after skill sync."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "skill_sync_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-045 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed after skill sync initialization."
+              required_fixes: []
+
+  INT-058:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for cross-system correlation coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-058 correlation scenario.
+                ## 2. Parts List
+                - Correlation test block
+                ## 3. Assembly Strategy
+                1. Build a simple part and emit traces.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $8
+                - Estimated weight: 80g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build correlation test block
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 80
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-058 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-058 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for correlation coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple script that produces consistent traces."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "correlation_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-058 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed with correlated traces."
+              required_fixes: []
+
+  INT-059:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for Langfuse linkage coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-059 Langfuse trace linkage scenario.
+                ## 2. Parts List
+                - Trace linkage test block
+                ## 3. Assembly Strategy
+                1. Build a simple part and emit traces.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $8
+                - Estimated weight: 80g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build trace linkage test block
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 80
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-059 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-059 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for Langfuse linkage coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple script that produces linked traces."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "trace_linkage_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-059 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed with linked Langfuse trace IDs."
+              required_fixes: []
+
+  INT-060:
+    transcript:
+      - node: engineer_planner
+        steps:
+          - thought: "Create planner artifacts for feedback contract coverage."
+            tool_name: "write_file"
+            tool_args:
+              path: "plan.md"
+              content: |
+                ## 1. Solution Overview
+                INT-060 feedback contract scenario.
+                ## 2. Parts List
+                - Feedback test block
+                ## 3. Assembly Strategy
+                1. Build a simple part and emit traces.
+                ## 4. Cost & Weight Budget
+                - Estimated unit cost: $8
+                - Estimated weight: 80g
+                ## 5. Risk Assessment
+                - Low complexity.
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "todo.md"
+              content: |
+                - [x] Build feedback test block
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "assembly_definition.yaml"
+              content: |
+                version: '1.0'
+                constraints:
+                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_weight_g: 1000
+                  planner_target_max_unit_cost_usd: 180
+                  planner_target_max_weight_g: 500
+                totals:
+                  estimated_unit_cost_usd: 8
+                  estimated_weight_g: 80
+                  estimate_confidence: high
+                manufactured_parts: []
+                cots_parts: []
+                final_assembly: []
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "write_file"
+            tool_args:
+              path: "objectives.yaml"
+              content: |
+                objectives:
+                  goal_zone: {min: [0,0,0], max: [1,1,1]}
+                  build_zone: {min: [-10,-10,-10], max: [10,10,10]}
+                simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
+                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+              overwrite: true
+            expected_observation: "success"
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-060 planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-060 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are valid for feedback contract coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - thought: "Emit a simple script that produces feedback-addressable traces."
+            tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "feedback_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-060 coder output generated."
+            thought: "Implementation complete."
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution completed with feedback-addressable traces."
+              required_fixes: []
+
   INT-027:
     transcript:
       - node: engineer_planner
