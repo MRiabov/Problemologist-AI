@@ -67,7 +67,7 @@ This is mostly for integration tests where such bypass is convenient (for system
 
 ## Tool definitions
 
-- `execute_command` Execute raw Python code in the session runtime and return stdout/stderr/exit status.
+- `execute_command` Execute a terminal shell command in the session workspace and return stdout/stderr/exit status.
 - `list_files` Structured listing with file metadata.
 - `read_file` Read UTF-8 text file content.
 - `write_file` Create or overwrite a file.
@@ -82,7 +82,15 @@ This is mostly for integration tests where such bypass is convenient (for system
 
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 
-`execute_command` is a runtime Python executor, not a shell wrapper. Agent prompts/examples must pass Python source directly and must not wrap it in `python -c ...`, `python script.py`, or similar shell syntax.
+`execute_command` is a shell-command tool. The agent contract is terminal execution from the session workspace root, not a raw-Python special case.
+
+Rules:
+
+1. The command string is interpreted as a shell command, exactly as an agent would type it in a terminal.
+2. Workspace-relative paths such as `script.py`, `plan.md`, and `renders/` remain the canonical path contract inside that shell session.
+3. Shell usage such as `python -c ...`, `python script.py`, `bash -lc ...`, `uv run ...`, `ls`, `cat`, and similar terminal invocations is valid if it stays within filesystem policy.
+4. Any implementation that accepts only raw Python source for `execute_command(...)` is a runtime bug or temporary drift, not the intended architecture contract.
+5. If we want a raw-Python helper in the future, it should be a separate tool with a separate name and spec, not an overload of `execute_command(...)`.
 
 `read_file` is a text-only contract. It must not be overloaded to return image bytes, base64 blobs, or multimodal payloads for binary assets. Agents must use `inspect_media(...)` for visual evidence. If a binary/media path is passed to `read_file`, runtime should fail closed with a deterministic error telling the agent to use `inspect_media(...)` instead.
 

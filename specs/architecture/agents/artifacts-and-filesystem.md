@@ -81,6 +81,8 @@ print(resp.choices[0].message.reasoning_content)
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
 
+`execute_command(...)` follows that same terminal model: it is intended to run shell commands from the session workspace root. If any current implementation path treats it as a raw-Python-only executor, that is implementation drift rather than the architecture contract.
+
 ## Templates
 
 Each agent starts with a template, roughly defined in [Starting folder structure for various agents](#starting-folder-structure-for-various-agents).  It is predefined for each agent and we will test it.

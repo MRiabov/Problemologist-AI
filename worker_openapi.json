@@ -1021,7 +1021,7 @@
           "worker-light"
         ],
         "summary": "Execute Code",
-        "description": "Execute Python code in session-isolated environment.",
+        "description": "Execute a shell command in the session-isolated environment.",
         "operationId": "execute_code_runtime_execute_post",
         "parameters": [
           {
@@ -1834,7 +1834,7 @@
           "code"
         ],
         "title": "ExecuteRequest",
-        "description": "Request to execute Python code."
+        "description": "Request to execute a shell command in the session workspace."
       },
       "ExecuteResponse": {
         "properties": {
@@ -1870,7 +1870,7 @@
           "exit_code"
         ],
         "title": "ExecuteResponse",
-        "description": "Response from executing Python code."
+        "description": "Response from executing a shell command."
       },
       "ExistsResponse": {
         "properties": {
