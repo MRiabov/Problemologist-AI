@@ -66,6 +66,8 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
 
     # Agent override over defaults (defaults deny all writes, coder allows script.py)
     assert await coder_fs.write_file("script.py", "print('ok')")
+    assert await coder_fs.write_file("/validate_benchmark.py", "print('ok')")
+    assert await coder_fs.write_file("/workspace/compat_alias.py", "print('ok')")
 
     # Deny > allow precedence for coder (**/*.py allowed, reviews/** denied)
     with pytest.raises(PermissionError):
@@ -108,6 +110,11 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     listed_paths = {entry.path for entry in await coder_fs.list_files("/")}
     assert "/plan.md" in listed_paths
     assert "/unmatched.txt" not in listed_paths
+
+    workspace_alias_paths = {
+        entry.path for entry in await coder_fs.list_files("/workspace")
+    }
+    assert "/plan.md" in workspace_alias_paths
 
     grep_matches = await coder_fs.grep("hidden", path="/")
     assert all(match.path != "/unmatched.txt" for match in grep_matches)

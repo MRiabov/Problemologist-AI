@@ -6,13 +6,15 @@ import httpx
 import pytest
 import yaml
 
+from controller.api.request_models import AgentRunRequest
 from controller.api.schemas import (
     AgentRunResponse,
+    BenchmarkGenerateRequest,
+    BenchmarkGenerateResponse,
     EpisodeResponse,
     OpenAPISchema,
     StandardResponse,
 )
-from controller.api.tasks import AgentRunRequest
 from shared.enums import EpisodeStatus
 from shared.models.schemas import (
     BoundingBox,
@@ -331,3 +333,59 @@ async def test_int_030_interrupt_propagation():
             EpisodeStatus.CANCELLED,
             EpisodeStatus.FAILED,
         ], f"Expected cancelled or failed, got {status}"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_030_benchmark_interrupt_propagation():
+    """INT-030 benchmark variant: Verify user interrupt cancels benchmark jobs."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        request = BenchmarkGenerateRequest(
+            prompt=f"INT-030 benchmark interrupt path {uuid.uuid4()}",
+        )
+        resp = await client.post(
+            f"{CONTROLLER_URL}/benchmark/generate",
+            json=request.model_dump(mode="json"),
+        )
+        assert resp.status_code in [200, 202], resp.text
+        run_data = BenchmarkGenerateResponse.model_validate(resp.json())
+        episode_id = run_data.episode_id
+
+        saw_running = False
+        for _ in range(40):
+            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{episode_id}")
+            if status_resp.status_code == 200:
+                ep_data = EpisodeResponse.model_validate(status_resp.json())
+                if ep_data.status == EpisodeStatus.RUNNING:
+                    saw_running = True
+                    break
+                if ep_data.status in [
+                    EpisodeStatus.PLANNED,
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                ]:
+                    break
+            await asyncio.sleep(0.25)
+
+        assert saw_running, "Benchmark run never entered RUNNING before interrupt"
+
+        interrupt_resp = await client.post(
+            f"{CONTROLLER_URL}/episodes/{episode_id}/interrupt"
+        )
+        assert interrupt_resp.status_code in [200, 202]
+        StandardResponse.model_validate(interrupt_resp.json())
+
+        final_status = None
+        for _ in range(40):
+            await asyncio.sleep(0.5)
+            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{episode_id}")
+            assert status_resp.status_code == 200
+            ep_data = EpisodeResponse.model_validate(status_resp.json())
+            final_status = ep_data.status
+            if final_status in [EpisodeStatus.CANCELLED, EpisodeStatus.FAILED]:
+                break
+
+        assert final_status == EpisodeStatus.CANCELLED, (
+            f"Expected benchmark interrupt to cancel run, got {final_status}"
+        )
