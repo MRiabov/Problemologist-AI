@@ -303,7 +303,7 @@ class RemoteFilesystemMiddleware:
 
     async def run_command(self, code: str, timeout: int = 30) -> ExecuteResponse:
         """
-        Execute a command (Python code) via the Worker client,
+        Execute raw Python code via the Worker client,
         wrapped in Temporal for durability.
         """
         await record_events(

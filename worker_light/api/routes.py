@@ -463,9 +463,14 @@ async def execute_code(
         timeout_seconds=request.timeout,
         working_directory=str(session_dir),
     )
+    from worker_light.config import settings
+
     result = await run_python_code_async(
         code=request.code,
-        env={"SESSION_ID": x_session_id},
+        env={
+            "SESSION_ID": x_session_id,
+            "WORKER_HEAVY_URL": settings.worker_heavy_url,
+        },
         config=config,
         session_id=x_session_id,
     )

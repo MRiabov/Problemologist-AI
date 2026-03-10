@@ -54,7 +54,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         return await fs.grep(pattern, path, glob)
 
     async def execute_command(command: str):
-        """Execute a shell command in the workspace."""
+        """Execute raw Python code in the workspace runtime."""
         # Record the command execution event
         await record_worker_events(
             episode_id=session_id,

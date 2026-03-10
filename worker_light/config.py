@@ -19,6 +19,9 @@ class WorkerSettings(BaseSettings):
     git_pat: str | None = Field(default=None, alias="GIT_PAT")
 
     sessions_dir: str | None = Field(default=None, alias="WORKER_SESSIONS_DIR")
+    worker_heavy_url: str = Field(
+        default="http://127.0.0.1:18002", alias="WORKER_HEAVY_URL"
+    )
 
     @property
     def skills_dir(self) -> Path:
