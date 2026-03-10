@@ -417,6 +417,29 @@ async def _fetch_episode(client: httpx.AsyncClient, episode_id: str) -> dict[str
     return response.json()
 
 
+async def _request_episode_interrupt(
+    episode_id: str,
+    *,
+    log,
+) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{CONTROLLER_URL}/episodes/{episode_id}/interrupt"
+            )
+        if resp.status_code in {200, 202}:
+            log.warning("eval_interrupt_requested", episode_id=episode_id)
+            return
+        log.warning(
+            "eval_interrupt_request_failed",
+            episode_id=episode_id,
+            status_code=resp.status_code,
+            response_text=resp.text,
+        )
+    except Exception:
+        log.exception("eval_interrupt_request_exception", episode_id=episode_id)
+
+
 def _trace_names_lower(episode: dict[str, Any]) -> set[str]:
     traces = episode.get("traces") or []
     names = set()
@@ -512,63 +535,65 @@ async def run_single_eval(
 
     success = False
     session_id = ""
+    episode_id = ""
 
     async with httpx.AsyncClient(timeout=60.0) as client:
-        if spec.mode == EvalMode.BENCHMARK:
-            benchmark_session_id = uuid.uuid4()
-            session_id = str(benchmark_session_id)
-            await _seed_eval_workspace(
-                item=item,
-                session_id=session_id,
-                agent_name=agent_name,
-            )
-            await _preflight_seeded_entry_contract(
-                item=item,
-                session_id=session_id,
-                agent_name=agent_name,
-                spec=spec,
-            )
-            url = f"{CONTROLLER_URL}/benchmark/generate"
-            payload = {
-                "prompt": task_description,
-                "session_id": session_id,
-                "start_node": spec.start_node,
-                "seed_id": lineage.seed_id,
-                "seed_dataset": lineage.seed_dataset,
-                "generation_kind": lineage.generation_kind,
-            }
-            status_url_template = f"{CONTROLLER_URL}/benchmark/{{session_id}}"
-            episode_id_key = "episode_id"
-            session_id_key = "session_id"
-        else:
-            if agent_name == AgentName.ELECTRONICS_ENGINEER:
-                session_id = f"EVAL-EE-{uuid.uuid4().hex[:8]}"
-            else:
-                session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
-
-            await _seed_eval_workspace(
-                item=item,
-                session_id=session_id,
-                agent_name=agent_name,
-            )
-            await _preflight_seeded_entry_contract(
-                item=item,
-                session_id=session_id,
-                agent_name=agent_name,
-                spec=spec,
-            )
-
-            # Force electronics-engineer path to execute in integration-mode runs by
-            # seeding explicit electronics requirements in objectives.yaml.
-            if (
-                agent_name == AgentName.ELECTRONICS_ENGINEER
-                and item.seed_artifact_dir is None
-                and not item.seed_files
-            ):
-                worker_for_seed = WorkerClient(
-                    base_url=WORKER_LIGHT_URL, session_id=session_id
+        try:
+            if spec.mode == EvalMode.BENCHMARK:
+                benchmark_session_id = uuid.uuid4()
+                session_id = str(benchmark_session_id)
+                await _seed_eval_workspace(
+                    item=item,
+                    session_id=session_id,
+                    agent_name=agent_name,
                 )
-                seeded_objectives = """objectives:
+                await _preflight_seeded_entry_contract(
+                    item=item,
+                    session_id=session_id,
+                    agent_name=agent_name,
+                    spec=spec,
+                )
+                url = f"{CONTROLLER_URL}/benchmark/generate"
+                payload = {
+                    "prompt": task_description,
+                    "session_id": session_id,
+                    "start_node": spec.start_node,
+                    "seed_id": lineage.seed_id,
+                    "seed_dataset": lineage.seed_dataset,
+                    "generation_kind": lineage.generation_kind,
+                }
+                status_url_template = f"{CONTROLLER_URL}/benchmark/{{session_id}}"
+                episode_id_key = "episode_id"
+                session_id_key = "session_id"
+            else:
+                if agent_name == AgentName.ELECTRONICS_ENGINEER:
+                    session_id = f"EVAL-EE-{uuid.uuid4().hex[:8]}"
+                else:
+                    session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
+
+                await _seed_eval_workspace(
+                    item=item,
+                    session_id=session_id,
+                    agent_name=agent_name,
+                )
+                await _preflight_seeded_entry_contract(
+                    item=item,
+                    session_id=session_id,
+                    agent_name=agent_name,
+                    spec=spec,
+                )
+
+                # Force electronics-engineer path to execute in integration-mode runs by
+                # seeding explicit electronics requirements in objectives.yaml.
+                if (
+                    agent_name == AgentName.ELECTRONICS_ENGINEER
+                    and item.seed_artifact_dir is None
+                    and not item.seed_files
+                ):
+                    worker_for_seed = WorkerClient(
+                        base_url=WORKER_LIGHT_URL, session_id=session_id
+                    )
+                    seeded_objectives = """objectives:
   goal_zone:
     min: [0, 0, 0]
     max: [10, 10, 10]
@@ -589,22 +614,21 @@ constraints:
 electronics_requirements:
   power_supply_available: true
 """
-                await worker_for_seed.write_file(
-                    "objectives.yaml", seeded_objectives, overwrite=True
-                )
+                    await worker_for_seed.write_file(
+                        "objectives.yaml", seeded_objectives, overwrite=True
+                    )
 
-            url = f"{CONTROLLER_URL}/agent/run"
-            payload = {
-                "task": task_description,
-                "agent_name": spec.request_agent_name or agent_name,
-                "session_id": session_id,
-                "metadata_vars": lineage.model_dump(exclude_none=True),
-            }
-            status_url_template = f"{CONTROLLER_URL}/episodes/{{episode_id}}"
-            episode_id_key = "episode_id"
-            session_id_key = "session_id"
+                url = f"{CONTROLLER_URL}/agent/run"
+                payload = {
+                    "task": task_description,
+                    "agent_name": spec.request_agent_name or agent_name,
+                    "session_id": session_id,
+                    "metadata_vars": lineage.model_dump(exclude_none=True),
+                }
+                status_url_template = f"{CONTROLLER_URL}/episodes/{{episode_id}}"
+                episode_id_key = "episode_id"
+                session_id_key = "session_id"
 
-        try:
             resp = await client.post(url, json=payload)
             if resp.status_code >= 400:
                 log.error(
@@ -616,57 +640,83 @@ electronics_requirements:
                 stats[agent_name]["total"] += 1
                 return
             data = resp.json()
-            episode_id = str(data.get(episode_id_key) or data.get("episode_id"))
+            episode_id = str(data.get(episode_id_key) or data.get("episode_id") or "")
             session_id = str(
                 data.get(session_id_key) or data.get("session_id") or episode_id
             )
-        except Exception:
-            log.exception("controller_request_failed")
-            stats[agent_name]["total"] += 1
-            return
 
-        status_url = status_url_template.format(
-            session_id=session_id, episode_id=episode_id
-        )
-        max_attempts = 120
-        attempt = 0
-        seen_trace_ids = set()
+            status_url = status_url_template.format(
+                session_id=session_id, episode_id=episode_id
+            )
+            max_attempts = 120
+            attempt = 0
+            seen_trace_ids = set()
 
-        while attempt < max_attempts:
-            await asyncio.sleep(5)
-            attempt += 1
+            while attempt < max_attempts:
+                await asyncio.sleep(5)
+                attempt += 1
 
-            try:
-                status_resp = await client.get(status_url)
-                if status_resp.status_code == 200:
-                    status_data = status_resp.json()
-                    status = status_data.get("status")
+                try:
+                    status_resp = await client.get(status_url)
+                    if status_resp.status_code == 200:
+                        status_data = status_resp.json()
+                        status = status_data.get("status")
 
-                    traces = status_data.get("traces", [])
-                    for trace in sorted(traces, key=lambda t: t.get("id", 0)):
-                        trace_id = trace.get("id")
-                        if trace_id not in seen_trace_ids:
-                            # Restate traces at DEBUG level so they go to the log file.
-                            # They will also appear on console if --log-level DEBUG is used.
-                            log.debug(
-                                "trace_log",
-                                trace_id=trace_id,
-                                content=trace.get("content"),
-                            )
-                            # If verbose is set, log at INFO so they show up on console regardless of log level.
-                            if verbose:
-                                log.info(
+                        traces = status_data.get("traces", [])
+                        for trace in sorted(traces, key=lambda t: t.get("id", 0)):
+                            trace_id = trace.get("id")
+                            if trace_id not in seen_trace_ids:
+                                # Restate traces at DEBUG level so they go to the log file.
+                                # They will also appear on console if --log-level DEBUG is used.
+                                log.debug(
                                     "trace_log",
                                     trace_id=trace_id,
                                     content=trace.get("content"),
                                 )
-                            seen_trace_ids.add(trace_id)
+                                # If verbose is set, log at INFO so they show up on console regardless of log level.
+                                if verbose:
+                                    log.info(
+                                        "trace_log",
+                                        trace_id=trace_id,
+                                        content=trace.get("content"),
+                                    )
+                                seen_trace_ids.add(trace_id)
 
-                    if (
-                        status == EpisodeStatus.PLANNED
-                        and spec.mode == EvalMode.BENCHMARK
-                    ):
-                        if agent_name == AgentName.BENCHMARK_PLANNER:
+                        if (
+                            status == EpisodeStatus.PLANNED
+                            and spec.mode == EvalMode.BENCHMARK
+                        ):
+                            if agent_name == AgentName.BENCHMARK_PLANNER:
+                                episode = await _fetch_episode(client, episode_id)
+                                missing_traces = _missing_required_traces(
+                                    spec.required_trace_names, episode
+                                )
+                                if missing_traces:
+                                    log.error(
+                                        "eval_failed_missing_traces",
+                                        missing_traces=missing_traces,
+                                        session_id=session_id,
+                                    )
+                                else:
+                                    log.info("eval_planned")
+                                    success = True
+                                break
+
+                            log.info("eval_planned_confirming")
+                            confirm_url = (
+                                f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
+                            )
+                            confirm_resp = await client.post(confirm_url, json={})
+                            if confirm_resp.status_code >= 400:
+                                log.error(
+                                    "benchmark_confirm_failed",
+                                    status_code=confirm_resp.status_code,
+                                    response_text=confirm_resp.text,
+                                    session_id=session_id,
+                                )
+                                break
+
+                        if status == EpisodeStatus.COMPLETED:
                             episode = await _fetch_episode(client, episode_id)
                             missing_traces = _missing_required_traces(
                                 spec.required_trace_names, episode
@@ -678,68 +728,60 @@ electronics_requirements:
                                     session_id=session_id,
                                 )
                             else:
-                                log.info("eval_planned")
+                                log.info("eval_completed")
                                 success = True
                             break
 
-                        log.info("eval_planned_confirming")
-                        confirm_url = f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
-                        confirm_resp = await client.post(confirm_url, json={})
-                        if confirm_resp.status_code >= 400:
-                            log.error(
-                                "benchmark_confirm_failed",
-                                status_code=confirm_resp.status_code,
-                                response_text=confirm_resp.text,
-                                session_id=session_id,
-                            )
+                        if status == EpisodeStatus.FAILED:
+                            log.error("eval_failed", session_id=session_id)
                             break
 
-                    if status == EpisodeStatus.COMPLETED:
-                        episode = await _fetch_episode(client, episode_id)
-                        missing_traces = _missing_required_traces(
-                            spec.required_trace_names, episode
-                        )
-                        if missing_traces:
-                            log.error(
-                                "eval_failed_missing_traces",
-                                missing_traces=missing_traces,
-                                session_id=session_id,
+                        if status == EpisodeStatus.CANCELLED:
+                            log.warning("eval_cancelled")
+                            break
+
+                        if attempt % 6 == 0:
+                            log.info(
+                                "eval_still_running", status=status, attempt=attempt
                             )
-                        else:
-                            log.info("eval_completed")
-                            success = True
-                        break
+                    else:
+                        log.warning(
+                            "eval_status_check_failed",
+                            status_code=status_resp.status_code,
+                        )
+                except Exception:
+                    log.exception("eval_status_check_exception")
 
-                    if status == EpisodeStatus.FAILED:
-                        log.error("eval_failed", session_id=session_id)
-                        break
+            if attempt >= max_attempts:
+                log.warning("eval_timeout", max_attempts=max_attempts)
 
-                    if status == EpisodeStatus.CANCELLED:
-                        log.warning("eval_cancelled")
-                        break
+            agent_stats = stats[agent_name]
+            agent_stats["total"] += 1
+            if success:
+                agent_stats["success"] += 1
 
-                    if attempt % 6 == 0:
-                        log.info("eval_still_running", status=status, attempt=attempt)
-                else:
-                    log.warning(
-                        "eval_status_check_failed",
-                        status_code=status_resp.status_code,
+                worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+                handler = METRIC_HANDLERS.get(agent_name)
+                if handler:
+                    await handler(worker, session_id, agent_stats)
+        except asyncio.CancelledError:
+            log.warning(
+                "eval_run_interrupted",
+                session_id=session_id or None,
+                episode_id=episode_id or None,
+            )
+            if episode_id:
+                await asyncio.shield(
+                    _request_episode_interrupt(
+                        episode_id,
+                        log=log,
                     )
-            except Exception:
-                log.exception("eval_status_check_exception")
-
-        if attempt >= max_attempts:
-            log.warning("eval_timeout", max_attempts=max_attempts)
-
-        agent_stats = stats[agent_name]
-        agent_stats["total"] += 1
-        if success:
-            agent_stats["success"] += 1
-
-            worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
-            handler = METRIC_HANDLERS.get(agent_name)
-            if handler:
-                await handler(worker, session_id, agent_stats)
+                )
+            raise
+        except Exception:
+            log.exception("controller_request_failed")
+            stats[agent_name]["total"] += 1
+            return
 
 
 async def main():
@@ -1036,4 +1078,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Agent evals interrupted.")
