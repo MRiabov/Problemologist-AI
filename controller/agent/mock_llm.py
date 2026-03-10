@@ -74,7 +74,7 @@ class MockDSPyLM(dspy.LM):
     """Mock DSPy LM using YAML scenarios keyed by session_id prefixes."""
 
     node_type: AgentName | None
-    _transcript_states: dict[str, int] = {}  # session_id -> entry_idx
+    _transcript_states: dict[str, int]  # session_id -> entry_idx
 
     def __init__(
         self,
@@ -83,6 +83,7 @@ class MockDSPyLM(dspy.LM):
         **kwargs,
     ):
         super().__init__(model="mock-dspy-model", **kwargs)
+        self._transcript_states = {}  # session_id -> entry_idx
         self.session_id = session_id or "default-session"
         self.node_type = self._normalize_agent_name(node_type)
         self.provider = "openai"
@@ -666,22 +667,17 @@ class MockDSPyLM(dspy.LM):
             "next_tool_args": tool_args or {},
         }
         if legacy_next_fields:
-            if is_json:
-                # Keep going so node-specific fields (e.g. summary/review/journal)
-                # are also populated before returning JSON.
-                pass
-            else:
-                lines = []
-                for field in expected_fields:
-                    if field not in legacy_resp:
-                        continue
-                    val = legacy_resp[field]
-                    if isinstance(val, (dict, list)):
-                        val = json.dumps(val)
-                    lines.append(f"[[ ## {field} ## ]]\n{val!s}")
-                if lines:
-                    return ["\n\n".join(lines)]
-                return [json.dumps(legacy_resp)]
+            lines = []
+            for field in expected_fields:
+                if field not in legacy_resp:
+                    continue
+                val = legacy_resp[field]
+                if isinstance(val, (dict, list)):
+                    val = json.dumps(val)
+                lines.append(f"[[ ## {field} ## ]]\n{val!s}")
+            if lines:
+                return ["\n\n".join(lines)]
+            return [json.dumps(legacy_resp)]
 
         # Structured tool-turn output for thought/tool_name/tool_args predictors.
         tool_fields = any(
@@ -694,8 +690,6 @@ class MockDSPyLM(dspy.LM):
                 "tool_name": tool_name,
                 "tool_args": tool_args or {},
             }
-            if is_json:
-                return [json.dumps(tool_resp)]
             lines = []
             for field in expected_fields:
                 if field not in tool_resp:
@@ -722,11 +716,16 @@ class MockDSPyLM(dspy.LM):
             return [json.dumps(tool_turn_resp)]
 
         if is_json:
-            # WP10: Do NOT filter JSON responses. dspy adapters are very sensitive to missing fields
-            # but generally ignore extra ones. Filtering often causes AdapterParseError.
-            merged = {**resp, **legacy_resp}
-            logger.info("mock_dspy_returning_json", json=merged)
-            return [json.dumps(merged)]
+            if expected_fields:
+                # Prefer field-block output when DSPy has explicit expected fields.
+                # Raw JSON here is brittle with ChatAdapter in integration runs.
+                pass
+            else:
+                # WP10: Do NOT filter JSON responses. dspy adapters are very sensitive to missing fields
+                # but generally ignore extra ones. Filtering often causes AdapterParseError.
+                merged = {**resp, **legacy_resp}
+                logger.info("mock_dspy_returning_json", json=merged)
+                return [json.dumps(merged)]
 
         # Fallback for field-based format (common in non-JSON dspy.ReAct)
         if expected_fields:

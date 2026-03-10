@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import inspect
 import json
 import re
 from collections.abc import Callable
@@ -10,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
+from litellm import completion
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
 
@@ -21,6 +23,7 @@ from controller.agent.execution_limits import (
     evaluate_agent_hard_fail,
 )
 from controller.agent.prompt_manager import PromptManager
+from controller.agent.provider_tool_call_adapters import extract_tool_calls
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
@@ -189,10 +192,14 @@ class BaseNode:
     def _should_use_native_tool_loop(
         self, *, node_type: AgentName, program_cls: type[dspy.Module]
     ) -> bool:
-        """Native tool calls are enabled incrementally, starting with benchmark planner."""
+        """Native tool calls are enabled incrementally for unstable ReAct nodes."""
         return (
             program_cls is dspy.ReAct
-            and node_type == AgentName.BENCHMARK_PLANNER
+            and node_type
+            in {
+                AgentName.BENCHMARK_PLANNER,
+                AgentName.BENCHMARK_CODER,
+            }
             and not settings.is_integration_test
         )
 
@@ -208,12 +215,16 @@ class BaseNode:
         native_instructions = (
             "Use provider-native tool calls.\n"
             "Call the provided tools to inspect and modify the workspace.\n"
-            "Always call `submit_plan` before finishing planner work.\n"
             "When all required work is complete, call `finish` with these output "
             f"fields: {output_fields}.\n"
             "Do not emit textual tool-call markers such as `next_tool_name` or "
             "`next_tool_args`."
         )
+        if node_type == AgentName.BENCHMARK_PLANNER:
+            native_instructions = (
+                native_instructions
+                + "\nAlways call `submit_plan` before finishing planner work."
+            )
 
         field_defs: dict[str, tuple[type[Any], Any]] = {}
         for name, value in inputs.items():
@@ -278,12 +289,212 @@ class BaseNode:
             finish,
             name="finish",
             desc=(
-                "Call this exactly once when the planner is done. "
+                "Call this exactly once when the node is done. "
                 "Provide the final output fields for the node."
             ),
             args=properties,
         )
         return finish_tool, output_field_names
+
+    def _resolve_native_litellm_model(self) -> tuple[str, str | None, str | None]:
+        api_base = settings.openai_api_base
+        use_openrouter = bool(settings.openrouter_api_key) or bool(
+            api_base and "openrouter.ai" in api_base
+        )
+        model_name = settings.llm_model
+        if "/" in model_name and model_name.split("/", 1)[0] in {
+            "openai",
+            "openrouter",
+            "anthropic",
+            "azure",
+            "gemini",
+        }:
+            litellm_model = model_name
+        elif use_openrouter:
+            litellm_model = f"openrouter/{model_name}"
+        else:
+            litellm_model = f"openai/{model_name}"
+
+        api_key = (
+            (settings.openrouter_api_key or settings.openai_api_key)
+            if use_openrouter
+            else settings.openai_api_key
+        )
+        return litellm_model, api_key, api_base
+
+    @staticmethod
+    def _native_schema_type(annotation: Any) -> str:
+        if annotation is bool:
+            return "boolean"
+        if annotation is int:
+            return "integer"
+        if annotation is float:
+            return "number"
+        if annotation in {dict, dict[str, Any]}:
+            return "object"
+        if annotation in {list, list[str], list[Any]}:
+            return "array"
+        return "string"
+
+    def _build_native_tool_schemas(
+        self,
+        tool_fns: dict[str, Callable],
+        *,
+        extra_schemas: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
+        schemas: list[dict[str, Any]] = []
+        for tool_name, tool_fn in tool_fns.items():
+            signature = inspect.signature(tool_fn)
+            properties: dict[str, Any] = {}
+            required: list[str] = []
+
+            for param_name, param in signature.parameters.items():
+                if param.kind not in (
+                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    inspect.Parameter.KEYWORD_ONLY,
+                ):
+                    continue
+                annotation = (
+                    param.annotation
+                    if param.annotation is not inspect.Signature.empty
+                    else str
+                )
+                properties[param_name] = {
+                    "type": self._native_schema_type(annotation),
+                }
+                if param.default is inspect.Signature.empty:
+                    required.append(param_name)
+                else:
+                    properties[param_name]["default"] = param.default
+
+            schemas.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "description": inspect.getdoc(tool_fn) or "",
+                        "parameters": {
+                            "type": "object",
+                            "properties": properties,
+                            "required": required,
+                            "additionalProperties": False,
+                        },
+                    },
+                }
+            )
+
+        if extra_schemas:
+            schemas.extend(extra_schemas)
+        return schemas
+
+    def _build_finish_tool_schema(
+        self, signature_cls: type[dspy.Signature]
+    ) -> tuple[dict[str, Any], list[str]]:
+        output_field_names = list(signature_cls.output_fields.keys())
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+
+        for name, field_info in signature_cls.output_fields.items():
+            field_type = self._field_type(field_info)
+            try:
+                schema = TypeAdapter(field_type).json_schema()
+            except Exception:
+                schema = {"type": "string"}
+            desc = self._field_desc(field_info)
+            if desc:
+                schema["description"] = desc
+            properties[name] = schema
+            required.append(name)
+
+        return (
+            {
+                "type": "function",
+                "function": {
+                    "name": "finish",
+                    "description": (
+                        "Call this exactly once when the node is done. "
+                        "Provide the final output fields for the node."
+                    ),
+                    "parameters": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required,
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            output_field_names,
+        )
+
+    @staticmethod
+    def _coerce_message_text(content: Any) -> str:
+        if isinstance(content, str):
+            return content.strip()
+        if isinstance(content, list):
+            text_chunks: list[str] = []
+            for block in content:
+                if isinstance(block, str):
+                    if block.strip():
+                        text_chunks.append(block.strip())
+                    continue
+                if isinstance(block, dict):
+                    text_value = block.get("text")
+                    if isinstance(text_value, str) and text_value.strip():
+                        text_chunks.append(text_value.strip())
+                        continue
+                    nested_text = block.get("content")
+                    if isinstance(nested_text, str) and nested_text.strip():
+                        text_chunks.append(nested_text.strip())
+                        continue
+                text_value = getattr(block, "text", None)
+                if isinstance(text_value, str) and text_value.strip():
+                    text_chunks.append(text_value.strip())
+                    continue
+                nested_text = getattr(block, "content", None)
+                if isinstance(nested_text, str) and nested_text.strip():
+                    text_chunks.append(nested_text.strip())
+            if text_chunks:
+                return "\n".join(text_chunks)
+        if content is None:
+            return ""
+        return str(content).strip()
+
+    def _extract_native_tool_calls(
+        self, message: Any, *, model_name: str | None = None
+    ) -> tuple[str, list[dict[str, Any]]]:
+        assistant_text = self._coerce_message_text(getattr(message, "content", None))
+        parsed = extract_tool_calls(
+            message,
+            assistant_text=assistant_text,
+            model_name=model_name,
+        )
+        if parsed.adapter_name:
+            logger.info(
+                "provider_tool_call_adapter_used",
+                adapter=parsed.adapter_name,
+                model_name=model_name,
+                session_id=self.ctx.session_id,
+            )
+        return parsed.assistant_text, parsed.tool_calls
+
+    def _assistant_message_with_tool_calls(
+        self,
+        message: Any,
+        *,
+        model_name: str | None = None,
+        assistant_text: str | None = None,
+        tool_calls_payload: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        if assistant_text is None or tool_calls_payload is None:
+            assistant_text, tool_calls_payload = self._extract_native_tool_calls(
+                message,
+                model_name=model_name,
+            )
+        return {
+            "role": "assistant",
+            "content": assistant_text,
+            "tool_calls": tool_calls_payload,
+        }
 
     def _run_native_tool_loop(
         self,
@@ -293,40 +504,91 @@ class BaseNode:
         tool_fns: dict[str, Callable],
         node_type: AgentName,
         max_iters: int,
+        db_callback: DatabaseCallbackHandler | None = None,
     ) -> dspy.Prediction:
-        tool_signature = self._build_native_tool_signature(
-            signature_cls=signature_cls,
-            inputs=inputs,
-            node_type=node_type,
+        instructions = getattr(signature_cls, "instructions", "") or ""
+        runtime_instructions = (
+            "Runtime tool-calling contract:\n"
+            "- Use provider-native tool calls only.\n"
+            "- Call the provided tools to inspect and modify the workspace.\n"
+            "- Do not emit textual tool-call wrappers such as `next_tool_name`, `next_tool_args`, or `[[ ## tool_calls ## ]]`.\n"
+            "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
+            "- Call `finish` exactly once when all required work is complete.\n"
         )
-        predictor = dspy.Predict(tool_signature)
-        tool_objects = [dspy.Tool(func) for func in tool_fns.values()]
-        finish_tool, finish_fields = self._build_finish_tool(signature_cls)
-        tool_objects.append(finish_tool)
-        tool_lookup = {tool.name: tool for tool in tool_objects}
-        trajectory_parts: list[str] = []
+        system_prompt = (
+            f"{instructions.strip()}\n\n{runtime_instructions}".strip()
+            if instructions.strip()
+            else runtime_instructions
+        )
+        user_prompt = "Node inputs:\n" + json.dumps(
+            inputs, indent=2, ensure_ascii=True, default=str
+        )
+        finish_schema, finish_fields = self._build_finish_tool_schema(signature_cls)
+        tool_schemas = self._build_native_tool_schemas(
+            tool_fns, extra_schemas=[finish_schema]
+        )
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        litellm_model, api_key, api_base = self._resolve_native_litellm_model()
+        if not api_key:
+            raise RuntimeError(f"Missing API key for native tool loop: {node_type}")
 
         for iteration in range(max_iters):
-            prediction = predictor(
-                **inputs,
-                trajectory=(
-                    "\n\n".join(trajectory_parts)
-                    if trajectory_parts
-                    else "No tools have been called yet."
-                ),
-                tools=tool_objects,
+            response = completion(
+                model=litellm_model,
+                api_key=api_key,
+                api_base=api_base,
+                timeout=settings.llm_timeout_seconds,
+                max_tokens=min(settings.llm_max_tokens, 2048),
+                messages=messages,
+                tools=tool_schemas,
+                tool_choice="auto",
             )
-            tool_calls = getattr(prediction, "tool_calls", None)
-            if not isinstance(tool_calls, dspy.ToolCalls) or not tool_calls.tool_calls:
+            message = response.choices[0].message
+            assistant_text, tool_calls = self._extract_native_tool_calls(
+                message,
+                model_name=litellm_model,
+            )
+            if assistant_text and db_callback:
+                db_callback.record_reasoning_text_sync(
+                    node_name=str(node_type),
+                    reasoning_text=assistant_text,
+                    step_index=iteration,
+                    source="native_tool_loop",
+                )
+
+            if not tool_calls:
                 msg = (
                     f"Native tool loop for {node_type.value} produced no tool calls "
                     f"on iteration {iteration + 1}."
                 )
                 raise ValueError(msg)
 
-            for call in tool_calls.tool_calls:
-                if call.name == "finish":
-                    payload = call.args or {}
+            messages.append(
+                self._assistant_message_with_tool_calls(
+                    message,
+                    model_name=litellm_model,
+                    assistant_text=assistant_text,
+                    tool_calls_payload=tool_calls,
+                )
+            )
+
+            for call in tool_calls:
+                function = call.get("function", {})
+                tool_name = function.get("name")
+                if not tool_name:
+                    raise ValueError("Native tool call is missing a function name.")
+
+                raw_arguments = function.get("arguments", "{}") or "{}"
+                payload = json.loads(raw_arguments)
+                if not isinstance(payload, dict):
+                    raise ValueError(
+                        f"Tool arguments for {tool_name} must be a JSON object."
+                    )
+
+                if tool_name == "finish":
                     missing_fields = [
                         field_name
                         for field_name in finish_fields
@@ -346,25 +608,39 @@ class BaseNode:
                         signature=signature_cls,
                     )
 
-                tool = tool_lookup.get(call.name)
+                tool = tool_fns.get(tool_name)
                 if tool is None:
-                    raise ValueError(f"Unknown tool requested: {call.name}")
+                    raise ValueError(f"Unknown tool requested: {tool_name}")
 
-                observation = call.execute(functions=tool_objects)
-                trajectory_parts.append(
-                    "\n".join(
-                        [
-                            f"Tool: {call.name}",
-                            f"Args: {json.dumps(call.args or {}, sort_keys=True)}",
-                            f"Observation: {self._serialize_tool_observation(observation)}",
-                        ]
-                    )
+                observation = tool(**payload)
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.get("id", ""),
+                        "name": tool_name,
+                        "content": self._serialize_tool_observation(observation),
+                    }
                 )
 
         msg = (
             f"Native tool loop for {node_type.value} exhausted {max_iters} iterations."
         )
         raise RuntimeError(msg)
+
+    @staticmethod
+    def _max_iters_for_node(node_type: AgentName) -> int:
+        if node_type in {
+            AgentName.ENGINEER_PLANNER,
+            AgentName.ELECTRONICS_PLANNER,
+            AgentName.BENCHMARK_PLANNER,
+        }:
+            return settings.react_planner_max_iters
+        if node_type in {
+            AgentName.ENGINEER_CODER,
+            AgentName.BENCHMARK_CODER,
+        }:
+            return settings.react_coder_max_iters
+        return settings.react_max_iters
 
     def _get_tool_functions(
         self,
@@ -1100,13 +1376,7 @@ class BaseNode:
 
         program = None
         if program_cls is dspy.ReAct and not use_native_tool_loop:
-            max_iters = settings.react_max_iters
-            if node_type in {
-                AgentName.ENGINEER_PLANNER,
-                AgentName.ELECTRONICS_PLANNER,
-                AgentName.BENCHMARK_PLANNER,
-            }:
-                max_iters = settings.react_planner_max_iters
+            max_iters = self._max_iters_for_node(node_type)
             program = program_cls(
                 signature_cls, tools=list(tool_fns.values()), max_iters=max_iters
             )
@@ -1219,7 +1489,7 @@ class BaseNode:
                         # Add a timeout to prevent infinite hangs in DSPy ReAct
                         try:
                             if use_native_tool_loop:
-                                max_iters = settings.react_planner_max_iters
+                                max_iters = self._max_iters_for_node(node_type)
                                 prediction = await asyncio.wait_for(
                                     asyncio.to_thread(
                                         self._run_native_tool_loop,
@@ -1228,6 +1498,7 @@ class BaseNode:
                                         tool_fns=tool_fns,
                                         node_type=node_type,
                                         max_iters=max_iters,
+                                        db_callback=db_callback,
                                     ),
                                     timeout=dspy_timeout,
                                 )
