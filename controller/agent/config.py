@@ -78,7 +78,8 @@ class AgentSettings(BaseSettings):
     dspy_program_timeout_seconds: int = 300
     dspy_program_max_retries: int = 2
     react_max_iters: int = 8
-    react_planner_max_iters: int = 6
+    react_planner_max_iters: int = 24
+    react_coder_max_iters: int = 48
     require_reasoning_traces: bool = global_settings.require_reasoning_traces
 
     # URL for the Worker Light API
