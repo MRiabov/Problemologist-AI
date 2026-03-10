@@ -24,6 +24,20 @@ if str(ROOT) not in sys.path:
 
 import contextlib
 
+from controller.agent.node_entry_validation import (  # noqa: E402
+    BENCHMARK_CODER_HANDOVER_CHECK,
+    BENCHMARK_REVIEWER_HANDOVER_CHECK,
+    ELECTRONICS_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ValidationGraph,
+    benchmark_coder_handover_custom_check_from_session_id,
+    build_benchmark_node_contracts,
+    build_engineer_node_contracts,
+    evaluate_node_entry_contract,
+    plan_reviewer_handover_custom_check_from_session_id,
+    reviewer_handover_custom_check_from_session_id,
+)
 from controller.clients.worker import WorkerClient  # noqa: E402
 from shared.enums import (  # noqa: E402
     AgentName,
@@ -58,12 +72,15 @@ class AgentEvalSpec(BaseModel):
     mode: EvalMode  # benchmark | agent | git
     request_agent_name: AgentName | None = None
     required_trace_names: tuple[AgentName, ...] = ()
+    start_node: AgentName | None = None
 
 
 class EvalDatasetItem(BaseModel):
     id: str
     task: str
     seed_dataset: Path | None = None
+    seed_artifact_dir: Path | None = None
+    seed_files: dict[str, str] | None = None
 
     model_config = ConfigDict(extra="allow")
 
@@ -74,16 +91,19 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_PLANNER,
         required_trace_names=(AgentName.BENCHMARK_PLANNER,),
+        start_node=AgentName.BENCHMARK_PLANNER,
     ),
     AgentName.BENCHMARK_CODER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_CODER,
         required_trace_names=(AgentName.BENCHMARK_CODER,),
+        start_node=AgentName.BENCHMARK_CODER,
     ),
     AgentName.BENCHMARK_REVIEWER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_REVIEWER,
         required_trace_names=(AgentName.BENCHMARK_REVIEWER,),
+        start_node=AgentName.BENCHMARK_REVIEWER,
     ),
     # Mechanical engineering roles
     AgentName.ENGINEER_PLANNER: AgentEvalSpec(
@@ -143,6 +163,179 @@ async def _handle_electronics_metrics(
 METRIC_HANDLERS = {
     AgentName.ELECTRONICS_ENGINEER: _handle_electronics_metrics,
 }
+
+
+def _resolve_seed_artifact_dir(item: EvalDatasetItem) -> Path | None:
+    if item.seed_artifact_dir is None:
+        return None
+
+    artifact_dir = Path(item.seed_artifact_dir)
+    if artifact_dir.is_absolute():
+        return artifact_dir
+
+    repo_relative = ROOT / artifact_dir
+    if repo_relative.exists():
+        return repo_relative
+
+    if item.seed_dataset is not None:
+        dataset_relative = (ROOT / item.seed_dataset).parent / artifact_dir
+        if dataset_relative.exists():
+            return dataset_relative
+
+    return repo_relative
+
+
+async def _seed_eval_workspace(
+    *,
+    item: EvalDatasetItem,
+    session_id: str,
+    agent_name: AgentName,
+) -> None:
+    artifact_dir = _resolve_seed_artifact_dir(item)
+    inline_files = item.seed_files or {}
+    if artifact_dir is None and not inline_files:
+        return
+
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    seeded_paths: list[str] = []
+    try:
+        if artifact_dir is not None:
+            if not artifact_dir.exists():
+                raise FileNotFoundError(
+                    f"Seed artifact directory not found: {artifact_dir}"
+                )
+            for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
+                rel_path = path.relative_to(artifact_dir).as_posix()
+                content = path.read_text(encoding="utf-8")
+                await worker.write_file(
+                    rel_path,
+                    content,
+                    overwrite=True,
+                    bypass_agent_permissions=True,
+                )
+                seeded_paths.append(rel_path)
+
+        for rel_path, content in inline_files.items():
+            await worker.write_file(
+                rel_path,
+                content,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
+            seeded_paths.append(rel_path)
+    finally:
+        await worker.aclose()
+
+    logger.info(
+        "eval_seed_workspace_applied",
+        session_id=session_id,
+        agent_name=agent_name,
+        seed_file_count=len(seeded_paths),
+        seeded_paths=seeded_paths,
+    )
+
+
+async def _preflight_seeded_entry_contract(
+    *,
+    item: EvalDatasetItem,
+    session_id: str,
+    agent_name: AgentName,
+    spec: AgentEvalSpec,
+) -> None:
+    if item.seed_artifact_dir is None and not item.seed_files:
+        return
+
+    if spec.mode == EvalMode.BENCHMARK:
+        target_node = spec.start_node or agent_name
+        contracts = build_benchmark_node_contracts()
+        graph = ValidationGraph.BENCHMARK
+    elif spec.mode == EvalMode.AGENT:
+        target_node = agent_name
+        contracts = build_engineer_node_contracts()
+        graph = ValidationGraph.ENGINEER
+    else:
+        return
+
+    contract = contracts.get(target_node)
+    if contract is None:
+        return
+
+    custom_checks = {
+        BENCHMARK_CODER_HANDOVER_CHECK: (
+            lambda *, contract, state: (
+                benchmark_coder_handover_custom_check_from_session_id(
+                    session_id=session_id,
+                    custom_objectives=None,
+                )
+            )
+        ),
+        BENCHMARK_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
+                session_id=session_id,
+                reviewer_label="Benchmark",
+                manifest_path=".manifests/benchmark_review_manifest.json",
+                expected_stage="benchmark_reviewer",
+            )
+        ),
+        ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: (
+                plan_reviewer_handover_custom_check_from_session_id(
+                    session_id=session_id,
+                )
+            )
+        ),
+        ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
+                session_id=session_id,
+                reviewer_label="Execution",
+                manifest_path=".manifests/engineering_execution_review_manifest.json",
+                expected_stage="engineering_execution_reviewer",
+            )
+        ),
+        ELECTRONICS_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
+                session_id=session_id,
+                reviewer_label="Electronics",
+                manifest_path=".manifests/electronics_review_manifest.json",
+                expected_stage="electronics_reviewer",
+            )
+        ),
+    }
+
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        result = await evaluate_node_entry_contract(
+            contract=contract,
+            state={
+                "task": item.task,
+                "episode_id": session_id,
+                "session": {
+                    "session_id": session_id,
+                    "custom_objectives": None,
+                },
+            },
+            artifact_exists=worker.exists,
+            graph=graph,
+            custom_checks=custom_checks,
+            integration_mode=True,
+        )
+    finally:
+        await worker.aclose()
+
+    if result.ok:
+        logger.info(
+            "eval_seed_entry_preflight_passed",
+            session_id=session_id,
+            agent_name=agent_name,
+            target_node=target_node,
+        )
+        return
+
+    errors = [error.model_dump(mode="json") for error in result.errors]
+    raise ValueError(
+        f"Seeded entry contract invalid for {target_node.value}: "
+        + "; ".join(f"{error['code']}: {error['message']}" for error in errors)
+    )
 
 
 def _episode_terminal(status: str | None) -> bool:
@@ -322,9 +515,24 @@ async def run_single_eval(
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         if spec.mode == EvalMode.BENCHMARK:
+            benchmark_session_id = uuid.uuid4()
+            session_id = str(benchmark_session_id)
+            await _seed_eval_workspace(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+            )
+            await _preflight_seeded_entry_contract(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+                spec=spec,
+            )
             url = f"{CONTROLLER_URL}/benchmark/generate"
             payload = {
                 "prompt": task_description,
+                "session_id": session_id,
+                "start_node": spec.start_node,
                 "seed_id": lineage.seed_id,
                 "seed_dataset": lineage.seed_dataset,
                 "generation_kind": lineage.generation_kind,
@@ -338,9 +546,25 @@ async def run_single_eval(
             else:
                 session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
 
+            await _seed_eval_workspace(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+            )
+            await _preflight_seeded_entry_contract(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+                spec=spec,
+            )
+
             # Force electronics-engineer path to execute in integration-mode runs by
             # seeding explicit electronics requirements in objectives.yaml.
-            if agent_name == AgentName.ELECTRONICS_ENGINEER:
+            if (
+                agent_name == AgentName.ELECTRONICS_ENGINEER
+                and item.seed_artifact_dir is None
+                and not item.seed_files
+            ):
                 worker_for_seed = WorkerClient(
                     base_url=WORKER_LIGHT_URL, session_id=session_id
                 )
