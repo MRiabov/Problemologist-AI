@@ -1,4 +1,5 @@
 import hashlib
+import os
 import tempfile
 from pathlib import Path
 
@@ -7,12 +8,25 @@ import trimesh
 from build123d import Compound, Part
 
 
+def _preferred_temp_dir() -> str | None:
+    """Use /dev/shm only when it exists and is writable."""
+    shm_path = Path("/dev/shm")
+    if shm_path.exists() and os.access(shm_path, os.W_OK):
+        try:
+            fd, probe_path = tempfile.mkstemp(dir=shm_path)
+            os.close(fd)
+            Path(probe_path).unlink(missing_ok=True)
+            return str(shm_path)
+        except OSError:
+            return None
+    return None
+
+
 def part_to_trimesh(part: Part | Compound) -> trimesh.Trimesh:
     """
     Converts a build123d Part or Compound to a trimesh.Trimesh object.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if Path("/dev/shm").exists() else None
+    temp_dir = _preferred_temp_dir()
     with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
@@ -105,8 +119,7 @@ def compute_part_hash(part: Part | Compound) -> str:
     Computes a stable hash for a build123d Part or Compound.
     Uses STL export as a proxy for geometry.
     """
-    # Use /dev/shm if available (Linux RAM disk) for faster I/O
-    temp_dir = "/dev/shm" if Path("/dev/shm").exists() else None
+    temp_dir = _preferred_temp_dir()
     with tempfile.NamedTemporaryFile(suffix=".stl", dir=temp_dir, delete=False) as tmp:
         tmp_path = tmp.name
 
