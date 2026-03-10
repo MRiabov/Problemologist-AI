@@ -119,12 +119,24 @@ class FilesystemPolicy:
             data = yaml.safe_load(f)
             self.config = FilesystemConfig(**data)
 
+    @staticmethod
+    def _normalize_virtual_path(path: str | Path) -> str:
+        """Normalize workspace aliases to the canonical session-root path."""
+        normalized = Path(path).as_posix()
+        if normalized in {"/workspace", "workspace"}:
+            normalized = "/"
+        elif normalized.startswith("/workspace/"):
+            normalized = "/" + normalized[len("/workspace/") :]
+        elif normalized.startswith("workspace/"):
+            normalized = normalized[len("workspace/") :]
+        return normalized.lstrip("/")
+
     def _match_path(self, path: str, patterns: list[str]) -> bool:
         """Check if path matches any of the gitignore-style glob patterns."""
         if not patterns:
             return False
 
-        p_str = Path(path).as_posix().lstrip("/")
+        p_str = self._normalize_virtual_path(path)
 
         for pattern in patterns:
             pat = pattern.lstrip("/")
@@ -147,9 +159,12 @@ class FilesystemPolicy:
             if "**" in pat:
                 import re
 
-                regex_pat = (
-                    re.escape(pat).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
-                )
+                # `**/` should match zero or more directories so patterns like
+                # `**/*.py` also allow root-level files such as `script.py`.
+                regex_pat = re.escape(pat)
+                regex_pat = regex_pat.replace(r"\*\*/", r"(?:.*/)?")
+                regex_pat = regex_pat.replace(r"\*\*", ".*")
+                regex_pat = regex_pat.replace(r"\*", "[^/]*")
                 if re.match(f"^{regex_pat}$", p_str):
                     return True
             elif fnmatch.fnmatch(p_str, pat):
@@ -175,7 +190,7 @@ class FilesystemPolicy:
 
         role = role_enum.value
 
-        p_str = Path(path).as_posix().lstrip("/")
+        p_str = self._normalize_virtual_path(path)
 
         # Get rules for agent, fallback to defaults
         agent_rules = self.config.agents.get(role)
