@@ -1,0 +1,11 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "engineering_plan_reviewer",
+  "session_id": "seed-eer-003-timed-gate-chute-plan",
+  "planner_node_type": "engineer_planner",
+  "artifact_hashes": {
+    "plan.md": "569065e4441f707d14c392b66eee6786e66ecffe7631a4dec3486f982522b8ec",
+    "todo.md": "01bd7ce67317377b02263a0e1b409885d876e390f682d17afeeae4480c811162",
+    "assembly_definition.yaml": "866b1f670ff179d1cadd554d577c89b64354ea1f01d11d3a71d363b2223998c6"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "engineering_execution_reviewer",
+  "timestamp": "2026-03-11T12:00:00Z",
+  "session_id": "seed-eer-004-raised-shelf-lift",
+  "revision": "r1",
+  "script_path": "script.py",
+  "script_sha256": "156c546365a91dfc336daaed30264521954d622c63a728aecd7392bec5e2322b",
+  "validation_success": true,
+  "validation_timestamp": 1710151680,
+  "simulation_success": true,
+  "simulation_summary": "Goal achieved: projectile_ball reached the goal zone.",
+  "simulation_timestamp": 1710151725,
+  "goal_reached": true,
+  "renders": [
+    "renders/images/context_view_01.png",
+    "renders/images/context_view_02.png"
+  ],
+  "mjcf_path": "solution.xml",
+  "cad_path": "script.py",
+  "objectives_path": "objectives.yaml",
+  "assembly_definition_path": "assembly_definition.yaml"
+}

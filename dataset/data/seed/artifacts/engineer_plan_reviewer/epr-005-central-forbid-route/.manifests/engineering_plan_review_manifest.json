@@ -1,0 +1,11 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "engineering_plan_reviewer",
+  "session_id": "seed-epr-005-central-forbid-route",
+  "planner_node_type": "engineer_planner",
+  "artifact_hashes": {
+    "plan.md": "cc1ff8d18c11434b67d7e36e67910be10d696ee30c0886655f6316b6d9a06489",
+    "todo.md": "f8d19f1099be42375bb73d4409b77c695bee4d48e3f34aa32f3173218885314d",
+    "assembly_definition.yaml": "94df2a53ba49baa30f62ea759cc85205c455f10bbdd3a264069e1ab4dcc57e9d"
+  }
+}

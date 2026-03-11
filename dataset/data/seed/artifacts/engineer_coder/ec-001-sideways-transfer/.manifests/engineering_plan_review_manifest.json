@@ -1,0 +1,11 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "engineering_plan_reviewer",
+  "session_id": "seed-ec-001-sideways-transfer",
+  "planner_node_type": "engineer_planner",
+  "artifact_hashes": {
+    "plan.md": "b40ce9f1b953f4a7ce750a7a06701280da2be616120d086d02ff0666ae584249",
+    "todo.md": "647f6db881e82bbe49dc23397c8a505521344d4ef92bfc02bc44c9fcc930105b",
+    "assembly_definition.yaml": "d28af297ae1360fdf29cddea41caab9665016974340280c0943cd852163b1c06"
+  }
+}
