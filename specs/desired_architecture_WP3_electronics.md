@@ -1,5 +1,7 @@
 # Desired Architecture: WP3 — Electromechanical Integration
 
+This file is a historical WP draft. The active architecture source of truth is now [specs/architecture/electronics-and-electromechanics.md](./architecture/electronics-and-electromechanics.md).
+
 ## Objective
 
 Enable the design and verification of **electromechanical systems** — mechanisms that need electrical power to function. The agent shall design not just the physical parts but also the electrical wiring, power distribution, and control logic that drives motors, pumps, and actuators.

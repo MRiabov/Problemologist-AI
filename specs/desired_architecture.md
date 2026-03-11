@@ -36,6 +36,8 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 ### Simulation
 
 - [Simulation and Definitions of Done](./architecture/simulation-and-dod.md): physics assumptions, backend responsibility split, constraints model, and success/failure definitions.
+- [Fluids, FEM, and stress validation](./architecture/fluids-and-deformables.md): Genesis-backed fluid simulation, deformable-material contracts, stress objectives, smoke-test policy, and WP2-specific artifacts.
+- [Electronics and electromechanical systems](./architecture/electronics-and-electromechanics.md): electrical schema, circuit-validation gate, 3D wire routing, power-gated actuation, and WP3-specific artifacts.
 
 ### Observability
 

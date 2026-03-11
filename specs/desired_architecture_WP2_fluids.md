@@ -1,5 +1,7 @@
 # Desired Architecture: WP2 — Fluids & Deformable Materials
 
+This file is a historical WP draft. The active architecture source of truth is now [specs/architecture/fluids-and-deformables.md](./architecture/fluids-and-deformables.md).
+
 ## Objective
 
 Extend the system from rigid-body-only dynamics to deformable materials (FEM) and fluids (MPM), making simulations physically realistic enough for actual engineering. After WP2, **all manufactured parts** deform under load, fluid benchmarks become a first-class objective type, and the agent pipeline (planner → engineer → reviewer) can reason about stress, breakage, and fluid behaviour.
