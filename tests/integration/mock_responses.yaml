@@ -4199,7 +4199,8 @@ scenarios:
               path: "script.py"
               content: |
                 from build123d import Compound, Location, Sphere
-                from shared.models.schemas import PartMetadata, CompoundMetadata
+                from utils.metadata import CompoundMetadata, PartMetadata
+                from utils.submission import simulate, submit_for_review, validate
                 from shared.enums import ManufacturingMethod
 
                 def build():
@@ -4215,35 +4216,21 @@ scenarios:
                     scene.label = "benchmark_scene"
                     scene.metadata = CompoundMetadata(fixed=False)
                     return scene
+
+                result = build()
+                validate_ok, validate_message = validate(result)
+                print(validate_ok)
+                print(validate_message)
+                sim_result = simulate(result)
+                print(sim_result.success)
+                print(sim_result.message)
+                if validate_ok and sim_result.success:
+                    print(submit_for_review(result))
               overwrite: true
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args:
-              command: |
-                python - <<'PY'
-                import importlib.util
-                from shared.utils.agent import validate, simulate
-
-                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                compound = mod.build()
-                print(validate(compound))
-                print(simulate(compound).success)
-                PY
-            expected_observation: "True"
-          - tool_name: "execute_command"
-            tool_args:
-              command: |
-                python - <<'PY'
-                import importlib.util
-                from shared.utils.agent import submit_for_review
-
-                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                print(submit_for_review(mod.build()))
-                PY
+              command: "python script.py"
             expected_observation: "True"
           - finished: true
             journal: "Work completed."
@@ -4343,7 +4330,8 @@ scenarios:
               path: "script.py"
               content: |
                 from build123d import *
-                from shared.models.schemas import PartMetadata
+                from utils.metadata import PartMetadata
+                from utils.submission import simulate, submit_for_review, validate
                 from shared.workers.workbench_models import ManufacturingMethod
                 def build():
                     p = Box(10,10,10)
@@ -4352,35 +4340,21 @@ scenarios:
                         material_id="abs", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP
                     )
                     return p
+
+                result = build()
+                validate_ok, validate_message = validate(result)
+                print(validate_ok)
+                print(validate_message)
+                sim_result = simulate(result)
+                print(sim_result.success)
+                print(sim_result.message)
+                if validate_ok and sim_result.success:
+                    print(submit_for_review(result))
               overwrite: true
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args:
-              command: |
-                python - <<'PY'
-                import importlib.util
-                from shared.utils.agent import validate, simulate
-
-                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                compound = mod.build()
-                print(validate(compound))
-                print(simulate(compound).success)
-                PY
-            expected_observation: "True"
-          - tool_name: "execute_command"
-            tool_args:
-              command: |
-                python - <<'PY'
-                import importlib.util
-                from shared.utils.agent import submit_for_review
-
-                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                print(submit_for_review(mod.build()))
-                PY
+              command: "python script.py"
             expected_observation: "True"
           - finished: true
             journal: "Implemented placeholder geometry for INT-180."
@@ -5061,7 +5035,8 @@ scenarios:
               path: "script.py"
               content: |
                 from build123d import *
-                from shared.models.schemas import PartMetadata
+                from utils.metadata import PartMetadata
+                from utils.submission import simulate, submit_for_review, validate
                 from shared.workers.workbench_models import ManufacturingMethod
                 def build():
                     p = Box(10,10,10)
@@ -5070,35 +5045,21 @@ scenarios:
                         material_id="abs", fixed=True, manufacturing_method=ManufacturingMethod.THREE_DP
                     )
                     return p
+
+                result = build()
+                validate_ok, validate_message = validate(result)
+                print(validate_ok)
+                print(validate_message)
+                sim_result = simulate(result)
+                print(sim_result.success)
+                print(sim_result.message)
+                if validate_ok and sim_result.success:
+                    print(submit_for_review(result))
               overwrite: true
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args:
-              command: |
-                python - <<'PY'
-                import importlib.util
-                from shared.utils.agent import validate, simulate
-
-                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                compound = mod.build()
-                print(validate(compound))
-                print(simulate(compound).success)
-                PY
-            expected_observation: "True"
-          - tool_name: "execute_command"
-            tool_args:
-              command: |
-                python - <<'PY'
-                import importlib.util
-                from shared.utils.agent import submit_for_review
-
-                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                print(submit_for_review(mod.build()))
-                PY
+              command: "python script.py"
             expected_observation: "True"
           - finished: true
             journal: "Mechanical implementation completed."
