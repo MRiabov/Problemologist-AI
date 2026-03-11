@@ -3,5 +3,5 @@
 - [x] Planner handoff seeded
 - [ ] Implement tunnel shell and floor in `script.py`
 - [ ] Implement ball spawn and metadata
-- [ ] Ensure validation/simulation path exists in `script.py`
-- [ ] Include explicit `submit_for_review` call
+- [ ] Keep `script.py` import-safe with a pure `build()` module contract
+- [ ] Use external shell self-checks for validate/simulate/review submission, not in-module calls

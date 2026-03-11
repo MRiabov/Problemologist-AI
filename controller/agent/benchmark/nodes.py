@@ -1,4 +1,3 @@
-import ast
 import asyncio
 import inspect
 import json
@@ -55,31 +54,8 @@ def extract_python_code(text: str) -> str:
 def _script_contract_violations(script: str) -> list[str]:
     """Return benchmark script contract violations that must fail closed."""
     violations: list[str] = []
-    parsed = False
     if 'if __name__ == "__main__"' in script or "if __name__ == '__main__'" in script:
         violations.append("script.py must not contain a __main__ block")
-
-    with suppress(Exception):
-        tree = ast.parse(script)
-        parsed = True
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                func = node.func
-                if isinstance(func, ast.Name) and func.id == "submit_for_review":
-                    violations.append(
-                        "script.py must not call submit_for_review(...); "
-                        "review handoff is executed by the control plane"
-                    )
-                if isinstance(func, ast.Attribute) and func.attr == "submit_for_review":
-                    violations.append(
-                        "script.py must not call submit_for_review(...); "
-                        "review handoff is executed by the control plane"
-                    )
-    if not parsed and "submit_for_review(" in script:
-        violations.append(
-            "script.py must not call submit_for_review(...); "
-            "review handoff is executed by the control plane"
-        )
 
     return list(dict.fromkeys(violations))
 

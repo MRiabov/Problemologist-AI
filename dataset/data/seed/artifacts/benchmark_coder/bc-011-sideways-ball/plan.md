@@ -1,6 +1,6 @@
 ## 1. Learning Objective
 
-Test lateral transfer over 1 meter distance. The benchmark should move a 40 mm steel sphere from the left platform to the right goal zone without leaving simulation bounds.
+Test lateral transfer over 1 meter distance. The benchmark should move a 40 mm radius steel sphere from the left platform to the right goal zone without leaving simulation bounds.
 
 ## 2. Geometry
 
@@ -25,4 +25,5 @@ Test lateral transfer over 1 meter distance. The benchmark should move a 40 mm s
 
 - Use Build123d primitives.
 - Ensure every part has `PartMetadata` or `CompoundMetadata`.
-- The final script must contain an explicit `submit_for_review` call.
+- Keep `script.py` import-safe with no `__main__` block and no in-module review submission call.
+- Run validate/simulate/review submission only from external shell self-check commands.

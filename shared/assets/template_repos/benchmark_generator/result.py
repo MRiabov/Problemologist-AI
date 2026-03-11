@@ -1,19 +1,11 @@
 from build123d import *
 
 
-# Define the environment
-# ... your code here ...
-
-# Create the final compound
+# Define the environment and expose the final assembly at module scope.
 # environment = Compound(children=[...])
-
-# Validate the environment
-# if validate(environment):
-#     # Simulate to verify
-#     result = simulate(environment)
-#     if result.success:
-#         submit_for_review(environment)
-#     else:
-#         print(f"Simulation failed: {result.summary}")
-# else:
-#     print("Validation failed.")
+#
+# Recommended runtime contract:
+# from utils.submission import validate, simulate, submit_for_review
+# validate_ok, validate_message = validate(environment)
+# sim_result = simulate(environment)
+# submit_for_review(environment)
