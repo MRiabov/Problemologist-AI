@@ -63,6 +63,23 @@ def _bypass_enabled(requested: bool, system_header: str | None) -> bool:
     return bool(requested and system_header == "1")
 
 
+def _sanitize_workspace_alias(text: str, session_dir: Path) -> str:
+    """Hide host session roots from tool-visible command output."""
+    if not text:
+        return text
+    session_root = str(session_dir.resolve())
+    return text.replace(session_root, "/workspace")
+
+
+def _is_host_session_absolute_path(path: str, session_dir: Path) -> bool:
+    """Detect leaked host paths that point at the current session root."""
+    normalized = str(path).strip()
+    if not normalized.startswith("/"):
+        return False
+    session_root = str(session_dir.resolve())
+    return normalized == session_root or normalized.startswith(f"{session_root}/")
+
+
 async def get_router(x_session_id: str = Header(...)):
     """Dependency to create a filesystem router for the current session."""
     try:
@@ -198,6 +215,17 @@ async def edit_file(
 ):
     """Edit a file with one or more operations."""
     try:
+        session_dir = fs_router.local_backend.root
+        if _is_host_session_absolute_path(request.path, session_dir):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Host session absolute paths are not allowed. "
+                    "Use workspace-relative paths like 'script.py' or the "
+                    "'/workspace/script.py' alias."
+                ),
+            )
+
         if _bypass_enabled(request.bypass_agent_permissions, x_system_fs_bypass):
             if not fs_router.local_backend.exists(request.path):
                 raise HTTPException(status_code=404, detail="File not found")
@@ -477,8 +505,8 @@ async def execute_code(
     events = _collect_events(fs_router)
 
     return ExecuteResponse(
-        stdout=result.stdout,
-        stderr=result.stderr,
+        stdout=_sanitize_workspace_alias(result.stdout, session_dir),
+        stderr=_sanitize_workspace_alias(result.stderr, session_dir),
         exit_code=result.exit_code,
         timed_out=result.timed_out,
         events=events,

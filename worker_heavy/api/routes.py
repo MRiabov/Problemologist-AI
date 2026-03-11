@@ -660,6 +660,25 @@ async def api_submit(
                             encoding="utf-8"
                         )
                 artifacts.review_manifests_json = review_manifests
+                render_blobs_base64: dict[str, str] = {}
+                renders_dir = root / "renders"
+                if renders_dir.exists():
+                    for render_path in sorted(renders_dir.iterdir()):
+                        if not render_path.is_file():
+                            continue
+                        if render_path.suffix.lower() not in {
+                            ".png",
+                            ".jpg",
+                            ".jpeg",
+                            ".mp4",
+                        }:
+                            continue
+                        rel_path = str(render_path.relative_to(root))
+                        artifacts.render_paths.append(rel_path)
+                        render_blobs_base64[rel_path] = base64.b64encode(
+                            render_path.read_bytes()
+                        ).decode("ascii")
+                artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=success,
                     message="Handover complete" if success else "Handover failed",

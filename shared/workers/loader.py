@@ -1,12 +1,16 @@
 import importlib.util
 import logging
+import os
 import sys
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from build123d import Compound, Part
+
 logger = logging.getLogger(__name__)
+SCRIPT_IMPORT_MODE_ENV = "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE"
 
 
 @contextmanager
@@ -23,6 +27,54 @@ def sys_path_context(path: str):
                 sys.path.remove(path)
     else:
         yield
+
+
+@contextmanager
+def script_import_mode():
+    previous = os.environ.get(SCRIPT_IMPORT_MODE_ENV)
+    os.environ[SCRIPT_IMPORT_MODE_ENV] = "1"
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(SCRIPT_IMPORT_MODE_ENV, None)
+        else:
+            os.environ[SCRIPT_IMPORT_MODE_ENV] = previous
+
+
+def _is_loaded_component_candidate(value: Any) -> bool:
+    return isinstance(value, (Compound, Part))
+
+
+def _extract_loaded_component(namespace: dict[str, Any], origin: str) -> Any:
+    build_func = namespace.get("build")
+    if callable(build_func):
+        return build_func()
+
+    for name in ("result", "compound", "benchmark", "assembly", "solution", "part"):
+        value = namespace.get(name)
+        if _is_loaded_component_candidate(value):
+            return value
+
+    candidates = [
+        (name, value)
+        for name, value in namespace.items()
+        if not name.startswith("__") and _is_loaded_component_candidate(value)
+    ]
+    if len(candidates) == 1:
+        return candidates[0][1]
+    if len(candidates) > 1:
+        candidate_names = ", ".join(name for name, _ in candidates[:5])
+        raise AttributeError(
+            "Multiple top-level build123d objects found in "
+            f"{origin}; expose the final assembly as `result = ...` "
+            f"or define build(). Candidates: {candidate_names}"
+        )
+
+    raise AttributeError(
+        f"No build123d result found in {origin}. Define build() or bind the "
+        "final assembly to a top-level variable such as `result`."
+    )
 
 
 def load_component_from_script(
@@ -45,17 +97,9 @@ def load_component_from_script(
         logger.warning("load_component_using_script_content_deprecated")
         local_scope = {}
         try:
-            exec(script_content, local_scope)
-            build_func = local_scope.get("build")
-            if not build_func:
-                for val in local_scope.values():
-                    if callable(val) and getattr(val, "__name__", "") == "build":
-                        build_func = val
-                        break
-
-            if build_func:
-                return build_func()
-            raise AttributeError("build() function not found in script content.")
+            with script_import_mode():
+                exec(script_content, local_scope)
+            return _extract_loaded_component(local_scope, "script content")
         except Exception as e:
             raise RuntimeError(f"Failed to execute script content: {e}") from e
 
@@ -77,20 +121,12 @@ def load_component_from_script(
         module = importlib.util.module_from_spec(spec)
         try:
             try:
-                spec.loader.exec_module(module)
+                with script_import_mode():
+                    spec.loader.exec_module(module)
             except Exception as e:
                 raise RuntimeError(f"Failed to execute script {path}: {e}") from e
 
-            if hasattr(module, "build"):
-                return module.build()
-
-            # Fallback for finding a 'build' function in the relative scope
-            for attr in dir(module):
-                val = getattr(module, attr)
-                if callable(val) and attr == "build":
-                    return val()
-
-            raise AttributeError(f"build() function not found in script {path}.")
+            return _extract_loaded_component(vars(module), str(path))
         finally:
             # Prevent memory leak by removing unique module from sys.modules if it was added
             if module_name in sys.modules:

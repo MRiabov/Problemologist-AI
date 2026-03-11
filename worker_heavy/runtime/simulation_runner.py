@@ -12,9 +12,11 @@ from typing import Any
 
 import structlog
 
-from shared.models.simulation import SimulationResult
+from shared.enums import FailureReason
+from shared.models.simulation import SimulationFailure, SimulationResult
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.utils.validation import (
+    save_simulation_result,
     simulate_subprocess,
     validate_subprocess,
 )
@@ -22,6 +24,18 @@ from worker_heavy.utils.validation import (
 logger = structlog.get_logger(__name__)
 
 _SPAWN_CONTEXT = multiprocessing.get_context("spawn")
+_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS = 30.0
+
+
+class SimulationExecutorOperationTimeoutError(RuntimeError):
+    """Raised when the isolated simulation child exceeds its wall-clock budget."""
+
+    def __init__(self, *, operation: str, timeout_seconds: float):
+        self.operation = operation
+        self.timeout_seconds = timeout_seconds
+        super().__init__(
+            f"{operation} child exceeded {timeout_seconds:.1f}s wall-clock timeout"
+        )
 
 
 @dataclass(frozen=True)
@@ -89,6 +103,68 @@ def cleanup_simulation_child_state() -> tuple[int, int]:
     return closed_backends, gc_collected
 
 
+def _shutdown_broken_executor(
+    executor: ProcessPoolExecutor,
+    *,
+    generation: int,
+    operation: str,
+    reason: str,
+) -> None:
+    """Best-effort teardown of a stuck/broken worker child."""
+    try:
+        executor.shutdown(wait=False, cancel_futures=True)
+    except Exception:
+        logger.warning(
+            "simulation_executor_shutdown_failed",
+            generation=generation,
+            operation=operation,
+            reason=reason,
+        )
+
+    processes = getattr(executor, "_processes", None) or {}
+    for process in list(processes.values()):
+        if process is None or not process.is_alive():
+            continue
+        try:
+            process.terminate()
+        except Exception:
+            logger.warning(
+                "simulation_executor_terminate_failed",
+                generation=generation,
+                operation=operation,
+                reason=reason,
+                pid=getattr(process, "pid", None),
+            )
+
+    for process in list(processes.values()):
+        if process is None:
+            continue
+        try:
+            process.join(timeout=1.0)
+        except Exception:
+            logger.warning(
+                "simulation_executor_join_failed",
+                generation=generation,
+                operation=operation,
+                reason=reason,
+                pid=getattr(process, "pid", None),
+            )
+
+    for process in list(processes.values()):
+        if process is None or not process.is_alive():
+            continue
+        try:
+            process.kill()
+        except Exception:
+            logger.warning(
+                "simulation_executor_kill_failed",
+                generation=generation,
+                operation=operation,
+                reason=reason,
+                pid=getattr(process, "pid", None),
+            )
+
+
 class SimulationExecutorManager:
     """Own the long-lived spawned child used by simulate and validate."""
 
@@ -128,6 +204,7 @@ class SimulationExecutorManager:
         crash_message: str,
         fn: Any,
         *args: Any,
+        timeout_seconds: float | None = None,
     ) -> Any:
         loop = asyncio.get_running_loop()
         with self._lock:
@@ -155,18 +232,42 @@ class SimulationExecutorManager:
             )
 
         try:
-            return await loop.run_in_executor(executor, fn, *args)
+            future = loop.run_in_executor(executor, fn, *args)
+            if timeout_seconds is None:
+                return await future
+            return await asyncio.wait_for(future, timeout=timeout_seconds)
+        except asyncio.TimeoutError as exc:
+            with self._lock:
+                broken_executor, broken_generation = self._mark_broken_locked()
+            if broken_executor is not None:
+                await asyncio.to_thread(
+                    _shutdown_broken_executor,
+                    broken_executor,
+                    generation=broken_generation,
+                    operation=operation,
+                    reason="timeout",
+                )
+            logger.error(
+                "simulation_executor_timeout",
+                generation=broken_generation,
+                operation=operation,
+                timeout_seconds=timeout_seconds,
+            )
+            raise SimulationExecutorOperationTimeoutError(
+                operation=operation,
+                timeout_seconds=timeout_seconds,
+            ) from exc
         except BrokenProcessPool as exc:
             with self._lock:
                 broken_executor, broken_generation = self._mark_broken_locked()
             if broken_executor is not None:
-                try:
-                    broken_executor.shutdown(wait=False, cancel_futures=True)
-                except Exception:
-                    logger.warning(
-                        "simulation_executor_shutdown_after_crash_failed",
-                        generation=broken_generation,
-                    )
+                await asyncio.to_thread(
+                    _shutdown_broken_executor,
+                    broken_executor,
+                    generation=broken_generation,
+                    operation=operation,
+                    reason="crash",
+                )
             logger.error(
                 "simulation_child_process_crashed",
                 error=str(exc),
@@ -280,19 +381,48 @@ async def run_simulation_in_isolated_process(
     The parent process remains isolated from heavy physics calls, while the
     child process stays warm across requests until crash or shutdown.
     """
-    return await _SIMULATION_EXECUTOR_MANAGER.submit(
-        "simulate",
-        "SIMULATION_CHILD_PROCESS_CRASHED",
-        simulate_subprocess,
-        script_path,
-        session_root,
-        script_content,
-        output_dir,
-        smoke_test_mode,
-        backend,
-        session_id,
-        particle_budget,
-    )
+    try:
+        return await _SIMULATION_EXECUTOR_MANAGER.submit(
+            "simulate",
+            "SIMULATION_CHILD_PROCESS_CRASHED",
+            simulate_subprocess,
+            script_path,
+            session_root,
+            script_content,
+            output_dir,
+            smoke_test_mode,
+            backend,
+            session_id,
+            particle_budget,
+            timeout_seconds=_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS,
+        )
+    except SimulationExecutorOperationTimeoutError:
+        timeout_result = SimulationResult(
+            success=False,
+            summary=(
+                "Simulation timed out after "
+                f"{_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS:.0f}s wall-clock."
+            ),
+            failure=SimulationFailure(
+                reason=FailureReason.TIMEOUT,
+                detail=(
+                    "simulate child exceeded "
+                    f"{_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS:.0f}s wall-clock "
+                    "timeout"
+                ),
+            ),
+        )
+        try:
+            save_simulation_result(
+                timeout_result, output_dir / "simulation_result.json"
+            )
+        except Exception as exc:
+            logger.error(
+                "failed_to_save_timeout_simulation_result",
+                error=str(exc),
+                session_id=session_id,
+            )
+        return timeout_result
 
 
 async def run_validation_in_isolated_process(

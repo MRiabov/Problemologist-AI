@@ -223,12 +223,18 @@ def submit_for_review(
     constraints = objectives_model.constraints
 
     manufactured_labels = {part.part_name for part in estimation.manufactured_parts}
-    if reviewer_stage != "benchmark_reviewer" and manufactured_labels:
-        method = estimation.manufactured_parts[0].manufacturing_method
+    if reviewer_stage != "benchmark_reviewer":
+        from shared.workers.workbench_models import ManufacturingMethod
+
+        method = (
+            estimation.manufactured_parts[0].manufacturing_method
+            if estimation.manufactured_parts
+            else ManufacturingMethod.CNC
+        )
         validation_result = validate_and_price_assembly(
             component,
             dfm_config,
-            part_labels=manufactured_labels,
+            part_labels=manufactured_labels or None,
             build_zone=build_zone,
             session_id=session_id,
             default_method=method,
@@ -270,7 +276,22 @@ def submit_for_review(
                 raise ValueError(f"Submission rejected (Weight): {msg}")
 
     # 4. Persist artifacts
-    render_paths = []
+    render_paths: list[str] = []
+    for raw_render_path in simulation_result.render_paths:
+        src_path = Path(raw_render_path)
+        if not src_path.exists() or not src_path.is_file():
+            logger.warning(
+                "submission_render_missing",
+                render_path=str(src_path),
+                session_id=session_id,
+            )
+            continue
+        dest_path = renders_dir / src_path.name
+        if src_path.resolve() != dest_path.resolve():
+            import shutil
+
+            shutil.copy(src_path, dest_path)
+        render_paths.append(str(Path("renders") / src_path.name))
     logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 
     cad_path = renders_dir / "model.step"

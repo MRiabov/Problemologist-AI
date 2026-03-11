@@ -741,6 +741,21 @@ def simulate(
                     if objectives.physics
                     else None,
                 )
+                fem_valid, fem_message = validate_fem_manufacturability(
+                    component,
+                    working_dir,
+                    session_id=session_id,
+                )
+                if not fem_valid:
+                    return SimulationResult(
+                        success=False,
+                        summary=fem_message or "Material validation failed",
+                        failure=SimulationFailure(
+                            reason=FailureReason.VALIDATION_FAILED,
+                            detail=fem_message or "Material validation failed",
+                        ),
+                        confidence="high",
+                    )
             except Exception as e:
                 import traceback
 
@@ -1257,13 +1272,10 @@ def validate_fem_manufacturability(
                 manufactured_labels = {
                     part.part_name for part in assembly.manufactured_parts
                 }
-            if not manufactured_labels:
-                return True, None
-
             val_report = validate_and_price_assembly(
                 component,
                 config,
-                part_labels=manufactured_labels,
+                part_labels=manufactured_labels or None,
                 fem_required=True,
                 session_id=session_id,
                 default_method=ManufacturingMethod.CNC,

@@ -179,7 +179,10 @@ class BenchmarkToolRequest(BaseModel):
 
     script_path: StrictStr = Field(
         default="script.py",
-        description="Path to the script containing the build() function.",
+        description=(
+            "Path to the authored script. The runtime accepts either "
+            "build() or a module-level final assembly such as `result = ...`."
+        ),
     )
     script_content: StrictStr | None = Field(
         default=None,
@@ -261,6 +264,7 @@ class SimulationArtifacts(BaseModel):
     """Structured artifacts from a simulation run."""
 
     render_paths: list[StrictStr] = Field(default_factory=list)
+    render_blobs_base64: dict[StrictStr, StrictStr] = Field(default_factory=dict)
     mjcf_content: StrictStr | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
@@ -377,7 +381,10 @@ class PreviewDesignRequest(BaseModel):
 
     script_path: StrictStr = Field(
         default="script.py",
-        description="Path to the script containing the build() function.",
+        description=(
+            "Path to the authored script. The runtime accepts either "
+            "build() or a module-level final assembly such as `result = ...`."
+        ),
     )
     script_content: StrictStr | None = Field(
         default=None,
