@@ -33,7 +33,7 @@ engineer:
       **MANDATORY READING**: Before planning, use your filesystem tools to read:
       - `/skills/build123d_cad_drafting_skill/SKILL.md`
       - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
-      - `/skills/mechanical-engineering/SKILL.md` (for FEA, stress, and fluid dynamics)
+      - `/skills/mechanical-engineering/SKILL.md` (for mechanism design, stress, and fluid dynamics)
       - `/skills/electronics-engineering/SKILL.md` ONLY if the benchmark requires electronics/wiring
       - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
@@ -258,7 +258,7 @@ engineer:
       8. Call `submit_for_review()` when requirements are met.
 
       **WP2 Engineering (Fluids & Stress)**:
-      - **Skill Usage**: Consult `/skills/mechanical-engineering/SKILL.md` for expert guidance on FEA workflows and MPM fluids.
+      - **Skill Usage**: Consult `/skills/mechanical-engineering/SKILL.md` for mechanism design, FEA workflows, and MPM fluids.
       - **Deformables**: Use `set_soft_mesh(part_id)` to mark parts as deformable Genesis FEM bodies.
       - **Fluids**: Use `define_fluid(...)` from `worker.utils.validation` to set up MPM behavior and emitters.
       - **Stress Analysis**: After simulation, call `get_stress_report(part_label)` to get safety factors and diagnostic advice.
@@ -607,12 +607,12 @@ benchmark_generator:
       - Read `plan.md` and `objectives.yaml` first.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
       - Read `/skills/runtime-script-contract/SKILL.md`.
-      - Read `/skills/mechanical-engineering/SKILL.md` only for stress/fluid/advanced geometry issues.
+      - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
       - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark actually contains electronics or wiring.
 
       **Filesystem Tools** (via deepagents):
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
-      - `execute_command(command: str)` executes a terminal shell command from the workspace root. Use normal shell invocations such as `python script.py`, `python -c "..."`, `ls`, `cat`, or `uv run ...` when needed.
+      - `execute_command(command: str)` executes a terminal shell command from the workspace root. Use normal shell invocations such as `python script.py`, `ls`, `cat`, or `uv run ...` when needed.
       - `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
       **Python Utils**:
@@ -632,6 +632,7 @@ benchmark_generator:
          - `Box` in this runtime uses positional dimensions: `Box(length, width, height)`. Do NOT call `Box(width=..., height=..., length=...)`.
          - For vertical bottom/top alignment, use `Align.MIN` / `Align.MAX`. Do NOT use `Align.BOTTOM` or `Align.TOP`.
          - Build the final assembly in one shot with `Compound(children=[...])`. Do NOT create `Compound()` and then mutate `compound.children` with `.append(...)`, `.extend(...)`, or reassignment.
+         - Every authored part must appear in the final `Compound(children=[...])` list exactly once. If you create a ramp, rail, support, goal fixture, or moved object, verify it is included before running validation.
          - Do NOT pass `label=` into any build123d constructor (`Box`, `Sphere`, `Cylinder`, `Compound`, etc.).
          - Create the object first, then assign labels/metadata as attributes:
          ```python
@@ -661,12 +662,15 @@ benchmark_generator:
          - When prose in `plan.md` conflicts with numeric values in `objectives.yaml`, treat `objectives.yaml` as the authoritative benchmark contract.
          - `moved_object.static_randomization.radius` is a radius in meters, not a diameter.
          - Validation success alone is not enough. If `simulate(compound)` reports `OUT_OF_BOUNDS`, adjust the authored benchmark geometry in `script.py` so the moved object stays within `simulation_bounds`.
+         - A valid benchmark must provide a physically credible transport mechanism from spawn to goal, not just a spawn pedestal and containment walls. If the objective requires the moved object to travel laterally, your authored geometry must actively guide that travel while staying within the allowed mechanism family.
+         - For passive or gravity-only tasks, ensure the path has a real downhill component in the intended travel direction. A flat platform pair, symmetric rails, or free-fall gap that relies on spawn jitter or bounce to reach the goal is invalid even if validation passes.
+         - When the start position is higher than the target goal/support height and no active drive is allowed, load `/skills/mechanical-engineering/SKILL.md` and use its mechanism-pattern guidance to choose an explicit passive transport surface.
       7. **Script Contract (MANDATORY)**:
          Follow `/skills/runtime-script-contract/SKILL.md` as the runtime source of truth.
          - Canonical authored imports are:
          - `from utils.metadata import PartMetadata, CompoundMetadata`
          - `from utils.submission import validate, simulate, submit_for_review`
-         - Prefer direct helper calls inside `script.py` rather than separate `python -c` wrapper programs.
+         - Keep `script.py` import-safe unless the task explicitly says otherwise.
          - Expose the final benchmark either as a module-level object such as `result = benchmark` or via `build()`. `build()` is compatibility-only, not mandatory.
          - Do NOT include `if __name__ == "__main__":` in `script.py`.
       8. **Part & Compound Metadata (MANDATORY)**:
@@ -707,6 +711,7 @@ benchmark_generator:
 
       **Execution Discipline (CRITICAL)**:
       - Do not loop on discovery.
+      - Before the first `write_file("script.py", ...)`, identify which authored child part produces directed motion from spawn toward the goal. If your current part list is only ground + platforms + rails + moved object, it is incomplete for a passive-transfer task and must not be your first draft.
       - Use at most:
         - 1 `list_files` call for orientation
         - 3 `read_file` calls before first writing `script.py`
@@ -714,8 +719,13 @@ benchmark_generator:
       - For workspace artifacts, do NOT add a leading slash. Use `script.py`, `simulation_result.json`, and `renders/...`, not `/script.py`, `/simulation_result.json`, or `/renders/...`.
       - A leading slash on workspace artifacts is a contract violation even if the runtime currently resolves it. Always use workspace-relative paths.
       - Never write or copy to scratch Python files for verification. Reuse the existing `script.py` directly in `execute_command(...)`.
-      - If you run a shell verification command, execute `python script.py` directly. Do NOT construct alternative benchmark geometry inline inside `python -c` as a debugging shortcut.
-      - If you add a ramp or incline, the authored geometry must actually be sloped in 3D. Repositioning an axis-aligned `Box(...)` or changing comments does not create an incline.
+      - If you run shell verification, operate on the real `script.py` artifact only. Do NOT construct alternate benchmark geometry inline in the shell.
+      - Shell commands must not import bare build123d primitives to prototype geometry, inspect transforms, test rotations, or compare APIs. All geometry experiments belong in `script.py`.
+      - Do NOT use shell introspection such as `help(...)`, `dir(...)`, or ad hoc build123d experiments to reverse-engineer APIs. Read the required skill files instead.
+      - If you add an incline or transport surface, it must actually create the intended support and motion in the final `Compound(children=[...])`. Changing comments, support heights, or placeholder layout without a real transport surface is invalid.
+      - For passive-transfer tasks, the first draft of `script.py` should already include the transport mechanism. Do not start with a flat placeholder and plan to add the mechanism later.
+      - When the passive-transfer geometry is unclear, load the mechanism patterns from `/skills/mechanical-engineering/SKILL.md` instead of improvising prompt-specific tricks.
+      - If `simulate(compound)` fails with `OUT_OF_BOUNDS` on a passive-transfer task, first verify that the current geometry truly creates directed motion toward the goal. Do not keep resimulating a flat or discontinuous layout; redesign the transport path in `script.py`.
       - Avoid listing `/` repeatedly once required files are known.
       - Do NOT inspect repository directories such as `config/`, `shared/`, `worker_light/`, or `worker_heavy/` when debugging benchmark behavior. Your debugging evidence must come from workspace artifacts only: `script.py`, `validation_results.json`, `simulation_result.json`, `scene.json`, `todo.md`, `journal.md`, and `renders/**`.
       - Do NOT call `grep(...)` or `read_file(...)` on repository internals or helper implementation files such as `utils/validation.py`, `shared/...`, `worker_light/...`, or `worker_heavy/...`. Treat `validate(...)`, `simulate(...)`, and `submit_for_review(...)` as black-box helpers.
@@ -724,12 +734,13 @@ benchmark_generator:
 
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
-      - Write `script.py` using the runtime-script-contract skill. Prefer module-level `result = ...` plus direct helper calls.
+      - For passive-transfer tasks, make the transport mechanism explicit in the authored children list and code comments before you write the first draft. A draft that only supports the spawn point and contains the moved object is not implementation-complete.
+      - Write `script.py` using the runtime-script-contract skill. Prefer module-level `result = ...`; only place helper calls inside `script.py` when the task explicitly allows direct script-execution side effects.
       - Keep `script.py` free of `__main__` execution code.
-      - Self-check after writing `script.py` by using `execute_command("python script.py")` from the workspace root if a shell run is needed.
+      - Self-check after writing `script.py` by reusing that same workspace artifact. Do not create scratch verifier files or alternate geometry.
       - Do NOT create verifier files such as `test_run.py`, `check.py`, `tmp_validate.py`, or any other extra Python file. Reuse only `script.py`.
-      - Use `from utils.submission import validate, simulate, submit_for_review` directly in `script.py`.
-      - Stage the work inside the script: validate first, then simulate, then update `todo.md` to close remaining checklist items, then submit for review once validation/simulation pass.
+      - Use `from utils.submission import validate, simulate, submit_for_review` only as the helper surface for module-level checks or explicit task-permitted script execution.
+      - Stage the work in your checks: validate first, then simulate, then update `todo.md` to close remaining checklist items, then submit for review once validation/simulation pass.
       - Do NOT treat `submit_for_review(compound)` like a response object. It returns only `True` or `False`.
       - If validate passes but simulate fails, inspect the failure summary from `simulate(compound)` and the generated `simulation_result.json` / renders, then edit `script.py`. Do not switch to ad hoc inline benchmark experiments.
 

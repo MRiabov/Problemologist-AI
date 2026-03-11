@@ -156,6 +156,13 @@ For authored CAD scripts, direct top-level execution is canonical. The agent sho
 
 `build()` is now a compatibility-only helper rather than a mandatory entrypoint. Runtime may continue to support `build()` while migration is in progress, but new authored-script contracts should not depend on `build()` being present.
 
+Skill-repository boundary is explicit:
+
+1. `skills/` is the canonical runtime skill repository mounted into agent workspaces as `/skills`.
+2. `.codex/skills/` is a Codex-only overlay for local debugging/editorial workflows and is not part of the runtime agent skill contract.
+3. `suggested_skills/` is a writable sidecar output area for proposed/new skills, not the canonical skill mount that normal agents should read from.
+4. Runtime agents should not be taught to treat `.codex/skills/`, `suggested_skills/`, or any other agent-specific skill store as interchangeable with `/skills`.
+
 <!-- Note: the filesystem is not in repo root, but in docker containers. -->
 
 <!-- Note: each of these should be asserted.-->
