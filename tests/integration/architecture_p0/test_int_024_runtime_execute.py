@@ -5,6 +5,12 @@ import httpx
 import pytest
 import yaml
 
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Episode
+from controller.utils import get_episode_id
+from shared.enums import AgentName, EpisodeStatus
 from shared.models.schemas import (
     BoundingBox,
     Constraints,
@@ -18,19 +24,74 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 
 def _runtime_validate_command() -> str:
-    return (
-        "python - <<'PY'\n"
-        "import importlib.util\n"
-        "from shared.utils.agent import validate\n"
-        'spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")\n'
-        "mod = importlib.util.module_from_spec(spec)\n"
-        "spec.loader.exec_module(mod)\n"
-        "compound = mod.build()\n"
-        "success, message = validate(compound)\n"
-        'print(f"VALIDATE_SUCCESS={success}")\n'
-        'print(f"VALIDATE_MESSAGE={message}")\n'
-        "PY\n"
+    return "python script.py"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_024_execute_command_uses_agent_policy_timeout_by_default():
+    """
+    INT-024: controller execute_command must inherit the agent execution
+    timeout policy instead of silently falling back to a stale 30s default.
+    """
+    session_id = f"INT-024-TIMEOUT-{uuid.uuid4().hex[:8]}"
+    episode_id = get_episode_id(session_id)
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        db.add(
+            Episode(
+                id=episode_id,
+                task="integration-timeout-check",
+                status=EpisodeStatus.RUNNING,
+                metadata_vars={},
+            )
+        )
+        await db.commit()
+
+    fs = RemoteFilesystemMiddleware(
+        client=WorkerClient(
+            base_url=WORKER_LIGHT_URL,
+            session_id=session_id,
+            heavy_url=os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002"),
+        ),
+        temporal_client=None,
+        agent_role=AgentName.BENCHMARK_CODER,
     )
+
+    result = await fs.run_command(
+        "python - <<'PY'\nimport time\ntime.sleep(35)\nprint('LONG_COMMAND_OK')\nPY\n"
+    )
+
+    assert result.timed_out is False
+    assert result.exit_code == 0
+    assert "LONG_COMMAND_OK" in result.stdout
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_024_runtime_execute_masks_host_session_root_as_workspace():
+    """
+    INT-024: shell execution must expose the canonical `/workspace` alias
+    rather than leaking the host session directory into model-visible output.
+    """
+    session_id = f"INT-024-PWD-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code="pwd",
+                timeout=30,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=60.0,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        data = ExecuteResponse.model_validate(exec_resp.json())
+        assert data.exit_code == 0
+        assert data.stdout.strip() == "/workspace"
+        assert "/tmp/pb-sessions" not in data.stdout
 
 
 @pytest.mark.integration_p0
@@ -38,7 +99,8 @@ def _runtime_validate_command() -> str:
 async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
     """
     INT-024: benchmark validation remains reachable from the light-worker
-    runtime via shared.utils.agent.validate() inside execute_command-equivalent
+    runtime via direct utils.submission.validate() calls inside the authored
+    script during execute_command-equivalent execution,
     execution, without host-resolution failures.
     """
     session_id = f"INT-024-RT-{uuid.uuid4().hex[:8]}"
@@ -46,13 +108,19 @@ async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
 
     script = """
 from build123d import Box, Location
-from shared.models.schemas import PartMetadata
+from utils.metadata import PartMetadata
+from utils.submission import validate
 
 def build():
     p = Box(4, 4, 4).move(Location((0, 0, 4)))
     p.label = "target_box"
     p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
     return p
+
+result = build()
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
 """
 
     invalid_objectives = ObjectivesYaml(
@@ -175,7 +243,8 @@ async def test_int_024_runtime_validate_rejects_parent_only_fixed_metadata():
 
     script = """
 from build123d import Align, Box, BuildPart, Compound
-from shared.models.schemas import CompoundMetadata, PartMetadata
+from utils.metadata import CompoundMetadata, PartMetadata
+from utils.submission import validate
 
 def build():
     with BuildPart() as ground_builder:
@@ -194,6 +263,11 @@ def build():
     benchmark.label = "benchmark_assembly"
     benchmark.metadata = CompoundMetadata(fixed=True)
     return benchmark
+
+result = build()
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
 """
 
     objectives = ObjectivesYaml(
@@ -265,7 +339,8 @@ async def test_int_024_runtime_validate_rejects_translated_top_level_parts():
 
     script = """
 from build123d import Align, Box, BuildPart, Compound
-from shared.models.schemas import CompoundMetadata, PartMetadata
+from utils.metadata import CompoundMetadata, PartMetadata
+from utils.submission import validate
 
 def build():
     with BuildPart() as ground_builder:
@@ -290,6 +365,11 @@ def build():
     benchmark.label = "benchmark_assembly"
     benchmark.metadata = CompoundMetadata()
     return benchmark
+
+result = build()
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
 """
 
     objectives = ObjectivesYaml(
@@ -361,13 +441,19 @@ async def test_int_024_runtime_validate_reports_resolved_build_zone_bounds():
 
     script = """
 from build123d import Align, Box
-from shared.models.schemas import PartMetadata
+from utils.metadata import PartMetadata
+from utils.submission import validate
 
 def build():
     ground = Box(40, 40, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
     ground.label = "ground_plane"
     ground.metadata = PartMetadata(material_id="hdpe", fixed=True)
     return ground
+
+result = build()
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
 """
 
     objectives = ObjectivesYaml(

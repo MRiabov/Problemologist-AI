@@ -1,9 +1,14 @@
 import uuid
+from time import sleep
 
 import httpx
 import pytest
 
 from shared.workers.schema import BenchmarkToolResponse
+from worker_heavy.runtime.simulation_runner import (
+    SimulationExecutorManager,
+    SimulationExecutorOperationTimeoutError,
+)
 
 WORKER_LIGHT_URL = "http://localhost:18001"
 WORKER_HEAVY_URL = "http://localhost:18002"
@@ -79,3 +84,31 @@ async def test_int_187_heavy_worker_crash_containment_boundary():
         ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready")
         assert ready_resp.status_code == 200, ready_resp.text
         assert ready_resp.json().get("status") == "ready"
+
+
+@pytest.mark.integration
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_189_simulation_executor_timeout_recreates_child():
+    manager = SimulationExecutorManager()
+
+    try:
+        with pytest.raises(SimulationExecutorOperationTimeoutError):
+            await manager.submit(
+                "simulate",
+                "SIMULATION_CHILD_PROCESS_CRASHED",
+                sleep,
+                2.0,
+                timeout_seconds=0.2,
+            )
+
+        result = await manager.submit(
+            "validate",
+            "VALIDATION_CHILD_PROCESS_CRASHED",
+            pow,
+            2,
+            5,
+        )
+        assert result == 32
+    finally:
+        await manager.shutdown()

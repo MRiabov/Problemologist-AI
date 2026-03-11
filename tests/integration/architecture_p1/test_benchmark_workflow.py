@@ -133,6 +133,13 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert manifest_paths, (
             f"benchmark_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
+        assert not any(
+            p.endswith("engineering_execution_review_manifest.json")
+            for p in artifact_paths
+        ), (
+            "Benchmark workflow must not emit engineering_execution_review_manifest.json. "
+            f"Artifacts: {artifact_paths}"
+        )
         assert any(
             "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
         ), f"review manifest must be in .manifests/. Found: {manifest_paths}"

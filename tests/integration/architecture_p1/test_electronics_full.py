@@ -256,7 +256,7 @@ async def test_int_136_power_budget_validation():
         await _require_services(client)
         session_id = f"INT-136-{uuid.uuid4().hex[:8]}"
 
-        code = """
+        code = """python - <<'PY'
 import json
 from shared.models.schemas import ElectronicComponent, ElectronicsSection, PowerSupplyConfig, WireConfig, WireTerminal
 from shared.enums import ElectronicComponentType
@@ -286,7 +286,7 @@ print(json.dumps({
     "over_safe": bool(over_budget["is_safe"]),
     "over_margin_a": float(over_budget["margin_a"]),
 }))
-"""
+PY"""
         exec_resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(code=code, timeout=60).model_dump(mode="json"),
@@ -421,7 +421,7 @@ async def test_int_141_circuit_transient_simulation():
         await _require_services(client)
         session_id = f"INT-141-{uuid.uuid4().hex[:8]}"
 
-        code = """
+        code = """python - <<'PY'
 import json
 import numpy as np
 from shared.models.schemas import ElectronicComponent, ElectronicsSection, PowerSupplyConfig, WireConfig, WireTerminal
@@ -441,7 +441,6 @@ circuit = build_circuit_from_section(section)
 tran = simulate_circuit_transient(circuit, duration_s=0.01, step_s=0.001)
 time_points = np.array(tran.time)
 
-# sample first node if available for contract visibility
 sample_voltage = None
 if len(tran.nodes):
     first_node = next(iter(tran.nodes.values()))
@@ -453,7 +452,7 @@ print(json.dumps({
     "duration_s": float(time_points[-1]) if len(time_points) else 0.0,
     "sample_voltage": sample_voltage,
 }))
-"""
+PY"""
 
         exec_resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",

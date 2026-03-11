@@ -83,6 +83,61 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "INT-005 engineer planner artifacts generated and submitted."
+      - node: electronics_planner
+        steps:
+          - thought: "No electronics changes are needed for INT-005; submit the handoff."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
+          - finished: true
+            summary: "INT-005 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "INT-005 planner artifacts satisfy the planning gate."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "guide_block"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=True,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-005 coder produced minimal execution artifact."
+      - node: electronics_engineer
+        steps:
+          - finished: true
+            journal: "INT-005 electronics engineer no-op pass."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics stage is a no-op for INT-005."
+              required_fixes: []
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "INT-005 execution artifacts are valid."
+              required_fixes: []
 
   INT-113:
     transcript:
@@ -572,7 +627,7 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "INT-184 electronics planner submission complete."
-      - node: engineer_reviewer
+      - node: engineer_plan_reviewer
         steps:
           - finished: true
             review:
@@ -702,6 +757,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "No electronics needed."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "INT-014 planner artifacts satisfy the planning gate."
+              required_fixes: []
       - node: engineer_coder
         steps:
           - thought: "Implementing the design."
@@ -709,15 +771,16 @@ scenarios:
             tool_args:
               path: "script.py"
               content: |
-                from build123d import Box
-                from shared.enums import ManufacturingMethod
+                from build123d import Box, Pos
                 from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
 
                 def build():
-                    part = Box(1, 1, 1).translate((7.5, 7.5, 7.5))
-                    part.label = "projectile_ball"
+                    part = Box(1, 1, 1).move(Pos(0, 0, 0.5))
+                    part.label = "motor_mount"
                     part.metadata = PartMetadata(
                         material_id="abs",
+                        fixed=True,
                         manufacturing_method=ManufacturingMethod.THREE_DP,
                     )
                     return part
@@ -726,7 +789,18 @@ scenarios:
           - finished: true
             journal: "Implemented mechanism with MOCK-MOTOR-ID."
             thought: "Implementation complete."
-      - node: engineer_reviewer
+      - node: electronics_engineer
+        steps:
+          - finished: true
+            journal: "INT-014 electronics engineer no-op pass."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics review is a no-op for INT-014."
+              required_fixes: []
+      - node: engineer_execution_reviewer
         steps:
           - finished: true
             review:
@@ -809,15 +883,50 @@ scenarios:
         steps:
           - finished: true
             review:
-              decision: "REJECTED"
-              reason: "INT-016 deterministic rejection path for schema-gate stability."
-              required_fixes:
-                - "Refine planner rationale."
-      - node: skill_agent
+              decision: "APPROVED"
+              reason: "INT-016 planner artifacts are valid for review-schema coverage."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "obj"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-016 coder produced minimal execution artifact."
+      - node: electronics_engineer
         steps:
           - finished: true
-            summary: "INT-016 skill analysis completed."
-            journal: "No additional skills identified."
+            journal: "INT-016 electronics engineer no-op pass."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics review is a no-op for INT-016."
+              required_fixes: []
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution artifacts are valid for review-schema coverage."
+              required_fixes: []
 
   INT-017:
     transcript:
@@ -896,6 +1005,47 @@ scenarios:
             review:
               decision: "APPROVED"
               reason: "Planner artifacts are valid."
+              required_fixes: []
+      - node: engineer_coder
+        steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(1, 1, 1)
+                    part.label = "projectile_ball"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
+          - finished: true
+            journal: "INT-017 coder produced minimal execution artifact."
+      - node: electronics_engineer
+        steps:
+          - finished: true
+            journal: "INT-017 electronics engineer no-op pass."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics review is a no-op for this refusal-loop fixture."
+              required_fixes: []
+      - node: engineer_execution_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Execution artifacts are valid for refusal-loop coverage."
               required_fixes: []
 
   INT-025:
@@ -3107,8 +3257,18 @@ scenarios:
             summary: "INT-038 planner artifacts generated and submitted."
       - node: electronics_planner
         steps:
+          - thought: "No electronics changes are needed for INT-038; submit the handoff."
+            tool_name: "submit_plan"
+            expected_observation: "submitted"
           - finished: true
-            summary: "No electronics required."
+            summary: "INT-038 electronics planner submission complete."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "INT-038 planner artifacts satisfy the planning gate."
+              required_fixes: []
       - node: engineer_coder
         steps:
           - thought: "Implement deterministic oscillatory script."
@@ -3134,7 +3294,18 @@ scenarios:
           - finished: true
             journal: "Simulation stable for oscillatory controller scenario."
             thought: "Implementation complete."
-      - node: engineer_reviewer
+      - node: electronics_engineer
+        steps:
+          - finished: true
+            journal: "INT-038 electronics engineer no-op pass."
+      - node: electronics_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Electronics review is a no-op for INT-038."
+              required_fixes: []
+      - node: engineer_execution_reviewer
         steps:
           - finished: true
             review:
@@ -4022,7 +4193,7 @@ scenarios:
               params: { wall_height: 5, goal_pos: [10, 10, 0] }
       - node: benchmark_coder
         steps:
-          - thought: "Implementing benchmark script with explicit reviewer handoff."
+          - thought: "Implementing an import-safe benchmark script."
             tool_name: "write_file"
             tool_args:
               path: "script.py"
@@ -4030,7 +4201,6 @@ scenarios:
                 from build123d import Compound, Location, Sphere
                 from shared.models.schemas import PartMetadata, CompoundMetadata
                 from shared.enums import ManufacturingMethod
-                from shared.utils.agent import submit_for_review
 
                 def build():
                     projectile_ball = Sphere(1.0)
@@ -4045,22 +4215,35 @@ scenarios:
                     scene.label = "benchmark_scene"
                     scene.metadata = CompoundMetadata(fixed=False)
                     return scene
-
-                def reviewer_handoff_contract(compound: Compound) -> None:
-                    submit_for_review(compound)
               overwrite: true
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args:
-              {
-                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
-              }
+              command: |
+                python - <<'PY'
+                import importlib.util
+                from shared.utils.agent import validate, simulate
+
+                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                compound = mod.build()
+                print(validate(compound))
+                print(simulate(compound).success)
+                PY
             expected_observation: "True"
           - tool_name: "execute_command"
             tool_args:
-              {
-                command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
-              }
+              command: |
+                python - <<'PY'
+                import importlib.util
+                from shared.utils.agent import submit_for_review
+
+                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                print(submit_for_review(mod.build()))
+                PY
             expected_observation: "True"
           - finished: true
             journal: "Work completed."
@@ -4173,15 +4356,31 @@ scenarios:
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args:
-              {
-                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
-              }
+              command: |
+                python - <<'PY'
+                import importlib.util
+                from shared.utils.agent import validate, simulate
+
+                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                compound = mod.build()
+                print(validate(compound))
+                print(simulate(compound).success)
+                PY
             expected_observation: "True"
           - tool_name: "execute_command"
             tool_args:
-              {
-                command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
-              }
+              command: |
+                python - <<'PY'
+                import importlib.util
+                from shared.utils.agent import submit_for_review
+
+                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                print(submit_for_review(mod.build()))
+                PY
             expected_observation: "True"
           - finished: true
             journal: "Implemented placeholder geometry for INT-180."
@@ -4279,6 +4478,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Ordering scenario plan artifacts are valid."
+              required_fixes: []
       - node: engineer_coder
         steps:
           - thought: "Emit simple script."
@@ -4295,7 +4501,7 @@ scenarios:
                     p.label = "obj"
                     p.metadata = PartMetadata(
                         material_id="abs",
-                        fixed=True,
+                        fixed=False,
                         manufacturing_method=ManufacturingMethod.THREE_DP,
                     )
                     return p
@@ -4304,7 +4510,7 @@ scenarios:
           - finished: true
             journal: "INT-181 coder output generated."
             thought: "Implementation complete."
-      - node: engineer_reviewer
+      - node: engineer_execution_reviewer
         steps:
           - finished: true
             review:
@@ -4387,6 +4593,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Isolation scenario plan artifacts are valid."
+              required_fixes: []
       - node: engineer_coder
         steps:
           - thought: "Emit simple script."
@@ -4403,7 +4616,7 @@ scenarios:
                     p.label = "obj"
                     p.metadata = PartMetadata(
                         material_id="abs",
-                        fixed=True,
+                        fixed=False,
                         manufacturing_method=ManufacturingMethod.THREE_DP,
                     )
                     return p
@@ -4412,7 +4625,7 @@ scenarios:
           - finished: true
             journal: "INT-182 coder output generated."
             thought: "Implementation complete."
-      - node: engineer_reviewer
+      - node: engineer_execution_reviewer
         steps:
           - finished: true
             review:
@@ -4498,6 +4711,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Steerability scenario plan artifacts are valid."
+              required_fixes: []
       - node: engineer_coder
         steps:
           - thought: "Emit simple script."
@@ -4514,7 +4734,7 @@ scenarios:
                     p.label = "obj"
                     p.metadata = PartMetadata(
                         material_id="abs",
-                        fixed=True,
+                        fixed=False,
                         manufacturing_method=ManufacturingMethod.THREE_DP,
                     )
                     return p
@@ -4523,7 +4743,7 @@ scenarios:
           - finished: true
             journal: "INT-183 coder output generated."
             thought: "Implementation complete."
-      - node: engineer_reviewer
+      - node: engineer_execution_reviewer
         steps:
           - finished: true
             review:
@@ -4535,16 +4755,7 @@ scenarios:
     transcript:
       - node: engineer_planner
         steps:
-          - thought: "Intentionally trigger a deterministic forbidden write once."
-            tool_name: "write_file"
-            tool_args:
-              {
-                path: ".manifests/int185_forbidden.md",
-                content: "forbidden",
-                overwrite: true,
-              }
-            expected_observation: "Permission denied"
-          - thought: "Recover and continue with valid planner artifacts."
+          - thought: "Write valid planner artifacts."
             tool_name: "write_file"
             tool_args:
               path: "plan.md"
@@ -4599,7 +4810,7 @@ scenarios:
           - tool_name: "submit_plan"
             expected_observation: "submitted"
           - finished: true
-            summary: "INT-185 planner recovered after agent-caused tool failure."
+            summary: "INT-185 planner artifacts generated."
       - node: electronics_planner
         steps:
           - thought: "No electronics steps."
@@ -4615,9 +4826,21 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Recovery scenario plan artifacts are valid."
+              required_fixes: []
       - node: engineer_coder
         steps:
-          - thought: "Emit simple script."
+          - thought: "Intentionally trigger a deterministic agent-caused command failure once."
+            tool_name: "execute_command"
+            tool_args:
+              { command: "ls /non_existent_path_to_fail" }
+            expected_observation: "ls: cannot access"
+          - thought: "Emit simple script after observing the failed command."
             tool_name: "write_file"
             tool_args:
               path: "script.py"
@@ -4631,7 +4854,7 @@ scenarios:
                     p.label = "obj"
                     p.metadata = PartMetadata(
                         material_id="abs",
-                        fixed=True,
+                        fixed=False,
                         manufacturing_method=ManufacturingMethod.THREE_DP,
                     )
                     return p
@@ -4640,7 +4863,7 @@ scenarios:
           - finished: true
             journal: "INT-185 coder output generated."
             thought: "Implementation complete."
-      - node: engineer_reviewer
+      - node: engineer_execution_reviewer
         steps:
           - finished: true
             review:
@@ -4710,13 +4933,39 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "No electronics required."
+      - node: engineer_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "INT-186 plan artifacts satisfy schema and handover requirements."
+              required_fixes: []
       - node: engineer_coder
         steps:
+          - tool_name: "write_file"
+            tool_args:
+              path: "script.py"
+              content: |
+                from build123d import Box
+                from shared.models.schemas import PartMetadata
+                from shared.workers.workbench_models import ManufacturingMethod
+
+                def build():
+                    part = Box(0.2, 0.2, 0.2)
+                    part.label = "obj"
+                    part.metadata = PartMetadata(
+                        material_id="abs",
+                        fixed=False,
+                        manufacturing_method=ManufacturingMethod.THREE_DP,
+                    )
+                    return part
+              overwrite: true
+            expected_observation: "success"
           - thought: "Trigger deterministic infra unavailability for execute_command."
             tool_name: "execute_command"
             tool_args:
               {
-                command: "import time; time.sleep(20); print('infra_probe')",
+                command: "python -c \"import time; time.sleep(20); print('infra_probe')\"",
               }
             expected_observation: "SYSTEM_TOOL_RETRY_EXHAUSTED"
           - finished: true
@@ -4825,15 +5074,31 @@ scenarios:
             expected_observation: "success"
           - tool_name: "execute_command"
             tool_args:
-              {
-                command: "import importlib.util\nfrom shared.utils.agent import validate, simulate\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\ncompound = mod.build()\nprint(validate(compound))\nprint(simulate(compound).success)",
-              }
+              command: |
+                python - <<'PY'
+                import importlib.util
+                from shared.utils.agent import validate, simulate
+
+                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                compound = mod.build()
+                print(validate(compound))
+                print(simulate(compound).success)
+                PY
             expected_observation: "True"
           - tool_name: "execute_command"
             tool_args:
-              {
-                command: "import importlib.util\nfrom shared.utils.agent import submit_for_review\nspec = importlib.util.spec_from_file_location('benchmark_script', 'script.py')\nmod = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(mod)\nprint(submit_for_review(mod.build()))",
-              }
+              command: |
+                python - <<'PY'
+                import importlib.util
+                from shared.utils.agent import submit_for_review
+
+                spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
+                mod = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(mod)
+                print(submit_for_review(mod.build()))
+                PY
             expected_observation: "True"
           - finished: true
             journal: "Mechanical implementation completed."

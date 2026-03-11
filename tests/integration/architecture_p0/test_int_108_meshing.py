@@ -53,7 +53,7 @@ def build():
         )
 
         # 2. Trigger tetrahedralization
-        code = """
+        code = """python - <<'PY'
 from pathlib import Path
 from worker_heavy.utils.mesh_utils import tetrahedralize
 from build123d import Box, export_stl
@@ -62,7 +62,7 @@ part = Box(1, 1, 1)
 export_stl(part, "test.stl")
 msh_path = tetrahedralize(Path("test.stl"), Path("test.msh"))
 assert msh_path.exists(), f"Mesh file not created at {msh_path}"
-"""
+PY"""
         exec_req = ExecuteRequest(code=code, timeout=60)
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
@@ -100,11 +100,12 @@ assert msh_path.exists(), f"Mesh file not created at {msh_path}"
             headers=base_headers,
         )
 
-        code_fail = """
+        code_fail = """python - <<'PY'
 from pathlib import Path
 from worker_heavy.utils.mesh_utils import tetrahedralize
+
 tetrahedralize(Path("bad.stl"), Path("bad.msh"))
-"""
+PY"""
         exec_fail_req = ExecuteRequest(code=code_fail, timeout=60)
         resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",

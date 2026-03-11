@@ -320,10 +320,7 @@ run()
         resp_exec = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code=(
-                    "import sys; sys.path.append('.'); "
-                    "import debug_stl; debug_stl.run()"
-                ),
+                code=("python - <<'PY'\nimport debug_stl\ndebug_stl.run()\nPY\n"),
                 timeout=120,
             ).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
@@ -500,8 +497,11 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
         "/runtime/execute",
         json=ExecuteRequest(
             code=(
-                "import sys; sys.path.append('.'); import verify_overload; "
-                "import asyncio; asyncio.run(verify_overload.run())"
+                "python - <<'PY'\n"
+                "import asyncio\n"
+                "import verify_overload\n"
+                "asyncio.run(verify_overload.run())\n"
+                "PY\n"
             ),
             timeout=90,
         ).model_dump(mode="json"),

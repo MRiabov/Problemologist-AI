@@ -282,12 +282,16 @@ async def test_int_183_steerability_queue_single_consumption():
 
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
-@pytest.mark.allow_backend_errors("filesystem_permission_denied.*int185_forbidden.md")
 @pytest.mark.asyncio
 async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
     """INT-185: Agent-caused tool error is observed, no infra retry fan-out, and run continues."""
+    worker_light_debug_log = Path("logs/worker_light_debug.log")
+    worker_debug_start_offset = (
+        worker_light_debug_log.stat().st_size if worker_light_debug_log.exists() else 0
+    )
+
     async with httpx.AsyncClient(timeout=300.0) as client:
-        _, episode_id = await run_agent_episode(
+        session_id, episode_id = await run_agent_episode(
             client,
             int_id="INT-185",
             task="INT-185 agent failed tool routing contract",
@@ -297,19 +301,17 @@ async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
 
     assert episode["status"] != "FAILED", f"Episode failed: {_slim_episode(episode)}"
     traces = episode.get("traces", [])
-    failed_forbidden_writes = [
+    failed_agent_commands = [
         (idx, t)
         for idx, t in enumerate(traces)
         if t.get("trace_type") == "TOOL_START"
-        and t.get("name") == "write_file"
-        and ".manifests/int185_forbidden.md" in (t.get("content") or "")
-        and "permission denied"
-        in str((t.get("metadata_vars") or {}).get("error") or "").lower()
+        and t.get("name") == "execute_command"
+        and "ls /non_existent_path_to_fail" in (t.get("content") or "")
     ]
-    assert len(failed_forbidden_writes) == 1, (
-        "Expected exactly one deterministic agent-caused forbidden write failure."
+    assert len(failed_agent_commands) == 1, (
+        "Expected exactly one deterministic agent-caused command failure."
     )
-    failed_idx = failed_forbidden_writes[0][0]
+    failed_idx = failed_agent_commands[0][0]
     subsequent_tool_starts = [
         idx
         for idx, t in enumerate(traces)
@@ -318,6 +320,13 @@ async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
     assert subsequent_tool_starts, (
         "Expected subsequent tool calls after the failed tool observation."
     )
+
+    worker_log_segment = strip_ansi(
+        read_log_segment(worker_light_debug_log, worker_debug_start_offset)
+    )
+    assert f"session_id={session_id}" in worker_log_segment, worker_log_segment
+    assert "runtime_execute_async_complete" in worker_log_segment, worker_log_segment
+    assert "exit_code=2" in worker_log_segment, worker_log_segment
 
 
 @pytest.mark.integration_agent
