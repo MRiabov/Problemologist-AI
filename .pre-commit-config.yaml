@@ -9,6 +9,12 @@ repos:
         files: \.py$
   - repo: local
     hooks:
+      - id: record-skills-revision
+        name: record-skills-revision
+        entry: bash -c "uv run python scripts/update_skills_lock.py && git add config/skills_repo.lock.json"
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: generate-openapi
         name: generate-openapi
         entry: bash -c "uv run python scripts/generate_openapi.py && git add controller_openapi.json worker_openapi.json"
