@@ -19,6 +19,7 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavyValidationWorkflow,
 )
+from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
@@ -78,22 +79,9 @@ _fs_policy: FilesystemPolicy | None = None
 def get_fs_policy() -> FilesystemPolicy:
     global _fs_policy
     if _fs_policy is None:
-        # Resolve config path relative to the project root or the current file.
-        potential_paths = [
-            Path("config/agents_config.yaml"),
-            Path(__file__).parents[2] / "config" / "agents_config.yaml",
-            Path("/app/config/agents_config.yaml"),
-        ]
-
-        config_path = next((p for p in potential_paths if p.exists()), None)
-
+        config_path = resolve_agents_config_path()
         if config_path is None:
-            # Fallback for development if repo root is different
-            logger.warning("agents_config_not_found_searching_repo")
-            # Try finding it in the project root
-            root = Path(__file__).parents[2]
-            config_path = root / "config" / "agents_config.yaml"
-
+            logger.warning("agents_config_not_found_using_defaults")
         _fs_policy = FilesystemPolicy(config_path)
     return _fs_policy
 

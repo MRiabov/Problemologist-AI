@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import UUID
 
-import structlog
-import yaml
 from pydantic import BaseModel, Field
 
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
+from shared.agents.config import (
+    AgentExecutionPolicy,
+    AgentsConfig,
+    load_agents_config,
+)
 from shared.enums import AgentName
 from shared.models.schemas import EpisodeMetadata
-from shared.workers.filesystem.policy import AgentExecutionPolicy, FilesystemConfig
-
-logger = structlog.get_logger(__name__)
 
 
 class EpisodeRuntimeCounters(BaseModel):
@@ -38,34 +37,12 @@ class AgentHardFailError(RuntimeError):
         self.code = code
 
 
-def _resolve_agents_config_path() -> Path | None:
-    candidates = (
-        Path("config/agents_config.yaml"),
-        Path(__file__).parents[2] / "config" / "agents_config.yaml",
-        Path("/app/config/agents_config.yaml"),
-    )
-    return next((p for p in candidates if p.exists()), None)
-
-
-def _load_filesystem_config() -> FilesystemConfig:
-    config_path = _resolve_agents_config_path()
-    if config_path is None:
-        return FilesystemConfig()
-    try:
-        with config_path.open("r", encoding="utf-8") as handle:
-            raw_data = yaml.safe_load(handle) or {}
-        return FilesystemConfig.model_validate(raw_data)
-    except Exception as exc:
-        logger.warning(
-            "failed_to_load_agents_execution_config",
-            config_path=str(config_path),
-            error=str(exc),
-        )
-        return FilesystemConfig()
+def _load_agents_config() -> AgentsConfig:
+    return load_agents_config()
 
 
 def resolve_agent_execution_policy(agent_name: AgentName | str) -> AgentExecutionPolicy:
-    config = _load_filesystem_config()
+    config = _load_agents_config()
     normalized = (
         agent_name if isinstance(agent_name, AgentName) else AgentName(agent_name)
     )

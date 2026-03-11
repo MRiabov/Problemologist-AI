@@ -1,65 +1,11 @@
-from pathlib import Path
-
-import structlog
-import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from controller.config.settings import settings as global_settings
-from shared.workers.filesystem.policy import FilesystemConfig
-
-logger = structlog.get_logger(__name__)
+from shared.agents.config import load_agents_config
 
 
-def _resolve_llm_max_tokens_from_agents_config(default: int = 16384) -> int:
-    potential_paths = [
-        Path("config/agents_config.yaml"),
-        Path(__file__).parents[2] / "config" / "agents_config.yaml",
-        Path("/app/config/agents_config.yaml"),
-    ]
-    config_path = next((p for p in potential_paths if p.exists()), None)
-
-    if config_path is None:
-        return default
-
-    try:
-        with config_path.open("r", encoding="utf-8") as f:
-            raw_data = yaml.safe_load(f) or {}
-        config = FilesystemConfig(**raw_data)
-        return config.llm.max_reasoning_tokens
-    except Exception as exc:
-        logger.warning(
-            "failed_to_load_agents_llm_config",
-            config_path=str(config_path),
-            error=str(exc),
-        )
-        return default
-
-
-def _resolve_context_compaction_threshold_tokens_from_agents_config(
-    default: int = 225000,
-) -> int:
-    potential_paths = [
-        Path("config/agents_config.yaml"),
-        Path(__file__).parents[2] / "config" / "agents_config.yaml",
-        Path("/app/config/agents_config.yaml"),
-    ]
-    config_path = next((p for p in potential_paths if p.exists()), None)
-
-    if config_path is None:
-        return default
-
-    try:
-        with config_path.open("r", encoding="utf-8") as f:
-            raw_data = yaml.safe_load(f) or {}
-        config = FilesystemConfig(**raw_data)
-        return config.llm.context_compaction_threshold_tokens
-    except Exception as exc:
-        logger.warning(
-            "failed_to_load_agents_context_compaction_tokens_config",
-            config_path=str(config_path),
-            error=str(exc),
-        )
-        return default
+def _load_agents_llm_config():
+    return load_agents_config().llm
 
 
 class AgentSettings(BaseSettings):
@@ -71,15 +17,12 @@ class AgentSettings(BaseSettings):
     openrouter_api_key: str | None = global_settings.openrouter_api_key
     anthropic_api_key: str | None = None
     llm_timeout_seconds: int = 300
-    llm_max_tokens: int = _resolve_llm_max_tokens_from_agents_config()
+    llm_max_tokens: int = _load_agents_llm_config().max_reasoning_tokens
     context_compaction_threshold_tokens: int = (
-        _resolve_context_compaction_threshold_tokens_from_agents_config()
+        _load_agents_llm_config().context_compaction_threshold_tokens
     )
     dspy_program_timeout_seconds: int = 300
     dspy_program_max_retries: int = 2
-    react_max_iters: int = 8
-    react_planner_max_iters: int = 24
-    react_coder_max_iters: int = 48
     require_reasoning_traces: bool = global_settings.require_reasoning_traces
 
     # URL for the Worker Light API
