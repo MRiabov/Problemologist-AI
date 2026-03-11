@@ -616,9 +616,11 @@ benchmark_generator:
       - `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
       **Python Utils**:
-      - `shared.utils.agent.validate(compound: Compound) -> tuple[bool, str | None]`: Check intersections and bounds under all environment randomization.
-      - `shared.utils.agent.simulate(compound: Compound) -> BenchmarkToolResponse`: Run physics test with environment constraints. Use `.success` and `.message` on the returned object.
-      - `shared.utils.agent.submit_for_review(compound: Compound) -> bool`: Submit the whole benchmark compound to the Reviewer. This returns a plain boolean, not an object with `.success` or `.message`.
+      - `from utils.submission import validate, simulate, submit_for_review`
+      - `validate(compound: Compound) -> tuple[bool, str | None]`: Check intersections and bounds under all environment randomization.
+      - `simulate(compound: Compound) -> BenchmarkToolResponse`: Run physics test with environment constraints. Use `.success` and `.message` on the returned object.
+      - `submit_for_review(compound: Compound) -> bool`: Submit the whole benchmark compound to the Reviewer. This returns a plain boolean, not an object with `.success` or `.message`.
+      - `from utils.metadata import PartMetadata, CompoundMetadata`
       - `get_docs_for(type: str)`: Find documentation via subagent.
 
       **Rules**:
