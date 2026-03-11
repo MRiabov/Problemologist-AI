@@ -2459,7 +2459,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
+            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
             "default": "script.py"
           },
           "script_content": {
@@ -2555,7 +2555,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
+            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
             "default": "script.py"
           },
           "script_content": {
@@ -3019,7 +3019,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
+            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
             "default": "script.py"
           },
           "script_content": {
@@ -3124,6 +3124,13 @@
             },
             "type": "array",
             "title": "Render Paths"
+          },
+          "render_blobs_base64": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Render Blobs Base64"
           },
           "mjcf_content": {
             "anyOf": [
@@ -3473,7 +3480,7 @@
           "script_path": {
             "type": "string",
             "title": "Script Path",
-            "description": "Path to the script containing the build() function.",
+            "description": "Path to the authored script. The runtime accepts either build() or a module-level final assembly such as `result = ...`.",
             "default": "script.py"
           },
           "script_content": {

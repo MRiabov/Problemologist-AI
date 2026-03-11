@@ -83,6 +83,15 @@ Both of the agents "live" directly in the filesystem of the container that they 
 
 `execute_command(...)` follows that same terminal model: it is intended to run shell commands from the session workspace root. If any current implementation path treats it as a raw-Python-only executor, that is implementation drift rather than the architecture contract.
 
+Agent-authored Python scripts are expected to import runtime helpers from a top-level `utils` package. The authored-script contract is:
+
+```py
+from utils.submission import validate, simulate, submit_for_review
+from utils.metadata import PartMetadata, CompoundMetadata
+```
+
+The old `shared.*` import paths remain repo internals, not the authored-script API contract.
+
 ## Templates
 
 Each agent starts with a template, roughly defined in [Starting folder structure for various agents](#starting-folder-structure-for-various-agents).  It is predefined for each agent and we will test it.
@@ -143,6 +152,10 @@ Notably, I don't think that creating them as "templates" (outside of symlinks) i
 
 Another important note: files in e.g. Engineering Coder or Reviewer stages aren't created anew - they are reused from the previous agent.
 
+For authored CAD scripts, direct top-level execution is canonical. The agent should be able to run `python script.py` and have the script perform its own validation/simulation/review helper calls through `utils.submission`.
+
+`build()` is now a compatibility-only helper rather than a mandatory entrypoint. Runtime may continue to support `build()` while migration is in progress, but new authored-script contracts should not depend on `build()` being present.
+
 <!-- Note: the filesystem is not in repo root, but in docker containers. -->
 
 <!-- Note: each of these should be asserted.-->
@@ -177,6 +190,7 @@ Rules:
 16. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
 17. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
 18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
+19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
