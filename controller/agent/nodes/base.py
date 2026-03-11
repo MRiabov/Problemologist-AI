@@ -800,20 +800,10 @@ class BaseNode:
         )
         raise RuntimeError(msg)
 
-    @staticmethod
-    def _max_iters_for_node(node_type: AgentName) -> int:
-        if node_type in {
-            AgentName.ENGINEER_PLANNER,
-            AgentName.ELECTRONICS_PLANNER,
-            AgentName.BENCHMARK_PLANNER,
-        }:
-            return settings.react_planner_max_iters
-        if node_type in {
-            AgentName.ENGINEER_CODER,
-            AgentName.BENCHMARK_CODER,
-        }:
-            return settings.react_coder_max_iters
-        return settings.react_max_iters
+    def _max_iters_for_node(self, node_type: AgentName) -> int:
+        return self.ctx.fs.policy.get_execution_policy(
+            node_type
+        ).native_tool_loop_max_iters
 
     def _get_tool_functions(
         self,

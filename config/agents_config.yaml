@@ -9,15 +9,18 @@ execution:
     timeout_seconds: 300
     max_turns: 150
     max_total_tokens: 400000
+    native_tool_loop_max_iters: 8
   agents:
     engineer_planner:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
+      native_tool_loop_max_iters: 48
     engineer_coder:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
+      native_tool_loop_max_iters: 48
     engineer_plan_reviewer:
       timeout_seconds: 300
       max_turns: 150
@@ -26,6 +29,7 @@ execution:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
+      native_tool_loop_max_iters: 48
     electronics_engineer:
       timeout_seconds: 300
       max_turns: 150
@@ -42,10 +46,12 @@ execution:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
+      native_tool_loop_max_iters: 48
     benchmark_coder:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
+      native_tool_loop_max_iters: 48
     benchmark_reviewer:
       timeout_seconds: 300
       max_turns: 150
@@ -119,6 +125,7 @@ agents:
         "edit_file",
         "grep",
         "execute_command",
+        "search_cots_catalog",
         "submit_plan",
       ]
     visual_inspection:
@@ -417,10 +424,12 @@ agents:
       [
         "list_files",
         "read_file",
+        "inspect_media",
         "write_file",
         "edit_file",
         "grep",
         "execute_command",
+        "search_cots_catalog",
         "submit_plan",
       ]
 

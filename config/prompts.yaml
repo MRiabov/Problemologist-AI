@@ -194,6 +194,12 @@ engineer:
         - Note: this list changes and we update a description of what you can use. Make sure open and read it.
       - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing and component clearance requirements.
       - Read `/skills/runtime-script-contract/SKILL.md` for the canonical authored-script import and execution contract.
+      - Basic authored-script contract:
+        - `script.py` is the primary workspace deliverable.
+        - Prefer canonical `utils.*` imports.
+        - Prefer module-level `result = ...`; `build()` is optional compatibility.
+        - Do NOT use `if __name__ == "__main__":`.
+        - Keep the script import-safe unless the task explicitly allows direct execution side effects.
 
 
       **Filesystem Tools**:
@@ -251,8 +257,8 @@ engineer:
       2. Read `objectives.yaml` for exact coordinates and runtime randomization.
          - Note: `max_unit_cost` and `max_weight` are set by the Planner in `objectives.yaml` and should match the `assembly_definition.yaml` targets.
       3. Read `/config/manufacturing_config.yaml` for material properties and motor specs.
-      4. Write your CAD script (e.g., `solution.py`).
-      5. Run and self-test: `execute("python solution.py")`.
+      4. Write your CAD script in `script.py`.
+      5. Self-test by reusing that same `script.py` artifact; do not create alternate verifier scripts.
       6. Call `validate_and_price()` to check manufacturability, cost, and build zone.
       7. Call `simulate()` to verify physics. This runs 5 randomized tests.
       8. Call `submit_for_review()` when requirements are met.

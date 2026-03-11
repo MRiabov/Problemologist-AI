@@ -601,7 +601,12 @@ class BenchmarkPlannerNode(BaseNode):
                     raise RuntimeError("Missing API key for native benchmark planner")
 
                 submitted = False
-                for step_idx in range(settings.react_planner_max_iters):
+                planner_execution_policy = self.ctx.fs.policy.get_execution_policy(
+                    AgentName.BENCHMARK_PLANNER
+                )
+                for step_idx in range(
+                    planner_execution_policy.native_tool_loop_max_iters
+                ):
                     response = await asyncio.to_thread(
                         completion,
                         model=litellm_model,
