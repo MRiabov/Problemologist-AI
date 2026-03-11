@@ -100,8 +100,8 @@ async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
     """
     INT-024: benchmark validation remains reachable from the light-worker
     runtime via direct utils.submission.validate() calls inside the authored
-    script during execute_command-equivalent execution,
-    execution, without host-resolution failures.
+    script during execute_command-equivalent execution, without
+    host-resolution failures.
     """
     session_id = f"INT-024-RT-{uuid.uuid4().hex[:8]}"
     headers = {"X-Session-ID": session_id}
