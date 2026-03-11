@@ -323,6 +323,17 @@ class WorkerClient:
             else:
                 logger.info("handover_artifact_synced", path=path)
 
+        for path, encoded in artifacts.render_blobs_base64.items():
+            ok = await self.upload_file(
+                path,
+                base64.b64decode(encoded),
+                bypass_agent_permissions=True,
+            )
+            if not ok:
+                logger.warning("handover_render_sync_upload_failed", path=path)
+            else:
+                logger.info("handover_render_synced", path=path)
+
     async def upload_file(
         self,
         path: str,

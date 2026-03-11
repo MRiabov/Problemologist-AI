@@ -21,7 +21,7 @@ def create_fs_tools(fs: RemoteFilesystemMiddleware) -> list[Callable]:
         )
 
     async def execute_command(command: str):
-        return await fs.run_command(command=command, timeout=30)
+        return await fs.run_command(command=command)
 
     tools = [list_files, read_file, write_file, edit_file, execute_command]
     return tools

@@ -412,11 +412,16 @@ class RemoteFilesystemMiddleware:
                 pass
         return success
 
-    async def run_command(self, command: str, timeout: int = 30) -> ExecuteResponse:
+    async def run_command(
+        self, command: str, timeout: int | None = None
+    ) -> ExecuteResponse:
         """
         Execute a shell command via the Worker client, wrapped in Temporal for
         durability.
         """
+        if timeout is None:
+            timeout = self.policy.get_execution_policy(self.agent_role).timeout_seconds
+
         await record_events(
             episode_id=self.client.session_id,
             events=[RunCommandToolEvent(command=command)],

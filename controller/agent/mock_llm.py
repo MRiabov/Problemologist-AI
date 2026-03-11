@@ -781,6 +781,31 @@ class MockDSPyLM(dspy.LM):
                     break
 
             if found_idx == -1:
+                prev_idx = entry_idx - 1
+                if 0 <= prev_idx < len(transcript):
+                    prev_entry = transcript[prev_idx]
+                    prev_steps = prev_entry.get("steps", [])
+                    last_step = prev_steps[-1] if prev_steps else {}
+                    if prev_entry.get("node") == node_key.value and last_step.get(
+                        "finished"
+                    ):
+                        logger.info(
+                            "mock_native_transcript_idempotent_finish",
+                            node=node_key.value,
+                            entry_idx=prev_idx,
+                        )
+                        return self._native_message(
+                            assistant_text=last_step.get("thought")
+                            or last_step.get("reasoning", "Task complete."),
+                            tool_name="finish",
+                            tool_args=self._native_finish_payload(
+                                node_key=node_key,
+                                node_data=last_step,
+                                finish_fields=finish_fields,
+                            ),
+                            call_id=f"mock_finish_{node_key.value}_idempotent",
+                        )
+
                 raise ValueError(
                     f"MockDSPyLM transcript node not found for native tool call: {node_key.value}"
                 )
