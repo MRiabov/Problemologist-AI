@@ -235,9 +235,6 @@ agents:
           [
             "/",
             ".",
-            "config/**",
-            "shared",
-            "shared/**",
             "skills/**",
             "utils/**",
             "plan.md",
@@ -247,8 +244,13 @@ agents:
             "assembly_definition.yaml",
             "script.py",
             "**/*.py",
+            "plan_refusal.md",
             "reviews/**",
             "renders/**",
+            "validation_results.json",
+            "simulation_result.json",
+            "scene.json",
+            "assets/**",
           ]
         deny: [".manifests/**"]
       write:
@@ -284,7 +286,7 @@ agents:
         "search_cots_catalog",
       ]
     visual_inspection:
-      required: true
+      required: false
       min_images: 1
       reminder_interval: 2
 

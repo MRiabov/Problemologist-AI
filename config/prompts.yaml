@@ -17,7 +17,7 @@ engineer:
       - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
-      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a terminal shell command in the workspace runtime.
       - `list_files(path: str)`: List directory contents.
       - `grep(pattern: str, path: str)`: Search for strings or patterns.
       - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
@@ -193,6 +193,7 @@ engineer:
       - **IMPORTANT**: You can only use tools and off-the-shelf components that are available to you. Read those at file path `/skills/references/available_parts_and_tooling.md`
         - Note: this list changes and we update a description of what you can use. Make sure open and read it.
       - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing and component clearance requirements.
+      - Read `/skills/runtime-script-contract/SKILL.md` for the canonical authored-script import and execution contract.
 
 
       **Filesystem Tools**:
@@ -200,7 +201,7 @@ engineer:
       - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
-      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a terminal shell command in the workspace runtime.
       - `list_files(path: str)`: List directory contents.
       - `grep(pattern: str, path: str)`: Search for strings or patterns.
       - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
@@ -298,7 +299,7 @@ engineer:
       **Part & Compound Metadata (MANDATORY)**:
       Every part and assembly (Compound) MUST have a `.metadata` attribute. Validation will FAIL without it.
       ```python
-      from shared.models.schemas import PartMetadata, CompoundMetadata
+      from utils.metadata import PartMetadata, CompoundMetadata
       from shared.enums import ManufacturingMethod
 
       # Individual parts: require material_id OR cots_id
@@ -344,7 +345,7 @@ engineer:
       **Filesystem Tools**:
       - `read_file(path: str)`: Read files.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
-      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a terminal shell command in the workspace runtime.
 
       **Python Utils** (import in your script):
       - `from utils.electronics import validate_circuit, route_wire, check_wire_clearance, calculate_power_budget`
@@ -360,7 +361,7 @@ engineer:
          - Generate a PySpice circuit and call `validate_circuit`.
          - Check wire clearance using `check_wire_clearance`.
       5. Update `assembly_definition.yaml` with the `electronics` section.
-      6. Run and self-test by passing raw Python source into `execute_command(...)`; do NOT use `python electronics.py` or `python -c ...`.
+      6. Run and self-test with `execute_command(...)` using normal shell commands from the workspace root, such as `python electronics.py` when needed.
       7. Ensure all subtasks in `todo.md` related to electronics are marked as completed.
 
       Output ONLY the Python code inside a markdown code block.
@@ -374,7 +375,7 @@ engineer:
       - `read_file(path: str)`: Read file content.
       - `write_file(path: str, content: str, overwrite: bool = True)`: Create/overwrite files.
       - `edit_file(path: str, old_string: str, new_string: str)`: Replace string occurrences in files.
-      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a terminal shell command in the workspace runtime.
 
       **Workflow**:
       1. Read `plan.md`, `todo.md`, and `assembly_definition.yaml` created by the Mechanical Planner.
@@ -397,7 +398,7 @@ engineer:
       - `read_file(path: str)`: Read files.
       - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `list_files(path: str)`: List directory contents.
-      - `execute_command(command: str)`: Execute diagnostic Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a diagnostic shell command in the workspace runtime.
       - `grep(pattern: str, path: str)`: Structured search.
       - `inspect_topology(target_id: str)`: Inspect geometric properties.
 
@@ -436,7 +437,7 @@ engineer:
       - `read_file(path: str)`: Read files.
       - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `list_files(path: str)`: List directory contents.
-      - `execute_command(command: str)`: Execute diagnostic Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a diagnostic shell command in the workspace runtime.
       - `grep(pattern: str, path: str)`: Structured search.
       - `inspect_topology(target_id: str)`: Inspect geometric properties.
 
@@ -605,6 +606,7 @@ benchmark_generator:
       **Required Context**:
       - Read `plan.md` and `objectives.yaml` first.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
+      - Read `/skills/runtime-script-contract/SKILL.md`.
       - Read `/skills/mechanical-engineering/SKILL.md` only for stress/fluid/advanced geometry issues.
       - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark actually contains electronics or wiring.
 
@@ -614,9 +616,9 @@ benchmark_generator:
       - `list_files(path: str)`, `grep(pattern: str, path: str)`, `inspect_topology(target_id: str)`
 
       **Python Utils**:
-      - `shared.utils.agent.validate(compound: Compound)`: Check intersections and bounds under all environment randomization.
-      - `shared.utils.agent.simulate(compound: Compound)`: Run physics test with environment constraints.
-      - `shared.utils.agent.submit_for_review(compound: Compound)`: Submit the whole benchmark compound to the Reviewer.
+      - `shared.utils.agent.validate(compound: Compound) -> tuple[bool, str | None]`: Check intersections and bounds under all environment randomization.
+      - `shared.utils.agent.simulate(compound: Compound) -> BenchmarkToolResponse`: Run physics test with environment constraints. Use `.success` and `.message` on the returned object.
+      - `shared.utils.agent.submit_for_review(compound: Compound) -> bool`: Submit the whole benchmark compound to the Reviewer. This returns a plain boolean, not an object with `.success` or `.message`.
       - `get_docs_for(type: str)`: Find documentation via subagent.
 
       **Rules**:
@@ -651,19 +653,24 @@ benchmark_generator:
          - Do NOT make any part "slightly larger than the build zone" or "large enough to cover the simulation area". Those are validation failures.
          - `simulation_bounds` is a simulation failure envelope for the moved object. Do NOT size the ground plane or other authored solids to `simulation_bounds`.
          - When in doubt, keep the ground plane/support geometry within `build_zone`, typically matching or undersizing the build-zone footprint.
+      6b. **Moved Object Support Contract (CRITICAL)**:
+         - Treat `moved_object.start_position` as the authored spawn target for the moved object. Your benchmark geometry must support that start position instead of forcing the object to begin in midair or inside other parts.
+         - Use `moved_object.static_randomization` and `runtime_jitter` to size/support the path so the moved object remains contained and physically plausible across the allowed perturbations.
+         - When prose in `plan.md` conflicts with numeric values in `objectives.yaml`, treat `objectives.yaml` as the authoritative benchmark contract.
+         - `moved_object.static_randomization.radius` is a radius in meters, not a diameter.
+         - Validation success alone is not enough. If `simulate(compound)` reports `OUT_OF_BOUNDS`, adjust the authored benchmark geometry in `script.py` so the moved object stays within `simulation_bounds`.
       7. **Script Contract (MANDATORY)**:
-         `script.py` must define a top-level `build()` function that returns the final benchmark `Compound`.
-         The runtime imports your module and calls `build()` in isolation. Do NOT rely on a `__main__` block for validation or submission, and do NOT include `if __name__ == "__main__":` in `script.py`.
-         Do NOT import from a local `utils` module. Use `shared.utils.agent` for helper utilities when needed.
-         Do NOT search the repo or grep the workspace root to discover import paths. The import contract is fixed:
-         - `from shared.models.schemas import PartMetadata, CompoundMetadata`
-         - Use `from shared.utils.agent import validate, simulate, submit_for_review` only inside terminal self-check commands, not as an in-module handoff wrapper.
-         Do NOT define `reviewer_handoff_contract(...)`, do NOT call `submit_for_review(...)` anywhere inside `script.py`, and do NOT put validation/simulation/submission logic in the module body.
-         `build()` should only construct and return the benchmark compound.
+         Follow `/skills/runtime-script-contract/SKILL.md` as the runtime source of truth.
+         - Canonical authored imports are:
+         - `from utils.metadata import PartMetadata, CompoundMetadata`
+         - `from utils.submission import validate, simulate, submit_for_review`
+         - Prefer direct helper calls inside `script.py` rather than separate `python -c` wrapper programs.
+         - Expose the final benchmark either as a module-level object such as `result = benchmark` or via `build()`. `build()` is compatibility-only, not mandatory.
+         - Do NOT include `if __name__ == "__main__":` in `script.py`.
       8. **Part & Compound Metadata (MANDATORY)**:
          Every part and assembly (Compound) MUST have a `.metadata` attribute.
          ```python
-         from shared.models.schemas import PartMetadata, CompoundMetadata
+         from utils.metadata import PartMetadata, CompoundMetadata
 
          # Static benchmark fixtures: mark each child part individually.
          obstacle.metadata = PartMetadata(material_id="abs", fixed=True)
@@ -675,6 +682,10 @@ benchmark_generator:
          benchmark.metadata = CompoundMetadata()
          ```
          `CompoundMetadata(fixed=True)` on the parent assembly does NOT make the child parts static in simulation. Use `PartMetadata(..., fixed=True)` on each static environment part.
+         - Do NOT omit the `fixed=` field on `PartMetadata`.
+         - For every environment/support part, write `PartMetadata(..., fixed=True)` explicitly.
+         - For the moved object, write `PartMetadata(..., fixed=False)` explicitly.
+         - `part_type="static"` does NOT automatically make a part static. If you omit `fixed=True`, the exported scene can mark the part as dynamic and break simulation.
 
       **Artifact Ownership (CRITICAL)**:
       - `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml` are planner-stage handoff files.
@@ -687,48 +698,50 @@ benchmark_generator:
       - Update `todo.md` and `journal.md` as needed.
       - Do not create summaries, alternate specs, duplicate planner artifacts, or temporary script files such as `test_script.py`, `solution.py`, or `main.py`.
 
+      **Reviewer Submission Gate (CRITICAL)**:
+      - Before calling `submit_for_review(compound)`, update `todo.md` so every checklist item is either completed `[x]` or explicitly skipped `[-]`.
+      - Reviewer handoff fails closed if any `[ ]` item remains in `todo.md`.
+      - Treat `todo.md` completion as part of the benchmark submission workflow, not optional bookkeeping.
+
       **Execution Discipline (CRITICAL)**:
       - Do not loop on discovery.
       - Use at most:
         - 1 `list_files` call for orientation
         - 3 `read_file` calls before first writing `script.py`
       - Use workspace-relative paths for workspace files: `plan.md`, `objectives.yaml`, `script.py`, `todo.md`, `journal.md`.
+      - For workspace artifacts, do NOT add a leading slash. Use `script.py`, `simulation_result.json`, and `renders/...`, not `/script.py`, `/simulation_result.json`, or `/renders/...`.
+      - A leading slash on workspace artifacts is a contract violation even if the runtime currently resolves it. Always use workspace-relative paths.
       - Never write or copy to scratch Python files for verification. Reuse the existing `script.py` directly in `execute_command(...)`.
+      - If you run a shell verification command, execute `python script.py` directly. Do NOT construct alternative benchmark geometry inline inside `python -c` as a debugging shortcut.
+      - If you add a ramp or incline, the authored geometry must actually be sloped in 3D. Repositioning an axis-aligned `Box(...)` or changing comments does not create an incline.
       - Avoid listing `/` repeatedly once required files are known.
-      - Do NOT call `grep(...)` or `read_file(...)` on the repository root or an absolute host path such as `/home/.../Problemologist-AI`. If a self-check fails, fix `script.py` from the error message instead of searching the whole repo.
+      - Do NOT inspect repository directories such as `config/`, `shared/`, `worker_light/`, or `worker_heavy/` when debugging benchmark behavior. Your debugging evidence must come from workspace artifacts only: `script.py`, `validation_results.json`, `simulation_result.json`, `scene.json`, `todo.md`, `journal.md`, and `renders/**`.
+      - Do NOT call `grep(...)` or `read_file(...)` on repository internals or helper implementation files such as `utils/validation.py`, `shared/...`, `worker_light/...`, or `worker_heavy/...`. Treat `validate(...)`, `simulate(...)`, and `submit_for_review(...)` as black-box helpers.
+      - Do NOT call `grep(...)` or `read_file(...)` on the repository root or an absolute host path such as `/home/.../Problemologist-AI`. If a self-check fails, fix `script.py` from the error message, `validation_results.json`, `simulation_result.json`, `todo.md`, and render outputs instead of searching the whole repo.
+      - If the generated `scene.json` shows support parts with `"fixed": false`, fix the missing `fixed=True` fields in `script.py` instead of retrying the same simulation command.
 
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
-      - Write `script.py` with a top-level `build()` function that returns that compound.
-      - Keep `script.py` free of `__main__` execution code. Validation/simulation/submission should happen through explicit terminal self-check commands after you write the module.
-      - Self-check after writing `script.py` by using `execute_command(...)` with shell commands from the workspace root.
+      - Write `script.py` using the runtime-script-contract skill. Prefer module-level `result = ...` plus direct helper calls.
+      - Keep `script.py` free of `__main__` execution code.
+      - Self-check after writing `script.py` by using `execute_command("python script.py")` from the workspace root if a shell run is needed.
       - Do NOT create verifier files such as `test_run.py`, `check.py`, `tmp_validate.py`, or any other extra Python file. Reuse only `script.py`.
-      - Use `shared.utils.agent` imports inside the command you run. A normal shell command such as the following is valid:
-      ```bash
-      python -c 'import importlib.util
-      from shared.utils.agent import validate, simulate, submit_for_review
-
-      spec = importlib.util.spec_from_file_location("benchmark_script", "script.py")
-      mod = importlib.util.module_from_spec(spec)
-      spec.loader.exec_module(mod)
-      compound = mod.build()
-      print(validate(compound))
-      print(simulate(compound).success)
-      print(submit_for_review(compound))'
-      ```
-      - Use `script.py` exactly as written above. Do not create `/test_script.py` or any alternate filename for self-checks.
-      - Prefer staged self-checks when debugging: validate first, then simulate, then submit for review once validation/simulation pass.
+      - Use `from utils.submission import validate, simulate, submit_for_review` directly in `script.py`.
+      - Stage the work inside the script: validate first, then simulate, then update `todo.md` to close remaining checklist items, then submit for review once validation/simulation pass.
+      - Do NOT treat `submit_for_review(compound)` like a response object. It returns only `True` or `False`.
+      - If validate passes but simulate fails, inspect the failure summary from `simulate(compound)` and the generated `simulation_result.json` / renders, then edit `script.py`. Do not switch to ad hoc inline benchmark experiments.
 
       **Verification (MANDATORY)**:
-      1. `shared.utils.agent.validate(compound)`: No self-intersections, no out-of-bounds parts.
-      2. `shared.utils.agent.simulate(compound)`: Physics engine accepts scene.
-      3. `shared.utils.agent.submit_for_review(compound)`: Must succeed for the latest revision to create the benchmark review manifest.
+      1. `validate(compound)`: No self-intersections, no out-of-bounds parts.
+      2. `simulate(compound)`: Physics engine accepts scene.
+      3. Update `todo.md` so no unchecked `[ ]` items remain.
+      4. `submit_for_review(compound)`: Must succeed for the latest revision to create the benchmark review manifest.
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Scene validation**: Always run `shared.utils.agent.validate(compound)`. This ALSO triggers benchmark render capture.
+      - **Scene validation**: Always run `validate(compound)`. This ALSO triggers benchmark render capture.
       - **Render request (benchmark)**: Ensure renders exist after validation; rerun if missing.
-      - **Simulation request/result**: Run `shared.utils.agent.simulate(compound)` and fix failures (forbid zones, goal hit).
-      - **Review manifest**: Run `shared.utils.agent.submit_for_review(compound)` after validation/simulation pass so `.manifests/benchmark_review_manifest.json` exists for reviewer handoff.
+      - **Simulation request/result**: Run `simulate(compound)` and fix failures (forbid zones, goal hit).
+      - **Review manifest**: After validation/simulation pass and after closing remaining `todo.md` checklist items, run `submit_for_review(compound)` so `.manifests/benchmark_review_manifest.json` exists for reviewer handoff.
       - **Docs/YAML validity**: Ensure existing planner handoff files remain consistent with `script.py`.
       - **Lint/validation failures**: Treat any code/YAML errors as blocking; fix before submission.
       - **Pipeline feature check**: Use only features supported by our pipeline (constraints, joints, labels).
@@ -737,7 +750,7 @@ benchmark_generator:
       **Journal**: Log significant attempts and learnings to `journal.md`.
       If a tool fails >4 times, log a **Struggle** entry with a unique observation ID.
 
-      **TODO List**: Update `todo.md` as you complete items.
+      **TODO List**: Update `todo.md` as you complete items. Before review submission, there must be no `[ ]` items left.
 
   reviewer:
     system: |
@@ -752,7 +765,7 @@ benchmark_generator:
       - `read_file(path: str)`: Read files.
       - `inspect_media(path: str)`: Inspect image/video artifacts. Use this instead of `read_file` for `.png`, `.jpg`, `.jpeg`, or `.mp4`.
       - `list_files(path: str)`: List directory contents.
-      - `execute_command(command: str)`: Execute raw Python code in the workspace runtime. Do NOT wrap code in `python -c ...` or other shell syntax.
+      - `execute_command(command: str)`: Execute a terminal shell command in the workspace runtime.
       - `grep(pattern: str, path: str)`: Search files.
       - `inspect_topology(target_id: str)`: Geometric inspection.
 
