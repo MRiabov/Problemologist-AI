@@ -12,6 +12,8 @@ from shared.utils.fasteners import fastener_hole as fastener_hole
 from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
 
 logger = structlog.get_logger(__name__)
+SCRIPT_IMPORT_MODE_ENV = "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE"
+SCRIPT_IMPORT_DEFERRED_MESSAGE = "Deferred during control-plane script import."
 
 # --- Proxy Logic ---
 
@@ -38,8 +40,17 @@ def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
 # --- Agent Utils ---
 
 
+def _is_script_import_mode() -> bool:
+    return os.getenv(SCRIPT_IMPORT_MODE_ENV) == "1"
+
+
 def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
     """Proxy for heavy simulation."""
+    if _is_script_import_mode():
+        return BenchmarkToolResponse(
+            success=True,
+            message=SCRIPT_IMPORT_DEFERRED_MESSAGE,
+        )
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.validation import simulate as real_simulate
 
@@ -53,6 +64,8 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
 
 def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
     """Proxy for benchmark geometric validation."""
+    if _is_script_import_mode():
+        return True, SCRIPT_IMPORT_DEFERRED_MESSAGE
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.validation import validate as real_validate
 
@@ -91,11 +104,13 @@ def validate_and_price(
 
 
 def submit_for_review(compound: Compound) -> bool:
-    """Proxy for submission."""
+    """Proxy for benchmark submission to the benchmark reviewer stage."""
+    if _is_script_import_mode():
+        return True
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.handover import submit_for_review as real_submit
 
-        return real_submit(compound)
+        return real_submit(compound, reviewer_stage="benchmark_reviewer")
 
     # In light-worker execution (e.g., script runtime checks), avoid emitting
     # heavy-worker gate errors before prerequisites are present. The controller
@@ -113,7 +128,10 @@ def submit_for_review(compound: Compound) -> bool:
         )
         return False
 
-    payload = {"script_path": "script.py"}
+    payload = {
+        "script_path": "script.py",
+        "reviewer_stage": "benchmark_reviewer",
+    }
     res = _call_heavy_worker("/benchmark/submit", payload)
     return BenchmarkToolResponse.model_validate(res).success
 
