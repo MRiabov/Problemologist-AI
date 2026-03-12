@@ -77,12 +77,12 @@ describe('ActionCard', () => {
     render(
       <EpisodeProvider>
         <ActionCard
-          trace={mockTrace('read_file', JSON.stringify({ kwargs: { path: '/workspace/objectives.yaml' } }))}
+          trace={mockTrace('read_file', JSON.stringify({ kwargs: { path: '/workspace/benchmark_definition.yaml' } }))}
           setActiveArtifactId={vi.fn()}
         />
       </EpisodeProvider>
     );
-    expect(screen.getByText('objectives.yaml')).toBeInTheDocument();
+    expect(screen.getByText('benchmark_definition.yaml')).toBeInTheDocument();
   });
 
   it('shows directory name for list_files path', () => {

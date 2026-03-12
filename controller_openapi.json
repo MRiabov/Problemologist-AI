@@ -645,7 +645,7 @@
           "benchmark"
         ],
         "summary": "Update Objectives",
-        "description": "Update objectives.yaml for a specific session.",
+        "description": "Update benchmark_definition.yaml for a specific session.",
         "operationId": "update_objectives_api_benchmark__session_id__objectives_post",
         "parameters": [
           {
@@ -1469,7 +1469,7 @@
           "benchmark"
         ],
         "summary": "Update Objectives",
-        "description": "Update objectives.yaml for a specific session.",
+        "description": "Update benchmark_definition.yaml for a specific session.",
         "operationId": "update_objectives_benchmark__session_id__objectives_post",
         "parameters": [
           {

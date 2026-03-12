@@ -91,7 +91,7 @@ export class BenchmarkService {
     }
     /**
      * Update Objectives
-     * Update objectives.yaml for a specific session.
+     * Update benchmark_definition.yaml for a specific session.
      * @param sessionId
      * @param requestBody
      * @returns BenchmarkObjectivesResponse Successful Response
@@ -192,7 +192,7 @@ export class BenchmarkService {
     }
     /**
      * Update Objectives
-     * Update objectives.yaml for a specific session.
+     * Update benchmark_definition.yaml for a specific session.
      * @param sessionId
      * @param requestBody
      * @returns BenchmarkObjectivesResponse Successful Response

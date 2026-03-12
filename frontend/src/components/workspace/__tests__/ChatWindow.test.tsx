@@ -177,7 +177,7 @@ describe('ChatWindow', () => {
     it('shows telemetry warning when reasoning is required but missing', () => {
         const traces = [
             { id: '1', trace_type: TraceType.TOOL_START, name: 'list_files', content: '{"kwargs":{"path":"/"}}' },
-            { id: '2', trace_type: TraceType.TOOL_START, name: 'read_file', content: '{"kwargs":{"path":"objectives.yaml"}}' },
+            { id: '2', trace_type: TraceType.TOOL_START, name: 'read_file', content: '{"kwargs":{"path":"benchmark_definition.yaml"}}' },
             { id: '3', trace_type: TraceType.TOOL_START, name: 'list_files', content: '{"kwargs":{"path":"/config"}}' },
         ];
         (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
