@@ -130,6 +130,10 @@ Validation-preview tests should therefore assert:
 1. the preview artifact contract still holds,
 2. the preview backend routing is correct,
 3. the selected simulation backend is not silently mutated for `/benchmark/simulate`.
+4. MuJoCo-backed preview images persist as RGB/depth/segmentation sibling files in `renders/`.
+5. `config/agents_config.yaml render.{rgb,depth,segmentation}` disables only the requested preview artifact types.
+6. `renders/render_manifest.json` persists per-image metadata, including segmentation legend entries with semantic labels and unique instance identifiers.
+7. RGB preview output reflects configured material colors for differing `material_id` values.
 
 ## Required integration test suite
 
@@ -168,7 +172,7 @@ Priorities:
 | INT-022 | Motor overload + forcerange behavior | Force clamping behaves correctly; sustained overload produces `motor_overload` failure reason. |
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
 | INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges. |
-| INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through MuJoCo by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
+| INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through MuJoCo by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; MuJoCo-backed preview renders persist RGB images plus sibling `_depth.png` and `_segmentation.png` files in `renders/` by default; `renders/render_manifest.json` persists per-image metadata and segmentation legend entries with semantic labels plus unique instance identifiers; RGB preview output reflects configured material colors for differing `material_id` values; `config/agents_config.yaml render.{rgb,depth,segmentation}` can disable any one of those artifact types independently; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
 | INT-026 | Mandatory event families emitted | Tool calls, simulation request/result, manufacturability checks, lint failures, plan submissions, and review decisions are emitted in real runs. |
 | INT-027 | Seed/variant observability | Static variant ID + runtime seed tracked for every simulation run. |

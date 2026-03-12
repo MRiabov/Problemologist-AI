@@ -104,6 +104,10 @@ ReAct is the first-line correction loop:
 2. If a tool/validation response is not acceptable, ReAct continues the same node loop and retries.
 3. The agent converges on valid handoff output or exits due to hard limits (timeout/turn budget/token budget).
 
+### Config-driven anti-stall reminder policy
+
+For native tool-loop nodes, if the model produces more than 5 consecutive no-tool turns, runtime injects a configured nudge telling it to stop narrating and actually act. 
+
 ### The "tools" as Python functions - Utils
 
 For agent-authored CAD scripts, the canonical import surface is a top-level `utils` package exposed in the runtime environment. Agent code should import helper functions and metadata types from that package, not from `shared.*` implementation paths.
@@ -139,6 +143,12 @@ Note - used by default by
   - Supported first-line inputs are image files (`.png`, `.jpg`, `.jpeg`).
   - For videos such as `simulation.mp4`, runtime may expose representative extracted frames through the same tool contract, but that remains a media-inspection action, not a text-file read.
   - The tool returns structured metadata (for example path, media kind, frame/image count, attach success), while the actual image/frame content is attached to the LLM call through the runtime's multimodal message path.
+  - When the inspected file is a render artifact under `renders/`, the tool should also return persisted render metadata from `renders/render_manifest.json` when available.
+  - For segmentation renders, that metadata must include a color legend mapping rendered colors to object identity.
+  - Segmentation legend entries must expose both:
+    1. a semantic label the model can reason about (`semantic_label`),
+    2. a unique instance identifier (`instance_id` / `instance_name`) so repeated parts in an assembly remain distinguishable.
+  - Repeated parts are therefore represented as repeated semantic labels with distinct instance identifiers, not collapsed into one legend row.
   - Merely listing `renders/` or reading `simulation_result.json` does not count as visual inspection.
 
 #### Config-driven visual-inspection policy

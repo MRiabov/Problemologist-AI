@@ -8,6 +8,9 @@
 
 We have two agents (or agent graphs): the benchmark generator and the engineer.
 
+Runtime conversations use four message roles: `system`, `user`, `assistant`, and `tool`.
+`assistant` is the agent-authored/model role; `tool` is runtime-owned tool responses; `system` carries deterministic runtime control messages such as gates, reminders, and recovery instructions.
+
 ## Benchmark generator workflow
 
 The benchmark generator flow is:

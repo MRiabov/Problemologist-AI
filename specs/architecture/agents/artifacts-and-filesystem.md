@@ -198,10 +198,17 @@ Rules:
 17. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
 18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
 19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
+20. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
+21. Those flags control whether MuJoCo-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
 ```yaml
+render:
+  rgb: true
+  depth: true
+  segmentation: true
+
 defaults:
   filesystem_permissions:
     read:

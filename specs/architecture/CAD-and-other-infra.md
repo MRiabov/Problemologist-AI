@@ -79,6 +79,35 @@ For the standard benchmark handoff package, we render 24 static preview views. T
 2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend.
 3. We do not use `/benchmark/validate` to regenerate the same static preview through Genesis only for parity.
 
+For MuJoCo-backed static preview renders, each camera view is persisted as an image triplet under `renders/`:
+
+1. the standard RGB preview image,
+2. a sibling depth-map image with `_depth.png` suffix,
+3. a sibling segmentation-map image with `_segmentation.png` suffix.
+
+Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel.
+
+For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
+
+We also persist a render metadata manifest at `renders/render_manifest.json`. That manifest is the structured companion for `inspect_media(...)` and carries per-image modality metadata.
+
+For segmentation renders, the manifest must contain a legend mapping rendered colors to object identity. The legend is instance-aware:
+
+1. `semantic_label` is the model-facing semantic name,
+2. `instance_id` / `instance_name` distinguishes repeated instances of the same semantic part,
+3. repeated parts therefore appear as multiple legend rows that may share `semantic_label` but must not share `instance_id`.
+
+Render-modality emission is config-driven through `config/agents_config.yaml`:
+
+```yaml
+render:
+  rgb: true
+  depth: true
+  segmentation: true
+```
+
+If one of those flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
+
 ### Workbench technical details
 
 Technical details of manufacturability constraints are discussed in spec 004 (not to be discussed here; however manufacturability is determined by deterministic algorithms.)
