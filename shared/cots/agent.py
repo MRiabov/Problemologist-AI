@@ -1,12 +1,7 @@
-import os
-
 import dspy
 
 from .models import SearchConstraints, SearchQuery
-from .runtime import search_parts
-
-# Default DB path relative to project root or configurable
-DEFAULT_DB_PATH = os.environ.get("COTS_DB_PATH", "parts.db")
+from .runtime import DEFAULT_DB_PATH, search_parts
 
 
 def search_cots_catalog(

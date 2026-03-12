@@ -1,6 +1,8 @@
+import os
 import uuid
 
 from sqlalchemy import create_engine, or_
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from shared.observability.events import emit_event
@@ -8,6 +10,41 @@ from shared.observability.schemas import COTSSearchEvent
 
 from .database.models import CatalogMetadataORM, COTSItemORM
 from .models import COTSItem, SearchQuery
+
+DEFAULT_DB_PATH = os.environ.get("COTS_DB_PATH", "parts.db")
+
+
+def get_catalog_metadata(db_path: str = DEFAULT_DB_PATH) -> dict[str, str | None]:
+    """Return the latest catalog metadata snapshot from the COTS database."""
+    engine = create_engine(f"sqlite:///{db_path}")
+
+    try:
+        with Session(engine) as session:
+            meta_stmt = (
+                session.query(CatalogMetadataORM)
+                .order_by(CatalogMetadataORM.id.desc())
+                .limit(1)
+            )
+            meta_result = meta_stmt.first()
+    except SQLAlchemyError:
+        meta_result = None
+
+    if not meta_result:
+        return {
+            "catalog_version": None,
+            "bd_warehouse_commit": None,
+            "catalog_snapshot_id": None,
+            "generated_at": None,
+        }
+
+    return {
+        "catalog_version": meta_result.catalog_version,
+        "bd_warehouse_commit": meta_result.bd_warehouse_commit,
+        "catalog_snapshot_id": getattr(meta_result, "catalog_snapshot_id", None),
+        "generated_at": (
+            meta_result.generated_at.isoformat() if meta_result.generated_at else None
+        ),
+    }
 
 
 def search_parts(query: SearchQuery, db_path: str) -> tuple[list[COTSItem], dict]:
@@ -75,47 +112,19 @@ def search_parts(query: SearchQuery, db_path: str) -> tuple[list[COTSItem], dict
                 )
             )
 
-    # Fetch catalog metadata for reproducibility
-    catalog_version = None
-    bd_warehouse_commit = None
-    catalog_snapshot_id = None
-    generated_at = None
-
-    with Session(engine) as session:
-        meta_stmt = (
-            session.query(CatalogMetadataORM)
-            .order_by(CatalogMetadataORM.id.desc())
-            .limit(1)
-        )
-        meta_result = meta_stmt.first()
-        if meta_result:
-            catalog_version = meta_result.catalog_version
-            bd_warehouse_commit = meta_result.bd_warehouse_commit
-            catalog_snapshot_id = getattr(meta_result, "catalog_snapshot_id", None)
-            generated_at = (
-                meta_result.generated_at.isoformat()
-                if meta_result.generated_at
-                else None
-            )
-
+    metadata = get_catalog_metadata(db_path)
     cots_query_id = uuid.uuid4().hex
-    metadata = {
-        "catalog_version": catalog_version,
-        "bd_warehouse_commit": bd_warehouse_commit,
-        "catalog_snapshot_id": catalog_snapshot_id,
-        "generated_at": generated_at,
-        "cots_query_id": cots_query_id,
-    }
+    metadata["cots_query_id"] = cots_query_id
 
     # Emit search event
     emit_event(
         COTSSearchEvent(
             query=query.query or str(query.constraints),
             results_count=len(results),
-            catalog_version=catalog_version,
-            bd_warehouse_commit=bd_warehouse_commit,
-            catalog_snapshot_id=catalog_snapshot_id,
-            generated_at=generated_at,
+            catalog_version=metadata["catalog_version"],
+            bd_warehouse_commit=metadata["bd_warehouse_commit"],
+            catalog_snapshot_id=metadata["catalog_snapshot_id"],
+            generated_at=metadata["generated_at"],
             cots_query_id=cots_query_id,
             candidates=[p.part_id for p in results],
         )

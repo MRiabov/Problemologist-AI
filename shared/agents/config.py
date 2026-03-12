@@ -74,6 +74,13 @@ class AgentPolicy(BaseModel):
 class LLMPolicyConfig(BaseModel):
     max_reasoning_tokens: int = 16384
     context_compaction_threshold_tokens: int = 225000
+    multimodal_model: str | None = None
+
+
+class RenderPolicyConfig(BaseModel):
+    rgb: bool = True
+    depth: bool = True
+    segmentation: bool = True
 
 
 class AgentExecutionPolicy(BaseModel):
@@ -117,6 +124,7 @@ class AgentExecutionConfig(BaseModel):
 
 class AgentsConfig(BaseModel):
     llm: LLMPolicyConfig = Field(default_factory=LLMPolicyConfig)
+    render: RenderPolicyConfig = Field(default_factory=RenderPolicyConfig)
     execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
     defaults: AgentPolicy = Field(default_factory=AgentPolicy)
     agents: dict[str, AgentPolicy] = Field(default_factory=dict)
@@ -137,9 +145,7 @@ def resolve_agents_config_path() -> Path | None:
 
 def load_agents_config(config_path: str | Path | None = None) -> AgentsConfig:
     resolved_path = (
-        Path(config_path)
-        if config_path is not None
-        else resolve_agents_config_path()
+        Path(config_path) if config_path is not None else resolve_agents_config_path()
     )
     if resolved_path is None:
         return AgentsConfig()
