@@ -293,10 +293,20 @@ def get_engineer_planner_tools(
         Returns:
             {"ok": bool, "status": "submitted"|"rejected", "errors": [...], "node_type": "..."}
         """
-        from worker_heavy.utils.file_validation import validate_node_output
+        from worker_heavy.utils.file_validation import (
+            validate_declared_planner_cost_contract,
+            validate_environment_attachment_contract,
+            validate_node_output,
+        )
+        from worker_heavy.workbenches.config import load_config
 
         # Engineer planner and electronics planner share the same planner artifacts.
-        required_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
+        required_files = [
+            "plan.md",
+            "todo.md",
+            "benchmark_definition.yaml",
+            "assembly_definition.yaml",
+        ]
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []
 
@@ -320,6 +330,47 @@ def get_engineer_planner_tools(
             return result.model_dump(mode="json")
 
         is_valid, errors = validate_node_output(AgentName.ENGINEER_PLANNER, artifacts)
+        if is_valid:
+            benchmark_definition = yaml.safe_load(
+                artifacts["benchmark_definition.yaml"]
+            )
+            assembly_definition = yaml.safe_load(artifacts["assembly_definition.yaml"])
+            from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
+            from shared.workers.workbench_models import ManufacturingConfig
+
+            benchmark_model = BenchmarkDefinition.model_validate(
+                benchmark_definition or {}
+            )
+            assembly_model = AssemblyDefinition.model_validate(
+                assembly_definition or {}
+            )
+            custom_config_text = None
+            if await fs.exists("manufacturing_config.yaml"):
+                custom_config_text = await fs.read_file("manufacturing_config.yaml")
+            manufacturing_config = (
+                ManufacturingConfig.model_validate(
+                    yaml.safe_load(custom_config_text) or {}
+                )
+                if custom_config_text is not None
+                else load_config()
+            )
+            attachment_errors = validate_environment_attachment_contract(
+                benchmark_definition=benchmark_model,
+                assembly_definition=assembly_model,
+            )
+            if attachment_errors:
+                is_valid = False
+                errors.extend(
+                    [f"attachment_contract: {msg}" for msg in attachment_errors]
+                )
+            cost_errors = validate_declared_planner_cost_contract(
+                assembly_definition=assembly_model,
+                manufacturing_config=manufacturing_config,
+            )
+            if cost_errors:
+                is_valid = False
+                errors.extend([f"pricing_contract: {msg}" for msg in cost_errors])
+
         if is_valid:
             artifact_hashes = {
                 rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()

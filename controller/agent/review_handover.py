@@ -1,13 +1,22 @@
 import hashlib
 from typing import Literal
 
+import yaml
+
 from controller.clients.worker import WorkerClient
+from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     PlanReviewManifest,
     ReviewManifest,
     ValidationResultRecord,
 )
+from shared.workers.workbench_models import ManufacturingConfig
+from worker_heavy.utils.file_validation import (
+    validate_declared_planner_cost_contract,
+    validate_environment_attachment_contract,
+)
+from worker_heavy.workbenches.config import load_config
 
 ReviewerStage = Literal[
     "benchmark_reviewer",
@@ -126,5 +135,49 @@ async def validate_plan_reviewer_handover(
                 f"planner artifact hash mismatch for {rel_path}; "
                 "re-run submit_plan() for latest planner revision."
             )
+
+    if not await worker_client.exists("benchmark_definition.yaml"):
+        return "benchmark_definition.yaml missing for engineering plan review handoff."
+    if not await worker_client.exists("assembly_definition.yaml"):
+        return "assembly_definition.yaml missing for engineering plan review handoff."
+
+    try:
+        benchmark_definition = BenchmarkDefinition.model_validate(
+            yaml.safe_load(await worker_client.read_file("benchmark_definition.yaml"))
+            or {}
+        )
+        assembly_definition = AssemblyDefinition.model_validate(
+            yaml.safe_load(await worker_client.read_file("assembly_definition.yaml"))
+            or {}
+        )
+    except Exception as e:
+        return f"planner handoff cross-validation parse failure: {e}"
+
+    attachment_errors = validate_environment_attachment_contract(
+        benchmark_definition=benchmark_definition,
+        assembly_definition=assembly_definition,
+    )
+    if attachment_errors:
+        return "; ".join(attachment_errors)
+
+    try:
+        if await worker_client.exists("manufacturing_config.yaml"):
+            manufacturing_config = ManufacturingConfig.model_validate(
+                yaml.safe_load(
+                    await worker_client.read_file("manufacturing_config.yaml")
+                )
+                or {}
+            )
+        else:
+            manufacturing_config = load_config()
+    except Exception as e:
+        return f"planner handoff pricing-config parse failure: {e}"
+
+    cost_errors = validate_declared_planner_cost_contract(
+        assembly_definition=assembly_definition,
+        manufacturing_config=manufacturing_config,
+    )
+    if cost_errors:
+        return "; ".join(cost_errors)
 
     return None
