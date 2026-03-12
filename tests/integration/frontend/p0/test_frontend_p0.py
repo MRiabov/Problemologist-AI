@@ -15,7 +15,7 @@ from controller.api.schemas import (
     EpisodeListItem,
     EpisodeResponse,
 )
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.enums import TraceType
 
 # Constants

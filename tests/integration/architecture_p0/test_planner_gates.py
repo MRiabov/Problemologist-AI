@@ -15,7 +15,7 @@ from controller.api.schemas import (
     BenchmarkGenerateResponse,
     EpisodeResponse,
 )
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.enums import AgentName, EpisodeStatus, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,

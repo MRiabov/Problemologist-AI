@@ -11,7 +11,7 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller

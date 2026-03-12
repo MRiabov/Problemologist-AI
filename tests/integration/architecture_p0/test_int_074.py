@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.enums import AgentName, EpisodeStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")

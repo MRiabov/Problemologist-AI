@@ -6,7 +6,7 @@ import pytest
 import yaml
 from httpx import AsyncClient
 
-from controller.api.request_models import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus, ReviewDecision
 

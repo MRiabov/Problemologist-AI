@@ -11,7 +11,7 @@ import yaml
 from PIL import Image
 
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.enums import EpisodeStatus
 from shared.models.schemas import (
     BoundingBox,

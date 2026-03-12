@@ -11,7 +11,7 @@ from controller.api.schemas import (
     EpisodeResponse,
     ReviewResponse,
 )
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.workers.schema import FsFileEntry
 
 # Constants

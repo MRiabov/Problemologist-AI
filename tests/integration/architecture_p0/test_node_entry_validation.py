@@ -11,7 +11,7 @@ from controller.api.schemas import (
     EpisodeCreateResponse,
     EpisodeResponse,
 )
-from controller.api.tasks import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, TraceType
 from shared.models.schemas import EntryValidationContext
 

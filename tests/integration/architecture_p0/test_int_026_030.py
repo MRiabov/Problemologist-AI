@@ -6,7 +6,7 @@ import httpx
 import pytest
 import yaml
 
-from controller.api.request_models import AgentRunRequest
+from controller.api.schemas import AgentRunRequest
 from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateRequest,
