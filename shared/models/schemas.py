@@ -450,6 +450,7 @@ class EpisodeMetadata(BaseModel):
     parent_seed_id: str | None = None
     is_integration_test: bool | None = None
     integration_test_id: str | None = None
+    disable_sidecars: bool | None = None
     additional_info: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -642,16 +643,6 @@ class ManufacturedPartEstimate(BaseModel):
     dfm_suggestions: list[str] = Field(default_factory=list)
 
 
-class CotsReproducibility(BaseModel):
-    """Metadata for COTS reproducibility."""
-
-    catalog_version: str
-    bd_warehouse_commit: str
-    catalog_snapshot_id: str
-    generated_at: str
-    cots_query_id: str | None = None
-
-
 class CotsPartEstimate(BaseModel):
     """Assembly estimate for a COTS part."""
 
@@ -660,7 +651,6 @@ class CotsPartEstimate(BaseModel):
     unit_cost_usd: float
     quantity: int
     source: str
-    reproducibility: CotsReproducibility | None = None
 
 
 class AssemblyPartConfig(BaseModel):

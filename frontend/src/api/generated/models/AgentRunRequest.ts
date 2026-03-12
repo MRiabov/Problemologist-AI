@@ -14,6 +14,10 @@ export type AgentRunRequest = {
      */
     session_id: string;
     /**
+     * Optional first node to enter within a unified agent graph.
+     */
+    start_node?: (AgentName | null);
+    /**
      * UI conversation scope session ID.
      */
     user_session_id?: (string | null);

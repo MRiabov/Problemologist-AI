@@ -10,6 +10,10 @@ from shared.models.schemas import EpisodeMetadata
 class AgentRunRequest(BaseModel):
     task: StrictStr = Field(..., description="The task for the agent to perform.")
     session_id: StrictStr = Field(..., description="Session ID for the worker.")
+    start_node: AgentName | None = Field(
+        None,
+        description="Optional first node to enter within a unified agent graph.",
+    )
     user_session_id: uuid.UUID | None = Field(
         None, description="UI conversation scope session ID."
     )

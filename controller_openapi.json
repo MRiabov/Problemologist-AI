@@ -2077,6 +2077,17 @@
             "title": "Session Id",
             "description": "Session ID for the worker."
           },
+          "start_node": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentName"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional first node to enter within a unified agent graph."
+          },
           "user_session_id": {
             "anyOf": [
               {
@@ -2902,6 +2913,17 @@
               }
             ],
             "title": "Integration Test Id"
+          },
+          "disable_sidecars": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disable Sidecars"
           },
           "additional_info": {
             "additionalProperties": true,

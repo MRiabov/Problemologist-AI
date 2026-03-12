@@ -41,6 +41,7 @@ export type EpisodeMetadata = {
     parent_seed_id?: (string | null);
     is_integration_test?: (boolean | null);
     integration_test_id?: (string | null);
+    disable_sidecars?: (boolean | null);
     additional_info?: Record<string, any>;
 };
 

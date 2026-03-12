@@ -201,6 +201,7 @@ async def execute_agent_task(
     task: str,
     session_id: str,
     agent_name: AgentName = AgentName.ENGINEER_CODER,
+    start_node: AgentName | None = None,
 ):
     session_factory = get_sessionmaker()
 
@@ -276,6 +277,7 @@ async def execute_agent_task(
                     # For now hardcoded in original code too.
                     trace_id=trace_id,
                     session_id=session_id,
+                    start_node=start_node,
                 )
 
                 # Add initial trace
@@ -319,6 +321,7 @@ async def execute_agent_task(
                         "task": task,
                         "session_id": session_id,
                         "episode_id": str(episode_id),
+                        "start_node": start_node.value if start_node else None,
                         "messages": [HumanMessage(content=task)],
                     }
                 elif agent_name in [
@@ -370,6 +373,7 @@ async def execute_agent_task(
                     "episode_id": str(episode_id),
                     "worker_session_id": session_id,
                     "agent_name": agent_name,
+                    "start_node": start_node.value if start_node else None,
                 }
 
                 with start_root_span(

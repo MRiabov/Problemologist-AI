@@ -261,6 +261,7 @@ async def run_agent(request: AgentRunRequest):
             request.task,
             request.session_id,
             agent_name=request.agent_name,
+            start_node=request.start_node,
         )
     )
     task_tracker.register_task(episode_id, task)
