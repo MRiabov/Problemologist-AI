@@ -1,11 +1,11 @@
 {
-  "status": "ready_for_review",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "4a825c967805ba9677ba11cbb70956b318eff1b858b68893acffc3c6595d8d35",
+    "plan.md": "5ac23af85eb32c6db1c8bf0f33d42756a8d02cc215ee9447b559a1592ea98b36",
+    "todo.md": "c2134c67e6b7153d142079bec22b5270992d7e64dfa6b34646a6cde20f1cf70a"
+  },
+  "planner_node_type": "electronics_planner",
   "reviewer_stage": "engineering_plan_reviewer",
   "session_id": "seed-eer-010-diverter-gate-wiring-plan",
-  "planner_node_type": "electronics_planner",
-  "artifact_hashes": {
-    "plan.md": "5ac23af85eb32c6db1c8bf0f33d42756a8d02cc215ee9447b559a1592ea98b36",
-    "todo.md": "c2134c67e6b7153d142079bec22b5270992d7e64dfa6b34646a6cde20f1cf70a",
-    "assembly_definition.yaml": "4a825c967805ba9677ba11cbb70956b318eff1b858b68893acffc3c6595d8d35"
-  }
+  "status": "ready_for_review"
 }

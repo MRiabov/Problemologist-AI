@@ -1,11 +1,11 @@
 {
-  "status": "ready_for_review",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "8e802c26c689df1cf84899e451f821b3a6247bfdf56a3a09d734f68b326d1844",
+    "plan.md": "47fcdb9380e82cc5da1a179ca58aa5e918fe636f6b5def1a799824fc2a0d97d1",
+    "todo.md": "2d078b189b82a3087127b539edaedd3cc8ce2e19f9e154e554749cf1b58e15cd"
+  },
+  "planner_node_type": "engineer_planner",
   "reviewer_stage": "engineering_plan_reviewer",
   "session_id": "seed-ec-004-raised-shelf-lift",
-  "planner_node_type": "engineer_planner",
-  "artifact_hashes": {
-    "plan.md": "47fcdb9380e82cc5da1a179ca58aa5e918fe636f6b5def1a799824fc2a0d97d1",
-    "todo.md": "2d078b189b82a3087127b539edaedd3cc8ce2e19f9e154e554749cf1b58e15cd",
-    "assembly_definition.yaml": "8e802c26c689df1cf84899e451f821b3a6247bfdf56a3a09d734f68b326d1844"
-  }
+  "status": "ready_for_review"
 }

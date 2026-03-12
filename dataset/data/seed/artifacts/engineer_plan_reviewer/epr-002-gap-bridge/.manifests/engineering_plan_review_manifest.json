@@ -1,11 +1,11 @@
 {
-  "status": "ready_for_review",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "a49e92226dc5a3132f687a16110c2ed25306b6d25cc70701c3451aa76eeab830",
+    "plan.md": "48dcb43a1abebfad561faaca37e67af5cbe33ab393e76df1ef3f3ec8043c2f9e",
+    "todo.md": "b963cea3bbf422e616cfe39b3474aa73acf2274d61640fc78a9f7706eed51597"
+  },
+  "planner_node_type": "engineer_planner",
   "reviewer_stage": "engineering_plan_reviewer",
   "session_id": "seed-epr-002-gap-bridge",
-  "planner_node_type": "engineer_planner",
-  "artifact_hashes": {
-    "plan.md": "48dcb43a1abebfad561faaca37e67af5cbe33ab393e76df1ef3f3ec8043c2f9e",
-    "todo.md": "3fa3efdf5555b6543f79514d6db41fee6d90391dc0c7db6d73462995d503f8f4",
-    "assembly_definition.yaml": "a49e92226dc5a3132f687a16110c2ed25306b6d25cc70701c3451aa76eeab830"
-  }
+  "status": "ready_for_review"
 }

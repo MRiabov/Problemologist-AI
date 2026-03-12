@@ -15,6 +15,6 @@
   "renders": [],
   "mjcf_path": "solution.xml",
   "cad_path": "script.py",
-  "objectives_path": "objectives.yaml",
+  "objectives_path": "benchmark_definition.yaml",
   "assembly_definition_path": "assembly_definition.yaml"
 }
