@@ -1328,6 +1328,232 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.allow_backend_errors("submission_cost_limit_exceeded")
+async def test_int_019_single_part_submit_counts_workspace_drilling_cost(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+):
+    """INT-019: single-part submit must include workspace drilling cost in the cost gate."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        objectives = valid_objectives.model_copy(deep=True)
+        objectives.constraints.max_unit_cost = 500.0
+        objectives.constraints.max_weight_g = 10000.0
+        objectives.benchmark_parts = [
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "material_id": "aluminum_6061",
+                    "attachment_policy": {
+                        "attachment_methods": ["fastener"],
+                        "drill_policy": {
+                            "allowed": True,
+                            "max_hole_count": 1,
+                            "diameter_range_mm": [3.0, 5.0],
+                            "max_depth_mm": 10.0,
+                        },
+                    },
+                },
+            }
+        ]
+
+        assembly_definition = valid_cost.model_copy(deep=True)
+        assembly_definition.constraints.benchmark_max_unit_cost_usd = 2000.0
+        assembly_definition.constraints.planner_target_max_unit_cost_usd = 1500.0
+        assembly_definition.environment_drill_operations = [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_left",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 1,
+            }
+        ]
+        assembly_definition.totals.estimated_unit_cost_usd = 1000.0
+        custom_config = {
+            "benchmark_operations": {
+                "drilling": {
+                    "cost_per_hole_usd": 1000.0,
+                }
+            }
+        }
+
+        goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
+        await setup_workspace(
+            client,
+            base_headers,
+            {
+                "plan.md": valid_plan,
+                "todo.md": valid_todo,
+                "benchmark_definition.yaml": objectives,
+                "assembly_definition.yaml": assembly_definition,
+                "manufacturing_config.yaml": custom_config,
+                "script.py": goal_script,
+            },
+        )
+
+        submit_req = BenchmarkToolRequest(script_path="script.py")
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not submit_data.success
+        assert "submission rejected (cost)" in submit_data.message.lower()
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_010_submit_handoff_accepts_cheaper_workspace_drilling_override(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+):
+    """INT-010: handoff validation must respect cheaper workspace drilling overrides."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        objectives = valid_objectives.model_copy(deep=True)
+        objectives.constraints.max_unit_cost = 500.0
+        objectives.constraints.max_weight_g = 10000.0
+        objectives.benchmark_parts = [
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "material_id": "aluminum_6061",
+                    "attachment_policy": {
+                        "attachment_methods": ["fastener"],
+                        "drill_policy": {
+                            "allowed": True,
+                            "max_hole_count": 1,
+                            "diameter_range_mm": [3.0, 5.0],
+                            "max_depth_mm": 10.0,
+                        },
+                    },
+                },
+            }
+        ]
+
+        assembly_definition = valid_cost.model_copy(deep=True)
+        assembly_definition.constraints.benchmark_max_unit_cost_usd = 50.0
+        assembly_definition.constraints.planner_target_max_unit_cost_usd = 10.0
+        assembly_definition.environment_drill_operations = [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_left",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 1,
+            }
+        ]
+        assembly_definition.totals.estimated_unit_cost_usd = 1.0
+        custom_config = {
+            "benchmark_operations": {
+                "drilling": {
+                    "cost_per_hole_usd": 1.0,
+                }
+            }
+        }
+
+        goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
+        await setup_workspace(
+            client,
+            base_headers,
+            {
+                "plan.md": valid_plan,
+                "todo.md": valid_todo,
+                "benchmark_definition.yaml": objectives,
+                "assembly_definition.yaml": assembly_definition,
+                "manufacturing_config.yaml": custom_config,
+                "script.py": goal_script,
+            },
+        )
+
+        submit_req = BenchmarkToolRequest(script_path="script.py")
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert submit_data.success, submit_data.message
+
+
+@pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
         "prior_validation_missing",
