@@ -15,6 +15,8 @@ from pydantic import ValidationError
 sys.path.append(str(Path(__file__).parents[3]))
 from shared.enums import ManufacturingMethod
 from shared.models.schemas import AssemblyDefinition
+from worker_heavy.utils.dfm import calculate_declared_assembly_cost
+from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
 
@@ -55,6 +57,13 @@ def main():
                     part["removed_volume_mm3"] = 0.0
 
         # 2. Pydantic Validation
+        estimation = AssemblyDefinition(**data)
+
+        config_path = Path("manufacturing_config.yaml")
+        config = load_config(str(config_path) if config_path.exists() else None)
+        data["totals"]["estimated_unit_cost_usd"] = calculate_declared_assembly_cost(
+            estimation, config
+        )
         estimation = AssemblyDefinition(**data)
 
         # 3. Write back normalized YAML
