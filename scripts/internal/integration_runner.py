@@ -709,16 +709,35 @@ def _normalize_pytest_args(pytest_args: list[str]) -> tuple[list[str], bool, boo
 
 
 def _should_run_playwright(pytest_args: list[str]) -> bool:
+    marker_expr: str | None = None
+    for idx, arg in enumerate(pytest_args):
+        if arg == "-m" and idx + 1 < len(pytest_args):
+            marker_expr = pytest_args[idx + 1]
+            break
+
+    if marker_expr and "integration_frontend" in marker_expr:
+        return True
+
+    explicit_frontend_selection = False
+    integration_root_selected = False
+
     for arg in pytest_args:
-        if "integration_frontend" in arg:
-            return True
         if arg.startswith("tests/e2e") or "/tests/e2e" in arg:
             return True
         if (
             arg.startswith("tests/integration/frontend")
             or "/tests/integration/frontend" in arg
         ):
-            return True
+            explicit_frontend_selection = True
+        if arg == "tests/integration" or arg.endswith("/tests/integration"):
+            integration_root_selected = True
+
+    if explicit_frontend_selection:
+        return True
+    if marker_expr is not None:
+        return False
+    if integration_root_selected:
+        return True
     return False
 
 
