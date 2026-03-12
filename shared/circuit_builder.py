@@ -1,7 +1,7 @@
 import logging
 
 from PySpice.Spice.Netlist import Circuit
-from PySpice.Unit import *
+from PySpice.Unit import u_MOhm, u_Ohm, u_V
 
 from shared.enums import ElectronicComponentType
 from shared.models.schemas import ElectronicsSection

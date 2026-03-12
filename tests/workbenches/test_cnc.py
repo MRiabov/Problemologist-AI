@@ -1,5 +1,15 @@
 import pytest
-from build123d import *
+from build123d import (
+    Axis,
+    Box,
+    BuildPart,
+    BuildSketch,
+    Circle,
+    Mode,
+    Rectangle,
+    extrude,
+    fillet,
+)
 
 from worker_heavy.workbenches.cnc import analyze_cnc, calculate_cnc_cost
 from worker_heavy.workbenches.config import load_config

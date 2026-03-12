@@ -15,6 +15,7 @@ from shared.models.schemas import (
     WireConfig,
     WireTerminal,
 )
+from shared.models.simulation import SimulationFailure
 from shared.pyspice_utils import CircuitValidationResult
 from shared.wire_utils import check_wire_clearance
 from worker_heavy.simulation.loop import SimulationLoop

@@ -86,11 +86,12 @@ async def test_benchmark_coder_with_mock_llm(temp_session_dir):
                 model_dump=lambda: {"stdout": "Executed", "stderr": "", "exit_code": 0},
             )
         except Exception as e:
+            err_msg = str(e)
             return MagicMock(
                 stdout="",
-                stderr=str(e),
+                stderr=err_msg,
                 exit_code=1,
-                model_dump=lambda: {"stdout": "", "stderr": str(e), "exit_code": 1},
+                model_dump=lambda: {"stdout": "", "stderr": err_msg, "exit_code": 1},
             )
         finally:
             os.chdir(original_cwd)

@@ -1,5 +1,5 @@
 import pytest
-from PySpice.Unit import *
+from PySpice.Unit import u_Ohm, u_V
 
 from shared.circuit_builder import build_circuit_from_section
 from shared.models.schemas import (
