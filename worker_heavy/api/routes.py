@@ -44,6 +44,7 @@ from worker_heavy.runtime.simulation_runner import (
 from worker_heavy.simulation.factory import close_all_session_backends
 from worker_heavy.simulation.verification import verify_with_jitter
 from worker_heavy.utils import submit_for_review
+from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.topology import analyze_component
 
@@ -214,13 +215,15 @@ async def api_verify(
                 objectives_path = root / "benchmark_definition.yaml"
                 if objectives_path.exists():
                     try:
-                        import yaml
-
-                        from shared.models.schemas import BenchmarkDefinition
-
                         raw = objectives_path.read_text(encoding="utf-8")
                         if "[TEMPLATE]" not in raw:
-                            objectives = BenchmarkDefinition(**yaml.safe_load(raw))
+                            is_valid, objectives_or_errors = (
+                                validate_benchmark_definition_yaml(raw)
+                            )
+                            if is_valid:
+                                objectives = objectives_or_errors
+                            else:
+                                raise ValueError("; ".join(objectives_or_errors))
                     except Exception as e:
                         logger.warning(
                             "verify_objectives_load_failed",

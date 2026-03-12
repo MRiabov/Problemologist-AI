@@ -294,6 +294,7 @@ def get_engineer_planner_tools(
             {"ok": bool, "status": "submitted"|"rejected", "errors": [...], "node_type": "..."}
         """
         from worker_heavy.utils.file_validation import (
+            validate_benchmark_definition_yaml,
             validate_declared_planner_cost_contract,
             validate_environment_attachment_contract,
             validate_node_output,
@@ -344,27 +345,31 @@ def get_engineer_planner_tools(
             manufacturing_config=manufacturing_config,
         )
         if is_valid:
-            benchmark_definition = yaml.safe_load(
+            benchmark_is_valid, benchmark_result = validate_benchmark_definition_yaml(
                 artifacts["benchmark_definition.yaml"]
             )
+            if not benchmark_is_valid:
+                is_valid = False
+                errors.extend(
+                    [f"benchmark_definition.yaml: {msg}" for msg in benchmark_result]
+                )
+            benchmark_model = benchmark_result if benchmark_is_valid else None
             assembly_definition = yaml.safe_load(artifacts["assembly_definition.yaml"])
-            from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
+            from shared.models.schemas import AssemblyDefinition
 
-            benchmark_model = BenchmarkDefinition.model_validate(
-                benchmark_definition or {}
-            )
             assembly_model = AssemblyDefinition.model_validate(
                 assembly_definition or {}
             )
-            attachment_errors = validate_environment_attachment_contract(
-                benchmark_definition=benchmark_model,
-                assembly_definition=assembly_model,
-            )
-            if attachment_errors:
-                is_valid = False
-                errors.extend(
-                    [f"attachment_contract: {msg}" for msg in attachment_errors]
+            if benchmark_model is not None:
+                attachment_errors = validate_environment_attachment_contract(
+                    benchmark_definition=benchmark_model,
+                    assembly_definition=assembly_model,
                 )
+                if attachment_errors:
+                    is_valid = False
+                    errors.extend(
+                        [f"attachment_contract: {msg}" for msg in attachment_errors]
+                    )
             cost_errors = validate_declared_planner_cost_contract(
                 assembly_definition=assembly_model,
                 manufacturing_config=manufacturing_config,

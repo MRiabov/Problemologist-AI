@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-import yaml
-
 from controller.clients.worker import WorkerClient
 from shared.enums import AgentName
-from shared.models.schemas import BenchmarkDefinition, PlannerSubmissionResult
+from shared.models.schemas import PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, RandomizationStrategy
-from worker_heavy.utils.file_validation import validate_node_output
+from worker_heavy.utils.file_validation import (
+    validate_benchmark_definition_yaml,
+    validate_node_output,
+)
 
 
 def validate_benchmark_planner_handoff_payload(
@@ -34,9 +35,17 @@ def validate_benchmark_planner_handoff_payload(
     objectives_text = artifacts.get("benchmark_definition.yaml")
     if objectives_text:
         try:
-            parsed = yaml.safe_load(objectives_text)
-            objectives = BenchmarkDefinition.model_validate(parsed or {})
-            if custom_objectives:
+            is_valid, objectives_or_errors = validate_benchmark_definition_yaml(
+                objectives_text
+            )
+            if not is_valid:
+                errors.extend(
+                    [f"planner_semantic: {message}" for message in objectives_or_errors]
+                )
+                objectives = None
+            else:
+                objectives = objectives_or_errors
+            if custom_objectives and objectives is not None:
                 if custom_objectives.max_unit_cost is not None:
                     observed = objectives.constraints.max_unit_cost
                     expected = custom_objectives.max_unit_cost

@@ -299,12 +299,16 @@ async def update_objectives(
         )
 
         try:
-            from shared.models.schemas import BenchmarkDefinition
+            from worker_heavy.utils.file_validation import (
+                validate_benchmark_definition_yaml,
+            )
 
             # Read existing
             content = await client.read_file("benchmark_definition.yaml")
-            obj_data_raw = yaml.safe_load(content) or {}
-            obj_data = BenchmarkDefinition(**obj_data_raw)
+            is_valid, benchmark_result = validate_benchmark_definition_yaml(content)
+            if not is_valid:
+                raise ValueError("; ".join(benchmark_result))
+            obj_data = benchmark_result
 
             if request.max_cost is not None:
                 obj_data.constraints.max_unit_cost = request.max_cost

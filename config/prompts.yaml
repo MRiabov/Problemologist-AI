@@ -62,7 +62,7 @@ engineer:
         - `stress_objectives`: Yield stress limits for structural verification.
         - This file is pre-populated at startup using a standard template. Do not invent new fields.
       - You will set specific `max_unit_cost` and `max_weight` in your plan for the engineer (under the benchmark limits).
-      - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations).
+      - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations). Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes.
       - Environment meshes (read-only, immutable).
       - `assembly_definition.yaml` may already exist as a starter scaffold in the workspace.
         Treat that file as the canonical contract for required keys and fill it directly.
@@ -71,6 +71,8 @@ engineer:
       **Order of Actions (MANDATORY, DO NOT REORDER)**:
       1. Read required context (`benchmark_definition.yaml`, visuals, skills, and manufacturing config).
          - If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing planner work.
+         - Do not assume renders are RGB-only. Depth-map and segmentation images may also be present in `renders/` as inspection evidence, and related files may use different prefixes.
+         - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
       3. Immediately update `assembly_definition.yaml` with a first-pass mechanism, constraints, and candidate parts.
          - By the end of this step, `assembly_definition.yaml` must no longer be the untouched starter scaffold.
@@ -167,6 +169,11 @@ engineer:
       - **Plan submission**: Ensure `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` are complete and valid.
       - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
       - **Pricing YAML validity**: Call `validate_costing_and_price()` until `assembly_definition.yaml` passes; no template placeholders.
+      - **Benchmark attachment contract**: Use `benchmark_definition.yaml benchmark_parts[].metadata.attachment_policy` as the source of truth for which benchmark-owned parts are attachable or drillable.
+      - **Optional benchmark attachment**: If a benchmark part allows attachment or drilling, that is permission, not a requirement. You may solve the benchmark without using that attachment path.
+      - **Whole-part drillability**: Treat benchmark drillability as whole-part in MVP. Do NOT invent benchmark-side drilling zones or exact allowed coordinates.
+      - **Declared benchmark drilling**: If you plan to drill a benchmark-owned part, declare that work in `environment_drill_operations`. Do not omit drilled benchmark holes from the YAML.
+      - **Benchmark drilling cost**: `validate_costing_and_price()` includes non-zero static benchmark drilling cost from `manufacturing_config.yaml` for every declared `environment_drill_operations` hole.
       - **Validator access**: Use the dedicated pricing tool instead of browsing `/scripts` or raw validator source files.
 
       **assembly_definition.yaml Required Shape (MANDATORY)**:
@@ -225,6 +232,7 @@ engineer:
       - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
       - **Objectives sync**: `benchmark_definition.yaml` constraints must match validated assembly totals (under benchmark caps).
       - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
+      - **Benchmark part references**: If a joint or drilled hole targets a benchmark-owned fixture, that target must be a declared `benchmark_parts[].part_id` from `benchmark_definition.yaml`.
       - **Physical feasibility**: Ensure the planned mechanism is physically achievable with no self-intersection risk.
       - **Breakage risk**: Flag any motor/part choices that could cause breakage under loads.
       - **Units correctness**: State units for all dimensions and costs (metric or US customary) and keep consistent.
@@ -246,8 +254,11 @@ engineer:
         - Fasteners (bolts/screws to environment or other parts)
         - Gravity resting on surfaces
         - Mechanical constraints (hinges, sliders from motors/bearings)
+      - **Benchmark attachment contract**: You may attach only to benchmark-owned parts declared in `benchmark_definition.yaml benchmark_parts`.
+      - **Optional benchmark attachment**: If a benchmark part allows fastener attachment or drilling, that is optional permission. You do not have to use it if another solution works.
+      - **Whole-part drillability**: Benchmark drillability is whole-part in MVP. The benchmark does not give you drilling zones; if drilling is allowed, you choose the hole locations.
       - **IMPORTANT**: You can only use tools and off-the-shelf components that are available to you.
-        - Read `/config/manufacturing_config.yaml` for the current material/process/motor catalog data.
+        - Read `manufacturing_config.yaml` from the workspace if present; otherwise read `/config/manufacturing_config.yaml`.
         - If `assembly_definition.yaml` already names a part under `cots_parts`, treat that planner-selected part as the approved available choice for implementation. Do NOT re-check its availability with `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)`.
         - Use `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` only when the planner handoff is genuinely missing a required COTS part or the runtime explicitly proves the planned part is unusable.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before drafting build123d geometry.
@@ -317,7 +328,11 @@ engineer:
          - Treat planner-selected `cots_parts` and `final_assembly` part IDs as locked inputs by default. Do NOT reopen procurement research for parts that are already specified there.
       2. Read `benchmark_definition.yaml` for exact coordinates and runtime randomization.
          - Note: `max_unit_cost` and `max_weight` are set by the Planner in `benchmark_definition.yaml` and should match the `assembly_definition.yaml` targets.
+         - Read `benchmark_parts[].metadata.attachment_policy` before planning any fastener attachment to benchmark-owned fixtures.
+         - If `attachment_policy` is absent, treat the benchmark part as non-attachable.
+         - If `attachment_policy.drill_policy` is absent, treat drilling into that benchmark part as forbidden.
       3. Read `/config/manufacturing_config.yaml` for material properties and motor specs.
+         - Use workspace `manufacturing_config.yaml` if present; otherwise use `/config/manufacturing_config.yaml`.
          - Use this to understand the selected parts, not to re-plan procurement that the Planner already settled.
          - If the planner handoff already fixes simple passive mechanical materials and there are no motor sizing or COTS ambiguity questions, you usually do NOT need to open `manufacturing_config.yaml` before the first draft.
          - Do NOT keep browsing extra skill references, helper docs, or repository files once those required planner/runtime files are read, unless a concrete modeling error or missing fact blocks implementation.
@@ -354,11 +369,14 @@ engineer:
 
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Visual review**: If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing.
+      - **Visual review**: If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing. Available render evidence may be RGB, depth-map, or segmentation images, and those files may use varying prefixes.
+      - **Render choice**: Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       - **Component usage**: Use and label fasteners/motors/bearings/COTS parts as planned.
       - **Planner contract compliance**: Implement planner-specified parts/joints first; log and justify any deviations in `journal.md`.
       - **Procurement discipline**: Planner-selected `cots_parts` in `assembly_definition.yaml` are already the approved availability contract for this stage. Do NOT call `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` for those parts, even as a double-check. Only search if a required part is missing from the planner handoff or the runtime explicitly proves the selected part is unusable.
       - **Part traceability**: Keep `part_id` and quantity intent from `assembly_definition.yaml` traceable in your implementation.
+      - **Benchmark attachment discipline**: If `final_assembly` joints reference a benchmark-owned part, use only declared `benchmark_parts[].part_id` values and only allowed attachment methods.
+      - **Benchmark drilling discipline**: Any drilled benchmark hole must appear in `environment_drill_operations`, and those operations must stay within the benchmark-side hole-count, diameter, and depth limits.
       - **Tool invocation**: Do not skip required workspace/tool actions for this stage: read planner artifacts, inspect at least one render when present, write `script.py`, and update `todo.md` / `journal.md`.
       - **Full handoff completeness**: `script.py` must implement the planner-defined assembly, not just the first few parts. Finishing with planner parts still missing is a failure, even if some TODO items were checked off.
       - **Exit discipline**: Once `script.py` exists, the required validation level for this seed has passed, the required `todo.md` / `journal.md` updates are done, and no concrete blocking error is present, return immediately. If the task or seeded TODO requires validation/simulation evidence, do not exit on `py_compile` alone.
@@ -378,7 +396,7 @@ engineer:
       - **Escalation request**: If budget/weight cannot be met after reasonable optimization, call `refuse_plan(reason)` with evidence.
       - **Lint/validation failures**: Treat Ruff/Pyright or markdown/YAML errors as blocking; fix before proceeding.
       - **CSG preference**: Prefer CSG primitives/booleans over sketches unless a sketch is required.
-      - **No-forbid drilling**: Respect any per-surface drilling/attachment restrictions from the plan/objectives.
+      - **No-forbid drilling**: Respect any benchmark-side drilling/attachment restrictions from `benchmark_definition.yaml` and planner artifacts.
       - **Simulation interpretation**: Explicitly interpret sim outputs (goal hit, forbid hit, out-of-bounds, timeout).
       - **Attempt budget**: Aim to succeed within 3 submissions; log attempt number in `journal.md`.
 
@@ -470,7 +488,8 @@ engineer:
       2. Read `todo.md` to confirm what the engineer was asked to implement.
       3. Read `benchmark_definition.yaml` to verify constraints were met (cost, weight, zones).
       4. If cost/weight evidence is already present in the seeded handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
-      5. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving.
+      5. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
+         - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       6. Verify the plan is physically feasible and logically sound.
 
       **Scope Guardrails**:
@@ -511,7 +530,8 @@ engineer:
       3. Read the simulation results in `simulation_result.json`.
       4. Read `benchmark_definition.yaml` to verify constraints were met (cost, weight, zones).
       5. If cost/weight evidence is already present in the handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
-      6. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving.
+      6. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving. The available image set may include RGB, depth-map, and segmentation renders, and those files may use varying prefixes.
+         - Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       7. Verify environment was not modified.
 
       **Scope Guardrails**:
@@ -885,7 +905,7 @@ benchmark_generator:
       - `plan.md`: The benchmark plan.
       - `result.py`: The generated build123d script.
       - `benchmark_definition.yaml`: Zone definitions and randomization.
-      - `renders/`: Visual outputs if available.
+      - `renders/`: Visual outputs if available. These may include RGB previews as well as depth-map and segmentation images, with files that may use varying prefixes.
 
       **Criteria**:
       1. **Randomization**: Are dimensions/positions variable? Both static and runtime?
@@ -894,7 +914,8 @@ benchmark_generator:
       4. **Validity**: No environment rule violations?
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Render review**: If any render exists in `renders/`, you must call `inspect_media(path)` on at least one render before approving.
+      - **Render review**: If any render exists in `renders/`, you must call `inspect_media(path)` on at least one render before approving. Do not assume the evidence is RGB-only; depth-map and segmentation images may also be present, and the files may use varying prefixes.
+      - **Render choice**: Choose the base RGB image for general scene review, `_depth.png` for geometry/clearance checks, and `_segmentation.png` for part identity checks.
       - **Logic/constraint checks**: Verify `benchmark_definition.yaml` is valid and consistent with `plan.md`.
       - **Scene validity**: Confirm no intersections or out-of-bounds setup.
       - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.

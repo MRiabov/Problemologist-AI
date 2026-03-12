@@ -49,6 +49,15 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
+def _load_valid_benchmark_definition(content: str) -> BenchmarkDefinition:
+    from .file_validation import validate_benchmark_definition_yaml
+
+    is_valid, result = validate_benchmark_definition_yaml(content)
+    if not is_valid:
+        raise ValueError("; ".join(result))
+    return result
+
+
 def _finite_float(value: float, default: float = 0.0) -> float:
     """Coerce NaN/Inf to a finite fallback for JSON-safe API responses."""
     try:
@@ -361,8 +370,7 @@ def define_fluid(
     obj_path = working_dir / "benchmark_definition.yaml"
 
     if obj_path.exists():
-        data = yaml.safe_load(obj_path.read_text())
-        objs = BenchmarkDefinition(**data)
+        objs = _load_valid_benchmark_definition(obj_path.read_text(encoding="utf-8"))
         updated = False
         for i, f in enumerate(objs.fluids):
             if f.fluid_id == name:
@@ -391,8 +399,9 @@ def set_soft_mesh(
 
     if obj_path.exists():
         try:
-            data = yaml.safe_load(obj_path.read_text())
-            objs = BenchmarkDefinition(**data)
+            objs = _load_valid_benchmark_definition(
+                obj_path.read_text(encoding="utf-8")
+            )
             objs.physics.fem_enabled = enabled
             if enabled:
                 # FEM currently requires Genesis backend
@@ -719,8 +728,7 @@ def simulate(
         content = objectives_path.read_text(encoding="utf-8")
         if "[TEMPLATE]" not in content:
             try:
-                data = yaml.safe_load(content)
-                objectives = BenchmarkDefinition(**data)
+                objectives = _load_valid_benchmark_definition(content)
                 fixed_contract_error = _validate_parent_fixed_contract(
                     component, objectives
                 )
@@ -1099,10 +1107,7 @@ def validate(
                 if lines and "[TEMPLATE]" in lines[0]:
                     effective_build_zone = None
                 else:
-                    from shared.models.schemas import BenchmarkDefinition
-
-                    data = yaml.safe_load(content)
-                    obj_model = BenchmarkDefinition(**data)
+                    obj_model = _load_valid_benchmark_definition(content)
                     objective_error = _validate_benchmark_definition_consistency(
                         obj_model
                     )
@@ -1276,8 +1281,7 @@ def validate_fem_manufacturability(
         if "[TEMPLATE]" in content:
             return True, None
 
-        data = yaml.safe_load(content)
-        objs = BenchmarkDefinition(**data)
+        objs = _load_valid_benchmark_definition(content)
         if objs.physics and objs.physics.fem_enabled:
             config = load_config()
             custom_config_path = session_root / "manufacturing_config.yaml"

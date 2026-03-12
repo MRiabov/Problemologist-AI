@@ -1,7 +1,6 @@
 from typing import Literal
 
 import structlog
-import yaml
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
@@ -32,9 +31,10 @@ from controller.graph.steerability_node import check_steering, steerability_node
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import AgentName, GenerationKind
-from shared.models.schemas import BenchmarkDefinition, EpisodeMetadata
+from shared.models.schemas import EpisodeMetadata
 from shared.observability.events import emit_event
 from shared.observability.schemas import NodeEntryValidationFailedEvent
+from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 
 from .nodes.coder import coder_node
 from .nodes.cots_search import cots_search_node
@@ -163,8 +163,12 @@ async def _state_requires_electronics(state: AgentState) -> bool:
         if not await client.exists("benchmark_definition.yaml"):
             return True
         raw_objectives = await client.read_file("benchmark_definition.yaml")
-        parsed = yaml.safe_load(raw_objectives) or {}
-        objectives = BenchmarkDefinition.model_validate(parsed)
+        is_valid, objectives_or_errors = validate_benchmark_definition_yaml(
+            raw_objectives
+        )
+        if not is_valid:
+            raise ValueError("; ".join(objectives_or_errors))
+        objectives = objectives_or_errors
         return objectives.electronics_requirements is not None
     except Exception as exc:
         logger.warning(

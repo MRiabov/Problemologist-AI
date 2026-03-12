@@ -4,10 +4,8 @@ from hashlib import sha256
 from pathlib import Path
 
 import structlog
-import yaml
 from build123d import Compound, export_step
 
-from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import ReviewManifest, ValidationResultRecord
 from worker_heavy.utils.dfm import validate_and_price_assembly
@@ -237,8 +235,13 @@ def submit_for_review(
         else load_config()
     )
 
-    objectives_data = yaml.safe_load(objectives_path.read_text())
-    objectives_model = BenchmarkDefinition(**objectives_data)
+    objectives_raw = objectives_path.read_text()
+    is_valid, objectives_result = validate_benchmark_definition_yaml(objectives_raw)
+    if not is_valid:
+        raise ValueError(
+            "benchmark_definition.yaml invalid: " + "; ".join(objectives_result)
+        )
+    objectives_model = objectives_result
     attachment_errors = validate_environment_attachment_contract(
         benchmark_definition=objectives_model,
         assembly_definition=estimation,

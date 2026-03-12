@@ -4,7 +4,7 @@ from typing import Literal
 import yaml
 
 from controller.clients.worker import WorkerClient
-from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
+from shared.models.schemas import AssemblyDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     PlanReviewManifest,
@@ -12,6 +12,7 @@ from shared.workers.schema import (
     ValidationResultRecord,
 )
 from worker_heavy.utils.file_validation import (
+    validate_benchmark_definition_yaml,
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
 )
@@ -141,10 +142,13 @@ async def validate_plan_reviewer_handover(
         return "assembly_definition.yaml missing for engineering plan review handoff."
 
     try:
-        benchmark_definition = BenchmarkDefinition.model_validate(
-            yaml.safe_load(await worker_client.read_file("benchmark_definition.yaml"))
-            or {}
-        )
+        benchmark_raw = await worker_client.read_file("benchmark_definition.yaml")
+        is_valid, benchmark_result = validate_benchmark_definition_yaml(benchmark_raw)
+        if not is_valid:
+            return "planner handoff cross-validation parse failure: " + "; ".join(
+                benchmark_result
+            )
+        benchmark_definition = benchmark_result
         assembly_definition = AssemblyDefinition.model_validate(
             yaml.safe_load(await worker_client.read_file("assembly_definition.yaml"))
             or {}

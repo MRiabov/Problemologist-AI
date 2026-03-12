@@ -118,16 +118,19 @@ class BenchmarkPlannerNode(BaseNode):
             )
             if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
                 try:
-                    from shared.models.schemas import BenchmarkDefinition
+                    from worker_heavy.utils.file_validation import (
+                        validate_benchmark_definition_yaml,
+                    )
 
                     obj_content = await self.ctx.worker_client.read_file(
                         BENCHMARK_DEFINITION_FILE
                     )
-                    obj_data_raw = yaml.safe_load(obj_content)
-                    if not isinstance(obj_data_raw, dict):
-                        obj_data_raw = {}
-
-                    obj_data = BenchmarkDefinition(**obj_data_raw)
+                    is_valid, obj_result = validate_benchmark_definition_yaml(
+                        obj_content
+                    )
+                    if not is_valid:
+                        raise ValueError("; ".join(obj_result))
+                    obj_data = obj_result
 
                     # Update constraints based on custom objectives
                     if custom_objectives.max_unit_cost is not None:
