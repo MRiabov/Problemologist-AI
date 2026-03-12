@@ -612,7 +612,13 @@ async def test_int_007_todo_integrity(
 )
 @pytest.mark.asyncio
 async def test_int_008_objectives_validation(
-    session_id, base_headers, valid_plan, valid_todo, valid_cost, minimal_script
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_cost,
+    minimal_script,
+    valid_objectives,
 ):
     """INT-008: Verify benchmark_definition.yaml schema and template detection."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -624,7 +630,12 @@ async def test_int_008_objectives_validation(
         }
 
         # 1. Template placeholders present (e.g., x_min)
-        template_content = "objectives:\n  goal_zone:\n    min: [x_min, y_min, z_min]"
+        template_content = valid_objectives.model_dump(mode="json")
+        template_content["objectives"]["goal_zone"]["min"] = [
+            "x_min",
+            "y_min",
+            "z_min",
+        ]
         await setup_workspace(
             client,
             base_headers,
@@ -640,7 +651,8 @@ async def test_int_008_objectives_validation(
         assert "template placeholders" in data.message
 
         # 2. Schema violation (wrong type)
-        invalid_obj = {"objectives": {"goal_zone": {"min": "not_a_list"}}}
+        invalid_obj = valid_objectives.model_dump(mode="json")
+        invalid_obj["objectives"]["goal_zone"]["min"] = "not_a_list"
         await setup_workspace(
             client,
             base_headers,

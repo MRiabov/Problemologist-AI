@@ -276,7 +276,7 @@ async def test_int_020_simulation_failure_taxonomy():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
-                start_position=(3.5, 3.5, 3.5),
+                start_position=(0.5, 0.5, 0.5),
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),
             constraints=Constraints(max_unit_cost=20.5, max_weight_g=10.5),

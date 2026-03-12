@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 
@@ -12,6 +13,34 @@ from shared.workers.schema import (
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+
+
+async def _wait_for_heavy_ready(client: httpx.AsyncClient) -> None:
+    for _ in range(120):
+        ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready", timeout=5.0)
+        if ready_resp.status_code == 200:
+            return
+        await asyncio.sleep(0.5)
+    pytest.fail("worker-heavy did not become ready before INT-018 request")
+
+
+async def _post_heavy_tool(
+    client: httpx.AsyncClient,
+    path: str,
+    request: BenchmarkToolRequest,
+    headers: dict[str, str],
+) -> httpx.Response:
+    for _ in range(120):
+        await _wait_for_heavy_ready(client)
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}{path}",
+            json=request.model_dump(mode="json"),
+            headers=headers,
+        )
+        if resp.status_code != 503:
+            return resp
+        await asyncio.sleep(0.5)
+    pytest.fail(f"worker-heavy stayed busy for {path}")
 
 
 @pytest.mark.integration_p0
@@ -113,19 +142,21 @@ randomization:
             )
             assert resp.status_code == 200, resp.text
 
-        validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
-            headers=headers,
+        validate_resp = await _post_heavy_tool(
+            client,
+            "/benchmark/validate",
+            BenchmarkToolRequest(script_path="script.py"),
+            headers,
         )
         assert validate_resp.status_code == 200, validate_resp.text
         validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
         assert validate_data.success is True, validate_data.message
 
-        simulate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
-            headers=headers,
+        simulate_resp = await _post_heavy_tool(
+            client,
+            "/benchmark/simulate",
+            BenchmarkToolRequest(script_path="script.py"),
+            headers,
         )
         assert simulate_resp.status_code == 200, simulate_resp.text
         simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
@@ -228,19 +259,21 @@ randomization:
             )
             assert resp.status_code == 200, resp.text
 
-        validate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
-            headers=headers,
+        validate_resp = await _post_heavy_tool(
+            client,
+            "/benchmark/validate",
+            BenchmarkToolRequest(script_path="script.py"),
+            headers,
         )
         assert validate_resp.status_code == 200, validate_resp.text
         validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
         assert validate_data.success is True, validate_data.message
 
-        simulate_resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/simulate",
-            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
-            headers=headers,
+        simulate_resp = await _post_heavy_tool(
+            client,
+            "/benchmark/simulate",
+            BenchmarkToolRequest(script_path="script.py"),
+            headers,
         )
         assert simulate_resp.status_code == 200, simulate_resp.text
         simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())

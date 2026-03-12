@@ -96,7 +96,8 @@ async def test_int_184_engineer_fail_fast_and_skip_target_node():
         req = AgentRunRequest(
             task="INT-184 engineer node-entry fail-fast contract.",
             session_id=session_id,
-            agent_name=AgentName.ENGINEER_CODER,
+            agent_name=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
         run_resp = await client.post(
             f"{CONTROLLER_URL}/api/agent/run",
