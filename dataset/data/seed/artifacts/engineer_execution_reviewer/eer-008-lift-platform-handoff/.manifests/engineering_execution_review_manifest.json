@@ -5,7 +5,7 @@
   "session_id": "seed-eer-008-lift-platform-handoff",
   "revision": "r1",
   "script_path": "script.py",
-  "script_sha256": "582c949ad9ef6b33e96780ddff20744da5ac305ca0414dbee2feb10a7e2eb99e",
+  "script_sha256": "a01c87c402e1f9b5446f89cab5998921929222f3a7e95768f72bb92ccb9236cc",
   "validation_success": true,
   "validation_timestamp": 1710152160,
   "simulation_success": true,

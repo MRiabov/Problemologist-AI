@@ -4,8 +4,8 @@ objectives:
     max: [165.0, 25.0, 55.0]
   forbid_zones:
     - name: gate_swing_clearance
-      min: [-25.0, -65.0, 10.0]
-      max: [55.0, 65.0, 120.0]
+      min: [40.0, -65.0, 10.0]
+      max: [110.0, 65.0, 120.0]
   build_zone:
     min: [-160.0, -90.0, 0.0]
     max: [180.0, 90.0, 160.0]
@@ -42,6 +42,6 @@ electronics_requirements:
     max_total_wire_length_mm: 700.0
     restricted_zones:
       - name: gate_swing_clearance
-        min: [-25.0, -65.0, 10.0]
-        max: [55.0, 65.0, 120.0]
+        min: [40.0, -65.0, 10.0]
+        max: [110.0, 65.0, 120.0]
   circuit_validation_required: true

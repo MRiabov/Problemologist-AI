@@ -5,8 +5,8 @@ from shared.models.schemas import CompoundMetadata, PartMetadata
 
 def build() -> Compound:
     with BuildPart() as part_1:
-        Box(500, 170, 10, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    part_1_part = part_1.part.move(Location((0, 0, 0)))
+        Box(500, 170, 10, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    part_1_part = part_1.part.move(Location((0, 0, 5)))
     part_1_part.label = "base_plate"
     part_1_part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
 

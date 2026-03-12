@@ -24,7 +24,7 @@ def build() -> Compound:
 
     with BuildPart() as part_4:
         Box(140, 120, 35, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    part_4_part = part_4.part.move(Location((255, 0, 12)))
+    part_4_part = part_4.part.move(Location((255, 0, 22)))
     part_4_part.label = "landing_cradle"
     part_4_part.metadata = PartMetadata(material_id="hdpe", fixed=True)
 

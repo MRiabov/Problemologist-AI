@@ -30,7 +30,7 @@ def build() -> Compound:
 
     with BuildPart() as part_5:
         Cylinder(radius=18, height=48, align=(Align.MIN, Align.CENTER, Align.CENTER))
-    part_5_part = part_5.part.move(Location((-170, -55, 34)))
+    part_5_part = part_5.part.move(Location((-170, -80, 38)))
     part_5_part.label = "lift_motor"
     part_5_part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
 

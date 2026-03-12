@@ -5,7 +5,7 @@
   "session_id": "seed-eer-003-timed-gate-chute",
   "revision": "r1",
   "script_path": "script.py",
-  "script_sha256": "136b76afb6a9e27f6fd19879984c44b8d6459822697e6f8ac1aeac4b24aef62f",
+  "script_sha256": "3c8823729bff20e733548aa5912d6da017e76bab5e45ac0810a6235be66b9c9b",
   "validation_success": true,
   "validation_timestamp": 1710151560,
   "simulation_success": true,

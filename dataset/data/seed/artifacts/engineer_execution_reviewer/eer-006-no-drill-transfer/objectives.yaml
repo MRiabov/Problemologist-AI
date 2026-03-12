@@ -4,8 +4,8 @@ objectives:
     max: [310.0, 55.0, 110.0]
   forbid_zones: []
   build_zone:
-    min: [-320.0, -180.0, 0.0]
-    max: [340.0, 180.0, 220.0]
+    min: [-380.0, -180.0, 0.0]
+    max: [380.0, 180.0, 220.0]
   fluid_objectives: []
   stress_objectives: []
 physics:

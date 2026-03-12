@@ -7,7 +7,7 @@ objectives:
       min: [-0.6, -0.12, 0.18]
       max: [0.6, 0.12, 0.4]
   build_zone:
-    min: [-0.45, -0.12, 0.0]
+    min: [-0.46, -0.12, 0.0]
     max: [0.45, 0.12, 0.18]
   fluid_objectives: []
   stress_objectives: []

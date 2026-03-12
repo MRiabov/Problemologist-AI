@@ -8,8 +8,8 @@ Use a freestanding entry funnel and a single powered roller lane to catch the se
 |------|-----------------|----------|---------|
 | base_plate | 980 x 170 x 10 | aluminum_6061 | Freestanding base that keeps the mechanism stable without drilling into the environment |
 | entry_funnel | 180 x 140 x 40 | hdpe | Wide capture pocket that absorbs X/Y spawn jitter and centers the ball onto the driven lane |
-| roller_bed | 820 x 70 x 28 | hdpe | Main lane that carries the driven roller shaft and side guides |
-| idler_guide | 820 x 18 x 24 | hdpe | Upper passive guide that keeps the ball centered over the roller lane |
+| roller_bed | 780 x 70 x 28 | hdpe | Main lane that carries the driven roller shaft and side guides |
+| idler_guide | 780 x 18 x 24 | hdpe | Upper passive guide that keeps the ball centered over the roller lane |
 | goal_tray | 150 x 120 x 35 | hdpe | End pocket that slows the ball and contains it inside the goal zone |
 | gearmotor_12v_60rpm | COTS | steel/plastic | Single drive motor for the lateral transfer roller |
 
@@ -28,8 +28,8 @@ Use a freestanding entry funnel and a single powered roller lane to catch the se
 |------|---------------|------------|----------|
 | base_plate | 166.6 | 449.8 | 15.50 |
 | entry_funnel | 30.2 | 29.0 | 6.00 |
-| roller_bed | 41.0 | 39.4 | 8.50 |
-| idler_guide | 14.2 | 13.6 | 5.00 |
+| roller_bed | 39.0 | 37.4 | 8.50 |
+| idler_guide | 13.5 | 12.9 | 5.00 |
 | goal_tray | 21.0 | 20.2 | 9.00 |
 | gearmotor_12v_60rpm | n/a | 145.0 | 18.50 |
 | **TOTAL** | 272.9 | 697.0 | **62.50** |

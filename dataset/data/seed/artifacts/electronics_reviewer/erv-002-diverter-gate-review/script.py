@@ -11,7 +11,8 @@ CABLE_CORRIDOR_WAYPOINTS = [
 
 def build() -> Compound:
     with BuildPart() as base:
-        Box(180.0, 80.0, 8.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+        Box(180.0, 80.0, 8.0, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    base.part = base.part.move(Location((0.0, 0.0, 4.0)))
     base.part.label = "mount_base"
     base.part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
 
@@ -31,7 +32,7 @@ def build() -> Compound:
         Cylinder(
             radius=12.0, height=35.0, align=(Align.CENTER, Align.CENTER, Align.MIN)
         )
-    motor_body.part = motor_body.part.move(Location((-82.0, 0.0, 22.0)))
+    motor_body.part = motor_body.part.move(Location((-96.0, 0.0, 22.0)))
     motor_body.part.label = "gate_motor"
     motor_body.part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
 

@@ -33,7 +33,10 @@ randomization:
   static_variation_id: engineer_coder_timed_gate_v1
   runtime_jitter_enabled: true
 electronics_requirements:
-  power_supply_available: true
+  power_supply_available:
+    type: mains_ac_rectified
+    voltage_dc: 24.0
+    max_current_a: 10.0
   wiring_constraints:
     max_total_wire_length_mm: 700.0
     restricted_zones:
