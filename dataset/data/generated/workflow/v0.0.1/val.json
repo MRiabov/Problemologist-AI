@@ -5,7 +5,7 @@
       "assembly_definition.yaml": "version: '1.0'\nconstraints:\n  benchmark_max_unit_cost_usd: 50\n  benchmark_max_weight_g: 1200\n  planner_target_max_unit_cost_usd: 25\n  planner_target_max_weight_g: 600\ntotals:\n  estimated_unit_cost_usd: 10\n  estimated_weight_g: 100\n  estimate_confidence: high\nmanufactured_parts: []\ncots_parts: []\nfinal_assembly: []\n",
       "assets/box.glb": "",
       "assets/box.stl": "",
-      "objectives.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-30, -30, -30]\n  max: [30, 30, 30]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
+      "benchmark_definition.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-30, -30, -30]\n  max: [30, 30, 30]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
       "plan.md": "## Learning Objective\n- Move a sphere into the goal zone.\n## Geometry\n- Simple box environment around origin.\n## Objectives\n- Reach goal while avoiding forbid zone.\n",
       "renders/preview.png": "",
       "reviews/__init__.py": "     1\t\"\"\"Reviews directory for the Worker.\n     2\t\n     3\tThis directory is mounted read-only in the agent's view.\n     4\tStores review logs and feedback from previous sessions.\n     5\t\"\"\"",
@@ -71,7 +71,7 @@
         "episode_id": "7ca50a93-ca06-48b5-890e-9f873a8d3625",
         "event_type": "write_file_tool",
         "overwrite": true,
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T07:59:11.758559Z"
       },
       {
@@ -145,7 +145,7 @@
         "agent_id": null,
         "episode_id": "7ca50a93-ca06-48b5-890e-9f873a8d3625",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T07:59:12.185809Z"
       },
       {
@@ -159,14 +159,14 @@
         "agent_id": null,
         "episode_id": "7ca50a93-ca06-48b5-890e-9f873a8d3625",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T07:59:19.073629Z"
       },
       {
         "agent_id": null,
         "episode_id": "7ca50a93-ca06-48b5-890e-9f873a8d3625",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T07:59:11.875623Z"
       },
       {
@@ -208,7 +208,7 @@
         "agent_id": null,
         "episode_id": "7ca50a93-ca06-48b5-890e-9f873a8d3625",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T07:59:12.006540Z"
       },
       {
@@ -329,7 +329,7 @@
         "agent_id": null,
         "episode_id": "7ca50a93-ca06-48b5-890e-9f873a8d3625",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T07:59:28.620204Z"
       },
       {
@@ -447,7 +447,7 @@
       "assets/box.glb": "",
       "assets/box.stl": "",
       "journal.md": "# Journal\n\n<!--\nThe Journal is your Episodic Memory. Record your high-level narrative here.\nUse it to remember what you did, what worked, and what didn't.\n\nStructure each entry with a timestamp or step number.\n-->\n\n## Entry 1: Initialization\n\n- **Intent**: Started the agent session.\n- **Context**: Initialized with template files.\n- **Next Step**: Read plan and objectives.\n",
-      "objectives.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-30, -30, -30]\n  max: [30, 30, 30]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
+      "benchmark_definition.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-30, -30, -30]\n  max: [30, 30, 30]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
       "plan.md": "     1\t## Learning Objective\n     2\t- Move a sphere into the goal zone.\n     3\t## Geometry\n     4\t- Simple box environment around origin.\n     5\t## Objectives\n     6\t- Reach goal while avoiding forbid zone.",
       "renders/preview.png": "",
       "reviews/__init__.py": "     1\t\"\"\"Reviews directory for the Worker.\n     2\t\n     3\tThis directory is mounted read-only in the agent's view.\n     4\tStores review logs and feedback from previous sessions.\n     5\t\"\"\"",
@@ -534,14 +534,14 @@
         "agent_id": null,
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:20:25.351251Z"
       },
       {
         "agent_id": null,
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:20:26.437505Z"
       },
       {
@@ -571,7 +571,7 @@
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "write_file_tool",
         "overwrite": true,
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:20:23.525966Z"
       },
       {
@@ -580,7 +580,7 @@
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "write_file_tool",
         "overwrite": true,
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:20:24.867968Z"
       },
       {
@@ -672,7 +672,7 @@
         "agent_id": null,
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:20:27.187524Z"
       },
       {
@@ -749,7 +749,7 @@
         "agent_id": null,
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:20:52.313223Z"
       },
       {
@@ -800,7 +800,7 @@
         "agent_id": null,
         "episode_id": "b90e8fa2-509b-47bb-bb81-ca71275f6a13",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T11:21:01.749829Z"
       },
       {
@@ -936,7 +936,7 @@
       "assets/box.glb": "",
       "assets/box.stl": "",
       "journal.md": "     1\t# Journal\n     2\t\n     3\t<!--\n     4\tThe Journal is your Episodic Memory. Record your high-level narrative here.\n     5\tUse it to remember what you did, what worked, and what didn't.\n     6\t\n     7\tStructure each entry with a timestamp or step number.\n     8\t-->\n     9\t\n    10\t## Entry 1: Initialization\n    11\t\n    12\t- **Intent**: Started the agent session.\n    13\t- **Context**: Initialized with template files.\n    14\t- **Next Step**: Read plan and objectives.",
-      "objectives.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-30, -30, -30]\n  max: [30, 30, 30]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
+      "benchmark_definition.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-30, -30, -30]\n  max: [30, 30, 30]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
       "plan.md": "## Learning Objective\n- Move a sphere into the goal zone.\n## Geometry\n- Simple box environment around origin.\n## Objectives\n- Reach goal while avoiding forbid zone.\n",
       "renders/preview.png": "",
       "reviews/__init__.py": "     1\t\"\"\"Reviews directory for the Worker.\n     2\t\n     3\tThis directory is mounted read-only in the agent's view.\n     4\tStores review logs and feedback from previous sessions.\n     5\t\"\"\"",
@@ -1021,7 +1021,7 @@
         "agent_id": null,
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:17.014042Z"
       },
       {
@@ -1051,7 +1051,7 @@
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "write_file_tool",
         "overwrite": true,
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:16.922724Z"
       },
       {
@@ -1138,7 +1138,7 @@
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "write_file_tool",
         "overwrite": true,
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:16.267052Z"
       },
       {
@@ -1203,7 +1203,7 @@
         "agent_id": null,
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:17.372076Z"
       },
       {
@@ -1280,7 +1280,7 @@
         "agent_id": null,
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:43.205586Z"
       },
       {
@@ -1294,7 +1294,7 @@
         "agent_id": null,
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:55.043551Z"
       },
       {
@@ -1345,7 +1345,7 @@
         "agent_id": null,
         "episode_id": "3c25358d-c01a-4011-8082-b05200de3608",
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-02T12:21:17.733243Z"
       }
     ],
@@ -1424,7 +1424,7 @@
       "assembly_definition.yaml": "     1\tversion: '1.0'\n     2\tconstraints:\n     3\t  benchmark_max_unit_cost_usd: 50\n     4\t  benchmark_max_weight_g: 1200\n     5\t  planner_target_max_unit_cost_usd: 25\n     6\t  planner_target_max_weight_g: 600\n     7\ttotals:\n     8\t  estimated_unit_cost_usd: 10\n     9\t  estimated_weight_g: 100\n    10\t  estimate_confidence: high\n    11\tmanufactured_parts: []\n    12\tcots_parts: []\n    13\tfinal_assembly: []",
       "assets/box.glb": "",
       "assets/box.stl": "",
-      "objectives.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-20, -20, -20]\n  max: [20, 20, 20]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
+      "benchmark_definition.yaml": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstacle_collision_zone\"\n      min: [2, -3, 0]\n      max: [4, 3, 4]\n  build_zone:\n    min: [-10, -10, -10]\n    max: [10, 10, 10]\nsimulation_bounds:\n  min: [-20, -20, -20]\n  max: [20, 20, 20]\nmoved_object:\n  label: \"projectile_ball\"\n  shape: \"sphere\"\n  static_randomization:\n    radius: [1, 2]\n  start_position: [0, 0, 0]\n  runtime_jitter: [0.5, 0.5, 0.5]\nconstraints:\n  max_unit_cost: 50.0\n  max_weight_g: 1200.0\nrandomization:\n  static_variation_id: \"v1.0\"\n  runtime_jitter_enabled: true\n",
       "plan.md": "     1\t## Learning Objective\n     2\t- Move a sphere into the goal zone.\n     3\t## Geometry\n     4\t- Simple box environment around origin.\n     5\t## Objectives\n     6\t- Reach goal while avoiding forbid zone.",
       "renders/preview.png": "",
       "reviews/__init__.py": "     1\t\"\"\"Reviews directory for the Worker.\n     2\t\n     3\tThis directory is mounted read-only in the agent's view.\n     4\tStores review logs and feedback from previous sessions.\n     5\t\"\"\"",
@@ -1537,7 +1537,7 @@
       {
         "agent_id": null,
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-01T22:26:34.850685Z"
       },
       {
@@ -1571,7 +1571,7 @@
       {
         "agent_id": null,
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-01T22:26:27.137021Z"
       },
       {
@@ -1647,7 +1647,7 @@
       {
         "agent_id": null,
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-01T22:26:32.076579Z"
       },
       {
@@ -1659,7 +1659,7 @@
       {
         "agent_id": null,
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-01T22:26:27.226514Z"
       },
       {
@@ -1671,7 +1671,7 @@
       {
         "agent_id": null,
         "event_type": "read_file_tool",
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-01T22:26:27.342502Z"
       },
       {
@@ -1709,7 +1709,7 @@
         "content_snippet": "objectives:\n  goal_zone:\n    min: [6, -2, 0]\n    max: [10, 2, 4]\n  forbid_zones:\n    - name: \"obstac",
         "event_type": "write_file_tool",
         "overwrite": true,
-        "path": "objectives.yaml",
+        "path": "benchmark_definition.yaml",
         "timestamp": "2026-03-01T22:26:27.086544Z"
       },
       {

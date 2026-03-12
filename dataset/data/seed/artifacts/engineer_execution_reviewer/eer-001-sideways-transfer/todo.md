@@ -1,7 +1,7 @@
 # TODO
 
 - [x] Planner handoff package seeded
-- [ ] Read `objectives.yaml`, `plan.md`, and `assembly_definition.yaml`
+- [ ] Read `benchmark_definition.yaml`, `plan.md`, and `assembly_definition.yaml`
 - [ ] Implement the freestanding base plate and entry funnel in `script.py`
 - [ ] Implement the driven roller lane and upper guide with the planned clearances
 - [ ] Implement the goal tray so it overlaps the seeded goal zone

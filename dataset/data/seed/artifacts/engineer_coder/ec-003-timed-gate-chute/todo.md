@@ -1,7 +1,7 @@
 # TODO
 
 - [x] Planner handoff package seeded
-- [ ] Read the seeded `objectives.yaml`, `plan.md`, and `assembly_definition.yaml`
+- [ ] Read the seeded `benchmark_definition.yaml`, `plan.md`, and `assembly_definition.yaml`
 - [ ] Implement the freestanding base and settling chute in `script.py`
 - [ ] Implement the single-motor metering wheel and guard while preserving the seeded wiring corridor
 - [ ] Implement the post-gate guide path and goal cup aligned to the seeded goal zone

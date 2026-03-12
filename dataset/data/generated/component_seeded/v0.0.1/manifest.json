@@ -92,7 +92,7 @@
     {
       "reasons": [
         "missing_or_empty:todo.md",
-        "missing_or_empty:objectives.yaml",
+        "missing_or_empty:benchmark_definition.yaml",
         "missing_or_empty:plan.md",
         "missing_or_empty:script.py"
       ],
@@ -101,7 +101,7 @@
     {
       "reasons": [
         "missing_or_empty:todo.md",
-        "missing_or_empty:objectives.yaml",
+        "missing_or_empty:benchmark_definition.yaml",
         "missing_or_empty:plan.md",
         "missing_or_empty:script.py"
       ],
@@ -134,7 +134,7 @@
     {
       "reasons": [
         "missing_or_empty:todo.md",
-        "missing_or_empty:objectives.yaml",
+        "missing_or_empty:benchmark_definition.yaml",
         "missing_or_empty:plan.md",
         "missing_or_empty:script.py"
       ],
@@ -157,7 +157,7 @@
     {
       "reasons": [
         "missing_or_empty:todo.md",
-        "missing_or_empty:objectives.yaml",
+        "missing_or_empty:benchmark_definition.yaml",
         "missing_or_empty:plan.md",
         "missing_or_empty:script.py",
         "missing_required_traces:benchmark_reviewer"
