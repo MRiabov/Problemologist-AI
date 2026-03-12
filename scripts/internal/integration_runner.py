@@ -417,6 +417,9 @@ def run_pytest_subprocess(
     extra_env: dict[str, str] | None = None,
     early_stop_error_logs: list[Path] | None = None,
 ) -> int:
+    has_explicit_maxfail = any(
+        arg == "--maxfail" or arg.startswith("--maxfail=") for arg in pytest_args
+    )
     cmd = [
         "uv",
         "run",
@@ -424,10 +427,11 @@ def run_pytest_subprocess(
         "-v",
         "-o",
         "addopts=-n0",
-        "--maxfail=3",
         "-s",
         "--color=yes",
     ]
+    if not has_explicit_maxfail:
+        cmd.append("--maxfail=3")
     if reverse:
         cmd.append("--reverse")
     cmd.extend(pytest_args)
@@ -836,27 +840,48 @@ def _wait_for_temporal_stable_tcp(
         time.sleep(interval_s)
 
 
+def _integration_infra_reachable_without_docker() -> bool:
+    minio_ok = False
+    try:
+        with urllib.request.urlopen(  # noqa: S310
+            "http://127.0.0.1:19000/minio/health/live", timeout=1.0
+        ) as response:
+            minio_ok = response.status == 200
+    except Exception:
+        minio_ok = False
+
+    return (
+        _check_tcp("127.0.0.1", 15432, timeout_s=1.0)
+        and _check_tcp("127.0.0.1", 17233, timeout_s=1.0)
+        and minio_ok
+    )
+
+
 def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
     print("Spinning up infrastructure (Postgres, Temporal, Minio)...")
-    _run(
-        [
-            "docker",
-            "compose",
-            "-f",
-            "docker-compose.test.yaml",
-            "up",
-            "-d",
-            "--remove-orphans",
-        ]
-    )
+    compose_cmd = [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.test.yaml",
+        "up",
+        "-d",
+        "--remove-orphans",
+    ]
+    compose_result = _run(compose_cmd, check=False)
+    if compose_result.returncode != 0:
+        print(
+            "docker compose up failed; checking whether integration infra is already reachable..."
+        )
+        if not _integration_infra_reachable_without_docker():
+            raise subprocess.CalledProcessError(compose_result.returncode, compose_cmd)
+        print(
+            "Reusing already-running integration infra without docker compose access."
+        )
 
     print("Waiting for infra to be ready...")
     infra_checks = [
-        HealthCheck(
-            name="postgres",
-            kind="cmd",
-            target="docker compose -f docker-compose.test.yaml exec postgres pg_isready -U postgres",
-        ),
+        HealthCheck(name="postgres", kind="tcp", target="127.0.0.1:15432"),
         HealthCheck(
             name="minio",
             kind="http",
@@ -1012,18 +1037,16 @@ def _preemptive_cleanup() -> None:
         _run(["pkill", "-f", pattern], check=False)
 
 
-def _final_force_cleanup() -> None:
-    patterns = [
-        "uvicorn.*18000",
-        "uvicorn.*18001",
-        "uvicorn.*18002",
-        "python -m controller.temporal_worker",
-        "uv run uvicorn",
-        "vite",
-        "npx serve",
-    ]
-    for pattern in patterns:
-        _run(["pkill", "-9", "-f", pattern], check=False)
+def _final_force_cleanup(target_pids: list[int]) -> None:
+    unique_pids = sorted(
+        {pid for pid in target_pids if isinstance(pid, int) and pid > 0}
+    )
+    if not unique_pids:
+        print("No force-kill PID targets provided; skipping detached SIGKILL fallback.")
+        return
+
+    for pid in unique_pids:
+        _run(["kill", "-9", str(pid)], check=False)
 
 
 def _kill_port_occupants(ports: list[int]) -> None:
@@ -1108,6 +1131,7 @@ def _spawn_async_force_cleanup(
     *,
     repo_root: Path,
     delay_seconds: float,
+    target_pids: list[int],
 ) -> None:
     cleanup_log = repo_root / "logs" / "integration_tests" / "cleanup.log"
     cleanup_log.parent.mkdir(parents=True, exist_ok=True)
@@ -1118,6 +1142,8 @@ def _spawn_async_force_cleanup(
         "--delay-seconds",
         str(delay_seconds),
     ]
+    for pid in sorted({pid for pid in target_pids if isinstance(pid, int) and pid > 0}):
+        cmd.extend(["--pid", str(pid)])
     with cleanup_log.open("ab") as handle:
         subprocess.Popen(
             cmd,
@@ -1133,6 +1159,7 @@ def _spawn_async_cleanup(
     repo_root: Path,
     sessions_dir: str,
     down: bool,
+    target_pids: list[int],
 ) -> None:
     cleanup_log = repo_root / "logs" / "integration_tests" / "cleanup.log"
     cleanup_log.parent.mkdir(parents=True, exist_ok=True)
@@ -1147,6 +1174,8 @@ def _spawn_async_cleanup(
     ]
     if down:
         cmd.append("--down")
+    for pid in sorted({pid for pid in target_pids if isinstance(pid, int) and pid > 0}):
+        cmd.extend(["--pid", str(pid)])
     with cleanup_log.open("ab") as handle:
         subprocess.Popen(
             cmd,
@@ -1161,6 +1190,13 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
     repo_root = Path(args.repo_root).resolve()
     os.chdir(repo_root)
 
+    target_pids = sorted(
+        {
+            int(pid)
+            for pid in getattr(args, "pid", []) or []
+            if str(pid).strip().isdigit() and int(pid) > 0
+        }
+    )
     print("Cleaning up processes...")
     _preemptive_cleanup()
     force_kill_grace_s = max(
@@ -1170,6 +1206,7 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
     _spawn_async_force_cleanup(
         repo_root=repo_root,
         delay_seconds=force_kill_grace_s,
+        target_pids=target_pids,
     )
     print(f"Scheduled detached force-kill fallback (grace={force_kill_grace_s:.1f}s).")
     _cleanup_pid_files(repo_root)
@@ -1189,7 +1226,12 @@ def _run_force_kill_command(args: argparse.Namespace) -> int:
     delay_seconds = max(0.0, args.delay_seconds)
     if delay_seconds > 0:
         time.sleep(delay_seconds)
-    _final_force_cleanup()
+    target_pids = [
+        int(pid)
+        for pid in getattr(args, "pid", []) or []
+        if str(pid).strip().isdigit() and int(pid) > 0
+    ]
+    _final_force_cleanup(target_pids)
     return 0
 
 
@@ -1393,6 +1435,7 @@ def _run_integration_command(
         os.environ.get("INTEGRATION_ASYNC_CLEANUP", "0").strip() == "1"
         and not args.wait_cleanup
     )
+    cleanup_target_pids: list[int] = []
 
     try:
         print("Starting Xvfb for headless rendering...")
@@ -1549,6 +1592,8 @@ def _run_integration_command(
             )
             print("Frontend server available on http://localhost:15173")
 
+        cleanup_target_pids = [started.process.pid for started in processes]
+
         _link_current_logs(run_playwright)
 
         print("Waiting for servers to be healthy...")
@@ -1650,6 +1695,7 @@ def _run_integration_command(
                 repo_root=repo_root,
                 sessions_dir=sessions_dir,
                 down=args.down,
+                target_pids=cleanup_target_pids,
             )
         else:
             _run_cleanup_command(
@@ -1657,6 +1703,7 @@ def _run_integration_command(
                     repo_root=str(repo_root),
                     sessions_dir=sessions_dir,
                     down=args.down,
+                    pid=cleanup_target_pids,
                 )
             )
 
@@ -1714,12 +1761,14 @@ def _build_parser() -> argparse.ArgumentParser:
     cleanup_parser.add_argument("--repo-root", required=True)
     cleanup_parser.add_argument("--sessions-dir", required=True)
     cleanup_parser.add_argument("--down", action="store_true")
+    cleanup_parser.add_argument("--pid", action="append", default=[])
 
     force_kill_parser = sub.add_parser(
         "force-kill",
         help="Internal: force-kill leftover integration processes (SIGKILL).",
     )
     force_kill_parser.add_argument("--delay-seconds", type=float, default=0.0)
+    force_kill_parser.add_argument("--pid", action="append", default=[])
 
     return parser
 

@@ -39,14 +39,18 @@ fi
 echo "Docker seems to be failing with $CURRENT_DRIVER (likely a Docker-in-Docker environment). Attempting to switch to vfs..."
 
 if ! command -v sudo >/dev/null 2>&1; then
-    echo "Error: sudo is required to change Docker configuration but not found."
-    exit 1
+    echo "Warning: sudo not found; cannot change Docker configuration automatically. Continuing without vfs switch."
+    exit 0
 fi
 
 # Create or update daemon.json
 TMP_JSON=$(mktemp)
 if [ -f /etc/docker/daemon.json ]; then
-    sudo cat /etc/docker/daemon.json > "$TMP_JSON"
+    if ! sudo cat /etc/docker/daemon.json > "$TMP_JSON"; then
+        echo "Warning: unable to read /etc/docker/daemon.json via sudo. Continuing without vfs switch."
+        rm "$TMP_JSON"
+        exit 0
+    fi
     # Use python to update the JSON if available, otherwise just overwrite
     if command -v python3 >/dev/null 2>&1; then
         python3 -c "import json;
@@ -63,7 +67,11 @@ else
     echo '{"storage-driver": "vfs"}' > "$TMP_JSON"
 fi
 
-sudo cp "$TMP_JSON" /etc/docker/daemon.json
+if ! sudo cp "$TMP_JSON" /etc/docker/daemon.json; then
+    echo "Warning: unable to update /etc/docker/daemon.json via sudo. Continuing without vfs switch."
+    rm "$TMP_JSON"
+    exit 0
+fi
 rm "$TMP_JSON"
 
 echo "Restarting Docker service..."
