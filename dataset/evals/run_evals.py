@@ -37,6 +37,7 @@ from controller.agent.node_entry_validation import (  # noqa: E402
     plan_reviewer_handover_custom_check_from_session_id,
     reviewer_handover_custom_check_from_session_id,
 )
+from controller.agent.review_handover import validate_reviewer_handover  # noqa: E402
 from controller.clients.worker import WorkerClient  # noqa: E402
 from shared.enums import (  # noqa: E402
     AgentName,
@@ -66,6 +67,9 @@ class AgentEvalSpec(BaseModel):
     request_agent_name: AgentName | None = None
     required_trace_names: tuple[AgentName, ...] = ()
     start_node: AgentName | None = None
+    required_reviewer_handover_manifest: str | None = None
+    required_reviewer_stage: str | None = None
+    materialize_reviewer_handover: bool = False
 
 
 class EvalDatasetItem(BaseModel):
@@ -282,6 +286,11 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_CODER,),
         start_node=AgentName.ENGINEER_CODER,
+        required_reviewer_handover_manifest=(
+            ".manifests/engineering_execution_review_manifest.json"
+        ),
+        required_reviewer_stage="engineering_execution_reviewer",
+        materialize_reviewer_handover=True,
     ),
     AgentName.ENGINEER_PLAN_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
@@ -645,6 +654,38 @@ def _missing_required_traces(
     return [trace.value for trace in required if trace.value.lower() not in names]
 
 
+async def _completion_contract_error(
+    *,
+    spec: AgentEvalSpec,
+    session_id: str,
+) -> str | None:
+    manifest_path = spec.required_reviewer_handover_manifest
+    expected_stage = spec.required_reviewer_stage
+    if not manifest_path or not expected_stage:
+        return None
+
+    if spec.materialize_reviewer_handover:
+        errors = await reviewer_handover_custom_check_from_session_id(
+            session_id=session_id,
+            reviewer_label="Execution",
+            manifest_path=manifest_path,
+            expected_stage=expected_stage,
+        )
+        if errors:
+            return "; ".join(error.message for error in errors)
+        return None
+
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        return await validate_reviewer_handover(
+            worker,
+            manifest_path=manifest_path,
+            expected_stage=expected_stage,
+        )
+    finally:
+        await worker.aclose()
+
+
 async def _run_git_eval(
     item: EvalDatasetItem, stats: dict[AgentName, Any], agent_name: AgentName
 ):
@@ -799,9 +840,9 @@ async def run_single_eval(
                 return
             data = resp.json()
             episode_id = str(data.get(episode_id_key) or data.get("episode_id") or "")
-            session_id = str(
-                data.get(session_id_key) or data.get("session_id") or episode_id
-            )
+            response_session_id = data.get(session_id_key) or data.get("session_id")
+            if response_session_id:
+                session_id = str(response_session_id)
 
             status_url = status_url_template.format(
                 session_id=session_id, episode_id=episode_id
@@ -919,8 +960,19 @@ async def run_single_eval(
                                         session_id=session_id,
                                     )
                                 else:
-                                    log.info("eval_planned")
-                                    success = True
+                                    completion_error = await _completion_contract_error(
+                                        spec=spec,
+                                        session_id=session_id,
+                                    )
+                                    if completion_error:
+                                        log.error(
+                                            "eval_failed_completion_contract",
+                                            session_id=session_id,
+                                            error=completion_error,
+                                        )
+                                    else:
+                                        log.info("eval_planned")
+                                        success = True
                                 break
 
                         if status == EpisodeStatus.COMPLETED:
@@ -935,8 +987,19 @@ async def run_single_eval(
                                     session_id=session_id,
                                 )
                             else:
-                                log.info("eval_completed")
-                                success = True
+                                completion_error = await _completion_contract_error(
+                                    spec=spec,
+                                    session_id=session_id,
+                                )
+                                if completion_error:
+                                    log.error(
+                                        "eval_failed_completion_contract",
+                                        session_id=session_id,
+                                        error=completion_error,
+                                    )
+                                else:
+                                    log.info("eval_completed")
+                                    success = True
                             break
 
                         if status == EpisodeStatus.FAILED:
@@ -1098,7 +1161,11 @@ async def main():
                 check=True,
                 capture_output=True,
                 text=True,
-                env={**os.environ, "LOG_DIR": str(env_up_log_dir)},
+                env={
+                    **os.environ,
+                    "LOG_DIR": str(env_up_log_dir),
+                    "SKIP_LOG_ARCHIVE": "1",
+                },
             )
             # Dump output into the log file at DEBUG level
             for line in result.stdout.splitlines():
