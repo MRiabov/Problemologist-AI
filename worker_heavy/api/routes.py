@@ -218,7 +218,10 @@ async def api_verify(
                         raw = objectives_path.read_text(encoding="utf-8")
                         if "[TEMPLATE]" not in raw:
                             is_valid, objectives_or_errors = (
-                                validate_benchmark_definition_yaml(raw)
+                                validate_benchmark_definition_yaml(
+                                    raw,
+                                    session_id=x_session_id,
+                                )
                             )
                             if is_valid:
                                 objectives = objectives_or_errors

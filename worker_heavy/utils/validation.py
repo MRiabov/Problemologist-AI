@@ -49,10 +49,14 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
-def _load_valid_benchmark_definition(content: str) -> BenchmarkDefinition:
+def _load_valid_benchmark_definition(
+    content: str, *, session_id: str | None = None
+) -> BenchmarkDefinition:
     from .file_validation import validate_benchmark_definition_yaml
 
-    is_valid, result = validate_benchmark_definition_yaml(content)
+    is_valid, result = validate_benchmark_definition_yaml(
+        content, session_id=session_id
+    )
     if not is_valid:
         raise ValueError("; ".join(result))
     return result
@@ -370,7 +374,10 @@ def define_fluid(
     obj_path = working_dir / "benchmark_definition.yaml"
 
     if obj_path.exists():
-        objs = _load_valid_benchmark_definition(obj_path.read_text(encoding="utf-8"))
+        objs = _load_valid_benchmark_definition(
+            obj_path.read_text(encoding="utf-8"),
+            session_id=session_id,
+        )
         updated = False
         for i, f in enumerate(objs.fluids):
             if f.fluid_id == name:
@@ -728,7 +735,9 @@ def simulate(
         content = objectives_path.read_text(encoding="utf-8")
         if "[TEMPLATE]" not in content:
             try:
-                objectives = _load_valid_benchmark_definition(content)
+                objectives = _load_valid_benchmark_definition(
+                    content, session_id=session_id
+                )
                 fixed_contract_error = _validate_parent_fixed_contract(
                     component, objectives
                 )
@@ -783,6 +792,15 @@ def simulate(
                 traceback.print_exc()
                 logger.error(
                     "failed_to_load_objectives", error=str(e), session_id=session_id
+                )
+                return SimulationResult(
+                    success=False,
+                    summary=f"benchmark_definition.yaml invalid: {e}",
+                    failure=SimulationFailure(
+                        reason=FailureReason.VALIDATION_FAILED,
+                        detail=str(e),
+                    ),
+                    confidence="high",
                 )
 
     cost_est_path = working_dir / "assembly_definition.yaml"
@@ -1107,7 +1125,9 @@ def validate(
                 if lines and "[TEMPLATE]" in lines[0]:
                     effective_build_zone = None
                 else:
-                    obj_model = _load_valid_benchmark_definition(content)
+                    obj_model = _load_valid_benchmark_definition(
+                        content, session_id=session_id
+                    )
                     objective_error = _validate_benchmark_definition_consistency(
                         obj_model
                     )
@@ -1281,7 +1301,7 @@ def validate_fem_manufacturability(
         if "[TEMPLATE]" in content:
             return True, None
 
-        objs = _load_valid_benchmark_definition(content)
+        objs = _load_valid_benchmark_definition(content, session_id=session_id)
         if objs.physics and objs.physics.fem_enabled:
             config = load_config()
             custom_config_path = session_root / "manufacturing_config.yaml"

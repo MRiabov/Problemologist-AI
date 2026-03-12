@@ -62,7 +62,12 @@ class ElectronicsPlannerNode(BaseNode):
                 else "New electronics planning. No rejection feedback."
             ),
         }
-        validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
+        validate_files = [
+            "plan.md",
+            "todo.md",
+            "benchmark_definition.yaml",
+            "assembly_definition.yaml",
+        ]
 
         prediction, artifacts, journal_entry = await self._run_program(
             program_cls=dspy.ReAct,

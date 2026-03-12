@@ -15,6 +15,7 @@ from worker_heavy.utils.file_validation import (
 def validate_benchmark_planner_handoff_payload(
     *,
     artifacts: dict[str, str],
+    session_id: str | None = None,
     custom_objectives: CustomObjectives | None = None,
     submission: PlannerSubmissionResult | None = None,
     submission_error: str | None = None,
@@ -36,7 +37,8 @@ def validate_benchmark_planner_handoff_payload(
     if objectives_text:
         try:
             is_valid, objectives_or_errors = validate_benchmark_definition_yaml(
-                objectives_text
+                objectives_text,
+                session_id=session_id,
             )
             if not is_valid:
                 errors.extend(
@@ -142,6 +144,7 @@ async def validate_benchmark_planner_handoff_artifacts(
     errors.extend(
         validate_benchmark_planner_handoff_payload(
             artifacts=artifacts,
+            session_id=client.session_id,
             custom_objectives=custom_objectives,
             submission=submission,
             submission_error=submission_error,

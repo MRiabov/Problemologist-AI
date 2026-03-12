@@ -608,6 +608,12 @@ def validate_node_output(
                     "todo.md",
                     "benchmark_definition.yaml",
                 ],
+                AgentName.ELECTRONICS_PLANNER: [
+                    "plan.md",
+                    "todo.md",
+                    "benchmark_definition.yaml",
+                    "assembly_definition.yaml",
+                ],
                 AgentName.BENCHMARK_CODER: [
                     "plan.md",
                     "todo.md",
@@ -636,6 +642,12 @@ def validate_node_output(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+            ],
+            AgentName.ELECTRONICS_PLANNER: [
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "assembly_definition.yaml",
             ],
             AgentName.BENCHMARK_CODER: [
                 "plan.md",

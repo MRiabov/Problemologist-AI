@@ -164,7 +164,8 @@ async def _state_requires_electronics(state: AgentState) -> bool:
             return True
         raw_objectives = await client.read_file("benchmark_definition.yaml")
         is_valid, objectives_or_errors = validate_benchmark_definition_yaml(
-            raw_objectives
+            raw_objectives,
+            session_id=session_id,
         )
         if not is_valid:
             raise ValueError("; ".join(objectives_or_errors))

@@ -126,7 +126,8 @@ class BenchmarkPlannerNode(BaseNode):
                         BENCHMARK_DEFINITION_FILE
                     )
                     is_valid, obj_result = validate_benchmark_definition_yaml(
-                        obj_content
+                        obj_content,
+                        session_id=str(state.session.session_id),
                     )
                     if not is_valid:
                         raise ValueError("; ".join(obj_result))

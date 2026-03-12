@@ -143,7 +143,10 @@ async def validate_plan_reviewer_handover(
 
     try:
         benchmark_raw = await worker_client.read_file("benchmark_definition.yaml")
-        is_valid, benchmark_result = validate_benchmark_definition_yaml(benchmark_raw)
+        is_valid, benchmark_result = validate_benchmark_definition_yaml(
+            benchmark_raw,
+            session_id=worker_client.session_id,
+        )
         if not is_valid:
             return "planner handoff cross-validation parse failure: " + "; ".join(
                 benchmark_result

@@ -305,7 +305,10 @@ async def update_objectives(
 
             # Read existing
             content = await client.read_file("benchmark_definition.yaml")
-            is_valid, benchmark_result = validate_benchmark_definition_yaml(content)
+            is_valid, benchmark_result = validate_benchmark_definition_yaml(
+                content,
+                session_id=str(session_id),
+            )
             if not is_valid:
                 raise ValueError("; ".join(benchmark_result))
             obj_data = benchmark_result

@@ -236,7 +236,10 @@ def submit_for_review(
     )
 
     objectives_raw = objectives_path.read_text()
-    is_valid, objectives_result = validate_benchmark_definition_yaml(objectives_raw)
+    is_valid, objectives_result = validate_benchmark_definition_yaml(
+        objectives_raw,
+        session_id=session_id,
+    )
     if not is_valid:
         raise ValueError(
             "benchmark_definition.yaml invalid: " + "; ".join(objectives_result)

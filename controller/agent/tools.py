@@ -331,8 +331,12 @@ def get_engineer_planner_tools(
             return result.model_dump(mode="json")
 
         custom_config_text = None
-        if await fs.exists("manufacturing_config.yaml"):
-            custom_config_text = await fs.read_file("manufacturing_config.yaml")
+        if await fs.client.exists(
+            "manufacturing_config.yaml", bypass_agent_permissions=True
+        ):
+            custom_config_text = await fs.client.read_file(
+                "manufacturing_config.yaml", bypass_agent_permissions=True
+            )
         manufacturing_config = (
             load_merged_config(override_data=yaml.safe_load(custom_config_text) or {})
             if custom_config_text is not None
@@ -346,7 +350,8 @@ def get_engineer_planner_tools(
         )
         if is_valid:
             benchmark_is_valid, benchmark_result = validate_benchmark_definition_yaml(
-                artifacts["benchmark_definition.yaml"]
+                artifacts["benchmark_definition.yaml"],
+                session_id=fs.client.session_id,
             )
             if not benchmark_is_valid:
                 is_valid = False
