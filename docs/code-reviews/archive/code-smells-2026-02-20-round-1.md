@@ -35,7 +35,7 @@ Doesn't DSPy have this stuff? Why not at least async, why give a whole thread to
 2. **Naming Mismatch**: `cad_simulation_metric` (L158) looks for `max_weight`, but the schema and test fixtures use `max_weight_g`.
 3. **Broken Eval**: This causes `evaluate_formula` to fail with `NameError: name 'max_weight' is not defined`, resulting in a score of 0.0 for those components.
 **Impact**: High. Distorts agent training and evaluation. Reward signals for weight optimization are either zeroed out or 1000x incorrect.
-**Recommendation**: Standardize on grams across the entire pipeline. Align field names between the reward configuration, `PredictionMetrics`, and `ObjectivesYaml`.
+**Recommendation**: Standardize on grams across the entire pipeline. Align field names between the reward configuration, `PredictionMetrics`, and `BenchmarkDefinition`.
 
 > **User Review**:
 > [x] Agree - [ ] Disagree
@@ -70,11 +70,11 @@ Agree, but what about genesis? I know it has a native collision check too
 - `evaluator.py:L37`: `if qpos is not None and len(qpos) >= 3 and qpos[2] < -2.0: return SimulationFailureMode.OUT_OF_BOUNDS`
 - `loop.py` does not pass `objectives.simulation_bounds` to the evaluator.
 **Impact**: Medium. Benchmarks that require different world bounds (e.g., flying drones or underwater ROVs) will fail incorrectly or miss genuine out-of-bounds events.
-**Recommendation**: Pass `simulation_bounds` from `ObjectivesYaml` to `SuccessEvaluator` and use it to validate the object's position.
+**Recommendation**: Pass `simulation_bounds` from `BenchmarkDefinition` to `SuccessEvaluator` and use it to validate the object's position.
 
 > **User Review**:
 > [x] Agree - [ ] Disagree
-> *Comments:* Looks critical. However, however, maybe we rescale it? I doubt that we do. Anyway, it should come from objectives yaml.
+> *Comments:* Looks critical. However, however, maybe we rescale it? I doubt that we do. Anyway, it should come from benchmark_definition.yaml.
 
 ### 5. Logic Bug in `AssemblyDefinition.moving_parts`
 
@@ -153,7 +153,7 @@ Line 414: `from worker_heavy.simulation.loop import SIMULATION_STEP_S`
 **Evidence**:
 Line 322: `frame = self.backend.render_camera("main", 640, 480)`
 **Impact**: Low. If the scene (MJCF/Genesis) doesn't define a "main" camera, rendering might fail or default to an undesirable view.
-**Recommendation**: Allow the camera name to be specified in `objectives.yaml` or fallback to the first available camera.
+**Recommendation**: Allow the camera name to be specified in `benchmark_definition.yaml` or fallback to the first available camera.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree

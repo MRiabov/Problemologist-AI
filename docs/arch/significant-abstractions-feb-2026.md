@@ -26,7 +26,7 @@ Each agent role is implemented as a encapsulated `Node` that uses a **ReAct** (R
 To avoid the brittleness of freeform dicts, all critical configuration and handover files are strictly typed.
 
 - **Schemas**: `shared/models/schemas.py` ([shared/models/schemas.py](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py))
-  - `ObjectivesYaml`: Defines the "What" (goals, zones, physics config).
+  - `BenchmarkDefinition`: Defines the "What" (goals, zones, physics config).
   - `AssemblyDefinition`: Defines the "How" of the solution (parts count, costs, weights).
   - `ReviewFrontmatter`: Controls the graph flow (approve/reject decisions).
 

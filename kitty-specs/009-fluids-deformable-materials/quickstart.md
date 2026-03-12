@@ -9,7 +9,7 @@
 ## Running a Simulation
 
 1. **Define Material**: Ensure `manufacturing_config.yaml` has FEM fields for your material.
-2. **Configure Objective**: In `objectives.yaml`, set:
+2. **Configure Objective**: In `benchmark_definition.yaml`, set:
 
     ```yaml
     physics:

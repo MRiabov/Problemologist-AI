@@ -79,12 +79,12 @@ The plan will have the following bullet points. The plan will be validated for c
         - A "goal" objective as a single AABB coordinate
 The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 2. A `todo.md` TODO list from the planner.
-3. A draft of `objectives.yaml` with rough values filled in.
+3. A draft of `benchmark_definition.yaml` with rough values filled in.
 4. A draft of `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
-If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `objectives.yaml` and must not silently mutate those constraints.
+If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `benchmark_definition.yaml` and must not silently mutate those constraints.
 
 ## Benchmark Generator with Engineer handover
 
@@ -113,7 +113,7 @@ The engineer will also receive YAML files with:
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `objectives.yaml`. The Benchmark Planner's `assembly_definition.yaml` stays in the Benchmark Planner scope and is not handed over to engineering.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `assembly_definition.yaml` stays in the Benchmark Planner scope and is not handed over to engineering.
 
 #### Renders 
 
@@ -157,14 +157,14 @@ For explicit-electronics tasks, there is also a specialist review gate between c
 Engineer sends four files to the coder agent who has to implement the plan:
 
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
-2. A stripped down `objectives.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
+2. A stripped down `benchmark_definition.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
 3. A `todo.md` TODO-list.
 4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
 
 Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 - Source of truth contract: `ENGINEER_PLANNER_HANDOFF_ARTIFACTS` in node-entry validation.
-- Required artifacts: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`
+- Required artifacts: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`
 - Reviewer-stage manifest: `.manifests/engineering_plan_review_manifest.json` (planner handoff materialization for the plan-review stage)
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
@@ -179,7 +179,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
 Unified coder contract:
 
-- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section and benchmark `objectives.yaml.electronics_requirements`.
+- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section and benchmark `benchmark_definition.yaml.electronics_requirements`.
 - `Engineering Coder` owns all implementation changes to `script.py` and helper implementation modules for the current revision.
 - `Engineering Coder` may implement both mechanical and electrical details in one pass when the task requires electronics.
 - `Engineering Coder` must not assume that electronics can be deferred to a later dedicated implementation node.
@@ -205,7 +205,7 @@ For each part:
 <!-- - Order of assembly --> 
 <!-- Order of assembly is partially unnecessary because we kind of work in CAD. However, it's a good thing to think of. -->
 ## 4. Cost & Weight Budget
-- `max_unit_cost`: $X (from objectives.yaml, planner's allocation)
+- `max_unit_cost`: $X (from benchmark_definition.yaml, planner's allocation)
 - `max_weight`: Y kg
 - Assembly breakdown per part
 ## 5. Risk Assessment
@@ -219,24 +219,26 @@ For each part:
 <!-- Note: the planner explicitly doesn't specify the CAD approach. It doesn't need to think about plans, it's about the geometry. -->
 ```
 
-### `objectives.yaml`
+### `benchmark_definition.yaml`
 
-`objectives.yaml` is a central data exchange object to the system. To centralize its structure:
+`benchmark_definition.yaml` is a central data exchange object to the system. To centralize its structure:
 
 ```yaml
 # =============================================================================
-# OBJECTIVES.YAML - Your Task Definition
+# BENCHMARK_DEFINITION.YAML - Your Task Definition
 # =============================================================================
-# This file defines WHAT you must achieve. Read it carefully before planning.
+# This file defines WHAT you must achieve and which benchmark-owned fixtures
+# and metadata are part of the task. Read it carefully before planning.
 #
 # YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
 #   1. Staying WITHIN the `build_zone` (you cannot build outside it)
 #   2. AVOIDING all `forbid_zones` (contact = failure)
 #   3. Respecting `max_unit_cost` and `max_weight` constraints
 #
-# The environment geometry in this file is READ-ONLY. Engineering assembly
-# motion metadata is stored under engineering assembly_definition.yaml
-# final_assembly.parts and is also READ-ONLY once written.
+# Benchmark-owned environment geometry and metadata in this file are READ-ONLY.
+# Engineering assembly motion metadata is stored under engineering
+# assembly_definition.yaml final_assembly.parts and is also READ-ONLY once
+# written.
 # =============================================================================
 
 objectives:
@@ -257,6 +259,15 @@ objectives:
   build_zone:
     min: [x, y, z]
     max: [x, y, z]
+
+benchmark_parts:
+  - part_id: "environment_fixture"
+    label: "environment_fixture"
+    metadata:
+      fixed: true
+      material_id: "aluminum_6061"
+      attachment_policy:
+        mountable: false
 
 # Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:
@@ -285,13 +296,20 @@ moved_object:
 # These are challenging but achievable. Exceeding them = rejection.
 constraints:
   max_unit_cost: 50.00  # USD - total cost of your manufactured parts
-  max_weight: 1.2       # kg - total weight of your design
+  max_weight_g: 1200.0  # grams - total weight of your design
 
 # Randomization metadata (for reproducibility)
 randomization:
   static_variation_id: "v1.2"  # Which static variant this is
   runtime_jitter_enabled: true
 ```
+
+`benchmark_definition.yaml` ownership rules:
+
+1. It owns benchmark/task geometry, randomization, benchmark/customer caps, and benchmark-owned fixture metadata.
+2. `benchmark_parts[].metadata` is benchmark-side metadata only. It describes read-only benchmark fixtures such as `fixed`, `material_id`, and attachment policy.
+3. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
+4. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
 
 <!-- Note: we are using metric units and degrees. -->
 
@@ -307,9 +325,9 @@ Expected flow:
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
 3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
     - The script validates schema consistency and computes assembly totals.
-    - The script auto-populates the unit cost and weight to the objectives.yaml file (unless the file is corrupted).
+    - The script auto-populates the unit cost and weight to the benchmark_definition.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
-5. Planner writes planner-owned constraints in `objectives.yaml` using validated assembly totals, under benchmark/customer caps.
+5. Planner writes planner-owned constraints in `benchmark_definition.yaml` using validated assembly totals, under benchmark/customer caps.
 
 Minimum motion metadata fields inside `final_assembly.parts` entries:
 
@@ -350,7 +368,7 @@ units: #pre-populated in template.
   volume: "mm3"
   mass: "g"
   currency: "USD"
-# constraints: # user review - no, unit constraints are written in objectives.yaml. 
+# constraints: # user review - no, unit constraints are written in benchmark_definition.yaml. 
 #   benchmark_max_unit_cost_usd: 50.0
 #   benchmark_max_weight_kg: 1.2
 #   planner_target_max_unit_cost_usd: 34.0

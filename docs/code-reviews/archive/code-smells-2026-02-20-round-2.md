@@ -107,10 +107,10 @@ forces = [abs(self.backend.get_actuator_state(n).force) for n in self._monitor_n
 > [ ] Agree - [ ] Disagree
 > *Comments:*
 
-### 6. IO-Heavy `objectives.yaml` Updates
+### 6. IO-Heavy `benchmark_definition.yaml` Updates
 
 **File**: `worker_heavy/utils/validation.py`
-**Issue**: Helper functions like `define_fluid` and `set_soft_mesh` perform a full load-modify-save cycle on `objectives.yaml`.
+**Issue**: Helper functions like `define_fluid` and `set_soft_mesh` perform a full load-modify-save cycle on `benchmark_definition.yaml`.
 **Impact**: Low/Medium. If multiple properties are set sequentially, the file is rewritten multiple times. More importantly, concurrent updates from different tools could lead to race conditions or data loss if not carefully synchronized.
 **Recommendation**: Use an in-memory representation of objectives that is flushed once, or use a more robust configuration management system.
 

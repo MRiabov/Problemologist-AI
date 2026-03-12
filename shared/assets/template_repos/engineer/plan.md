@@ -1,7 +1,7 @@
 # Engineering Plan
 
 <!-- 
-This plan describes HOW you will solve the benchmark scenario defined in objectives.yaml.
+This plan describes HOW you will solve the benchmark scenario defined in benchmark_definition.yaml.
 The plan must respect ALL constraints: build_zone boundaries, max_unit_cost, max_weight.
 Think mechanically: slopes guide gravity, walls channel flow, motors provide energy.
 -->
@@ -31,8 +31,8 @@ List each part you will create. For EACH part, specify:
 - Material (must be compatible with manufacturing method)
 - Purpose in the mechanism
 
-CRITICAL: All parts must fit within the build_zone from objectives.yaml.
-CRITICAL: Total weight must not exceed max_weight from objectives.yaml.
+CRITICAL: All parts must fit within the build_zone from benchmark_definition.yaml.
+CRITICAL: Total weight must not exceed max_weight from benchmark_definition.yaml.
 
 EXAMPLE:
 | Part | Dimensions (mm) | Material | Purpose |
@@ -64,7 +64,7 @@ EXAMPLE:
 4. Place right_wall along +X edge of main_ramp, extending 20mm above ramp surface
 5. Verify all parts are WITHIN build_zone boundaries
 
-KEY COORDINATES (from objectives.yaml):
+KEY COORDINATES (from benchmark_definition.yaml):
 - Goal zone: [min] to [max]
 - Build zone: [min] to [max]
 - Ball spawn: [X, Y, Z] ± [jitter]
@@ -89,7 +89,7 @@ EXAMPLE:
 | right_wall | 4.8 | 5.8 | 0.72 |
 | **TOTAL** | 34.1 | 41.0 | **$5.12** |
 
-Constraints from objectives.yaml:
+Constraints from benchmark_definition.yaml:
 - max_unit_cost: $[X]
 - max_weight: [X] g
 -->
@@ -128,7 +128,7 @@ The moved_object has runtime_jitter and static_randomization.
 Your solution MUST work across ALL possible spawn variations.
 
 CALCULATION:
-- Spawn position: [X, Y, Z] from objectives.yaml
+- Spawn position: [X, Y, Z] from benchmark_definition.yaml
 - Runtime jitter: ±[X, Y, Z] mm
 - Static randomization: [describe any radius/mass variations]
 

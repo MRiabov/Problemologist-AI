@@ -28,18 +28,18 @@ This review records the planning and prompt infrastructure risks that could prev
 
 Response: Skills are synced in the worker on startup via `worker/skills/sync.py` (called in `worker/app.py`), gated by `GIT_REPO_URL`. If that env var is not set or git is unreachable, sync is skipped. The runtime filesystem mounts skills at `/skills`, so prompts should target `/skills/...` to align with the mounted path.
 
-### 3. objectives.yaml Schema Mismatch
+### 3. benchmark_definition.yaml Schema Mismatch
 
 - The prompt example in `config/prompts.yaml` shows a flat schema with top-level fields like `goal_zone`, `forbid_zones`, `build_zone`, `max_unit_cost`, and `max_weight`.
 - The enforced schema in `shared/models/schemas.py` requires nested structure:
 - `objectives.goal_zone`, `objectives.forbid_zones`, `objectives.build_zone`
 - `constraints.max_unit_cost`, `constraints.max_weight`
 - Plus required `moved_object`, `simulation_bounds`, and `randomization`.
-- Impact: A planner or benchmark generator that follows the prompt example will produce an `objectives.yaml` that fails validation in `worker/utils/file_validation.py`.
+- Impact: A planner or benchmark generator that follows the prompt example will produce an `benchmark_definition.yaml` that fails validation in `worker/utils/file_validation.py`.
 - Suggested fix: Update the prompt example to match the Pydantic schema or relax validation to accept the legacy flat schema.
 
 User review: it should be as in desired_architecture.md document, search for "```yaml" in that document. That template should be pre-populated at startup for the planner.
-Response: Updated `config/prompts.yaml` to use the objectives template from `desired_architecture.md` and to state that `objectives.yaml` is pre-populated at startup.
+Response: Updated `config/prompts.yaml` to use the objectives template from `desired_architecture.md` and to state that `benchmark_definition.yaml` is pre-populated at startup.
 
 ### 4. COTS Search Requirement Not Operationalized in Planner Prompt
 
@@ -71,11 +71,11 @@ Response: Updated planner + engineer prompts to require that no `[ ]` remain bef
 ## Summary
 
 - Planning can run, but several mismatches can cause invalid output or missing data that later steps require.
-- The highest risk issues are the `objectives.yaml` schema mismatch and path mismatches to skills and config.
+- The highest risk issues are the `benchmark_definition.yaml` schema mismatch and path mismatches to skills and config.
 
 ## Suggested Next Steps
 
 1. Update `config/prompts.yaml` to correct filesystem paths.
-2. Update `objectives.yaml` examples in prompts to match the Pydantic schema.
+2. Update `benchmark_definition.yaml` examples in prompts to match the Pydantic schema.
 3. Decide which plan/todo validators are authoritative, then align templates accordingly.
 4. Expose or document the `cots_search` tool for planner usage.

@@ -24,7 +24,7 @@ The recently added motor controller specifications are not yet implemented.
 Handover validation is largely in place, but some refinements are needed.
 
 - **[MISSING]** Engineering `plan.md` and `todo.md` templates are missing from the `engineer/` template repo.
-- **[PARTIAL]** `objectives.yaml` is persisted during handover, but not all fields are utilized by subsequent tools.
+- **[PARTIAL]** `benchmark_definition.yaml` is persisted during handover, but not all fields are utilized by subsequent tools.
 
 ---
 
@@ -47,7 +47,7 @@ The design and 3-column layout are completed and look premium.
 
 ## 5. Agent Tools & Validation
 
-- **[MISSING]** **`build_zone` Integration**: The main `validate` tool in `worker/utils/validation.py` uses a generic `MAX_SIZE` instead of the specific `build_zone` bounds from `objectives.yaml`.
+- **[MISSING]** **`build_zone` Integration**: The main `validate` tool in `worker/utils/validation.py` uses a generic `MAX_SIZE` instead of the specific `build_zone` bounds from `benchmark_definition.yaml`.
 - **[DONE]** `preview_design` tool and `/lint` endpoint are implemented.
 
 ---

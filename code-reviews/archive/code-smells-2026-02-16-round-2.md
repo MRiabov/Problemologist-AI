@@ -123,7 +123,7 @@ We should have a cots ID in cots parts. It should resolve from cots ID, not from
 ### [Smell] Hardcoded Filenames in Workers
 
 **File**: [controller/agent/benchmark/nodes.py](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/benchmark/nodes.py)
-**Description**: "script.py", "objectives.yaml", and "review.md" are hardcoded throughout the nodes.
+**Description**: "script.py", "benchmark_definition.yaml", and "review.md" are hardcoded throughout the nodes.
 **Impact**: Prevents running multiple scripts or custom review filenames without refactoring.
 **Suggested Fix**: Pass filenames via `SharedNodeContext` or an `AgentConfig`.
 

@@ -24,7 +24,7 @@ We need automated ways to prove that Genesis and MuJoCo are consistent for rigid
 ## Guidance
 
 ### T025: Benchmark Planner Updates
-- Update the Planner agent's tools to support generating `objectives.yaml` with:
+- Update the Planner agent's tools to support generating `benchmark_definition.yaml` with:
   - `physics: {backend: genesis, fem_enabled: true}`
   - `fluid_objectives` (containment, flow_rate)
   - `stress_objectives` (max_stress thresholds)

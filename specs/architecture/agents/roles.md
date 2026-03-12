@@ -5,7 +5,7 @@
 
 - Primary focus: role-level behavior for benchmark generation and engineering execution.
 - Defines Planner/Coder/Reviewer responsibilities, expected artifacts, and quality expectations.
-- Includes concrete examples of `plan.md` and `objectives.yaml` style outputs.
+- Includes concrete examples of `plan.md` and `benchmark_definition.yaml` style outputs.
 - Use alongside handover contracts when implementing agent transitions.
 
 ## Benchmark generator agent (or graph)
@@ -92,12 +92,12 @@ Problems with motors and moving parts are verified more consistently because the
 
 8. **Planner artifacts**
    - Write `todo.md` implementation checklist.
-   - Write draft `objectives.yaml` matching this geometry/constraint data.
+   - Write draft `benchmark_definition.yaml` matching this geometry/constraint data.
    - Write draft `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
 ```
 
 ```yaml
-# objectives.yaml (draft from Benchmark Planner)
+# benchmark_definition.yaml (draft from Benchmark Planner)
 objectives:
   goal_zone:
     min: [28, 6, 1]
@@ -124,7 +124,7 @@ moved_object:
 
 constraints:
   max_unit_cost: 45.0
-  max_weight: 1.1
+  max_weight_g: 1100.0
 
 randomization:
   static_variation_id: "drop_ball_funnel_v2"
@@ -173,14 +173,14 @@ The architect will create and persist a TODO list. The engineer must implement. 
 The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
-   - Read `objectives.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight`).
+   - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight_g`).
    - Do not read benchmark `assembly_definition.yaml`; benchmark cost estimation stays local to the Benchmark Planner.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
 2. **Plan the mechanism and budgets**
    - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
-   - Set planner-owned `max_unit_cost` and `max_weight` **under** benchmark/customer caps.
+   - Set planner-owned `max_unit_cost` and `max_weight_g` **under** benchmark/customer caps.
    - Minimize motion complexity: use the smallest DOF set needed to satisfy the objective; avoid unnecessary moving axes.
    - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS Search subagent and carry part IDs + catalog prices into the plan.
 
@@ -274,7 +274,7 @@ The engineering loop has two reviewer stages with different responsibilities.
 `Engineering Plan Reviewer` responsibilities:
 
 1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
-2. Validate plan consistency across `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml`.
+2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
 3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
 4. Validate non-ambiguity and completeness of planner handoff artifacts.
 5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.

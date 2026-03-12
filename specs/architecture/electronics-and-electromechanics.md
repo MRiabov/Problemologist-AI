@@ -3,7 +3,7 @@
 ## Scope summary
 
 - Primary focus: the architecture contract for electrical design, circuit validation, wire routing, power-gated actuation, and electromechanical review.
-- Defines the stable product-facing contracts in `objectives.yaml`, `assembly_definition.yaml`, and the simulation/review artifact surface for electronics.
+- Defines the stable product-facing contracts in `benchmark_definition.yaml`, `assembly_definition.yaml`, and the simulation/review artifact surface for electronics.
 - Describes what the planner, electrical engineer, reviewer, backend, and frontend must support when a mechanism depends on electrical power.
 - Use this file for WP3-level architecture and capability planning.
 - Use [agents/overview.md](./agents/overview.md) and [agents/handover-contracts.md](./agents/handover-contracts.md) for the surrounding workflow contract.
@@ -103,9 +103,9 @@ WP3 does not replace that layer. It adds a power gate:
 
 ## Stable artifact contracts
 
-### `objectives.yaml`
+### `benchmark_definition.yaml`
 
-Benchmark-level electrical requirements live in `objectives.yaml` under `electronics_requirements`.
+Benchmark-level electrical requirements live in `benchmark_definition.yaml` under `electronics_requirements`.
 
 The stable contract is:
 
@@ -170,7 +170,7 @@ electronics:
 
 ### Design intent
 
-This split between `objectives.yaml` and `assembly_definition.yaml` is intentional:
+This split between `benchmark_definition.yaml` and `assembly_definition.yaml` is intentional:
 
 1. the benchmark declares requirements and constraints,
 2. the planner handoff declares the concrete electrical solution intent and constraints,

@@ -64,7 +64,7 @@ User prompt →
 |------|----------|
 | `plan.md` | Learning objective, geometry coordinates, moving parts, input/goal/forbid objectives |
 | `todo.md` | TODO list from planner |
-| `objectives.yaml` | **Draft** with rough values filled in |
+| `benchmark_definition.yaml` | **Draft** with rough values filled in |
 -->
 
 ### 2.3 Engineer Planner → CAD Agent Files
@@ -72,14 +72,14 @@ User prompt →
 | File | Contents |
 |------|----------|
 | `plan.md` | Solution overview, parts list, assembly strategy, cost/weight budget, risk assessment |
-| `objectives.yaml` | Stripped-down version with planner's **own** max price/weight (under benchmark ceiling) |
+| `benchmark_definition.yaml` | Stripped-down version with planner's **own** max price/weight (under benchmark ceiling) |
 | `todo.md` | TODO list |
 
 **Critical clarification**: The benchmark generator sets **ceiling** price/weight. The engineering planner sets operating constraints **under** that ceiling.
 
 ---
 
-## 3. `objectives.yaml` Structure *(NEW - COMPREHENSIVE)*
+## 3. `benchmark_definition.yaml` Structure *(NEW - COMPREHENSIVE)*
 
 *MISSING: Programmatic validation against this schema.*
 
@@ -132,7 +132,7 @@ moving_parts:
 ## 3. Assembly Strategy
   - How parts connect, mounting points
 ## 4. Cost & Weight Budget
-  - max_unit_cost, max_weight from objectives.yaml
+  - max_unit_cost, max_weight from benchmark_definition.yaml
   - Per-part breakdown
 ## 5. Risk Assessment
   - Failure modes, mitigations, runtime randomization considerations
@@ -342,8 +342,8 @@ Based on the scope of changes, suggested implementation order:
 
 ### P0 - Critical for Agent Flow
 
-1. `objectives.yaml` full schema implementation
-2. Handover file validation (`plan.md`, `todo.md`, `objectives.yaml`)
+1. `benchmark_definition.yaml` full schema implementation
+2. Handover file validation (`plan.md`, `todo.md`, `benchmark_definition.yaml`)
 3. Review YAML frontmatter parsing and validation
 4. Build zone bounds validation in `validate_and_price`
 
@@ -375,7 +375,7 @@ Based on the scope of changes, suggested implementation order:
 
 | Area | Files to Create/Modify |
 |------|----------------------|
-| Schema | `objectives.yaml` schema, `plan.md` templates |
+| Schema | `benchmark_definition.yaml` schema, `plan.md` templates |
 | Validation | Markdown validators, Python linting integration |
 | Tools | `preview_design` implementation |
 | Frontend | Benchmark creation flow, 3-column layout, CAD viewer |

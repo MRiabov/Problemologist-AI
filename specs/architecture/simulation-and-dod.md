@@ -372,7 +372,7 @@ We want to allow to do something like "at 5 seconds, rotate to 45deg, then at 10
 
 <!-- Notably, MuJoCo already has some... motor types: " MuJoCo has `position`, `velocity`, `motor` actuators". I don't know how they work -->
 
-<!-- moving-part metadata moved out of objectives.yaml into assembly_definition.yaml final_assembly.parts to keep objectives focused on task constraints. -->
+<!-- moving-part metadata stays out of benchmark_definition.yaml and lives in assembly_definition.yaml final_assembly.parts; benchmark fixture metadata may live in benchmark_definition.yaml under benchmark_parts. -->
 
 ##### Position-based controllers implementation
 

@@ -92,12 +92,12 @@ The benchmark planner and CAD engineer can create new benchmark types: fluid con
 
 **Why this priority**: Without new benchmark types, the system cannot evaluate agent performance in fluid/stress scenarios.
 
-**Independent Test**: Use the benchmark planner to generate a fluid containment benchmark. Verify the resulting `objectives.yaml` includes `physics`, `fluids`, and `fluid_objectives` sections with correct schema.
+**Independent Test**: Use the benchmark planner to generate a fluid containment benchmark. Verify the resulting `benchmark_definition.yaml` includes `physics`, `fluids`, and `fluid_objectives` sections with correct schema.
 
 **Acceptance Scenarios**:
 
-1. **Given** the benchmark planner is asked to create a fluid containment challenge, **When** it generates `objectives.yaml`, **Then** the file includes a `physics` section with `backend: genesis`, a `fluids` section with fluid properties, and a `fluid_objectives` section with type `fluid_containment`.
-2. **Given** the benchmark planner creates a stress-limited benchmark, **When** it generates `objectives.yaml`, **Then** the file includes `stress_objectives` with `type: max_stress` and a valid `max_von_mises_mpa` threshold.
+1. **Given** the benchmark planner is asked to create a fluid containment challenge, **When** it generates `benchmark_definition.yaml`, **Then** the file includes a `physics` section with `backend: genesis`, a `fluids` section with fluid properties, and a `fluid_objectives` section with type `fluid_containment`.
+2. **Given** the benchmark planner creates a stress-limited benchmark, **When** it generates `benchmark_definition.yaml`, **Then** the file includes `stress_objectives` with `type: max_stress` and a valid `max_von_mises_mpa` threshold.
 
 ---
 
@@ -130,7 +130,7 @@ The benchmark planner and CAD engineer can create new benchmark types: fluid con
 - **FR-014**: System MUST validate that all materials referenced by parts have FEM fields populated when `fem_enabled: true`, failing early with a clear error if any are missing.
 - **FR-015**: System MUST support a `smoke_test_mode` configuration that caps particles to 5000 for CI/CD and local development, labelling results as approximate.
 - **FR-016**: System MUST persist only MP4 video, JSON summary metrics, and stress summaries to storage. Raw particle data MUST be deleted after processing.
-- **FR-017**: Benchmark planner MUST be able to create fluid-based and stress-based benchmarks with appropriate `physics`, `fluids`, `fluid_objectives`, and `stress_objectives` sections in `objectives.yaml`.
+- **FR-017**: Benchmark planner MUST be able to create fluid-based and stress-based benchmarks with appropriate `physics`, `fluids`, `fluid_objectives`, and `stress_objectives` sections in `benchmark_definition.yaml`.
 - **FR-018**: Engineer agent MUST include "Stress Considerations" in risk assessments for FEM-enabled benchmarks.
 - **FR-019**: Engineer agent MUST call `get_stress_report()` on load-bearing parts after simulation and balance material usage (add where safety factor < 1.5, remove where > 5.0).
 - **FR-020**: Reviewer agent MUST verify that no parts have utilization > 80% without justification and that fluid containment metrics pass for fluid benchmarks.

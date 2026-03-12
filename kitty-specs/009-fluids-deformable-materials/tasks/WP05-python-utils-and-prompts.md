@@ -35,7 +35,7 @@ The agents currently only understand rigid-body failure. We need to teach them a
 ### T019: `define_fluid` Python Utility
 
 - Implement `define_fluid(...)` in `worker/utils/validation.py`.
-- Function to add fluid emitters/volumes to the assembly definition (modifies `objectives.yaml` or similar).
+- Function to add fluid emitters/volumes to the assembly definition (modifies `benchmark_definition.yaml` or similar).
 - Input: location, volume, fluid properties.
 - **Note**: This function is already partially implemented in `worker/utils/validation.py`.
 

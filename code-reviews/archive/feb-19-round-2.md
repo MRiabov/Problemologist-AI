@@ -24,7 +24,7 @@ While the project has established a strong directory structure (`smoke/`, `archi
 | INT-125 | Motor Power Gating | Missing | Verify torque = 0 when `is_powered` is 0. |
 | INT-126 | Wire Tear | Missing | Verify `FAILED_WIRE_TORN` when tension exceeds tensile rating. |
 | INT-127 | Electronics Compat | Missing | Verify pre-WP3 benchmarks default to `is_powered = 1.0`. |
-| INT-128 | Electronics Schema | Missing | Verify `objectives.yaml` validation for electronics fields. |
+| INT-128 | Electronics Schema | Missing | Verify `benchmark_definition.yaml` validation for electronics fields. |
 
 ### P1: Full Architecture Workflow
 

@@ -424,9 +424,9 @@ New domain events added to the event tracking system:
 
 ---
 
-## `objectives.yaml` Schema Extension
+## `benchmark_definition.yaml` Schema Extension
 
-Electromechanical benchmarks extend `objectives.yaml` with:
+Electromechanical benchmarks extend `benchmark_definition.yaml` with:
 
 ```yaml
 # Additional fields for electromechanical benchmarks

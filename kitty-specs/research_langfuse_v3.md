@@ -4,7 +4,7 @@
 
 Model "confusion" in complex agentic systems like Problemologist-AI typically manifests as:
 
-1. **Context Loss**: Forgetting previous instructions or constraints (e.g., ignoring `objectives.yaml`).
+1. **Context Loss**: Forgetting previous instructions or constraints (e.g., ignoring `benchmark_definition.yaml`).
 2. **Hallucination**: Inventing file contents or tool capabilities (e.g., using nonexistent `build123d` methods).
 3. **Looping**: Repeating failed actions without learning.
 4. **Drift**: Deviating from the high-level plan over long horizons.
@@ -63,8 +63,8 @@ You have "Reviewer" and "Critic" agents. Langfuse **Evaluations** can automate p
 - **Model-based Evaluation (LLM-as-a-Judge)**:
   - Create an evaluator that checks for **Constraint Adherence**.
   - **Input**: The generated `plan.md`.
-  - **Context**: The `objectives.yaml` (Gold Standard).
-  - **Prompt**: "Does the plan in `plan.md` violate any constraints in `objectives.yaml`? Answer Yes/No."
+  - **Context**: The `benchmark_definition.yaml` (Gold Standard).
+  - **Prompt**: "Does the plan in `plan.md` violate any constraints in `benchmark_definition.yaml`? Answer Yes/No."
   - **Trigger**: Run this evaluator asynchronously on every tracing completion of `Planner.create_plan`.
 - **Visualizing Quality**:
   - If the "Confusion Score" (derived from evaluations) spikes, you know a recent change (code or prompt) degraded reliability.

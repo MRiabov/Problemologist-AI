@@ -31,8 +31,8 @@ We should be able to test evaluations on multiple tiers, specifically:
 2. Testing of code validity, ruff/pyright checks - 90% of cases on an average tool call
     - Including, specifically, build123d code. So we would generate a valid build123d code in 95% of the cases.
 3. Testing that output YAML is valid in 95% of cases.
-    - In `objectives.yaml`, the objectives do not intersect, specified objects do not intersect
-    - In `objectives.yaml`, the objectives are in bounds of the model.
+    - In `benchmark_definition.yaml`, the objectives do not intersect, specified objects do not intersect
+    - In `benchmark_definition.yaml`, the objectives are in bounds of the model.
 4. Given a prompt, agents read the necessary skill documents (as instructed).
     - For each agent.
 
@@ -108,7 +108,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
       - Quantity
       - Max weight,
       - Max cost
-      - And other numerical parameters specified in objectives.yaml.
+      - And other numerical parameters specified in benchmark_definition.yaml.
 5. The benchmark generator would be able to predict the price and weight the engineer will solve the solution in the range of 80-120% (with 20% error) of the final price in 80% of the cases, within 50-150% in 97% of cases (this is the standard price, not the "safe" price)
 
 ##### Medium evals - Benchmark Coder
@@ -161,7 +161,7 @@ All visual-inspection evals above are config-driven rather than prompt-only. The
     - Second submission - 20 tool calls, 85% pass,
     - Third submission - 30 tool calls, 95% pass.
 2. Robustness test: If at least 1 simulation passes, at least 70% of "runtime jitter" variations pass too (i.e. the solution is not "flaky" that only works for one specific seed, but is mechanically robust).
-3. Given a plan and `objectives.yaml`, the Engineer will not try to submit a solution that is more unit expensive or heavy than unit tests set by the planner and will:
+3. Given a plan and `benchmark_definition.yaml`, the Engineer will not try to submit a solution that is more unit expensive or heavy than unit tests set by the planner and will:
     - Cheaper than the max price: 80% on first attempt, 90% after the first failure, 95% after the second failure.
     - Small error: 0-20% more expensive - In 10% on first attempt, 5% after the first error, 3% after the second failure (only small failyre, not including large error).
     - Large error: >20% more expensive - In 10% of first failure, 5% on second failure, 3% after after the second failure.

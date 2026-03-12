@@ -124,7 +124,7 @@ The `electronics` object is passed into the constructor and should be treated as
 - `SIMULATION_STEP_S = 0.002` (Hardcoded in `loop.py`)
 - `ELECTRONICS_FLUID_DAMAGE` distance `0.05` (5cm) (Hardcoded in `genesis_backend.py`)
 **Impact**: Low/Medium. Difficult to tune behavior for different benchmarks or environments without modifying core simulation code.
-**Recommendation**: Move these to a central `SimulationSettings` Pydantic model or allow overriding them via `objectives.yaml`.
+**Recommendation**: Move these to a central `SimulationSettings` Pydantic model or allow overriding them via `benchmark_definition.yaml`.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree

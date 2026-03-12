@@ -21,7 +21,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 - **Lack of Validation**: Errors in plan generation or custom objective application will only be caught at runtime, often deep in simulation logic.
 - **Observability Gap**: Structured schemas are required for logging to our local observability database.
-- **Inconsistency**: While some parts (like `ObjectivesYaml`) are well-modeled, others nearby remain completely untyped.
+- **Inconsistency**: While some parts (like `BenchmarkDefinition`) are well-modeled, others nearby remain completely untyped.
 
 **User Review:**
 

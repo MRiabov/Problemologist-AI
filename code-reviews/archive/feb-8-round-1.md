@@ -15,7 +15,7 @@
 3. **Filesystem tools via deepagents**: `read/aread`, `write/awrite`, `edit/aedit`, `execute/aexecute`, `ls`
 4. **Journal structure** (Intent/Result/Reflection/Next Step)
 5. **Review YAML frontmatter** format
-6. **`objectives.yaml`** structure matches
+6. **`benchmark_definition.yaml`** structure matches
 
 ---
 
@@ -37,8 +37,8 @@
 
 Architecture (lines 443-478) describes handover flows in detail, but **prompts.yaml doesn't specify what data is passed between agents**:
 
-- Planner → Coder/Engineer: Only mentions `plan.md` and `todo.md`, but not `objectives.yaml` creation flow
-- The **benchmark coder must OUTPUT `objectives.yaml`** (architecture line 463), but there's no explicit handover specification for what the engineering planner receives
+- Planner → Coder/Engineer: Only mentions `plan.md` and `todo.md`, but not `benchmark_definition.yaml` creation flow
+- The **benchmark coder must OUTPUT `benchmark_definition.yaml`** (architecture line 463), but there's no explicit handover specification for what the engineering planner receives
 
 ### 2. `refuse_plan` is Underspecified
 
@@ -55,7 +55,7 @@ Architecture says "the Engineering Reviewer must agree... will pass the plan bac
 ### 4. Economic Constraints Handover
 
 - **Architecture**: "Maximum prices and weight... estimated by the planner... 50% safety margin" (line 468)
-- **But**: Benchmark Generator Coder prompt creates `max_unit_cost` in `objectives.yaml` (lines 234-236), not the Planner
+- **But**: Benchmark Generator Coder prompt creates `max_unit_cost` in `benchmark_definition.yaml` (lines 234-236), not the Planner
 - This contradicts architecture which implies the **benchmark planner sets these constraints**
 
 ### 5. Runtime vs Static Randomization
@@ -63,7 +63,7 @@ Architecture says "the Engineering Reviewer must agree... will pass the plan bac
 Prompts mention both but don't specify **who is responsible for generating each**:
 
 - Static randomization → Benchmark coder generates variants?
-- Runtime randomization → Specified in `objectives.yaml`, but **where does engineer get the specific jitter ranges?**
+- Runtime randomization → Specified in `benchmark_definition.yaml`, but **where does engineer get the specific jitter ranges?**
 
 ### 6. `to_mjcf` Function
 
@@ -78,6 +78,6 @@ In coder prompt (lines 209-216) - **not listed in utils imports or anywhere**
    - `refuse_plan`
    - `validate` (for benchmark coder)
    - `to_mjcf`
-3. **Clarify economic constraints flow**: Benchmark planner should set `max_unit_cost`/`max_weight` in a draft `objectives.yaml`, then coder finalizes
+3. **Clarify economic constraints flow**: Benchmark planner should set `max_unit_cost`/`max_weight` in a draft `benchmark_definition.yaml`, then coder finalizes
 4. **Document handover contracts explicitly**: What files are passed, who creates what
 5. **Add routing logic** for refusals and rejections between agents

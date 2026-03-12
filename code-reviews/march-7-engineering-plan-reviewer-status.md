@@ -7,7 +7,7 @@ The "Engineering Plan Reviewer" (EPR) node is functional within the LangGraph or
 
 | Feature Area | Status | Gaps / Observations |
 | :--- | :--- | :--- |
-| **Handoff Artifacts** | Partial (80%) | Correctly requires `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml`. Missing - `manifests/engineering_plan_review_manifest.json` |
+| **Handoff Artifacts** | Partial (80%) | Correctly requires `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`. Missing - `manifests/engineering_plan_review_manifest.json` |
 | **Manifest System** | **Missing (0%)** | Spec requires `.manifests/engineering_plan_review_manifest.json`. Currently non-existent. |
 | **Review Persistence** | **Missing (0%)** | Spec requires reviews to be persisted in `reviews/review-round-*/` for long-term agent memory. |
 | **Node Entry Gates** | Partial (70%) | Artifact checks are in place, but manifest validation and stale-revision checks are missing. |

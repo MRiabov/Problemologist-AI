@@ -12,7 +12,7 @@ This report documents the gap between the current integration test implementatio
 | **INT-005** | Engineer planner artifact gate | **Drift** | `test_planner_gates.py` uses `benchmark/submit` for artifact checks. The spec requires verifying that `submit_plan` (tool-call) is the mandatory gate and that episode traces contain `TOOL_START` for `node_type=engineer_planner`. |
 | **INT-024** | Benchmark validation toolchain | **Missing** | Current tests in `test_architecture_p0.py` only check valid scripts. Missing verification that `/validate` catches intersecting/invalid objective setups across randomization ranges. |
 | **INT-126** | Wire tear behavior | **Missing** | No integrated test for `FAILED_WIRE_TORN` when tension exceeds tensile rating. |
-| **INT-128** | Electronics schema gate | **Missing** | `objectives.yaml` validation for `electronics_requirements` is not exercised in integration. |
+| **INT-128** | Electronics schema gate | **Missing** | `benchmark_definition.yaml` validation for `electronics_requirements` is not exercised in integration. |
 
 ### 2. Frontend P0 (UI Delivery)
 

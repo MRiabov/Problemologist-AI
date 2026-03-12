@@ -29,7 +29,7 @@ The `file_validation.py` logic is strict, while LLM outputs frequently fall shor
 
 ### 4. Workspace Initialization Conflicts
 The `initialize_agent_files` function in `controller/agent/initialization.py` may be overwriting evaluation-specific data.
-- **Symptom:** Logs show agents reading `objectives.yaml` files filled with template zeros (`[0,0,0]` for goal zones).
+- **Symptom:** Logs show agents reading `benchmark_definition.yaml` files filled with template zeros (`[0,0,0]` for goal zones).
 - **Cause:** `run_evals.py` seeds the workspace with specific objectives, but the controller's initialization logic (called at the start of every episode) might be overwriting these with fresh templates from `shared/assets/template_repos/`.
 
 ### 5. DSPy ReAct Stability Issues

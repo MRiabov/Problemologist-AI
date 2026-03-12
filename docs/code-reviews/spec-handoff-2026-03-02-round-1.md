@@ -36,7 +36,7 @@ Tool availability is broad (`read/write/edit/execute`), so role-specific boundar
 **Acceptance criteria**:
 
 - Reviewer `write/edit` to non-review file is blocked.
-- Engineering/Benchmark CAD implementers cannot edit `objectives.yaml` / `assembly_definition.yaml` after planner handoff lock.
+- Engineering/Benchmark CAD implementers cannot edit `benchmark_definition.yaml` / `assembly_definition.yaml` after planner handoff lock.
 - Policy-driven allow/deny behavior is covered by tests.
 
 ---

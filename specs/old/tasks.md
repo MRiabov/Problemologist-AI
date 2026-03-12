@@ -24,7 +24,7 @@
 **Implementation Notes**:
 
 - Requires `genesis-world` or `genesis-physics` package in the worker.
-- Must handle GPU/CPU falls-backs as per `objectives.yaml`.
+- Must handle GPU/CPU falls-backs as per `benchmark_definition.yaml`.
 - Ensure `get_stress_field` correctly maps to mesh nodes.
 
 **Dependencies**: None

@@ -110,7 +110,7 @@ Skip for now... but this is clearly a bad functionality tbh. The goal would be t
 - `SIMULATION_STEP_S = 0.002`
 - `MAX_SIMULATION_TIME_SECONDS = 30.0`
 **Impact**: Low/Medium. Difficulty in tuning simulation parameters and testing different scenarios without modifying core code.
-**Recommendation**: Refactor `SimulationLoop.step` into smaller, well-defined private methods and move hardcoded constants to a configuration object or `objectives.yaml`.
+**Recommendation**: Refactor `SimulationLoop.step` into smaller, well-defined private methods and move hardcoded constants to a configuration object or `benchmark_definition.yaml`.
 
 > **User Review**:
 > [ ] Agree - [ ] Disagree

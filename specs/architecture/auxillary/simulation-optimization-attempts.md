@@ -450,7 +450,7 @@ The benchmark exercises two paths:
 2. direct static render path
    - `prerender_24_views(...)`
 
-Each child run writes a session-local `script.py` and `objectives.yaml`, selects either `MUJOCO` or `GENESIS` in `physics.backend`, and executes in a fresh subprocess to preserve cold-request behavior.
+Each child run writes a session-local `script.py` and `benchmark_definition.yaml`, selects either `MUJOCO` or `GENESIS` in `physics.backend`, and executes in a fresh subprocess to preserve cold-request behavior.
 
 #### Command
 

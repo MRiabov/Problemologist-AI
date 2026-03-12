@@ -4,7 +4,7 @@
 
 - Primary focus: the architecture contract for fluid benchmarks, deformable-material simulation, and stress-aware validation.
 - Defines what benchmark planners, engineers, reviewers, and the simulation stack must support when a task goes beyond rigid-body-only mechanics.
-- Defines the stable product-facing contracts in `objectives.yaml`, `manufacturing_config.yaml`, and the simulation/review artifact surface.
+- Defines the stable product-facing contracts in `benchmark_definition.yaml`, `manufacturing_config.yaml`, and the simulation/review artifact surface.
 - Use this file for WP2-level capability planning and product behavior.
 - Use [simulation-and-dod.md](./simulation-and-dod.md) for generic simulation semantics that apply to all physics modes.
 
@@ -76,9 +76,9 @@ The planner and engineer can rely on a simple rule:
 
 ## Stable artifact contracts
 
-### `objectives.yaml`
+### `benchmark_definition.yaml`
 
-WP2 extends `objectives.yaml` with three architecture-level concepts:
+WP2 extends `benchmark_definition.yaml` with three architecture-level concepts:
 
 1. physics backend selection,
 2. fluid definitions,
@@ -179,7 +179,7 @@ WP2 does not require a new standalone fluid section inside `assembly_definition.
 
 The main physical coupling comes from:
 
-1. the benchmark definition in `objectives.yaml`,
+1. the benchmark definition in `benchmark_definition.yaml`,
 2. the geometry built by the planner/engineer,
 3. the material assignments carried by the assembly parts,
 4. the electronics section when a fluid benchmark is also electromechanical.

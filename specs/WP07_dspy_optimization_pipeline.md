@@ -115,7 +115,7 @@ We have raw data in `evals/datasets/*.json`. These must be accessible as `dspy.E
 
 - Create `controller/agent/benchmark/data_loader.py`.
 - Function `load_benchmark_dataset(agent_type: str) -> list[dspy.Example]`.
-- Ensure examples include `inputs` (prompt, context) and `labels` (optimal `objectives.yaml` or a "Gold" `script.py` known to pass).
+- Ensure examples include `inputs` (prompt, context) and `labels` (optimal `benchmark_definition.yaml` or a "Gold" `script.py` known to pass).
 
 ---
 

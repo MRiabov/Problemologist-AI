@@ -125,7 +125,7 @@ This document tracks the implementation of the WP2 Fluids and FEM system.
 **Estimated Prompt Size**: ~300 lines
 **Subtasks**:
 
-- [x] **T025**: Update benchmark planner to generate stress/fluid-based `objectives.yaml`.
+- [x] **T025**: Update benchmark planner to generate stress/fluid-based `benchmark_definition.yaml`.
 - [x] **T026**: Implement integration tests for physics parity (MuJoCo vs Genesis).
 - [x] **T027**: Implement integration tests for FEM breakage and fluid containment.
 

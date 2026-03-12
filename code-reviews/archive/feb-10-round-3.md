@@ -2,7 +2,7 @@
 
 ## Missing Event Capture
 
-- Artifact creation events for every required output: `plan.md`, `todo.md`, `journal.md`, `objectives.yaml`, CAD scripts, MJCF, renders, videos, reviews, optimization notes, skills. Needed to compute dataset completeness and reasoning trace coverage.
+- Artifact creation events for every required output: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml`, CAD scripts, MJCF, renders, videos, reviews, optimization notes, skills. Needed to compute dataset completeness and reasoning trace coverage.
 - Review decision events for every reviewer stage (benchmark reviewer, engineer reviewer) with decision, reason category, and evidence used (images viewed count, video viewed, files checked).
 - Plan refusal events with explicit refusal reason and proof-of-impossibility evidence.
 - Plan compliance check events for CAD vs plan (geometry, constraints, objectives). Needed to measure plan adherence.

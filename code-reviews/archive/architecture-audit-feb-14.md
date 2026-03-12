@@ -56,7 +56,7 @@ The current implementation of the agentic infrastructure is **highly aligned** w
 ## Minor Gaps / Recommendations
 
 1. **Electrical Split**: Re-evaluate if the decoupled "Electrical Planner" and "Electrical Reviewer" are still needed as distinct nodes for better scalability.
-2. **Immutability Validation**: Ensure that hash-based verification for control files (`objectives.yaml`) is consistently applied in all verification nodes.
+2. **Immutability Validation**: Ensure that hash-based verification for control files (`benchmark_definition.yaml`) is consistently applied in all verification nodes.
 3. **Token Compression**: Monitor context limits and implement the summarization/compression logic mentioned in the "Future work" section of the spec if necessary.
 
 ## Conclusion

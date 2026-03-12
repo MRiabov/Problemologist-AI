@@ -3,9 +3,9 @@
 ## 1. Major Inconsistencies (Spec Drift)
 
 ### Filesystem Permission Drift (`config/agents_config.yaml`)
-*   **The Issue:** The `engineer_coder` (CAD Implementer) is currently granted `write` access to `plan.md`, `objectives.yaml`, and `assembly_definition.yaml`.
+*   **The Issue:** The `engineer_coder` (CAD Implementer) is currently granted `write` access to `plan.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
 *   **The Spec:** Section `Filesystem -> agents_config.yaml` explicitly states these are "control" files owned by the Planner. The Coder should only have `read` access to them. Allowing the Coder to modify the plan or objectives breaks the "Architect vs. Implementer" hierarchy.
-*   **Impact:** Agents may "cheat" by lowering constraints (e.g., increasing `max_unit_cost`) in `objectives.yaml` rather than solving the engineering problem.
+*   **Impact:** Agents may "cheat" by lowering constraints (e.g., increasing `max_unit_cost`) in `benchmark_definition.yaml` rather than solving the engineering problem.
 
 ### COTS Search Implementation
 *   **The Issue:** The spec (Section `COTS search subagent -> Tools`) calls for "Read-only SQL queries against the COTS catalog database" by a lightweight model.

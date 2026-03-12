@@ -6,9 +6,9 @@ Assess whether the current `config/prompts.yaml` and runtime file layout allow (
 
 ## Planning Viability
 
-### 1. objectives.yaml is auto-created, but may be template-only
+### 1. benchmark_definition.yaml is auto-created, but may be template-only
 
-- `LocalFilesystemBackend.create()` writes `objectives.yaml` from `worker/objectives_template.py` on session init.
+- `LocalFilesystemBackend.create()` writes `benchmark_definition.yaml` from `worker/benchmark_definition_template.py` on session init.
 - That file contains placeholder values (`x_min`, `x_max`, etc.).
 - Impact: If upstream does not overwrite placeholders with real values before planning, the planner can only produce a vague plan or accidentally treat placeholders as real coordinates. This isn’t a path issue, but a data-population dependency.
 
@@ -22,13 +22,13 @@ Otherwise the submission must not work.
 **RESOLVED**:
 
 - Added Pydantic validation to `worker/utils/file_validation.py`.
-- Added template check (ensuring no `x_min`, etc. remain) to `validate_objectives_yaml`.
+- Added template check (ensuring no `x_min`, etc. remain) to `validate_benchmark_definition_yaml`.
 - Enforced these checks in `submit_for_review` (handover logic).
 
 ### 2. Planner constraint override is not persisted
 
-- Planner is told to set specific `max_unit_cost`/`max_weight` for the engineer, but the engineer reads constraints from `objectives.yaml`.
-- There is no requirement/instruction for the planner to update `objectives.yaml` with those values.
+- Planner is told to set specific `max_unit_cost`/`max_weight` for the engineer, but the engineer reads constraints from `benchmark_definition.yaml`.
+- There is no requirement/instruction for the planner to update `benchmark_definition.yaml` with those values.
 - Impact: The plan can disagree with what the engineer is required to obey.
 
 User review: Yes, have to update them. However, the exact mechanism of this is underspecified. I.e. - how would the planner plan for every bit of costs? they would need to probably use a python script and calculate it with a big YAML file with all parts; then it would automatically calculate the "guessed" unit cost.
@@ -42,7 +42,7 @@ I'll specify this later, nobody touch it for now.
 - `prerender_24_views()` writes to `RENDERS_DIR` (default `./renders`).
 - Impact: If the container does not set `RENDERS_DIR=/renders/images`, the planner will look in a path that isn’t populated.
 
-**Conclusion:** Planning is viable **if** objectives.yaml is populated with real values and `RENDERS_DIR` matches the prompt’s expectation. Otherwise, planning can run but may be low-fidelity or misaligned.
+**Conclusion:** Planning is viable **if** benchmark_definition.yaml is populated with real values and `RENDERS_DIR` matches the prompt’s expectation. Otherwise, planning can run but may be low-fidelity or misaligned.
 
 User review: we need to assert (and I tink we do) that the values are populated before they are confirmed.
 
@@ -82,7 +82,7 @@ User review: we need to assert (and I tink we do) that the values are populated 
 ### Additional Contextual Risks
 
 - `simulate()` in `worker/utils/validation.py` is WRITTEN to incorporate environment constraints:
-  - Reads `objectives.yaml` automatically.
+  - Reads `benchmark_definition.yaml` automatically.
   - Checks for contact with `forbid_zones`.
   - Checks for `goal_zone` hit using `moved_object` position.
   - Returns `SimulationResult` with fail reason (e.g., "Forbid zone hit: X").
@@ -95,4 +95,4 @@ User review: we need to assert (and I tink we do) that the values are populated 
 2. Update validate_and_price call: **DONE**
 3. Fix benchmark coder prompt / to_mjcf: **DONE**
 4. Align render output path: **DONE**
-5. require planner to update objectives.yaml: **SKIPPED PER USER**
+5. require planner to update benchmark_definition.yaml: **SKIPPED PER USER**

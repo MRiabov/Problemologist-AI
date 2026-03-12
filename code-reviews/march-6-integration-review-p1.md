@@ -20,7 +20,7 @@ Human: Done.
 - Why this matters: The test passes if any renders exist, but fails to verify that the engineer receives the full metadata bundle (DOFs, jitter, etc.) required for design stability.
 - Evidence:
   - `tests/integration/architecture_p1/test_handover.py:84`
-- Notes: Verification currently stops at `renders/` directory existence and `objectives.yaml` presence.
+- Notes: Verification currently stops at `renders/` directory existence and `benchmark_definition.yaml` presence.
 
 Human: had singificant logic there.
 

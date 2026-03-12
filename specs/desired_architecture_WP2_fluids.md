@@ -53,7 +53,7 @@ class SimulatorBackendType(str, Enum):
 
 ### Backend Selection
 
-The backend is selected per episode via `config/simulation_config.yaml` (or typically just `objectives.yaml` in previous versions, now separated for clarity):
+The backend is selected per episode via `config/simulation_config.yaml` (or typically just `benchmark_definition.yaml` in previous versions, now separated for clarity):
 
 ```yaml
 # config/simulation_config.yaml
@@ -155,7 +155,7 @@ This data:
 Fluids are defined in a new `materials.yaml`:
 
 ```yaml
-# objectives.yaml — new section
+# benchmark_definition.yaml — new section
 fluids:
   - fluid_id: "water_fill"
     properties:
@@ -167,7 +167,7 @@ fluids:
 
 ### Fluid in-scene
 
-Fludis as in scene are defined in assembly_definition if the fluid is in the assembly OR it is `objectives.yaml` if it's as a "starting setup".
+Fludis as in scene are defined in assembly_definition if the fluid is in the assembly OR it is `benchmark_definition.yaml` if it's as a "starting setup".
 
 ```yaml
     initial_volume:
@@ -185,7 +185,7 @@ The existing `build123d → OBJ → MuJoCo` pipeline extends as follows:
 |---|---|---|---|
 | **Rigid parts** (FEM disabled) | `build123d` BREP | Tessellate to OBJ | `gs.morphs.Mesh(file='part.obj')` |
 | **Deformable parts** (FEM enabled) | `build123d` BREP | Tessellate to STL → **Tetrahedralize** (TetGen) → `.msh` | `gs.morphs.SoftMesh(file='part.msh')` |
-| **Fluids** | Volume primitive in `objectives.yaml` | Particle sampling (Genesis handles seeding for primitives) | `gs.morphs.Box(...)` + `gs.materials.Liquid(...)` |
+| **Fluids** | Volume primitive in `benchmark_definition.yaml` | Particle sampling (Genesis handles seeding for primitives) | `gs.morphs.Box(...)` + `gs.materials.Liquid(...)` |
 
 - **TetGen** is installed in the worker container. A `mesh_utils.py` wrapper handles invocation and error recovery.
 - **V-HACD** (currently used for MuJoCo convex decomposition) is not needed for Genesis, which handles collision natively.
@@ -208,7 +208,7 @@ Until WP3 is implemented, this check is a no-op but the failure mode and event t
 
 ## Validation Metrics
 
-We introduce a **Metrics Engine** that runs per-step analysis during simulation. These metrics are first-class objective types in `objectives.yaml`:
+We introduce a **Metrics Engine** that runs per-step analysis during simulation. These metrics are first-class objective types in `benchmark_definition.yaml`:
 
 ### Metric: Fluid Containment
 
@@ -258,7 +258,7 @@ objectives:
 
 ## Schema Changes
 
-### `objectives.yaml` additions
+### `benchmark_definition.yaml` additions
 
 ```yaml
 # New top-level section
@@ -373,7 +373,7 @@ def simulate(
     component: Compound,
     render: bool = False,
     # NEW parameters
-    fem_enabled: bool | None = None,   # Override objectives.yaml setting
+    fem_enabled: bool | None = None,   # Override benchmark_definition.yaml setting
     particle_budget: int | None = None # Cap particle count (for testing)
 ) -> SimulationResult:
     """Runs simulation. Now returns stress_summaries and fluid_metrics
@@ -408,7 +408,7 @@ Existing validation gains one new check:
 
 #### Benchmark Planner
 
-- Can now create fluid-based benchmarks with `fluid_objectives` in `objectives.yaml`.
+- Can now create fluid-based benchmarks with `fluid_objectives` in `benchmark_definition.yaml`.
 - Must specify `physics.backend: genesis` for any benchmark involving fluids or requiring FEM.
 - Can define initial fluid volumes and containment/flow objectives.
 
@@ -499,7 +499,7 @@ When the workload justifies it (multiple concurrent GPU simulations), the worker
 
 ### New Fast Evals
 
-1. `objectives.yaml` with `physics` section passes schema validation — 100% of cases.
+1. `benchmark_definition.yaml` with `physics` section passes schema validation — 100% of cases.
 2. `manufacturing_config.yaml` materials have all FEM fields if `fem_enabled: true` — 100%.
 3. Fluid objectives schema is valid (required fields present, thresholds numeric) — 100%.
 
@@ -550,7 +550,7 @@ The benchmark planner and CAD engineer gain the ability to create fluid-based an
 
 ### Benchmark Planner Output
 
-`objectives.yaml` gains the new `physics`, `fluids`, `fluid_objectives`, and `stress_objectives` sections as defined above. The benchmark planner must specify these when creating fluid/stress benchmarks. Existing rigid-body benchmarks remain unchanged (they use `backend: mujoco` or `backend: genesis, fem_enabled: false`).
+`benchmark_definition.yaml` gains the new `physics`, `fluids`, `fluid_objectives`, and `stress_objectives` sections as defined above. The benchmark planner must specify these when creating fluid/stress benchmarks. Existing rigid-body benchmarks remain unchanged (they use `backend: mujoco` or `backend: genesis, fem_enabled: false`).
 
 ---
 
@@ -560,7 +560,7 @@ The benchmark planner and CAD engineer gain the ability to create fluid-based an
 
 1. Implement `PhysicsBackend` protocol.
 2. Wrap existing MuJoCo code behind it.
-3. Add `physics.backend` to `objectives.yaml` schema. Default: `"mujoco"`.
+3. Add `physics.backend` to `benchmark_definition.yaml` schema. Default: `"mujoco"`.
 4. All existing benchmarks continue to work unchanged.
 
 ### Phase 2: Genesis rigid-body (validation)
@@ -615,6 +615,6 @@ The benchmark planner and CAD engineer gain the ability to create fluid-based an
 - **Tetrahedralization**: Intermediate asset pipeline added using TetGen via `worker/utils/mesh_utils.py`.
 - **Stress Reporting**: `StressSummary` implemented in `SimulationLoop`.
 - **Breakage Detection**: Automatic simulation abort on `ultimate_stress_pa` violation.
-- **Fluid Support**: MPM definitions added to `ObjectivesYaml`.
+- **Fluid Support**: MPM definitions added to `BenchmarkDefinition`.
 - **Validation Metrics**: `fluid_containment` and `max_stress` objective evaluation added to `SimulationLoop`.
 - **Agent Tools**: `define_fluid`, `get_stress_report`, and `preview_stress` added to `worker/utils/validation.py`.

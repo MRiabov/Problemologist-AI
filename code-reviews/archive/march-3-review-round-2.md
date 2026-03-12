@@ -64,7 +64,7 @@ Evidence:
 - `logs/manual_run/worker_light.log`
 
 ### 5. Round-1 finding #4 is valid but partially misattributed (medium)
-- Overwrite bug is real because existence check compares `"objectives.yaml"` against listed `"/objectives.yaml"`.
+- Overwrite bug is real because existence check compares `"benchmark_definition.yaml"` against listed `"/benchmark_definition.yaml"`.
 - But in eval path for `electronics_engineer`, current `run_evals.py` routes request as `agent_name="engineer_coder"`; this does not directly include template objective write in that branch.
 
 Evidence:

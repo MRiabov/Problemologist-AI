@@ -19,7 +19,7 @@ review_status: "approved"
 Establish the data models and persistence layer required to support electromechanical integration in the assembly and benchmark definitions.
 
 ## Context
-We need to extend the existing `assembly_definition.yaml` (formerly `preliminary_cost_calculation.yaml`) and `objectives.yaml` to include an `electronics` section. This section will store the circuit netlist, power supply specifications, and wiring paths. We also need to add electronic component categories to our COTS database.
+We need to extend the existing `assembly_definition.yaml` (formerly `preliminary_cost_calculation.yaml`) and `benchmark_definition.yaml` to include an `electronics` section. This section will store the circuit netlist, power supply specifications, and wiring paths. We also need to add electronic component categories to our COTS database.
 
 ## Detailed Guidance
 
@@ -31,7 +31,7 @@ We need to extend the existing `assembly_definition.yaml` (formerly `preliminary
 2. Add `ElectronicComponent`: `component_id`, `type` (motor, relay, etc.), `cots_part_id` (optional), `assembly_part_ref` (optional).
 3. Add `WireConfig`: `wire_id`, `from_node`, `to_node`, `gauge_awg`, `length_mm`, `waypoints` (list of 3D coordinates).
 4. Add `ElectronicsSection`: Contains `power_supply`, `components`, and `wiring`.
-5. Integrate `ElectronicsSection` into `AssemblyDefinition` and `ObjectivesYaml`.
+5. Integrate `ElectronicsSection` into `AssemblyDefinition` and `BenchmarkDefinition`.
 
 **Validation**:
 - [ ] Models can be instantiated with valid YAML.

@@ -152,10 +152,10 @@ Priorities:
 | INT-003 | Session filesystem isolation | Two concurrent sessions cannot read each other's files. |
 | INT-004 | Heavy-worker single-flight admission | Multiple agents may run, but each heavy-worker instance accepts only one active heavy job; concurrent requests to the same instance receive deterministic busy responses (no in-worker buffering/scheduling). Multi-worker throughput/fan-out behavior is out of scope for this test. |
 | INT-187 | Heavy-worker crash containment boundary | Force deterministic simulation child-process failure and assert fail-closed request failure while `worker-heavy` API health stays up and subsequent heavy requests can still be served (no whole-service crash from one simulation failure). |
-| INT-005 | Engineer planner mandatory artifact gate | Engineer planner must block handoff unless planner artifacts are present/valid (`plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`) and traces contain explicit `TOOL_START` for `submit_plan` with `node_type=engineer_planner`. After `submit_plan`, episode must reach `PLANNED`; if it reaches `FAILED`, test fails. Missing `submit_plan` must fail closed (no success-like status transition). |
+| INT-005 | Engineer planner mandatory artifact gate | Engineer planner must block handoff unless planner artifacts are present/valid (`plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`) and traces contain explicit `TOOL_START` for `submit_plan` with `node_type=engineer_planner`. After `submit_plan`, episode must reach `PLANNED`; if it reaches `FAILED`, test fails. Missing `submit_plan` must fail closed (no success-like status transition). |
 | INT-006 | `plan.md` structure validation | Exact required engineering plan headings enforced (`1..5` sections). |
 | INT-007 | `todo.md` checkbox integrity | Required checkbox format is enforced; deleted mandatory checklist entries are rejected. |
-| INT-008 | `objectives.yaml` logic validation | Build/goal/forbid constraints validated: bounds checks, no illegal intersections, valid moving-parts definitions. |
+| INT-008 | `benchmark_definition.yaml` logic validation | Build/goal/forbid constraints validated: bounds checks, no illegal intersections, and valid benchmark-owned fixture metadata (`benchmark_parts` unique IDs/labels, required `material_id` or `cots_id` when metadata is declared). |
 | INT-009 | `assembly_definition.yaml` schema gate | Required fields and numeric types enforced per method; malformed/template-like files rejected. |
 | INT-010 | Planner pricing script integration | `validate_costing_and_price` runs, computes totals, and blocks handoff when over caps. |
 | INT-011 | Planner caps under benchmark caps | Planner-owned `max_unit_cost`/`max_weight` are <= benchmark/customer limits. |
@@ -215,14 +215,14 @@ Priorities:
 | INT-125 | Motor power gating in simulation | Motor with valid controller function but no circuit power (`is_powered = 0`) produces zero effective torque; motor with power produces expected torque. |
 | INT-126 | Wire tear during simulation | Wire tension exceeding rated tensile triggers `FAILED_WIRE_TORN`; affected motor stops (`is_powered` drops to 0); event emitted. |
 | INT-127 | Pre-WP3 backward compat: implicit power | Episodes without `electronics` section implicitly set `is_powered = 1.0` for all motors; existing benchmarks pass unchanged. |
-| INT-128 | `objectives.yaml` electronics schema gate | `electronics_requirements` section validates `power_supply_available`, `wiring_constraints`, and `circuit_validation_required` fields; malformed entries rejected. |
+| INT-128 | `benchmark_definition.yaml` electronics schema gate | `electronics_requirements` section validates `power_supply_available`, `wiring_constraints`, and `circuit_validation_required` fields; malformed entries rejected. |
 
 ### P1: Full architecture workflow coverage
 
 | ID | Test | Required assertions |
 |---|---|---|
 | INT-031 | Benchmark planner -> CAD -> reviewer path | Full benchmark-generation flow validates artifacts, review loop, accepted handoff object integrity, benchmark-planner `submit_plan` trace presence before planner handoff (`PLANNED`), and reviewer start only after valid latest-revision coder handover artifact (`.manifests/benchmark_review_manifest.json`) exists. |
-| INT-032 | Benchmark-to-engineer handoff package | Engineer receives expected bundle (`objectives.yaml`, environment geometry metadata, 24-view renders, moving-parts DOFs, runtime jitter metadata); downstream reviewer gate must require latest-revision handover artifacts, not tool-trace presence alone. |
+| INT-032 | Benchmark-to-engineer handoff package | Engineer receives expected bundle (`benchmark_definition.yaml`, benchmark-owned fixture metadata including `benchmark_parts`, environment geometry metadata, 24-view renders, moving-parts DOFs, runtime jitter metadata); downstream reviewer gate must require latest-revision handover artifacts, not tool-trace presence alone. |
 | INT-033 | Engineering full loop (planner/coder/reviewer) | Planner sets realistic budgets and emits `submit_plan`; coder implements and calls python `submit_for_review(Compound)` only after passing latest-revision validation/simulation gates and manifest generation; reviewer approves/rejects with typed decision and evidence. |
 | INT-034 | Reviewer evidence completeness | Review decisions include expected evidence fields, valid reviewer-specific handover manifest (for example `.manifests/benchmark_review_manifest.json`, `.manifests/engineering_plan_review_manifest.json`, `.manifests/engineering_execution_review_manifest.json`, or `.manifests/electronics_review_manifest.json`) tied to the latest revision and successful simulation result, and reviewer-specific persisted review file path for that stage/round. |
 | INT-035 | Materials config enforcement | Only materials defined in `manufacturing_config.yaml` are accepted by validation/simulation pipeline. |
@@ -356,7 +356,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-005 | Submit with missing engineer-planner artifacts through API and assert rejection, then run engineer planner flow over controller APIs and assert episode traces include `TOOL_START` with `name=submit_plan` and `node_type=engineer_planner`; after submission, assert episode reaches `PLANNED` and not `FAILED`. Assert missing submission trace cannot transition to success-like statuses. | Calling artifact validator function directly or asserting only final `PLANNED/COMPLETED` status without planner tool-call evidence. |
 | INT-006 | Submit malformed `plan.md` through real flow and assert heading gate failure. | Unit-testing markdown parser in isolation only. |
 | INT-007 | Edit `todo.md` through tool APIs and assert integrity rejection on bad structure. | Directly invoking TODO validator function. |
-| INT-008 | Upload invalid `objectives.yaml` via API and assert logic/bounds failure. | Constructing model objects without API path. |
+| INT-008 | Upload invalid `benchmark_definition.yaml` via API and assert logic/bounds failure. | Constructing model objects without API path. |
 | INT-009 | Submit malformed `assembly_definition.yaml` in run flow and assert blocked handoff. | Pydantic-schema-only unit checks. |
 | INT-010 | Execute planner submission over HTTP and verify pricing script gate behavior. | Mocking script call result. |
 | INT-011 | Provide planner caps above benchmark caps via real artifacts and assert refusal. | Comparing dicts in unit-only test. |

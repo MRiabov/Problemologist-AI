@@ -98,32 +98,32 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 ### Initial files for each agent and read-write permissions
 
 - Engineering Planner:
-  - read: `skills/**`, `utils/**`, `objectives.yaml` (benchmark-owned constraints), `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
-  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `objectives.yaml` (only planner-owned fields: internal max targets under benchmark caps)
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml` (benchmark-owned constraints), `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `benchmark_definition.yaml` (benchmark-owned task fields plus planner-owned internal max targets under benchmark caps)
 - Electronics Planner:
-  - read: `skills/**`, `utils/**`, `objectives.yaml`, `plan.md`, `todo.md`, `journal.md`
-  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned electrical handoff), `objectives.yaml` (planner-owned electrical targets/constraints only)
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md`, `todo.md`, `journal.md`
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned electrical handoff), `benchmark_definition.yaml` (benchmark-owned electrical requirements and planner-owned constraints only)
 - Engineering Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
   - note: this role owns unified implementation, including electrical/wiring logic when the approved plan requires electronics
 - Engineering Plan Reviewer:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/engineering-plan-review-round-*.md` only
 - Engineering Execution Reviewer:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/engineering-execution-review-round-*.md` only
 - Benchmark Planner:
   - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
-  - write: `plan.md`, `todo.md`, `journal.md`, `objectives.yaml` (benchmark-owned), `assembly_definition.yaml` (benchmark-local draft, not handed to engineering)
+  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `assembly_definition.yaml` (benchmark-local draft, not handed to engineering)
 - Benchmark Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
 - Benchmark Reviewer:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/benchmark-review-round-*.md` only
 - Electronics Reviewer:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/electronics-review-round-*.md` only
 - COTS Search subagent:
   - read: `parts.db` (read-only), COTS query helpers/CLI, constraints from caller, optional prior `journal.md`
@@ -149,7 +149,8 @@ System-only metadata:
 Locking rule:
 
 - Before planner submission: planner may edit planner-owned files above.
-- After planner submission accepted: `objectives.yaml` and `assembly_definition.yaml` become read-only for Coder/Reviewer; only replanning can mutate them.
+- After planner submission accepted: `benchmark_definition.yaml` and `assembly_definition.yaml` become read-only for Coder/Reviewer; only replanning can mutate them.
+- `benchmark_definition.yaml.benchmark_parts` is benchmark-owned fixture metadata. Coder/Reviewer must treat it as immutable task context, not as solution metadata.
 
 Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
 
@@ -225,10 +226,10 @@ agents:
   Engineering Planner:
     filesystem_permissions:
       read:
-        allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+        allow: ["skills/**", "utils/**", "benchmark_definition.yaml", "plan.md", "todo.md", "journal.md"]
         deny: [".manifests/**"]
       write:
-        allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
+        allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "benchmark_definition.yaml"]
         deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py", ".manifests/**"]
     visual_inspection:
       required: true
@@ -252,23 +253,23 @@ defaults:
 agents:
   Engineering Planner:
     read:
-      allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+      allow: ["skills/**", "utils/**", "benchmark_definition.yaml", "plan.md", "todo.md", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
+      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "benchmark_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
   Engineering Coder:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: [".manifests/**"]
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+      deny: ["benchmark_definition.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
 
   Engineering Plan Reviewer:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
       allow: ["reviews/engineering-plan-review-round-*.md"]
@@ -276,7 +277,7 @@ agents:
 
   Engineering Execution Reviewer:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
       allow: ["reviews/engineering-execution-review-round-*.md"]
@@ -287,20 +288,20 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "objectives.yaml", "assembly_definition.yaml"]
+      allow: ["plan.md", "todo.md", "journal.md", "benchmark_definition.yaml", "assembly_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
   Benchmark Coder:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: [".manifests/**"]
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+      deny: ["benchmark_definition.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
 
   Benchmark Reviewer:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
       allow: ["reviews/benchmark-review-round-*.md"]
@@ -320,7 +321,7 @@ agents:
       deny: [".manifests/**"]
     write:
       allow: ["skills/**", "journal.md"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "script.py", "reviews/**"]
+      deny: ["benchmark_definition.yaml", "assembly_definition.yaml", "plan.md", "todo.md", "script.py", "reviews/**"]
 
   Journalling Agent:
     read:
@@ -332,15 +333,15 @@ agents:
 
   Electronics Planner:
     read:
-      allow: ["skills/**", "utils/**", "objectives.yaml", "plan.md", "todo.md", "journal.md"]
+      allow: ["skills/**", "utils/**", "benchmark_definition.yaml", "plan.md", "todo.md", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
+      allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "benchmark_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
   Electronics Reviewer:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
       allow: ["reviews/electronics-review-round-*.md"]
@@ -349,7 +350,13 @@ agents:
 
 ## Immutability validation
 
-We assert that files (especially "control" files like `objectives.yaml` and `assembly_definition.yaml`) are not edited by coder agents, however they are edited by planner agents. We use git-based hash assertions for such files where they must be immutable.
+We assert that files (especially "control" files like `benchmark_definition.yaml` and `assembly_definition.yaml`) are not edited by coder agents, however they are edited by planner agents. We use git-based hash assertions for such files where they must be immutable.
+
+Control-file ownership split:
+
+1. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
+2. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
+3. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 Essentially, the goal is a clear separation of concerns: planner files are edited by the planner, review files are edited by reviewer nodes, coder edits coder files; skill subagents modify only skill files, etc.
 
@@ -432,7 +439,7 @@ We define the file structure as follows, individual agents adapt to individual n
 
 1. Planning skills
 2. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template as above)
-3. Sample objectives.yaml (validated)
+3. Sample benchmark_definition.yaml (validated)
 
 #### Benchmark Generator - Benchmark Coder
 

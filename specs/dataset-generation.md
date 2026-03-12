@@ -30,7 +30,7 @@ The inputs to each model are as described in @desired_architecture.md document. 
 ```md
 - plan.md (read)
 - todo.md (read/write)
-- objectives.yaml (read)
+- benchmark_definition.yaml (read)
 - assembly_definition.yaml (read)
 - reviews/** (read)
 - renders/** (read, tool-generated)

@@ -164,7 +164,7 @@ The spec says what the catalog is *built from* but not:
 
 ### 3.2 Coordinate system origin (L1095-1096 — noted by author)
 
-The spec's own comment says: *"FIXME: Underspec: we don't define coordinate system starting point"*. This affects every geometric reference in objectives.yaml.
+The spec's own comment says: *"FIXME: Underspec: we don't define coordinate system starting point"*. This affects every geometric reference in benchmark_definition.yaml.
 
 ### 3.3 FEM / stress validation scoping (L1641)
 
@@ -176,7 +176,7 @@ But the conversations show active work on FEM validation tests. Is FEM in scope 
 
 The spec says benchmark agents produce `drillable=True/False` metadata but doesn't specify:
 
-- Where this is stored (in the MJCF? in objectives.yaml? in a separate config?)
+- Where this is stored (in the MJCF? in benchmark_definition.yaml? in a separate config?)
 - How the engineering planner receives it (YAML file? visual overlay?) — L1424 mentions "a YAML file" and "texture or separate set of renders" but doesn't commit to either
 - How drilling validation works programmatically
 
