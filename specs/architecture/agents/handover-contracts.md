@@ -267,7 +267,13 @@ benchmark_parts:
       fixed: true
       material_id: "aluminum_6061"
       attachment_policy:
-        mountable: false
+        attachment_methods: ["fastener"]
+        drill_policy:
+          allowed: true
+          max_hole_count: 2
+          diameter_range_mm: [3.0, 5.5]
+          max_depth_mm: 12.0
+        notes: "Only fastener-based mounting with the declared drilling limits is allowed."
 
 # Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:
@@ -308,6 +314,16 @@ randomization:
 
 1. It owns benchmark/task geometry, randomization, benchmark/customer caps, and benchmark-owned fixture metadata.
 2. `benchmark_parts[].metadata` is benchmark-side metadata only. It describes read-only benchmark fixtures such as `fixed`, `material_id`, and attachment policy.
+   - The Benchmark Planner defines which benchmark-owned parts are drillable or non-drillable through `attachment_policy`.
+   - `attachment_policy.attachment_methods` is the allowlist of permitted engineer-to-fixture attachment methods.
+   - Use `attachment_methods: ["none"]` to mark a fixture as explicitly non-attachable.
+   - If `attachment_policy` is absent, the fixture is treated as non-attachable by default.
+   - `attachment_policy` is permissive, not mandatory. The engineer may use the allowed attachment path from `benchmark_definition.yaml`, but does not need to use it if the benchmark can be solved another way.
+   - Engineer-owned parts in `assembly_definition.yaml` may only attach to benchmark-owned parts that are declared in `benchmark_definition.yaml`.
+   - `attachment_policy.drill_policy` controls whether the engineer may create new fastener holes in that benchmark fixture, and under what numeric limits.
+   - Drillability is whole-part in MVP. The Benchmark Planner and Benchmark Coder declare whether the part is drillable and the allowed numeric limits, but do not narrow drilling down to a sub-zone or exact coordinates on the part.
+   - The engineer decides where to place the drilled holes on an allowed benchmark part, subject to the declared min/max hole size, max depth, and max hole-count limits.
+   - `attachment_policy.notes` is reviewer-facing guidance only and must not be treated as a machine-enforced fallback.
 3. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
 4. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
 
@@ -328,6 +344,8 @@ Expected flow:
     - The script auto-populates the unit cost and weight to the benchmark_definition.yaml file (unless the file is corrupted).
 4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
 5. Planner writes planner-owned constraints in `benchmark_definition.yaml` using validated assembly totals, under benchmark/customer caps.
+6. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
+7. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
 
 Minimum motion metadata fields inside `final_assembly.parts` entries:
 
@@ -360,6 +378,7 @@ Required assembly fields:
 - `final_assembly` containing subassemblies/parts/joints
 - each part entry in `final_assembly.parts` includes `dofs`; moving motorized entries include `control`
 - repeated part references are allowed and used by pricing logic to compute quantity effects
+- if drilling into benchmark-owned fixtures is planned: `environment_drill_operations`
 
 ```yaml
 version: "1.0"
@@ -402,6 +421,13 @@ cots_parts:
     source: "parts.db"
   # user note: cots parts must be enforced to exist in the subassemblies, at least 1. Else why would it be here?
   # user note 2: reminder: search for COTS parts is performed by a subagent
+environment_drill_operations:
+  - target_part_id: "environment_fixture"
+    hole_id: "mount_left"
+    diameter_mm: 5.0
+    depth_mm: 10.0
+    quantity: 1
+    notes: "Fastener clearance hole into permitted floor fixture"
 final_assembly:
   - subassembly_id: "frame_and_ramp"
     parts:
@@ -432,6 +458,7 @@ totals:
 Validation requirement:
 
 - Submission is blocked if `assembly_definition.yaml` is missing, malformed, still template-like, fails `validate_costing_and_price.py`, or contains non-numeric values for required numeric fields (doesn't match schema in general)
+- Submission is blocked if `environment_drill_operations` requests drilling into a benchmark fixture whose `benchmark_definition.yaml benchmark_parts[].metadata.attachment_policy.drill_policy` forbids it or whose declared hole dimensions/count exceed that policy.
 
 ## Coder and Execution Reviewer interaction
 

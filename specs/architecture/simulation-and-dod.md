@@ -162,9 +162,9 @@ Some parts will need to be "fixed" despite physics *during benchmark generation,
 
 We use **build123d's native `RigidJoint` system** for mating parts. This avoids custom positioning math — build123d handles transforms automatically via `connect_to()`. Fastener geometry (bolts, screws, nuts) comes from the [`bd-warehouse`](https://bd-warehouse.readthedocs.io/en/latest/fastener.html) package.
 
-**Helper function**: `fastener_hole(part, pos, depth, diameter, hole_id: str, hole_type: HoleType = HoleType.FlatHeadHole, add_fastener=False)`
+**Helper function**: `fastener_hole(part, location, hole_id: str, size="M3", length=10.0, hole_type=HoleType.CounterBoreHole, add_fastener=False, fit="Normal")`
 
-1. Cuts a hole at `pos` using build123d `Hole` (or `CounterBoreHole`)
+1. Cuts a fastener hole at the specified `location`
 2. Creates a `RigidJoint` at the hole location with a parameter `rigid_joint.hole_id=hole_id`
 3. If `add_fastener=True`, inserts appropriate fastener from bd-warehouse catalog
 4. Returns the modified part
@@ -175,17 +175,18 @@ The type of Hole is determined by an enum - HoleType: `FlatHeadHole`, `CounterBo
 
 ```python
 from utils.fasteners import fastener_hole
+from build123d import Location
 
 # Create bracket (anchor part) - explicitly positioned
 bracket = Box(100, 50, 10)
-bracket = fastener_hole(bracket, pos=(20, 25), depth=10, diameter=5, hole_id="mount_1")
-bracket = fastener_hole(bracket, pos=(80, 25), depth=10, diameter=5, hole_id="mount_2")
+bracket = fastener_hole(bracket, location=Location((20, 25)), size="M5", length=10.0, hole_id="mount_1")
+bracket = fastener_hole(bracket, location=Location((80, 25)), size="M5", length=10.0, hole_id="mount_2")
 bracket.position = (0, 0, 100)  # world position
 
 # Create arm - will be positioned via joint mating
 arm = Box(200, 30, 8)
-arm = fastener_hole(arm, pos=(10, 15), depth=8, diameter=5, hole_id="arm_1", add_fastener=True)
-arm = fastener_hole(arm, pos=(50, 15), depth=8, diameter=5, hole_id="arm_2", add_fastener=True)
+arm = fastener_hole(arm, location=Location((10, 15)), size="M5", length=8.0, hole_id="arm_1", add_fastener=True)
+arm = fastener_hole(arm, location=Location((50, 15)), size="M5", length=8.0, hole_id="arm_2", add_fastener=True)
 
 # Mate parts - build123d computes transform automatically
 arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
@@ -287,14 +288,25 @@ Map of joints to Genesis (which has parity with MuJoCo) constraints and their us
 
 Oftentimes engineers will need to constrain machinery to the environment, e.g. to the floor. However, not all things can be constrained to, e.g. you don't want to drill a motor some other machine.
 
-The benchmark generator agent (and planner) will thus produce parts and compounds will `drillable=True` or False, by the semantic meaning of the file.
+The Benchmark Planner creates explicit drillable or non-drillable constraints on benchmark-owned environment parts in `benchmark_definition.yaml benchmark_parts[].metadata.attachment_policy`.
 
-The Engineering Planner will get a visual confirmation of drillable/non-drillable objects via a texture or a separate set of renders, and will have a YAML file describing what can be drilled and what can't be
-<!-- ouch: I'm starting to be uncertain on how to actually pass it to the engineer -->
+The Engineering Planner will get a visual confirmation of drillable/non-drillable objects via a texture or a separate set of renders, and the machine-readable handoff path is:
+
+1. benchmark-side attachment and drill permissions live in `benchmark_definition.yaml`,
+2. the engineer may use that attachment policy, but does not need to use it if the benchmark can be solved another way,
+3. if a benchmark-owned part is declared in `benchmark_definition.yaml`, engineer-owned parts in `assembly_definition.yaml` may attach to it only through the permitted attachment policy,
+4. planner-declared intended drilled fastener holes live in `assembly_definition.yaml.environment_drill_operations`,
+5. planner handoff submission and reviewer entry both fail closed if those planned drill operations violate the benchmark-side drill policy.
 
 ##### Specifics
 
-If the compound is `drillable=False` so are all of it's children.
+If the benchmark fixture exposes no `drill_policy`, drilling is forbidden by default.
+
+The Benchmark Planner and Benchmark Coder declare whole-part drillability, not drilling zones. The engineer decides where on the allowed benchmark part to place holes.
+
+The benchmark-owned drill policy specifies realistic numeric limits such as minimum and maximum hole diameter, maximum drill depth, and maximum hole count for that part.
+
+Drilling benchmark-owned fixtures has non-zero cost. For MVP that cost is static and comes from `manufacturing_config.yaml`.
 
 #### Allowed components in simulation
 
@@ -569,6 +581,8 @@ Watertightness is required for both. -->
 We have a set of materials defined in `manufacturing_config.yaml`, which defines: `materials` section, and which materials can be used for the simulation - their weight, price, and cost per KG. The config is auto-validated with unit tests (e.g., can't reference and inexisting material).
 
 `manufacturing_config.yaml` can be read-only for the agents to gauge the pricing ahead of time. It is also used during programmatic validation of manufacturability.
+
+It also defines static benchmark drilling cost for `environment_drill_operations` against benchmark-owned fixtures.
 
 `manufacturing_config.yaml` sample schema:
 
