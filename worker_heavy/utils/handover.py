@@ -11,6 +11,10 @@ from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import ReviewManifest, ValidationResultRecord
 from worker_heavy.utils.dfm import validate_and_price_assembly
+from worker_heavy.utils.file_validation import (
+    validate_declared_planner_cost_contract,
+    validate_environment_attachment_contract,
+)
 from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
@@ -219,10 +223,39 @@ def submit_for_review(
     # 3. Perform DFM + Geometry Checks (INT-019)
     renders_dir.mkdir(parents=True, exist_ok=True)
     manifests_dir.mkdir(parents=True, exist_ok=True)
-    dfm_config = load_config()
+    custom_config_path = cwd / "manufacturing_config.yaml"
+    dfm_config = (
+        load_config(str(custom_config_path))
+        if custom_config_path.exists()
+        else load_config()
+    )
 
     objectives_data = yaml.safe_load(objectives_path.read_text())
     objectives_model = BenchmarkDefinition(**objectives_data)
+    attachment_errors = validate_environment_attachment_contract(
+        benchmark_definition=objectives_model,
+        assembly_definition=estimation,
+    )
+    if attachment_errors:
+        logger.error(
+            "environment_attachment_contract_invalid",
+            errors=attachment_errors,
+            session_id=session_id,
+        )
+        raise ValueError(
+            "Attachment contract violation: " + "; ".join(attachment_errors)
+        )
+    cost_errors = validate_declared_planner_cost_contract(
+        assembly_definition=estimation,
+        manufacturing_config=dfm_config,
+    )
+    if cost_errors:
+        logger.error(
+            "planner_cost_contract_invalid",
+            errors=cost_errors,
+            session_id=session_id,
+        )
+        raise ValueError("Pricing contract violation: " + "; ".join(cost_errors))
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
@@ -238,6 +271,7 @@ def submit_for_review(
         validation_result = validate_and_price_assembly(
             component,
             dfm_config,
+            assembly_definition=estimation,
             part_labels=manufactured_labels or None,
             build_zone=build_zone,
             session_id=session_id,
@@ -259,7 +293,10 @@ def submit_for_review(
                 constraints.max_unit_cost
                 and validation_result.unit_cost > constraints.max_unit_cost
             ):
-                msg = f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit ${constraints.max_unit_cost:.2f}"
+                msg = (
+                    f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit "
+                    f"${constraints.max_unit_cost:.2f}"
+                )
                 logger.error(
                     "submission_cost_limit_exceeded",
                     cost=validation_result.unit_cost,

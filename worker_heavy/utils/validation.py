@@ -35,10 +35,15 @@ from shared.simulation.schemas import (
     get_default_simulator_backend,
 )
 from shared.wire_utils import calculate_path_length, check_wire_clearance
+from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.simulation.factory import get_simulation_builder
 from worker_heavy.workbenches.config import load_config
 
-from .dfm import validate_and_price, validate_and_price_assembly
+from .dfm import (
+    calculate_benchmark_drilling_cost,
+    validate_and_price,
+    validate_and_price_assembly,
+)
 from .rendering import prerender_24_views
 
 logger = structlog.get_logger(__name__)
@@ -427,14 +432,16 @@ def to_mjcf(
 
 def calculate_assembly_totals(
     component: Compound,
+    assembly_definition: AssemblyDefinition | None = None,
     electronics: ElectronicsSection | None = None,
     cots_parts: list[CotsPartEstimate] | None = None,
+    manufacturing_config: ManufacturingConfig | None = None,
     session_id: str | None = None,
 ) -> tuple[float, float]:
     """
     Calculate total cost and weight of the assembly including electronics and COTS.
     """
-    config = load_config()
+    config = manufacturing_config or load_config()
     total_cost = 0.0
     total_weight = 0.0
 
@@ -583,6 +590,9 @@ def calculate_assembly_totals(
                 # In current schema CotsPartEstimate doesn't have weight_g
                 # But the indexer extracts it.
                 pass
+
+    if assembly_definition is not None:
+        total_cost += calculate_benchmark_drilling_cost(assembly_definition, config)
 
     return total_cost, total_weight
 
@@ -980,10 +990,17 @@ def simulate(
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
+        pricing_config = load_config()
+        custom_config_path = working_dir / "manufacturing_config.yaml"
+        if custom_config_path.exists():
+            pricing_config = load_config(str(custom_config_path))
+
         cost, weight = calculate_assembly_totals(
             component,
+            assembly_definition=assembly_definition,
             electronics=electronics,
             cots_parts=assembly_definition.cots_parts if assembly_definition else None,
+            manufacturing_config=pricing_config,
         )
 
         result = SimulationResult(
@@ -1271,6 +1288,7 @@ def validate_fem_manufacturability(
 
             assembly_definition_path = session_root / "assembly_definition.yaml"
             manufactured_labels: set[str] = set()
+            assembly: AssemblyDefinition | None = None
             if assembly_definition_path.exists():
                 assembly_data = yaml.safe_load(
                     assembly_definition_path.read_text(encoding="utf-8")
@@ -1282,6 +1300,7 @@ def validate_fem_manufacturability(
             val_report = validate_and_price_assembly(
                 component,
                 config,
+                assembly_definition=assembly,
                 part_labels=manufactured_labels or None,
                 fem_required=True,
                 session_id=session_id,

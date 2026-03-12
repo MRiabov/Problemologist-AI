@@ -1,7 +1,7 @@
 import structlog
 from build123d import Compound, Part
 
-from shared.models.schemas import BoundingBox
+from shared.models.schemas import AssemblyDefinition, BoundingBox
 from shared.workers.workbench_models import (
     ManufacturingConfig,
     ManufacturingMethod,
@@ -100,6 +100,51 @@ def _count_dofs(part: Part | Compound) -> int:
         dof_count += 1
 
     return dof_count
+
+
+def calculate_benchmark_drilling_cost(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> float:
+    """Return static benchmark drilling cost from declared environment operations."""
+    unit_cost = config.benchmark_operations.drilling.cost_per_hole_usd
+    total_holes = sum(
+        operation.quantity
+        for operation in assembly_definition.environment_drill_operations
+    )
+    return round(total_holes * unit_cost, 2)
+
+
+def calculate_declared_assembly_cost(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> float:
+    """Return deterministic planner-declared assembly cost minimum."""
+    manufactured_cost = sum(
+        part.estimated_unit_cost_usd * part.quantity
+        for part in assembly_definition.manufactured_parts
+    )
+    cots_cost = sum(
+        part.unit_cost_usd * part.quantity for part in assembly_definition.cots_parts
+    )
+    drilling_cost = calculate_benchmark_drilling_cost(assembly_definition, config)
+    return round(manufactured_cost + cots_cost + drilling_cost, 2)
+
+
+def validate_declared_assembly_cost(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> list[str]:
+    """Ensure planner totals include all declared part, COTS, and drilling costs."""
+    minimum_cost = calculate_declared_assembly_cost(assembly_definition, config)
+    if assembly_definition.totals.estimated_unit_cost_usd + 1e-6 < minimum_cost:
+        return [
+            "assembly_definition.totals.estimated_unit_cost_usd "
+            f"(${assembly_definition.totals.estimated_unit_cost_usd:.2f}) "
+            "must include declared manufactured-part costs, COTS costs, and "
+            f"benchmark drilling cost (minimum ${minimum_cost:.2f})"
+        ]
+    return []
 
 
 def validate_and_price(
@@ -223,6 +268,7 @@ def validate_and_price(
 def validate_and_price_assembly(
     part: Part | Compound,
     config: ManufacturingConfig,
+    assembly_definition: AssemblyDefinition | None = None,
     part_labels: set[str] | None = None,
     build_zone: BoundingBox | None = None,
     quantity: int = 1,
@@ -310,6 +356,13 @@ def validate_and_price_assembly(
             f"{label}: {violation}" for violation in child_result.violations
         )
 
+    benchmark_drilling_cost = (
+        calculate_benchmark_drilling_cost(assembly_definition, config)
+        if assembly_definition is not None
+        else 0.0
+    )
+    total_cost += benchmark_drilling_cost
+
     return WorkbenchResult(
         is_manufacturable=overall_ok,
         unit_cost=total_cost,
@@ -319,6 +372,7 @@ def validate_and_price_assembly(
             additional_info={
                 "part_reports": per_part,
                 "part_count": len(reports),
+                "benchmark_drilling_cost_usd": benchmark_drilling_cost,
             }
         ),
     )

@@ -1,6 +1,10 @@
 defaults:
   currency: "USD"
 
+benchmark_operations:
+  drilling:
+    cost_per_hole_usd: 1.5
+
 materials:
   aluminum_6061:
     name: "Aluminum 6061"

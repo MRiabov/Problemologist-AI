@@ -20,17 +20,22 @@ import structlog
 import yaml
 from pydantic import ValidationError
 
-from shared.enums import AgentName
+from shared.enums import AgentName, BenchmarkAttachmentMethod
 from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
+    PartConfig,
     PlanRefusalFrontmatter,
     ReviewFrontmatter,
+    SubassemblyEstimate,
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.workbench_models import ManufacturingConfig
+from worker_heavy.utils.dfm import validate_declared_assembly_cost
 from worker_heavy.utils.validation import _validate_benchmark_definition_consistency
+from worker_heavy.workbenches.config import load_config
 
 logger = structlog.get_logger(__name__)
 
@@ -197,6 +202,18 @@ def validate_assembly_definition_yaml(
             ]
 
         estimation = AssemblyDefinition(**data)
+        manufacturing_config = load_config()
+        cost_errors = validate_declared_planner_cost_contract(
+            assembly_definition=estimation,
+            manufacturing_config=manufacturing_config,
+        )
+        if cost_errors:
+            logger.error(
+                "cost_estimation_yaml_invalid",
+                errors=cost_errors,
+                session_id=session_id,
+            )
+            return False, cost_errors
 
         if estimation.electronics:
             from shared.models.schemas import PartConfig, SubassemblyEstimate
@@ -246,6 +263,195 @@ def validate_assembly_definition_yaml(
                 )
             )
         return False, errors
+
+
+def validate_environment_drilling_contract(
+    *,
+    benchmark_definition: BenchmarkDefinition,
+    assembly_definition: AssemblyDefinition,
+) -> list[str]:
+    """Validate planner-declared drilling intent against benchmark fixture policy."""
+    errors: list[str] = []
+    if not assembly_definition.environment_drill_operations:
+        return errors
+
+    benchmark_parts = {
+        part.part_id: part for part in benchmark_definition.benchmark_parts
+    }
+    drill_counts: dict[str, int] = {}
+
+    for operation in assembly_definition.environment_drill_operations:
+        target = benchmark_parts.get(operation.target_part_id)
+        if target is None:
+            errors.append(
+                "environment_drill_operations: target_part_id "
+                f"'{operation.target_part_id}' is not declared in benchmark_parts"
+            )
+            continue
+
+        attachment_policy = target.metadata.attachment_policy
+        drill_policy = (
+            attachment_policy.drill_policy if attachment_policy is not None else None
+        )
+        if drill_policy is None or not drill_policy.allowed:
+            errors.append(
+                "environment_drill_operations: drilling is not allowed for "
+                f"benchmark part '{operation.target_part_id}'"
+            )
+            continue
+
+        if drill_policy.diameter_range_mm is not None:
+            diameter_min, diameter_max = drill_policy.diameter_range_mm
+            if not (diameter_min <= operation.diameter_mm <= diameter_max):
+                errors.append(
+                    "environment_drill_operations: diameter_mm "
+                    f"({operation.diameter_mm}) for hole '{operation.hole_id}' "
+                    f"must be within [{diameter_min}, {diameter_max}] on "
+                    f"benchmark part '{operation.target_part_id}'"
+                )
+
+        if (
+            drill_policy.max_depth_mm is not None
+            and operation.depth_mm > drill_policy.max_depth_mm
+        ):
+            errors.append(
+                "environment_drill_operations: depth_mm "
+                f"({operation.depth_mm}) for hole '{operation.hole_id}' exceeds "
+                f"max_depth_mm ({drill_policy.max_depth_mm}) on benchmark part "
+                f"'{operation.target_part_id}'"
+            )
+
+        drill_counts[operation.target_part_id] = (
+            drill_counts.get(operation.target_part_id, 0) + operation.quantity
+        )
+
+    for part_id, count in drill_counts.items():
+        target = benchmark_parts.get(part_id)
+        if target is None or target.metadata.attachment_policy is None:
+            continue
+        drill_policy = target.metadata.attachment_policy.drill_policy
+        if (
+            drill_policy is not None
+            and drill_policy.allowed
+            and drill_policy.max_hole_count is not None
+            and count > drill_policy.max_hole_count
+        ):
+            errors.append(
+                "environment_drill_operations: total planned hole count "
+                f"({count}) exceeds max_hole_count ({drill_policy.max_hole_count}) "
+                f"for benchmark part '{part_id}'"
+            )
+
+    return errors
+
+
+def validate_environment_attachment_contract(
+    *,
+    benchmark_definition: BenchmarkDefinition,
+    assembly_definition: AssemblyDefinition,
+) -> list[str]:
+    """Validate assembly joints and drilling against benchmark attachment policy."""
+    errors = validate_environment_drilling_contract(
+        benchmark_definition=benchmark_definition,
+        assembly_definition=assembly_definition,
+    )
+
+    benchmark_parts = {
+        part.part_id: part for part in benchmark_definition.benchmark_parts
+    }
+
+    engineer_part_refs = {
+        part.part_id for part in assembly_definition.manufactured_parts
+    } | {part.part_id for part in assembly_definition.cots_parts}
+
+    for item in assembly_definition.final_assembly:
+        if isinstance(item, SubassemblyEstimate):
+            engineer_part_refs.update(part.name for part in item.parts)
+            joints = item.joints
+        elif isinstance(item, PartConfig):
+            engineer_part_refs.add(item.name)
+            joints = []
+        else:
+            joints = []
+
+        for joint in joints:
+            for part_ref in joint.parts:
+                if (
+                    part_ref not in engineer_part_refs
+                    and part_ref not in benchmark_parts
+                ):
+                    errors.append(
+                        "final_assembly.joints: joint "
+                        f"'{joint.joint_id}' references undeclared part '{part_ref}'"
+                    )
+
+            benchmark_refs = [
+                part_ref for part_ref in joint.parts if part_ref in benchmark_parts
+            ]
+            if not benchmark_refs:
+                continue
+
+            if joint.type != "fastener_joint":
+                errors.append(
+                    "final_assembly.joints: benchmark attachments must use "
+                    f"'fastener_joint'; joint '{joint.joint_id}' uses '{joint.type}'"
+                )
+
+            if len(benchmark_refs) != 1:
+                errors.append(
+                    "final_assembly.joints: each benchmark attachment joint must "
+                    f"reference exactly one benchmark part; joint '{joint.joint_id}' "
+                    f"references {benchmark_refs}"
+                )
+                continue
+
+            benchmark_ref = benchmark_refs[0]
+            target = benchmark_parts[benchmark_ref]
+            attachment_policy = target.metadata.attachment_policy
+            if (
+                attachment_policy is None
+                or BenchmarkAttachmentMethod.FASTENER
+                not in attachment_policy.attachment_methods
+            ):
+                errors.append(
+                    "final_assembly.joints: benchmark part "
+                    f"'{benchmark_ref}' does not permit fastener attachment"
+                )
+
+            non_benchmark_refs = [
+                part_ref for part_ref in joint.parts if part_ref != benchmark_ref
+            ]
+            if not non_benchmark_refs:
+                errors.append(
+                    "final_assembly.joints: benchmark attachment joint "
+                    f"'{joint.joint_id}' must include at least one engineer-owned part"
+                )
+                continue
+
+            for part_ref in non_benchmark_refs:
+                if part_ref in benchmark_parts:
+                    errors.append(
+                        "final_assembly.joints: benchmark attachment joint "
+                        f"'{joint.joint_id}' must not connect benchmark part "
+                        f"'{benchmark_ref}' to another benchmark part '{part_ref}'"
+                    )
+                elif part_ref not in engineer_part_refs:
+                    errors.append(
+                        "final_assembly.joints: joint "
+                        f"'{joint.joint_id}' references undeclared engineer part "
+                        f"'{part_ref}'"
+                    )
+
+    return errors
+
+
+def validate_declared_planner_cost_contract(
+    *,
+    assembly_definition: AssemblyDefinition,
+    manufacturing_config: ManufacturingConfig,
+) -> list[str]:
+    """Validate that planner totals include deterministic declared costs."""
+    return validate_declared_assembly_cost(assembly_definition, manufacturing_config)
 
 
 def validate_review_frontmatter(
@@ -378,6 +584,7 @@ def validate_node_output(
                 AgentName.ENGINEER_PLANNER: [
                     "plan.md",
                     "todo.md",
+                    "benchmark_definition.yaml",
                     "assembly_definition.yaml",
                 ],
                 AgentName.BENCHMARK_PLANNER: [
@@ -406,6 +613,7 @@ def validate_node_output(
             AgentName.ENGINEER_PLANNER: [
                 "plan.md",
                 "todo.md",
+                "benchmark_definition.yaml",
                 "assembly_definition.yaml",
             ],
             AgentName.BENCHMARK_PLANNER: [

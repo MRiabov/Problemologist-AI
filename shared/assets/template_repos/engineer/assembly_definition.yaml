@@ -57,6 +57,18 @@ cots_parts:
   #   quantity: 8
   #   source: catalog
 
+environment_drill_operations:
+  # Optional.
+  # Declare benchmark-owned fixture drilling only when the benchmark attachment
+  # policy allows it.
+  # Example:
+  # - target_part_id: environment_fixture
+  #   hole_id: mount_left
+  #   diameter_mm: 5.0
+  #   depth_mm: 10.0
+  #   quantity: 1
+  #   notes: Fastener clearance hole into permitted fixture
+
 final_assembly:
   # Add PartConfig or SubassemblyEstimate items.
   # Example PartConfig shape:
@@ -77,6 +89,8 @@ final_assembly:
   # Use only canonical manufacturing enum values elsewhere in this file: CNC, 3DP, IM.
 
 totals:
+  # `estimated_unit_cost_usd` must include manufactured parts, COTS parts,
+  # and any benchmark drilling cost from environment_drill_operations.
   estimated_unit_cost_usd:
   estimated_weight_g:
   estimate_confidence:
