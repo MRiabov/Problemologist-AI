@@ -326,12 +326,13 @@ engineer:
          - If `assembly_definition.yaml` contains electronics or `objectives.yaml` contains `electronics_requirements`, implement the corresponding electrical behavior in this same artifact set. Do NOT assume a later dedicated electronics implementation node will add it for you.
          - The authored `script.py` must cover the full planner handoff for this turn. Do NOT stop after only the first TODO item or a partial subset of planner-defined parts unless you are blocked by a concrete error and you record that blocker in `journal.md`.
          - Do NOT import visualization-only helpers such as `ocp_vscode`, and do NOT add `show(...)` calls or `if __name__ == "__main__":` blocks to authored workspace scripts.
-         - Keep imports minimal and plan-driven. For ordinary mechanical seeds, default to `build123d` plus `utils.metadata`. Add other `utils` imports only when the planner handoff or the actual geometry requires them. Do NOT invent helper imports "just in case", and do not leave unused helper imports in the final script.
-         - Place top-level parts with `Location(...)` via `.move(...)`, `.moved(...)`, or `.location = Location(...)`. Do NOT assign `.position = (...)` on authored parts; that is not the runtime placement contract.
-         - For simple freestanding/passive handoffs, prefer a fast utilitarian implementation over polished extras. Do not spend turns on decorative chamfers, aesthetics-only details, or optional complexity unless they are needed for fit, safety, or function.
-         - If the planner asks for simple plates, rails, trays, funnels, or guards, start with the fewest primitives and booleans that satisfy the geometry. Skip fillets, chamfers, sculpting, and nonessential cut features unless they solve a real functional constraint.
+        - Keep imports minimal and plan-driven. For ordinary mechanical seeds, default to `build123d` plus `utils.metadata`. Add other `utils` imports only when the planner handoff or the actual geometry requires them. Do NOT invent helper imports "just in case", and do not leave unused helper imports in the final script.
+        - Place top-level parts with `Location(...)` via `.move(...)`, `.moved(...)`, or `.location = Location(...)`. Do NOT assign `.position = (...)` on authored parts; that is not the runtime placement contract.
+        - Curve/path primitives such as `Polyline(...)` belong in `with BuildLine()`, not `with BuildPart()`. If you model routed wires or any swept path, build the path in `BuildLine`, then sweep from that line/wire output. Do NOT call `Polyline(...)` inside `BuildPart()`.
+        - For simple freestanding/passive handoffs, prefer a fast utilitarian implementation over polished extras. Do not spend turns on decorative chamfers, aesthetics-only details, or optional complexity unless they are needed for fit, safety, or function.
+        - If the planner asks for simple plates, rails, trays, funnels, or guards, start with the fewest primitives and booleans that satisfy the geometry. Skip fillets, chamfers, sculpting, and nonessential cut features unless they solve a real functional constraint.
       5. Self-test by reusing that same `script.py` artifact; do not create alternate verifier scripts.
-         - Prefer cheap shell validity checks such as `python -m py_compile script.py`.
+         - Prefer one cheap syntax check such as `python -m py_compile script.py`.
          - Use `execute_command(...)` only for ordinary shell diagnostics when truly needed, not for raw `python -c` import checks of authored CAD scripts.
       6. Update `todo.md` and `journal.md` to reflect implementation progress and any justified deviations.
          - `todo.md` progress is bookkeeping, not a stage boundary. Do not pause the implementation just because one checkbox was completed; continue until the full required coder artifact set is done or a real blocker appears.
@@ -402,9 +403,17 @@ engineer:
           material_id="aluminum-6061"
       )
 
+      # COTS parts: use cots_id and DO NOT set manufacturing_method="COTS"
+      motor.metadata = PartMetadata(
+          cots_id="gearmotor_12v_60rpm"
+      )
+
       # Assemblies/Compounds:
       assembly.metadata = CompoundMetadata()
       ```
+      - `manufacturing_method` is only for manufactured parts and the only valid values are `CNC`, `3DP`, and `IM`.
+      - Never set `manufacturing_method="COTS"`.
+      - For motors, wires, bearings, fasteners, power supplies, and other catalog items, set `cots_id=...` and leave `manufacturing_method` unset unless the part is actually manufactured in-house.
 
       **Refusing a Plan**:
       If the plan is inappropriate (e.g., price/weight set too low, approach is fundamentally flawed), you may call `refuse_plan(reason: str)` with evidence.
