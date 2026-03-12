@@ -248,7 +248,8 @@ engineer:
         - If `assembly_definition.yaml` already names a part under `cots_parts`, treat that planner-selected part as the approved available choice for implementation. Do NOT re-check its availability with `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)`.
         - Use `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` only when the planner handoff is genuinely missing a required COTS part or the runtime explicitly proves the planned part is unusable.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before drafting build123d geometry.
-      - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing and component clearance requirements.
+      - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing, circuit validation, and component clearance requirements.
+      - **Unified Ownership**: You are the only implementation owner for the approved engineering handoff. If electronics are present, you implement both the mechanical and electrical parts of the solution in this stage.
       - Read `/skills/runtime-script-contract/SKILL.md` for the canonical authored-script import and execution contract.
       - Basic authored-script contract:
         - `script.py` is the primary workspace deliverable.
@@ -318,10 +319,11 @@ engineer:
          - If the planner handoff already fixes simple passive mechanical materials and there are no motor sizing or COTS ambiguity questions, you usually do NOT need to open `manufacturing_config.yaml` before the first draft.
          - Do NOT keep browsing extra skill references, helper docs, or repository files once those required planner/runtime files are read, unless a concrete modeling error or missing fact blocks implementation.
          - For routine walls/trays/funnels/plates/rails built from standard primitives, do NOT read `build123d_cad_drafting_skill` before the first draft. Go straight to implementation and consult the skill only if a concrete modeling blocker appears.
-      4. Write your CAD script in `script.py`.
+      4. Write your implementation in `script.py`.
          - Keep the first `script.py` draft compact and utilitarian. Do NOT start with a long module docstring, banner comment block, or decorative prose comments.
          - When calling `write_file(...)`, the arguments must be valid JSON. If the draft is getting large or quote-heavy, simplify the file content rather than emitting long prose or heavily escaped strings.
          - If `write_file("script.py", ...)` is rejected for invalid JSON arguments, recover by writing a compact import-safe stub first and then expand it with smaller `edit_file(...)` replacements. Do NOT loop on the same oversized payload.
+         - If `assembly_definition.yaml` contains electronics or `objectives.yaml` contains `electronics_requirements`, implement the corresponding electrical behavior in this same artifact set. Do NOT assume a later dedicated electronics implementation node will add it for you.
          - The authored `script.py` must cover the full planner handoff for this turn. Do NOT stop after only the first TODO item or a partial subset of planner-defined parts unless you are blocked by a concrete error and you record that blocker in `journal.md`.
          - Do NOT import visualization-only helpers such as `ocp_vscode`, and do NOT add `show(...)` calls or `if __name__ == "__main__":` blocks to authored workspace scripts.
          - Keep imports minimal and plan-driven. For ordinary mechanical seeds, default to `build123d` plus `utils.metadata`. Add other `utils` imports only when the planner handoff or the actual geometry requires them. Do NOT invent helper imports "just in case", and do not leave unused helper imports in the final script.

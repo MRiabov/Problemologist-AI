@@ -31,7 +31,6 @@ def create_agent_graph(
         AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_PLAN_REVIEWER,
         AgentName.ELECTRONICS_PLANNER,
-        AgentName.ELECTRONICS_ENGINEER,
         AgentName.ELECTRONICS_REVIEWER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
     }:
@@ -43,15 +42,12 @@ def create_agent_graph(
     if agent_name == AgentName.ELECTRONICS_PLANNER:
         return electronics_planner_graph, None
 
-    if (
-        agent_name
-        in [
-            AgentName.ENGINEER_CODER,
-            AgentName.ENGINEER_PLAN_REVIEWER,
-            AgentName.ENGINEER_EXECUTION_REVIEWER,
-        ]
-        or agent_name == AgentName.ELECTRONICS_ENGINEER
-    ):
+    if agent_name in [
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.ELECTRONICS_REVIEWER,
+    ]:
         # Unified engineering graph (Architect -> Engineer -> Critic)
         return engineering_graph, None
 

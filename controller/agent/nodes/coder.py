@@ -141,15 +141,11 @@ class CoderNode(BaseNode):
         if exact_unchecked in todo:
             return todo.replace(exact_unchecked, exact_checked, 1)
 
-        # Fallback: mark first unchecked non-electronics line as done.
+        # Fallback: mark the first unchecked line as done.
         lines = todo.splitlines()
-        elec_keywords = ("circuit", "wire", "electronics", "routing", "psu", "power")
         for idx, line in enumerate(lines):
             stripped = line.strip()
             if not stripped.startswith("- [ ]"):
-                continue
-            task = stripped.replace("- [ ]", "", 1).strip().lower()
-            if any(kw in task for kw in elec_keywords):
                 continue
             lines[idx] = re.sub(r"^\s*-\s*\[\s\]", "- [x]", line, count=1)
             return "\n".join(lines)
@@ -163,14 +159,9 @@ class CoderNode(BaseNode):
 
     def _get_next_step(self, todo: str) -> str | None:
         """Extract the first '- [ ]' item from the TODO list."""
-        elec_keywords = ["circuit", "wire", "electronics", "routing", "psu", "power"]
         for line in todo.split("\n"):
             if line.strip().startswith("- [ ]"):
-                task = line.strip().replace("- [ ]", "").strip()
-                # If it's an electronics task, skip it
-                if any(kw in task.lower() for kw in elec_keywords):
-                    continue
-                return task
+                return line.strip().replace("- [ ]", "").strip()
         return None
 
 

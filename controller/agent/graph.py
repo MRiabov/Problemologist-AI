@@ -38,7 +38,6 @@ from shared.observability.schemas import NodeEntryValidationFailedEvent
 
 from .nodes.coder import coder_node
 from .nodes.cots_search import cots_search_node
-from .nodes.electronics_engineer import electronics_engineer_node
 from .nodes.electronics_planner import electronics_planner_node
 from .nodes.electronics_reviewer import electronics_reviewer_node
 from .nodes.execution_reviewer import engineer_execution_reviewer_node
@@ -492,7 +491,7 @@ async def route_after_engineer_coder(
     state: AgentState,
 ) -> Literal[
     AgentName.STEER,
-    AgentName.ELECTRONICS_ENGINEER,
+    AgentName.ELECTRONICS_REVIEWER,
     AgentName.ENGINEER_EXECUTION_REVIEWER,
     END,
 ]:
@@ -501,18 +500,8 @@ async def route_after_engineer_coder(
     if await _should_end_scoped_run_after_node(state, AgentName.ENGINEER_CODER):
         return END
     if await _state_requires_electronics(state):
-        return AgentName.ELECTRONICS_ENGINEER
+        return AgentName.ELECTRONICS_REVIEWER
     return AgentName.ENGINEER_EXECUTION_REVIEWER
-
-
-async def route_after_electronics_engineer(
-    state: AgentState,
-) -> Literal[AgentName.STEER, AgentName.ELECTRONICS_REVIEWER, END]:
-    if await check_steering(state) == AgentName.STEER:
-        return AgentName.STEER
-    if await _should_end_scoped_run_after_node(state, AgentName.ELECTRONICS_ENGINEER):
-        return END
-    return AgentName.ELECTRONICS_REVIEWER
 
 
 async def route_after_electronics_reviewer(
@@ -544,10 +533,6 @@ builder.add_node(
 builder.add_node(
     AgentName.ENGINEER_CODER,
     _guarded_node(AgentName.ENGINEER_CODER, coder_node),
-)
-builder.add_node(
-    AgentName.ELECTRONICS_ENGINEER,
-    _guarded_node(AgentName.ELECTRONICS_ENGINEER, electronics_engineer_node),
 )
 builder.add_node(
     AgentName.ELECTRONICS_REVIEWER,
@@ -582,7 +567,6 @@ def route_start(
     AgentName.ELECTRONICS_PLANNER,
     AgentName.ENGINEER_PLAN_REVIEWER,
     AgentName.ENGINEER_CODER,
-    AgentName.ELECTRONICS_ENGINEER,
     AgentName.ELECTRONICS_REVIEWER,
     AgentName.ENGINEER_EXECUTION_REVIEWER,
 ]:
@@ -601,7 +585,6 @@ def route_start(
         AgentName.ELECTRONICS_PLANNER,
         AgentName.ENGINEER_PLAN_REVIEWER,
         AgentName.ENGINEER_CODER,
-        AgentName.ELECTRONICS_ENGINEER,
         AgentName.ELECTRONICS_REVIEWER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
     }
@@ -650,18 +633,8 @@ builder.add_conditional_edges(
     route_after_engineer_coder,
     {
         AgentName.STEER: AgentName.STEER,
-        AgentName.ELECTRONICS_ENGINEER: AgentName.ELECTRONICS_ENGINEER,
-        AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_EXECUTION_REVIEWER,
-        END: END,
-    },
-)
-
-builder.add_conditional_edges(
-    AgentName.ELECTRONICS_ENGINEER,
-    route_after_electronics_engineer,
-    {
-        AgentName.STEER: AgentName.STEER,
         AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_EXECUTION_REVIEWER,
         END: END,
     },
 )

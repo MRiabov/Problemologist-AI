@@ -45,7 +45,7 @@ ENGINEER_PREVIOUS_NODE_MAP: Mapping[AgentName, AgentName | None] = {
     AgentName.ENGINEER_PLAN_REVIEWER: AgentName.ELECTRONICS_PLANNER,
     AgentName.ENGINEER_CODER: AgentName.ENGINEER_PLAN_REVIEWER,
     AgentName.ELECTRONICS_ENGINEER: AgentName.ENGINEER_CODER,
-    AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_ENGINEER,
+    AgentName.ELECTRONICS_REVIEWER: AgentName.ENGINEER_CODER,
     # Execution review failures should route back to coder so latest-revision
     # handover artifacts can be regenerated before another reviewer entry.
     AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_CODER,
@@ -207,11 +207,6 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             node=AgentName.ENGINEER_CODER,
             required_state_fields=["episode_id"],
             required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
-        ),
-        AgentName.ELECTRONICS_ENGINEER: NodeEntryContract(
-            node=AgentName.ELECTRONICS_ENGINEER,
-            required_state_fields=["episode_id"],
-            required_artifacts=["script.py"],
         ),
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
             node=AgentName.ELECTRONICS_REVIEWER,

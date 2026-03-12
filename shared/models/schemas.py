@@ -583,7 +583,9 @@ class PlanRefusalFrontmatter(BaseModel):
         if self.role == AgentName.ENGINEER_CODER:
             if not all(
                 isinstance(r, MechanicalRefusalReason)
+                or isinstance(r, ElectricalRefusalReason)
                 or str(r) in MechanicalRefusalReason.__members__
+                or str(r) in ElectricalRefusalReason.__members__
                 for r in self.reasons
             ):
                 raise ValueError(f"Invalid reasons for {self.role}")
