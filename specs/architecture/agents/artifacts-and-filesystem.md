@@ -34,7 +34,6 @@ The Engineer consists of
 - Planner,
 - Electrical Planner
 - Coder,
-- Electronics Engineer
 - Engineering Plan Reviewer,
 - Engineering Execution Reviewer,
 - Electronics Reviewer
@@ -101,9 +100,13 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 - Engineering Planner:
   - read: `skills/**`, `utils/**`, `objectives.yaml` (benchmark-owned constraints), `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
   - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `objectives.yaml` (only planner-owned fields: internal max targets under benchmark caps)
+- Electronics Planner:
+  - read: `skills/**`, `utils/**`, `objectives.yaml`, `plan.md`, `todo.md`, `journal.md`
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned electrical handoff), `objectives.yaml` (planner-owned electrical targets/constraints only)
 - Engineering Coder:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
+  - note: this role owns unified implementation, including electrical/wiring logic when the approved plan requires electronics
 - Engineering Plan Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/engineering-plan-review-round-*.md` only
@@ -335,14 +338,6 @@ agents:
       allow: ["plan.md", "todo.md", "journal.md", "assembly_definition.yaml", "objectives.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
-  Electronics Engineer:
-    read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
-      deny: [".manifests/**"]
-    write:
-      allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
-      deny: ["objectives.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
-
   Electronics Reviewer:
     read:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "objectives.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
@@ -526,7 +521,7 @@ Rules:
 Base frontmatter shape:
 
 ```yaml
-agent_role: Engineering Coder # or Electronics Engineer / Benchmark Coder
+agent_role: Engineering Coder # or Benchmark Coder
 reasons: [cost, weight] # one or more reasons
 summary: "Why the current plan cannot be implemented as written"
 evidence:
@@ -540,8 +535,7 @@ requested_planner_changes:
 
 Allowed reasons by agent role:
 
-- Engineering Coder (mechanical): `cost`, `weight`, `underspecification`, `incorrect_specification`, `build_zone_violation`, `kinematic_infeasibility`, `manufacturability_conflict`, `cots_unavailable`
-- Electronics Engineer (electrical): `underspecification`, `incorrect_specification`, `schema_inconsistency`, `wiring_infeasibility`, `power_budget_violation`, `component_incompatibility`, `cots_unavailable`
+- Engineering Coder (unified implementation): `cost`, `weight`, `underspecification`, `incorrect_specification`, `build_zone_violation`, `kinematic_infeasibility`, `manufacturability_conflict`, `schema_inconsistency`, `wiring_infeasibility`, `power_budget_violation`, `component_incompatibility`, `cots_unavailable`
 - Benchmark Coder: `underspecification`, `incorrect_specification`, `geometry_conflict`, `objective_conflict`, `invalid_randomization`, `unsolvable_benchmark`, `simulation_invalid`
 
 ## Reviews by reviewers

@@ -25,10 +25,18 @@ The engineering flow has two separate review stages:
 
 1. `Engineering Planner` (+ `Electronics Planner`)
 2. `Engineering Plan Reviewer` (plan-quality gate before coding)
-3. `Engineering Coder` (+ `Electronics Engineer` and `Electronics Reviewer`)
-4. `Engineering Execution Reviewer` (post-validation/post-simulation execution gate)
+3. `Engineering Coder` (unified mechanical + electrical implementation)
+4. `Electronics Reviewer` (conditional electromechanical review stage when electronics are required)
+5. `Engineering Execution Reviewer` (post-validation/post-simulation execution gate)
 
 The split between plan and execution reviewers is mandatory.
+
+Implementation ownership is intentionally unified.
+
+- `Engineering Planner` and `Electronics Planner` may both refine planner-owned artifacts before the plan-review gate.
+- After plan approval, a single `Engineering Coder` owns implementation changes to `script.py` and any helper implementation modules.
+- We do not run separate mechanical and electrical implementation agents in sequence for the same workspace revision. That late serialized split creates avoidable cross-domain handoff damage when wiring, PSU placement, connector access, or route clearance require mechanical adjustments.
+- `Electronics Reviewer` stays as a specialist review gate for explicit-electronics tasks, but it reviews the unified coder output rather than owning a separate coding pass.
 
 - Plan review checks planning quality and contract completeness before implementation starts, and persists reviewer output to a stage-specific file (`reviews/engineering-plan-review-round-<n>.md`).
 - Execution review runs only after validation/simulation success artifacts are present for the latest revision, then checks robustness/non-flakiness and plan adherence, and persists reviewer output to `reviews/engineering-execution-review-round-<n>.md`.

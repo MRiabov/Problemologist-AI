@@ -15,7 +15,7 @@ Benchmark Planner <-> Benchmark Coder <-> Benchmark Reviewer (If plan is not val
 
 Benchmark Reviewer "accepts" and passes the environment to the Engineering Planner model. (indirect contact - no actual "communication")
 
-Engineering Planner -> Engineering Plan Reviewer -> Engineering Coder -> Engineering Execution Reviewer
+Engineering Planner -> Electronics Planner (when required) -> Engineering Plan Reviewer -> Engineering Coder -> Electronics Reviewer (when required) -> Engineering Execution Reviewer
 
 The Engineering Planner will try to think of the cheapest and most efficient, but *stable* approach of solving the environment given known constraints (objectives info, cost/weight info, geometry info, build zones).
 Engineering Coder can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
@@ -148,6 +148,12 @@ Engineering handoff includes two review gates:
 1. Planner gate (`Engineering Plan Reviewer`): validates planner artifacts before coder entry.
 2. Execution gate (`Engineering Execution Reviewer`): validates latest implementation handoff after validation/simulation success.
 
+For explicit-electronics tasks, there is also a specialist review gate between coding and execution review:
+
+1. `Electronics Reviewer` validates the electromechanical implementation against the benchmark electrical requirements and planner-owned electrical handoff.
+2. `Electronics Reviewer` does not own a separate implementation pass. It reviews the unified `Engineering Coder` output.
+3. If electrical issues require implementation changes, routing returns to `Engineering Coder`, not to a separate electrical implementer node.
+
 Engineer sends four files to the coder agent who has to implement the plan:
 
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
@@ -170,6 +176,13 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
   - Re-run `skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
   - Keep cost/weight target scrutiny as a mandatory realism check.
   - Optional future work: propose weight/cost optimization opportunities.
+
+Unified coder contract:
+
+- `Engineering Coder` reads the combined planner handoff, including any planner-owned `assembly_definition.yaml.electronics` section and benchmark `objectives.yaml.electronics_requirements`.
+- `Engineering Coder` owns all implementation changes to `script.py` and helper implementation modules for the current revision.
+- `Engineering Coder` may implement both mechanical and electrical details in one pass when the task requires electronics.
+- `Engineering Coder` must not assume that electronics can be deferred to a later dedicated implementation node.
 
 ### `plan.md` structure for the engineering plan
 

@@ -59,6 +59,28 @@ For explicit electromechanical tasks:
 3. simulation validates that design before or during motion,
 4. reviewers inspect the electrical evidence alongside the mechanical result.
 
+### Planning is split, implementation is unified
+
+We split electrical planning from mechanical planning, but we do not split electrical coding into a second implementation owner after the mechanical coder.
+
+For explicit electromechanical tasks:
+
+1. `Engineering Planner` owns the mechanical plan,
+2. `Electronics Planner` augments that plan with electrical requirements, component choices, and wiring intent,
+3. `Engineering Plan Reviewer` approves the combined handoff,
+4. `Engineering Coder` implements the whole approved solution in one revision,
+5. `Electronics Reviewer` performs specialist electrical review on the unified implementation,
+6. `Engineering Execution Reviewer` performs final post-success execution review.
+
+We choose this because electromechanical implementation details are often coupled:
+
+1. wire routing can require geometry changes,
+2. connector access can require bracket or frame changes,
+3. PSU placement can require packaging and center-of-mass changes,
+4. late serialized electrical-only coding creates avoidable planner drift and rework loops.
+
+The architecture therefore keeps specialist electrical reasoning in planning and review, but keeps implementation ownership unified.
+
 ### Circuit validity comes before physics
 
 The electrical design must pass a circuit-validation gate before the physics run is allowed to proceed.
@@ -151,8 +173,14 @@ electronics:
 This split between `objectives.yaml` and `assembly_definition.yaml` is intentional:
 
 1. the benchmark declares requirements and constraints,
-2. the engineer declares the concrete electrical solution,
+2. the planner handoff declares the concrete electrical solution intent and constraints,
 3. the reviewer can judge whether the solution actually satisfies the benchmark instead of whether it simply contains electrical-looking data.
+
+Implementation ownership rule:
+
+1. `assembly_definition.yaml.electronics` is planner-owned after plan approval,
+2. `Engineering Coder` implements that approved electrical design in `script.py` and helper modules,
+3. implementation changes that require planner-level electrical redesign must route through plan refusal / replanning, not through a separate late electrical implementer node.
 
 ## Circuit model contract
 

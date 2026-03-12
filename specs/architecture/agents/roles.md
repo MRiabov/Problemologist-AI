@@ -158,8 +158,8 @@ Engineer has explicit node roles:
 1. `Engineering Planner` (mechanical plan author)
 2. `Electronics Planner` (electrical planning companion stage)
 3. `Engineering Plan Reviewer` (plan-quality reviewer before coding)
-4. `Engineering Coder` (mechanical implementation)
-5. `Electronics Engineer` + `Electronics Reviewer` (electrical implementation and electrical review)
+4. `Engineering Coder` (unified mechanical + electrical implementation owner)
+5. `Electronics Reviewer` (electrical/electromechanical specialist review when required)
 6. `Engineering Execution Reviewer` (final Execution Reviewer after validated/simulated implementation handoff)
 
 The architect will create and persist a TODO list. The engineer must implement. The agent will have easy access to the TODO list.
@@ -245,6 +245,27 @@ The Engineering Planner workflow is:
 - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 
 At this point, the planner can handoff the documents to the Engineering Coder. Before handoff, the planner runs a standalone script from `skills/manufacturing-knowledge/scripts/validate_costing_and_price.py` to validate `assembly_definition.yaml` and compute assembly totals (including geometry-driven fields such as part volume, blank/stock size, stock volume, and removed volume for CNC). If the estimated cost is above `max_unit_cost`, the planner cannot proceed and must adapt the plan. The planner's documents are autovalidated; if validation fails, handoff (submission) is refused until fixed. (the validation is currently implemented as Pydantic validation.)
+
+### Unified implementation ownership
+
+Implementation is not split into a mechanical coder followed by a separate electronics implementer.
+
+The architecture rule is:
+
+1. `Engineering Planner` owns the mechanical planning pass.
+2. `Electronics Planner` adds electrical requirements, component choices, and wiring intent when the benchmark declares explicit electronics.
+3. `Engineering Plan Reviewer` approves or rejects the combined planner handoff.
+4. `Engineering Coder` then implements the whole approved solution in one workspace revision, including geometry, controller behavior, electronics definitions, and any wire-routing logic required by the approved plan.
+5. `Electronics Reviewer` validates the electromechanical implementation when electronics are present.
+
+We choose this because electromechanical implementation is often co-dependent:
+
+1. wire-routing constraints can require geometry changes,
+2. PSU or connector packaging can require mounting changes,
+3. moving-part clearance can require both wiring and mechanical edits,
+4. a late serialized electrical-only coding stage creates unnecessary handoff loops and stale assumptions.
+
+The implementation split is therefore planner-specialized but coder-unified.
 
 ### Engineering reviewer split
 
