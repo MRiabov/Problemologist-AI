@@ -500,6 +500,7 @@ class SceneCompiler:
         joint_type: str | None = None,
         joint_axis: list[float] | None = None,
         joint_range: list[float] | None = None,
+        geom_rgba: str | None = None,
     ):
         """Adds a body to the worldbody. Can be a physical mesh or a logical zone.
 
@@ -547,7 +548,10 @@ class SceneCompiler:
         else:
             if mesh_names:
                 for mesh_name in mesh_names:
-                    ET.SubElement(body, "geom", type="mesh", mesh=mesh_name)
+                    geom_attrs = {"type": "mesh", "mesh": mesh_name}
+                    if geom_rgba:
+                        geom_attrs["rgba"] = geom_rgba
+                    ET.SubElement(body, "geom", **geom_attrs)
 
             # Handle joints
             if is_fixed:
@@ -672,6 +676,14 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         weld_constraints = []
         body_locations = {}  # name -> (pos, euler)
 
+        from worker_heavy.workbenches.config import load_config
+
+        custom_cfg_path = self.output_dir / "manufacturing_config.yaml"
+        if custom_cfg_path.exists():
+            mfg_config = load_config(str(custom_cfg_path))
+        else:
+            mfg_config = load_config()
+
         # 1. Add zones from objectives if provided
         if objectives:
             # Add Goal Zone
@@ -762,6 +774,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     joint_type=data.joint_type,
                     joint_axis=data.joint_axis,
                     joint_range=data.joint_range,
+                    geom_rgba=self._resolve_geom_rgba(data.material_id, mfg_config),
                 )
                 body_locations[data.label] = (data.pos, data.euler)
 
@@ -862,6 +875,29 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         scene_path = self.output_dir / "scene.xml"
         self.compiler.save(scene_path)
         return scene_path
+
+    @staticmethod
+    def _resolve_geom_rgba(material_id: str | None, mfg_config: Any) -> str | None:
+        if not material_id:
+            return None
+
+        mat_def = mfg_config.materials.get(material_id)
+        if mat_def is None and mfg_config.cnc:
+            mat_def = mfg_config.cnc.materials.get(material_id)
+        if mat_def is None and mfg_config.injection_molding:
+            mat_def = mfg_config.injection_molding.materials.get(material_id)
+        if mat_def is None and mfg_config.three_dp:
+            mat_def = mfg_config.three_dp.materials.get(material_id)
+        if mat_def is None or not mat_def.color:
+            return None
+
+        color = mat_def.color.lstrip("#")
+        if len(color) != 6:
+            return None
+        r = int(color[0:2], 16) / 255
+        g = int(color[2:4], 16) / 255
+        b = int(color[4:6], 16) / 255
+        return f"{r:.3f} {g:.3f} {b:.3f} 1"
 
 
 # Alias for backward compatibility

@@ -17,6 +17,7 @@ from shared.simulation.backends import (
     StepResult,
     StressField,
 )
+from shared.workers.schema import SegmentationLegendEntry
 
 
 class MuJoCoBackend(PhysicsBackend):
@@ -42,6 +43,7 @@ class MuJoCoBackend(PhysicsBackend):
             if scene.scene_path:
                 self.model = mujoco.MjModel.from_xml_path(scene.scene_path)
                 self.data = mujoco.MjData(self.model)
+                mujoco.mj_forward(self.model, self.data)
 
                 # Clear caches on new scene load
                 self._body_id_cache.clear()
@@ -176,6 +178,28 @@ class MuJoCoBackend(PhysicsBackend):
         return self.render_camera(cam_name or "fixed", 640, 480)
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
+        frame, _, _ = self.render_camera_modalities(
+            camera_name,
+            width,
+            height,
+            include_rgb=True,
+            include_depth=False,
+            include_segmentation=False,
+        )
+        if frame is None:
+            raise RuntimeError("RGB rendering was disabled for render_camera")
+        return frame
+
+    def render_camera_modalities(
+        self,
+        camera_name: str,
+        width: int,
+        height: int,
+        *,
+        include_rgb: bool = True,
+        include_depth: bool = True,
+        include_segmentation: bool = True,
+    ) -> tuple[np.ndarray | None, np.ndarray | None, np.ndarray | None]:
         # Recreate renderer every time to avoid resolution/framebuffer issues
         if self.renderer is not None:
             with contextlib.suppress(BaseException):
@@ -191,8 +215,135 @@ class MuJoCoBackend(PhysicsBackend):
                 # logger.warning("mujoco_camera_not_found_falling_back", camera=cam)
                 cam = None
 
-        self.renderer.update_scene(self.data, camera=cam)
-        return self.renderer.render()
+        frame = None
+        depth_frame = None
+        segmentation_frame = None
+
+        if include_rgb:
+            self.renderer.update_scene(self.data, camera=cam)
+            frame = np.array(self.renderer.render(), copy=True)
+
+        if include_depth:
+            self.renderer.enable_depth_rendering()
+            self.renderer.update_scene(self.data, camera=cam)
+            depth_frame = np.array(self.renderer.render(), copy=True)
+            self.renderer.disable_depth_rendering()
+
+        if include_segmentation:
+            self.renderer.enable_segmentation_rendering()
+            self.renderer.update_scene(self.data, camera=cam)
+            # MuJoCo returns (objid, objtype) pairs per pixel in segmentation mode.
+            segmentation_frame = np.array(self.renderer.render(), copy=True)
+            self.renderer.disable_segmentation_rendering()
+
+        return frame, depth_frame, segmentation_frame
+
+    def describe_segmentation(
+        self, segmentation_frame: np.ndarray
+    ) -> list[SegmentationLegendEntry]:
+        if segmentation_frame.ndim < 3 or segmentation_frame.shape[2] < 2:
+            return []
+
+        obj_ids = segmentation_frame[..., 0].astype(np.int64, copy=False)
+        obj_types = segmentation_frame[..., 1].astype(np.int64, copy=False)
+        valid_mask = (obj_ids >= 0) & (obj_types >= 0)
+        if not valid_mask.any():
+            return []
+
+        unique_pairs = np.unique(
+            np.stack((obj_ids[valid_mask], obj_types[valid_mask]), axis=1),
+            axis=0,
+        )
+
+        legend: list[SegmentationLegendEntry] = []
+        for obj_id, obj_type in unique_pairs:
+            color = self._stable_segmentation_color(int(obj_id), int(obj_type))
+            color_hex = "#{:02X}{:02X}{:02X}".format(*color)
+            object_type_name = self._mjtobj_name(int(obj_type))
+            body_name = None
+            geom_name = None
+            instance_name = f"{object_type_name.lower()}:{int(obj_id)}"
+            semantic_label = instance_name
+
+            if int(obj_type) == int(mujoco.mjtObj.mjOBJ_GEOM):
+                geom_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_GEOM, int(obj_id)
+                )
+                if 0 <= int(obj_id) < self.model.ngeom:
+                    body_id = int(self.model.geom_bodyid[int(obj_id)])
+                    body_name = mujoco.mj_id2name(
+                        self.model, mujoco.mjtObj.mjOBJ_BODY, body_id
+                    )
+                semantic_label = body_name or geom_name or semantic_label
+                instance_name = body_name or geom_name or instance_name
+            elif int(obj_type) == int(mujoco.mjtObj.mjOBJ_BODY):
+                body_name = mujoco.mj_id2name(
+                    self.model, mujoco.mjtObj.mjOBJ_BODY, int(obj_id)
+                )
+                semantic_label = body_name or semantic_label
+                instance_name = body_name or instance_name
+            else:
+                generic_name = self._safe_id2name(int(obj_type), int(obj_id))
+                semantic_label = generic_name or semantic_label
+                instance_name = generic_name or instance_name
+
+            legend.append(
+                SegmentationLegendEntry(
+                    instance_id=f"{object_type_name.lower()}:{int(obj_id)}",
+                    instance_name=instance_name,
+                    semantic_label=semantic_label,
+                    object_type=object_type_name.lower(),
+                    object_id=int(obj_id),
+                    body_name=body_name,
+                    geom_name=geom_name,
+                    color_rgb=color,
+                    color_hex=color_hex,
+                )
+            )
+
+        return sorted(
+            legend, key=lambda entry: (entry.semantic_label, entry.instance_id)
+        )
+
+    def colorize_segmentation(self, segmentation_frame: np.ndarray) -> np.ndarray:
+        if segmentation_frame.ndim < 3 or segmentation_frame.shape[2] < 2:
+            return np.zeros((*segmentation_frame.shape[:2], 3), dtype=np.uint8)
+
+        obj_ids = segmentation_frame[..., 0].astype(np.int64, copy=False)
+        obj_types = segmentation_frame[..., 1].astype(np.int64, copy=False)
+        valid_mask = (obj_ids >= 0) & (obj_types >= 0)
+        seg_image = np.zeros((*segmentation_frame.shape[:2], 3), dtype=np.uint8)
+        if not valid_mask.any():
+            return seg_image
+
+        unique_pairs = np.unique(
+            np.stack((obj_ids[valid_mask], obj_types[valid_mask]), axis=1),
+            axis=0,
+        )
+        for obj_id, obj_type in unique_pairs:
+            color = self._stable_segmentation_color(int(obj_id), int(obj_type))
+            pair_mask = valid_mask & (obj_ids == obj_id) & (obj_types == obj_type)
+            seg_image[pair_mask] = color
+        return seg_image
+
+    @staticmethod
+    def _stable_segmentation_color(obj_id: int, obj_type: int) -> tuple[int, int, int]:
+        seed = ((obj_type + 1) * 73856093) ^ ((obj_id + 1) * 19349663)
+        red = 64 + (seed & 0x7F)
+        green = 64 + ((seed >> 7) & 0x7F)
+        blue = 64 + ((seed >> 14) & 0x7F)
+        return red, green, blue
+
+    @staticmethod
+    def _mjtobj_name(obj_type: int) -> str:
+        with contextlib.suppress(Exception):
+            return mujoco.mjtObj(obj_type).name
+        return f"OBJ_{obj_type}"
+
+    def _safe_id2name(self, obj_type: int, obj_id: int) -> str | None:
+        with contextlib.suppress(Exception):
+            return mujoco.mj_id2name(self.model, mujoco.mjtObj(obj_type), obj_id)
+        return None
 
     def set_camera(
         self,

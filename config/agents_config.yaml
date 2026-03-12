@@ -3,6 +3,12 @@ version: "1.0"
 llm:
   max_reasoning_tokens: 16384 # per turn, I assume.
   context_compaction_threshold_tokens: 225000
+  multimodal_model: null
+
+render:
+  rgb: true
+  depth: true
+  segmentation: true
 
 execution:
   defaults:
@@ -123,9 +129,8 @@ agents:
         "inspect_media",
         "write_file",
         "edit_file",
-        "grep",
-        "execute_command",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
+        "validate_costing_and_price",
         "submit_plan",
       ]
     visual_inspection:
@@ -178,7 +183,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
       ]
 
   electronics_engineer:
@@ -232,7 +237,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
       ]
 
   benchmark_coder:
@@ -290,7 +295,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
       ]
     visual_inspection:
       required: false
@@ -332,7 +337,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
       ]
     visual_inspection:
       required: true
@@ -374,7 +379,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
       ]
     visual_inspection:
       required: true
@@ -429,7 +434,7 @@ agents:
         "edit_file",
         "grep",
         "execute_command",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
         "submit_plan",
       ]
 
@@ -467,7 +472,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
         "write_review_file",
       ]
     visual_inspection:
@@ -556,7 +561,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
       ]
 
   cots_search:
@@ -616,6 +621,6 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
-        "search_cots_catalog",
+        "invoke_cots_search_subagent",
         "save_suggested_skill",
       ]

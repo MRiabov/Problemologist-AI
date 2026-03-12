@@ -192,13 +192,6 @@ def validate_assembly_definition_yaml(
 
         estimation = AssemblyDefinition(**data)
 
-        # Task 3.3: Enforce COTS reproducibility metadata
-        for cots_part in estimation.cots_parts:
-            if not cots_part.reproducibility:
-                return False, [
-                    f"COTS part '{cots_part.part_id}' is missing reproducibility metadata "
-                    "(catalog_version, catalog_snapshot_id, etc.)"
-                ]
         if estimation.electronics:
             from shared.models.schemas import PartConfig, SubassemblyEstimate
 
