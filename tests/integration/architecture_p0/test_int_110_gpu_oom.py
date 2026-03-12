@@ -6,11 +6,11 @@ import pytest
 import yaml
 
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -44,7 +44,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
     """
     skip_unless_genesis("INT-110 targets Genesis GPU OOM retry behavior.")
     async with httpx.AsyncClient(timeout=300.0) as client:
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS,
                 compute_target="cuda",
@@ -64,7 +64,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
         )
 
         write_obj_req = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )

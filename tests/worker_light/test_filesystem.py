@@ -34,7 +34,7 @@ def test_local_backend_operations(tmp_path):
     # Test LS
     files = backend.ls("/")
     assert len(files) >= 1
-    # LocalFilesystemBackend.create might add objectives.yaml automatically
+    # LocalFilesystemBackend.create might add benchmark_definition.yaml automatically
     names = [f.name for f in files]
     assert "test.txt" in names
 

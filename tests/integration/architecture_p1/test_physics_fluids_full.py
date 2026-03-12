@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from shared.enums import FailureReason, FluidEvalAt, FluidShapeType
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     FlowRateObjective,
@@ -18,7 +19,6 @@ from shared.models.schemas import (
     FluidVolume,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -83,7 +83,7 @@ async def test_int_131_full_fluid_objective_path():
     """
     INT-131: Full fluid benchmark workflow (planner -> engineer -> reviewer).
     Integration coverage here validates fluid objective handling through
-    worker boundaries: objectives.yaml -> /benchmark/simulate -> fluid metrics.
+    worker boundaries: benchmark_definition.yaml -> /benchmark/simulate -> fluid metrics.
     """
     skip_unless_genesis("INT-131 requires Genesis fluid simulation.")
     import torch
@@ -96,7 +96,7 @@ async def test_int_131_full_fluid_objective_path():
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"INT-131-{uuid.uuid4().hex[:8]}"
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
             fluids=[
                 FluidDefinition(
@@ -138,7 +138,7 @@ async def test_int_131_full_fluid_objective_path():
         await _write_file(
             client,
             session_id,
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             yaml.dump(objectives.model_dump(mode="json")),
         )
         await _write_file(client, session_id, "script.py", _simple_script())
@@ -195,7 +195,7 @@ async def test_int_133_elec_to_mech_conflict_signal():
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"INT-133-{uuid.uuid4().hex[:8]}"
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(5, 5, 5), max=(7, 7, 7)),
@@ -213,7 +213,7 @@ async def test_int_133_elec_to_mech_conflict_signal():
         await _write_file(
             client,
             session_id,
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             yaml.dump(objectives.model_dump(mode="json")),
         )
         await _write_file(
@@ -308,7 +308,7 @@ async def test_int_134_stress_heatmap_render_artifact():
             yaml.dump(config.model_dump(mode="json")),
         )
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS, fem_enabled=True
             ),
@@ -328,7 +328,7 @@ async def test_int_134_stress_heatmap_render_artifact():
         await _write_file(
             client,
             session_id,
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             yaml.dump(objectives.model_dump(mode="json")),
         )
         await _write_file(
@@ -393,7 +393,7 @@ async def test_int_135_wire_clearance_validation():
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"INT-135-{uuid.uuid4().hex[:8]}"
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(5, 5, 5), max=(7, 7, 7)),
@@ -411,7 +411,7 @@ async def test_int_135_wire_clearance_validation():
         await _write_file(
             client,
             session_id,
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             yaml.dump(objectives.model_dump(mode="json")),
         )
         await _write_file(

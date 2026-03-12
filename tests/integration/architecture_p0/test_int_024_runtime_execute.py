@@ -12,11 +12,11 @@ from controller.persistence.models import Episode
 from controller.utils import get_episode_id
 from shared.enums import AgentName, EpisodeStatus
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
 )
 from shared.workers.schema import ExecuteRequest, ExecuteResponse, WriteFileRequest
 
@@ -123,7 +123,7 @@ print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
 
-    invalid_objectives = ObjectivesYaml(
+    invalid_objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(0.0, 0.0, 0.0), max=(10.0, 10.0, 10.0)),
             forbid_zones=[
@@ -147,7 +147,7 @@ print(f"VALIDATE_MESSAGE={message}")
         constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
     )
 
-    valid_objectives = ObjectivesYaml(
+    valid_objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(8.0, 8.0, 0.0), max=(12.0, 12.0, 8.0)),
             forbid_zones=[],
@@ -180,7 +180,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_invalid = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(invalid_objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -207,7 +207,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_valid = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(valid_objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -270,7 +270,7 @@ print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
 
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(8.0, 8.0, 0.0), max=(12.0, 12.0, 8.0)),
             forbid_zones=[],
@@ -303,7 +303,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_objectives = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -372,7 +372,7 @@ print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
 
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(10.0, -2.0, 0.0), max=(12.0, 2.0, 4.0)),
             forbid_zones=[],
@@ -405,7 +405,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_objectives = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -456,7 +456,7 @@ print(f"VALIDATE_SUCCESS={success}")
 print(f"VALIDATE_MESSAGE={message}")
 """
 
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(8.0, 8.0, 0.0), max=(12.0, 12.0, 8.0)),
             forbid_zones=[],
@@ -489,7 +489,7 @@ print(f"VALIDATE_MESSAGE={message}")
         write_objectives = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),

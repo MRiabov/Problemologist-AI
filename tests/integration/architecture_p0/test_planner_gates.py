@@ -20,12 +20,12 @@ from shared.enums import AgentName, EpisodeStatus, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     CostTotals,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
@@ -82,7 +82,7 @@ def valid_todo():
 
 @pytest.fixture
 def valid_objectives():
-    return ObjectivesYaml(
+    return BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(10.0, 10.0, 10.0), max=(20.0, 20.0, 20.0)),
             forbid_zones=[],
@@ -141,7 +141,7 @@ def build():
 async def setup_workspace(client, headers, files):
     """Utility to setup a workspace. Overwrites if exists."""
     for path, content in files.items():
-        if isinstance(content, (ObjectivesYaml, AssemblyDefinition)):
+        if isinstance(content, (BenchmarkDefinition, AssemblyDefinition)):
             content_str = yaml.dump(content.model_dump(mode="json", by_alias=True))
         elif not isinstance(content, str):
             content_str = yaml.dump(content)
@@ -301,7 +301,7 @@ async def test_int_005_mandatory_artifacts_gate(
         base_files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
@@ -497,7 +497,7 @@ async def test_int_006_plan_structure_validation(
     async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
@@ -551,7 +551,7 @@ async def test_int_007_todo_integrity(
     async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "plan.md": valid_plan,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
@@ -587,13 +587,16 @@ async def test_int_007_todo_integrity(
 
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
-    regexes=["objectives_yaml_invalid", "objectives_yaml_validation_error"]
+    regexes=[
+        "benchmark_definition_yaml_invalid",
+        "benchmark_definition_yaml_validation_error",
+    ]
 )
 @pytest.mark.asyncio
 async def test_int_008_objectives_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_cost, minimal_script
 ):
-    """INT-008: Verify objectives.yaml schema and template detection."""
+    """INT-008: Verify benchmark_definition.yaml schema and template detection."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "plan.md": valid_plan,
@@ -605,7 +608,9 @@ async def test_int_008_objectives_validation(
         # 1. Template placeholders present (e.g., x_min)
         template_content = "objectives:\n  goal_zone:\n    min: [x_min, y_min, z_min]"
         await setup_workspace(
-            client, base_headers, {**base_files, "objectives.yaml": template_content}
+            client,
+            base_headers,
+            {**base_files, "benchmark_definition.yaml": template_content},
         )
         submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
@@ -619,7 +624,9 @@ async def test_int_008_objectives_validation(
         # 2. Schema violation (wrong type)
         invalid_obj = {"objectives": {"goal_zone": {"min": "not_a_list"}}}
         await setup_workspace(
-            client, base_headers, {**base_files, "objectives.yaml": invalid_obj}
+            client,
+            base_headers,
+            {**base_files, "benchmark_definition.yaml": invalid_obj},
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
@@ -627,7 +634,7 @@ async def test_int_008_objectives_validation(
             headers=base_headers,
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert "objectives.yaml invalid" in data.message
+        assert "benchmark_definition.yaml invalid" in data.message
 
 
 @pytest.mark.integration_p0
@@ -646,7 +653,7 @@ async def test_int_009_cost_estimation_validation(
         base_files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "solution.py": minimal_script,
         }
 
@@ -716,7 +723,7 @@ async def test_int_011_planner_caps_enforcement(
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "assembly_definition.yaml": invalid_cost,
             "solution.py": minimal_script,
         }
@@ -744,7 +751,7 @@ async def test_int_011_planner_caps_enforcement(
 
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
-    regexes=["immutability_violation", "objectives_yaml_modified"]
+    regexes=["immutability_violation", "benchmark_definition_yaml_modified"]
 )
 @pytest.mark.asyncio
 async def test_int_015_engineer_handover_immutability(
@@ -756,14 +763,14 @@ async def test_int_015_engineer_handover_immutability(
     valid_cost,
     minimal_script,
 ):
-    """INT-015: Verify immutability of objectives.yaml during handover."""
+    """INT-015: Verify immutability of benchmark_definition.yaml during handover."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         await client.post(f"{WORKER_LIGHT_URL}/git/init", headers=base_headers)
 
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
@@ -779,11 +786,11 @@ async def test_int_015_engineer_handover_immutability(
             headers=base_headers,
         )
 
-        # Cheat: modify objectives.yaml
+        # Cheat: modify benchmark_definition.yaml
         modified_objectives = valid_objectives.model_copy(deep=True)
         modified_objectives.constraints.max_unit_cost = 1000.0
         await setup_workspace(
-            client, base_headers, {"objectives.yaml": modified_objectives}
+            client, base_headers, {"benchmark_definition.yaml": modified_objectives}
         )
         # Record validation
         val_req = BenchmarkToolRequest(script_path="solution.py")
@@ -800,7 +807,7 @@ async def test_int_015_engineer_handover_immutability(
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert not data.success
-        assert "objectives.yaml violation" in data.message
+        assert "benchmark_definition.yaml violation" in data.message
         assert "has been modified" in data.message
 
 
@@ -831,7 +838,7 @@ def build():
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": tight_objectives,
+            "benchmark_definition.yaml": tight_objectives,
             "assembly_definition.yaml": valid_cost,
             "script.py": expensive_script,
         }
@@ -903,7 +910,7 @@ async def test_int_010_planner_pricing_script_integration(
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": valid_objectives,
+            "benchmark_definition.yaml": valid_objectives,
             "assembly_definition.yaml": invalid_cost,
             "solution.py": minimal_script,
         }
@@ -968,7 +975,7 @@ def build():
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "objectives.yaml": relaxed_objectives,
+            "benchmark_definition.yaml": relaxed_objectives,
             "assembly_definition.yaml": valid_cost,
             "script.py": goal_script,
         }

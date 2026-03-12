@@ -24,7 +24,7 @@ async def test_benchmark_to_engineer_handoff():
     INT-032: Benchmark-to-engineer handoff package
 
     Verifies that the Engineer receives (or has access to) the expected bundle:
-    - objectives.yaml
+    - benchmark_definition.yaml
     - environment geometry metadata
     - 24-view renders
     - moving-parts DOFs
@@ -81,8 +81,8 @@ async def test_benchmark_to_engineer_handoff():
         artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
 
         # Check existence of required files
-        assert any("objectives.yaml" in p for p in artifact_paths), (
-            f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        assert any("benchmark_definition.yaml" in p for p in artifact_paths), (
+            f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
 
         # Check for renders (expecting a directory or multiple files)

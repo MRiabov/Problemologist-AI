@@ -519,7 +519,7 @@ def build():
 @pytest.mark.asyncio
 async def test_int_128_objectives_electronics_schema_gate():
     """
-    INT-128: malformed electronics_requirements in objectives.yaml
+    INT-128: malformed electronics_requirements in benchmark_definition.yaml
     fails closed in /benchmark/validate.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -564,7 +564,7 @@ electronics_requirements:
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=invalid_objectives,
                 overwrite=True,
             ).model_dump(mode="json"),

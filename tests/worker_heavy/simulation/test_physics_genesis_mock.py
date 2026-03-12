@@ -5,6 +5,7 @@ import pytest
 
 from shared.enums import FailureReason
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     FluidContainmentObjective,
@@ -12,7 +13,6 @@ from shared.models.schemas import (
     FluidVolume,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.models.simulation import (
@@ -93,7 +93,7 @@ def test_fluid_containment_integration(mock_genesis_backend, tmp_path):
         eval_at="end",
     )
 
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(10, 10, 10), max=(11, 11, 11)),
             fluid_objectives=[containment_obj],
@@ -164,7 +164,7 @@ def test_fluid_containment_failure(mock_genesis_backend, tmp_path):
         threshold=0.9,
     )
 
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(10, 10, 10), max=(11, 11, 11)),
             fluid_objectives=[containment_obj],

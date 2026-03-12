@@ -51,18 +51,18 @@ def test_fem_breakage_detection(tmp_path):
         )
 
         from shared.models.schemas import (
+            BenchmarkDefinition,
             BoundingBox,
             Constraints,
             MovedObject,
             ObjectivesSection,
-            ObjectivesYaml,
             PhysicsConfig,
         )
         from shared.models.simulation import StressSummary
         from shared.workers.workbench_models import ManufacturingMethod
 
         physics = PhysicsConfig(fem_enabled=True, backend=SimulatorBackendType.GENESIS)
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=physics,
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(10, 10, 10), max=(11, 11, 11)),

@@ -17,11 +17,11 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
 )
 from shared.workers.schema import (
     BenchmarkToolRequest,
@@ -98,8 +98,8 @@ async def test_int_026_mandatory_event_families():
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"INT-026-{uuid.uuid4().hex[:8]}"
 
-        # 1. Setup objectives.yaml
-        objectives = ObjectivesYaml(
+        # 1. Setup benchmark_definition.yaml
+        objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(8, 8, 8), max=(12, 12, 12)),
                 build_zone=BoundingBox(min=(0, 0, 0), max=(20, 20, 20)),
@@ -114,7 +114,7 @@ async def test_int_026_mandatory_event_families():
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
         )
         write_obj_req = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )

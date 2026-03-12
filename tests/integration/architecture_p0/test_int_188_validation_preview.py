@@ -11,11 +11,11 @@ import yaml
 from PIL import Image
 
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -44,8 +44,8 @@ def build():
 """
 
 
-def _default_objectives() -> ObjectivesYaml:
-    return ObjectivesYaml(
+def _default_objectives() -> BenchmarkDefinition:
+    return BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
             forbid_zones=[],
@@ -85,7 +85,7 @@ async def _write_standard_validation_inputs(
     objectives_resp = await client.post(
         f"{WORKER_LIGHT_URL}/fs/write",
         json=WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(_default_objectives().model_dump(mode="json")),
             overwrite=True,
         ).model_dump(mode="json"),
@@ -145,7 +145,7 @@ def build():
         )
         assert write_resp.status_code == 200, write_resp.text
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
                 forbid_zones=[],
@@ -166,7 +166,7 @@ def build():
         objectives_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -290,7 +290,7 @@ def build():
             )
             assert write_resp.status_code == 200, write_resp.text
 
-            objectives = ObjectivesYaml(
+            objectives = BenchmarkDefinition(
                 objectives=ObjectivesSection(
                     goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
                     forbid_zones=[],
@@ -313,7 +313,7 @@ def build():
             objectives_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/write",
                 json=WriteFileRequest(
-                    path="objectives.yaml",
+                    path="benchmark_definition.yaml",
                     content=yaml.dump(objectives.model_dump(mode="json")),
                     overwrite=True,
                 ).model_dump(mode="json"),

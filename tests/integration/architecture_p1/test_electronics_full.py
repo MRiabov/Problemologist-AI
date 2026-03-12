@@ -12,10 +12,10 @@ from shared.enums import ElectronicComponentType, FailureReason
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
+    BenchmarkDefinition,
     CostTotals,
     ElectronicComponent,
     ElectronicsSection,
-    ObjectivesYaml,
     PowerSupplyConfig,
     WireConfig,
     WireTerminal,
@@ -76,8 +76,8 @@ async def _write_file(
     assert resp.status_code == 200, resp.text
 
 
-def _base_objectives_yaml() -> str:
-    objectives = ObjectivesYaml.model_validate(
+def _base_benchmark_definition_yaml() -> str:
+    objectives = BenchmarkDefinition.model_validate(
         {
             "physics": {"backend": selected_backend().value},
             "objectives": {
@@ -127,7 +127,10 @@ async def test_int_132_full_electromechanical_path():
         session_id = f"INT-132-{uuid.uuid4().hex[:8]}"
 
         await _write_file(
-            client, session_id, "objectives.yaml", _base_objectives_yaml()
+            client,
+            session_id,
+            "benchmark_definition.yaml",
+            _base_benchmark_definition_yaml(),
         )
         await _write_file(client, session_id, "script.py", _base_script())
 
@@ -344,12 +347,14 @@ async def test_int_140_wire_and_electrical_component_costing():
     """INT-140: validate_and_price path includes wire and electrical COTS costs."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_services(client)
-        base_objectives = _base_objectives_yaml()
+        base_objectives = _base_benchmark_definition_yaml()
         base_script = _base_script()
 
         async def run_with_wire_length(length_mm: float) -> BenchmarkToolResponse:
             session_id = f"INT-140-{uuid.uuid4().hex[:8]}"
-            await _write_file(client, session_id, "objectives.yaml", base_objectives)
+            await _write_file(
+                client, session_id, "benchmark_definition.yaml", base_objectives
+            )
             await _write_file(client, session_id, "script.py", base_script)
 
             assembly_yaml = f"""

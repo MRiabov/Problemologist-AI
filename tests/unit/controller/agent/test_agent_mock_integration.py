@@ -63,7 +63,7 @@ async def test_benchmark_coder_with_mock_llm(temp_session_dir):
     async def mock_read(path):
         full_path = temp_session_dir / path.lstrip("/")
         if not full_path.exists():
-            if "objectives.yaml" in path:
+            if "benchmark_definition.yaml" in path:
                 return "objectives: {}"
             return "empty"
         return full_path.read_text()
@@ -150,7 +150,7 @@ async def test_benchmark_coder_with_mock_llm(temp_session_dir):
             assert (temp_session_dir / "script.py").exists()
             script_content = (temp_session_dir / "script.py").read_text()
             assert "def build():" in script_content
-            assert (temp_session_dir / "objectives.yaml").exists()
+            assert (temp_session_dir / "benchmark_definition.yaml").exists()
             assert (temp_session_dir / "plan.md").exists()
             assert (temp_session_dir / "todo.md").exists()
 

@@ -65,8 +65,8 @@ def test_define_fluid(tmp_path):
     os.environ["RENDERS_DIR"] = str(tmp_path / "renders")
     (tmp_path / "renders").mkdir()
 
-    obj_path = tmp_path / "objectives.yaml"
-    # Basic objectives.yaml content
+    obj_path = tmp_path / "benchmark_definition.yaml"
+    # Basic benchmark_definition.yaml content
     obj_path.write_text("""
 objectives:
   goal_zone: {min: [0,0,0], max: [1,1,1]}
@@ -102,7 +102,7 @@ def test_set_soft_mesh(tmp_path):
     os.environ["RENDERS_DIR"] = str(tmp_path / "renders")
     (tmp_path / "renders").mkdir()
 
-    obj_path = tmp_path / "objectives.yaml"
+    obj_path = tmp_path / "benchmark_definition.yaml"
     obj_path.write_text("""
 objectives:
   goal_zone: {min: [0,0,0], max: [1,1,1]}

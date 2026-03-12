@@ -7,6 +7,7 @@ import yaml
 
 from shared.enums import FluidEvalAt, FluidShapeType
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     FlowRateObjective,
@@ -16,7 +17,6 @@ from shared.models.schemas import (
     FluidVolume,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.observability.schemas import SimulationBackendSelectedEvent
@@ -68,8 +68,8 @@ async def test_int_101_physics_backend_selection():
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"test-int-101-{int(time.time())}"
 
-        # 1. Setup objectives.yaml with Genesis backend
-        objectives = ObjectivesYaml(
+        # 1. Setup benchmark_definition.yaml with Genesis backend
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS,
                 fem_enabled=True,
@@ -89,7 +89,7 @@ async def test_int_101_physics_backend_selection():
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
         )
         write_obj_req = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -162,7 +162,7 @@ async def test_int_105_fluid_containment_evaluation():
 
         # Setup objectives with fluid containment
         # Zone contains (0,0,0)
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
             fluids=[
                 FluidDefinition(
@@ -196,7 +196,7 @@ async def test_int_105_fluid_containment_evaluation():
         )
 
         write_obj_req = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -251,7 +251,7 @@ def build():
         # 4. Fail path: threshold > 1.0 (impossible to achieve)
         objectives.objectives.fluid_objectives[0].threshold = 1.1
         req_write_obj_fail = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -280,7 +280,7 @@ async def test_int_106_flow_rate_evaluation():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-106-{int(time.time())}"
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(5, 5, 5), max=(7, 7, 7)),
@@ -304,7 +304,7 @@ async def test_int_106_flow_rate_evaluation():
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
         )
         req_write_obj = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -353,7 +353,7 @@ async def test_int_112_mujoco_backward_compat():
         session_id = f"test-int-112-{int(time.time())}"
 
         # Setup objectives with MuJoCo but include fluid objectives
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS
             ),  # Genesis but we check MuJoCo behavior if we toggle it
@@ -378,7 +378,7 @@ async def test_int_112_mujoco_backward_compat():
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
         )
         req_write_obj = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )

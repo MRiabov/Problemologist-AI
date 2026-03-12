@@ -56,7 +56,7 @@ async def test_initialize_agent_files_benchmark():
 
     # Assert
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
-    assert "objectives.yaml" in written_files
+    assert "benchmark_definition.yaml" in written_files
     assert "plan.md" in written_files
     assert "todo.md" in written_files
     assert "journal.md" in written_files
@@ -83,7 +83,7 @@ async def test_initialize_agent_files_respects_existing_paths_with_leading_slash
     mock_backend = MagicMock()
     mock_backend.als_info = AsyncMock(
         side_effect=[
-            [{"path": "/objectives.yaml", "is_dir": False}],
+            [{"path": "/benchmark_definition.yaml", "is_dir": False}],
             [],
         ]
     )
@@ -94,5 +94,5 @@ async def test_initialize_agent_files_respects_existing_paths_with_leading_slash
     )
 
     written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
-    assert "objectives.yaml" not in written_files
+    assert "benchmark_definition.yaml" not in written_files
     assert "plan.md" in written_files

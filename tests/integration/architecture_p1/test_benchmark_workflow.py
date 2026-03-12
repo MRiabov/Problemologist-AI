@@ -26,7 +26,7 @@ async def test_benchmark_planner_cad_reviewer_path():
     Verifies:
     1. Benchmark generation trigger
     2. Successful completion of the workflow
-    3. Existence of required artifacts (plan.md, objectives.yaml, Reviews)
+    3. Existence of required artifacts (plan.md, benchmark_definition.yaml, Reviews)
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # 1. Trigger Benchmark Generation
@@ -106,8 +106,8 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(p.endswith("plan.md") for p in artifact_paths), (
             f"plan.md missing. Artifacts: {artifact_paths}"
         )
-        assert any(p.endswith("objectives.yaml") for p in artifact_paths), (
-            f"objectives.yaml missing. Artifacts: {artifact_paths}"
+        assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
+            f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
         assert submit_plan_traces, (
             "Expected planner to call submit_plan before workflow completion."

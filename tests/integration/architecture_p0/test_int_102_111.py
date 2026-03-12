@@ -6,11 +6,11 @@ import pytest
 import yaml
 
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -43,12 +43,12 @@ def base_headers(session_id):
 
 
 async def setup_fem_workspace(
-    client, headers, objectives: ObjectivesYaml, script_content=None
+    client, headers, objectives: BenchmarkDefinition, script_content=None
 ):
     """Utility to setup a FEM workspace."""
-    # Write objectives.yaml
+    # Write benchmark_definition.yaml
     write_obj_req = WriteFileRequest(
-        path="objectives.yaml",
+        path="benchmark_definition.yaml",
         content=yaml.dump(objectives.model_dump(mode="json")),
         overwrite=True,
     )
@@ -82,7 +82,7 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
     skip_unless_genesis("INT-102/111 require Genesis FEM support.")
     async with httpx.AsyncClient(timeout=300.0) as client:
         # 1. Setup objectives with FEM enabled and genesis backend
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS, fem_enabled=True
             ),
@@ -208,7 +208,7 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
             headers=base_headers,
         )
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS, fem_enabled=True
             ),
@@ -299,7 +299,7 @@ async def test_int_104_stress_reporting(session_id, base_headers):
             headers=base_headers,
         )
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS, fem_enabled=True
             ),
@@ -365,7 +365,7 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
         # Use a material that is strong but we set a very LOW stress objective
         from shared.models.schemas import MaxStressObjective
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(
                 backend=SimulatorBackendType.GENESIS, fem_enabled=True
             ),
@@ -455,7 +455,7 @@ async def test_int_109_physics_instability_abort(session_id, base_headers):
     """
     skip_unless_genesis("INT-109 currently targets Genesis instability handling.")
     async with httpx.AsyncClient(timeout=300.0) as client:
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(10, 10, 10), max=(12, 12, 12)),

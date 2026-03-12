@@ -33,12 +33,15 @@ async def _write_workspace_file(
 
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
-    regexes=["objectives_yaml_invalid", "objectives_yaml_validation_error"]
+    regexes=[
+        "benchmark_definition_yaml_invalid",
+        "benchmark_definition_yaml_validation_error",
+    ]
 )
 @pytest.mark.asyncio
 async def test_int_008_objectives_semantic_validation_rejects_goal_forbid_overlap():
     """
-    INT-008: objectives.yaml validation must fail closed on semantic contradictions,
+    INT-008: benchmark_definition.yaml validation must fail closed on semantic contradictions,
     not only schema errors, before benchmark submission proceeds.
     """
     session_id = f"INT-008-OBJ-{uuid.uuid4().hex[:8]}"
@@ -120,7 +123,7 @@ def build():
         )
         await _write_workspace_file(client, headers, "solution.py", minimal_script)
         await _write_workspace_file(
-            client, headers, "objectives.yaml", overlapping_objectives
+            client, headers, "benchmark_definition.yaml", overlapping_objectives
         )
 
         resp = await client.post(

@@ -94,7 +94,7 @@ randomization:
     async with httpx.AsyncClient(timeout=300.0) as client:
         for path, content in {
             "script.py": script,
-            "objectives.yaml": objectives,
+            "benchmark_definition.yaml": objectives,
         }.items():
             resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/write",
@@ -203,7 +203,7 @@ randomization:
     async with httpx.AsyncClient(timeout=300.0) as client:
         for path, content in {
             "script.py": script,
-            "objectives.yaml": objectives,
+            "benchmark_definition.yaml": objectives,
         }.items():
             resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/write",

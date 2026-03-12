@@ -13,7 +13,7 @@ def test_extract_reasoning_steps_prefers_trajectory_then_summary() -> None:
         "trajectory": {
             "thought_0": "Inspect objectives first",
             "tool_name_0": "read_file",
-            "tool_args_0": {"path": "objectives.yaml"},
+            "tool_args_0": {"path": "benchmark_definition.yaml"},
             "observation_0": "loaded constraints",
         },
         "reasoning": "Final summary",

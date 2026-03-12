@@ -13,8 +13,8 @@ General idea.
 - small risk
 """
 
-# Valid objectives.yaml content
-VALID_OBJECTIVES_YAML = """
+# Valid benchmark_definition.yaml content
+VALID_BENCHMARK_DEFINITION_YAML = """
 objectives:
   goal_zone:
     min: [0, 0, 0]
@@ -75,21 +75,21 @@ def test_validate_node_output_coder_success():
     files = {
         "plan.md": VALID_ENGINEERING_PLAN,
         "todo.md": "- [ ] task 1",
-        "objectives.yaml": VALID_OBJECTIVES_YAML,
+        "benchmark_definition.yaml": VALID_BENCHMARK_DEFINITION_YAML,
     }
     is_valid, errors = validate_node_output("coder", files)
     assert is_valid, f"Validation failed with errors: {errors}"
     assert not errors
 
 
-def test_validate_node_output_objectives_template():
+def test_validate_node_output_benchmark_definition_template():
     files = {
         "plan.md": "## 1. Solution Overview\nValid",
         "todo.md": "- [ ] task 1",
-        "objectives.yaml": "objectives:\n  goal_zone:\n    min: [x, y, z]\n",
+        "benchmark_definition.yaml": "objectives:\n  goal_zone:\n    min: [x, y, z]\n",
     }
     is_valid, errors = validate_node_output("coder", files)
     assert not is_valid
-    assert any("objectives.yaml:" in e for e in errors) or any(
+    assert any("benchmark_definition.yaml:" in e for e in errors) or any(
         "contains template placeholders" in e for e in errors
     )

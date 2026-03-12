@@ -4,9 +4,9 @@ import pytest
 from pydantic import ValidationError
 
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     MovingPart,
-    ObjectivesYaml,
     ReviewFrontmatter,
 )
 
@@ -81,8 +81,8 @@ class TestMovingPart:
         assert "slide_y" in part.dofs
 
 
-class TestObjectivesYaml:
-    """Tests for full ObjectivesYaml schema."""
+class TestBenchmarkDefinition:
+    """Tests for full BenchmarkDefinition schema."""
 
     @pytest.fixture
     def valid_objectives_data(self):
@@ -105,7 +105,7 @@ class TestObjectivesYaml:
         }
 
     def test_valid_full_schema(self, valid_objectives_data):
-        obj = ObjectivesYaml(**valid_objectives_data)
+        obj = BenchmarkDefinition(**valid_objectives_data)
         assert obj.objectives.goal_zone.min == (0, 0, 0)
         assert obj.moved_object.label == "ball"
         assert obj.constraints.max_unit_cost == 50.0
@@ -113,9 +113,9 @@ class TestObjectivesYaml:
     def test_missing_constraints(self, valid_objectives_data):
         del valid_objectives_data["constraints"]
         with pytest.raises(ValidationError):
-            ObjectivesYaml(**valid_objectives_data)
+            BenchmarkDefinition(**valid_objectives_data)
 
     def test_missing_objectives_section(self, valid_objectives_data):
         del valid_objectives_data["objectives"]
         with pytest.raises(ValidationError):
-            ObjectivesYaml(**valid_objectives_data)
+            BenchmarkDefinition(**valid_objectives_data)

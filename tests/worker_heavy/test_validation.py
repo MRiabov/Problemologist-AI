@@ -32,20 +32,20 @@ def test_geometric_validation():
 
 
 def test_objectives_validation_events():
-    from worker_heavy.utils.file_validation import validate_objectives_yaml
+    from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 
     clear_emitted_events()
 
     invalid_yaml = "invalid: { ["
-    success, _ = validate_objectives_yaml(invalid_yaml)
+    success, _ = validate_benchmark_definition_yaml(invalid_yaml)
     assert success is False
     # YAML parse error doesn't emit LogicFailureEvent yet based on my reading of file_validation.py:48-55
     # only ValidationError does.
 
     # Let's use something that definitely fails Pydantic validation
-    success, _ = validate_objectives_yaml("some_field: unexpected")
+    success, _ = validate_benchmark_definition_yaml("some_field: unexpected")
     assert not success
-    assert_event_emitted("logic_failure", file_path="objectives.yaml")
+    assert_event_emitted("logic_failure", file_path="benchmark_definition.yaml")
 
 
 def test_plan_validation_events():
@@ -82,7 +82,7 @@ def test_handover():
     os.environ["SESSION_ID"] = "test_session"
     plan_path = Path("plan.md")
     todo_path = Path("todo.md")
-    obj_path = Path("objectives.yaml")
+    obj_path = Path("benchmark_definition.yaml")
     cost_path = Path("assembly_definition.yaml")
     val_res_path = Path("validation_results.json")
     sim_res_path = Path("simulation_result.json")
@@ -155,7 +155,7 @@ Simple test plan
         todo_path.write_text(
             """# TODO List
 
-- [x] Read objectives.yaml
+- [x] Read benchmark_definition.yaml
 - [-] Optional task
 """,
             encoding="utf-8",

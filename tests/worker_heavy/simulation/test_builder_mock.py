@@ -4,11 +4,11 @@ import trimesh
 from build123d import Box, Compound
 
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from worker_heavy.simulation.builder import GenesisSimulationBuilder
@@ -47,7 +47,7 @@ def test_genesis_builder_generates_msh_when_fem_enabled(
     assembly = Compound(children=[box])
 
     # Define objectives with FEM enabled
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(0, 0, 0), max=(1, 1, 1)),
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
@@ -98,7 +98,7 @@ def test_genesis_builder_no_msh_when_fem_disabled(
     assembly = Compound(children=[box])
 
     # Define objectives with FEM disabled
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(0, 0, 0), max=(1, 1, 1)),
             build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),

@@ -3,14 +3,14 @@
 import pytest
 
 from worker_heavy.utils.file_validation import (
-    validate_objectives_yaml,
+    validate_benchmark_definition_yaml,
     validate_plan_md_structure,
     validate_review_frontmatter,
 )
 
 
-class TestValidateObjectivesYaml:
-    """Tests for objectives.yaml validation."""
+class TestValidateBenchmarkDefinition:
+    """Tests for benchmark_definition.yaml validation."""
 
     @pytest.fixture
     def valid_yaml_content(self):
@@ -40,12 +40,12 @@ constraints:
 """
 
     def test_valid_content(self, valid_yaml_content):
-        is_valid, result = validate_objectives_yaml(valid_yaml_content)
+        is_valid, result = validate_benchmark_definition_yaml(valid_yaml_content)
         assert is_valid is True
         assert result.moved_object.label == "ball"
 
     def test_empty_content(self):
-        is_valid, errors = validate_objectives_yaml("")
+        is_valid, errors = validate_benchmark_definition_yaml("")
         assert is_valid is False
         assert "Empty or invalid YAML content" in errors
 
@@ -59,12 +59,14 @@ objectives:
     min: [0, 0, 0]
     max: [10, 10, 10]
 """
-        is_valid, errors = validate_objectives_yaml(yaml_content)
+        is_valid, errors = validate_benchmark_definition_yaml(yaml_content)
         assert is_valid is False
         assert any("simulation_bounds" in str(e) for e in errors)
 
     def test_invalid_yaml_syntax(self):
-        is_valid, _errors = validate_objectives_yaml("invalid: yaml: content:")
+        is_valid, _errors = validate_benchmark_definition_yaml(
+            "invalid: yaml: content:"
+        )
         assert is_valid is False
 
 

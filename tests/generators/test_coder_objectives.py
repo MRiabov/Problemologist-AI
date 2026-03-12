@@ -22,7 +22,7 @@ def mock_state():
 
 
 @pytest.mark.asyncio
-async def test_coder_node_injects_objectives_yaml(mock_state):
+async def test_coder_node_injects_benchmark_definition_yaml(mock_state):
     valid_script = "def build(seed, scale=1.0): return None, ''"
     objectives_content = "theme: bracket\nobjectives:\n  zone_goal:\n    min: [0,0,0]"
 
@@ -52,7 +52,7 @@ async def test_coder_node_injects_objectives_yaml(mock_state):
 
         await coder_node(mock_state)
 
-    # Verify agent was called with objectives_yaml in context
+    # Verify agent was called with benchmark_definition_yaml in context
     mock_agent.ainvoke.assert_called_once()
     call_args = mock_agent.ainvoke.call_args
     messages = call_args.args[0]["messages"]

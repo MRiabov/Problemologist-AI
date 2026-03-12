@@ -31,7 +31,7 @@ def test_log_lm_history_delta_emits_reasoning_from_string_and_dict_outputs() -> 
     history = [
         {
             "outputs": [
-                "Thought: inspect objectives first\nAction: read_file(path='/objectives.yaml')",
+                "Thought: inspect objectives first\nAction: read_file(path='/benchmark_definition.yaml')",
                 {"reasoning": "Now list config directory"},
                 {
                     "thought": "Read skills first",

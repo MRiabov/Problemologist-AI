@@ -42,7 +42,7 @@ constraints: {{max_unit_cost: 100, max_weight_g: 10}}
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=objectives_content,
                 overwrite=True,
             ).model_dump(),
@@ -106,7 +106,7 @@ constraints: {{max_unit_cost: 100, max_weight_g: 10}}
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=objectives_content,
                 overwrite=True,
             ).model_dump(),

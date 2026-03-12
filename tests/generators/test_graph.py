@@ -143,7 +143,7 @@ async def test_validate_planner_handoff_fails_when_submit_plan_missing(
     template_files = {
         "plan.md": "# 1. Solution Overview\n\n- test plan",
         "todo.md": "- [ ] test step",
-        "objectives.yaml": (
+        "benchmark_definition.yaml": (
             "objectives:\n"
             "  goal_zone:\n"
             "    min: [8.0, -2.0, 0.0]\n"

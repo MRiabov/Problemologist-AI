@@ -116,7 +116,7 @@ constraints: {{max_unit_cost: 100, max_weight_g: 1000}}
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml", content=objectives_content
+                path="benchmark_definition.yaml", content=objectives_content
             ).model_dump(),
             headers={"X-Session-ID": session_id},
         )
@@ -170,7 +170,7 @@ totals:
         )
 
         # Add fluid at the same position as elec_part
-        # We modify objectives.yaml to include fluid
+        # We modify benchmark_definition.yaml to include fluid
         objectives_with_fluid = (
             objectives_content
             + """
@@ -185,7 +185,7 @@ fluids:
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=objectives_with_fluid,
                 overwrite=True,
             ).model_dump(),

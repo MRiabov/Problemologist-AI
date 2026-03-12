@@ -56,7 +56,7 @@ Test solution
         '{"success": true, "summary": "Goal achieved."}'
     )
 
-    # Create valid objectives.yaml in tmp_path
+    # Create valid benchmark_definition.yaml in tmp_path
     objectives_content = """
 objectives:
   goal_zone:
@@ -81,7 +81,7 @@ randomization:
   static_variation_id: "test"
   runtime_jitter_enabled: false
 """
-    (tmp_path / "objectives.yaml").write_text(objectives_content)
+    (tmp_path / "benchmark_definition.yaml").write_text(objectives_content)
 
     # Create valid assembly_definition.yaml in tmp_path
     cost_content = """

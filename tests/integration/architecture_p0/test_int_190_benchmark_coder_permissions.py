@@ -22,7 +22,7 @@ def test_int_190_benchmark_coder_filesystem_scope_matches_workspace_contract():
         "plan.md",
         "todo.md",
         "journal.md",
-        "objectives.yaml",
+        "benchmark_definition.yaml",
         "assembly_definition.yaml",
         "script.py",
         "validation_results.json",

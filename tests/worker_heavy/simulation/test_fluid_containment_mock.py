@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from shared.models.schemas import ObjectivesYaml
+from shared.models.schemas import BenchmarkDefinition
 from shared.simulation.schemas import SimulatorBackendType
 from worker_heavy.simulation.loop import SimulationLoop
 
@@ -62,7 +62,7 @@ def test_fluid_containment_logic(tmp_path):
         loop = SimulationLoop(
             str(xml_path),
             backend_type=SimulatorBackendType.GENESIS,
-            objectives=ObjectivesYaml(**objectives_dict),
+            objectives=BenchmarkDefinition(**objectives_dict),
         )
 
         metrics = loop.step(control_inputs={}, duration=0.1)

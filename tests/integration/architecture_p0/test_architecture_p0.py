@@ -13,11 +13,11 @@ from PIL import Image
 from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
@@ -243,8 +243,8 @@ async def test_int_020_simulation_failure_taxonomy():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-020-{int(time.time())}"
 
-        # 1. Setup minimal objectives.yaml
-        objectives = ObjectivesYaml(
+        # 1. Setup minimal benchmark_definition.yaml
+        objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(10.5, 10.5, 10.5), max=(12.5, 12.5, 12.5)),
                 forbid_zones=[
@@ -269,7 +269,7 @@ async def test_int_020_simulation_failure_taxonomy():
         )
 
         req_write_obj = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -367,7 +367,7 @@ run()
             min=(3.0, 3.0, 3.0), max=(4.0, 4.0, 4.0)
         )
         req_write_success_obj = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(success_objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -402,7 +402,7 @@ async def test_int_021_runtime_randomization_robustness():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-021-{int(time.time())}"
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
                 build_zone=BoundingBox(min=(-20, -20, -20), max=(20, 20, 20)),
@@ -417,7 +417,7 @@ async def test_int_021_runtime_randomization_robustness():
             constraints=Constraints(max_unit_cost=20.0, max_weight_g=10.0),
         )
         req_write_obj = WriteFileRequest(
-            path="objectives.yaml",
+            path="benchmark_definition.yaml",
             content=yaml.dump(objectives.model_dump(mode="json")),
             overwrite=True,
         )
@@ -586,7 +586,7 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
-        overlap_objectives = ObjectivesYaml(
+        overlap_objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(0.0, 0.0, 0.0), max=(10.0, 10.0, 10.0)),
                 forbid_zones=[
@@ -612,7 +612,7 @@ def build():
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(overlap_objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -660,7 +660,7 @@ def build():
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(jitter_conflict_objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),
@@ -708,7 +708,7 @@ def build():
         )
         assert write_resp.status_code == 200, write_resp.text
 
-        objectives = ObjectivesYaml(
+        objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
                 forbid_zones=[],
@@ -729,7 +729,7 @@ def build():
         objectives_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
             json=WriteFileRequest(
-                path="objectives.yaml",
+                path="benchmark_definition.yaml",
                 content=yaml.dump(objectives.model_dump(mode="json")),
                 overwrite=True,
             ).model_dump(mode="json"),

@@ -5,12 +5,12 @@ import pytest
 
 from shared.enums import FailureReason
 from shared.models.schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     FlowRateObjective,
     MovedObject,
     ObjectivesSection,
-    ObjectivesYaml,
     PhysicsConfig,
 )
 from shared.simulation.backends import (
@@ -57,7 +57,7 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
         tolerance=0.2,
     )
 
-    objectives = ObjectivesYaml(
+    objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(10, 10, 10), max=(11, 11, 11)),
             fluid_objectives=[flow_obj],

@@ -45,7 +45,7 @@ Test
         '{"success": true, "summary": "Goal achieved."}'
     )
 
-    # Create valid objectives.yaml in CWD (mocked)
+    # Create valid benchmark_definition.yaml in CWD (mocked)
     objectives_content = """
 objectives:
   goal_zone:
@@ -70,7 +70,7 @@ randomization:
   static_variation_id: "test"
   runtime_jitter_enabled: false
 """
-    objectives_file = temp_dir / "objectives.yaml"
+    objectives_file = temp_dir / "benchmark_definition.yaml"
     objectives_file.write_text(objectives_content)
 
     # Create valid assembly_definition.yaml
@@ -124,8 +124,8 @@ totals:
             success = submit_for_review(component)
             assert success is True
 
-            # Check if objectives.yaml was copied to renders
-            target_obj = temp_dir / "renders" / "objectives.yaml"
+            # Check if benchmark_definition.yaml was copied to renders
+            target_obj = temp_dir / "renders" / "benchmark_definition.yaml"
             assert target_obj.exists()
             assert target_obj.read_text() == objectives_content
 
