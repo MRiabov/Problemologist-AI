@@ -1,7 +1,7 @@
 import argparse
 import asyncio
+import contextlib
 import json
-import logging
 import os
 import shutil
 import subprocess
@@ -10,6 +10,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 import httpx
@@ -21,8 +22,6 @@ from pyrate_limiter import Duration, Limiter, Rate
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-
-import contextlib
 
 from controller.agent.node_entry_validation import (  # noqa: E402
     BENCHMARK_CODER_HANDOVER_CHECK,
@@ -56,14 +55,8 @@ logger = get_logger(__name__)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
-
-
-def _quiet_http_transport_logs() -> None:
-    """Suppress verbose httpx/httpcore transport debug logs in eval output."""
-    for name in ("httpcore", "httpcore.connection", "httpcore.http11", "httpx"):
-        noisy_logger = logging.getLogger(name)
-        noisy_logger.setLevel(logging.WARNING)
-        noisy_logger.propagate = True
+READABLE_AGENT_LOG_FILE: Path | None = None
+_READABLE_AGENT_LOG_LOCK = Lock()
 
 
 class AgentEvalSpec(BaseModel):
@@ -83,6 +76,178 @@ class EvalDatasetItem(BaseModel):
     seed_files: dict[str, str] | None = None
 
     model_config = ConfigDict(extra="allow")
+
+
+def _truncate_text(value: str, *, limit: int = 160) -> str:
+    text = value.strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def _sanitize_readable_text(value: Any) -> str:
+    if value is None:
+        return ""
+
+    text = str(value).replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not text:
+        return ""
+
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in {'"', "'"}:
+        with contextlib.suppress(json.JSONDecodeError):
+            decoded = json.loads(text)
+            if isinstance(decoded, str):
+                text = decoded
+
+    text = text.encode("utf-8", "backslashreplace").decode("unicode_escape")
+    text = "".join(ch if ch.isprintable() or ch in "\n\t" else " " for ch in text)
+    text = " ".join(part for part in text.replace("\t", " ").split())
+    return text.strip()
+
+
+def _short_run_label(episode: dict[str, Any]) -> str:
+    metadata = episode.get("metadata_vars") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    for candidate in (
+        metadata.get("benchmark_id"),
+        metadata.get("worker_session_id"),
+        episode.get("id"),
+    ):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()[:7]
+
+    return "unknown"
+
+
+def _parse_trace_json_content(raw_content: Any) -> dict[str, Any] | None:
+    if not isinstance(raw_content, str):
+        return None
+
+    with contextlib.suppress(json.JSONDecodeError):
+        parsed = json.loads(raw_content)
+        if isinstance(parsed, dict):
+            return parsed
+
+    return None
+
+
+def _format_tool_args(trace: dict[str, Any]) -> str:
+    parsed = _parse_trace_json_content(trace.get("content"))
+    if parsed is None:
+        raw = _sanitize_readable_text(trace.get("content"))
+        return _truncate_text(raw, limit=120) if raw else ""
+
+    kwargs = parsed.get("kwargs")
+    args = parsed.get("args")
+    parts: list[str] = []
+
+    if isinstance(kwargs, dict):
+        preferred_keys = (
+            "path",
+            "file_path",
+            "target_path",
+            "directory",
+            "command",
+            "cmd",
+            "query",
+            "prompt",
+            "plan_path",
+            "script_path",
+            "backend",
+        )
+        for key in preferred_keys:
+            value = kwargs.get(key)
+            if value in (None, "", [], {}, ()):
+                continue
+            parts.append(
+                f"{key}={_truncate_text(_sanitize_readable_text(value), limit=80)}"
+            )
+
+        if not parts:
+            for key, value in kwargs.items():
+                if value in (None, "", [], {}, ()):
+                    continue
+                if key in {"content", "review_content"}:
+                    continue
+                parts.append(
+                    f"{key}={_truncate_text(_sanitize_readable_text(value), limit=60)}"
+                )
+                if len(parts) >= 3:
+                    break
+
+    if not parts and isinstance(args, list):
+        for value in args[:3]:
+            parts.append(_truncate_text(_sanitize_readable_text(value), limit=60))
+
+    return " ".join(parts)
+
+
+def _format_readable_trace_line(
+    *,
+    episode: dict[str, Any],
+    trace: dict[str, Any],
+    default_agent_name: str,
+    detail_mode: str = "default",
+) -> str | None:
+    trace_type = str(trace.get("trace_type") or "").upper()
+    run_label = _short_run_label(episode)
+    metadata = trace.get("metadata_vars") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    if trace_type == "LLM_END" and detail_mode == "default":
+        agent_name = _sanitize_readable_text(trace.get("name")) or default_agent_name
+        prefix = f"{agent_name} | {run_label} | "
+        text = _sanitize_readable_text(trace.get("content"))
+        if not text:
+            return None
+        return prefix + text
+
+    if trace_type != "TOOL_START":
+        return None
+
+    prefix = f"{default_agent_name} | {run_label} | "
+    error_text = _sanitize_readable_text(metadata.get("error"))
+    if detail_mode == "error":
+        if not error_text:
+            return None
+        return (
+            prefix
+            + "TOOL "
+            + _sanitize_readable_text(trace.get("name"))
+            + (f" ERROR {error_text}")
+        )
+
+    observation_text = _sanitize_readable_text(metadata.get("observation"))
+    if detail_mode == "result":
+        if not observation_text:
+            return None
+        return (
+            prefix
+            + "RESULT "
+            + _sanitize_readable_text(trace.get("name"))
+            + " "
+            + _truncate_text(observation_text, limit=220)
+        )
+
+    tool_name = _sanitize_readable_text(trace.get("name"))
+    tool_args = _format_tool_args(trace)
+    base = prefix + "TOOL " + tool_name
+    if tool_args:
+        base += " " + tool_args
+    return base
+
+
+def _append_readable_log_line(line: str) -> None:
+    if READABLE_AGENT_LOG_FILE is None:
+        return
+
+    with _READABLE_AGENT_LOG_LOCK:
+        READABLE_AGENT_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with READABLE_AGENT_LOG_FILE.open("a", encoding="utf-8") as handle:
+            handle.write(line.rstrip() + "\n")
 
 
 AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
@@ -110,32 +275,44 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_PLANNER,
         required_trace_names=(AgentName.ENGINEER_PLANNER,),
+        start_node=AgentName.ENGINEER_PLANNER,
     ),
     AgentName.ENGINEER_CODER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_CODER,),
+        start_node=AgentName.ENGINEER_CODER,
     ),
     AgentName.ENGINEER_PLAN_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_PLAN_REVIEWER,),
+        start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+    ),
+    AgentName.ENGINEER_EXECUTION_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
+        required_trace_names=(AgentName.ENGINEER_EXECUTION_REVIEWER,),
+        start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
     ),
     # Electrical engineering roles inside the unified engineer graph
     AgentName.ELECTRONICS_PLANNER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_PLANNER,
         required_trace_names=(AgentName.ELECTRONICS_PLANNER,),
+        start_node=AgentName.ELECTRONICS_PLANNER,
     ),
     AgentName.ELECTRONICS_ENGINEER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ELECTRONICS_ENGINEER,),
+        start_node=AgentName.ELECTRONICS_ENGINEER,
     ),
     AgentName.ELECTRONICS_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ELECTRONICS_REVIEWER,),
+        start_node=AgentName.ELECTRONICS_REVIEWER,
     ),
     # Sidecars
     AgentName.SKILL_AGENT: AgentEvalSpec(
@@ -206,13 +383,22 @@ async def _seed_eval_workspace(
                 )
             for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
                 rel_path = path.relative_to(artifact_dir).as_posix()
-                content = path.read_text(encoding="utf-8")
-                await worker.write_file(
-                    rel_path,
-                    content,
-                    overwrite=True,
-                    bypass_agent_permissions=True,
-                )
+                raw_bytes = path.read_bytes()
+                try:
+                    content = raw_bytes.decode("utf-8")
+                except UnicodeDecodeError:
+                    await worker.upload_file(
+                        rel_path,
+                        raw_bytes,
+                        bypass_agent_permissions=True,
+                    )
+                else:
+                    await worker.write_file(
+                        rel_path,
+                        content,
+                        overwrite=True,
+                        bypass_agent_permissions=True,
+                    )
                 seeded_paths.append(rel_path)
 
         for rel_path, content in inline_files.items():
@@ -250,7 +436,7 @@ async def _preflight_seeded_entry_contract(
         contracts = build_benchmark_node_contracts()
         graph = ValidationGraph.BENCHMARK
     elif spec.mode == EvalMode.AGENT:
-        target_node = agent_name
+        target_node = spec.start_node or agent_name
         contracts = build_engineer_node_contracts()
         graph = ValidationGraph.ENGINEER
     else:
@@ -345,6 +531,16 @@ def _episode_terminal(status: str | None) -> bool:
         EpisodeStatus.COMPLETED,
         EpisodeStatus.FAILED,
         EpisodeStatus.CANCELLED,
+    }
+
+
+def _planned_counts_as_success(agent_name: AgentName, spec: AgentEvalSpec) -> bool:
+    if spec.mode == EvalMode.BENCHMARK:
+        return True
+    return agent_name in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.BENCHMARK_PLANNER,
     }
 
 
@@ -524,6 +720,7 @@ async def run_single_eval(
         seed_match_method=SeedMatchMethod.RUNTIME_EXPLICIT,
         generation_kind=GenerationKind.SEEDED_EVAL,
         parent_seed_id=task_id,
+        disable_sidecars=True,
     )
 
     log = logger.bind(
@@ -532,6 +729,12 @@ async def run_single_eval(
         eval_mode=spec.mode,
     )
     log.info("eval_start")
+    readable_agent = spec.start_node or spec.request_agent_name or agent_name
+    readable_agent_name = (
+        readable_agent.value
+        if isinstance(readable_agent, AgentName)
+        else str(readable_agent).strip()
+    )
 
     success = False
     session_id = ""
@@ -612,7 +815,10 @@ constraints:
   max_unit_cost: 50.0
   max_weight_g: 500.0
 electronics_requirements:
-  power_supply_available: true
+  power_supply_available:
+    type: mains_ac_rectified
+    voltage_dc: 24.0
+    max_current_a: 10.0
 """
                     await worker_for_seed.write_file(
                         "objectives.yaml", seeded_objectives, overwrite=True
@@ -622,6 +828,7 @@ electronics_requirements:
                 payload = {
                     "task": task_description,
                     "agent_name": spec.request_agent_name or agent_name,
+                    "start_node": spec.start_node or agent_name,
                     "session_id": session_id,
                     "metadata_vars": lineage.model_dump(exclude_none=True),
                 }
@@ -651,6 +858,8 @@ electronics_requirements:
             max_attempts = 120
             attempt = 0
             seen_trace_ids = set()
+            seen_trace_errors: dict[int, str] = {}
+            seen_trace_results: dict[int, str] = {}
 
             while attempt < max_attempts:
                 await asyncio.sleep(5)
@@ -665,6 +874,11 @@ electronics_requirements:
                         traces = status_data.get("traces", [])
                         for trace in sorted(traces, key=lambda t: t.get("id", 0)):
                             trace_id = trace.get("id")
+                            readable_line = _format_readable_trace_line(
+                                episode=status_data,
+                                trace=trace,
+                                default_agent_name=readable_agent_name,
+                            )
                             if trace_id not in seen_trace_ids:
                                 # Restate traces at DEBUG level so they go to the log file.
                                 # They will also appear on console if --log-level DEBUG is used.
@@ -680,11 +894,37 @@ electronics_requirements:
                                         trace_id=trace_id,
                                         content=trace.get("content"),
                                     )
+                                if readable_line:
+                                    _append_readable_log_line(readable_line)
                                 seen_trace_ids.add(trace_id)
+
+                            error_line = _format_readable_trace_line(
+                                episode=status_data,
+                                trace=trace,
+                                default_agent_name=readable_agent_name,
+                                detail_mode="error",
+                            )
+                            error_text = error_line or ""
+                            prior_error_text = seen_trace_errors.get(trace_id, "")
+                            if error_text and error_text != prior_error_text:
+                                _append_readable_log_line(error_text)
+                                seen_trace_errors[trace_id] = error_text
+
+                            result_line = _format_readable_trace_line(
+                                episode=status_data,
+                                trace=trace,
+                                default_agent_name=readable_agent_name,
+                                detail_mode="result",
+                            )
+                            result_text = result_line or ""
+                            prior_result_text = seen_trace_results.get(trace_id, "")
+                            if result_text and result_text != prior_result_text:
+                                _append_readable_log_line(result_text)
+                                seen_trace_results[trace_id] = result_text
 
                         if (
                             status == EpisodeStatus.PLANNED
-                            and spec.mode == EvalMode.BENCHMARK
+                            and _planned_counts_as_success(agent_name, spec)
                         ):
                             if agent_name == AgentName.BENCHMARK_PLANNER:
                                 episode = await _fetch_episode(client, episode_id)
@@ -702,18 +942,34 @@ electronics_requirements:
                                     success = True
                                 break
 
-                            log.info("eval_planned_confirming")
-                            confirm_url = (
-                                f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
-                            )
-                            confirm_resp = await client.post(confirm_url, json={})
-                            if confirm_resp.status_code >= 400:
-                                log.error(
-                                    "benchmark_confirm_failed",
-                                    status_code=confirm_resp.status_code,
-                                    response_text=confirm_resp.text,
-                                    session_id=session_id,
+                            if spec.mode == EvalMode.BENCHMARK:
+                                log.info("eval_planned_confirming")
+                                confirm_url = (
+                                    f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
                                 )
+                                confirm_resp = await client.post(confirm_url, json={})
+                                if confirm_resp.status_code >= 400:
+                                    log.error(
+                                        "benchmark_confirm_failed",
+                                        status_code=confirm_resp.status_code,
+                                        response_text=confirm_resp.text,
+                                        session_id=session_id,
+                                    )
+                                    break
+                            else:
+                                episode = await _fetch_episode(client, episode_id)
+                                missing_traces = _missing_required_traces(
+                                    spec.required_trace_names, episode
+                                )
+                                if missing_traces:
+                                    log.error(
+                                        "eval_failed_missing_traces",
+                                        missing_traces=missing_traces,
+                                        session_id=session_id,
+                                    )
+                                else:
+                                    log.info("eval_planned")
+                                    success = True
                                 break
 
                         if status == EpisodeStatus.COMPLETED:
@@ -847,6 +1103,7 @@ async def main():
 
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "run_evals.log"
+    readable_log_file = log_dir / "readable_agent_logs.log"
 
     # Symlink for run_evals.log (latest.log in logs/evals/)
     latest_log = log_dir / "latest.log"
@@ -856,16 +1113,23 @@ async def main():
     with contextlib.suppress(Exception):
         latest_log.symlink_to(log_file.name)
 
+    if readable_log_file.exists():
+        with contextlib.suppress(Exception):
+            readable_log_file.unlink()
+    readable_log_file.touch()
+
     os.environ["LOG_DIR"] = str(log_dir)
     os.environ["EXTRA_DEBUG_LOG"] = str(log_file)
     os.environ["LOG_LEVEL"] = args.log_level
     configure_logging("evals")
-    _quiet_http_transport_logs()
 
     global logger
+    global READABLE_AGENT_LOG_FILE
     logger = get_logger(__name__)
+    READABLE_AGENT_LOG_FILE = readable_log_file
 
     print(f"Logging to: {log_file} (and symlinked at {latest_log})")
+    print(f"Readable agent logs: {readable_log_file}")
     logger.info("eval_run_start", log_dir=str(log_dir))
 
     start_time = time.time()
@@ -904,6 +1168,7 @@ async def main():
                 ("evals/temporal_worker_debug.log", "temporal_worker_debug.log"),
                 ("evals/frontend.log", "frontend.log"),
                 ("evals/run_evals.log", "run_evals.log"),
+                ("evals/readable_agent_logs.log", "readable_agent_logs.log"),
             ]
             for target, link_name in links:
                 link_path = logs_root / link_name

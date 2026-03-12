@@ -35,6 +35,14 @@ def base_headers(session_id):
 async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_headers):
     """INT-012, INT-013: Verify COTS search output contract and read-only behavior."""
     async with httpx.AsyncClient(timeout=300.0) as client:
+        before_ls_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
+        )
+        assert before_ls_resp.status_code == 200
+        before_entries = {
+            FsFileEntry.model_validate(entry).path for entry in before_ls_resp.json()
+        }
+
         # COTS subagent or tool is usually invoked via a runtime script or endpoint.
         # Let's test via the COTS indexer/search endpoint if available,
         # or via a subagent call if the controller exposes it.
@@ -56,20 +64,15 @@ async def test_int_012_013_cots_search_contract_and_readonly(session_id, base_he
             assert part.source is not None
 
         # INT-012: Read-only check
-        # Verify that after search, no new files are created in a dummy session
-        # (beyond journal entries which are allowed)
+        # Verify that the query path did not mutate the session workspace.
         ls_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/ls", json={"path": "."}, headers=base_headers
         )
-        fs_entries = [FsFileEntry.model_validate(e) for e in ls_resp.json()]
-        # Allow only journals or nothing
-        for entry in fs_entries:
-            assert (
-                entry.name.startswith("journal")
-                or entry.name == "objectives.yaml"
-                or entry.name == "plan.md"
-                or entry.name == "."
-            )
+        assert ls_resp.status_code == 200
+        after_entries = {
+            FsFileEntry.model_validate(entry).path for entry in ls_resp.json()
+        }
+        assert after_entries == before_entries
 
 
 @pytest.mark.integration_p0

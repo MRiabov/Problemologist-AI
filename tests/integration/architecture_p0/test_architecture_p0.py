@@ -1,4 +1,5 @@
 import asyncio
+import io
 import os
 import time
 import uuid
@@ -7,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 import yaml
+from PIL import Image
 
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
 from controller.api.tasks import AgentRunRequest
@@ -773,3 +775,15 @@ def build():
         ]
         png_renders = [name for name in render_names if name.endswith(".png")]
         assert png_renders, render_names
+
+        blob_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read_blob",
+            json=ReadFileRequest(path=f"renders/{png_renders[0]}").model_dump(
+                mode="json"
+            ),
+            headers=headers,
+        )
+        assert blob_resp.status_code == 200, blob_resp.text
+        image = Image.open(io.BytesIO(blob_resp.content)).convert("RGB")
+        extrema = image.getextrema()
+        assert any(high > 0 for _, high in extrema), extrema

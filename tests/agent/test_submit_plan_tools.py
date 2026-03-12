@@ -8,6 +8,13 @@ from shared.enums import AgentName
 class _FakeFs:
     def __init__(self, files: dict[str, str]):
         self._files = files
+        self.client = type("Client", (), {"session_id": "s1"})()
+        self.policy = type(
+            "Policy",
+            (),
+            {"get_allowed_tools": staticmethod(lambda _agent_role: None)},
+        )()
+        self.agent_role = AgentName.ENGINEER_PLANNER
 
     async def exists(self, path: str) -> bool:
         return path in self._files
@@ -91,3 +98,32 @@ async def test_benchmark_submit_plan_validates_and_submits(monkeypatch):
     assert result["node_type"] == AgentName.BENCHMARK_PLANNER.value
     assert called["node_type"] == AgentName.BENCHMARK_PLANNER
     assert called["files"] == ["objectives.yaml", "plan.md", "todo.md"]
+
+
+@pytest.mark.asyncio
+async def test_engineer_tools_expose_cots_subagent_wrapper_not_raw_search(monkeypatch):
+    fs = _FakeFs({})
+    tools = get_engineer_planner_tools(fs, session_id="s1")
+    tool_names = {getattr(tool, "__name__", "") for tool in tools}
+
+    assert "invoke_cots_search_subagent" in tool_names
+    assert "search_cots_catalog" not in tool_names
+
+    captured = {}
+
+    class _FakeAgent:
+        async def ainvoke(self, payload):
+            captured["payload"] = payload
+            return {"messages": [type("Msg", (), {"content": "candidate result"})()]}
+
+    monkeypatch.setattr(
+        "controller.agent.tools.create_cots_search_agent",
+        lambda _model_name: _FakeAgent(),
+    )
+
+    invoke_cots = _get_tool_by_name(tools, "invoke_cots_search_subagent")
+    result = await invoke_cots(query="M3 bolt", category="fastener", limit=3)
+
+    assert result == "candidate result"
+    assert "M3 bolt" in captured["payload"]["task"]
+    assert "category=fastener" in captured["payload"]["task"]
