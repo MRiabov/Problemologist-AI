@@ -12,6 +12,13 @@ objectives:
   fluid_objectives: []
   stress_objectives: []
 
+benchmark_parts:
+  - part_id: "environment_fixture"
+    label: "environment_fixture"
+    metadata:
+      fixed: true
+      material_id: "aluminum_6061"
+
 simulation_bounds:
   min: [-30.0, -30.0, -10.0]
   max: [30.0, 30.0, 30.0]

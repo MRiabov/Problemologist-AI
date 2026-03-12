@@ -45,10 +45,12 @@ class PlanReviewerNode(BaseNode):
 
     async def __call__(self, state: AgentState) -> AgentState:
         # Read objectives and assembly_definition for context
-        objectives = "# No objectives.yaml found."
+        objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("objectives.yaml"):
-                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+            if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
+                objectives = await self.ctx.worker_client.read_file(
+                    "benchmark_definition.yaml"
+                )
 
         assembly_definition = "# No assembly_definition.yaml found."
         with suppress(Exception):

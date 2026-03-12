@@ -307,11 +307,11 @@ async def calculate_and_report_automated_score(
         # 2. Get objectives for context if possible
         objectives_data = None
         try:
-            from shared.models.schemas import ObjectivesYaml
+            from shared.models.schemas import BenchmarkDefinition
 
-            content = await worker_client.read_file("objectives.yaml")
+            content = await worker_client.read_file("benchmark_definition.yaml")
             raw_data = yaml.safe_load(content)
-            obj_model = ObjectivesYaml(**raw_data)
+            obj_model = BenchmarkDefinition(**raw_data)
             objectives_data = obj_model.model_dump()
         except Exception:
             pass
@@ -340,7 +340,7 @@ async def calculate_and_report_automated_score(
         gold = Prediction(
             agent_name=agent_name,
             objectives=objectives_data,
-            # Provide basic data if objectives.yaml is missing
+            # Provide basic data if benchmark_definition.yaml is missing
             max_unit_cost=max_unit_cost,
             max_weight=max_weight,
         )

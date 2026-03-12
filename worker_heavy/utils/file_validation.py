@@ -2,7 +2,7 @@
 File validation utilities for agent handover files.
 
 Validates the structure and content of:
-- objectives.yaml: Central data exchange object
+- benchmark_definition.yaml: Central data exchange object
 - assembly_definition.yaml: Cost risk management
 - plan.md: Structured planning documents
 - Review files: YAML frontmatter with decision field
@@ -23,14 +23,14 @@ from pydantic import ValidationError
 from shared.enums import AgentName
 from shared.models.schemas import (
     AssemblyDefinition,
-    ObjectivesYaml,
+    BenchmarkDefinition,
     PlanRefusalFrontmatter,
     ReviewFrontmatter,
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 from shared.simulation.schemas import SimulatorBackendType
-from worker_heavy.utils.validation import _validate_objectives_consistency
+from worker_heavy.utils.validation import _validate_benchmark_definition_consistency
 
 logger = structlog.get_logger(__name__)
 
@@ -54,7 +54,7 @@ TEMPLATE_PLACEHOLDERS = [
     "x_max",
     "[x, y, z]",
     "y_min",
-    "z_min",  # objectives.yaml
+    "z_min",  # benchmark_definition.yaml
     "[implement here]",
     "TODO:",
     "...",  # generic
@@ -90,18 +90,18 @@ def _find_template_placeholders(filename: str, content: str) -> list[str]:
     return found_placeholders
 
 
-def validate_objectives_yaml(
+def validate_benchmark_definition_yaml(
     content: str, session_id: str | None = None
-) -> tuple[bool, ObjectivesYaml | list[str]]:
+) -> tuple[bool, BenchmarkDefinition | list[str]]:
     """
-    Parse and validate objectives.yaml content.
+    Parse and validate benchmark_definition.yaml content.
 
     Args:
         content: Raw YAML string content
         session_id: Optional session ID for logging
 
     Returns:
-        (True, ObjectivesYaml) if valid
+        (True, BenchmarkDefinition) if valid
         (False, list[str]) with error messages if invalid
     """
     try:
@@ -110,13 +110,15 @@ def validate_objectives_yaml(
             return False, ["Empty or invalid YAML content"]
 
         # 1. Enforce that file is not the template
-        found_placeholders = _find_template_placeholders("objectives.yaml", content)
+        found_placeholders = _find_template_placeholders(
+            "benchmark_definition.yaml", content
+        )
         if found_placeholders:
             return False, [
-                f"objectives.yaml still contains template placeholders: {found_placeholders}"
+                f"benchmark_definition.yaml still contains template placeholders: {found_placeholders}"
             ]
 
-        objectives = ObjectivesYaml(**data)
+        objectives = BenchmarkDefinition(**data)
 
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if objectives.physics.backend == SimulatorBackendType.MUJOCO:
@@ -125,36 +127,40 @@ def validate_objectives_yaml(
                     "MuJoCo backend does not support fluids. Use Genesis instead."
                 ]
 
-        objective_error = _validate_objectives_consistency(objectives)
+        objective_error = _validate_benchmark_definition_consistency(objectives)
         if objective_error:
             logger.error(
-                "objectives_yaml_invalid",
+                "benchmark_definition_yaml_invalid",
                 errors=[objective_error],
                 session_id=session_id,
             )
             emit_event(
                 LogicFailureEvent(
-                    file_path="objectives.yaml",
+                    file_path="benchmark_definition.yaml",
                     constraint_name="objectives_consistency",
                     error_message=objective_error,
                 )
             )
             return False, [objective_error]
 
-        logger.info("objectives_yaml_valid", session_id=session_id)
+        logger.info("benchmark_definition_yaml_valid", session_id=session_id)
         return True, objectives
     except yaml.YAMLError as e:
-        logger.error("objectives_yaml_parse_error", error=str(e), session_id=session_id)
+        logger.error(
+            "benchmark_definition_yaml_parse_error", error=str(e), session_id=session_id
+        )
         return False, [f"YAML parse error: {e}"]
     except ValidationError as e:
         errors = [f"{err['loc']}: {err['msg']}" for err in e.errors()]
         logger.error(
-            "objectives_yaml_validation_error", errors=errors, session_id=session_id
+            "benchmark_definition_yaml_validation_error",
+            errors=errors,
+            session_id=session_id,
         )
         for error in errors:
             emit_event(
                 LogicFailureEvent(
-                    file_path="objectives.yaml",
+                    file_path="benchmark_definition.yaml",
                     constraint_name="pydantic_validation",
                     error_message=error,
                 )
@@ -374,16 +380,20 @@ def validate_node_output(
                     "todo.md",
                     "assembly_definition.yaml",
                 ],
-                AgentName.BENCHMARK_PLANNER: ["plan.md", "todo.md", "objectives.yaml"],
+                AgentName.BENCHMARK_PLANNER: [
+                    "plan.md",
+                    "todo.md",
+                    "benchmark_definition.yaml",
+                ],
                 AgentName.ENGINEER_CODER: [
                     "plan.md",
                     "todo.md",
-                    "objectives.yaml",
+                    "benchmark_definition.yaml",
                 ],
                 AgentName.BENCHMARK_CODER: [
                     "plan.md",
                     "todo.md",
-                    "objectives.yaml",
+                    "benchmark_definition.yaml",
                 ],
                 AgentName.ELECTRONICS_ENGINEER: [
                     "plan.md",
@@ -398,16 +408,20 @@ def validate_node_output(
                 "todo.md",
                 "assembly_definition.yaml",
             ],
-            AgentName.BENCHMARK_PLANNER: ["plan.md", "todo.md", "objectives.yaml"],
+            AgentName.BENCHMARK_PLANNER: [
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+            ],
             AgentName.ENGINEER_CODER: [
                 "plan.md",
                 "todo.md",
-                "objectives.yaml",
+                "benchmark_definition.yaml",
             ],
             AgentName.BENCHMARK_CODER: [
                 "plan.md",
                 "todo.md",
-                "objectives.yaml",
+                "benchmark_definition.yaml",
             ],
             AgentName.ELECTRONICS_ENGINEER: [
                 "plan.md",
@@ -447,11 +461,13 @@ def validate_node_output(
             res = validate_todo_md(content)
             if not res.is_valid:
                 errors.extend([f"todo.md: {e}" for e in res.violations])
-        elif filename == "objectives.yaml":
-            is_valid, obj_res = validate_objectives_yaml(content, session_id=session_id)
+        elif filename == "benchmark_definition.yaml":
+            is_valid, obj_res = validate_benchmark_definition_yaml(
+                content, session_id=session_id
+            )
             if not is_valid:
                 # obj_res is list[str] on failure
-                errors.extend([f"objectives.yaml: {e}" for e in obj_res])
+                errors.extend([f"benchmark_definition.yaml: {e}" for e in obj_res])
         elif filename == "assembly_definition.yaml":
             is_valid, asm_res = validate_assembly_definition_yaml(
                 content, session_id=session_id
@@ -608,7 +624,7 @@ def validate_immutability(
         except subprocess.CalledProcessError:
             # File might not have existed in root commit (e.g. created later)
             # In that case, immutability check might not apply or is ambiguous.
-            # Ideally objectives.yaml SHOULD exist in root commit.
+            # Ideally benchmark_definition.yaml SHOULD exist in root commit.
             pass
 
     except (subprocess.CalledProcessError, FileNotFoundError):

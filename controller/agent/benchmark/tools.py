@@ -59,7 +59,7 @@ def get_benchmark_planner_tools(
         """
         from worker_heavy.utils.file_validation import validate_node_output
 
-        required_files = ["plan.md", "todo.md", "objectives.yaml"]
+        required_files = ["plan.md", "todo.md", "benchmark_definition.yaml"]
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []
 

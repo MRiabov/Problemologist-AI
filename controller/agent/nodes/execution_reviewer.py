@@ -173,11 +173,11 @@ class ExecutionReviewerNode(BaseNode):
                 )
 
             # Read objectives if possible for context
-            objectives = "# No objectives.yaml found."
+            objectives = "# No benchmark_definition.yaml found."
             with suppress(Exception):
-                if await self.ctx.worker_client.exists("objectives.yaml"):
+                if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
                     objectives = await self.ctx.worker_client.read_file(
-                        "objectives.yaml"
+                        "benchmark_definition.yaml"
                     )
 
             assembly_definition = "# No assembly_definition.yaml found."

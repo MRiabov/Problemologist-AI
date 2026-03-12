@@ -117,7 +117,7 @@ class AgentModule(dspy.Module):
             return self.program(
                 prompt=kwargs.get("task", ""),
                 plan=kwargs.get("plan", ""),
-                objectives_yaml=str(kwargs.get("objectives", {})),
+                benchmark_definition_yaml=str(kwargs.get("objectives", {})),
                 review_feedback="",
                 validation_logs="",
             )

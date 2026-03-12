@@ -6,7 +6,7 @@ from build123d import Compound, Part
 
 from shared.config.simulation import simulation_settings
 from shared.enums import FailureReason
-from shared.models.schemas import ElectronicsSection, ObjectivesYaml
+from shared.models.schemas import BenchmarkDefinition, ElectronicsSection
 from shared.models.simulation import (
     SimulationFailure,
     SimulationMetrics,
@@ -43,7 +43,7 @@ class SimulationLoop:
         max_simulation_time: float = simulation_settings.max_simulation_time_seconds,
         backend_type: SimulatorBackendType | None = None,
         electronics: ElectronicsSection | None = None,
-        objectives: ObjectivesYaml | None = None,
+        objectives: BenchmarkDefinition | None = None,
         smoke_test_mode: bool | None = None,
         session_id: str | None = None,
         particle_budget: int | None = None,

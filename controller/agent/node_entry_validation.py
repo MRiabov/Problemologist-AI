@@ -72,7 +72,7 @@ PREVIOUS_NODE_MAPS: Mapping[ValidationGraph, Mapping[AgentName, AgentName | None
 BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "plan.md",
     "todo.md",
-    "objectives.yaml",
+    "benchmark_definition.yaml",
 )
 REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "script.py",
@@ -82,7 +82,7 @@ REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
 ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "plan.md",
     "todo.md",
-    "objectives.yaml",
+    "benchmark_definition.yaml",
     "assembly_definition.yaml",
 )
 ENGINEERING_PLAN_REVIEW_MANIFEST = ".manifests/engineering_plan_review_manifest.json"

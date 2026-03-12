@@ -1121,7 +1121,7 @@ async def run_generation_session(
     )
 
     # 2.5. Initialize benchmark workspace templates before planner validation.
-    # This guarantees required baseline files like objectives.yaml exist.
+    # This guarantees required baseline files like benchmark_definition.yaml exist.
     try:
         from controller.config.settings import settings as global_settings
 

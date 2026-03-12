@@ -20,8 +20,8 @@ from build123d import Compound, Solid, export_stl
 
 if TYPE_CHECKING:
     from shared.models.schemas import (
+        BenchmarkDefinition,
         MovingPart,
-        ObjectivesYaml,
     )
 
 from pydantic import BaseModel, ConfigDict
@@ -646,7 +646,7 @@ class SimulationBuilderBase(ABC):
     def build_from_assembly(
         self,
         assembly: Compound,
-        objectives: ObjectivesYaml | None = None,
+        objectives: BenchmarkDefinition | None = None,
         moving_parts: list[MovingPart] | None = None,
         electronics: Any | None = None,
         smoke_test_mode: bool = False,
@@ -665,7 +665,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
     def build_from_assembly(
         self,
         assembly: Compound,
-        objectives: ObjectivesYaml | None = None,
+        objectives: BenchmarkDefinition | None = None,
         moving_parts: list[MovingPart] | None = None,
         electronics: Any | None = None,
         smoke_test_mode: bool = False,
@@ -910,7 +910,7 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
     def build_from_assembly(
         self,
         assembly: Compound,
-        objectives: ObjectivesYaml | None = None,
+        objectives: BenchmarkDefinition | None = None,
         moving_parts: list[MovingPart] | None = None,
         electronics: Any | None = None,
         smoke_test_mode: bool = False,

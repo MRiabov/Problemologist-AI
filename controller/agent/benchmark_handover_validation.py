@@ -6,7 +6,7 @@ import yaml
 
 from controller.clients.worker import WorkerClient
 from shared.enums import AgentName
-from shared.models.schemas import ObjectivesYaml, PlannerSubmissionResult
+from shared.models.schemas import BenchmarkDefinition, PlannerSubmissionResult
 from shared.simulation.schemas import CustomObjectives, RandomizationStrategy
 from worker_heavy.utils.file_validation import validate_node_output
 
@@ -31,11 +31,11 @@ def validate_benchmark_planner_handoff_payload(
         if not is_valid:
             errors.extend([f"planner_structural: {msg}" for msg in structural_errors])
 
-    objectives_text = artifacts.get("objectives.yaml")
+    objectives_text = artifacts.get("benchmark_definition.yaml")
     if objectives_text:
         try:
             parsed = yaml.safe_load(objectives_text)
-            objectives = ObjectivesYaml.model_validate(parsed or {})
+            objectives = BenchmarkDefinition.model_validate(parsed or {})
             if custom_objectives:
                 if custom_objectives.max_unit_cost is not None:
                     observed = objectives.constraints.max_unit_cost
@@ -62,7 +62,9 @@ def validate_benchmark_planner_handoff_payload(
                             f"({observed}) does not match custom objective ({expected})"
                         )
         except Exception as exc:
-            errors.append(f"planner_semantic: Failed to parse objectives.yaml ({exc})")
+            errors.append(
+                f"planner_semantic: Failed to parse benchmark_definition.yaml ({exc})"
+            )
 
     if require_submission:
         if submission is not None:
@@ -119,7 +121,7 @@ async def validate_benchmark_planner_handoff_artifacts(
 ) -> list[str]:
     """Validate the planner-to-coder handoff package from the worker session."""
     errors: list[str] = []
-    files_to_check = ("plan.md", "todo.md", "objectives.yaml")
+    files_to_check = ("plan.md", "todo.md", "benchmark_definition.yaml")
     artifacts: dict[str, str] = {}
 
     for rel_path in files_to_check:

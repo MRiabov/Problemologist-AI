@@ -2,20 +2,22 @@ from __future__ import annotations
 
 from pathlib import Path
 
-OBJECTIVES_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
+BENCHMARK_DEFINITION_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
 # =============================================================================
-# OBJECTIVES.YAML - Your Task Definition
+# BENCHMARK_DEFINITION.YAML - Your Task Definition
 # =============================================================================
-# This file defines WHAT you must achieve. Read it carefully before planning.
+# This file defines WHAT you must achieve and the benchmark-owned fixture
+# metadata you may rely on before planning.
 #
 # YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
 #   1. Staying WITHIN the `build_zone` (you cannot build outside it)
 #   2. AVOIDING all `forbid_zones` (contact = failure)
 #   3. Respecting `max_unit_cost` and `max_weight` constraints
 #
-# The environment geometry in this file is READ-ONLY. Engineering assembly
-# motion metadata is stored under engineering assembly_definition.yaml
-# final_assembly.parts and is also READ-ONLY once written.
+# Benchmark-owned environment geometry and metadata in this file are READ-ONLY.
+# Engineering assembly motion metadata is stored under engineering
+# assembly_definition.yaml final_assembly.parts and is also READ-ONLY once
+# written.
 # =============================================================================
 
 objectives:
@@ -36,6 +38,13 @@ objectives:
   build_zone:
     min: [0.0, 0.0, 0.0]
     max: [0.0, 0.0, 0.0]
+
+benchmark_parts:
+  - part_id: "environment_fixture"
+    label: "environment_fixture"
+    metadata:
+      fixed: true
+      material_id: "aluminum_6061"
 
 # Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:
@@ -73,9 +82,9 @@ randomization:
 """
 
 
-def ensure_objectives_yaml(root: Path) -> None:
-    """Create objectives.yaml template in the session root if missing."""
-    path = root / "objectives.yaml"
+def ensure_benchmark_definition_yaml(root: Path) -> None:
+    """Create benchmark_definition.yaml template in the session root if missing."""
+    path = root / "benchmark_definition.yaml"
     if path.exists():
         return
-    path.write_text(OBJECTIVES_YAML_TEMPLATE, encoding="utf-8")
+    path.write_text(BENCHMARK_DEFINITION_YAML_TEMPLATE, encoding="utf-8")

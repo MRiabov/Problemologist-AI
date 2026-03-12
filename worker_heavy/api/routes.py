@@ -211,16 +211,16 @@ async def api_verify(
             ) as root:
                 # 1. Load and build the scene
                 objectives = None
-                objectives_path = root / "objectives.yaml"
+                objectives_path = root / "benchmark_definition.yaml"
                 if objectives_path.exists():
                     try:
                         import yaml
 
-                        from shared.models.schemas import ObjectivesYaml
+                        from shared.models.schemas import BenchmarkDefinition
 
                         raw = objectives_path.read_text(encoding="utf-8")
                         if "[TEMPLATE]" not in raw:
-                            objectives = ObjectivesYaml(**yaml.safe_load(raw))
+                            objectives = BenchmarkDefinition(**yaml.safe_load(raw))
                     except Exception as e:
                         logger.warning(
                             "verify_objectives_load_failed",

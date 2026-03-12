@@ -15,12 +15,12 @@ from shared.enums import (
 )
 from shared.models.schemas import (
     AssemblyDefinition,
+    BenchmarkDefinition,
     CotsPartEstimate,
     ElectronicsSection,
     FluidDefinition,
     FluidProperties,
     FluidVolume,
-    ObjectivesYaml,
 )
 from shared.models.simulation import (
     SimulationFailure,
@@ -85,7 +85,9 @@ def _boxes_intersect(
     return all(a_min[i] <= b_max[i] and b_min[i] <= a_max[i] for i in range(3))
 
 
-def _validate_objectives_consistency(objectives: ObjectivesYaml) -> str | None:
+def _validate_benchmark_definition_consistency(
+    objectives: BenchmarkDefinition,
+) -> str | None:
     """Fail closed on invalid objective relationships and jitter ranges."""
     goal = objectives.objectives.goal_zone
     for zone in objectives.objectives.forbid_zones:
@@ -142,7 +144,7 @@ def _metadata_is_fixed(metadata: Any) -> bool:
 
 
 def _validate_parent_fixed_contract(
-    component: Compound, objectives: ObjectivesYaml | None
+    component: Compound, objectives: BenchmarkDefinition | None
 ) -> str | None:
     """Reject the misleading parent-only fixed pattern for benchmark fixtures."""
     if not _metadata_is_fixed(getattr(component, "metadata", None)):
@@ -351,11 +353,11 @@ def define_fluid(
     )
 
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
-    obj_path = working_dir / "objectives.yaml"
+    obj_path = working_dir / "benchmark_definition.yaml"
 
     if obj_path.exists():
         data = yaml.safe_load(obj_path.read_text())
-        objs = ObjectivesYaml(**data)
+        objs = BenchmarkDefinition(**data)
         updated = False
         for i, f in enumerate(objs.fluids):
             if f.fluid_id == name:
@@ -380,12 +382,12 @@ def set_soft_mesh(
 ) -> bool:
     """Explicitly enables FEM for the scene and marks intent for a specific part."""
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
-    obj_path = working_dir / "objectives.yaml"
+    obj_path = working_dir / "benchmark_definition.yaml"
 
     if obj_path.exists():
         try:
             data = yaml.safe_load(obj_path.read_text())
-            objs = ObjectivesYaml(**data)
+            objs = BenchmarkDefinition(**data)
             objs.physics.fem_enabled = enabled
             if enabled:
                 # FEM currently requires Genesis backend
@@ -702,13 +704,13 @@ def simulate(
 
     objectives = None
     assembly_definition = None
-    objectives_path = working_dir / "objectives.yaml"
+    objectives_path = working_dir / "benchmark_definition.yaml"
     if objectives_path.exists():
         content = objectives_path.read_text(encoding="utf-8")
         if "[TEMPLATE]" not in content:
             try:
                 data = yaml.safe_load(content)
-                objectives = ObjectivesYaml(**data)
+                objectives = BenchmarkDefinition(**data)
                 fixed_contract_error = _validate_parent_fixed_contract(
                     component, objectives
                 )
@@ -1068,10 +1070,10 @@ def validate(
 
     bbox = component.bounding_box()
 
-    # Load build_zone from objectives.yaml if not provided
+    # Load build_zone from benchmark_definition.yaml if not provided
     effective_build_zone = build_zone
     if effective_build_zone is None and output_dir:
-        obj_path = output_dir / "objectives.yaml"
+        obj_path = output_dir / "benchmark_definition.yaml"
         if obj_path.exists():
             try:
                 content = obj_path.read_text(encoding="utf-8")
@@ -1080,13 +1082,18 @@ def validate(
                 if lines and "[TEMPLATE]" in lines[0]:
                     effective_build_zone = None
                 else:
-                    from shared.models.schemas import ObjectivesYaml
+                    from shared.models.schemas import BenchmarkDefinition
 
                     data = yaml.safe_load(content)
-                    obj_model = ObjectivesYaml(**data)
-                    objective_error = _validate_objectives_consistency(obj_model)
+                    obj_model = BenchmarkDefinition(**data)
+                    objective_error = _validate_benchmark_definition_consistency(
+                        obj_model
+                    )
                     if objective_error:
-                        return (False, f"Invalid objectives.yaml: {objective_error}")
+                        return (
+                            False,
+                            f"Invalid benchmark_definition.yaml: {objective_error}",
+                        )
                     fixed_contract_error = _validate_parent_fixed_contract(
                         component, obj_model
                     )
@@ -1243,7 +1250,7 @@ def validate_fem_manufacturability(
     component: Compound, session_root: Path, session_id: str | None = None
 ) -> tuple[bool, str | None]:
     """Check if FEM material validation is required and if it passes."""
-    obj_path = session_root / "objectives.yaml"
+    obj_path = session_root / "benchmark_definition.yaml"
     if not obj_path.exists():
         return True, None
 
@@ -1253,7 +1260,7 @@ def validate_fem_manufacturability(
             return True, None
 
         data = yaml.safe_load(content)
-        objs = ObjectivesYaml(**data)
+        objs = BenchmarkDefinition(**data)
         if objs.physics and objs.physics.fem_enabled:
             config = load_config()
             custom_config_path = session_root / "manufacturing_config.yaml"

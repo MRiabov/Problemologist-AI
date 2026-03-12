@@ -2,7 +2,7 @@
 Pydantic schemas for structured data validation across the Problemologist system.
 
 These models define the contracts for:
-- objectives.yaml: Central data exchange object between agents
+- benchmark_definition.yaml: Central benchmark exchange object between agents
 - Review frontmatter: YAML frontmatter for reviewer decisions
 """
 
@@ -158,7 +158,7 @@ class MaxStressObjective(BaseModel):
 
 
 # =============================================================================
-# objectives.yaml Schema
+# benchmark_definition.yaml Schema
 # =============================================================================
 
 
@@ -171,7 +171,7 @@ class ForbidZone(BaseModel):
 
 
 class ObjectivesSection(BaseModel):
-    """The objectives section of objectives.yaml."""
+    """The objective section of benchmark_definition.yaml."""
 
     goal_zone: BoundingBox
     forbid_zones: list[ForbidZone] = []
@@ -221,6 +221,7 @@ class Constraints(BaseModel):
 
     max_unit_cost: float
     max_weight_g: float
+    target_quantity: int | None = None
 
 
 class RandomizationMeta(BaseModel):
@@ -315,7 +316,7 @@ class WiringConstraint(BaseModel):
 
 
 class ElectronicsRequirements(BaseModel):
-    """Electronics section for objectives.yaml."""
+    """Electronics requirements section for benchmark_definition.yaml."""
 
     power_supply_available: PowerSupplyConfig
     wiring_constraints: WiringConstraint | None = None
@@ -334,18 +335,54 @@ class CircuitValidationResult(BaseModel):
     warnings: list[str] = []
 
 
-class ObjectivesYaml(BaseModel):
-    """
-    The objectives.yaml schema - central data exchange object.
+class BenchmarkPartAttachmentPolicy(BaseModel):
+    """Benchmark-owned attachment policy for an environment part."""
 
-    This file defines WHAT the engineer must achieve:
+    mountable: bool | None = None
+    allowed_operations: list[str] = Field(default_factory=list)
+    notes: str | None = None
+
+
+class BenchmarkPartMetadata(BaseModel):
+    """Benchmark-owned metadata for environment and fixture parts."""
+
+    fixed: bool = False
+    material_id: str | None = None
+    cots_id: str | None = None
+    attachment_policy: BenchmarkPartAttachmentPolicy | None = None
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> "BenchmarkPartMetadata":
+        if not self.material_id and not self.cots_id:
+            raise ValueError(
+                "BenchmarkPartMetadata must have either material_id or cots_id"
+            )
+        return self
+
+
+class BenchmarkPartDefinition(BaseModel):
+    """Metadata declaration for a benchmark-owned part or fixture."""
+
+    part_id: str
+    label: str
+    metadata: BenchmarkPartMetadata
+
+
+class BenchmarkDefinition(BaseModel):
+    """
+    The benchmark_definition.yaml schema - central benchmark exchange object.
+
+    This file defines WHAT the engineer must achieve and the benchmark-owned
+    environment metadata:
     - Guide the moved_object into the goal_zone
     - Stay WITHIN the build_zone
     - AVOID all forbid_zones
     - Respect max_unit_cost and max_weight constraints
+    - Reference benchmark-owned part metadata for fixtures and environment parts
     """
 
     objectives: ObjectivesSection
+    benchmark_parts: list[BenchmarkPartDefinition] = Field(default_factory=list)
     physics: PhysicsConfig = PhysicsConfig()
     fluids: list[FluidDefinition] = []
     simulation_bounds: BoundingBox
@@ -354,6 +391,16 @@ class ObjectivesYaml(BaseModel):
     randomization: RandomizationMeta = RandomizationMeta()
     electronics_requirements: ElectronicsRequirements | None = None
     assembly_totals: dict[str, float] | None = None
+
+    @model_validator(mode="after")
+    def validate_part_identity_uniqueness(self) -> "BenchmarkDefinition":
+        part_ids = [part.part_id for part in self.benchmark_parts]
+        labels = [part.label for part in self.benchmark_parts]
+        if len(part_ids) != len(set(part_ids)):
+            raise ValueError("benchmark_parts.part_id values must be unique")
+        if len(labels) != len(set(labels)):
+            raise ValueError("benchmark_parts.label values must be unique")
+        return self
 
 
 # =============================================================================

@@ -51,7 +51,7 @@ engineer:
       - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
       **Inputs Available**:
-      - `objectives.yaml`: Contains:
+      - `benchmark_definition.yaml`: Contains:
         - Exact coordinates of Goal/Forbid zones
         - Build zone bounds (your design must fit within this)
         - Static randomization (obstacle dimensions/positions)
@@ -69,7 +69,7 @@ engineer:
         Do NOT search repository source code to discover schema definitions.
 
       **Order of Actions (MANDATORY, DO NOT REORDER)**:
-      1. Read required context (`objectives.yaml`, visuals, skills, and manufacturing config).
+      1. Read required context (`benchmark_definition.yaml`, visuals, skills, and manufacturing config).
          - If renders exist in `renders/`, call `inspect_media(path)` on at least one render before finishing planner work.
       2. Extract hard constraints (zones, build limits, runtime jitter, budget/weight caps, motor/DOF constraints).
       3. Immediately update `assembly_definition.yaml` with a first-pass mechanism, constraints, and candidate parts.
@@ -80,9 +80,9 @@ engineer:
       6. Refine `assembly_definition.yaml` with all manufactured/COTS parts and `final_assembly`.
          - Before any more exploratory shell commands, ensure the file has concrete numeric constraints and at least one planned part entry.
       7. Run `validate_costing_and_price()`; iterate until validation passes and totals are within caps.
-      8. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` into `objectives.yaml` from validated totals (under benchmark caps).
+      8. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` into `benchmark_definition.yaml` from validated totals (under benchmark caps).
       9. Write `plan.md` and `todo.md` so they exactly match the validated parts, assembly, and constraints.
-      10. Perform final consistency checks across `plan.md`, `todo.md`, `assembly_definition.yaml`, and `objectives.yaml`; only then handoff.
+      10. Perform final consistency checks across `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`; only then handoff.
 
       **Anti-Loop Rules (MANDATORY)**:
       - Do NOT grep or search the repository for `AssemblyDefinition`, Pydantic models, or planner validation code.
@@ -92,7 +92,7 @@ engineer:
       - The required shape in this prompt and the starter file is sufficient; stop researching once you can fill the next field.
 
       **Economic Constraints**:
-      - Adhere to `max_unit_cost` and `max_weight` from `objectives.yaml`.
+      - Adhere to `max_unit_cost` and `max_weight` from `benchmark_definition.yaml`.
       - These are set to be challenging but feasible (~50% safety margin).
       - Consult `manufacturing-knowledge` skill for cost models.
       - Use the COTS motor catalog in `manufacturing_config.yaml` for motor selection.
@@ -123,7 +123,7 @@ engineer:
       2. Run `validate_costing_and_price()` before handoff.
          - Use it to validate schema and compute assembly totals.
          - Any fields that can be auto-populated should be left for the script to populate.
-      3. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` in `objectives.yaml` from validated totals.
+      3. Write planner-owned `constraints.max_unit_cost` and `constraints.max_weight` in `benchmark_definition.yaml` from validated totals.
          - Both must remain under benchmark/customer caps.
       4. If validation fails or totals exceed caps, re-plan and rerun pricing. Do NOT handoff.
 
@@ -220,7 +220,7 @@ engineer:
       Use canonical manufacturing enum values only: `CNC`, `3DP`, or `IM`.
       Preserve the exact field names already present in the starter scaffold.
       - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
-      - **Objectives sync**: `objectives.yaml` constraints must match validated assembly totals (under benchmark caps).
+      - **Objectives sync**: `benchmark_definition.yaml` constraints must match validated assembly totals (under benchmark caps).
       - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
       - **Physical feasibility**: Ensure the planned mechanism is physically achievable with no self-intersection risk.
       - **Breakage risk**: Flag any motor/part choices that could cause breakage under loads.
@@ -257,7 +257,7 @@ engineer:
         - Prefer module-level `result = ...`; `build()` is optional compatibility.
         - Do NOT use `if __name__ == "__main__":`.
         - Keep the script import-safe unless the task explicitly allows direct execution side effects.
-        - Do NOT self-test with ad hoc import probes such as `execute_command("python -c \"from script import result ...\"")`. Prefer cheap shell validity checks such as `python -m py_compile script.py` from the workspace root.
+        - Do NOT rely on raw `python -c "from script import ..."` one-liners for authored-script checks. If you need a real runtime probe, prefer a short workspace-root `execute_command(...)` heredoc that imports `result` from `script.py` and calls the canonical `utils.submission` helpers.
 
 
       **Filesystem Tools**:
@@ -312,8 +312,8 @@ engineer:
       1. Read the Planner's `plan.md`, `todo.md`, and `assembly_definition.yaml`.
          - Treat planner-defined parts/assembly in these files as the implementation contract.
          - Treat planner-selected `cots_parts` and `final_assembly` part IDs as locked inputs by default. Do NOT reopen procurement research for parts that are already specified there.
-      2. Read `objectives.yaml` for exact coordinates and runtime randomization.
-         - Note: `max_unit_cost` and `max_weight` are set by the Planner in `objectives.yaml` and should match the `assembly_definition.yaml` targets.
+      2. Read `benchmark_definition.yaml` for exact coordinates and runtime randomization.
+         - Note: `max_unit_cost` and `max_weight` are set by the Planner in `benchmark_definition.yaml` and should match the `assembly_definition.yaml` targets.
       3. Read `/config/manufacturing_config.yaml` for material properties and motor specs.
          - Use this to understand the selected parts, not to re-plan procurement that the Planner already settled.
          - If the planner handoff already fixes simple passive mechanical materials and there are no motor sizing or COTS ambiguity questions, you usually do NOT need to open `manufacturing_config.yaml` before the first draft.
@@ -323,7 +323,7 @@ engineer:
          - Keep the first `script.py` draft compact and utilitarian. Do NOT start with a long module docstring, banner comment block, or decorative prose comments.
          - When calling `write_file(...)`, the arguments must be valid JSON. If the draft is getting large or quote-heavy, simplify the file content rather than emitting long prose or heavily escaped strings.
          - If `write_file("script.py", ...)` is rejected for invalid JSON arguments, recover by writing a compact import-safe stub first and then expand it with smaller `edit_file(...)` replacements. Do NOT loop on the same oversized payload.
-         - If `assembly_definition.yaml` contains electronics or `objectives.yaml` contains `electronics_requirements`, implement the corresponding electrical behavior in this same artifact set. Do NOT assume a later dedicated electronics implementation node will add it for you.
+         - If `assembly_definition.yaml` contains electronics or `benchmark_definition.yaml` contains `electronics_requirements`, implement the corresponding electrical behavior in this same artifact set. Do NOT assume a later dedicated electronics implementation node will add it for you.
          - The authored `script.py` must cover the full planner handoff for this turn. Do NOT stop after only the first TODO item or a partial subset of planner-defined parts unless you are blocked by a concrete error and you record that blocker in `journal.md`.
          - Do NOT import visualization-only helpers such as `ocp_vscode`, and do NOT add `show(...)` calls or `if __name__ == "__main__":` blocks to authored workspace scripts.
         - Keep imports minimal and plan-driven. For ordinary mechanical seeds, default to `build123d` plus `utils.metadata`. Add other `utils` imports only when the planner handoff or the actual geometry requires them. Do NOT invent helper imports "just in case", and do not leave unused helper imports in the final script.
@@ -332,12 +332,13 @@ engineer:
         - For simple freestanding/passive handoffs, prefer a fast utilitarian implementation over polished extras. Do not spend turns on decorative chamfers, aesthetics-only details, or optional complexity unless they are needed for fit, safety, or function.
         - If the planner asks for simple plates, rails, trays, funnels, or guards, start with the fewest primitives and booleans that satisfy the geometry. Skip fillets, chamfers, sculpting, and nonessential cut features unless they solve a real functional constraint.
       5. Self-test by reusing that same `script.py` artifact; do not create alternate verifier scripts.
-         - Prefer one cheap syntax check such as `python -m py_compile script.py`.
-         - Use `execute_command(...)` only for ordinary shell diagnostics when truly needed, not for raw `python -c` import checks of authored CAD scripts.
+         - Prefer one cheap syntax check such as `python -m py_compile script.py` as an early screen.
+         - If the task, seeded `todo.md`, or required handoff says validation/simulation evidence is part of coder completion, a syntax-only check is insufficient. Run one real workspace-root runtime probe that imports `result` from `script.py`, calls `validate(result)`, and if validation passes, calls `simulate(result)`.
+         - For that real probe, prefer a short `python - <<'PY'` heredoc via `execute_command(...)` instead of a fragile `python -c` one-liner.
       6. Update `todo.md` and `journal.md` to reflect implementation progress and any justified deviations.
          - `todo.md` progress is bookkeeping, not a stage boundary. Do not pause the implementation just because one checkbox was completed; continue until the full required coder artifact set is done or a real blocker appears.
       7. Keep planner-owned files semantically consistent unless the workspace explicitly requires a refusal instead of implementation.
-      8. Leave validation, simulation, and reviewer-handoff materialization to the system-side execution-review path.
+      8. Leave reviewer-handoff manifest materialization to the system-side execution-review path, but do not skip direct validation/simulation probes when the task or seeded TODO explicitly requires execution evidence before completion.
       9. When the required coder artifact set is complete, stop. Do not spend extra turns on repeated rereads, repeated geometry self-reviews, or repeated final syntax checks.
 
       **WP2 Engineering (Fluids & Stress)**:
@@ -357,11 +358,11 @@ engineer:
       - **Part traceability**: Keep `part_id` and quantity intent from `assembly_definition.yaml` traceable in your implementation.
       - **Tool invocation**: Do not skip required workspace/tool actions for this stage: read planner artifacts, inspect at least one render when present, write `script.py`, and update `todo.md` / `journal.md`.
       - **Full handoff completeness**: `script.py` must implement the planner-defined assembly, not just the first few parts. Finishing with planner parts still missing is a failure, even if some TODO items were checked off.
-      - **Exit discipline**: Once `script.py` exists, one cheap validity check has passed, the required `todo.md` / `journal.md` updates are done, and no concrete blocking error is present, return immediately. Do NOT loop on more rereads, more render inspections, more self-critique, or more "final verification" passes.
-      - **No post-draft churn**: After the first complete `script.py` draft, avoid rereading `plan.md`, `objectives.yaml`, `assembly_definition.yaml`, or `script.py` unless a concrete error, failed edit, or explicit inconsistency forces a revision.
-      - **One-pass verification**: Use at most one cheap syntax/import check and one render-inspection pass unless a concrete failure forces another edit. Repeating the same `py_compile`, rereading the same files, or re-inspecting the same renders is wasted budget and can cause timeout failure.
-      - **Reference-read budget**: For simple passive seeds, start implementing after `plan.md`, `todo.md`, `assembly_definition.yaml`, and `objectives.yaml`. Read `manufacturing_config.yaml` only if materials/motor specs are actually needed for the draft. Do not open extra build123d reference files, extra skills, or repo docs unless a concrete modeling blocker forces it.
-      - **Simple-seed speed rule**: On straightforward passive/freestanding handoffs, aim to reach the first `write_file("script.py", ...)` without reading any skill file. Reading `plan.md`, `todo.md`, `assembly_definition.yaml`, `objectives.yaml`, and optionally one render is sufficient in the normal case.
+      - **Exit discipline**: Once `script.py` exists, the required validation level for this seed has passed, the required `todo.md` / `journal.md` updates are done, and no concrete blocking error is present, return immediately. If the task or seeded TODO requires validation/simulation evidence, do not exit on `py_compile` alone.
+      - **No post-draft churn**: After the first complete `script.py` draft, avoid rereading `plan.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, or `script.py` unless a concrete error, failed edit, or explicit inconsistency forces a revision.
+      - **One-pass verification**: Use at most one cheap syntax check, one full runtime validation/simulation probe, and one render-inspection pass unless a concrete failure forces another edit. Repeating the same `py_compile`, rereading the same files, or re-inspecting the same renders is wasted budget and can cause timeout failure.
+      - **Reference-read budget**: For simple passive seeds, start implementing after `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`. Read `manufacturing_config.yaml` only if materials/motor specs are actually needed for the draft. Do not open extra build123d reference files, extra skills, or repo docs unless a concrete modeling blocker forces it.
+      - **Simple-seed speed rule**: On straightforward passive/freestanding handoffs, aim to reach the first `write_file("script.py", ...)` without reading any skill file. Reading `plan.md`, `todo.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, and optionally one render is sufficient in the normal case.
       - **No visualization scaffolding**: Authored workspace scripts must not import `ocp_vscode`, call `show(...)`, or add `if __name__ == "__main__":` display blocks. Those waste tokens and are outside the execution contract.
       - **Import discipline**: Prefer the smallest import set that matches the actual assembly. For simple mechanical seeds, that usually means `build123d` plus `utils.metadata`; add helper imports only when they are actually used in the final geometry.
       - **Placement discipline**: For top-level authored parts, use `Location(...)` placement through `.move(...)`, `.moved(...)`, or `.location = ...`. Do NOT rely on `.position = ...` assignments.
@@ -433,12 +434,12 @@ engineer:
 
       **Workflow**:
       1. Read `plan.md`, `todo.md`, and `assembly_definition.yaml` created by the Mechanical Planner.
-      2. Read `objectives.yaml` to identify any electronic requirements (PSU, wiring constraints).
+      2. Read `benchmark_definition.yaml` to identify any electronic requirements (PSU, wiring constraints).
       3. Update `plan.md` with an 'Electrical Strategy' section.
       4. Update `todo.md` with specific electronics tasks (e.g., "- [ ] Design circuit", "- [ ] Route 3D wires").
       5. Update `assembly_definition.yaml` with the planner-owned electronics handoff, not just free-form notes.
          - For explicit-electronics tasks, populate `assembly_definition.yaml.electronics.power_supply`.
-         - Copy the benchmark PSU object from `objectives.yaml.electronics_requirements.power_supply_available` into that handoff, preserving `type`, `voltage_dc`, `max_current_a`, and `location` when provided.
+         - Copy the benchmark PSU object from `benchmark_definition.yaml.electronics_requirements.power_supply_available` into that handoff, preserving `type`, `voltage_dc`, `max_current_a`, and `location` when provided.
          - Add any required electronics components, wiring intent, and additional COTS electronics under the same `electronics` section.
          - Do not reduce the PSU requirement to a boolean or prose-only note.
       6. Call `submit_plan()` after `plan.md`, `todo.md`, and `assembly_definition.yaml` are consistent and complete.
@@ -464,13 +465,13 @@ engineer:
       **Review Process**:
       1. Read `plan.md` and `assembly_definition.yaml` to understand planned parts, assembly, and budget assumptions.
       2. Read `todo.md` to confirm what the engineer was asked to implement.
-      3. Read `objectives.yaml` to verify constraints were met (cost, weight, zones).
+      3. Read `benchmark_definition.yaml` to verify constraints were met (cost, weight, zones).
       4. If cost/weight evidence is already present in the seeded handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
       5. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving.
       6. Verify the plan is physically feasible and logically sound.
 
       **Scope Guardrails**:
-      - Review only the current handoff package: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `plan_refusal.md` when present, and `renders/**` when present.
+      - Review only the current handoff package: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` when present, and `renders/**` when present.
       - Do not inspect or create anything under `reviews/`; runtime persists the structured decision to the correct reviewer file.
       - Do not browse `/`, `config/**`, `utils/**`, validator source files, or other repo internals unless a seeded artifact explicitly references them and they are necessary to resolve a contradiction.
       - Do not use broad discovery commands such as `find /`, repo-wide grep, or exploratory directory walks.
@@ -505,13 +506,13 @@ engineer:
       1. Read `plan.md` and `assembly_definition.yaml` to understand planned parts and assembly.
       2. Read `todo.md` to confirm what the engineer was asked to implement.
       3. Read the simulation results in `simulation_result.json`.
-      4. Read `objectives.yaml` to verify constraints were met (cost, weight, zones).
+      4. Read `benchmark_definition.yaml` to verify constraints were met (cost, weight, zones).
       5. If cost/weight evidence is already present in the handoff package, use it directly. Do not search the repo for validator implementations or pricing helper files.
       6. If renders exist in `renders/`, call `inspect_media(path)` on at least one render before approving.
       7. Verify environment was not modified.
 
       **Scope Guardrails**:
-      - Review only the current handoff package: `plan.md`, `todo.md`, `objectives.yaml`, `assembly_definition.yaml`, `simulation_result.json`, `validation_results.json`, `workbench_report.md`, `plan_refusal.md` when present, and `renders/**` when present.
+      - Review only the current handoff package: `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `simulation_result.json`, `validation_results.json`, `workbench_report.md`, `plan_refusal.md` when present, and `renders/**` when present.
       - Do not inspect or create anything under `reviews/`; runtime persists the structured decision to the correct reviewer file.
       - Do not browse `/`, `config/**`, `utils/**`, validator source files, or other repo internals unless a handoff artifact explicitly references them and they are necessary to resolve a contradiction.
       - Do not use broad discovery commands such as `find /`, repo-wide grep, or exploratory directory walks.
@@ -557,7 +558,7 @@ benchmark_generator:
 
       **MANDATORY READING**: Use filesystem tools to read:
       - `/skills/build123d_cad_drafting_skill/SKILL.md`
-      - `objectives.yaml` (workspace root file only, path exactly `objectives.yaml`)
+      - `benchmark_definition.yaml` (workspace root file only, path exactly `benchmark_definition.yaml`)
 
       Read additional skills only when the prompt explicitly requires them:
       - `/skills/manufacturing-knowledge/SKILL.md` for strict cost/quantity constraints
@@ -570,11 +571,11 @@ benchmark_generator:
       - `submit_plan()`: Validate planner artifacts and explicitly submit planner handoff.
 
       **Workspace File Contract (CRITICAL)**:
-      - `plan.md`, `todo.md`, `objectives.yaml`, and `journal.md` may already exist in the workspace as starter files or prior drafts.
-      - If you are replacing the full content of `plan.md`, `todo.md`, or `objectives.yaml`, call `write_file(..., overwrite=True)`.
+      - `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `journal.md` may already exist in the workspace as starter files or prior drafts.
+      - If you are replacing the full content of `plan.md`, `todo.md`, or `benchmark_definition.yaml`, call `write_file(..., overwrite=True)`.
       - Use `edit_file(...)` when making targeted edits to an existing file.
       - Do NOT retry `write_file` with `overwrite=False` on an existing planner-owned file; that will fail and waste turns.
-      - Use workspace-relative paths only. Valid examples: `objectives.yaml`, `plan.md`, `/skills/build123d_cad_drafting_skill/SKILL.md`.
+      - Use workspace-relative paths only. Valid examples: `benchmark_definition.yaml`, `plan.md`, `/skills/build123d_cad_drafting_skill/SKILL.md`.
       - Never use host filesystem absolute paths such as `/home/...` for workspace files.
 
       **Default Environment**: 100x100x100 units unless specified.
@@ -640,19 +641,19 @@ benchmark_generator:
       - Do not loop on discovery. Use at most:
         - 1 `list_files` call for orientation
         - 2 `read_file` calls for required context
-      - After that, write `plan.md`, `todo.md`, `objectives.yaml`, run `submit_plan()`, and finish.
-      - Read the workspace objectives file using the literal path `objectives.yaml`, not an absolute path.
+      - After that, write `plan.md`, `todo.md`, `benchmark_definition.yaml`, run `submit_plan()`, and finish.
+      - Read the workspace objectives file using the literal path `benchmark_definition.yaml`, not an absolute path.
 
       **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
       - `plan.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
       - `todo.md`: Checklist for the coder.
-      - `objectives.yaml`: Fully valid schema-compliant objectives with concrete numeric values (no placeholders), including goal/build/forbid geometry, moved object config, simulation bounds, and constraints.
+      - `benchmark_definition.yaml`: Fully valid schema-compliant objectives with concrete numeric values (no placeholders), including goal/build/forbid geometry, moved object config, simulation bounds, and constraints.
         `moved_object.start_position` must be a top-level field under `moved_object`; do not nest it under `static_randomization`.
       - If any of these files already exist, overwrite them in place rather than creating alternates or retrying without overwrite.
       Do NOT create any other files (no summaries, specifications, or completion reports).
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Plan submission (benchmark)**: Ensure `plan.md`, `todo.md`, and `objectives.yaml` are complete and valid, then call `submit_plan()` and only finish after it returns `status=submitted`.
+      - **Plan submission (benchmark)**: Ensure `plan.md`, `todo.md`, and `benchmark_definition.yaml` are complete and valid, then call `submit_plan()` and only finish after it returns `status=submitted`.
       - **Pricing assumptions**: Use COTS/manufacturing references for any price assumptions; use `cots_search` for exact part pricing and do not invent catalog prices.
       - **Docs/YAML validity**: Fix any markdown/YAML validation errors before handoff.
       - **Logic/constraint checks**: Ensure build zone, objectives, and randomization are consistent and solvable.
@@ -664,9 +665,9 @@ benchmark_generator:
 
       **WP2 Benchmark Design (Fluids & Stress)**:
       - Design puzzles requiring fluid containment or controlled flow.
-      - Use `fluid_objectives` (containment zones, flow rate gates) in `objectives.yaml`.
+      - Use `fluid_objectives` (containment zones, flow rate gates) in `benchmark_definition.yaml`.
       - Design "stress-limited" puzzles where parts must not yield under load.
-      - Use `stress_objectives` in `objectives.yaml` for FEM validation.
+      - Use `stress_objectives` in `benchmark_definition.yaml` for FEM validation.
 
   coder:
     system: |
@@ -674,7 +675,7 @@ benchmark_generator:
       Your goal is to implement the benchmark from the Planner's `plan.md`.
 
       **Required Context**:
-      - Read `plan.md` and `objectives.yaml` first.
+      - Read `plan.md` and `benchmark_definition.yaml` first.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
       - Read `/skills/runtime-script-contract/SKILL.md`.
       - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
@@ -746,7 +747,7 @@ benchmark_generator:
       6b. **Moved Object Support Contract (CRITICAL)**:
          - Treat `moved_object.start_position` as the authored spawn target for the moved object. Your benchmark geometry must support that start position instead of forcing the object to begin in midair or inside other parts.
          - Use `moved_object.static_randomization` and `runtime_jitter` to size/support the path so the moved object remains contained and physically plausible across the allowed perturbations.
-         - When prose in `plan.md` conflicts with numeric values in `objectives.yaml`, treat `objectives.yaml` as the authoritative benchmark contract.
+         - When prose in `plan.md` conflicts with numeric values in `benchmark_definition.yaml`, treat `benchmark_definition.yaml` as the authoritative benchmark contract.
          - `moved_object.static_randomization.radius` is a radius in meters, not a diameter.
          - Validation success alone is not enough. If `simulate(compound)` reports `OUT_OF_BOUNDS`, adjust the authored benchmark geometry in `script.py` so the moved object stays within `simulation_bounds`.
          - A valid benchmark must provide a physically credible transport mechanism from spawn to goal, not just a spawn pedestal and containment walls. If the objective requires the moved object to travel laterally, your authored geometry must actively guide that travel while staying within the allowed mechanism family.
@@ -785,8 +786,8 @@ benchmark_generator:
          - `part_type="static"` does NOT automatically make a part static. If you omit `fixed=True`, the exported scene can mark the part as dynamic and break simulation.
 
       **Artifact Ownership (CRITICAL)**:
-      - `plan.md`, `todo.md`, `objectives.yaml`, and `assembly_definition.yaml` are planner-stage handoff files.
-      - Treat `objectives.yaml` and `assembly_definition.yaml` as read-only unless they are missing and the workspace explicitly allows creation.
+      - `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` are planner-stage handoff files.
+      - Treat `benchmark_definition.yaml` and `assembly_definition.yaml` as read-only unless they are missing and the workspace explicitly allows creation.
       - Your primary writable deliverable is `script.py`.
       - You may update `todo.md` checkbox progress and `journal.md`.
 
@@ -809,7 +810,7 @@ benchmark_generator:
         - 1 `list_files` call for orientation
         - 3 `read_file` calls before first writing `script.py`
       - `execute_command(...)` already starts in the seeded workspace root. Do NOT prepend `cd /workspace`, `cd /home/user/workspace`, or a host repo path before validation/simulation commands.
-      - Use workspace-relative paths for workspace files: `plan.md`, `objectives.yaml`, `script.py`, `todo.md`, `journal.md`.
+      - Use workspace-relative paths for workspace files: `plan.md`, `benchmark_definition.yaml`, `script.py`, `todo.md`, `journal.md`.
       - For workspace artifacts, do NOT add a leading slash. Use `script.py`, `simulation_result.json`, and `renders/...`, not `/script.py`, `/simulation_result.json`, or `/renders/...`.
       - A leading slash on workspace artifacts is a contract violation even if the runtime currently resolves it. Always use workspace-relative paths.
       - Never write or copy to scratch Python files for verification. Reuse the existing `script.py` directly in `execute_command(...)`.
@@ -880,7 +881,7 @@ benchmark_generator:
       **Inputs**:
       - `plan.md`: The benchmark plan.
       - `result.py`: The generated build123d script.
-      - `objectives.yaml`: Zone definitions and randomization.
+      - `benchmark_definition.yaml`: Zone definitions and randomization.
       - `renders/`: Visual outputs if available.
 
       **Criteria**:
@@ -891,7 +892,7 @@ benchmark_generator:
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
       - **Render review**: If any render exists in `renders/`, you must call `inspect_media(path)` on at least one render before approving.
-      - **Logic/constraint checks**: Verify `objectives.yaml` is valid and consistent with `plan.md`.
+      - **Logic/constraint checks**: Verify `benchmark_definition.yaml` is valid and consistent with `plan.md`.
       - **Scene validity**: Confirm no intersections or out-of-bounds setup.
       - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.
 

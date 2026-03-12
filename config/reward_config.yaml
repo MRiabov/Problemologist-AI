@@ -31,14 +31,14 @@ benchmark:
       plan_artifacts_present:
         weight: 0.05
         description: >
-          plan.md, objectives.yaml, assembly_definition.yaml, and todo.md all
+          plan.md, benchmark_definition.yaml, assembly_definition.yaml, and todo.md all
           exist and are non-empty (not equal to template stubs).
 
       # Gate 2 — YAML files pass schema validation
       yaml_schema_valid:
         weight: 0.10
         description: >
-          objectives.yaml and assembly_definition.yaml pass Pydantic schema
+          benchmark_definition.yaml and assembly_definition.yaml pass Pydantic schema
           validation (no missing required fields, correct types, valid units).
 
       # Gate 3 — cost estimate within benchmark cap
@@ -192,7 +192,7 @@ engineer:
       cost_within_cap:
         weight: 0.12
         description: >
-          Planner-estimated cost <= objectives.yaml max_unit_cost.
+          Planner-estimated cost <= benchmark_definition.yaml max_unit_cost.
         partial: true
         penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_cost / max_unit_cost - 1.0))"
 
@@ -215,7 +215,7 @@ engineer:
         weight: 0.10
         description: >
           All parts declared in assembly_definition.yaml fit within the
-          build_zone AABB from objectives.yaml (checked geometrically).
+          build_zone AABB from benchmark_definition.yaml (checked geometrically).
 
       # Gate 7 — engineer successfully implemented the plan (downstream)
       engineer_implemented_successfully:
@@ -316,7 +316,7 @@ engineer:
       power_budget_valid:
         weight: 0.15
         description: >
-          Total power draw <= power_budget from objectives.yaml.
+          Total power draw <= power_budget from benchmark_definition.yaml.
         partial: true
         penalty_formula: "max(0.0, 1.0 - max(0.0, total_power / max_power - 1.0))"
 

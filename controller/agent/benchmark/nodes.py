@@ -41,7 +41,7 @@ from .tools import get_benchmark_planner_tools, get_benchmark_tools
 logger = structlog.get_logger(__name__)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
-OBJECTIVES_FILE = "objectives.yaml"
+BENCHMARK_DEFINITION_FILE = "benchmark_definition.yaml"
 SCRIPT_FILE = "script.py"
 
 
@@ -116,18 +116,18 @@ class BenchmarkPlannerNode(BaseNode):
             logger.info(
                 "planner_updating_objectives", session_id=state.session.session_id
             )
-            if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
+            if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
                 try:
-                    from shared.models.schemas import ObjectivesYaml
+                    from shared.models.schemas import BenchmarkDefinition
 
                     obj_content = await self.ctx.worker_client.read_file(
-                        OBJECTIVES_FILE
+                        BENCHMARK_DEFINITION_FILE
                     )
                     obj_data_raw = yaml.safe_load(obj_content)
                     if not isinstance(obj_data_raw, dict):
                         obj_data_raw = {}
 
-                    obj_data = ObjectivesYaml(**obj_data_raw)
+                    obj_data = BenchmarkDefinition(**obj_data_raw)
 
                     # Update constraints based on custom objectives
                     if custom_objectives.max_unit_cost is not None:
@@ -145,7 +145,7 @@ class BenchmarkPlannerNode(BaseNode):
                         obj_data.model_dump(mode="json"), sort_keys=False
                     )
                     await self.ctx.worker_client.write_file(
-                        OBJECTIVES_FILE, new_content
+                        BENCHMARK_DEFINITION_FILE, new_content
                     )
                     logger.info(
                         "planner_objectives_updated",
@@ -172,7 +172,7 @@ class BenchmarkPlannerNode(BaseNode):
                 state,
                 inputs,
                 get_benchmark_planner_tools,
-                ["plan.md", "todo.md", "objectives.yaml"],
+                ["plan.md", "todo.md", "benchmark_definition.yaml"],
                 AgentName.BENCHMARK_PLANNER,
             )
         else:
@@ -339,7 +339,7 @@ class BenchmarkPlannerNode(BaseNode):
             + "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
             + '- Stop after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
             + "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
-            + "- In `objectives.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
+            + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
         )
         user_prompt = "Benchmark planner inputs:\n" + json.dumps(
             inputs, indent=2, ensure_ascii=True, default=str
@@ -389,7 +389,7 @@ class BenchmarkPlannerNode(BaseNode):
         artifacts: dict[str, Any],
         reasoning: str,
     ) -> dict[str, Any]:
-        objectives_raw = artifacts.get("objectives.yaml", "")
+        objectives_raw = artifacts.get("benchmark_definition.yaml", "")
         objectives_data = {}
         with suppress(Exception):
             parsed = yaml.safe_load(objectives_raw)
@@ -430,11 +430,11 @@ class BenchmarkPlannerNode(BaseNode):
             reasoning=reasoning.strip() or None,
         ).model_dump(mode="json")
 
-    async def _normalize_objectives_yaml_artifact(self) -> bool:
-        if not await self.ctx.fs.exists(OBJECTIVES_FILE):
+    async def _normalize_benchmark_definition_yaml_artifact(self) -> bool:
+        if not await self.ctx.fs.exists(BENCHMARK_DEFINITION_FILE):
             return False
 
-        raw_content = await self.ctx.fs.read_file(OBJECTIVES_FILE)
+        raw_content = await self.ctx.fs.read_file(BENCHMARK_DEFINITION_FILE)
         if not raw_content.strip():
             return False
 
@@ -490,12 +490,12 @@ class BenchmarkPlannerNode(BaseNode):
             return False
 
         await self.ctx.fs.write_file(
-            OBJECTIVES_FILE,
+            BENCHMARK_DEFINITION_FILE,
             yaml.safe_dump(data, sort_keys=False),
             overwrite=True,
         )
         logger.info(
-            "benchmark_planner_normalized_objectives_yaml",
+            "benchmark_planner_normalized_benchmark_definition_yaml",
             session_id=self.ctx.session_id,
             removed_keys=removed_keys,
             kept_keys=sorted(normalized_totals.keys()),
@@ -557,7 +557,7 @@ class BenchmarkPlannerNode(BaseNode):
         from worker_heavy.utils.file_validation import validate_node_output
 
         max_retries = max(1, int(settings.dspy_program_max_retries))
-        validate_files = ["plan.md", "todo.md", "objectives.yaml"]
+        validate_files = ["plan.md", "todo.md", "benchmark_definition.yaml"]
         episode_id = getattr(state, "episode_id", None) or self.ctx.episode_id
         db_callback = None
         if episode_id and str(episode_id).strip():
@@ -676,7 +676,7 @@ class BenchmarkPlannerNode(BaseNode):
                             continue
 
                         if tool_name == "submit_plan":
-                            await self._normalize_objectives_yaml_artifact()
+                            await self._normalize_benchmark_definition_yaml_artifact()
                             await self._normalize_todo_markdown_artifact()
                         try:
                             result = await asyncio.to_thread(
@@ -734,7 +734,7 @@ class BenchmarkPlannerNode(BaseNode):
                     if submitted:
                         break
 
-                await self._normalize_objectives_yaml_artifact()
+                await self._normalize_benchmark_definition_yaml_artifact()
                 await self._normalize_todo_markdown_artifact()
 
                 if not submitted:
@@ -846,7 +846,7 @@ class BenchmarkCoderSignature(dspy.Signature):
 
     prompt = dspy.InputField()
     plan = dspy.InputField()
-    objectives_yaml = dspy.InputField()
+    benchmark_definition_yaml = dspy.InputField()
     review_feedback = dspy.InputField()
     validation_logs = dspy.InputField()
     journal = dspy.OutputField(desc="A summary of what was done")
@@ -922,11 +922,11 @@ class BenchmarkCoderNode(BaseNode):
         if state.simulation_result and not state.simulation_result.valid:
             validation_logs += "\n" + "\n".join(state.simulation_result.logs)
 
-        objectives_yaml = "# No objectives.yaml found."
+        benchmark_definition_yaml = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists(OBJECTIVES_FILE):
-                objectives_yaml = await self.ctx.worker_client.read_file(
-                    OBJECTIVES_FILE
+            if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
+                benchmark_definition_yaml = await self.ctx.worker_client.read_file(
+                    BENCHMARK_DEFINITION_FILE
                 )
         plan_input = (
             state.plan.model_dump_json() if state.plan else "# No plan.md found."
@@ -939,7 +939,7 @@ class BenchmarkCoderNode(BaseNode):
         inputs = {
             "prompt": state.session.prompt,
             "plan": plan_input,
-            "objectives_yaml": objectives_yaml,
+            "benchmark_definition_yaml": benchmark_definition_yaml,
             "review_feedback": (
                 state.review_feedback
                 if state.session.status == SessionStatus.REJECTED
@@ -955,7 +955,7 @@ class BenchmarkCoderNode(BaseNode):
             state,
             inputs,
             get_benchmark_tools,
-            [SCRIPT_FILE, "plan.md", "todo.md", "objectives.yaml"],
+            [SCRIPT_FILE, "plan.md", "todo.md", "benchmark_definition.yaml"],
             AgentName.BENCHMARK_CODER,
         )
 
@@ -1050,7 +1050,7 @@ class BenchmarkCoderNode(BaseNode):
                     # physics simulation
                     backend = get_default_simulator_backend()
                     try:
-                        obj_data = yaml.safe_load(objectives_yaml)
+                        obj_data = yaml.safe_load(benchmark_definition_yaml)
                         if (
                             obj_data
                             and "physics" in obj_data
@@ -1405,10 +1405,12 @@ class BenchmarkReviewerNode(BaseNode):
             if await self.ctx.worker_client.exists("plan.md"):
                 plan_md = await self.ctx.worker_client.read_file("plan.md")
 
-        objectives = "# No objectives.yaml found."
+        objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("objectives.yaml"):
-                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+            if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
+                objectives = await self.ctx.worker_client.read_file(
+                    "benchmark_definition.yaml"
+                )
 
         state.review_round = state.review_round + 1
         review_filename = f"reviews/benchmark-review-round-{state.review_round}.md"

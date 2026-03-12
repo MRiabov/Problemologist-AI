@@ -7,7 +7,7 @@ import structlog
 import yaml
 from build123d import Compound, export_step
 
-from shared.models.schemas import ObjectivesYaml
+from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import ReviewManifest, ValidationResultRecord
 from worker_heavy.utils.dfm import validate_and_price_assembly
@@ -102,20 +102,22 @@ def submit_for_review(
         logger.error("todo_md_missing", session_id=session_id)
         raise ValueError("todo.md is missing (required for submission)")
 
-    # objectives.yaml
-    objectives_path = cwd / "objectives.yaml"
+    # benchmark_definition.yaml
+    objectives_path = cwd / "benchmark_definition.yaml"
     if objectives_path.exists():
-        from .file_validation import validate_objectives_yaml
+        from .file_validation import validate_benchmark_definition_yaml
 
         objectives_content = objectives_path.read_text(encoding="utf-8")
-        is_valid, result = validate_objectives_yaml(
+        is_valid, result = validate_benchmark_definition_yaml(
             objectives_content, session_id=session_id
         )
         if not is_valid:
             logger.error(
-                "objectives_yaml_invalid", errors=result, session_id=session_id
+                "benchmark_definition_yaml_invalid",
+                errors=result,
+                session_id=session_id,
             )
-            raise ValueError(f"objectives.yaml invalid: {result}")
+            raise ValueError(f"benchmark_definition.yaml invalid: {result}")
 
         # INT-015: Verify immutability
         from .file_validation import validate_immutability
@@ -124,11 +126,13 @@ def submit_for_review(
             objectives_path, session_id=session_id
         )
         if not is_immutable:
-            logger.error("objectives_yaml_modified", session_id=session_id)
-            raise ValueError(f"objectives.yaml violation: {error_msg}")
+            logger.error("benchmark_definition_yaml_modified", session_id=session_id)
+            raise ValueError(f"benchmark_definition.yaml violation: {error_msg}")
     else:
-        logger.error("objectives_yaml_missing", session_id=session_id)
-        raise ValueError("objectives.yaml is missing (required for submission)")
+        logger.error("benchmark_definition_yaml_missing", session_id=session_id)
+        raise ValueError(
+            "benchmark_definition.yaml is missing (required for submission)"
+        )
 
     # assembly_definition.yaml
     cost_path = cwd / "assembly_definition.yaml"
@@ -218,7 +222,7 @@ def submit_for_review(
     dfm_config = load_config()
 
     objectives_data = yaml.safe_load(objectives_path.read_text())
-    objectives_model = ObjectivesYaml(**objectives_data)
+    objectives_model = BenchmarkDefinition(**objectives_data)
     build_zone = objectives_model.objectives.build_zone
     constraints = objectives_model.constraints
 
@@ -299,7 +303,7 @@ def submit_for_review(
 
     import shutil
 
-    shutil.copy(objectives_path, renders_dir / "objectives.yaml")
+    shutil.copy(objectives_path, renders_dir / "benchmark_definition.yaml")
     shutil.copy(cost_path, renders_dir / "assembly_definition.yaml")
 
     # 5. Create reviewer-stage manifest
@@ -332,7 +336,7 @@ def submit_for_review(
         renders=render_paths,
         mjcf_path=str(renders_dir / "scene.xml"),
         cad_path=str(cad_path),
-        objectives_path=str(renders_dir / "objectives.yaml"),
+        objectives_path=str(renders_dir / "benchmark_definition.yaml"),
         assembly_definition_path=str(renders_dir / "assembly_definition.yaml"),
     )
 

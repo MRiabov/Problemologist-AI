@@ -1,11 +1,11 @@
 # Shared models package
 from .schemas import (
+    BenchmarkDefinition,
     BoundingBox,
     Constraints,
     MovedObject,
     MovingPart,
     ObjectivesSection,
-    ObjectivesYaml,
     ReviewFrontmatter,
 )
 from .steerability import (
@@ -16,6 +16,7 @@ from .steerability import (
 )
 
 __all__ = [
+    "BenchmarkDefinition",
     "BoundingBox",
     "CodeReference",
     "Constraints",
@@ -23,7 +24,6 @@ __all__ = [
     "MovedObject",
     "MovingPart",
     "ObjectivesSection",
-    "ObjectivesYaml",
     "ReviewFrontmatter",
     "SelectionLevel",
     "SteerablePrompt",

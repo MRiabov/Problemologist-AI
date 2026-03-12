@@ -32,7 +32,7 @@ from controller.graph.steerability_node import check_steering, steerability_node
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import AgentName, GenerationKind
-from shared.models.schemas import EpisodeMetadata, ObjectivesYaml
+from shared.models.schemas import BenchmarkDefinition, EpisodeMetadata
 from shared.observability.events import emit_event
 from shared.observability.schemas import NodeEntryValidationFailedEvent
 
@@ -160,11 +160,11 @@ async def _state_requires_electronics(state: AgentState) -> bool:
         session_id=session_id,
     )
     try:
-        if not await client.exists("objectives.yaml"):
+        if not await client.exists("benchmark_definition.yaml"):
             return True
-        raw_objectives = await client.read_file("objectives.yaml")
+        raw_objectives = await client.read_file("benchmark_definition.yaml")
         parsed = yaml.safe_load(raw_objectives) or {}
-        objectives = ObjectivesYaml.model_validate(parsed)
+        objectives = BenchmarkDefinition.model_validate(parsed)
         return objectives.electronics_requirements is not None
     except Exception as exc:
         logger.warning(

@@ -91,7 +91,7 @@ agents:
             "config/**",
             "skills/**",
             "utils/**",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan.md",
             "todo.md",
@@ -106,7 +106,7 @@ agents:
             "todo.md",
             "journal.md",
             "assembly_definition.yaml",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
           ]
         deny:
           [
@@ -147,7 +147,7 @@ agents:
             "plan.md",
             "todo.md",
             "journal.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "script.py",
             "**/*.py",
@@ -165,7 +165,7 @@ agents:
             "renders/**",
             "plan_refusal.md",
             "plan.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
           ]
         deny: ["skills/**", "utils/**", "reviews/**/*.py", ".manifests/**"]
@@ -194,7 +194,7 @@ agents:
             "plan.md",
             "todo.md",
             "journal.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "script.py",
             "**/*.py",
@@ -219,7 +219,7 @@ agents:
           ]
         deny:
           [
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan.md",
             "skills/**",
@@ -256,7 +256,7 @@ agents:
             "utils/**",
             "plan.md",
             "todo.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan_refusal.md",
             "script.py",
@@ -298,7 +298,7 @@ agents:
             "utils/**",
             "plan.md",
             "todo.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan_refusal.md",
             "script.py",
@@ -338,7 +338,7 @@ agents:
             "config/**",
             "skills/**",
             "utils/**",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan.md",
             "todo.md",
@@ -354,7 +354,7 @@ agents:
             "plan.md",
             "todo.md",
             "journal.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
           ]
         deny:
@@ -392,7 +392,7 @@ agents:
             "utils/**",
             "plan.md",
             "todo.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan_refusal.md",
             "script.py",
@@ -432,7 +432,7 @@ agents:
             "config/**",
             "skills/**",
             "utils/**",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan.md",
             "todo.md",
@@ -446,7 +446,7 @@ agents:
             "todo.md",
             "journal.md",
             "assembly_definition.yaml",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
           ]
         deny:
           [
@@ -481,7 +481,7 @@ agents:
             "utils/**",
             "plan.md",
             "todo.md",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan_refusal.md",
             "script.py",
@@ -516,7 +516,7 @@ agents:
             "config/**",
             "skills/**",
             "utils/**",
-            "objectives.yaml",
+            "benchmark_definition.yaml",
             "assembly_definition.yaml",
             "plan.md",
             "todo.md",

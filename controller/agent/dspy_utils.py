@@ -203,7 +203,7 @@ def cad_simulation_metric(
                     break
         if hasattr(obj, "objectives"):
             obj_yaml = obj.objectives
-            # Map from ObjectivesYaml nested structure
+            # Map from BenchmarkDefinition nested structure
             if hasattr(obj_yaml, "constraints"):
                 context["max_unit_cost"] = obj_yaml.constraints.max_unit_cost
                 context["max_weight_g"] = obj_yaml.constraints.max_weight_g

@@ -196,11 +196,13 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             root = get_session_root(session_id)
         backend = cls(root=root, session_id=session_id)
         try:
-            from shared.workers.objectives_template import ensure_objectives_yaml
+            from shared.workers.benchmark_definition_template import (
+                ensure_benchmark_definition_yaml,
+            )
 
-            ensure_objectives_yaml(backend.root)
+            ensure_benchmark_definition_yaml(backend.root)
         except Exception as e:
-            logger.warning("objectives_template_write_failed", error=str(e))
+            logger.warning("benchmark_definition_template_write_failed", error=str(e))
         try:
             from shared.cots.runtime import DEFAULT_DB_PATH, get_catalog_metadata
             from shared.workers.schema import COTSReproducibilityManifest

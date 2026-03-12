@@ -266,7 +266,7 @@ async def update_objectives(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """
-    Update objectives.yaml for a specific session.
+    Update benchmark_definition.yaml for a specific session.
     """
     # The original code had these imports inside the function.
     # They are now moved to the top-level imports.
@@ -299,12 +299,12 @@ async def update_objectives(
         )
 
         try:
-            from shared.models.schemas import ObjectivesYaml
+            from shared.models.schemas import BenchmarkDefinition
 
             # Read existing
-            content = await client.read_file("objectives.yaml")
+            content = await client.read_file("benchmark_definition.yaml")
             obj_data_raw = yaml.safe_load(content) or {}
-            obj_data = ObjectivesYaml(**obj_data_raw)
+            obj_data = BenchmarkDefinition(**obj_data_raw)
 
             if request.max_cost is not None:
                 obj_data.constraints.max_unit_cost = request.max_cost
@@ -332,7 +332,7 @@ async def update_objectives(
 
             # Write back
             new_content = yaml.dump(obj_data.model_dump(mode="json"), sort_keys=False)
-            await client.write_file("objectives.yaml", new_content)
+            await client.write_file("benchmark_definition.yaml", new_content)
 
             return BenchmarkObjectivesResponse(
                 status=ResponseStatus.SUCCESS,
