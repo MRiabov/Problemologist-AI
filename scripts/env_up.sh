@@ -105,11 +105,12 @@ echo "Starting Application Servers..."
 # Ensure log directory exists and manage log history
 LOG_DIR="${LOG_DIR:-logs/manual_run}"
 ARCHIVE_DIR="${ARCHIVE_DIR:-logs/archives}"
+SKIP_LOG_ARCHIVE="${SKIP_LOG_ARCHIVE:-0}"
 mkdir -p "$LOG_DIR"
 mkdir -p "$ARCHIVE_DIR"
 
 # Archive previous logs if they exist
-if [ -d "$LOG_DIR" ] && [ "$(ls -A "$LOG_DIR")" ]; then
+if [ "$SKIP_LOG_ARCHIVE" != "1" ] && [ -d "$LOG_DIR" ] && [ "$(ls -A "$LOG_DIR")" ]; then
   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
   mv "$LOG_DIR" "$ARCHIVE_DIR/run_${TIMESTAMP}"
   mkdir -p "$LOG_DIR"
