@@ -19,6 +19,7 @@ from pydantic import (
 
 from shared.enums import (
     AgentName,
+    BenchmarkAttachmentMethod,
     BenchmarkRefusalReason,
     ElectricalRefusalReason,
     ElectronicComponentType,
@@ -335,12 +336,71 @@ class CircuitValidationResult(BaseModel):
     warnings: list[str] = []
 
 
+class BenchmarkPartDrillPolicy(BaseModel):
+    """Benchmark-owned drilling policy for an environment part."""
+
+    allowed: bool = False
+    max_hole_count: int | None = None
+    diameter_range_mm: CoercedTuple2D | None = None
+    max_depth_mm: float | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "BenchmarkPartDrillPolicy":
+        if self.max_hole_count is not None and self.max_hole_count < 1:
+            raise ValueError("max_hole_count must be >= 1")
+        if self.diameter_range_mm is not None:
+            diameter_min, diameter_max = self.diameter_range_mm
+            if diameter_min <= 0 or diameter_max <= 0:
+                raise ValueError("diameter_range_mm values must be > 0")
+            if diameter_min > diameter_max:
+                raise ValueError("diameter_range_mm minimum must be <= maximum")
+        if self.max_depth_mm is not None and self.max_depth_mm <= 0:
+            raise ValueError("max_depth_mm must be > 0")
+        if not self.allowed and (
+            self.max_hole_count is not None
+            or self.diameter_range_mm is not None
+            or self.max_depth_mm is not None
+        ):
+            raise ValueError("drill policy constraints require allowed=true")
+        return self
+
+
 class BenchmarkPartAttachmentPolicy(BaseModel):
     """Benchmark-owned attachment policy for an environment part."""
 
-    mountable: bool | None = None
-    allowed_operations: list[str] = Field(default_factory=list)
+    attachment_methods: list[BenchmarkAttachmentMethod] = Field(default_factory=list)
+    drill_policy: BenchmarkPartDrillPolicy | None = None
     notes: str | None = None
+
+    @field_validator("attachment_methods")
+    @classmethod
+    def validate_attachment_methods(
+        cls, value: list[BenchmarkAttachmentMethod]
+    ) -> list[BenchmarkAttachmentMethod]:
+        if not value:
+            raise ValueError(
+                "attachment_methods must contain at least one method when attachment_policy is declared"
+            )
+        if len(value) != len(set(value)):
+            raise ValueError("attachment_methods must not contain duplicates")
+        if BenchmarkAttachmentMethod.NONE in value and len(value) != 1:
+            raise ValueError(
+                "attachment_methods 'none' must be the only method when present"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def validate_drill_contract(self) -> "BenchmarkPartAttachmentPolicy":
+        if (
+            self.drill_policy is not None
+            and self.drill_policy.allowed
+            and BenchmarkAttachmentMethod.FASTENER not in self.attachment_methods
+        ):
+            raise ValueError(
+                "drill_policy.allowed=true requires attachment_methods to include 'fastener'"
+            )
+        return self
 
 
 class BenchmarkPartMetadata(BaseModel):
@@ -803,6 +863,27 @@ class ElectronicsSection(BaseModel):
     components: list[ElectronicComponent] = []
 
 
+class EnvironmentDrillOperation(BaseModel):
+    """Planner-declared drill operation against a benchmark-owned fixture."""
+
+    target_part_id: str
+    hole_id: str
+    diameter_mm: float
+    depth_mm: float
+    quantity: int = 1
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "EnvironmentDrillOperation":
+        if self.diameter_mm <= 0:
+            raise ValueError("diameter_mm must be > 0")
+        if self.depth_mm <= 0:
+            raise ValueError("depth_mm must be > 0")
+        if self.quantity < 1:
+            raise ValueError("quantity must be >= 1")
+        return self
+
+
 class AssemblyDefinition(BaseModel):
     """
     Schema for assembly_definition.yaml.
@@ -815,6 +896,7 @@ class AssemblyDefinition(BaseModel):
     manufactured_parts: list[ManufacturedPartEstimate] = []
     cots_parts: list[CotsPartEstimate] = []
     electronics: ElectronicsSection | None = None
+    environment_drill_operations: list[EnvironmentDrillOperation] = []
     final_assembly: list[SubassemblyEstimate | PartConfig] = []
     totals: CostTotals
     dfm_suggestions: list[str] = Field(default_factory=list)

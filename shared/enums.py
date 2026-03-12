@@ -181,6 +181,13 @@ class GenerationKind(StrEnum):
     SKILL_AGENT = "skill_agent"
 
 
+class BenchmarkAttachmentMethod(StrEnum):
+    """Allowed ways an engineer may attach to a benchmark-owned fixture."""
+
+    NONE = "none"
+    FASTENER = "fastener"
+
+
 class EvalMode(StrEnum):
     """Evaluation modes for run_evals.py."""
 
