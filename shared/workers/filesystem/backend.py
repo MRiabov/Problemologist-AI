@@ -201,6 +201,21 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             ensure_objectives_yaml(backend.root)
         except Exception as e:
             logger.warning("objectives_template_write_failed", error=str(e))
+        try:
+            from shared.cots.runtime import DEFAULT_DB_PATH, get_catalog_metadata
+            from shared.workers.schema import COTSReproducibilityManifest
+
+            manifests_dir = backend.root / ".manifests"
+            manifests_dir.mkdir(parents=True, exist_ok=True)
+            manifest = COTSReproducibilityManifest(
+                **get_catalog_metadata(DEFAULT_DB_PATH)
+            )
+            (manifests_dir / "cots_reproducibility.json").write_text(
+                manifest.model_dump_json(indent=2),
+                encoding="utf-8",
+            )
+        except Exception as e:
+            logger.warning("cots_reproducibility_manifest_write_failed", error=str(e))
         return backend
 
     def _resolve(self, virtual_path: str) -> Path:

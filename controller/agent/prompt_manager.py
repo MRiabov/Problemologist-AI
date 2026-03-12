@@ -117,6 +117,17 @@ Output ONLY the resolved content. Do not include markdown code blocks (```) unle
         except jinja2.TemplateNotFound:
             raise ValueError(f"Template '{template_name}' not found")
 
+    def get_prompt_value(self, key: str) -> Any:
+        """Return a raw value from config/prompts.yaml using dot-separated keys."""
+        data = load_prompts()
+        value: Any = data
+        for segment in key.split("."):
+            if isinstance(value, dict) and segment in value:
+                value = value[segment]
+            else:
+                raise KeyError(f"Prompt key '{key}' not found in config.")
+        return value
+
     def load_compiled_program(
         self, agent_name: AgentName, program: dspy.Module
     ) -> dspy.Module:

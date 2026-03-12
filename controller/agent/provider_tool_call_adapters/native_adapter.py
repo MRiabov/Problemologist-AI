@@ -30,7 +30,7 @@ class NativeToolCallAdapter:
                     or tool_call.get("name")
                     or tool_call.get("tool_name")
                     or ""
-                )
+                ).strip()
                 raw_arguments = (
                     function.get("arguments")
                     or tool_call.get("arguments")
@@ -46,7 +46,7 @@ class NativeToolCallAdapter:
                     or getattr(tool_call, "name", None)
                     or getattr(tool_call, "tool_name", None)
                     or ""
-                )
+                ).strip()
                 raw_arguments = (
                     getattr(function, "arguments", None)
                     or getattr(tool_call, "arguments", None)

@@ -141,6 +141,17 @@ def configure_logging(service_name: str):
         u_logger.propagate = True
         u_logger.setLevel(logging.DEBUG if extra_debug_log else log_level_num)
 
+    # Silence noisy third-party loggers that are too chatty at DEBUG level
+    for noisy_logger in (
+        "botocore",
+        "boto3",
+        "s3transfer",
+        "urllib3",
+        "httpcore",
+        "httpx",
+    ):
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
     # Keep access logs at INFO for visibility during debugging unless debug file is on
     if not extra_debug_log:
         access_logger = logging.getLogger("uvicorn.access")

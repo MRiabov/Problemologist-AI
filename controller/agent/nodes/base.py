@@ -33,8 +33,9 @@ from controller.observability.langfuse import (
 )
 from controller.observability.tracing import record_worker_events
 from controller.persistence.models import Trace
+from shared.agents.config import load_agents_config
 from shared.enums import AgentName, TraceType
-from shared.models.schemas import CodeReference, TraceMetadata
+from shared.models.schemas import CodeReference, ReviewResult, TraceMetadata
 from shared.observability.schemas import LlmMediaAttachedEvent
 from shared.workers.filesystem.policy import VisualInspectionPolicy
 from shared.workers.schema import MediaInspectionResult
@@ -204,20 +205,154 @@ class BaseNode:
     ) -> VisualInspectionPolicy:
         return self.ctx.fs.policy.get_visual_inspection_policy(node_type)
 
+    async def _next_review_round(self, review_filename_prefix: str) -> int:
+        pattern = re.compile(rf"^{re.escape(review_filename_prefix)}-(\d+)\.md$")
+        max_round = 0
+        try:
+            entries = await self.ctx.worker_client.list_files(
+                "reviews", bypass_agent_permissions=True
+            )
+        except Exception:
+            return 1
+
+        for entry in entries:
+            if entry.is_dir:
+                continue
+            match = pattern.fullmatch(entry.name)
+            if match:
+                max_round = max(max_round, int(match.group(1)))
+        return max_round + 1
+
+    async def _persist_review_result(
+        self, review: ReviewResult, review_filename_prefix: str
+    ) -> str:
+        round_number = await self._next_review_round(review_filename_prefix)
+        review_path = f"reviews/{review_filename_prefix}-{round_number}.md"
+
+        comments: list[str] = []
+        reason = review.reason.strip()
+        if reason:
+            comments.append(reason)
+        comments.extend(
+            fix.strip() for fix in review.required_fixes if fix and fix.strip()
+        )
+        if not comments:
+            comments.append(f"{review.decision.value} review")
+
+        lines = ["---", f"decision: {review.decision.value}", "comments:"]
+        for comment in comments:
+            lines.append(f"  - {json.dumps(comment)}")
+        lines.extend(["---", "", "# Review", ""])
+        lines.append(reason or "(no reason provided)")
+
+        if review.required_fixes:
+            lines.extend(["", "## Required Fixes"])
+            for fix in review.required_fixes:
+                if fix.strip():
+                    lines.append(f"- {fix.strip()}")
+
+        await self.ctx.worker_client.write_file(
+            review_path,
+            "\n".join(lines) + "\n",
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        return review_path
+
+    def _get_runtime_prompt(self, key: str, **kwargs: Any) -> str:
+        prompt = str(self.ctx.pm.get_prompt_value(key)).strip()
+        return prompt.format(**kwargs) if kwargs else prompt
+
+    @staticmethod
+    def _runtime_prompt_scope(node_type: AgentName) -> str:
+        if node_type in {
+            AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_CODER,
+            AgentName.BENCHMARK_REVIEWER,
+        }:
+            return "benchmark_generator.runtime"
+        return "engineer.runtime"
+
+    def _runtime_prompt_key(self, node_type: AgentName, key: str) -> str:
+        return f"{self._runtime_prompt_scope(node_type)}.{key}"
+
+    @staticmethod
+    def _tool_response_message(
+        *,
+        tool_call_id: str,
+        tool_name: str,
+        content: str,
+    ) -> dict[str, str]:
+        """
+        Tool responses are runtime-owned/system-origin messages semantically,
+        but provider-native tool loops require them to be encoded with
+        `role="tool"` and linked to the original tool_call_id.
+        """
+        return {
+            "role": "tool",
+            "tool_call_id": tool_call_id,
+            "name": tool_name,
+            "content": content,
+        }
+
+    @staticmethod
+    def _parse_native_tool_arguments(
+        tool_name: str,
+        raw_arguments: Any,
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        if isinstance(raw_arguments, dict):
+            payload = raw_arguments
+        else:
+            serialized_arguments = raw_arguments
+            if serialized_arguments in (None, ""):
+                serialized_arguments = "{}"
+            if not isinstance(serialized_arguments, str):
+                return None, (
+                    f"Tool arguments for {tool_name} must be a JSON object string; "
+                    f"got {type(raw_arguments).__name__}."
+                )
+            try:
+                payload = json.loads(serialized_arguments)
+            except json.JSONDecodeError as exc:
+                return None, (
+                    f"Invalid JSON arguments for {tool_name}: {exc}. "
+                    "Re-emit the tool call with a valid JSON object."
+                )
+
+        if not isinstance(payload, dict):
+            return None, f"Tool arguments for {tool_name} must be a JSON object."
+        return payload, None
+
     @staticmethod
     def _is_image_media_path(path: str) -> bool:
         return path.lower().endswith((".png", ".jpg", ".jpeg"))
 
     async def _list_render_media_paths(self) -> list[str]:
         with suppress(Exception):
-            entries = await self.ctx.worker_client.list_files("/renders")
+            pending_dirs = ["/renders"]
             media_paths: list[str] = []
-            for entry in entries:
-                path = getattr(entry, "path", "") or ""
-                if self._is_image_media_path(path):
-                    media_paths.append(path.lstrip("/"))
+            visited_dirs: set[str] = set()
+            while pending_dirs:
+                current_dir = pending_dirs.pop()
+                if current_dir in visited_dirs:
+                    continue
+                visited_dirs.add(current_dir)
+                entries = await self.ctx.worker_client.list_files(current_dir)
+                for entry in entries:
+                    path = getattr(entry, "path", "") or ""
+                    if not path:
+                        continue
+                    if getattr(entry, "is_dir", False):
+                        pending_dirs.append(path.rstrip("/"))
+                        continue
+                    if self._is_image_media_path(path):
+                        media_paths.append(path.lstrip("/"))
+            media_paths.sort()
             return media_paths
         return []
+
+    async def _workspace_has_render_media(self) -> bool:
+        return bool(await self._list_render_media_paths())
 
     def _list_render_media_paths_sync(self) -> list[str]:
         with suppress(Exception):
@@ -393,12 +528,18 @@ class BaseNode:
         )
         return finish_tool, output_field_names
 
-    def _resolve_native_litellm_model(self) -> tuple[str, str | None, str | None]:
+    def _resolve_native_litellm_model(
+        self, *, prefer_multimodal: bool = False
+    ) -> tuple[str, str | None, str | None]:
         api_base = settings.openai_api_base
         use_openrouter = bool(settings.openrouter_api_key) or bool(
             api_base and "openrouter.ai" in api_base
         )
         model_name = settings.llm_model
+        if prefer_multimodal:
+            multimodal_model = load_agents_config().llm.multimodal_model
+            if multimodal_model:
+                model_name = multimodal_model
         if "/" in model_name and model_name.split("/", 1)[0] in {
             "openai",
             "openrouter",
@@ -593,6 +734,59 @@ class BaseNode:
             "tool_calls": tool_calls_payload,
         }
 
+    @staticmethod
+    def _requires_submit_plan(node_type: AgentName) -> bool:
+        return node_type in {
+            AgentName.ENGINEER_PLANNER,
+            AgentName.ELECTRONICS_PLANNER,
+        }
+
+    @staticmethod
+    def _submit_plan_succeeded(result: Any) -> bool:
+        payload = result
+        if isinstance(payload, str):
+            with suppress(Exception):
+                payload = json.loads(payload)
+        return (
+            isinstance(payload, dict)
+            and payload.get("ok") is True
+            and payload.get("status") == "submitted"
+        )
+
+    @staticmethod
+    def _submit_plan_error_message(result: Any) -> str | None:
+        payload = result
+        if isinstance(payload, str):
+            with suppress(Exception):
+                payload = json.loads(payload)
+        if not isinstance(payload, dict):
+            return None
+        errors = payload.get("errors")
+        if isinstance(errors, list):
+            normalized = [str(err).strip() for err in errors if str(err).strip()]
+            if normalized:
+                return "; ".join(normalized)
+        return None
+
+    @staticmethod
+    def _planner_autosubmit_prediction(
+        *,
+        signature_cls: type[dspy.Signature],
+        finish_fields: list[str],
+        node_type: AgentName,
+    ) -> dspy.Prediction:
+        summary = {
+            AgentName.ENGINEER_PLANNER: "Mechanical planner artifacts submitted successfully.",
+            AgentName.ELECTRONICS_PLANNER: "Electronics planner artifacts submitted successfully.",
+        }.get(node_type, "Planner artifacts submitted successfully.")
+        return dspy.Prediction.from_completions(
+            {
+                field_name: [summary if field_name == "summary" else ""]
+                for field_name in finish_fields
+            },
+            signature=signature_cls,
+        )
+
     def _run_native_tool_loop(
         self,
         *,
@@ -606,6 +800,7 @@ class BaseNode:
         db_callback: DatabaseCallbackHandler | None = None,
     ) -> dspy.Prediction:
         instructions = getattr(signature_cls, "instructions", "") or ""
+        requires_submit_plan = self._requires_submit_plan(node_type)
         runtime_instructions = (
             "Runtime tool-calling contract:\n"
             "- Use provider-native tool calls only.\n"
@@ -614,6 +809,14 @@ class BaseNode:
             "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
             "- Call `finish` exactly once when all required work is complete.\n"
         )
+        if requires_submit_plan:
+            runtime_instructions += (
+                "- Call `submit_plan()` before `finish`.\n"
+                '- Stop exploratory work after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
+                "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
+                "- Do not call `finish` until `submit_plan()` has succeeded.\n"
+                "- Use `validate_costing_and_price()` for planner validation; do not browse `/scripts` or validator source files.\n"
+            )
         system_prompt = (
             f"{instructions.strip()}\n\n{runtime_instructions}".strip()
             if instructions.strip()
@@ -646,11 +849,24 @@ class BaseNode:
             media_paths=current_render_media_paths,
         )
         if unmet_visual_requirement:
-            messages.append({"role": "user", "content": unmet_visual_requirement})
-        litellm_model, api_key, api_base = self._resolve_native_litellm_model()
+            messages.append({"role": "system", "content": unmet_visual_requirement})
+        prefer_multimodal = bool(visual_policy.required and current_render_media_paths)
+        litellm_model, api_key, api_base = self._resolve_native_litellm_model(
+            prefer_multimodal=prefer_multimodal
+        )
+        logger.info(
+            "native_tool_loop_model_selected",
+            node_type=node_type,
+            session_id=self.ctx.session_id,
+            prefer_multimodal=prefer_multimodal,
+            render_media_count=len(current_render_media_paths),
+            model=litellm_model,
+        )
         if not api_key:
             raise RuntimeError(f"Missing API key for native tool loop: {node_type}")
 
+        submit_plan_succeeded = False
+        no_tool_call_streak = 0
         for iteration in range(max_iters):
             native_mock_completion = getattr(
                 self.ctx.dspy_lm, "native_tool_completion", None
@@ -666,7 +882,7 @@ class BaseNode:
                     model=litellm_model,
                     api_key=api_key,
                     api_base=api_base,
-                    timeout=settings.llm_timeout_seconds,
+                    timeout=settings.native_tool_completion_timeout_seconds,
                     max_tokens=min(settings.llm_max_tokens, 2048),
                     messages=messages,
                     tools=tool_schemas,
@@ -686,12 +902,32 @@ class BaseNode:
                 )
 
             if not tool_calls:
-                msg = (
-                    f"Native tool loop for {node_type.value} produced no tool calls "
-                    f"on iteration {iteration + 1}."
+                no_tool_call_streak += 1
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": assistant_text
+                        or "No tool call was emitted on the previous turn.",
+                    }
                 )
-                raise ValueError(msg)
+                if no_tool_call_streak > 5:
+                    no_tool_call_reminder = str(
+                        self.ctx.pm.get_prompt_value(
+                            self._runtime_prompt_key(node_type, "no_tool_call_nudge")
+                        )
+                    ).strip()
+                    if requires_submit_plan and not submit_plan_succeeded:
+                        no_tool_call_reminder += (
+                            " Call `submit_plan()` before `finish`."
+                        )
+                else:
+                    no_tool_call_reminder = self._get_runtime_prompt(
+                        self._runtime_prompt_key(node_type, "continue_from_workspace")
+                    )
+                messages.append({"role": "system", "content": no_tool_call_reminder})
+                continue
 
+            no_tool_call_streak = 0
             messages.append(
                 self._assistant_message_with_tool_calls(
                     message,
@@ -703,18 +939,56 @@ class BaseNode:
 
             for call in tool_calls:
                 function = call.get("function", {})
-                tool_name = function.get("name")
+                tool_name = str(function.get("name") or "").strip()
                 if not tool_name:
                     raise ValueError("Native tool call is missing a function name.")
 
                 raw_arguments = function.get("arguments", "{}") or "{}"
-                payload = json.loads(raw_arguments)
-                if not isinstance(payload, dict):
-                    raise ValueError(
-                        f"Tool arguments for {tool_name} must be a JSON object."
+                payload, argument_error = self._parse_native_tool_arguments(
+                    tool_name, raw_arguments
+                )
+                if argument_error:
+                    logger.warning(
+                        "native_tool_call_payload_invalid",
+                        node_type=str(node_type),
+                        session_id=self.ctx.session_id,
+                        tool_name=tool_name,
+                        error=argument_error,
                     )
+                    messages.append(
+                        self._tool_response_message(
+                            tool_call_id=call.get("id", ""),
+                            tool_name=tool_name,
+                            content=argument_error,
+                        )
+                    )
+                    messages.append(
+                        {
+                            "role": "system",
+                            "content": self._get_runtime_prompt(
+                                self._runtime_prompt_key(
+                                    node_type, "invalid_tool_arguments_recover"
+                                ),
+                                tool_name=tool_name,
+                            ),
+                        }
+                    )
+                    continue
 
                 if tool_name == "finish":
+                    if requires_submit_plan and not submit_plan_succeeded:
+                        submit_reminder = self._get_runtime_prompt(
+                            self._runtime_prompt_key(node_type, "submit_before_finish")
+                        )
+                        messages.append(
+                            self._tool_response_message(
+                                tool_call_id=call.get("id", ""),
+                                tool_name="finish",
+                                content=submit_reminder,
+                            )
+                        )
+                        messages.append({"role": "system", "content": submit_reminder})
+                        continue
                     missing_fields = [
                         field_name
                         for field_name in finish_fields
@@ -737,15 +1011,14 @@ class BaseNode:
                         AgentName.ENGINEER_EXECUTION_REVIEWER,
                     }:
                         messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": call.get("id", ""),
-                                "name": "finish",
-                                "content": unmet_visual_requirement,
-                            }
+                            self._tool_response_message(
+                                tool_call_id=call.get("id", ""),
+                                tool_name="finish",
+                                content=unmet_visual_requirement,
+                            )
                         )
                         messages.append(
-                            {"role": "user", "content": unmet_visual_requirement}
+                            {"role": "system", "content": unmet_visual_requirement}
                         )
                         continue
                     return dspy.Prediction.from_completions(
@@ -760,16 +1033,74 @@ class BaseNode:
                 if tool is None:
                     raise ValueError(f"Unknown tool requested: {tool_name}")
 
-                observation = tool(**payload)
+                try:
+                    observation = tool(**payload)
+                except Exception as err:
+                    error_text = str(err).strip() or f"{tool_name} failed"
+                    if _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in error_text:
+                        raise RuntimeError(error_text) from err
+                    logger.warning(
+                        "native_tool_call_failed",
+                        node_type=str(node_type),
+                        session_id=self.ctx.session_id,
+                        tool_name=tool_name,
+                        error=error_text,
+                    )
+                    messages.append(
+                        self._tool_response_message(
+                            tool_call_id=call.get("id", ""),
+                            tool_name=tool_name,
+                            content=f"{tool_name} failed: {error_text}",
+                        )
+                    )
+                    messages.append(
+                        {
+                            "role": "system",
+                            "content": self._get_runtime_prompt(
+                                self._runtime_prompt_key(
+                                    node_type, "tool_call_failed_recover"
+                                ),
+                                tool_name=tool_name,
+                            ),
+                        }
+                    )
+                    continue
                 self._record_tool_usage(tool_name, observation)
                 messages.append(
-                    {
-                        "role": "tool",
-                        "tool_call_id": call.get("id", ""),
-                        "name": tool_name,
-                        "content": self._serialize_tool_observation(observation),
-                    }
+                    self._tool_response_message(
+                        tool_call_id=call.get("id", ""),
+                        tool_name=tool_name,
+                        content=self._serialize_tool_observation(observation),
+                    )
                 )
+                if requires_submit_plan and tool_name == "submit_plan":
+                    if self._submit_plan_succeeded(observation):
+                        submit_plan_succeeded = True
+                        messages.append(
+                            {
+                                "role": "system",
+                                "content": self._get_runtime_prompt(
+                                    self._runtime_prompt_key(
+                                        node_type, "submit_succeeded_finish_now"
+                                    )
+                                ),
+                            }
+                        )
+                    else:
+                        error_text = self._submit_plan_error_message(observation)
+                        if error_text:
+                            messages.append(
+                                {
+                                    "role": "system",
+                                    "content": self._get_runtime_prompt(
+                                        self._runtime_prompt_key(
+                                            node_type,
+                                            "submit_rejected_fix_and_retry",
+                                        ),
+                                        error_text=error_text,
+                                    ),
+                                }
+                            )
                 messages.extend(
                     self._build_media_attachment_messages(
                         node_type=node_type,
@@ -787,12 +1118,23 @@ class BaseNode:
                 ):
                     messages.append(
                         {
-                            "role": "user",
+                            "role": "system",
                             "content": self._build_visual_inspection_reminder(
                                 policy=visual_policy,
                                 media_paths=current_render_media_paths,
                             ),
                         }
+                    )
+
+        if requires_submit_plan and not submit_plan_succeeded:
+            submit_tool = tool_fns.get("submit_plan")
+            if submit_tool is not None:
+                submission = submit_tool()
+                if self._submit_plan_succeeded(submission):
+                    return self._planner_autosubmit_prediction(
+                        signature_cls=signature_cls,
+                        finish_fields=finish_fields,
+                        node_type=node_type,
                     )
 
         msg = (
@@ -1532,6 +1874,7 @@ class BaseNode:
         validate_files: list[str],
         node_type: AgentName,
         max_retries: int | None = None,
+        record_node_lifecycle: bool = True,
     ) -> tuple[Any, dict[str, Any], str]:
         """
         Reusable execution loop for DSPy nodes with retries and validation.
@@ -1634,7 +1977,7 @@ class BaseNode:
                     )
                     self._reset_tool_usage_tracking()
                     # WP10: Explicitly record node start for UI
-                    if db_callback:
+                    if db_callback and record_node_lifecycle:
                         node_input = (
                             inputs.get("task")
                             or inputs.get("prompt")
@@ -1762,7 +2105,7 @@ class BaseNode:
                         )
 
                     # WP10: Explicitly record node end for UI
-                    if db_callback:
+                    if db_callback and record_node_lifecycle:
                         await db_callback.record_node_end(
                             node_type,
                             output_data=str(prediction),

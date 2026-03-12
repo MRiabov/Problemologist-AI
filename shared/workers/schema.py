@@ -339,6 +339,15 @@ class PlanReviewManifest(BaseModel):
     artifact_hashes: dict[StrictStr, StrictStr]
 
 
+class COTSReproducibilityManifest(BaseModel):
+    """System-owned catalog provenance snapshot for the current workspace session."""
+
+    catalog_version: StrictStr | None = None
+    bd_warehouse_commit: StrictStr | None = None
+    catalog_snapshot_id: StrictStr | None = None
+    generated_at: StrictStr | None = None
+
+
 class GitCommitRequest(BaseModel):
     """Request to commit changes in the session workspace."""
 
@@ -502,6 +511,47 @@ class InspectTopologyResponse(BaseModel):
     message: StrictStr | None = None
 
 
+class RenderSiblingPaths(BaseModel):
+    """Sibling render artifact paths for a single camera/view group."""
+
+    rgb: StrictStr | None = None
+    depth: StrictStr | None = None
+    segmentation: StrictStr | None = None
+
+
+class SegmentationLegendEntry(BaseModel):
+    """One segmentation color entry exposed to media inspection."""
+
+    instance_id: StrictStr
+    instance_name: StrictStr
+    semantic_label: StrictStr
+    object_type: StrictStr
+    object_id: StrictInt
+    body_name: StrictStr | None = None
+    geom_name: StrictStr | None = None
+    color_rgb: tuple[int, int, int]
+    color_hex: StrictStr
+
+
+class RenderArtifactMetadata(BaseModel):
+    """Structured metadata persisted for one render artifact."""
+
+    modality: Literal["rgb", "depth", "segmentation", "unknown"] = "unknown"
+    group_key: StrictStr | None = None
+    siblings: RenderSiblingPaths = Field(default_factory=RenderSiblingPaths)
+    depth_min_m: float | None = None
+    depth_max_m: float | None = None
+    depth_interpretation: StrictStr | None = None
+    segmentation_legend: list[SegmentationLegendEntry] = Field(default_factory=list)
+
+
+class RenderManifest(BaseModel):
+    """Manifest persisted alongside rendered artifacts under renders/."""
+
+    version: StrictStr = "1.0"
+    artifacts: dict[StrictStr, RenderArtifactMetadata] = Field(default_factory=dict)
+
+
 class MediaInspectionResult(BaseModel):
     """Structured result for agent-facing visual media inspection."""
 
@@ -511,6 +561,7 @@ class MediaInspectionResult(BaseModel):
     attached_to_model: bool = False
     size_bytes: StrictInt = Field(ge=0)
     note: StrictStr
+    render_metadata: RenderArtifactMetadata | None = None
     data_url: StrictStr | None = Field(default=None, exclude=True, repr=False)
 
 

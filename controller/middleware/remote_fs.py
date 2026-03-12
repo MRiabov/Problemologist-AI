@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from contextlib import suppress
 from pathlib import Path
 from typing import Literal
 
@@ -57,6 +58,8 @@ from shared.workers.schema import (
     InspectTopologyResponse,
     MediaInspectionResult,
     PreviewDesignResponse,
+    RenderArtifactMetadata,
+    RenderManifest,
     ScriptExecutionRequest,
 )
 
@@ -250,6 +253,7 @@ class RemoteFilesystemMiddleware:
         path_str = str(path)
         mime_type, media_kind = self._media_metadata_for_path(path_str)
         binary = await self.client.read_file_binary(path_str)
+        render_metadata = await self._load_render_metadata(path_str)
 
         if media_kind == "image":
             data_url = (
@@ -261,7 +265,15 @@ class RemoteFilesystemMiddleware:
                 media_kind=media_kind,
                 attached_to_model=True,
                 size_bytes=len(binary),
-                note="Image attached for multimodal review.",
+                note=(
+                    "Image attached for multimodal review."
+                    + (
+                        " Render metadata is included in this observation."
+                        if render_metadata is not None
+                        else ""
+                    )
+                ),
+                render_metadata=render_metadata,
                 data_url=data_url,
             )
         elif media_kind == "video":
@@ -275,6 +287,7 @@ class RemoteFilesystemMiddleware:
                     "Video inspection is not yet attached to the model. "
                     "Inspect still recorded for observability."
                 ),
+                render_metadata=render_metadata,
             )
         else:
             result = MediaInspectionResult(
@@ -287,6 +300,7 @@ class RemoteFilesystemMiddleware:
                     "Unsupported media type for inspect_media(). "
                     "Supported types: .png, .jpg, .jpeg, .mp4."
                 ),
+                render_metadata=render_metadata,
             )
 
         await record_events(
@@ -308,6 +322,23 @@ class RemoteFilesystemMiddleware:
             ],
         )
         return result
+
+    async def _load_render_metadata(
+        self, path: str | Path
+    ) -> RenderArtifactMetadata | None:
+        render_path = str(path).lstrip("/")
+        manifest_path = Path(render_path).parent / "render_manifest.json"
+        if not await self.client.exists(str(manifest_path)):
+            return None
+
+        manifest_raw = await self.client.read_file(str(manifest_path))
+        if manifest_raw.startswith("Error:"):
+            return None
+
+        with suppress(Exception):
+            manifest = RenderManifest.model_validate_json(manifest_raw)
+            return manifest.artifacts.get(render_path)
+        return None
 
     async def write_file(
         self, path: str | Path, content: str, overwrite: bool = True
@@ -349,19 +380,26 @@ class RemoteFilesystemMiddleware:
                 try:
                     import yaml
 
-                    from shared.models.schemas import AssemblyDefinition
-
                     data_raw = yaml.safe_load(content)
-                    data = AssemblyDefinition(**data_raw)
-                    if data.cots_parts:
+                    cots_parts = []
+                    if isinstance(data_raw, dict):
+                        raw_cots_parts = data_raw.get("cots_parts")
+                        if isinstance(raw_cots_parts, list):
+                            cots_parts = [
+                                part
+                                for part in raw_cots_parts
+                                if isinstance(part, dict)
+                                and isinstance(part.get("part_id"), str)
+                                and part.get("part_id", "").strip()
+                            ]
+
+                    if cots_parts:
                         from shared.observability.schemas import COTSSelectionEvent
 
-                        selected_ids = [p.part_id for p in data.cots_parts]
-                        query_ids = [
-                            p.reproducibility.cots_query_id
-                            for p in data.cots_parts
-                            if p.reproducibility and p.reproducibility.cots_query_id
+                        selected_ids = [
+                            str(part["part_id"]).strip() for part in cots_parts
                         ]
+                        query_ids: list[str] = []
 
                         await record_events(
                             episode_id=self.client.session_id,
