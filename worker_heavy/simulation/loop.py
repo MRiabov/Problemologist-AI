@@ -30,7 +30,7 @@ from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.simulation.objectives import ObjectiveEvaluator
 from worker_heavy.utils.dfm import validate_and_price_assembly
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -121,7 +121,7 @@ class SimulationLoop:
                 working_dir = Path(xml_path).parent
                 custom_config_path = working_dir / "manufacturing_config.yaml"
                 if custom_config_path.exists():
-                    self.config = load_config(custom_config_path)
+                    self.config = load_merged_config(custom_config_path)
                     logger.info(
                         "loop_loaded_custom_config",
                         path=str(custom_config_path),

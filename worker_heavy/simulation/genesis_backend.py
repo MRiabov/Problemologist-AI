@@ -148,12 +148,12 @@ class GenesisBackend(PhysicsBackend):
 
     def _load_mfg_config(self, config_dir: Optional["Path"] = None):
         try:
-            from worker_heavy.workbenches.config import load_config
+            from worker_heavy.workbenches.config import load_config, load_merged_config
 
             if config_dir:
                 custom_path = config_dir / "manufacturing_config.yaml"
                 if custom_path.exists():
-                    self.mfg_config = load_config(str(custom_path))
+                    self.mfg_config = load_merged_config(custom_path)
                     logger.info(
                         "genesis_loaded_custom_mfg_config", path=str(custom_path)
                     )

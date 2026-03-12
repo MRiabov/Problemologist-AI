@@ -11,12 +11,11 @@ from shared.workers.schema import (
     ReviewManifest,
     ValidationResultRecord,
 )
-from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
 )
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ReviewerStage = Literal[
     "benchmark_reviewer",
@@ -162,11 +161,13 @@ async def validate_plan_reviewer_handover(
 
     try:
         if await worker_client.exists("manufacturing_config.yaml"):
-            manufacturing_config = ManufacturingConfig.model_validate(
-                yaml.safe_load(
-                    await worker_client.read_file("manufacturing_config.yaml")
+            manufacturing_config = load_merged_config(
+                override_data=(
+                    yaml.safe_load(
+                        await worker_client.read_file("manufacturing_config.yaml")
+                    )
+                    or {}
                 )
-                or {}
             )
         else:
             manufacturing_config = load_config()

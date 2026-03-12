@@ -676,11 +676,11 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         weld_constraints = []
         body_locations = {}  # name -> (pos, euler)
 
-        from worker_heavy.workbenches.config import load_config
+        from worker_heavy.workbenches.config import load_config, load_merged_config
 
         custom_cfg_path = self.output_dir / "manufacturing_config.yaml"
         if custom_cfg_path.exists():
-            mfg_config = load_config(str(custom_cfg_path))
+            mfg_config = load_merged_config(custom_cfg_path)
         else:
             mfg_config = load_config()
 
@@ -956,11 +956,11 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)
 
         # Load manufacturing config to check for deformable materials
-        from worker_heavy.workbenches.config import load_config
+        from worker_heavy.workbenches.config import load_config, load_merged_config
 
         custom_cfg_path = self.output_dir / "manufacturing_config.yaml"
         if custom_cfg_path.exists():
-            mfg_config = load_config(str(custom_cfg_path))
+            mfg_config = load_merged_config(custom_cfg_path)
         else:
             mfg_config = load_config()
 

@@ -35,7 +35,7 @@ from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.utils.dfm import validate_declared_assembly_cost
 from worker_heavy.utils.validation import _validate_benchmark_definition_consistency
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -174,7 +174,9 @@ def validate_benchmark_definition_yaml(
 
 
 def validate_assembly_definition_yaml(
-    content: str, session_id: str | None = None
+    content: str,
+    session_id: str | None = None,
+    manufacturing_config: ManufacturingConfig | None = None,
 ) -> tuple[bool, AssemblyDefinition | list[str]]:
     """
     Parse and validate assembly_definition.yaml content.
@@ -202,10 +204,10 @@ def validate_assembly_definition_yaml(
             ]
 
         estimation = AssemblyDefinition(**data)
-        manufacturing_config = load_config()
+        effective_config = manufacturing_config or load_config()
         cost_errors = validate_declared_planner_cost_contract(
             assembly_definition=estimation,
-            manufacturing_config=manufacturing_config,
+            manufacturing_config=effective_config,
         )
         if cost_errors:
             logger.error(
@@ -553,7 +555,10 @@ def validate_plan_refusal(
 
 
 def validate_node_output(
-    node_type: str, files_content_map: dict[str, str], session_id: str | None = None
+    node_type: str,
+    files_content_map: dict[str, str],
+    session_id: str | None = None,
+    manufacturing_config: ManufacturingConfig | None = None,
 ) -> tuple[bool, list[str]]:
     """
     Universally validate node output for required files and template placeholders.
@@ -677,8 +682,19 @@ def validate_node_output(
                 # obj_res is list[str] on failure
                 errors.extend([f"benchmark_definition.yaml: {e}" for e in obj_res])
         elif filename == "assembly_definition.yaml":
+            effective_config = manufacturing_config
+            if (
+                effective_config is None
+                and "manufacturing_config.yaml" in files_content_map
+            ):
+                custom_config = yaml.safe_load(
+                    files_content_map["manufacturing_config.yaml"]
+                )
+                effective_config = load_merged_config(override_data=custom_config or {})
             is_valid, asm_res = validate_assembly_definition_yaml(
-                content, session_id=session_id
+                content,
+                session_id=session_id,
+                manufacturing_config=effective_config,
             )
             if not is_valid:
                 # asm_res is list[str] on failure

@@ -298,7 +298,7 @@ def get_engineer_planner_tools(
             validate_environment_attachment_contract,
             validate_node_output,
         )
-        from worker_heavy.workbenches.config import load_config
+        from worker_heavy.workbenches.config import load_config, load_merged_config
 
         # Engineer planner and electronics planner share the same planner artifacts.
         required_files = [
@@ -329,30 +329,32 @@ def get_engineer_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        is_valid, errors = validate_node_output(AgentName.ENGINEER_PLANNER, artifacts)
+        custom_config_text = None
+        if await fs.exists("manufacturing_config.yaml"):
+            custom_config_text = await fs.read_file("manufacturing_config.yaml")
+        manufacturing_config = (
+            load_merged_config(override_data=yaml.safe_load(custom_config_text) or {})
+            if custom_config_text is not None
+            else load_config()
+        )
+
+        is_valid, errors = validate_node_output(
+            AgentName.ENGINEER_PLANNER,
+            artifacts,
+            manufacturing_config=manufacturing_config,
+        )
         if is_valid:
             benchmark_definition = yaml.safe_load(
                 artifacts["benchmark_definition.yaml"]
             )
             assembly_definition = yaml.safe_load(artifacts["assembly_definition.yaml"])
             from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
-            from shared.workers.workbench_models import ManufacturingConfig
 
             benchmark_model = BenchmarkDefinition.model_validate(
                 benchmark_definition or {}
             )
             assembly_model = AssemblyDefinition.model_validate(
                 assembly_definition or {}
-            )
-            custom_config_text = None
-            if await fs.exists("manufacturing_config.yaml"):
-                custom_config_text = await fs.read_file("manufacturing_config.yaml")
-            manufacturing_config = (
-                ManufacturingConfig.model_validate(
-                    yaml.safe_load(custom_config_text) or {}
-                )
-                if custom_config_text is not None
-                else load_config()
             )
             attachment_errors = validate_environment_attachment_contract(
                 benchmark_definition=benchmark_model,

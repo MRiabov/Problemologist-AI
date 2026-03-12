@@ -308,7 +308,7 @@ def validate_and_price_assembly(
         method = getattr(metadata, "manufacturing_method", None) or default_method
         if isinstance(method, str):
             method = ManufacturingMethod(method)
-        return validate_and_price(
+        result = validate_and_price(
             part,
             method,
             config,
@@ -316,6 +316,17 @@ def validate_and_price_assembly(
             quantity=quantity,
             fem_required=fem_required,
             session_id=session_id,
+        )
+        if assembly_definition is None:
+            return result
+
+        drilling_cost = calculate_benchmark_drilling_cost(assembly_definition, config)
+        return WorkbenchResult(
+            is_manufacturable=result.is_manufacturable,
+            unit_cost=result.unit_cost + drilling_cost,
+            weight_g=result.weight_g,
+            violations=list(result.violations),
+            metadata=result.metadata,
         )
 
     total_cost = 0.0

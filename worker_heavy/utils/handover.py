@@ -15,7 +15,7 @@ from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
 )
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -144,8 +144,15 @@ def submit_for_review(
         from .file_validation import validate_assembly_definition_yaml
 
         cost_content = cost_path.read_text(encoding="utf-8")
+        custom_config_path = cwd / "manufacturing_config.yaml"
         is_valid, estimation = validate_assembly_definition_yaml(
-            cost_content, session_id=session_id
+            cost_content,
+            session_id=session_id,
+            manufacturing_config=(
+                load_merged_config(custom_config_path)
+                if custom_config_path.exists()
+                else load_config()
+            ),
         )
         if not is_valid:
             logger.error(
@@ -225,7 +232,7 @@ def submit_for_review(
     manifests_dir.mkdir(parents=True, exist_ok=True)
     custom_config_path = cwd / "manufacturing_config.yaml"
     dfm_config = (
-        load_config(str(custom_config_path))
+        load_merged_config(custom_config_path)
         if custom_config_path.exists()
         else load_config()
     )

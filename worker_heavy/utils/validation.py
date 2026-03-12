@@ -37,7 +37,7 @@ from shared.simulation.schemas import (
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 from shared.workers.workbench_models import ManufacturingConfig
 from worker_heavy.simulation.factory import get_simulation_builder
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
     calculate_benchmark_drilling_cost,
@@ -993,7 +993,7 @@ def simulate(
         pricing_config = load_config()
         custom_config_path = working_dir / "manufacturing_config.yaml"
         if custom_config_path.exists():
-            pricing_config = load_config(str(custom_config_path))
+            pricing_config = load_merged_config(custom_config_path)
 
         cost, weight = calculate_assembly_totals(
             component,
@@ -1282,7 +1282,7 @@ def validate_fem_manufacturability(
             config = load_config()
             custom_config_path = session_root / "manufacturing_config.yaml"
             if custom_config_path.exists():
-                config = load_config(str(custom_config_path))
+                config = load_merged_config(custom_config_path)
 
             from shared.workers.workbench_models import ManufacturingMethod
 
