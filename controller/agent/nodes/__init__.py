@@ -1,6 +1,5 @@
 from .coder import coder_node as coder_node
 from .cots_search import cots_search_node as cots_search_node
-from .electronics_engineer import electronics_engineer_node as electronics_engineer_node
 from .electronics_planner import electronics_planner_node as electronics_planner_node
 from .electronics_reviewer import electronics_reviewer_node as electronics_reviewer_node
 from .execution_reviewer import (

@@ -302,12 +302,6 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         required_trace_names=(AgentName.ELECTRONICS_PLANNER,),
         start_node=AgentName.ELECTRONICS_PLANNER,
     ),
-    AgentName.ELECTRONICS_ENGINEER: AgentEvalSpec(
-        mode=EvalMode.AGENT,
-        request_agent_name=AgentName.ENGINEER_CODER,
-        required_trace_names=(AgentName.ELECTRONICS_ENGINEER,),
-        start_node=AgentName.ELECTRONICS_ENGINEER,
-    ),
     AgentName.ELECTRONICS_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
@@ -337,9 +331,7 @@ async def _handle_electronics_metrics(
 
 
 # Mapping of agent names to their specific metric handlers
-METRIC_HANDLERS = {
-    AgentName.ELECTRONICS_ENGINEER: _handle_electronics_metrics,
-}
+METRIC_HANDLERS = {}
 
 
 def _resolve_seed_artifact_dir(item: EvalDatasetItem) -> Path | None:
@@ -769,10 +761,7 @@ async def run_single_eval(
                 episode_id_key = "episode_id"
                 session_id_key = "session_id"
             else:
-                if agent_name == AgentName.ELECTRONICS_ENGINEER:
-                    session_id = f"EVAL-EE-{uuid.uuid4().hex[:8]}"
-                else:
-                    session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
+                session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
 
                 await _seed_eval_workspace(
                     item=item,
@@ -785,44 +774,6 @@ async def run_single_eval(
                     agent_name=agent_name,
                     spec=spec,
                 )
-
-                # Force electronics-engineer path to execute in integration-mode runs by
-                # seeding explicit electronics requirements in objectives.yaml.
-                if (
-                    agent_name == AgentName.ELECTRONICS_ENGINEER
-                    and item.seed_artifact_dir is None
-                    and not item.seed_files
-                ):
-                    worker_for_seed = WorkerClient(
-                        base_url=WORKER_LIGHT_URL, session_id=session_id
-                    )
-                    seeded_objectives = """objectives:
-  goal_zone:
-    min: [0, 0, 0]
-    max: [10, 10, 10]
-  build_zone:
-    min: [-20, -20, 0]
-    max: [20, 20, 40]
-simulation_bounds:
-  min: [-50, -50, -10]
-  max: [50, 50, 80]
-moved_object:
-  label: "test_ball"
-  shape: "sphere"
-  start_position: [0, 0, 5]
-  runtime_jitter: [0, 0, 0]
-constraints:
-  max_unit_cost: 50.0
-  max_weight_g: 500.0
-electronics_requirements:
-  power_supply_available:
-    type: mains_ac_rectified
-    voltage_dc: 24.0
-    max_current_a: 10.0
-"""
-                    await worker_for_seed.write_file(
-                        "objectives.yaml", seeded_objectives, overwrite=True
-                    )
 
                 url = f"{CONTROLLER_URL}/agent/run"
                 payload = {

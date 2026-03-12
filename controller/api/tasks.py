@@ -307,16 +307,12 @@ async def execute_agent_task(
                     callbacks.append(langfuse_callback)
 
                 # Prepare initial state based on agent type
-                if (
-                    agent_name
-                    in [
-                        AgentName.ENGINEER_PLANNER,
-                        AgentName.ENGINEER_CODER,
-                        AgentName.ENGINEER_PLAN_REVIEWER,
-                        AgentName.ENGINEER_EXECUTION_REVIEWER,
-                    ]
-                    or agent_name == AgentName.ELECTRONICS_ENGINEER
-                ):
+                if agent_name in [
+                    AgentName.ENGINEER_PLANNER,
+                    AgentName.ENGINEER_CODER,
+                    AgentName.ENGINEER_PLAN_REVIEWER,
+                    AgentName.ENGINEER_EXECUTION_REVIEWER,
+                ]:
                     initial_input = {
                         "task": task,
                         "session_id": session_id,

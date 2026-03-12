@@ -645,7 +645,6 @@ class RemoteFilesystemMiddleware:
             role_to_stage: dict[AgentName, str] = {
                 AgentName.BENCHMARK_CODER: "benchmark_reviewer",
                 AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
-                AgentName.ELECTRONICS_ENGINEER: "electronics_reviewer",
                 AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",
                 AgentName.ENGINEER_CODER: "engineering_execution_reviewer",
                 AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_reviewer",

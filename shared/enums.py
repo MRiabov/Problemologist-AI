@@ -301,7 +301,7 @@ class MechanicalRefusalReason(UppercaseStrEnum):
 
 
 class ElectricalRefusalReason(UppercaseStrEnum):
-    """Refusal reasons for electronics_engineer."""
+    """Electrical refusal reasons accepted by the unified engineering coder."""
 
     INVALID_NETLIST = "INVALID_NETLIST"
     POWER_INSUFFICIENT = "POWER_INSUFFICIENT"

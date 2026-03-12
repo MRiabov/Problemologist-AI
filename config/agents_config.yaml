@@ -36,10 +36,6 @@ execution:
       max_turns: 150
       max_total_tokens: 400000
       native_tool_loop_max_iters: 48
-    electronics_engineer:
-      timeout_seconds: 300
-      max_turns: 150
-      max_total_tokens: 400000
     electronics_reviewer:
       timeout_seconds: 300
       max_turns: 150
@@ -173,60 +169,6 @@ agents:
             "assembly_definition.yaml",
           ]
         deny: ["skills/**", "utils/**", "reviews/**/*.py", ".manifests/**"]
-    tools:
-      [
-        "list_files",
-        "read_file",
-        "inspect_media",
-        "write_file",
-        "edit_file",
-        "grep",
-        "execute_command",
-        "inspect_topology",
-        "invoke_cots_search_subagent",
-      ]
-
-  electronics_engineer:
-    filesystem_permissions:
-      read:
-        allow:
-          [
-            "/",
-            ".",
-            "config/**",
-            "skills/**",
-            "utils/**",
-            "plan.md",
-            "todo.md",
-            "objectives.yaml",
-            "assembly_definition.yaml",
-            "reviews/**",
-            "renders/**",
-          ]
-        deny: [".manifests/**"]
-      write:
-        allow:
-          [
-            "script.py",
-            "**/*.py",
-            "todo.md",
-            "journal.md",
-            "renders/**",
-            "plan_refusal.md",
-            "schematic_*.png",
-            "schematic_*.pdf",
-            "wiring_*.png",
-          ]
-        deny:
-          [
-            "objectives.yaml",
-            "assembly_definition.yaml",
-            "plan.md",
-            "skills/**",
-            "utils/**",
-            "reviews/**",
-            ".manifests/**",
-          ]
     tools:
       [
         "list_files",

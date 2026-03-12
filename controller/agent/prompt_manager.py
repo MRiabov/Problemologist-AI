@@ -26,9 +26,6 @@ class PromptManager:
                 "electronics_planner"
             ]["system"],
             AgentName.ENGINEER_CODER.value: data["engineer"]["engineer"]["system"],
-            AgentName.ELECTRONICS_ENGINEER.value: data["engineer"][
-                "electronics_engineer"
-            ]["system"],
             AgentName.ENGINEER_PLAN_REVIEWER.value: data["engineer"][
                 "engineer_plan_reviewer"
             ]["system"],

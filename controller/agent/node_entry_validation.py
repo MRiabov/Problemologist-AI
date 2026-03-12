@@ -44,7 +44,6 @@ ENGINEER_PREVIOUS_NODE_MAP: Mapping[AgentName, AgentName | None] = {
     AgentName.ELECTRONICS_PLANNER: AgentName.ENGINEER_PLANNER,
     AgentName.ENGINEER_PLAN_REVIEWER: AgentName.ELECTRONICS_PLANNER,
     AgentName.ENGINEER_CODER: AgentName.ENGINEER_PLAN_REVIEWER,
-    AgentName.ELECTRONICS_ENGINEER: AgentName.ENGINEER_CODER,
     AgentName.ELECTRONICS_REVIEWER: AgentName.ENGINEER_CODER,
     # Execution review failures should route back to coder so latest-revision
     # handover artifacts can be regenerated before another reviewer entry.
