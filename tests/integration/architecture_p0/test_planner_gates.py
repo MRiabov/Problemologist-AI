@@ -10,12 +10,12 @@ import pytest
 import yaml
 
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
     EpisodeResponse,
 )
-from controller.api.schemas import AgentRunRequest
 from shared.enums import AgentName, EpisodeStatus, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,

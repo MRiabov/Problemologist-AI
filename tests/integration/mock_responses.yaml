@@ -120,10 +120,6 @@ scenarios:
             expected_observation: "success"
           - finished: true
             journal: "INT-005 coder produced minimal execution artifact."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "INT-005 electronics engineer no-op pass."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -473,10 +469,6 @@ scenarios:
             expected_observation: "success"
           - finished: true
             journal: "INT-074 execution scenario: coder wrote over-actuated assembly deviation."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "No electronics implementation required."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -650,10 +642,6 @@ scenarios:
             expected_observation: "success"
           - finished: true
             journal: "INT-184 coder produced baseline script."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "INT-184 electronics engineer no-op pass."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -789,10 +777,6 @@ scenarios:
           - finished: true
             journal: "Implemented mechanism with MOCK-MOTOR-ID."
             thought: "Implementation complete."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "INT-014 electronics engineer no-op pass."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -909,10 +893,6 @@ scenarios:
             expected_observation: "success"
           - finished: true
             journal: "INT-016 coder produced minimal execution artifact."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "INT-016 electronics engineer no-op pass."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -1029,10 +1009,6 @@ scenarios:
             expected_observation: "success"
           - finished: true
             journal: "INT-017 coder produced minimal execution artifact."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "INT-017 electronics engineer no-op pass."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -3294,10 +3270,6 @@ scenarios:
           - finished: true
             journal: "Simulation stable for oscillatory controller scenario."
             thought: "Implementation complete."
-      - node: electronics_engineer
-        steps:
-          - finished: true
-            journal: "INT-038 electronics engineer no-op pass."
       - node: electronics_reviewer
         steps:
           - finished: true
@@ -5022,11 +4994,6 @@ scenarios:
             expected_observation: "success"
           - finished: true
             summary: "Electronics wiring task added."
-      - node: electronics_engineer
-        steps:
-          - thought: "Implementing electronics wiring."
-            finished: true
-            journal: "Completed electronics wiring path for motor and PSU."
       - node: benchmark_coder
         steps:
           - thought: "Implementing basic geometry."

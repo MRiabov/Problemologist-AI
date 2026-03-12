@@ -6,12 +6,12 @@ from httpx import AsyncClient
 
 from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
     BenchmarkGenerateResponse,
     ConfirmRequest,
     EpisodeResponse,
 )
-from controller.api.schemas import AgentRunRequest
 from shared.enums import EpisodeStatus
 
 # Adjust URL to your controller

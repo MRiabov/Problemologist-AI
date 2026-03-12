@@ -10,12 +10,12 @@ from pydantic import TypeAdapter
 
 from controller.api.routes.benchmark import BenchmarkGenerateRequest
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
     BenchmarkGenerateResponse,
     EpisodeListItem,
     EpisodeResponse,
 )
-from controller.api.schemas import AgentRunRequest
 from shared.enums import TraceType
 
 # Constants

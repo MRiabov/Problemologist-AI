@@ -6,8 +6,11 @@ import httpx
 import pytest
 from temporalio.client import Client, WorkflowFailureError
 
-from controller.api.schemas import EpisodeCreateResponse, EpisodeResponse
-from controller.api.schemas import AgentRunRequest
+from controller.api.schemas import (
+    AgentRunRequest,
+    EpisodeCreateResponse,
+    EpisodeResponse,
+)
 from shared.enums import AssetType, EpisodeStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")

@@ -6,12 +6,12 @@ import httpx
 import pytest
 
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
     BenchmarkConfirmResponse,
     EpisodeCreateResponse,
     EpisodeResponse,
 )
-from controller.api.schemas import AgentRunRequest
 from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, TraceType
 from shared.models.schemas import EntryValidationContext
 
@@ -83,7 +83,6 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
         "node_entry_validation_rejected",
         "execution reviewer entry blocked",
         "reviewer handover",
-        "filesystem_permission_denied.*electronics_engineer.*script.py",
     ]
 )
 @pytest.mark.asyncio

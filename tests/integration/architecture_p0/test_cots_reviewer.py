@@ -6,12 +6,12 @@ import pytest
 from pydantic import TypeAdapter
 
 from controller.api.schemas import (
+    AgentRunRequest,
     AgentRunResponse,
     CotsSearchItem,
     EpisodeResponse,
     ReviewResponse,
 )
-from controller.api.schemas import AgentRunRequest
 from shared.workers.schema import FsFileEntry
 
 # Constants

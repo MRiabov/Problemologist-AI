@@ -10,8 +10,7 @@ import pytest
 import yaml
 from PIL import Image
 
-from controller.api.schemas import AgentRunResponse, EpisodeResponse
-from controller.api.schemas import AgentRunRequest
+from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus
 from shared.models.schemas import (
     BoundingBox,

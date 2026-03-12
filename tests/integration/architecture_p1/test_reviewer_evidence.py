@@ -6,8 +6,7 @@ import pytest
 import yaml
 from httpx import AsyncClient
 
-from controller.api.schemas import AgentRunRequest
-from controller.api.schemas import AgentRunResponse, EpisodeResponse
+from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus, ReviewDecision
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
