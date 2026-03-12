@@ -32,6 +32,10 @@ from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     DeleteFileRequest,
+    ExecuteRequest,
+    ExecuteResponse,
+    ReadFileRequest,
+    ReadFileResponse,
     WriteFileRequest,
 )
 
@@ -812,6 +816,317 @@ async def test_int_015_engineer_handover_immutability(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(regexes=["environment_attachment_contract_invalid"])
+@pytest.mark.asyncio
+async def test_int_018_submit_handoff_rejects_forbidden_environment_drilling(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+):
+    """INT-018: submit handoff must fail closed on forbidden benchmark drilling."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        relaxed_objectives = valid_objectives.model_copy(deep=True)
+        relaxed_objectives.constraints.max_unit_cost = 500.0
+        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.benchmark_parts = [
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "material_id": "aluminum_6061",
+                    "attachment_policy": {
+                        "attachment_methods": ["fastener"],
+                        "notes": "Fastener mounting without drilling only.",
+                    },
+                },
+            }
+        ]
+
+        invalid_drilling_cost = valid_cost.model_copy(deep=True)
+        invalid_drilling_cost.environment_drill_operations = [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_left",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 1,
+                "notes": "Planner requests a drilled fastener hole",
+            }
+        ]
+
+        goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "benchmark_definition.yaml": relaxed_objectives,
+            "assembly_definition.yaml": invalid_drilling_cost,
+            "script.py": goal_script,
+        }
+        await setup_workspace(client, base_headers, files)
+
+        submit_req = BenchmarkToolRequest(script_path="script.py")
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not submit_data.success
+        assert "attachment contract" in submit_data.message.lower()
+        assert "drilling is not allowed" in submit_data.message.lower()
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "cost_estimation_yaml_invalid",
+        "assembly_definition_yaml_invalid",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_010_submit_handoff_rejects_missing_benchmark_drilling_cost(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+):
+    """INT-010: submit handoff must reject totals that omit static benchmark drilling cost."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        relaxed_objectives = valid_objectives.model_copy(deep=True)
+        relaxed_objectives.constraints.max_unit_cost = 500.0
+        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.benchmark_parts = [
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "material_id": "aluminum_6061",
+                    "attachment_policy": {
+                        "attachment_methods": ["fastener"],
+                        "drill_policy": {
+                            "allowed": True,
+                            "max_hole_count": 4,
+                            "diameter_range_mm": [3.0, 6.0],
+                            "max_depth_mm": 12.0,
+                        },
+                    },
+                },
+            }
+        ]
+
+        invalid_cost = valid_cost.model_copy(deep=True)
+        invalid_cost.constraints.planner_target_max_unit_cost_usd = 10.0
+        invalid_cost.totals.estimated_unit_cost_usd = 2.0
+        invalid_cost.environment_drill_operations = [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_left",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 2,
+                "notes": "Two drilled holes should incur static benchmark drilling cost.",
+            }
+        ]
+
+        goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "benchmark_definition.yaml": relaxed_objectives,
+            "assembly_definition.yaml": invalid_cost,
+            "script.py": goal_script,
+        }
+        await setup_workspace(client, base_headers, files)
+
+        submit_req = BenchmarkToolRequest(script_path="script.py")
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not submit_data.success
+        assert "assembly_definition.yaml invalid" in submit_data.message.lower()
+        assert "benchmark drilling cost" in submit_data.message.lower()
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(regexes=["environment_attachment_contract_invalid"])
+@pytest.mark.asyncio
+async def test_int_023_submit_handoff_rejects_forbidden_benchmark_attachment_joint(
+    session_id,
+    base_headers,
+    valid_plan,
+    valid_todo,
+    valid_objectives,
+    valid_cost,
+):
+    """INT-023: submit handoff must reject fastener joints to non-attachable benchmark parts."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        relaxed_objectives = valid_objectives.model_copy(deep=True)
+        relaxed_objectives.constraints.max_unit_cost = 500.0
+        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.benchmark_parts = [
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "material_id": "aluminum_6061",
+                    "attachment_policy": {
+                        "attachment_methods": ["none"],
+                        "notes": "This fixture is explicitly non-attachable.",
+                    },
+                },
+            }
+        ]
+
+        invalid_cost = valid_cost.model_copy(deep=True)
+        invalid_cost.final_assembly = [
+            {
+                "subassembly_id": "mounting",
+                "parts": [
+                    {
+                        "name": "engineer_bracket",
+                        "config": {"dofs": []},
+                    }
+                ],
+                "joints": [
+                    {
+                        "joint_id": "fixture_mount",
+                        "parts": ["engineer_bracket", "environment_fixture"],
+                        "type": "fastener_joint",
+                    }
+                ],
+            }
+        ]
+
+        goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
+        files = {
+            "plan.md": valid_plan,
+            "todo.md": valid_todo,
+            "benchmark_definition.yaml": relaxed_objectives,
+            "assembly_definition.yaml": invalid_cost,
+            "script.py": goal_script,
+        }
+        await setup_workspace(client, base_headers, files)
+
+        submit_req = BenchmarkToolRequest(script_path="script.py")
+        val_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert val_resp.status_code == 200, val_resp.text
+        val_data = BenchmarkToolResponse.model_validate(val_resp.json())
+        assert val_data.success, val_data.message
+
+        sim_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+            timeout=600.0,
+        )
+        assert sim_resp.status_code == 200, sim_resp.text
+        sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
+        assert sim_data.success, sim_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not submit_data.success
+        assert "attachment contract" in submit_data.message.lower()
+        assert "does not permit fastener attachment" in submit_data.message.lower()
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 @pytest.mark.allow_backend_errors("submission_cost_limit_exceeded")
 async def test_int_019_hard_constraints_gates(
@@ -932,6 +1247,84 @@ async def test_int_010_planner_pricing_script_integration(
         assert not data.success
         assert "assembly_definition.yaml invalid" in data.message
         assert "exceeds target" in data.message.lower()
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
+    session_id, base_headers
+):
+    """INT-010: validate_and_price must write static benchmark drilling cost into totals."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        assembly_definition = {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 50.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 45.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "environment_drill_operations": [
+                {
+                    "target_part_id": "fixture_a",
+                    "hole_id": "mount_left",
+                    "diameter_mm": 4.0,
+                    "depth_mm": 8.0,
+                    "quantity": 2,
+                }
+            ],
+            "totals": {
+                "estimated_unit_cost_usd": 0.0,
+                "estimated_weight_g": 100.0,
+                "estimate_confidence": "medium",
+            },
+        }
+        custom_config = {
+            "benchmark_operations": {
+                "drilling": {
+                    "cost_per_hole_usd": 2.0,
+                }
+            }
+        }
+
+        await setup_workspace(
+            client,
+            base_headers,
+            {
+                "assembly_definition.yaml": assembly_definition,
+                "manufacturing_config.yaml": custom_config,
+            },
+        )
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "python "
+                    "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
+                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                ),
+                timeout=60,
+            ).model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+        assert "Total Estimated Cost: $4.00" in exec_data.stdout
+
+        read_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="assembly_definition.yaml").model_dump(
+                mode="json"
+            ),
+            headers=base_headers,
+        )
+        assert read_resp.status_code == 200, read_resp.text
+        updated_assembly = AssemblyDefinition.model_validate(
+            yaml.safe_load(ReadFileResponse.model_validate(read_resp.json()).content)
+        )
+        assert updated_assembly.totals.estimated_unit_cost_usd == pytest.approx(4.0)
 
 
 @pytest.mark.integration_p0
