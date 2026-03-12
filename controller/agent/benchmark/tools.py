@@ -1,6 +1,10 @@
 from collections.abc import Callable
 
-from controller.agent.tools import filter_tools_for_agent, get_common_tools
+from controller.agent.tools import (
+    _invoke_cots_search_subagent,
+    filter_tools_for_agent,
+    get_common_tools,
+)
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.enums import AgentName
 from shared.models.schemas import PlannerSubmissionResult
@@ -29,6 +33,22 @@ def get_benchmark_planner_tools(
 
     async def grep(pattern: str, path: str | None = None, glob: str | None = None):
         return await fs.grep(pattern, path, glob)
+
+    async def invoke_cots_search_subagent(
+        query: str,
+        max_weight_g: float | None = None,
+        max_cost: float | None = None,
+        category: str | None = None,
+        limit: int = 5,
+    ) -> str:
+        """Invoke the dedicated COTS search subagent."""
+        return await _invoke_cots_search_subagent(
+            query=query,
+            max_weight_g=max_weight_g,
+            max_cost=max_cost,
+            category=category,
+            limit=limit,
+        )
 
     async def submit_plan() -> dict:
         """
@@ -72,7 +92,16 @@ def get_benchmark_planner_tools(
         return result.model_dump(mode="json")
 
     return filter_tools_for_agent(
-        fs, [list_files, read_file, write_file, edit_file, grep, submit_plan]
+        fs,
+        [
+            list_files,
+            read_file,
+            write_file,
+            edit_file,
+            grep,
+            invoke_cots_search_subagent,
+            submit_plan,
+        ],
     )
 
 

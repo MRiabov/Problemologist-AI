@@ -2,6 +2,7 @@ from contextlib import suppress
 
 import dspy
 import structlog
+import yaml
 from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
@@ -9,6 +10,7 @@ from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName
+from shared.models.schemas import ObjectivesYaml
 from shared.observability.schemas import ElecAgentHandoverEvent
 from shared.type_checking import type_check
 
@@ -49,12 +51,19 @@ class ElectronicsEngineerNode(BaseNode):
 
         # Read objectives for context
         objectives = "# No objectives.yaml found."
+        has_electronics_requirements = False
         with suppress(Exception):
             if await self.ctx.worker_client.exists("objectives.yaml"):
                 objectives = await self.ctx.worker_client.read_file("objectives.yaml")
+                parsed_objectives = ObjectivesYaml.model_validate(
+                    yaml.safe_load(objectives) or {}
+                )
+                has_electronics_requirements = (
+                    parsed_objectives.electronics_requirements is not None
+                )
 
         if not current_step:
-            if "electronics_requirements" not in objectives:
+            if not has_electronics_requirements:
                 return state
             current_step = "Design circuit and route wires"
 

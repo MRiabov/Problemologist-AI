@@ -159,6 +159,23 @@ class PlanReviewerNode(BaseNode):
             )
 
         review = ReviewResult.model_validate(prediction.review)
+        try:
+            review_path = await self._persist_review_result(
+                review, "engineering-plan-review-round"
+            )
+        except Exception as exc:
+            return state.model_copy(
+                update={
+                    "status": AgentStatus.FAILED,
+                    "feedback": f"Plan Reviewer failed to persist review file: {exc}",
+                    "journal": (
+                        state.journal
+                        + journal_entry
+                        + f"\n[Plan Reviewer] Review persistence failed: {exc}"
+                    ),
+                    "turn_count": state.turn_count + 1,
+                }
+            )
         decision = review.decision
         feedback = review.reason
         if review.required_fixes:
@@ -203,6 +220,7 @@ class PlanReviewerNode(BaseNode):
                     reason=feedback,
                     evidence_stats={
                         "is_plan_review": True,
+                        "review_file_path": review_path,
                     },
                 )
             ],

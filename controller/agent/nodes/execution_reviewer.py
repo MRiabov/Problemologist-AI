@@ -13,6 +13,7 @@ from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
+from shared.models.simulation import SimulationResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
@@ -55,15 +56,6 @@ class ExecutionReviewerNode(BaseNode):
     Engineer Execution Reviewer node: Evaluates the implementation after simulation.
     """
 
-    async def _workspace_has_render_media(self) -> bool:
-        with suppress(Exception):
-            entries = await self.ctx.worker_client.list_files("/renders")
-            for entry in entries:
-                path = getattr(entry, "path", "") or ""
-                if path.lower().endswith((".png", ".jpg", ".jpeg")):
-                    return True
-        return False
-
     async def _enforce_render_inspection_gate(
         self, review: ReviewResult
     ) -> ReviewResult:
@@ -89,233 +81,298 @@ class ExecutionReviewerNode(BaseNode):
         )
 
     async def __call__(self, state: AgentState) -> AgentState:
-        with suppress(Exception):
-            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
-                assembly_definition = await self.ctx.worker_client.read_file(
-                    "assembly_definition.yaml"
-                )
-                plan_markdown = state.plan or ""
-                if await self.ctx.worker_client.exists("plan.md"):
-                    plan_markdown = await self.ctx.worker_client.read_file("plan.md")
-                findings = collect_excessive_dof_findings(assembly_definition)
-                unjustified = [
-                    finding
-                    for finding in findings
-                    if not has_accepted_dof_justification(
-                        plan_markdown, part_id=finding.part_id
+        db_callback = self.ctx.get_database_recorder(state.episode_id)
+        node_output_data = state.task or "Execution reviewer started."
+        node_output_obj = None
+        await db_callback.record_node_start(
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
+            input_data=state.task or state.journal,
+        )
+        try:
+            with suppress(Exception):
+                if await self.ctx.worker_client.exists("assembly_definition.yaml"):
+                    assembly_definition = await self.ctx.worker_client.read_file(
+                        "assembly_definition.yaml"
                     )
-                ]
-                if unjustified:
-                    for finding in unjustified:
-                        payload = {
-                            "reviewer_stage": "engineering_execution_reviewer",
-                            "part_id": finding.part_id,
-                            "proposed_dofs": finding.dofs,
-                            "dof_count": finding.dof_count,
-                            "expected_minimal_dofs": 3,
-                            "dof_count_gt_3": True,
-                        }
-                        await record_worker_events(
-                            episode_id=state.episode_id,
-                            events=[
-                                {
-                                    "event_type": "excessive_dof_detected",
-                                    "data": payload,
-                                    **payload,
-                                }
-                            ],
+                    plan_markdown = state.plan or ""
+                    if await self.ctx.worker_client.exists("plan.md"):
+                        plan_markdown = await self.ctx.worker_client.read_file(
+                            "plan.md"
                         )
-                    summary = ", ".join(
-                        f"{item.part_id}({item.dof_count})" for item in unjustified
-                    )
-                    feedback = (
-                        "Execution reviewer flagged over-actuated deviation: "
-                        f"{summary}. Add explicit DOF_JUSTIFICATION markers in plan.md."
-                    )
-                    return state.model_copy(
-                        update={
-                            "status": AgentStatus.FAILED,
-                            "feedback": feedback,
-                            "journal": (
-                                state.journal + f"\n[Execution Reviewer] {feedback}"
-                            ),
-                            "turn_count": state.turn_count + 1,
-                        }
-                    )
+                    findings = collect_excessive_dof_findings(assembly_definition)
+                    unjustified = [
+                        finding
+                        for finding in findings
+                        if not has_accepted_dof_justification(
+                            plan_markdown, part_id=finding.part_id
+                        )
+                    ]
+                    if unjustified:
+                        for finding in unjustified:
+                            payload = {
+                                "reviewer_stage": "engineering_execution_reviewer",
+                                "part_id": finding.part_id,
+                                "proposed_dofs": finding.dofs,
+                                "dof_count": finding.dof_count,
+                                "expected_minimal_dofs": 3,
+                                "dof_count_gt_3": True,
+                            }
+                            await record_worker_events(
+                                episode_id=state.episode_id,
+                                events=[
+                                    {
+                                        "event_type": "excessive_dof_detected",
+                                        "data": payload,
+                                        **payload,
+                                    }
+                                ],
+                            )
+                        summary = ", ".join(
+                            f"{item.part_id}({item.dof_count})" for item in unjustified
+                        )
+                        feedback = (
+                            "Execution reviewer flagged over-actuated deviation: "
+                            f"{summary}. Add explicit DOF_JUSTIFICATION markers in plan.md."
+                        )
+                        node_output_data = feedback
+                        return state.model_copy(
+                            update={
+                                "status": AgentStatus.FAILED,
+                                "feedback": feedback,
+                                "journal": (
+                                    state.journal + f"\n[Execution Reviewer] {feedback}"
+                                ),
+                                "turn_count": state.turn_count + 1,
+                            }
+                        )
 
-        submit_err = await self._ensure_submit_for_review_succeeded()
-        if submit_err:
-            return state.model_copy(
-                update={
-                    "status": AgentStatus.CODE_REJECTED,
-                    "feedback": submit_err,
-                    "journal": state.journal + f"\n[Execution Reviewer] {submit_err}",
-                    "turn_count": state.turn_count + 1,
-                }
-            )
-
-        simulation_outcome = await self._run_simulation_review_step()
-        simulation_journal = f"\n[Simulation] {simulation_outcome.summary}"
-        if not simulation_outcome.success:
-            return state.model_copy(
-                update={
-                    "status": AgentStatus.CODE_REJECTED,
-                    "feedback": simulation_outcome.summary,
-                    "journal": state.journal + simulation_journal,
-                    "turn_count": state.turn_count + 1,
-                }
-            )
-
-        # Read objectives if possible for context
-        objectives = "# No objectives.yaml found."
-        with suppress(Exception):
-            if await self.ctx.worker_client.exists("objectives.yaml"):
-                objectives = await self.ctx.worker_client.read_file("objectives.yaml")
-
-        assembly_definition = "# No assembly_definition.yaml found."
-        with suppress(Exception):
-            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
-                assembly_definition = await self.ctx.worker_client.read_file(
-                    "assembly_definition.yaml"
+            submit_err = await self._ensure_submit_for_review_succeeded()
+            if submit_err:
+                node_output_data = submit_err
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.CODE_REJECTED,
+                        "feedback": submit_err,
+                        "journal": state.journal
+                        + f"\n[Execution Reviewer] {submit_err}",
+                        "turn_count": state.turn_count + 1,
+                    }
                 )
 
-        plan_refusal = ""
-        with suppress(Exception):
-            if await self.ctx.worker_client.exists("plan_refusal.md"):
-                plan_refusal = await self.ctx.worker_client.read_file("plan_refusal.md")
-
-        inputs = {
-            "task": state.task,
-            "plan": state.plan,
-            "todo": state.todo,
-            "assembly_definition": assembly_definition,
-            "plan_refusal": plan_refusal,
-            "objectives": objectives,
-            "journal": state.journal + simulation_journal,
-        }
-
-        # Validate existence of key reports
-        validate_files = ["simulation_result.json", "assembly_definition.yaml"]
-
-        prediction, _artifacts, journal_entry = await self._run_program(
-            program_cls=dspy.ReAct,
-            signature_cls=ExecutionReviewerSignature,
-            state=state,
-            inputs=inputs,
-            tool_factory=get_engineer_tools,
-            validate_files=validate_files,
-            node_type=AgentName.ENGINEER_EXECUTION_REVIEWER,
-        )
-
-        if not prediction:
-            return state.model_copy(
-                update={
-                    "status": AgentStatus.CODE_REJECTED,
-                    "feedback": f"Execution Reviewer failed to complete: {journal_entry}",
-                    "journal": state.journal + simulation_journal + journal_entry,
-                    "turn_count": state.turn_count + 1,
-                }
-            )
-
-        review = ReviewResult.model_validate(prediction.review)
-        review = await self._enforce_render_inspection_gate(review)
-        decision = review.decision
-        feedback = review.reason
-        if review.required_fixes:
-            feedback += "\nRequired Fixes:\n" + "\n".join(
-                [f"- {f}" for f in review.required_fixes]
-            )
-
-        journal_entry += f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
-
-        status_map = {
-            ReviewDecision.APPROVED: AgentStatus.APPROVED,
-            ReviewDecision.REJECTED: AgentStatus.CODE_REJECTED,
-            ReviewDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
-            ReviewDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
-            ReviewDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.FAILED,
-            ReviewDecision.REJECT_PLAN_REFUSAL: AgentStatus.CODE_REJECTED,
-        }
-        if decision not in status_map:
-            return state.model_copy(
-                update={
-                    "status": AgentStatus.FAILED,
-                    "feedback": (
-                        "Execution Reviewer returned unsupported structured "
-                        f"decision: {decision}"
-                    ),
-                    "journal": (
-                        state.journal
-                        + simulation_journal
-                        + journal_entry
-                        + f"\n[Execution Reviewer] Unsupported decision: {decision}"
-                    ),
-                    "turn_count": state.turn_count + 1,
-                }
-            )
-
-        # Emit ReviewDecisionEvent for observability
-        await record_worker_events(
-            episode_id=state.episode_id,
-            events=[
-                ReviewDecisionEvent(
-                    decision=decision,
-                    reason=feedback,
-                    evidence_stats={
-                        "has_sim_report": True,
-                        "has_mfg_report": True,
-                    },
+            simulation_outcome = await self._run_simulation_review_step()
+            simulation_journal = f"\n[Simulation] {simulation_outcome.summary}"
+            if not simulation_outcome.success:
+                node_output_data = simulation_outcome.summary
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.CODE_REJECTED,
+                        "feedback": simulation_outcome.summary,
+                        "journal": state.journal + simulation_journal,
+                        "turn_count": state.turn_count + 1,
+                    }
                 )
-            ],
-        )
 
-        return state.model_copy(
-            update={
-                "status": status_map[decision],
-                "feedback": feedback,
-                "journal": state.journal + simulation_journal + journal_entry,
-                "messages": [
-                    *state.messages,
-                    AIMessage(content=f"Review decision: {decision.value}"),
-                ],
-                "turn_count": state.turn_count + 1,
+            # Read objectives if possible for context
+            objectives = "# No objectives.yaml found."
+            with suppress(Exception):
+                if await self.ctx.worker_client.exists("objectives.yaml"):
+                    objectives = await self.ctx.worker_client.read_file(
+                        "objectives.yaml"
+                    )
+
+            assembly_definition = "# No assembly_definition.yaml found."
+            with suppress(Exception):
+                if await self.ctx.worker_client.exists("assembly_definition.yaml"):
+                    assembly_definition = await self.ctx.worker_client.read_file(
+                        "assembly_definition.yaml"
+                    )
+
+            plan_refusal = ""
+            with suppress(Exception):
+                if await self.ctx.worker_client.exists("plan_refusal.md"):
+                    plan_refusal = await self.ctx.worker_client.read_file(
+                        "plan_refusal.md"
+                    )
+
+            inputs = {
+                "task": state.task,
+                "plan": state.plan,
+                "todo": state.todo,
+                "assembly_definition": assembly_definition,
+                "plan_refusal": plan_refusal,
+                "objectives": objectives,
+                "journal": state.journal + simulation_journal,
             }
-        )
+
+            # Validate existence of key reports
+            validate_files = ["simulation_result.json", "assembly_definition.yaml"]
+
+            prediction, _artifacts, journal_entry = await self._run_program(
+                program_cls=dspy.ReAct,
+                signature_cls=ExecutionReviewerSignature,
+                state=state,
+                inputs=inputs,
+                tool_factory=get_engineer_tools,
+                validate_files=validate_files,
+                node_type=AgentName.ENGINEER_EXECUTION_REVIEWER,
+                record_node_lifecycle=False,
+            )
+            node_output_data = str(prediction)
+            node_output_obj = prediction
+
+            if not prediction:
+                node_output_data = (
+                    f"Execution Reviewer failed to complete: {journal_entry}"
+                )
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.CODE_REJECTED,
+                        "feedback": (
+                            f"Execution Reviewer failed to complete: {journal_entry}"
+                        ),
+                        "journal": state.journal + simulation_journal + journal_entry,
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
+
+            review = ReviewResult.model_validate(prediction.review)
+            review = await self._enforce_render_inspection_gate(review)
+            try:
+                review_path = await self._persist_review_result(
+                    review, "engineering-execution-review-round"
+                )
+            except Exception as exc:
+                node_output_data = (
+                    f"Execution Reviewer failed to persist review file: {exc}"
+                )
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.FAILED,
+                        "feedback": node_output_data,
+                        "journal": (
+                            state.journal
+                            + simulation_journal
+                            + journal_entry
+                            + f"\n[Execution Reviewer] Review persistence failed: {exc}"
+                        ),
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
+            decision = review.decision
+            feedback = review.reason
+            if review.required_fixes:
+                feedback += "\nRequired Fixes:\n" + "\n".join(
+                    [f"- {f}" for f in review.required_fixes]
+                )
+
+            journal_entry += (
+                f"\nCritic Decision: {decision.value}\nFeedback: {feedback}"
+            )
+
+            status_map = {
+                ReviewDecision.APPROVED: AgentStatus.APPROVED,
+                ReviewDecision.REJECTED: AgentStatus.CODE_REJECTED,
+                ReviewDecision.REJECT_PLAN: AgentStatus.PLAN_REJECTED,
+                ReviewDecision.REJECT_CODE: AgentStatus.CODE_REJECTED,
+                ReviewDecision.CONFIRM_PLAN_REFUSAL: AgentStatus.FAILED,
+                ReviewDecision.REJECT_PLAN_REFUSAL: AgentStatus.CODE_REJECTED,
+            }
+            if decision not in status_map:
+                node_output_data = (
+                    "Execution Reviewer returned unsupported structured "
+                    f"decision: {decision}"
+                )
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.FAILED,
+                        "feedback": node_output_data,
+                        "journal": (
+                            state.journal
+                            + simulation_journal
+                            + journal_entry
+                            + f"\n[Execution Reviewer] Unsupported decision: {decision}"
+                        ),
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
+
+            # Emit ReviewDecisionEvent for observability
+            await record_worker_events(
+                episode_id=state.episode_id,
+                events=[
+                    ReviewDecisionEvent(
+                        decision=decision,
+                        reason=feedback,
+                        evidence_stats={
+                            "has_sim_report": True,
+                            "has_mfg_report": True,
+                            "review_file_path": review_path,
+                        },
+                    )
+                ],
+            )
+
+            node_output_data = f"Review decision: {decision.value}"
+            node_output_obj = review
+            return state.model_copy(
+                update={
+                    "status": status_map[decision],
+                    "feedback": feedback,
+                    "journal": state.journal + simulation_journal + journal_entry,
+                    "messages": [
+                        *state.messages,
+                        AIMessage(content=f"Review decision: {decision.value}"),
+                    ],
+                    "turn_count": state.turn_count + 1,
+                }
+            )
+        finally:
+            await db_callback.record_node_end(
+                AgentName.ENGINEER_EXECUTION_REVIEWER,
+                output_data=node_output_data,
+                output_obj=node_output_obj,
+            )
 
     async def _run_simulation_review_step(self) -> SimulationReviewOutcome:
-        if not await self.ctx.worker_client.exists("script.py"):
+        if not await self.ctx.worker_client.exists("simulation_result.json"):
             return SimulationReviewOutcome(
                 ran=False,
                 success=False,
-                summary="script.py missing; execution review cannot run simulation.",
+                summary=(
+                    "simulation_result.json missing; execution review requires "
+                    "a valid latest-revision handoff package."
+                ),
                 source="precheck",
             )
 
         try:
-            sim_result = await self.ctx.worker_client.simulate(script_path="script.py")
-            await self._persist_simulation_artifacts(sim_result)
-            message = (sim_result.message or "").strip()
-            if sim_result.success:
-                return SimulationReviewOutcome(
-                    ran=True,
-                    success=True,
-                    summary=message or "Goal achieved.",
-                    source="simulation",
-                )
-            return SimulationReviewOutcome(
-                ran=True,
-                success=False,
-                summary=message or "Simulation failed.",
-                source="simulation",
-            )
+            sim_raw = await self.ctx.worker_client.read_file("simulation_result.json")
+            sim_result = SimulationResult.model_validate_json(sim_raw)
         except Exception as e:
-            logger.warning("execution_reviewer_simulation_failed", error=str(e))
-            return SimulationReviewOutcome(
-                ran=True,
-                success=False,
-                summary=f"Simulation failed: {e}",
-                source="simulation",
+            logger.warning(
+                "execution_reviewer_simulation_artifact_invalid", error=str(e)
             )
+            return SimulationReviewOutcome(
+                ran=False,
+                success=False,
+                summary=f"simulation_result.json invalid: {e}",
+                source="precheck",
+            )
+
+        if sim_result.success:
+            return SimulationReviewOutcome(
+                ran=False,
+                success=True,
+                summary=sim_result.summary.strip() or "Goal achieved.",
+                source="precheck",
+            )
+
+        return SimulationReviewOutcome(
+            ran=False,
+            success=False,
+            summary=sim_result.summary.strip() or "Simulation failed.",
+            source="precheck",
+        )
 
     async def _persist_simulation_artifacts(self, sim_result) -> None:
         """Persist real simulation outputs for downstream asset/tracing sync."""

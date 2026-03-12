@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import inspect
 import json
 import re
@@ -23,6 +24,7 @@ from controller.agent.tools import filter_tools_for_agent
 from controller.observability.middleware_helper import record_events
 from shared.enums import AgentName, ReviewDecision, SessionStatus
 from shared.models.schemas import ReviewResult
+from shared.models.simulation import SimulationResult
 from shared.observability.schemas import ConversationLengthExceededEvent
 from shared.simulation.schemas import (
     RandomizationStrategy,
@@ -30,13 +32,14 @@ from shared.simulation.schemas import (
     get_default_simulator_backend,
 )
 from shared.type_checking import type_check
-from shared.workers.schema import SimulationArtifacts
+from shared.workers.schema import SimulationArtifacts, ValidationResultRecord
 
 from ..review_handover import validate_reviewer_handover
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
 logger = structlog.get_logger(__name__)
+_SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 OBJECTIVES_FILE = "objectives.yaml"
 SCRIPT_FILE = "script.py"
@@ -58,6 +61,11 @@ def _script_contract_violations(script: str) -> list[str]:
         violations.append("script.py must not contain a __main__ block")
 
     return list(dict.fromkeys(violations))
+
+
+def _goal_reached(summary: str) -> bool:
+    text = (summary or "").lower()
+    return "goal achieved" in text or "green zone" in text or "goal zone" in text
 
 
 class BenchmarkPlannerSignature(dspy.Signature):
@@ -246,31 +254,12 @@ class BenchmarkPlannerNode(BaseNode):
         )
         return state
 
-    def _resolve_native_litellm_model(self) -> tuple[str, str | None, str | None]:
-        api_base = settings.openai_api_base
-        use_openrouter = bool(settings.openrouter_api_key) or bool(
-            api_base and "openrouter.ai" in api_base
+    def _resolve_native_litellm_model(
+        self, *, prefer_multimodal: bool = False
+    ) -> tuple[str, str | None, str | None]:
+        return super()._resolve_native_litellm_model(
+            prefer_multimodal=prefer_multimodal
         )
-        model_name = settings.llm_model
-        if "/" in model_name and model_name.split("/", 1)[0] in {
-            "openai",
-            "openrouter",
-            "anthropic",
-            "azure",
-            "gemini",
-        }:
-            litellm_model = model_name
-        elif use_openrouter:
-            litellm_model = f"openrouter/{model_name}"
-        else:
-            litellm_model = f"openai/{model_name}"
-
-        api_key = (
-            (settings.openrouter_api_key or settings.openai_api_key)
-            if use_openrouter
-            else settings.openai_api_key
-        )
-        return litellm_model, api_key, api_base
 
     @staticmethod
     def _native_schema_type(annotation: Any) -> str:
@@ -612,7 +601,7 @@ class BenchmarkPlannerNode(BaseNode):
                         model=litellm_model,
                         api_key=api_key,
                         api_base=api_base,
-                        timeout=settings.llm_timeout_seconds,
+                        timeout=settings.native_tool_completion_timeout_seconds,
                         max_tokens=min(settings.llm_max_tokens, 2048),
                         messages=messages,
                         tools=tool_schemas,
@@ -655,28 +644,79 @@ class BenchmarkPlannerNode(BaseNode):
                                 f"Native benchmark planner requested unknown tool: {tool_name}"
                             )
 
-                        raw_arguments = function.get("arguments", "{}") or "{}"
-                        arguments = json.loads(raw_arguments)
-                        if not isinstance(arguments, dict):
-                            raise ValueError(
-                                f"Tool arguments for {tool_name} must be a JSON object."
+                        raw_arguments = (
+                            tool_call.get("function", {}).get("arguments", "{}") or "{}"
+                        )
+                        arguments, argument_error = self._parse_native_tool_arguments(
+                            str(tool_name), raw_arguments
+                        )
+                        if argument_error:
+                            logger.warning(
+                                "benchmark_native_tool_call_payload_invalid",
+                                session_id=self.ctx.session_id,
+                                tool_name=tool_name,
+                                error=argument_error,
                             )
+                            messages.append(
+                                self._tool_response_message(
+                                    tool_call_id=tool_call.get("id", ""),
+                                    tool_name=str(tool_name),
+                                    content=argument_error,
+                                )
+                            )
+                            messages.append(
+                                {
+                                    "role": "system",
+                                    "content": self._get_runtime_prompt(
+                                        "benchmark_generator.runtime.invalid_tool_arguments_recover",
+                                        tool_name=str(tool_name),
+                                    ),
+                                }
+                            )
+                            continue
 
                         if tool_name == "submit_plan":
                             await self._normalize_objectives_yaml_artifact()
                             await self._normalize_todo_markdown_artifact()
-                        result = await asyncio.to_thread(
-                            tool_fns[tool_name], **arguments
-                        )
+                        try:
+                            result = await asyncio.to_thread(
+                                tool_fns[tool_name], **arguments
+                            )
+                        except Exception as err:
+                            error_text = str(err).strip() or f"{tool_name} failed"
+                            if _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in error_text:
+                                raise RuntimeError(error_text) from err
+                            logger.warning(
+                                "benchmark_native_tool_call_failed",
+                                session_id=self.ctx.session_id,
+                                tool_name=tool_name,
+                                error=error_text,
+                            )
+                            messages.append(
+                                self._tool_response_message(
+                                    tool_call_id=tool_call.get("id", ""),
+                                    tool_name=str(tool_name),
+                                    content=f"{tool_name} failed: {error_text}",
+                                )
+                            )
+                            messages.append(
+                                {
+                                    "role": "system",
+                                    "content": self._get_runtime_prompt(
+                                        "benchmark_generator.runtime.tool_call_failed_recover",
+                                        tool_name=str(tool_name),
+                                    ),
+                                }
+                            )
+                            continue
                         result_text = self._serialize_tool_observation(result)
 
                         messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tool_call.get("id", ""),
-                                "name": tool_name,
-                                "content": result_text,
-                            }
+                            self._tool_response_message(
+                                tool_call_id=tool_call.get("id", ""),
+                                tool_name=str(tool_name),
+                                content=result_text,
+                            )
                         )
 
                         if tool_name == "submit_plan":
@@ -816,6 +856,63 @@ class BenchmarkCoderSignature(dspy.Signature):
 class BenchmarkCoderNode(BaseNode):
     """Refactored Benchmark Coder using BaseNode."""
 
+    async def _download_render_data(
+        self, *, render_paths: list[str], session_id: str
+    ) -> list[bytes]:
+        async def _download(url_path: str) -> bytes | None:
+            from controller.config.settings import settings as global_settings
+
+            worker_light_url = global_settings.worker_light_url
+            url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
+            try:
+                async with httpx.AsyncClient() as http_client:
+                    response = await http_client.get(
+                        url, headers={"X-Session-ID": session_id}
+                    )
+                    return response.content if response.status_code == 200 else None
+            except Exception:
+                return None
+
+        results = await asyncio.gather(*[_download(path) for path in render_paths])
+        return [result for result in results if result is not None]
+
+    async def _load_fresh_validation_record(
+        self, *, script_content: str
+    ) -> ValidationResultRecord | None:
+        if not await self.ctx.worker_client.exists("validation_results.json"):
+            return None
+
+        try:
+            raw_record = await self.ctx.worker_client.read_file(
+                "validation_results.json"
+            )
+            record = ValidationResultRecord.model_validate_json(raw_record)
+        except Exception as exc:
+            logger.warning("persisted_validation_record_invalid", error=str(exc))
+            return None
+
+        script_sha = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+        if not record.success or record.script_sha256 != script_sha:
+            return None
+        return record
+
+    async def _load_successful_simulation_result(self) -> SimulationResult | None:
+        if not await self.ctx.worker_client.exists("simulation_result.json"):
+            return None
+
+        try:
+            raw_result = await self.ctx.worker_client.read_file(
+                "simulation_result.json"
+            )
+            result = SimulationResult.model_validate_json(raw_result)
+        except Exception as exc:
+            logger.warning("persisted_simulation_result_invalid", error=str(exc))
+            return None
+
+        if not result.success or not _goal_reached(result.summary):
+            return None
+        return result
+
     async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
         session_id = str(state.session.session_id)
         logger.info("coder_node_start", session_id=session_id)
@@ -915,8 +1012,20 @@ class BenchmarkCoderNode(BaseNode):
 
             logger.info("running_integrated_validation", session_id=session_id)
             try:
-                val_res = await self.ctx.worker_client.validate(script_path=SCRIPT_FILE)
-                if not val_res.success:
+                val_res = None
+                validation_record = await self._load_fresh_validation_record(
+                    script_content=script
+                )
+                if validation_record is None:
+                    val_res = await self.ctx.worker_client.validate(
+                        script_path=SCRIPT_FILE
+                    )
+                else:
+                    logger.info(
+                        "reusing_fresh_validation_result", session_id=session_id
+                    )
+
+                if val_res is not None and not val_res.success:
                     validation_error = (
                         val_res.message or "geometric validation failed before submit"
                     )
@@ -953,12 +1062,20 @@ class BenchmarkCoderNode(BaseNode):
                     except Exception:
                         pass
 
-                    sim_res = await self.ctx.worker_client.simulate(
-                        script_path=SCRIPT_FILE, backend=backend
+                    sim_res = None
+                    persisted_sim_result = (
+                        await self._load_successful_simulation_result()
                     )
+                    if persisted_sim_result is None:
+                        sim_res = await self.ctx.worker_client.simulate(
+                            script_path=SCRIPT_FILE, backend=backend
+                        )
+                    else:
+                        logger.info(
+                            "reusing_fresh_simulation_result", session_id=session_id
+                        )
 
-                    # Update MJCF content from simulation results
-                    if sim_res.artifacts:
+                    if sim_res is not None and sim_res.artifacts:
                         if isinstance(sim_res.artifacts, SimulationArtifacts):
                             if sim_res.artifacts.mjcf_content:
                                 state.mjcf_content = sim_res.artifacts.mjcf_content
@@ -966,8 +1083,10 @@ class BenchmarkCoderNode(BaseNode):
                             state.mjcf_content = sim_res.artifacts.get(
                                 "mjcf_content", ""
                             )
+                    elif persisted_sim_result and persisted_sim_result.mjcf_content:
+                        state.mjcf_content = persisted_sim_result.mjcf_content
 
-                    if not sim_res.success:
+                    if sim_res is not None and not sim_res.success:
                         simulation_error = (
                             sim_res.message or "physics simulation failed before submit"
                         )
@@ -989,43 +1108,43 @@ class BenchmarkCoderNode(BaseNode):
                             render_data=[],
                         )
                     else:
-                        # Download Renders
-                        render_paths = []
-                        if sim_res.artifacts:
+                        render_paths: list[str] = []
+                        validation_logs = ["Validation passed."]
+                        if sim_res is not None and sim_res.artifacts:
                             if isinstance(sim_res.artifacts, SimulationArtifacts):
                                 render_paths = sim_res.artifacts.render_paths
                             elif isinstance(sim_res.artifacts, dict):
                                 render_paths = sim_res.artifacts.get("render_paths", [])
+                        elif persisted_sim_result is not None:
+                            render_paths = list(persisted_sim_result.render_paths)
+                            validation_logs = [persisted_sim_result.summary]
 
-                        async def _download(url_path):
-                            from controller.config.settings import (
-                                settings as global_settings,
-                            )
-
-                            worker_light_url = global_settings.worker_light_url
-                            url = f"{worker_light_url}/assets/{url_path.lstrip('/')}"
-                            try:
-                                async with httpx.AsyncClient() as http_client:
-                                    r = await http_client.get(
-                                        url, headers={"X-Session-ID": session_id}
-                                    )
-                                    return r.content if r.status_code == 200 else None
-                            except Exception:
-                                return None
-
-                        tasks = [_download(p) for p in render_paths]
-                        results = await asyncio.gather(*tasks)
-                        render_data = [r for r in results if r is not None]
+                        render_data = await self._download_render_data(
+                            render_paths=render_paths,
+                            session_id=session_id,
+                        )
 
                         from shared.simulation.schemas import ValidationResult
 
                         state.simulation_result = ValidationResult(
                             valid=True,
                             cost=0,
-                            logs=["Validation passed."],
+                            logs=validation_logs,
                             render_paths=render_paths,
                             render_data=render_data,
                         )
+
+                        handoff_err = await validate_reviewer_handover(
+                            self.ctx.worker_client,
+                            manifest_path=".manifests/benchmark_review_manifest.json",
+                            expected_stage="benchmark_reviewer",
+                        )
+                        if handoff_err is None:
+                            logger.info(
+                                "reusing_existing_benchmark_handover",
+                                session_id=session_id,
+                            )
+                            return state
 
                         # Control-plane handoff submit is executed only after
                         # validate+simulate pass. script.py itself stays a pure
@@ -1245,15 +1364,6 @@ class BenchmarkReviewerSignature(dspy.Signature):
 @type_check
 class BenchmarkReviewerNode(BaseNode):
     """Refactored Benchmark Reviewer using BaseNode."""
-
-    async def _workspace_has_render_media(self) -> bool:
-        with suppress(Exception):
-            entries = await self.ctx.worker_client.list_files("/renders")
-            for entry in entries:
-                path = getattr(entry, "path", "") or ""
-                if path.lower().endswith((".png", ".jpg", ".jpeg")):
-                    return True
-        return False
 
     async def _enforce_render_inspection_gate(
         self, review: ReviewResult
