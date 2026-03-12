@@ -1,8 +1,0 @@
-[
-  {
-    "id": "ee-011-diverter-gate-wiring",
-    "task": "Use the seeded mechanical handoff package to implement the electronics portion for the single-motor diverter gate. Keep the design on one 12V DC supply with at most 2.0A available, route both power and return wires through the left-wall cable corridor, and update the seeded artifacts so the electronics handoff can pass review.",
-    "seed_artifact_dir": "dataset/data/seed/artifacts/electronics_engineer/ee-011-diverter-gate-wiring",
-    "expected_criteria": "Electronics engineer starts from seeded planner and coder artifacts, adds a valid single-motor power path, and preserves the routing constraints in the workspace files."
-  }
-]

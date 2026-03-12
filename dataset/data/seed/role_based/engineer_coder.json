@@ -58,5 +58,11 @@
     "task": "Use the seeded engineering planner handoff package in the workspace to implement the lower-bin deflector in `script.py`. Keep the reviewed planner artifacts aligned with the passive drop-redirection strategy, respect the dead-zone keepout, and update `todo.md` and `journal.md` as execution progresses.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-010-lower-bin-deflector",
     "expected_criteria": "Engineer coder starts from a reviewed lower-bin handoff package, implements the passive deflector assembly in `script.py`, and preserves the seeded planner contract and dead-zone constraints."
+  },
+  {
+    "id": "ec-011",
+    "task": "Use the seeded reviewed handoff package in the workspace to finish the single-motor diverter-gate implementation in `script.py` and complete the electromechanical updates required by the plan. Keep the design on one 12V DC supply with at most 2.0A available, route both power and return wires through the left-wall cable corridor, update `assembly_definition.yaml`, and preserve the reviewed planner artifacts while you update `todo.md` and `journal.md`.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_coder/ec-011-diverter-gate-wiring",
+    "expected_criteria": "Engineer coder starts from a reviewed diverter-gate handoff package, completes the electromechanical implementation in the workspace files, adds a valid single-motor power path, and preserves the seeded routing and supply constraints."
   }
 ]

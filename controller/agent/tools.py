@@ -182,7 +182,6 @@ def get_engineer_tools(
 ) -> list[Callable]:
     """
     Get the tools for the Engineer agent.
-    Uses the common toolset only.
     """
     return get_common_tools(fs, session_id)
 
