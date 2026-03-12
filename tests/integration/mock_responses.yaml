@@ -76,6 +76,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -193,6 +199,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -249,6 +261,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -325,6 +343,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 250, max_weight_g: 2500.0}
               overwrite: true
             expected_observation: "success"
@@ -402,6 +426,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 250, max_weight_g: 2500.0}
               overwrite: true
             expected_observation: "success"
@@ -546,6 +576,12 @@ scenarios:
                     radius: [1, 2]
                   start_position: [0, 0, 0]
                   runtime_jitter: [0.5, 0.5, 0.5]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 200.0
                   max_weight_g: 1200.0
@@ -721,6 +757,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
@@ -849,6 +891,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 40, max_weight_g: 500.0}
               overwrite: true
             expected_observation: "success"
@@ -966,6 +1014,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 60, max_weight_g: 600.0}
               overwrite: true
             expected_observation: "success"
@@ -1083,6 +1137,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
@@ -1231,6 +1291,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 200.0
                   max_weight_g: 1200.0
@@ -1356,6 +1422,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 200.0
                   max_weight_g: 1200.0
@@ -1477,6 +1549,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 200.0
                   max_weight_g: 1200.0
@@ -1601,6 +1679,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 220.0
                   max_weight_g: 1200.0
@@ -1730,6 +1814,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 180.0
                   max_weight_g: 1200.0
@@ -1843,6 +1933,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -1953,6 +2049,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2063,6 +2165,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 220, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2174,6 +2282,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 220, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2293,6 +2407,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2423,6 +2543,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2558,6 +2684,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2668,6 +2800,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2778,6 +2916,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2888,6 +3032,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -2997,6 +3147,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 500.0}
               overwrite: true
             expected_observation: "success"
@@ -3116,6 +3272,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 40, max_weight_g: 400.0}
               overwrite: true
             expected_observation: "success"
@@ -3224,6 +3386,12 @@ scenarios:
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 250, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -3342,6 +3510,12 @@ scenarios:
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 250, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -3453,6 +3627,12 @@ scenarios:
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
                 moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -3559,6 +3739,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
@@ -3649,6 +3835,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
@@ -3743,6 +3935,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
@@ -3848,6 +4046,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
@@ -3984,6 +4188,12 @@ scenarios:
                   shape: "sphere"
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
@@ -4147,6 +4357,12 @@ scenarios:
                     radius: [1, 2]
                   start_position: [0, 0, 0]
                   runtime_jitter: [0.5, 0.5, 0.5]
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints:
                   max_unit_cost: 200.0
                   max_weight_g: 1200.0
@@ -4274,6 +4490,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -4402,6 +4624,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -4517,6 +4745,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -4635,6 +4869,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -4750,6 +4990,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -4862,6 +5108,12 @@ scenarios:
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
                 moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"
@@ -4974,6 +5226,12 @@ scenarios:
                   build_zone: {min: [-20,-20,0], max: [20,20,20]}
                 simulation_bounds: {min: [-50,-50,0], max: [50,50,50]}
                 moved_object: {label: "projectile_ball", shape: "sphere", start_position: [0,0,2], runtime_jitter: [0,0,0]}
+                benchmark_parts:
+                  - part_id: environment_fixture
+                    label: environment_fixture
+                    metadata:
+                      fixed: true
+                      material_id: aluminum_6061
                 constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
               overwrite: true
             expected_observation: "success"

@@ -32,6 +32,16 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
 @pytest.fixture
 def session_id():
     return f"test-fem-{int(time.time())}"
@@ -98,6 +108,7 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
 
         # 1b. Setup custom material config that LACKS FEM fields
@@ -224,6 +235,7 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         # Script with a part that will surely break (high force/stress expected)
         script_content = """
@@ -315,6 +327,7 @@ async def test_int_104_stress_reporting(session_id, base_headers):
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         script_content = """
 from build123d import *
@@ -384,6 +397,7 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
 
         # Material setup with FEM fields so it passes initial gate
@@ -469,6 +483,7 @@ async def test_int_109_physics_instability_abort(session_id, base_headers):
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         # Script with overlapping high-density parts to cause explosion
         script_content = """

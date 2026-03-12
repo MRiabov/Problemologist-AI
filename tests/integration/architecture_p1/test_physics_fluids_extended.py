@@ -37,6 +37,12 @@ objectives:
   build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
 simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
 moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+benchmark_parts:
+  - part_id: environment_fixture
+    label: environment_fixture
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
 constraints: {{max_unit_cost: 100, max_weight_g: 10}}
 """
         await client.post(
@@ -101,6 +107,12 @@ objectives:
   build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
 simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
 moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+benchmark_parts:
+  - part_id: environment_fixture
+    label: environment_fixture
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
 constraints: {{max_unit_cost: 100, max_weight_g: 10}}
 """
         await client.post(

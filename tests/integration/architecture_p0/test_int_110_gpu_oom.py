@@ -26,6 +26,16 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
 @pytest.fixture
 def session_id():
     return f"test-gpu-{int(time.time())}"
@@ -61,6 +71,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
 
         write_obj_req = WriteFileRequest(

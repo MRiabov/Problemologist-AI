@@ -40,6 +40,19 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {
+                "fixed": True,
+                "material_id": "aluminum_6061",
+            },
+        }
+    ]
+
+
 async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
     """Fetch gzipped workspace from light worker and return base64 string."""
     resp = await client.post(
@@ -256,6 +269,7 @@ async def test_int_020_simulation_failure_taxonomy():
                 ],
                 build_zone=BoundingBox(min=(0.5, 0.5, 0.5), max=(20.5, 20.5, 20.5)),
             ),
+            benchmark_parts=_default_benchmark_parts(),
             simulation_bounds=BoundingBox(
                 min=(-20.5, -20.5, -20.5), max=(20.5, 20.5, 20.5)
             ),
@@ -407,6 +421,7 @@ async def test_int_021_runtime_randomization_robustness():
                 goal_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
                 build_zone=BoundingBox(min=(-20, -20, -20), max=(20, 20, 20)),
             ),
+            benchmark_parts=_default_benchmark_parts(),
             simulation_bounds=BoundingBox(min=(-20, -20, -20), max=(20, 20, 20)),
             moved_object=MovedObject(
                 label="target_box",
@@ -598,6 +613,7 @@ def build():
                 ],
                 build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
             ),
+            benchmark_parts=_default_benchmark_parts(),
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),
@@ -715,6 +731,7 @@ def build():
                 build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
             ),
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            benchmark_parts=_default_benchmark_parts(),
             simulation_bounds=BoundingBox(
                 min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
             ),

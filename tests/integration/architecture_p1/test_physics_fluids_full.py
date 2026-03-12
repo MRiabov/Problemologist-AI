@@ -39,6 +39,16 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
 class MetricTypeEnvelope(BaseModel):
     metric_types: list[str]
 
@@ -134,6 +144,7 @@ async def test_int_131_full_fluid_objective_path():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         await _write_file(
             client,
@@ -209,6 +220,7 @@ async def test_int_133_elec_to_mech_conflict_signal():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=1000.0, max_weight_g=5000.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         await _write_file(
             client,
@@ -324,6 +336,7 @@ async def test_int_134_stress_heatmap_render_artifact():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         await _write_file(
             client,
@@ -407,6 +420,7 @@ async def test_int_135_wire_clearance_validation():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=1000.0, max_weight_g=5000.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         await _write_file(
             client,

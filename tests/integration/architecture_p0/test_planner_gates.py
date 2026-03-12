@@ -45,6 +45,19 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {
+                "fixed": True,
+                "material_id": "aluminum_6061",
+            },
+        }
+    ]
+
+
 @pytest.fixture
 def session_id(request):
     match = re.search(r"test_int_(\d{3})", request.node.name, re.IGNORECASE)
@@ -92,6 +105,7 @@ def valid_objectives():
             forbid_zones=[],
             build_zone=BoundingBox(min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 100.0)),
         ),
+        benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
             min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
         ),

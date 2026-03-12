@@ -23,6 +23,19 @@ from shared.workers.schema import ExecuteRequest, ExecuteResponse, WriteFileRequ
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {
+                "fixed": True,
+                "material_id": "aluminum_6061",
+            },
+        }
+    ]
+
+
 def _runtime_validate_command() -> str:
     return "python script.py"
 
@@ -135,6 +148,7 @@ print(f"VALIDATE_MESSAGE={message}")
             ],
             build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
         ),
+        benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
@@ -153,6 +167,7 @@ print(f"VALIDATE_MESSAGE={message}")
             forbid_zones=[],
             build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
         ),
+        benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
@@ -276,6 +291,7 @@ print(f"VALIDATE_MESSAGE={message}")
             forbid_zones=[],
             build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
         ),
+        benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
@@ -378,6 +394,7 @@ print(f"VALIDATE_MESSAGE={message}")
             forbid_zones=[],
             build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
         ),
+        benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),
@@ -462,6 +479,7 @@ print(f"VALIDATE_MESSAGE={message}")
             forbid_zones=[],
             build_zone=BoundingBox(min=(-5.0, -5.0, 0.0), max=(5.0, 5.0, 10.0)),
         ),
+        benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
             min=(-50.0, -50.0, -10.0), max=(50.0, 50.0, 50.0)
         ),

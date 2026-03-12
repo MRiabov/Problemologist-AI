@@ -110,7 +110,12 @@ objectives:
   build_zone: {{min: [-1,-1,-1], max: [1,1,1]}}
 simulation_bounds: {{min: [-1,-1,-1], max: [1,1,1]}}
 moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
-
+benchmark_parts:
+  - part_id: environment_fixture
+    label: environment_fixture
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
 constraints: {{max_unit_cost: 100, max_weight_g: 1000}}
 """
         await client.post(

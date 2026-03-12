@@ -555,6 +555,12 @@ moved_object:
 constraints:
   max_unit_cost: 100
   max_weight_g: 1000
+benchmark_parts:
+  - part_id: environment_fixture
+    label: environment_fixture
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
 electronics_requirements:
   power_supply_available:
     voltage_dc: 12

@@ -36,6 +36,16 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
 class PowerBudgetSummary(BaseModel):
     under_safe: bool
     under_margin_a: float
@@ -92,6 +102,7 @@ def _base_benchmark_definition_yaml() -> str:
                 "runtime_jitter": [0, 0, 0],
             },
             "constraints": {"max_unit_cost": 1000.0, "max_weight_g": 5000.0},
+            "benchmark_parts": _default_benchmark_parts(),
         }
     )
     return yaml.dump(objectives.model_dump(mode="json"))

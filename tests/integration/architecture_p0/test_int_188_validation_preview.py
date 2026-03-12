@@ -32,6 +32,16 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
 def _build_single_box_script(material_id: str) -> str:
     return f"""
 from build123d import *
@@ -62,6 +72,7 @@ def _default_objectives() -> BenchmarkDefinition:
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
         constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        benchmark_parts=_default_benchmark_parts(),
     )
 
 
@@ -162,6 +173,7 @@ def build():
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         objectives_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
@@ -309,6 +321,7 @@ def build():
                     runtime_jitter=(0.0, 0.0, 0.0),
                 ),
                 constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+                benchmark_parts=_default_benchmark_parts(),
             )
             objectives_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/write",

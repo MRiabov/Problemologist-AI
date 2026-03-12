@@ -86,6 +86,12 @@ moved_object:
 constraints:
   max_unit_cost: 120.0
   max_weight_g: 5000.0
+benchmark_parts:
+  - part_id: ground_plane
+    label: ground_plane
+    metadata:
+      fixed: true
+      material_id: hdpe
 randomization:
   static_variation_id: v1.0
   runtime_jitter_enabled: false
@@ -195,6 +201,12 @@ moved_object:
 constraints:
   max_unit_cost: 120.0
   max_weight_g: 5000.0
+benchmark_parts:
+  - part_id: ground_plane
+    label: ground_plane
+    metadata:
+      fixed: true
+      material_id: hdpe
 randomization:
   static_variation_id: v1.0
   runtime_jitter_enabled: false

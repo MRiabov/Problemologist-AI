@@ -34,6 +34,16 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
 def _event_get(event, key: str, default=None):
     if isinstance(event, dict):
         return event.get(key, default)
@@ -87,6 +97,7 @@ async def test_int_101_physics_backend_selection():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         write_obj_req = WriteFileRequest(
             path="benchmark_definition.yaml",
@@ -193,6 +204,7 @@ async def test_int_105_fluid_containment_evaluation():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
 
         write_obj_req = WriteFileRequest(
@@ -302,6 +314,7 @@ async def test_int_106_flow_rate_evaluation():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         req_write_obj = WriteFileRequest(
             path="benchmark_definition.yaml",
@@ -376,6 +389,7 @@ async def test_int_112_mujoco_backward_compat():
                 runtime_jitter=(0, 0, 0),
             ),
             constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
         )
         req_write_obj = WriteFileRequest(
             path="benchmark_definition.yaml",
