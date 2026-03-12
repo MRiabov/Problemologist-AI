@@ -17,6 +17,7 @@ class AgentSettings(BaseSettings):
     openrouter_api_key: str | None = global_settings.openrouter_api_key
     anthropic_api_key: str | None = None
     llm_timeout_seconds: int = 300
+    native_tool_completion_timeout_seconds: int = 60
     llm_max_tokens: int = _load_agents_llm_config().max_reasoning_tokens
     context_compaction_threshold_tokens: int = (
         _load_agents_llm_config().context_compaction_threshold_tokens

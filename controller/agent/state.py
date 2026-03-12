@@ -24,6 +24,7 @@ class AgentState(BaseModel):
 
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
     task: StrictStr = ""
+    start_node: StrictStr | None = None
     plan: StrictStr = ""
     todo: StrictStr = ""
     current_step: StrictStr = ""

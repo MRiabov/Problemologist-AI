@@ -57,7 +57,7 @@ from shared.enums import (
     TerminalReason,
     TraceType,
 )
-from shared.models.schemas import PlannerSubmissionResult
+from shared.models.schemas import EpisodeMetadata, PlannerSubmissionResult
 from shared.observability.events import emit_event
 from shared.observability.schemas import NodeEntryValidationFailedEvent
 from shared.simulation.schemas import (
@@ -80,6 +80,28 @@ from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
 logger = structlog.get_logger(__name__)
+
+
+async def _sidecars_disabled_for_state(state: BenchmarkGeneratorState) -> bool:
+    if integration_mode_enabled():
+        return True
+
+    episode_id = (state.episode_id or "").strip()
+    if not episode_id:
+        return False
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, episode_id)
+        if episode is None:
+            return False
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        return bool(
+            metadata.disable_sidecars
+            or metadata.is_integration_test
+            or metadata.generation_kind == GenerationKind.SEEDED_EVAL
+        )
+
 
 BENCHMARK_NODE_CONTRACTS = build_benchmark_node_contracts()
 
@@ -583,6 +605,8 @@ def define_graph():
             return AgentName.BENCHMARK_CODER
 
         if state.session.status == SessionStatus.FAILED:
+            if await _sidecars_disabled_for_state(state):
+                return END
             return AgentName.SKILL_AGENT
 
         return AgentName.BENCHMARK_REVIEWER
@@ -595,6 +619,7 @@ def define_graph():
             AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_REVIEWER,
             AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_CODER,
             AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
+            END: END,
         },
     )
 
@@ -631,7 +656,8 @@ def define_graph():
 
         # Check for summarization need
         if (
-            estimate_text_tokens(state.journal or "")
+            not await _sidecars_disabled_for_state(state)
+            and estimate_text_tokens(state.journal or "")
             > agent_settings.context_compaction_threshold_tokens
         ):
             return AgentName.JOURNALLING_AGENT
@@ -647,6 +673,8 @@ def define_graph():
             state.session.validation_logs.append(
                 hard_fail.message or "Agent hard-fail limit reached."
             )
+            if await _sidecars_disabled_for_state(state):
+                return END
             return AgentName.SKILL_AGENT
 
         feedback = (state.review_feedback or "").upper()
@@ -656,8 +684,12 @@ def define_graph():
         # Use structured decision if available
         if state.review_decision:
             if state.review_decision == ReviewDecision.APPROVED:
+                if await _sidecars_disabled_for_state(state):
+                    return END
                 return AgentName.SKILL_AGENT
             if state.review_decision == ReviewDecision.CONFIRM_PLAN_REFUSAL:
+                if await _sidecars_disabled_for_state(state):
+                    return END
                 return AgentName.SKILL_AGENT
             if state.review_decision == ReviewDecision.REJECT_PLAN:
                 return AgentName.BENCHMARK_PLANNER
@@ -667,6 +699,8 @@ def define_graph():
 
         # Fallback for legacy behavior
         if "APPROVED" in feedback:
+            if await _sidecars_disabled_for_state(state):
+                return END
             return AgentName.SKILL_AGENT
         if feedback.startswith("STEERING:"):
             return AgentName.BENCHMARK_PLANNER
@@ -682,6 +716,7 @@ def define_graph():
             AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
             AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
             AgentName.JOURNALLING_AGENT: AgentName.JOURNALLING_AGENT,
+            END: END,
         },
     )
 

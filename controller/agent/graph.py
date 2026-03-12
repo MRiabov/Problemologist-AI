@@ -1,4 +1,7 @@
+from typing import Literal
+
 import structlog
+import yaml
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
@@ -26,7 +29,10 @@ from controller.agent.node_entry_validation import (
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from controller.graph.steerability_node import check_steering, steerability_node
-from shared.enums import AgentName
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Episode
+from shared.enums import AgentName, GenerationKind
+from shared.models.schemas import EpisodeMetadata, ObjectivesYaml
 from shared.observability.events import emit_event
 from shared.observability.schemas import NodeEntryValidationFailedEvent
 
@@ -45,6 +51,46 @@ from .state import AgentState, AgentStatus
 logger = structlog.get_logger(__name__)
 
 ENGINEER_NODE_CONTRACTS = build_engineer_node_contracts()
+
+
+async def _sidecars_disabled_for_state(state: AgentState) -> bool:
+    if integration_mode_enabled():
+        return True
+
+    episode_id = (state.episode_id or "").strip()
+    if not episode_id:
+        return False
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, episode_id)
+        if episode is None:
+            return False
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        return bool(
+            metadata.disable_sidecars
+            or metadata.is_integration_test
+            or metadata.generation_kind == GenerationKind.SEEDED_EVAL
+        )
+
+
+def _requested_start_node(state: AgentState) -> AgentName | None:
+    start_node = (state.start_node or "").strip()
+    if not start_node:
+        return None
+    try:
+        return AgentName(start_node)
+    except ValueError:
+        return None
+
+
+async def _should_end_scoped_run_after_node(
+    state: AgentState, completed_node: AgentName
+) -> bool:
+    return (
+        await _sidecars_disabled_for_state(state)
+        and _requested_start_node(state) == completed_node
+    )
 
 
 async def _artifact_exists_for_state(state: AgentState, artifact_path: str) -> bool:
@@ -104,6 +150,56 @@ def _build_entry_rejection_feedback(
     return feedback, journal_entry
 
 
+async def _state_requires_electronics(state: AgentState) -> bool:
+    session_id = (state.session_id or "").strip()
+    if not session_id:
+        return True
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=session_id,
+    )
+    try:
+        if not await client.exists("objectives.yaml"):
+            return True
+        raw_objectives = await client.read_file("objectives.yaml")
+        parsed = yaml.safe_load(raw_objectives) or {}
+        objectives = ObjectivesYaml.model_validate(parsed)
+        return objectives.electronics_requirements is not None
+    except Exception as exc:
+        logger.warning(
+            "engineer_graph_electronics_scope_detection_failed",
+            session_id=session_id,
+            episode_id=state.episode_id,
+            error=str(exc),
+        )
+        return True
+    finally:
+        await client.aclose()
+
+
+async def _normalize_engineer_reroute_target(
+    target_node: AgentName, state: AgentState, validation
+):
+    if validation.ok:
+        return validation
+    if target_node != AgentName.ENGINEER_PLAN_REVIEWER:
+        return validation
+    if validation.reroute_target != AgentName.ELECTRONICS_PLANNER:
+        return validation
+    if await _state_requires_electronics(state):
+        return validation
+    logger.info(
+        "engineer_plan_review_reroute_normalized",
+        episode_id=state.episode_id,
+        session_id=str(state.session_id),
+        previous_reroute_target=AgentName.ELECTRONICS_PLANNER.value,
+        reroute_target=AgentName.ENGINEER_PLANNER.value,
+    )
+    return validation.model_copy(update={"reroute_target": AgentName.ENGINEER_PLANNER})
+
+
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
     custom_checks = {
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
@@ -145,6 +241,9 @@ def _guarded_node(target_node: AgentName, node_callable):
         # Entry validation is intentionally scoped to first-class graph transitions.
         # Tool-invoked helper subagents are out of scope for this contract.
         validation = await _evaluate_engineer_node_entry(target_node, state)
+        validation = await _normalize_engineer_reroute_target(
+            target_node, state, validation
+        )
         if validation.ok:
             state.entry_validation_rejected = False
             state.entry_validation_terminal = False
@@ -203,7 +302,7 @@ def _guarded_node(target_node: AgentName, node_callable):
             reroute_target=(
                 validation.reroute_target.value if validation.reroute_target else None
             ),
-            integration_mode=integration_mode_enabled(),
+            integration_mode=await _sidecars_disabled_for_state(state),
             errors=serialized_errors,
         )
 
@@ -244,7 +343,8 @@ async def should_continue(state: AgentState) -> str:
 
     # Check for summarization need if journal is long
     if (
-        estimate_text_tokens(state.journal)
+        not await _sidecars_disabled_for_state(state)
+        and estimate_text_tokens(state.journal)
         > agent_settings.context_compaction_threshold_tokens
     ):
         return AgentName.JOURNALLING_AGENT
@@ -260,14 +360,27 @@ async def should_continue(state: AgentState) -> str:
         state.journal = (
             state.journal + "\n[Hard Fail] " + (hard_fail.message or "quota reached")
         ).strip()
+        if await _sidecars_disabled_for_state(state):
+            return END
         return AgentName.SKILL_AGENT
 
     if state.status == AgentStatus.APPROVED or state.status == AgentStatus.FAILED:
+        if await _should_end_scoped_run_after_node(
+            state, AgentName.ENGINEER_EXECUTION_REVIEWER
+        ):
+            return END
         # T010: Check if there are more steps in TODO before finishing
         if state.status == AgentStatus.APPROVED and "- [ ]" in state.todo:
             logger.info("step_approved_continuing_to_next", todo=state.todo)
             return AgentName.ENGINEER_CODER
+        if await _sidecars_disabled_for_state(state):
+            return END
         return AgentName.SKILL_AGENT
+
+    if await _should_end_scoped_run_after_node(
+        state, AgentName.ENGINEER_EXECUTION_REVIEWER
+    ):
+        return END
 
     # If rejected and we haven't looped too many times
     if state.iteration < 5:
@@ -275,6 +388,8 @@ async def should_continue(state: AgentState) -> str:
             return AgentName.ENGINEER_PLANNER
         return AgentName.ENGINEER_CODER
 
+    if await _sidecars_disabled_for_state(state):
+        return END
     return AgentName.SKILL_AGENT
 
 
@@ -300,12 +415,17 @@ async def should_continue_after_plan_review(state: AgentState) -> str:
             )
 
     if (
-        estimate_text_tokens(state.journal)
+        not await _sidecars_disabled_for_state(state)
+        and estimate_text_tokens(state.journal)
         > agent_settings.context_compaction_threshold_tokens
     ):
         return AgentName.JOURNALLING_AGENT
 
     if state.status == AgentStatus.APPROVED:
+        if await _should_end_scoped_run_after_node(
+            state, AgentName.ENGINEER_PLAN_REVIEWER
+        ):
+            return END
         return AgentName.ENGINEER_CODER
 
     hard_fail = await evaluate_agent_hard_fail(
@@ -319,17 +439,90 @@ async def should_continue_after_plan_review(state: AgentState) -> str:
         state.journal = (
             state.journal + "\n[Hard Fail] " + (hard_fail.message or "quota reached")
         ).strip()
+        if await _sidecars_disabled_for_state(state):
+            return END
         return AgentName.SKILL_AGENT
 
     if state.status == AgentStatus.FAILED:
+        if await _sidecars_disabled_for_state(state):
+            return END
         return AgentName.SKILL_AGENT
+
+    if await _should_end_scoped_run_after_node(state, AgentName.ENGINEER_PLAN_REVIEWER):
+        return END
 
     if state.iteration < 5:
         if state.status == AgentStatus.PLAN_REJECTED:
             return AgentName.ENGINEER_PLANNER
         return AgentName.ENGINEER_CODER
 
+    if await _sidecars_disabled_for_state(state):
+        return END
     return AgentName.SKILL_AGENT
+
+
+async def route_after_engineer_planner(
+    state: AgentState,
+) -> Literal[
+    AgentName.ELECTRONICS_PLANNER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.SKILL_AGENT,
+    END,
+]:
+    if await _should_end_scoped_run_after_node(state, AgentName.ENGINEER_PLANNER):
+        return END
+    if state.status == AgentStatus.FAILED:
+        if await _sidecars_disabled_for_state(state):
+            return END
+        return AgentName.SKILL_AGENT
+    if await _state_requires_electronics(state):
+        return AgentName.ELECTRONICS_PLANNER
+    return AgentName.ENGINEER_PLAN_REVIEWER
+
+
+async def route_after_electronics_planner(
+    state: AgentState,
+) -> Literal[AgentName.ENGINEER_PLAN_REVIEWER, END]:
+    if await _should_end_scoped_run_after_node(state, AgentName.ELECTRONICS_PLANNER):
+        return END
+    return AgentName.ENGINEER_PLAN_REVIEWER
+
+
+async def route_after_engineer_coder(
+    state: AgentState,
+) -> Literal[
+    AgentName.STEER,
+    AgentName.ELECTRONICS_ENGINEER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
+    END,
+]:
+    if await check_steering(state) == AgentName.STEER:
+        return AgentName.STEER
+    if await _should_end_scoped_run_after_node(state, AgentName.ENGINEER_CODER):
+        return END
+    if await _state_requires_electronics(state):
+        return AgentName.ELECTRONICS_ENGINEER
+    return AgentName.ENGINEER_EXECUTION_REVIEWER
+
+
+async def route_after_electronics_engineer(
+    state: AgentState,
+) -> Literal[AgentName.STEER, AgentName.ELECTRONICS_REVIEWER, END]:
+    if await check_steering(state) == AgentName.STEER:
+        return AgentName.STEER
+    if await _should_end_scoped_run_after_node(state, AgentName.ELECTRONICS_ENGINEER):
+        return END
+    return AgentName.ELECTRONICS_REVIEWER
+
+
+async def route_after_electronics_reviewer(
+    state: AgentState,
+) -> Literal[AgentName.STEER, AgentName.ENGINEER_EXECUTION_REVIEWER, END]:
+    if await check_steering(state) == AgentName.STEER:
+        return AgentName.STEER
+    if await _should_end_scoped_run_after_node(state, AgentName.ELECTRONICS_REVIEWER):
+        return END
+    return AgentName.ENGINEER_EXECUTION_REVIEWER
 
 
 # Initialize the StateGraph with our AgentState
@@ -380,10 +573,64 @@ builder.add_node(
 )
 builder.add_node(AgentName.STEER, _guarded_node(AgentName.STEER, steerability_node))
 
+
 # Set the entry point and edges
-builder.add_edge(START, AgentName.ENGINEER_PLANNER)
-builder.add_edge(AgentName.ENGINEER_PLANNER, AgentName.ELECTRONICS_PLANNER)
-builder.add_edge(AgentName.ELECTRONICS_PLANNER, AgentName.ENGINEER_PLAN_REVIEWER)
+def route_start(
+    state: AgentState,
+) -> Literal[
+    AgentName.ENGINEER_PLANNER,
+    AgentName.ELECTRONICS_PLANNER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.ENGINEER_CODER,
+    AgentName.ELECTRONICS_ENGINEER,
+    AgentName.ELECTRONICS_REVIEWER,
+    AgentName.ENGINEER_EXECUTION_REVIEWER,
+]:
+    start_node = (state.start_node or "").strip()
+    if not start_node:
+        return AgentName.ENGINEER_PLANNER
+
+    try:
+        requested = AgentName(start_node)
+    except ValueError:
+        logger.warning("invalid_engineer_start_node", start_node=start_node)
+        return AgentName.ENGINEER_PLANNER
+
+    allowed_start_nodes = {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ELECTRONICS_ENGINEER,
+        AgentName.ELECTRONICS_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+    }
+    if requested not in allowed_start_nodes:
+        logger.warning("unsupported_engineer_start_node", start_node=start_node)
+        return AgentName.ENGINEER_PLANNER
+
+    return requested
+
+
+builder.add_conditional_edges(START, route_start)
+builder.add_conditional_edges(
+    AgentName.ENGINEER_PLANNER,
+    route_after_engineer_planner,
+    {
+        AgentName.ELECTRONICS_PLANNER: AgentName.ELECTRONICS_PLANNER,
+        AgentName.ENGINEER_PLAN_REVIEWER: AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
+        END: END,
+    },
+)
+builder.add_conditional_edges(
+    AgentName.ELECTRONICS_PLANNER,
+    route_after_electronics_planner,
+    {
+        AgentName.ENGINEER_PLAN_REVIEWER: AgentName.ENGINEER_PLAN_REVIEWER,
+        END: END,
+    },
+)
 
 builder.add_conditional_edges(
     AgentName.ENGINEER_PLAN_REVIEWER,
@@ -394,25 +641,39 @@ builder.add_conditional_edges(
         AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
         AgentName.STEER: AgentName.STEER,
         AgentName.JOURNALLING_AGENT: AgentName.JOURNALLING_AGENT,
+        END: END,
     },
 )
 
 builder.add_conditional_edges(
     AgentName.ENGINEER_CODER,
-    check_steering,
-    {AgentName.STEER: AgentName.STEER, "next": AgentName.ELECTRONICS_ENGINEER},
+    route_after_engineer_coder,
+    {
+        AgentName.STEER: AgentName.STEER,
+        AgentName.ELECTRONICS_ENGINEER: AgentName.ELECTRONICS_ENGINEER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        END: END,
+    },
 )
 
 builder.add_conditional_edges(
     AgentName.ELECTRONICS_ENGINEER,
-    check_steering,
-    {AgentName.STEER: AgentName.STEER, "next": AgentName.ELECTRONICS_REVIEWER},
+    route_after_electronics_engineer,
+    {
+        AgentName.STEER: AgentName.STEER,
+        AgentName.ELECTRONICS_REVIEWER: AgentName.ELECTRONICS_REVIEWER,
+        END: END,
+    },
 )
 
 builder.add_conditional_edges(
     AgentName.ELECTRONICS_REVIEWER,
-    check_steering,
-    {AgentName.STEER: AgentName.STEER, "next": AgentName.ENGINEER_EXECUTION_REVIEWER},
+    route_after_electronics_reviewer,
+    {
+        AgentName.STEER: AgentName.STEER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER: AgentName.ENGINEER_EXECUTION_REVIEWER,
+        END: END,
+    },
 )
 
 # Conditional routing from execution reviewer
@@ -425,6 +686,7 @@ builder.add_conditional_edges(
         AgentName.SKILL_AGENT: AgentName.SKILL_AGENT,
         AgentName.STEER: AgentName.STEER,
         AgentName.JOURNALLING_AGENT: AgentName.JOURNALLING_AGENT,
+        END: END,
     },
 )
 

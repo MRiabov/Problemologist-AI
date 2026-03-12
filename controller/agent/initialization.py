@@ -88,6 +88,7 @@ async def initialize_agent_files(
         file_mappings = {
             "engineer/plan.md": "plan.md",
             "engineer/todo.md": "todo.md",
+            "engineer/assembly_definition.yaml": "assembly_definition.yaml",
             "shared/journal.md": "journal.md",
         }
     elif agent_name == AgentName.ENGINEER_CODER:

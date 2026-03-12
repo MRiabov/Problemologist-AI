@@ -18,12 +18,24 @@ def create_agent_graph(
     agent_name: AgentName = AgentName.ENGINEER_CODER,
     trace_id: str | None = None,
     session_id: str | None = None,
+    start_node: AgentName | None = None,
 ):
     """
     Factory to create/return the appropriate LangGraph based on agent_name.
     Migrated from deepagents to LangGraph.
     """
     # WP10: Remove LangChain-based Langfuse callbacks
+
+    if start_node is not None and agent_name in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ELECTRONICS_ENGINEER,
+        AgentName.ELECTRONICS_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+    }:
+        return engineering_graph, None
 
     if agent_name == AgentName.ENGINEER_PLANNER:
         return engineer_planner_graph, None
