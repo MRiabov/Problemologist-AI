@@ -94,12 +94,12 @@ We track the following structured domain events to compute the evaluation metric
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
+21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
 24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
 25. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
-26. Engineering Plan Reviewer deterministic validator execution (`plan_review_validation_run`) with input artifact revision, validator status, and mismatch reasons when rejected.
+26. Plan-reviewer deterministic validator execution (`plan_review_validation_run`) with reviewer stage, input artifact revision, validator status, and mismatch reasons when rejected.
 27. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
 28. Validation preview backend selection (`validation_preview_backend_selected`) with requested physics backend, actual preview backend, and render purpose (`validation_static_preview`).
 29. Validation preview render completion (`validation_preview_render_complete`) with preview backend, image count, elapsed render time, and artifact paths.
@@ -176,7 +176,7 @@ It is desirable to understand why the simulation/model has failing, so I propose
 
 1. `EpisodeStatus` stores the coarse lifecycle state (`RUNNING`, `PLANNED`, `WAITING_USER`, `COMPLETED`, `FAILED`, `CANCELLED`).
 2. `EpisodeMetadata` stores detailed execution details:
-   - `episode_phase` stores the current workflow phase (`BENCHMARK_PLANNING`, `BENCHMARK_CODING`, `BENCHMARK_REVIEWING`, `ENGINEERING_PLANNING`, `ENGINEERING_PLAN_REVIEWING`, `ENGINEERING_CODING`, `ENGINEERING_EXECUTION_REVIEWING`).
+   - `episode_phase` stores the current workflow phase (`BENCHMARK_PLANNING`, `BENCHMARK_PLAN_REVIEWING`, `BENCHMARK_CODING`, `BENCHMARK_REVIEWING`, `ENGINEERING_PLANNING`, `ENGINEERING_PLAN_REVIEWING`, `ENGINEERING_CODING`, `ENGINEERING_EXECUTION_REVIEWING`).
    - `terminal_reason` stores the concrete terminal cause (`APPROVED`, `REJECTED_BY_REVIEW`, `TIMEOUT`, `OUT_OF_TURN_BUDGET`, `OUT_OF_TOKEN_BUDGET`, `SYSTEM_TOOL_RETRY_EXHAUSTED`, etc.).
    - `failure_class` stores ownership classification (`AGENT_QUALITY_FAILURE`, `AGENT_SEMANTIC_FAILURE`, `APPLICATION_LOGIC_FAILURE`, `INFRA_DEVOPS_FAILURE`).
 

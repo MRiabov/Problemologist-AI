@@ -159,6 +159,7 @@ Note - used by default by
   - `visual_inspection.min_images`: minimum number of distinct render images the role must inspect.
   - `visual_inspection.reminder_interval`: how often runtime injects reminder messages while the role keeps operating without satisfying the image requirement.
 - Current required roles are:
+  - `benchmark_plan_reviewer`
   - `benchmark_reviewer`
   - `engineer_planner`
   - `engineer_coder`
@@ -220,7 +221,10 @@ The preferred execution path for the agent is to run the authored script itself,
 2. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
 3. Be mandatory before planner completion/handoff.
 4. Be the only valid planner completion gate: planner transitions are `PLANNED` only when `ok=true`.
-5. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
+5. Persist the stage-specific plan-review manifest for the next reviewer gate:
+   - Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
+   - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
+6. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
 ### Exact tools logic
 
@@ -275,6 +279,7 @@ Manifest persistence contract:
    - Engineering Execution Reviewer submission: `.manifests/engineering_execution_review_manifest.json`
    - Electronics Reviewer submission: `.manifests/electronics_review_manifest.json`
 3. Planner `submit_plan` persists the plan-review manifest:
+   - Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
    - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
 
 Reviewer entry preconditions are explicit and fail-closed:

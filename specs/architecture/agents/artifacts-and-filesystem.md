@@ -24,6 +24,7 @@ Adapter choice is an explicit runtime contract:
 We create two LangGraph-managed workflows with DSPy.ReAct-driven agent nodes - a Benchmark Generator workflow, consisting of:
 
 - Planner,
+- Plan Reviewer,
 - Coder,
 - Reviewer,
 - Skill Agent
@@ -116,6 +117,9 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 - Benchmark Planner:
   - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
   - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `assembly_definition.yaml` (benchmark-local draft, not handed to engineering)
+- Benchmark Plan Reviewer:
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `renders/**`, `journal.md`
+  - write: `reviews/benchmark-plan-review-round-*.md` only
 - Benchmark Coder:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
@@ -135,11 +139,13 @@ Each agent starts with a template, roughly defined in [Starting folder structure
 System-only metadata:
 - `.manifests/**` is reserved for deterministic handover/state metadata written by backend utilities.
 - Reviewer-stage manifest filenames are explicit and role-scoped:
+  - `.manifests/benchmark_plan_review_manifest.json`
   - `.manifests/benchmark_review_manifest.json`
   - `.manifests/engineering_plan_review_manifest.json`
   - `.manifests/engineering_execution_review_manifest.json`
   - `.manifests/electronics_review_manifest.json`
 - Reviewer decision persistence filenames are explicit and role-scoped:
+  - `reviews/benchmark-plan-review-round-<n>.md`
   - `reviews/benchmark-review-round-<n>.md`
   - `reviews/engineering-plan-review-round-<n>.md`
   - `reviews/engineering-execution-review-round-<n>.md`
@@ -188,7 +194,7 @@ Rules:
 3. If a path is not matched by `allow`, access is denied by default.
 4. Agent-specific rules override `defaults` (defaults are fallback only).
 5. Tool availability can be broad, but path permissions are enforced per role by this file.
-6. Reviewer roles (Engineering Plan Reviewer, Engineering Execution Reviewer, Benchmark Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review files (`reviews/engineering-plan-review-round-*.md`, `reviews/engineering-execution-review-round-*.md`, `reviews/benchmark-review-round-*.md`, `reviews/electronics-review-round-*.md`).
+6. Reviewer roles (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review files (`reviews/benchmark-plan-review-round-*.md`, `reviews/benchmark-review-round-*.md`, `reviews/engineering-plan-review-round-*.md`, `reviews/engineering-execution-review-round-*.md`, `reviews/electronics-review-round-*.md`).
 7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
 8. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
 9. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
@@ -197,7 +203,7 @@ Rules:
 12. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
 13. `config/agents_config.yaml` is also the source of truth for per-role visual-inspection policy, not only path permissions.
 14. Visual-inspection policy is structured as `visual_inspection: {required, min_images, reminder_interval}` under each role.
-15. Current required-visual roles are: `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
+15. Current required-visual roles are: `benchmark_plan_reviewer`, `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
 16. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
 17. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
 18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
@@ -290,6 +296,14 @@ agents:
     write:
       allow: ["plan.md", "todo.md", "journal.md", "benchmark_definition.yaml", "assembly_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
+
+  Benchmark Plan Reviewer:
+    read:
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "renders/**", "journal.md"]
+      deny: [".manifests/**"]
+    write:
+      allow: ["reviews/benchmark-plan-review-round-*.md"]
+      deny: [".manifests/**"]
 
   Benchmark Coder:
     read:

@@ -17,8 +17,9 @@ The agent is to generate problems for an engineer to solve. This is important, a
 ## Agent subagents
 
 1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, friction, dynamic objects, motors, etc.
-2. A Benchmark Coder that implements the benchmark from the plan
-3. A reviewer that reviews the environment for
+2. A Benchmark Plan Reviewer that reviews the planner handoff before implementation starts.
+3. A Benchmark Coder that implements the benchmark from the approved plan
+4. A reviewer that reviews the implemented environment for
     - Feasibility of solution
     - Lack of violation of environment constraints (no significant, etc.)
     - Proper randomization.
@@ -94,6 +95,7 @@ Problems with motors and moving parts are verified more consistently because the
    - Write `todo.md` implementation checklist.
    - Write draft `benchmark_definition.yaml` matching this geometry/constraint data.
    - Write draft `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+   - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 ```
 
 ```yaml
@@ -130,6 +132,38 @@ randomization:
   static_variation_id: "drop_ball_funnel_v2"
   runtime_jitter_enabled: true
 ```
+
+### Benchmark reviewer split
+
+The benchmark loop has two reviewer stages with different responsibilities.
+
+`Benchmark Plan Reviewer` responsibilities:
+
+1. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `assembly_definition.yaml`.
+2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
+3. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
+4. Validate non-ambiguity and completeness of planner handoff artifacts.
+5. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
+6. Reject excessive or unjustified benchmark-side DOFs in benchmark-local `final_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
+7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+
+`Benchmark Reviewer` responsibilities:
+
+1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations.
+2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
+3. Verify the benchmark remains solvable, properly randomized, and free of unintended excessive DOFs or unconstrained parts after implementation.
+4. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
+5. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+
+Benchmark-side reviewer manifest naming:
+
+- Plan reviewer stage: `.manifests/benchmark_plan_review_manifest.json`
+- Execution reviewer stage: `.manifests/benchmark_review_manifest.json`
+
+Benchmark-side reviewer decision persistence naming:
+
+- Plan reviewer writes: `reviews/benchmark-plan-review-round-<n>.md`
+- Execution reviewer writes: `reviews/benchmark-review-round-<n>.md`
 
 ## Engineer (problem solver)
 

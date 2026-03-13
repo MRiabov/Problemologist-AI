@@ -100,7 +100,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 
 ##### Medium evals - Benchmark Generator Planner
 
-1. Given a prompt, a Benchmark Planner generates a plan that upon valid scrutinizing of a Plan Reviewer, passes in 80% of cases.
+1. Given a prompt, a Benchmark Planner generates a plan that, upon valid scrutiny by the `Benchmark Plan Reviewer`, passes in 80% of cases.
 2. Given a prompt, a benchmark generator planner generates a plan that would have unimpeded objectives (objectives obstructed by obstacles by no more than 35%) in 97% of the cases (calculated by volume - shouldn't be obstructed.)
 3. Given a prompt, the benchmark generator will produce plans for various manufacturing quantities (prototype <5, small volume <100, mass-manufacturing - 3000)
 4. Given a prompt, we will include to the solution proposed by the prompt:
@@ -110,6 +110,13 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
       - Max cost
       - And other numerical parameters specified in benchmark_definition.yaml.
 5. The benchmark generator would be able to predict the price and weight the engineer will solve the solution in the range of 80-120% (with 20% error) of the final price in 80% of the cases, within 50-150% in 97% of cases (this is the standard price, not the "safe" price)
+
+##### Medium evals - Benchmark Plan Reviewer
+
+1. Given a benchmark planner handoff package, the Benchmark Plan Reviewer correctly identifies nonexistent benchmark objects or inconsistent object references across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `assembly_definition.yaml` in at least 90% of seeded cases.
+2. Given a benchmark planner handoff package, the Benchmark Plan Reviewer rejects ambiguous, infeasible, or incomplete plans in at least 85% of seeded bad-plan cases.
+3. Given a benchmark planner handoff package with renders available, the Benchmark Plan Reviewer inspects at least the config-driven minimum number of images through the dedicated media-inspection tool before approval. Current production policy is `min_images=1`.
+4. Reviewer efficacy: benchmark plan-review feedback should lead to a corrected planner handoff in at least 60% of failed first submissions.
 
 ##### Medium evals - Benchmark Coder
 

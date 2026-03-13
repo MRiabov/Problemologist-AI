@@ -10,8 +10,13 @@
 ## All handovers that happen
 
 User prompt ->
-Benchmark Planner <-> Benchmark Coder <-> Benchmark Reviewer (If plan is not valid - for example, it specifies conflicting geometry, the Benchmark Coder can refuse and route back to Benchmark Planner. Benchmark Coder refusal is valid only for plan infeasibility, not for generic coding failure.)
-(Benchmark Reviewer to Benchmark Coder - if the environment CAD 3d model does not adhere to the plan OR the environment CAD model has invalid geometry e.g. intersections OR it is impossible to solve, Benchmark Reviewer can refuse)
+Benchmark Planner -> Benchmark Plan Reviewer -> Benchmark Coder -> Benchmark Reviewer
+
+Benchmark-side routing rules:
+
+- `Benchmark Plan Reviewer` rejects planner handoff when the plan contains conflicting geometry, ambiguous/randomization-invalid benchmark definitions, or references to nonexistent benchmark objects across planner artifacts. Rejection routes back to `Benchmark Planner`.
+- `Benchmark Coder` can refuse and route back to `Benchmark Planner` when the approved plan is infeasible to implement. Benchmark Coder refusal is valid only for plan infeasibility, not for generic coding failure.
+- `Benchmark Reviewer` routes back to `Benchmark Coder` when the implemented environment CAD model does not adhere to the approved plan, has invalid geometry such as intersections, or is impossible to solve.
 
 Benchmark Reviewer "accepts" and passes the environment to the Engineering Planner model. (indirect contact - no actual "communication")
 
@@ -30,10 +35,11 @@ There is no shared/canonical reviewer manifest file.
 
 Required manifest filenames:
 
-1. Benchmark Reviewer: `.manifests/benchmark_review_manifest.json`
-2. Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
-3. Engineering Execution Reviewer: `.manifests/engineering_execution_review_manifest.json`
-4. Electronics Reviewer: `.manifests/electronics_review_manifest.json`
+1. Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
+2. Benchmark Reviewer: `.manifests/benchmark_review_manifest.json`
+3. Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
+4. Engineering Execution Reviewer: `.manifests/engineering_execution_review_manifest.json`
+5. Electronics Reviewer: `.manifests/electronics_review_manifest.json`
 
 Validation rule:
 
@@ -47,16 +53,17 @@ Reviewer decisions are persisted as reviewer-scoped markdown files. We do not us
 
 Required reviewer decision files:
 
-1. Benchmark Reviewer: `reviews/benchmark-review-round-<n>.md`
-2. Engineering Plan Reviewer: `reviews/engineering-plan-review-round-<n>.md`
-3. Engineering Execution Reviewer: `reviews/engineering-execution-review-round-<n>.md`
-4. Electronics Reviewer: `reviews/electronics-review-round-<n>.md`
+1. Benchmark Plan Reviewer: `reviews/benchmark-plan-review-round-<n>.md`
+2. Benchmark Reviewer: `reviews/benchmark-review-round-<n>.md`
+3. Engineering Plan Reviewer: `reviews/engineering-plan-review-round-<n>.md`
+4. Engineering Execution Reviewer: `reviews/engineering-execution-review-round-<n>.md`
+5. Electronics Reviewer: `reviews/electronics-review-round-<n>.md`
 
 Validation rule:
 
 - Reviewer output is invalid if the decision is not persisted to the stage-specific file path for that reviewer/round.
 
-## Benchmark Planner and Benchmark Coder
+## Benchmark Planner and Benchmark Plan Reviewer
 
 The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
 
@@ -81,10 +88,22 @@ The agents' file must correspond to roughly the structure detailed above, with a
 2. A `todo.md` TODO list from the planner.
 3. A draft of `benchmark_definition.yaml` with rough values filled in.
 4. A draft of `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+5. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
 If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `benchmark_definition.yaml` and must not silently mutate those constraints.
+
+`Benchmark Plan Reviewer` gate requirements:
+
+- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-local `assembly_definition.yaml`.
+- Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
+- Entry guard behavior:
+  - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
+  - Reject when planner artifacts mention benchmark objects, moving parts, joints, or zones that are not declared consistently across the planner handoff package.
+  - Reject when benchmark-local DOF/control metadata introduces unsupported or unjustified benchmark-side motion.
+- Approval effect:
+  - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
 ## Benchmark Generator with Engineer handover
 
@@ -98,11 +117,12 @@ These renders are not only passive assets in storage. Reviewer and other vision-
 
 The source of truth for which roles must perform visual inspection is `config/agents_config.yaml` under each role's `visual_inspection` policy. Current required roles in engineering/benchmark handoff flow are:
 
-1. `benchmark_reviewer`
-2. `engineer_planner`
-3. `engineer_coder`
-4. `engineer_plan_reviewer`
-5. `engineer_execution_reviewer`
+1. `benchmark_plan_reviewer`
+2. `benchmark_reviewer`
+3. `engineer_planner`
+4. `engineer_coder`
+5. `engineer_plan_reviewer`
+6. `engineer_execution_reviewer`
 
 The requirement is conditional on actual render-image availability for the current node/revision. If no render images exist yet in `renders/`, the role is not considered in violation merely because the policy is enabled.
 

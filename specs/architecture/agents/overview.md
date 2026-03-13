@@ -16,8 +16,14 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 The benchmark generator flow is:
 
 1. `Benchmark Planner`
-2. `Benchmark Coder`
-3. `Benchmark Reviewer`
+2. `Benchmark Plan Reviewer`
+3. `Benchmark Coder`
+4. `Benchmark Reviewer`
+
+The split between benchmark plan review and benchmark execution review is mandatory.
+
+- `Benchmark Plan Reviewer` checks planner-hand-off quality before implementation starts and persists reviewer output to `reviews/benchmark-plan-review-round-<n>.md`.
+- `Benchmark Reviewer` remains the post-validation/post-simulation review gate for the implemented benchmark environment and persists reviewer output to `reviews/benchmark-review-round-<n>.md`.
 
 ## Engineering workflow
 
