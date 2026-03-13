@@ -1,6 +1,7 @@
 import hashlib
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import yaml
 
@@ -21,6 +22,10 @@ from shared.workers.schema import PlanReviewManifest
 
 def _tool_name(tool: Callable) -> str:
     return getattr(tool, "name", getattr(tool, "__name__", str(tool)))
+
+
+def _runtime_skill_script_path(*relative_parts: str) -> Path:
+    return Path(__file__).resolve().parents[2].joinpath(*relative_parts)
 
 
 def filter_tools_for_agent(
@@ -275,9 +280,13 @@ def get_engineer_planner_tools(
         Returns:
             {"ok": bool, "stdout": str, "stderr": str, "exit_code": int, "timed_out": bool}
         """
-        response = await fs.run_command(
-            "python skills/manufacturing-knowledge/scripts/validate_and_price.py"
+        validator_path = _runtime_skill_script_path(
+            "skills",
+            "manufacturing-knowledge",
+            "scripts",
+            "validate_and_price.py",
         )
+        response = await fs.run_command(f"python {validator_path}")
         return {
             "ok": response.exit_code == 0 and not response.timed_out,
             "stdout": response.stdout,

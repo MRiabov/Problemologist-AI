@@ -39,6 +39,7 @@ class NativeToolCallAdapter:
                 )
                 tool_call_id = tool_call.get("id", f"tool_call_{idx}")
                 tool_call_type = tool_call.get("type", "function")
+                provider_specific_fields = tool_call.get("provider_specific_fields")
             else:
                 function = getattr(tool_call, "function", None)
                 tool_name = (
@@ -55,16 +56,21 @@ class NativeToolCallAdapter:
                 )
                 tool_call_id = getattr(tool_call, "id", f"tool_call_{idx}")
                 tool_call_type = getattr(tool_call, "type", "function")
+                provider_specific_fields = getattr(
+                    tool_call, "provider_specific_fields", None
+                )
 
-            tool_calls.append(
-                {
-                    "id": tool_call_id,
-                    "type": tool_call_type,
-                    "function": {
-                        "name": tool_name,
-                        "arguments": raw_arguments or "{}",
-                    },
-                }
-            )
+            payload = {
+                "id": tool_call_id,
+                "type": tool_call_type,
+                "function": {
+                    "name": tool_name,
+                    "arguments": raw_arguments or "{}",
+                },
+            }
+            if isinstance(provider_specific_fields, dict) and provider_specific_fields:
+                payload["provider_specific_fields"] = provider_specific_fields
+
+            tool_calls.append(payload)
 
         return ParsedToolCalls(assistant_text=assistant_text, tool_calls=tool_calls)

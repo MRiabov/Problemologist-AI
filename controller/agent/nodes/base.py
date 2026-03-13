@@ -15,7 +15,7 @@ from litellm import completion
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
 
-from controller.agent.config import settings
+from controller.agent.config import LiteLLMRequestConfig, settings
 from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.execution_limits import (
     AgentHardFailError,
@@ -95,30 +95,8 @@ class SharedNodeContext:
             init_tracing()
 
             # T012: Initialize DSPy LM (LiteLLM-backed) for Agent support.
-            # Prefer explicit OpenRouter provider wiring over OpenAI-compatible routing.
-            api_base = settings.openai_api_base
-            use_openrouter = bool(settings.openrouter_api_key) or bool(
-                api_base and "openrouter.ai" in api_base
-            )
-            model_name = settings.llm_model
-            if "/" in model_name and model_name.split("/", 1)[0] in {
-                "openai",
-                "openrouter",
-                "anthropic",
-                "azure",
-                "gemini",
-            }:
-                litellm_model = model_name
-            elif use_openrouter:
-                litellm_model = f"openrouter/{model_name}"
-            else:
-                litellm_model = f"openai/{model_name}"
-
-            api_key = (
-                (settings.openrouter_api_key or settings.openai_api_key)
-                if use_openrouter
-                else settings.openai_api_key
-            ) or "dummy"
+            request_config = settings.resolve_litellm_request_config(settings.llm_model)
+            api_key = request_config.api_key or "dummy"
 
             # Respect repository configuration (config/agents_config.yaml) directly.
             lm_max_tokens = settings.llm_max_tokens
@@ -130,19 +108,18 @@ class SharedNodeContext:
                 "max_tokens": lm_max_tokens,
             }
             # Keep support for custom gateways and explicit compatibility endpoints.
-            if api_base:
-                lm_kwargs["api_base"] = api_base
-
+            if request_config.api_base:
+                lm_kwargs["api_base"] = request_config.api_base
             logger.info(
                 "lm_client_initialized",
-                provider=("openrouter" if use_openrouter else "openai_compatible"),
-                model=litellm_model,
-                api_base=api_base,
+                provider=request_config.provider,
+                model=request_config.model,
+                api_base=request_config.api_base,
                 planner_token_cap=lm_max_tokens
                 if "planner" in agent_role.value
                 else None,
             )
-            dspy_lm = dspy.LM(litellm_model, **lm_kwargs)
+            dspy_lm = dspy.LM(request_config.model, **lm_kwargs)
 
         return cls(
             worker_light_url=worker_light_url,
@@ -530,35 +507,13 @@ class BaseNode:
 
     def _resolve_native_litellm_model(
         self, *, prefer_multimodal: bool = False
-    ) -> tuple[str, str | None, str | None]:
-        api_base = settings.openai_api_base
-        use_openrouter = bool(settings.openrouter_api_key) or bool(
-            api_base and "openrouter.ai" in api_base
-        )
+    ) -> LiteLLMRequestConfig:
         model_name = settings.llm_model
         if prefer_multimodal:
             multimodal_model = load_agents_config().llm.multimodal_model
             if multimodal_model:
                 model_name = multimodal_model
-        if "/" in model_name and model_name.split("/", 1)[0] in {
-            "openai",
-            "openrouter",
-            "anthropic",
-            "azure",
-            "gemini",
-        }:
-            litellm_model = model_name
-        elif use_openrouter:
-            litellm_model = f"openrouter/{model_name}"
-        else:
-            litellm_model = f"openai/{model_name}"
-
-        api_key = (
-            (settings.openrouter_api_key or settings.openai_api_key)
-            if use_openrouter
-            else settings.openai_api_key
-        )
-        return litellm_model, api_key, api_base
+        return settings.resolve_litellm_request_config(model_name)
 
     @staticmethod
     def _native_schema_type(annotation: Any) -> str:
@@ -728,11 +683,20 @@ class BaseNode:
                 message,
                 model_name=model_name,
             )
-        return {
+        assistant_message: dict[str, Any] = {
             "role": "assistant",
             "content": assistant_text,
             "tool_calls": tool_calls_payload,
         }
+        if isinstance(message, dict):
+            provider_specific_fields = message.get("provider_specific_fields")
+        else:
+            provider_specific_fields = getattr(
+                message, "provider_specific_fields", None
+            )
+        if isinstance(provider_specific_fields, dict) and provider_specific_fields:
+            assistant_message["provider_specific_fields"] = provider_specific_fields
+        return assistant_message
 
     @staticmethod
     def _requires_submit_plan(node_type: AgentName) -> bool:
@@ -851,7 +815,7 @@ class BaseNode:
         if unmet_visual_requirement:
             messages.append({"role": "system", "content": unmet_visual_requirement})
         prefer_multimodal = bool(visual_policy.required and current_render_media_paths)
-        litellm_model, api_key, api_base = self._resolve_native_litellm_model(
+        request_config = self._resolve_native_litellm_model(
             prefer_multimodal=prefer_multimodal
         )
         logger.info(
@@ -860,9 +824,10 @@ class BaseNode:
             session_id=self.ctx.session_id,
             prefer_multimodal=prefer_multimodal,
             render_media_count=len(current_render_media_paths),
-            model=litellm_model,
+            model=request_config.model,
+            provider=request_config.provider,
         )
-        if not api_key:
+        if not request_config.api_key:
             raise RuntimeError(f"Missing API key for native tool loop: {node_type}")
 
         submit_plan_succeeded = False
@@ -879,9 +844,9 @@ class BaseNode:
                 )
             else:
                 response = completion(
-                    model=litellm_model,
-                    api_key=api_key,
-                    api_base=api_base,
+                    model=request_config.model,
+                    api_key=request_config.api_key,
+                    api_base=request_config.api_base,
                     timeout=settings.native_tool_completion_timeout_seconds,
                     max_tokens=min(settings.llm_max_tokens, 2048),
                     messages=messages,
@@ -891,7 +856,7 @@ class BaseNode:
                 message = response.choices[0].message
             assistant_text, tool_calls = self._extract_native_tool_calls(
                 message,
-                model_name=litellm_model,
+                model_name=request_config.model,
             )
             if assistant_text and db_callback:
                 db_callback.record_reasoning_text_sync(
@@ -931,7 +896,7 @@ class BaseNode:
             messages.append(
                 self._assistant_message_with_tool_calls(
                     message,
-                    model_name=litellm_model,
+                    model_name=request_config.model,
                     assistant_text=assistant_text,
                     tool_calls_payload=tool_calls,
                 )

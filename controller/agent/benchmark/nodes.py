@@ -14,7 +14,7 @@ import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 from litellm import completion
 
-from controller.agent.config import settings
+from controller.agent.config import LiteLLMRequestConfig, settings
 from controller.agent.context_usage import (
     estimate_text_tokens,
     update_episode_context_usage,
@@ -260,7 +260,7 @@ class BenchmarkPlannerNode(BaseNode):
 
     def _resolve_native_litellm_model(
         self, *, prefer_multimodal: bool = False
-    ) -> tuple[str, str | None, str | None]:
+    ) -> LiteLLMRequestConfig:
         return super()._resolve_native_litellm_model(
             prefer_multimodal=prefer_multimodal
         )
@@ -589,8 +589,8 @@ class BenchmarkPlannerNode(BaseNode):
 
                 reasoning_chunks: list[str] = []
                 messages = self._build_native_planner_messages(inputs)
-                litellm_model, api_key, api_base = self._resolve_native_litellm_model()
-                if not api_key:
+                request_config = self._resolve_native_litellm_model()
+                if not request_config.api_key:
                     raise RuntimeError("Missing API key for native benchmark planner")
 
                 submitted = False
@@ -602,9 +602,9 @@ class BenchmarkPlannerNode(BaseNode):
                 ):
                     response = await asyncio.to_thread(
                         completion,
-                        model=litellm_model,
-                        api_key=api_key,
-                        api_base=api_base,
+                        model=request_config.model,
+                        api_key=request_config.api_key,
+                        api_base=request_config.api_base,
                         timeout=settings.native_tool_completion_timeout_seconds,
                         max_tokens=min(settings.llm_max_tokens, 2048),
                         messages=messages,
@@ -614,7 +614,7 @@ class BenchmarkPlannerNode(BaseNode):
                     message = response.choices[0].message
                     assistant_text, tool_calls = self._extract_native_tool_calls(
                         message,
-                        model_name=litellm_model,
+                        model_name=request_config.model,
                     )
                     if assistant_text:
                         reasoning_chunks.append(assistant_text)
@@ -634,7 +634,7 @@ class BenchmarkPlannerNode(BaseNode):
                     messages.append(
                         self._assistant_message_with_tool_calls(
                             message,
-                            model_name=litellm_model,
+                            model_name=request_config.model,
                             assistant_text=assistant_text,
                             tool_calls_payload=tool_calls,
                         )
