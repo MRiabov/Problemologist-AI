@@ -24,6 +24,7 @@ CODER_AGENTS = {
 }
 REVIEWER_AGENTS = {
     AgentName.ENGINEER_PLAN_REVIEWER,
+    AgentName.BENCHMARK_PLAN_REVIEWER,
     AgentName.BENCHMARK_REVIEWER,
     AgentName.ELECTRONICS_REVIEWER,
     AgentName.ENGINEER_EXECUTION_REVIEWER,
@@ -613,6 +614,7 @@ class MockDSPyLM(dspy.LM):
         if re.match(uuid_regex, self.session_id.lower()):
             if self.node_type in {
                 AgentName.BENCHMARK_PLANNER,
+                AgentName.BENCHMARK_PLAN_REVIEWER,
                 AgentName.BENCHMARK_CODER,
                 AgentName.BENCHMARK_REVIEWER,
             }:
@@ -1120,6 +1122,7 @@ class MockDSPyLM(dspy.LM):
                 AgentName.ENGINEER_CODER: ["thought", "journal"],
                 AgentName.BENCHMARK_CODER: ["thought", "journal"],
                 AgentName.ENGINEER_PLAN_REVIEWER: ["thought", "review"],
+                AgentName.BENCHMARK_PLAN_REVIEWER: ["thought", "review"],
                 AgentName.BENCHMARK_REVIEWER: ["thought", "review"],
                 AgentName.ELECTRONICS_REVIEWER: ["thought", "review"],
                 AgentName.ENGINEER_EXECUTION_REVIEWER: ["thought", "review"],
