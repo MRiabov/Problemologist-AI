@@ -2047,6 +2047,7 @@
         "type": "string",
         "enum": [
           "benchmark_planner",
+          "benchmark_plan_reviewer",
           "benchmark_coder",
           "benchmark_reviewer",
           "engineer_planner",
@@ -2939,6 +2940,7 @@
         "type": "string",
         "enum": [
           "BENCHMARK_PLANNING",
+          "BENCHMARK_PLAN_REVIEWING",
           "BENCHMARK_CODING",
           "BENCHMARK_REVIEWING",
           "ENGINEERING_PLANNING",

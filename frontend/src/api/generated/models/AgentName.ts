@@ -7,6 +7,7 @@
  */
 export enum AgentName {
     BENCHMARK_PLANNER = 'benchmark_planner',
+    BENCHMARK_PLAN_REVIEWER = 'benchmark_plan_reviewer',
     BENCHMARK_CODER = 'benchmark_coder',
     BENCHMARK_REVIEWER = 'benchmark_reviewer',
     ENGINEER_PLANNER = 'engineer_planner',
