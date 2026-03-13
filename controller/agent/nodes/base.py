@@ -15,6 +15,15 @@ from litellm import completion
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
 
+from controller.agent.cli_backend import (
+    CLI_OUTPUT_END_MARKER,
+    CLI_OUTPUT_START_MARKER,
+    CliAgentLM,
+    CliBackendBootstrapError,
+    classify_cli_bootstrap_failure,
+    is_cli_model,
+    resolve_cli_command_template,
+)
 from controller.agent.config import settings
 from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.execution_limits import (
@@ -85,11 +94,27 @@ class SharedNodeContext:
             fs = RemoteFilesystemMiddleware(worker_client, agent_role=agent_role)
 
         # WP05: Support mock LLMs for integration tests
-        if settings.is_integration_test:
+        if settings.is_integration_test and not settings.integration_use_real_llm:
             from controller.agent.mock_llm import MockDSPyLM
 
             logger.info("using_mock_llms_for_integration_test", session_id=session_id)
             dspy_lm = MockDSPyLM(session_id=session_id)
+        elif is_cli_model(settings.llm_model):
+            command_template = resolve_cli_command_template(
+                model_name=settings.llm_model,
+                explicit_template=settings.llm_cli_command_template,
+            )
+            logger.info(
+                "cli_lm_client_initialized",
+                model=settings.llm_model,
+                agent_role=agent_role,
+                command_template=command_template,
+            )
+            dspy_lm = CliAgentLM(
+                model_name=settings.llm_model,
+                command_template=command_template,
+                timeout_seconds=settings.llm_cli_timeout_seconds,
+            )
         else:
             # T025: Initialize native tracing
             init_tracing()
@@ -435,6 +460,9 @@ class BaseNode:
             AgentName.ENGINEER_EXECUTION_REVIEWER,
         }
 
+    def _uses_cli_agent_backend(self) -> bool:
+        return isinstance(self.ctx.dspy_lm, CliAgentLM)
+
     def _build_native_tool_signature(
         self,
         *,
@@ -776,14 +804,221 @@ class BaseNode:
         node_type: AgentName,
     ) -> dspy.Prediction:
         summary = {
-            AgentName.ENGINEER_PLANNER: "Mechanical planner artifacts submitted successfully.",
-            AgentName.ELECTRONICS_PLANNER: "Electronics planner artifacts submitted successfully.",
+            AgentName.ENGINEER_PLANNER: (
+                "Mechanical planner artifacts submitted successfully."
+            ),
+            AgentName.ELECTRONICS_PLANNER: (
+                "Electronics planner artifacts submitted successfully."
+            ),
         }.get(node_type, "Planner artifacts submitted successfully.")
         return dspy.Prediction.from_completions(
             {
                 field_name: [summary if field_name == "summary" else ""]
                 for field_name in finish_fields
             },
+            signature=signature_cls,
+        )
+
+    def _build_cli_agent_prompt(
+        self,
+        *,
+        signature_cls: type[dspy.Signature],
+        inputs: dict[str, Any],
+        node_type: AgentName,
+        finish_fields: list[str],
+    ) -> str:
+        instructions = getattr(signature_cls, "instructions", "") or ""
+        requires_submit_plan = self._requires_submit_plan(node_type)
+        output_shape = {
+            field_name: {
+                "required": True,
+                "type": self._native_schema_type(
+                    self._field_type(signature_cls.output_fields[field_name])
+                ),
+            }
+            for field_name in finish_fields
+        }
+        runtime_lines = [
+            f"You are the {node_type.value} node running inside the workspace root.",
+            (
+                "Read and edit workspace files directly using the CLI's built-in"
+                " capabilities."
+            ),
+            "Do not ask for confirmation or human approval.",
+            "Do not emit tool-call wrappers, XML tool calls, or pseudo-code plans.",
+            (
+                "When your work is complete, print exactly one JSON object"
+                " between these markers:\n"
+                f"{CLI_OUTPUT_START_MARKER}\n"
+                "<json>\n"
+                f"{CLI_OUTPUT_END_MARKER}"
+            ),
+            "The JSON object must contain all required output fields below.",
+            json.dumps(output_shape, indent=2, ensure_ascii=True),
+        ]
+        if requires_submit_plan:
+            runtime_lines.append(
+                "Do not call submit_plan yourself. The runtime will validate and"
+                " submit the planner artifacts after your CLI process exits."
+            )
+
+        return (
+            f"{instructions.strip()}\n\n"
+            + "\n".join(runtime_lines)
+            + "\n\nNode inputs:\n"
+            + json.dumps(inputs, indent=2, ensure_ascii=True, default=str)
+        ).strip()
+
+    @staticmethod
+    def _extract_cli_output_payload(
+        text: str, *, finish_fields: list[str]
+    ) -> tuple[dict[str, Any], str]:
+        pattern = re.compile(
+            rf"{re.escape(CLI_OUTPUT_START_MARKER)}\s*(.*?)\s*{re.escape(CLI_OUTPUT_END_MARKER)}",
+            re.DOTALL,
+        )
+        match = pattern.search(text or "")
+        if not match:
+            raise ValueError(
+                "CLI backend did not print the required output markers with JSON"
+                " payload."
+            )
+
+        payload_text = match.group(1).strip()
+        payload = json.loads(payload_text)
+        if not isinstance(payload, dict):
+            raise ValueError("CLI backend output payload must be a JSON object.")
+
+        missing_fields = [
+            field_name for field_name in finish_fields if field_name not in payload
+        ]
+        if missing_fields:
+            raise ValueError(
+                "CLI backend output is missing required fields: "
+                + ", ".join(missing_fields)
+            )
+
+        reasoning_text = pattern.sub("", text or "").strip()
+        return payload, reasoning_text
+
+    async def _call_sync_tool(
+        self, tool: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Any:
+        return await asyncio.to_thread(tool, *args, **kwargs)
+
+    async def _run_cli_agent_program(
+        self,
+        *,
+        signature_cls: type[dspy.Signature],
+        inputs: dict[str, Any],
+        tool_fns: dict[str, Callable],
+        node_type: AgentName,
+        db_callback: DatabaseCallbackHandler | None,
+    ) -> dspy.Prediction:
+        cli_lm = self.ctx.dspy_lm
+        if not isinstance(cli_lm, CliAgentLM):
+            raise RuntimeError("CLI agent backend is not configured.")
+
+        finish_fields = list(signature_cls.output_fields.keys())
+        prompt_text = self._build_cli_agent_prompt(
+            signature_cls=signature_cls,
+            inputs=inputs,
+            node_type=node_type,
+            finish_fields=finish_fields,
+        )
+        prompt_path = f"__cli_prompt_{node_type.value}.md"
+        await self.ctx.worker_client.write_file(
+            prompt_path,
+            prompt_text,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        rendered_command = cli_lm.render_command(
+            prompt_text=prompt_text,
+            prompt_file=prompt_path,
+            session_id=self.ctx.session_id,
+            node_type=node_type.value,
+        )
+        result = await self.ctx.worker_client.execute_command(
+            rendered_command.command,
+            timeout=min(settings.llm_cli_timeout_seconds, 300),
+        )
+        transcript = "\n".join(
+            part for part in [result.stdout or "", result.stderr or ""] if part
+        ).strip()
+        cli_lm.history.append(
+            {
+                "model": cli_lm.model,
+                "response_model": cli_lm.model,
+                "outputs": [transcript],
+                "response": {
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "exit_code": result.exit_code,
+                    "timed_out": result.timed_out,
+                    "command": rendered_command.command,
+                },
+                "usage": None,
+                "cost": None,
+            }
+        )
+        bootstrap_failure = classify_cli_bootstrap_failure(result.stdout, result.stderr)
+        if bootstrap_failure:
+            raise CliBackendBootstrapError(bootstrap_failure)
+        if result.timed_out:
+            raise RuntimeError("CLI backend timed out before producing a result.")
+        if result.exit_code != 0:
+            error_text = (result.stderr or result.stdout or "").strip()
+            raise RuntimeError(
+                error_text or f"CLI backend exited with code {result.exit_code}."
+            )
+
+        try:
+            payload, reasoning_text = self._extract_cli_output_payload(
+                transcript, finish_fields=finish_fields
+            )
+        except ValueError as err:
+            bootstrap_failure = classify_cli_bootstrap_failure(
+                result.stdout, result.stderr
+            )
+            if bootstrap_failure:
+                raise CliBackendBootstrapError(bootstrap_failure) from err
+            raise
+        if reasoning_text and db_callback:
+            db_callback.record_reasoning_text_sync(
+                node_name=str(node_type),
+                reasoning_text=reasoning_text[:2000],
+                source="cli_agent",
+            )
+
+        if node_type == AgentName.BENCHMARK_PLANNER:
+            normalize_benchmark = getattr(
+                self, "_normalize_benchmark_definition_yaml_artifact", None
+            )
+            if callable(normalize_benchmark):
+                await normalize_benchmark()
+            normalize_todo = getattr(self, "_normalize_todo_markdown_artifact", None)
+            if callable(normalize_todo):
+                await normalize_todo()
+
+        if (
+            self._requires_submit_plan(node_type)
+            or node_type == AgentName.BENCHMARK_PLANNER
+        ):
+            submit_tool = tool_fns.get("submit_plan")
+            if submit_tool is None:
+                raise RuntimeError("CLI planner backend requires submit_plan tool.")
+            submission = await self._call_sync_tool(submit_tool)
+            if not self._submit_plan_succeeded(submission):
+                error_text = self._submit_plan_error_message(submission) or str(
+                    submission
+                )
+                raise RuntimeError(
+                    f"submit_plan failed after CLI execution: {error_text}"
+                )
+
+        return dspy.Prediction.from_completions(
+            {field_name: [payload.get(field_name)] for field_name in finish_fields},
             signature=signature_cls,
         )
 
@@ -1931,18 +2166,23 @@ class BaseNode:
             node_type=node_type,
             program_cls=program_cls,
         )
+        use_cli_agent_backend = self._uses_cli_agent_backend()
 
         program = None
-        if program_cls is dspy.ReAct and not use_native_tool_loop:
+        if (
+            program_cls is dspy.ReAct
+            and not use_native_tool_loop
+            and not use_cli_agent_backend
+        ):
             max_iters = self._max_iters_for_node(node_type)
             program = program_cls(
                 signature_cls, tools=list(tool_fns.values()), max_iters=max_iters
             )
-        elif not use_native_tool_loop:
+        elif not use_native_tool_loop and not use_cli_agent_backend:
             program = program_cls(signature_cls, tools=list(tool_fns.values()))
 
         # WP07: Try to load compiled prompt if available
-        if not use_native_tool_loop:
+        if not use_native_tool_loop and not use_cli_agent_backend:
             self.ctx.pm.load_compiled_program(node_type, program)
 
         # WP08: Set node_type on mock LM if available for explicit lookup
@@ -1988,121 +2228,145 @@ class BaseNode:
                             node_type, input_data=str(node_input)
                         )
 
-                    adapter = self._create_dspy_adapter(
-                        use_native_function_calling=use_native_tool_loop
-                    )
-                    logger.info(
-                        "dspy_adapter_selected",
-                        session_id=self.ctx.session_id,
-                        episode_id=episode_id,
-                        node_type=str(node_type),
-                        runtime_mode=(
-                            "native_tool_loop" if use_native_tool_loop else "react"
-                        ),
-                        adapter=type(adapter).__name__,
-                        use_json_adapter_fallback=getattr(
-                            adapter, "use_json_adapter_fallback", None
-                        ),
-                        use_native_function_calling=getattr(
-                            adapter, "use_native_function_calling", None
-                        ),
-                    )
-                    with dspy.settings.context(lm=self.ctx.dspy_lm, adapter=adapter):
+                    if use_cli_agent_backend:
+                        prediction = await asyncio.wait_for(
+                            self._run_cli_agent_program(
+                                signature_cls=signature_cls,
+                                inputs=inputs,
+                                tool_fns=tool_fns,
+                                node_type=node_type,
+                                db_callback=db_callback,
+                            ),
+                            timeout=dspy_timeout,
+                        )
                         logger.info(
-                            f"{node_type}_dspy_invoke_start",
+                            f"{node_type}_cli_invoke_complete",
                             session_id=self.ctx.session_id,
                         )
-                        lm_history = getattr(self.ctx.dspy_lm, "history", None)
-                        history_start_idx = (
-                            len(lm_history) if isinstance(lm_history, list) else None
+                    else:
+                        adapter = self._create_dspy_adapter(
+                            use_native_function_calling=use_native_tool_loop
                         )
-                        history_stream_stop = asyncio.Event()
-                        history_stream_task: asyncio.Task | None = None
+                        logger.info(
+                            "dspy_adapter_selected",
+                            session_id=self.ctx.session_id,
+                            episode_id=episode_id,
+                            node_type=str(node_type),
+                            runtime_mode=(
+                                "native_tool_loop" if use_native_tool_loop else "react"
+                            ),
+                            adapter=type(adapter).__name__,
+                            use_json_adapter_fallback=getattr(
+                                adapter, "use_json_adapter_fallback", None
+                            ),
+                            use_native_function_calling=getattr(
+                                adapter, "use_native_function_calling", None
+                            ),
+                        )
+                        with dspy.settings.context(
+                            lm=self.ctx.dspy_lm, adapter=adapter
+                        ):
+                            logger.info(
+                                f"{node_type}_dspy_invoke_start",
+                                session_id=self.ctx.session_id,
+                            )
+                            lm_history = getattr(self.ctx.dspy_lm, "history", None)
+                            history_start_idx = (
+                                len(lm_history)
+                                if isinstance(lm_history, list)
+                                else None
+                            )
+                            history_stream_stop = asyncio.Event()
+                            history_stream_task: asyncio.Task | None = None
 
-                        final_history_idx = history_start_idx
+                            final_history_idx = history_start_idx
 
-                        async def stream_lm_history_live(start_idx: int | None) -> None:
-                            """Continuously flush newly generated LM history rows."""
-                            nonlocal final_history_idx
-                            if start_idx is None:
-                                return
-                            next_idx = start_idx
-                            while not history_stream_stop.is_set():
+                            async def stream_lm_history_live(
+                                start_idx: int | None,
+                            ) -> None:
+                                """Continuously flush newly generated LM history rows."""
+                                nonlocal final_history_idx
+                                if start_idx is None:
+                                    return
+                                next_idx = start_idx
+                                while not history_stream_stop.is_set():
+                                    self._log_lm_history_delta(
+                                        node_type=node_type,
+                                        attempt=retry_count + 1,
+                                        history_start_idx=next_idx,
+                                        db_callback=db_callback,
+                                    )
+                                    current_history = getattr(
+                                        self.ctx.dspy_lm, "history", None
+                                    )
+                                    if isinstance(current_history, list):
+                                        next_idx = len(current_history)
+                                        final_history_idx = next_idx
+                                    await asyncio.sleep(0.2)
+
+                            history_stream_task = asyncio.create_task(
+                                stream_lm_history_live(history_start_idx)
+                            )
+                            # Add a timeout to prevent infinite hangs in DSPy ReAct
+                            try:
+                                if use_native_tool_loop:
+                                    max_iters = self._max_iters_for_node(node_type)
+                                    (
+                                        visual_policy,
+                                        render_media_paths,
+                                    ) = await self._get_visual_inspection_context(
+                                        node_type
+                                    )
+                                    prediction = await asyncio.wait_for(
+                                        asyncio.to_thread(
+                                            self._run_native_tool_loop,
+                                            signature_cls=signature_cls,
+                                            inputs=inputs,
+                                            tool_fns=tool_fns,
+                                            node_type=node_type,
+                                            max_iters=max_iters,
+                                            visual_policy=visual_policy,
+                                            render_media_paths=render_media_paths,
+                                            db_callback=db_callback,
+                                        ),
+                                        timeout=dspy_timeout,
+                                    )
+                                else:
+                                    prediction = await asyncio.wait_for(
+                                        asyncio.to_thread(program, **inputs),
+                                        timeout=dspy_timeout,
+                                    )
+                                logger.info(
+                                    f"{node_type}_raw_prediction",
+                                    prediction=str(prediction),
+                                    prediction_type=str(type(prediction)),
+                                    session_id=self.ctx.session_id,
+                                )
+                            except TimeoutError as err:
+                                logger.error(
+                                    f"{node_type}_dspy_timeout",
+                                    session_id=self.ctx.session_id,
+                                )
+                                msg = (
+                                    f"DSPy program {node_type} "
+                                    f"timed out after {dspy_timeout}s"
+                                )
+                                raise RuntimeError(msg) from err
+                            finally:
+                                history_stream_stop.set()
+                                if history_stream_task:
+                                    with suppress(Exception):
+                                        await history_stream_task
                                 self._log_lm_history_delta(
                                     node_type=node_type,
                                     attempt=retry_count + 1,
-                                    history_start_idx=next_idx,
+                                    history_start_idx=final_history_idx,
                                     db_callback=db_callback,
                                 )
-                                current_history = getattr(
-                                    self.ctx.dspy_lm, "history", None
-                                )
-                                if isinstance(current_history, list):
-                                    next_idx = len(current_history)
-                                    final_history_idx = next_idx
-                                await asyncio.sleep(0.2)
-
-                        history_stream_task = asyncio.create_task(
-                            stream_lm_history_live(history_start_idx)
-                        )
-                        # Add a timeout to prevent infinite hangs in DSPy ReAct
-                        try:
-                            if use_native_tool_loop:
-                                max_iters = self._max_iters_for_node(node_type)
-                                (
-                                    visual_policy,
-                                    render_media_paths,
-                                ) = await self._get_visual_inspection_context(node_type)
-                                prediction = await asyncio.wait_for(
-                                    asyncio.to_thread(
-                                        self._run_native_tool_loop,
-                                        signature_cls=signature_cls,
-                                        inputs=inputs,
-                                        tool_fns=tool_fns,
-                                        node_type=node_type,
-                                        max_iters=max_iters,
-                                        visual_policy=visual_policy,
-                                        render_media_paths=render_media_paths,
-                                        db_callback=db_callback,
-                                    ),
-                                    timeout=dspy_timeout,
-                                )
-                            else:
-                                prediction = await asyncio.wait_for(
-                                    asyncio.to_thread(program, **inputs),
-                                    timeout=dspy_timeout,
-                                )
                             logger.info(
-                                f"{node_type}_raw_prediction",
-                                prediction=str(prediction),
-                                prediction_type=str(type(prediction)),
+                                f"{node_type}_dspy_invoke_complete",
                                 session_id=self.ctx.session_id,
                             )
-                        except TimeoutError as err:
-                            logger.error(
-                                f"{node_type}_dspy_timeout",
-                                session_id=self.ctx.session_id,
-                            )
-                            msg = (
-                                f"DSPy program {node_type} "
-                                f"timed out after {dspy_timeout}s"
-                            )
-                            raise RuntimeError(msg) from err
-                        finally:
-                            history_stream_stop.set()
-                            if history_stream_task:
-                                with suppress(Exception):
-                                    await history_stream_task
-                            self._log_lm_history_delta(
-                                node_type=node_type,
-                                attempt=retry_count + 1,
-                                history_start_idx=final_history_idx,
-                                db_callback=db_callback,
-                            )
-                        logger.info(
-                            f"{node_type}_dspy_invoke_complete",
-                            session_id=self.ctx.session_id,
-                        )
 
                     # WP10: Explicitly record node end for UI
                     if db_callback and record_node_lifecycle:
@@ -2184,6 +2448,24 @@ class BaseNode:
 
                 except AgentHardFailError:
                     raise
+                except CliBackendBootstrapError as err:
+                    last_lm_preview = None
+                    lm_history = getattr(self.ctx.dspy_lm, "history", None)
+                    if isinstance(lm_history, list) and lm_history:
+                        last_entry = lm_history[-1]
+                        if isinstance(last_entry, dict):
+                            last_lm_preview = str(last_entry.get("response"))[:600]
+                    logger.error(
+                        f"{node_type}_cli_bootstrap_failed",
+                        session_id=self.ctx.session_id,
+                        error=str(err),
+                        retry_count=retry_count + 1,
+                        max_retries=max_retries,
+                        last_lm_preview=last_lm_preview,
+                    )
+                    journal_entry += f"\n[System Error] {err}"
+                    retry_count = max_retries
+                    break
                 except Exception as err:
                     if _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(err):
                         # Fail-fast for infra retry exhaustion; do not continue

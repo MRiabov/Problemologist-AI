@@ -6,9 +6,16 @@ class Settings(BaseSettings):
     """Configuration settings for the Problemologist Controller."""
 
     is_integration_test: bool = Field(default=False, alias="IS_INTEGRATION_TEST")
+    integration_use_real_llm: bool = Field(
+        default=False, alias="INTEGRATION_USE_REAL_LLM"
+    )
 
     # LLM Settings
     llm_model: StrictStr = Field(default="z-ai/glm-4.7-flash", alias="LLM_MODEL")
+    llm_cli_command_template: str | None = Field(
+        default=None, alias="LLM_CLI_COMMAND_TEMPLATE"
+    )
+    llm_cli_timeout_seconds: int = Field(default=300, alias="LLM_CLI_TIMEOUT_SECONDS")
     openai_api_base: str | None = Field(default=None, alias="OPENAI_API_BASE")
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openrouter_api_key: str | None = Field(default=None, alias="OPENROUTER_API_KEY")

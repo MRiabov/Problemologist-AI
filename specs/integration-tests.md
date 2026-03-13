@@ -173,6 +173,8 @@ Priorities:
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
 | INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges. |
 | INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through MuJoCo by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; MuJoCo-backed preview renders persist RGB images plus sibling `_depth.png` and `_segmentation.png` files in `renders/` by default; `renders/render_manifest.json` persists per-image metadata and segmentation legend entries with semantic labels plus unique instance identifiers; RGB preview output reflects configured material colors for differing `material_id` values; `config/agents_config.yaml render.{rgb,depth,segmentation}` can disable any one of those artifact types independently; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
+| INT-189 | CLI-backed agent runtime contract | When `INTEGRATION_USE_REAL_LLM=1` and `LLM_MODEL=cli/*`, controller agent nodes use the configured CLI backend instead of `MockDSPyLM`; CLI execution still runs through `worker-light /runtime/execute` inside the session workspace; planner artifacts remain subject to the normal `submit_plan()` validation gate; non-zero CLI exit, timeout, or missing contract-valid result payload fails closed. |
+| INT-190 | CLI auth/bootstrap prompt fail-fast | When a CLI backend prints an interactive authentication/bootstrap prompt instead of the required payload contract, controller must classify it as non-retriable, fail the node in one attempt, skip `submit_plan()`, and terminate the episode as `FAILED` without spending the full CLI retry timeout budget on a second attempt. |
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
 | INT-026 | Mandatory event families emitted | Tool calls, simulation request/result, manufacturability checks, lint failures, plan submissions, and review decisions are emitted in real runs. |
 | INT-027 | Seed/variant observability | Static variant ID + runtime seed tracked for every simulation run. |
@@ -500,7 +502,7 @@ This section exists to force implementation as true integration tests, not unit 
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-075, INT-101..INT-114, INT-120..INT-128, INT-184, INT-187.
 - `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
-- `tests/integration/agent/p1/`: INT-181, INT-182, INT-183, INT-185, INT-186.
+- `tests/integration/agent/p1/`: INT-181, INT-182, INT-183, INT-185, INT-186, INT-189, INT-190.
 - `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177.
 - `tests/integration/frontend/p1/`: INT-160, INT-161, INT-166, INT-168, INT-171, INT-175, INT-176, INT-178, INT-179.
 - `tests/integration/frontend/p2/`: INT-169.

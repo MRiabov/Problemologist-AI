@@ -169,7 +169,7 @@ class BenchmarkPlannerNode(BaseNode):
             ),
         }
 
-        if settings.is_integration_test:
+        if settings.is_integration_test or self._uses_cli_agent_backend():
             prediction, _, journal_entry = await self._run_program(
                 dspy.ReAct,
                 BenchmarkPlannerSignature,

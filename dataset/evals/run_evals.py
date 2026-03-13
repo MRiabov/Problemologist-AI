@@ -60,6 +60,15 @@ READABLE_AGENT_LOG_FILE: Path | None = None
 _READABLE_AGENT_LOG_LOCK = Lock()
 
 
+def _log_llm_backend_config() -> None:
+    logger.info(
+        "eval_llm_backend_config",
+        llm_model=os.getenv("LLM_MODEL"),
+        cli_command_template_configured=bool(os.getenv("LLM_CLI_COMMAND_TEMPLATE")),
+        integration_use_real_llm=os.getenv("INTEGRATION_USE_REAL_LLM"),
+    )
+
+
 class AgentEvalSpec(BaseModel):
     """Runtime details for an eval agent type."""
 
@@ -1145,6 +1154,7 @@ async def main():
     print(f"Logging to: {log_file} (and symlinked at {latest_log})")
     print(f"Readable agent logs: {readable_log_file}")
     logger.info("eval_run_start", log_dir=str(log_dir))
+    _log_llm_backend_config()
 
     start_time = time.time()
     print(f"Agent Evals Started at: {time.ctime(start_time)}")

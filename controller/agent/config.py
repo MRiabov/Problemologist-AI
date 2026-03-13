@@ -12,6 +12,8 @@ class AgentSettings(BaseSettings):
     """Configuration for the Engineer Agent."""
 
     llm_model: str = global_settings.llm_model
+    llm_cli_command_template: str | None = global_settings.llm_cli_command_template
+    llm_cli_timeout_seconds: int = global_settings.llm_cli_timeout_seconds
     openai_api_key: str | None = None
     openai_api_base: str | None = None  # For OpenRouter or custom endpoints
     openrouter_api_key: str | None = global_settings.openrouter_api_key
@@ -30,6 +32,7 @@ class AgentSettings(BaseSettings):
     worker_light_url: str = global_settings.worker_light_url
     worker_heavy_url: str | None = global_settings.worker_heavy_url
     is_integration_test: bool = global_settings.is_integration_test
+    integration_use_real_llm: bool = global_settings.integration_use_real_llm
 
     # DB connection for checkpointing (if using PostgresSaver in future)
     db_connection_string: str | None = None

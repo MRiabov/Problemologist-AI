@@ -637,7 +637,7 @@ def _load_env_file(path: Path) -> None:
             if hash_index != -1:
                 value = value[:hash_index].rstrip()
 
-        os.environ[key] = value
+        os.environ.setdefault(key, value)
 
 
 def _ensure_postgres_database(db_name: str) -> None:
@@ -1345,6 +1345,11 @@ def _run_integration_command(
     os.environ["IS_INTEGRATION_TEST"] = "true"
     os.environ.setdefault("LOG_LEVEL", "INFO")
     os.environ["PYTHONUNBUFFERED"] = "1"
+    if os.getenv("INTEGRATION_USE_REAL_LLM", "").lower() in {"1", "true", "yes"}:
+        print(
+            "Integration real-LLM mode enabled:"
+            f" LLM_MODEL={os.getenv('LLM_MODEL', '<unset>')}"
+        )
 
     integration_db_name = "problemologist_integration"
     integration_db_url = (

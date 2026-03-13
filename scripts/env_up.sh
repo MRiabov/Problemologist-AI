@@ -54,7 +54,11 @@ if [ -f .env ]; then
       elif [[ "$value" =~ ^\'.*\'$ ]]; then
         value="${value:1:-1}"
       fi
-      export "$key=$value"
+      # Preserve explicit caller-provided env so eval/integration runs can
+      # override .env-backed provider defaults.
+      if [[ -z "${!key+x}" ]]; then
+        export "$key=$value"
+      fi
     fi
   done < .env
 fi
