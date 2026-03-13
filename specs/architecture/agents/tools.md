@@ -76,9 +76,12 @@ This is mostly for integration tests where such bypass is convenient (for system
 - `inspect_media` Read visual evidence (`.png`, `.jpg`, `.jpeg`, and supported video frame bundles) and attach it to the model as media input for the current tool step.
 - `inspect_topology` Inspect assembly/topology metadata.
 - `search_cots_catalog` Search COTS parts catalog.
+- `invoke_cots_search_subagent(query: str)` Hand off one request string to the shared COTS Search node.
 - `submit_plan` Validate and submit planner handoff artifacts.
 - `write_review_file` Persist reviewer decision output to the stage-specific file.
 - `save_suggested_skill` Persist skill-agent suggested skill output.
+
+`invoke_cots_search_subagent(query: str)` is a prompt-only handoff. It passes exactly one request string to the shared `COTS Search` node and does not inherit planner/coder `task`, `plan`, or `journal` state or use graph-specific signature variants.
 
 Importantly, we have all these methods as async functions, their names with `aread`, `awrite`, `aedit`, etc. This is likely the preferred way to call all these functions.
 

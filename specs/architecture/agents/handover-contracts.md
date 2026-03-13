@@ -28,6 +28,11 @@ In this case, the Engineering Coder must provide `plan_refusal.md` (with role-sp
 
 The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
 
+## COTS subagent handoff contract
+
+- `invoke_cots_search_subagent(...)` hands off exactly one request string to `COTS Search`.
+- `COTS Search` does not inherit planner/coder `task`, `plan`, or `journal` state, and benchmark + engineer flows must both call the same prompt-only node contract.
+
 ## Reviewer manifest naming contract
 
 Reviewer handoff manifests are reviewer-scoped at gate boundaries.

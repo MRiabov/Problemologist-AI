@@ -377,12 +377,12 @@ Purpose: a lightweight subagent that performs catalog lookups and returns verifi
 
 - Uses a smaller/cheaper model than the primary planner/engineer.
 - Read-only access to the COTS catalog DB and/or CLI; no writes.
-- No file edits except optional `journal.md` logging of queries + results.
+- No workspace file edits; results are returned to the caller as a structured payload.
 
 ### Inputs (from planner/engineer/Benchmark Planner/Benchmark Coder)
 
-- Part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608").
-- Constraints: quantity tier, max_unit_cost, size/torque/voltage limits, material, mounting/shaft constraints.
+- One request string from `invoke_cots_search_subagent(...)`.
+- That request string may contain part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608") plus constraints such as quantity tier, max_unit_cost, size/torque/voltage limits, material, and mounting/shaft constraints.
 
 ### Tools
 
@@ -396,7 +396,8 @@ Purpose: a lightweight subagent that performs catalog lookups and returns verifi
 
 ### Invocation
 
-- Engineering Planner, Coder, reviewers and Benchmark Planner, Benchmark Coder, reviewers call the subagent whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- Engineering Planner, Coder, reviewers and Benchmark Planner, Benchmark Coder, reviewers call the same prompt-only subagent node whenever a COTS part is needed (motors, bearings, fasteners, gears, etc.).
+- There are no graph-specific COTS signature variants and no inherited task/plan/journal handoff.
 - The returned part IDs and prices must be used in the plan and cost estimates.
 
 Notably the Benchmark Planner will need it too since they are also responsible for (hard cap) price estimation.

@@ -130,8 +130,8 @@ Each agent starts with a template, roughly defined in [Starting folder structure
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/electronics-review-round-*.md` only
 - COTS Search subagent:
-  - read: `parts.db` (read-only), COTS query helpers/CLI, constraints from caller, optional prior `journal.md`
-  - write: `journal.md` (optional), structured COTS result payload returned to caller
+  - read: `parts.db` (read-only), COTS query helpers/CLI, and any constraints embedded in the single caller-provided request string
+  - write: structured COTS result payload returned to caller
 - Skill creator/learner:
   - read: `skill-creator/SKILL.md`, existing `skills/**`, relevant journals/reviews/traces, git metadata
   - write: `skills/**` (subject to safety limits), `journal.md`, git commit metadata
