@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr, field_validator
 
-from shared.enums import AssetType, EpisodeStatus, ResponseStatus
+from shared.enums import AgentName, AssetType, EpisodeStatus, ResponseStatus
 from shared.models.schemas import ElectronicsSection
 from shared.models.simulation import (
     FluidMetricResult,
@@ -333,9 +333,12 @@ class PlanReviewManifest(BaseModel):
     """Planner handoff manifest used to gate engineering plan reviewer entry."""
 
     status: Literal["ready_for_review"]
-    reviewer_stage: Literal["engineering_plan_reviewer"]
+    reviewer_stage: Literal[
+        "benchmark_plan_reviewer",
+        "engineering_plan_reviewer",
+    ]
     session_id: StrictStr
-    planner_node_type: StrictStr
+    planner_node_type: AgentName
     artifact_hashes: dict[StrictStr, StrictStr]
 
 

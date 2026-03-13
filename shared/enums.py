@@ -42,6 +42,7 @@ class EpisodePhase(UppercaseStrEnum):
     """Current workflow phase within an episode."""
 
     BENCHMARK_PLANNING = "BENCHMARK_PLANNING"
+    BENCHMARK_PLAN_REVIEWING = "BENCHMARK_PLAN_REVIEWING"
     BENCHMARK_CODING = "BENCHMARK_CODING"
     BENCHMARK_REVIEWING = "BENCHMARK_REVIEWING"
     ENGINEERING_PLANNING = "ENGINEERING_PLANNING"
@@ -138,6 +139,7 @@ class AgentName(StrEnum):
     """Canonical agent identifiers used across API, evals, and orchestration."""
 
     BENCHMARK_PLANNER = "benchmark_planner"
+    BENCHMARK_PLAN_REVIEWER = "benchmark_plan_reviewer"
     BENCHMARK_CODER = "benchmark_coder"
     BENCHMARK_REVIEWER = "benchmark_reviewer"
     ENGINEER_PLANNER = "engineer_planner"
