@@ -602,6 +602,7 @@ def validate_node_output(
                     "plan.md",
                     "todo.md",
                     "benchmark_definition.yaml",
+                    "assembly_definition.yaml",
                 ],
                 AgentName.ENGINEER_CODER: [
                     "plan.md",
@@ -637,6 +638,7 @@ def validate_node_output(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+                "assembly_definition.yaml",
             ],
             AgentName.ENGINEER_CODER: [
                 "plan.md",

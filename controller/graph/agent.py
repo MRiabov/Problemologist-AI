@@ -52,6 +52,7 @@ def create_agent_graph(
 
     if agent_name in [
         AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
     ]:

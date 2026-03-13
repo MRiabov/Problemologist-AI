@@ -1,3 +1,5 @@
+import hashlib
+import json
 import re
 from collections.abc import Callable
 
@@ -11,6 +13,7 @@ from controller.agent.tools import (
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.enums import AgentName
 from shared.models.schemas import PlannerSubmissionResult
+from shared.workers.schema import PlanReviewManifest
 
 
 def get_benchmark_planner_tools(
@@ -124,7 +127,12 @@ def get_benchmark_planner_tools(
         """
         from worker_heavy.utils.file_validation import validate_node_output
 
-        required_files = ["plan.md", "todo.md", "benchmark_definition.yaml"]
+        required_files = [
+            "plan.md",
+            "todo.md",
+            "benchmark_definition.yaml",
+            "assembly_definition.yaml",
+        ]
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []
 
@@ -148,6 +156,24 @@ def get_benchmark_planner_tools(
             return result.model_dump(mode="json")
 
         is_valid, errors = validate_node_output(AgentName.BENCHMARK_PLANNER, artifacts)
+        if is_valid:
+            artifact_hashes = {
+                rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()
+                for rel_path, content in artifacts.items()
+            }
+            manifest = PlanReviewManifest(
+                status="ready_for_review",
+                reviewer_stage="benchmark_plan_reviewer",
+                session_id=fs.client.session_id,
+                planner_node_type=AgentName.BENCHMARK_PLANNER,
+                artifact_hashes=artifact_hashes,
+            )
+            await fs.client.write_file(
+                ".manifests/benchmark_plan_review_manifest.json",
+                json.dumps(manifest.model_dump(mode="json"), indent=2),
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
         result = PlannerSubmissionResult(
             ok=is_valid,
             status="submitted" if is_valid else "rejected",

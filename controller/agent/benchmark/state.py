@@ -21,6 +21,7 @@ class BenchmarkGeneratorState(BaseModel):
     simulation_result: ValidationResult | None = None  # Result of the last check
     review_feedback: str | None = None  # Comments from reviewer
     review_decision: ReviewDecision | None = None  # Structured decision from reviewer
+    start_node: str | None = None  # Optional explicit graph entry override
     hard_fail_code: str | None = None  # Structured hard-fail code from execution limits
     entry_validation_rejected: bool = False  # Guard rejected node entry this turn
     entry_validation_terminal: bool = False  # Guard rejection terminated workflow

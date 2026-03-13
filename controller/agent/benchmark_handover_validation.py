@@ -132,7 +132,12 @@ async def validate_benchmark_planner_handoff_artifacts(
 ) -> list[str]:
     """Validate the planner-to-coder handoff package from the worker session."""
     errors: list[str] = []
-    files_to_check = ("plan.md", "todo.md", "benchmark_definition.yaml")
+    files_to_check = (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    )
     artifacts: dict[str, str] = {}
 
     for rel_path in files_to_check:

@@ -213,12 +213,24 @@ class BaseNode:
                 if fix.strip():
                     lines.append(f"- {fix.strip()}")
 
-        await self.ctx.worker_client.write_file(
+        review_content = "\n".join(lines) + "\n"
+        write_ok = await self.ctx.worker_client.write_file(
             review_path,
-            "\n".join(lines) + "\n",
+            review_content,
             overwrite=True,
             bypass_agent_permissions=True,
         )
+        if not write_ok:
+            write_ok = await self.ctx.worker_client.write_file(
+                review_path,
+                review_content,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
+        if not write_ok or not await self.ctx.worker_client.exists(
+            review_path, bypass_agent_permissions=True
+        ):
+            raise RuntimeError(f"review file was not materialized at {review_path}")
         return review_path
 
     def _get_runtime_prompt(self, key: str, **kwargs: Any) -> str:
@@ -229,6 +241,7 @@ class BaseNode:
     def _runtime_prompt_scope(node_type: AgentName) -> str:
         if node_type in {
             AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER,
             AgentName.BENCHMARK_CODER,
             AgentName.BENCHMARK_REVIEWER,
         }:
@@ -389,6 +402,7 @@ class BaseNode:
         """Native tool calls are enabled incrementally for unstable ReAct nodes."""
         return program_cls is dspy.ReAct and node_type in {
             AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER,
             AgentName.BENCHMARK_CODER,
             AgentName.BENCHMARK_REVIEWER,
             AgentName.COTS_SEARCH,

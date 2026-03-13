@@ -37,6 +37,9 @@ class PromptManager:
             AgentName.BENCHMARK_PLANNER.value: data["benchmark_generator"]["planner"][
                 "system"
             ],
+            AgentName.BENCHMARK_PLAN_REVIEWER.value: data["benchmark_generator"][
+                "plan_reviewer"
+            ]["system"],
             AgentName.BENCHMARK_CODER.value: data["benchmark_generator"]["coder"][
                 "system"
             ],

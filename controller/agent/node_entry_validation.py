@@ -56,7 +56,8 @@ ENGINEER_PREVIOUS_NODE_MAP: Mapping[AgentName, AgentName | None] = {
 
 BENCHMARK_PREVIOUS_NODE_MAP: Mapping[AgentName, AgentName | None] = {
     AgentName.BENCHMARK_PLANNER: None,
-    AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_PLANNER,
+    AgentName.BENCHMARK_PLAN_REVIEWER: AgentName.BENCHMARK_PLANNER,
+    AgentName.BENCHMARK_CODER: AgentName.BENCHMARK_PLAN_REVIEWER,
     AgentName.BENCHMARK_REVIEWER: AgentName.BENCHMARK_CODER,
     AgentName.COTS_SEARCH: AgentName.BENCHMARK_PLANNER,
     AgentName.SKILL_AGENT: AgentName.BENCHMARK_REVIEWER,
@@ -73,6 +74,7 @@ BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "plan.md",
     "todo.md",
     "benchmark_definition.yaml",
+    "assembly_definition.yaml",
 )
 REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "script.py",
@@ -85,6 +87,7 @@ ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "benchmark_definition.yaml",
     "assembly_definition.yaml",
 )
+BENCHMARK_PLAN_REVIEW_MANIFEST = ".manifests/benchmark_plan_review_manifest.json"
 ENGINEERING_PLAN_REVIEW_MANIFEST = ".manifests/engineering_plan_review_manifest.json"
 BENCHMARK_REVIEW_MANIFEST = ".manifests/benchmark_review_manifest.json"
 ENGINEERING_EXECUTION_REVIEW_MANIFEST = (
@@ -92,6 +95,7 @@ ENGINEERING_EXECUTION_REVIEW_MANIFEST = (
 )
 ELECTRONICS_REVIEW_MANIFEST = ".manifests/electronics_review_manifest.json"
 
+BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK = "benchmark_plan_reviewer_handover"
 BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
 BENCHMARK_CODER_HANDOVER_CHECK = "benchmark_coder_handover"
 ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
@@ -154,6 +158,12 @@ def build_benchmark_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.BENCHMARK_PLANNER: NodeEntryContract(
             node=AgentName.BENCHMARK_PLANNER,
             required_state_fields=["session", "episode_id"],
+        ),
+        AgentName.BENCHMARK_PLAN_REVIEWER: NodeEntryContract(
+            node=AgentName.BENCHMARK_PLAN_REVIEWER,
+            required_state_fields=["session", "episode_id"],
+            required_artifacts=list(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS),
+            custom_check=BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.BENCHMARK_CODER: NodeEntryContract(
             node=AgentName.BENCHMARK_CODER,
@@ -343,6 +353,67 @@ async def benchmark_coder_handover_custom_check_from_session_id(
         )
         for error in handoff_errors
     ]
+
+
+async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
+    *,
+    session_id: str | None,
+) -> list[NodeEntryValidationError]:
+    normalized_session_id = (session_id or "").strip()
+    if not normalized_session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_REVIEWER_ENTRY_BLOCKED,
+                message=(
+                    "Benchmark plan reviewer handover check failed: missing session_id."
+                ),
+                source=EntryValidationSource.HANDOVER,
+                artifact_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+            )
+        ]
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=normalized_session_id,
+    )
+    try:
+        handover_error = await validate_plan_reviewer_handover(
+            client,
+            manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+            expected_stage="benchmark_plan_reviewer",
+        )
+    except Exception as exc:
+        handover_error = f"plan reviewer handover validation exception: {exc}"
+    finally:
+        await client.aclose()
+
+    if handover_error is None:
+        return []
+
+    return [
+        NodeEntryValidationError(
+            code=REASON_REVIEWER_ENTRY_BLOCKED,
+            message=(f"Benchmark plan reviewer entry blocked: {handover_error}"),
+            source=EntryValidationSource.HANDOVER,
+            artifact_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+        )
+    ]
+
+
+async def benchmark_plan_reviewer_handover_custom_check(
+    *,
+    contract: NodeEntryContract,  # noqa: ARG001
+    state: BaseModel | Mapping[str, Any],
+) -> list[NodeEntryValidationError]:
+    session = _get_state_value(state, "session")
+    if isinstance(session, Mapping):
+        session_id = session.get("session_id")
+    else:
+        session_id = getattr(session, "session_id", None)
+    return await benchmark_plan_reviewer_handover_custom_check_from_session_id(
+        session_id=str(session_id) if session_id else None,
+    )
 
 
 async def benchmark_coder_handover_custom_check(
@@ -654,6 +725,8 @@ async def evaluate_node_entry_contract(
 
 __all__ = [
     "BENCHMARK_CODER_HANDOVER_CHECK",
+    "BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK",
+    "BENCHMARK_PLAN_REVIEW_MANIFEST",
     "BENCHMARK_PLANNER_HANDOFF_ARTIFACTS",
     "BENCHMARK_PREVIOUS_NODE_MAP",
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
@@ -676,6 +749,8 @@ __all__ = [
     "ValidationGraph",
     "benchmark_coder_handover_custom_check",
     "benchmark_coder_handover_custom_check_from_session_id",
+    "benchmark_plan_reviewer_handover_custom_check",
+    "benchmark_plan_reviewer_handover_custom_check_from_session_id",
     "build_benchmark_node_contracts",
     "build_engineer_node_contracts",
     "evaluate_node_entry_contract",

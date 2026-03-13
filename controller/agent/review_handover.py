@@ -23,6 +23,10 @@ ReviewerStage = Literal[
     "engineering_execution_reviewer",
     "electronics_reviewer",
 ]
+PlanReviewerStage = Literal[
+    "benchmark_plan_reviewer",
+    "engineering_plan_reviewer",
+]
 
 
 def _goal_reached(summary: str) -> bool:
@@ -106,6 +110,7 @@ async def validate_plan_reviewer_handover(
     worker_client: WorkerClient,
     *,
     manifest_path: str = ".manifests/engineering_plan_review_manifest.json",
+    expected_stage: PlanReviewerStage = "engineering_plan_reviewer",
 ) -> str | None:
     """Validate planner-to-plan-reviewer handoff using stage-specific manifest."""
     if not await worker_client.exists(manifest_path):
@@ -119,8 +124,11 @@ async def validate_plan_reviewer_handover(
 
     if manifest.status != "ready_for_review":
         return "plan review manifest status is not ready_for_review."
-    if manifest.reviewer_stage != "engineering_plan_reviewer":
-        return f"plan review manifest stage mismatch: got {manifest.reviewer_stage}."
+    if manifest.reviewer_stage != expected_stage:
+        return (
+            f"plan review manifest stage mismatch: expected {expected_stage}, "
+            f"got {manifest.reviewer_stage}."
+        )
 
     if not manifest.artifact_hashes:
         return "plan review manifest has no artifact_hashes."
@@ -137,9 +145,9 @@ async def validate_plan_reviewer_handover(
             )
 
     if not await worker_client.exists("benchmark_definition.yaml"):
-        return "benchmark_definition.yaml missing for engineering plan review handoff."
+        return f"benchmark_definition.yaml missing for {expected_stage} handoff."
     if not await worker_client.exists("assembly_definition.yaml"):
-        return "assembly_definition.yaml missing for engineering plan review handoff."
+        return f"assembly_definition.yaml missing for {expected_stage} handoff."
 
     try:
         benchmark_raw = await worker_client.read_file("benchmark_definition.yaml")

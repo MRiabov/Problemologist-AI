@@ -30,11 +30,13 @@ from controller.agent.execution_limits import (
 from controller.agent.initialization import initialize_agent_files
 from controller.agent.node_entry_validation import (
     BENCHMARK_CODER_HANDOVER_CHECK,
+    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_REVIEW_MANIFEST,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
     ValidationGraph,
     benchmark_coder_handover_custom_check,
+    benchmark_plan_reviewer_handover_custom_check,
     build_benchmark_node_contracts,
     evaluate_node_entry_contract,
     integration_mode_enabled,
@@ -71,6 +73,7 @@ from .models import GenerationSession, SessionStatus
 from .nodes import (
     coder_node,
     cots_search_node,
+    plan_reviewer_node,
     planner_node,
     reviewer_node,
     skills_node,
@@ -289,6 +292,15 @@ async def _custom_benchmark_reviewer_handover_check(
     )
 
 
+async def _custom_benchmark_plan_reviewer_handover_check(
+    *, state: BenchmarkGeneratorState
+) -> list[NodeEntryValidationError]:
+    return await benchmark_plan_reviewer_handover_custom_check(
+        contract=BENCHMARK_NODE_CONTRACTS[AgentName.BENCHMARK_PLAN_REVIEWER],
+        state=state,
+    )
+
+
 def _format_entry_errors(errors: list[NodeEntryValidationError]) -> str:
     return "; ".join(f"{error.code}: {error.message}" for error in errors)
 
@@ -323,6 +335,11 @@ async def _evaluate_benchmark_node_entry(
     state: BenchmarkGeneratorState,
 ):
     custom_checks = {
+        BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: _custom_benchmark_plan_reviewer_handover_check(  # noqa: ARG005
+                state=state
+            )
+        ),
         BENCHMARK_CODER_HANDOVER_CHECK: benchmark_coder_handover_custom_check,
         BENCHMARK_REVIEWER_HANDOVER_CHECK: (
             lambda *, contract, state: _custom_benchmark_reviewer_handover_check(  # noqa: ARG005
@@ -517,6 +534,10 @@ def define_graph():
         _guarded_node(AgentName.BENCHMARK_PLANNER, planner_node),
     )
     workflow.add_node(
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        _guarded_node(AgentName.BENCHMARK_PLAN_REVIEWER, plan_reviewer_node),
+    )
+    workflow.add_node(
         AgentName.BENCHMARK_CODER,
         _guarded_node(AgentName.BENCHMARK_CODER, coder_node),
     )
@@ -545,9 +566,16 @@ def define_graph():
         state: BenchmarkGeneratorState,
     ) -> Literal[
         AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
     ]:
+        if state.start_node == AgentName.BENCHMARK_PLAN_REVIEWER.value:
+            return AgentName.BENCHMARK_PLAN_REVIEWER
+        if state.start_node == AgentName.BENCHMARK_CODER.value:
+            return AgentName.BENCHMARK_CODER
+        if state.start_node == AgentName.BENCHMARK_REVIEWER.value:
+            return AgentName.BENCHMARK_REVIEWER
         if state.session.status == SessionStatus.VALIDATING:
             return AgentName.BENCHMARK_REVIEWER
         if state.session.status in [SessionStatus.EXECUTING, SessionStatus.PLANNED]:
@@ -558,7 +586,7 @@ def define_graph():
 
     async def planner_router(
         state: BenchmarkGeneratorState,
-    ) -> Literal[AgentName.BENCHMARK_PLANNER, END]:
+    ) -> Literal[AgentName.BENCHMARK_PLANNER, AgentName.BENCHMARK_PLAN_REVIEWER]:
         planner_errors = await _validate_planner_handoff(
             session_id=state.session.session_id,
             plan=state.plan,
@@ -577,13 +605,51 @@ def define_graph():
             state.session.validation_logs.extend(planner_errors)
             return AgentName.BENCHMARK_PLANNER
 
-        state.session.status = SessionStatus.PLANNED
-        return END
+        state.review_decision = None
+        state.review_feedback = None
+        return AgentName.BENCHMARK_PLAN_REVIEWER
 
     workflow.add_conditional_edges(
         AgentName.BENCHMARK_PLANNER,
         planner_router,
         {
+            AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
+            AgentName.BENCHMARK_PLAN_REVIEWER: AgentName.BENCHMARK_PLAN_REVIEWER,
+        },
+    )
+
+    async def plan_reviewer_router(
+        state: BenchmarkGeneratorState,
+    ) -> Literal[
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.BENCHMARK_PLANNER,
+        END,
+    ]:
+        decision = state.review_decision
+        if decision == ReviewDecision.APPROVED:
+            state.session.status = SessionStatus.PLANNED
+            return END
+        if decision in {ReviewDecision.REJECTED, ReviewDecision.REJECT_PLAN}:
+            state.session.status = SessionStatus.REJECTED
+            return AgentName.BENCHMARK_PLANNER
+
+        state.session.status = SessionStatus.REJECTED
+        if state.review_feedback:
+            state.review_feedback = (
+                "Plan reviewer output invalid: unsupported structured decision. "
+                + state.review_feedback
+            )
+        else:
+            state.review_feedback = (
+                "Plan reviewer output invalid: missing structured review_decision."
+            )
+        return AgentName.BENCHMARK_PLANNER
+
+    workflow.add_conditional_edges(
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        plan_reviewer_router,
+        {
+            AgentName.BENCHMARK_PLAN_REVIEWER: AgentName.BENCHMARK_PLAN_REVIEWER,
             AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
             END: END,
         },
@@ -757,6 +823,7 @@ async def _execute_graph_streaming(
                 if normalized_node_name is None:
                     legacy_node_aliases = {
                         "planner": AgentName.BENCHMARK_PLANNER,
+                        "plan_reviewer": AgentName.BENCHMARK_PLAN_REVIEWER,
                         "coder": AgentName.BENCHMARK_CODER,
                         "reviewer": AgentName.BENCHMARK_REVIEWER,
                         "skills": AgentName.SKILL_AGENT,
@@ -808,6 +875,8 @@ async def _execute_graph_streaming(
 
             if normalized_node_name == AgentName.BENCHMARK_PLANNER:
                 episode_phase = EpisodePhase.BENCHMARK_PLANNING
+            elif normalized_node_name == AgentName.BENCHMARK_PLAN_REVIEWER:
+                episode_phase = EpisodePhase.BENCHMARK_PLAN_REVIEWING
             elif normalized_node_name == AgentName.BENCHMARK_CODER:
                 episode_phase = EpisodePhase.BENCHMARK_CODING
             elif normalized_node_name == AgentName.BENCHMARK_REVIEWER:
@@ -876,8 +945,34 @@ async def _execute_graph_streaming(
                     else:
                         failure_class = FailureClass.AGENT_QUALITY_FAILURE
                 else:
+                    new_status = SessionStatus.PLANNING
+            elif normalized_node_name == AgentName.BENCHMARK_PLAN_REVIEWER:
+                if final_state.review_decision == ReviewDecision.APPROVED:
                     new_status = SessionStatus.PLANNED
                     should_stop = True
+                elif final_state.review_decision in {
+                    ReviewDecision.REJECTED,
+                    ReviewDecision.REJECT_PLAN,
+                }:
+                    new_status = SessionStatus.REJECTED
+                    failure_class = FailureClass.AGENT_QUALITY_FAILURE
+                else:
+                    logger.error(
+                        "benchmark_plan_reviewer_missing_structured_decision",
+                        session_id=str(session_id),
+                        feedback=final_state.review_feedback,
+                    )
+                    error_msg = (
+                        "plan_reviewer_execution: missing or unsupported "
+                        "structured review_decision"
+                    )
+                    final_state.session.validation_logs.append(error_msg)
+                    final_state.review_feedback = (
+                        "Plan reviewer output invalid: missing or unsupported "
+                        "structured review_decision."
+                    )
+                    new_status = SessionStatus.REJECTED
+                    failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
             elif normalized_node_name == AgentName.BENCHMARK_CODER:
                 if final_state.session.status == SessionStatus.FAILED:
                     new_status = SessionStatus.FAILED
@@ -1059,6 +1154,9 @@ async def run_generation_session(
     elif normalized_start_node == AgentName.BENCHMARK_REVIEWER:
         initial_session_status = SessionStatus.VALIDATING
         initial_episode_phase = EpisodePhase.BENCHMARK_REVIEWING
+    elif normalized_start_node == AgentName.BENCHMARK_PLAN_REVIEWER:
+        initial_session_status = SessionStatus.PLANNING
+        initial_episode_phase = EpisodePhase.BENCHMARK_PLAN_REVIEWING
     else:
         initial_session_status = SessionStatus.PLANNING
         initial_episode_phase = EpisodePhase.BENCHMARK_PLANNING
@@ -1117,6 +1215,7 @@ async def run_generation_session(
         review_round=0,
         turn_count=0,
         plan=None,
+        start_node=normalized_start_node.value,
         messages=[],
     )
 
@@ -1324,8 +1423,35 @@ async def _persist_session_assets(
                 except Exception:
                     pass
 
+            async def sync_workspace_review_dir() -> None:
+                """Sync reviewer outputs from the session workspace, not the /reviews mount."""
+                try:
+                    review_files = await asyncio.wait_for(
+                        client.list_files("reviews", bypass_agent_permissions=True),
+                        timeout=5.0,
+                    )
+                except Exception:
+                    return
+
+                for file_info in review_files:
+                    if file_info.is_dir:
+                        continue
+                    path = f"reviews/{file_info.name}"
+                    content = ""
+                    try:
+                        content = await asyncio.wait_for(
+                            client.read_file(path, bypass_agent_permissions=True),
+                            timeout=2.0,
+                        )
+                    except Exception:
+                        pass
+                    await asyncio.wait_for(
+                        broadcast_file_update(str(session_id), path, content),
+                        timeout=2.0,
+                    )
+
             # Only sync top-level files and critical directories to avoid hangs.
-            for dir_to_sync in ["/", "/assets/", "/renders/", "/reviews/"]:
+            for dir_to_sync in ["/", "/assets/", "/renders/"]:
                 try:
                     files = await asyncio.wait_for(
                         client.list_files(dir_to_sync), timeout=5.0
@@ -1370,11 +1496,14 @@ async def _persist_session_assets(
                 except Exception:
                     continue
 
+            await sync_workspace_review_dir()
+
             # .manifests is system-owned metadata and may be denied via role policy
             # through the routed backend. Read it directly through WorkerClient so
             # reviewer manifests are still surfaced as episode assets.
             try:
                 for manifest_path in (
+                    ".manifests/benchmark_plan_review_manifest.json",
                     ".manifests/benchmark_review_manifest.json",
                     ".manifests/engineering_plan_review_manifest.json",
                     ".manifests/engineering_execution_review_manifest.json",
@@ -1667,6 +1796,7 @@ async def continue_generation_session(
         review_round=0,
         turn_count=saved_turn_count,
         plan=restored_plan,
+        start_node=AgentName.BENCHMARK_CODER.value,
         messages=[],
     )
 

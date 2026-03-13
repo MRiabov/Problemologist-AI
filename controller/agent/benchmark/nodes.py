@@ -177,7 +177,12 @@ class BenchmarkPlannerNode(BaseNode):
                 state,
                 inputs,
                 get_benchmark_planner_tools,
-                ["plan.md", "todo.md", "benchmark_definition.yaml"],
+                [
+                    "plan.md",
+                    "todo.md",
+                    "benchmark_definition.yaml",
+                    "assembly_definition.yaml",
+                ],
                 AgentName.BENCHMARK_PLANNER,
             )
         else:
@@ -842,6 +847,152 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
         agent_role=AgentName.BENCHMARK_PLANNER,
     )
     node = BenchmarkPlannerNode(context=ctx)
+    return await node(state)
+
+
+class BenchmarkPlanReviewerSignature(dspy.Signature):
+    """
+    Review the benchmark planning handoff before coding begins.
+    Inspect plan.md, todo.md, benchmark_definition.yaml, and assembly_definition.yaml.
+    Reject plans that reference nonexistent objects or inconsistent planner artifacts.
+    When done, use SUBMIT to provide the final review result.
+    """
+
+    prompt = dspy.InputField()
+    plan_md = dspy.InputField()
+    todo_md = dspy.InputField()
+    benchmark_definition_yaml = dspy.InputField()
+    assembly_definition_yaml = dspy.InputField()
+    journal = dspy.InputField()
+    review_feedback = dspy.InputField()
+    review: ReviewResult = dspy.OutputField()
+
+
+@type_check
+class BenchmarkPlanReviewerNode(BaseNode):
+    """Review benchmark planner artifacts before execution begins."""
+
+    async def _enforce_render_inspection_gate(
+        self, review: ReviewResult
+    ) -> ReviewResult:
+        if review.decision != ReviewDecision.APPROVED:
+            return review
+        if not await self._workspace_has_render_media():
+            return review
+        if self._used_tool("inspect_media"):
+            return review
+        fixes = list(review.required_fixes or [])
+        fixes.append(
+            "Inspect at least one render via inspect_media(path) before approving."
+        )
+        return review.model_copy(
+            update={
+                "decision": ReviewDecision.REJECT_PLAN,
+                "reason": (
+                    "Plan approval blocked: renders exist but the reviewer did not use "
+                    "inspect_media(path) to inspect visual evidence."
+                ),
+                "required_fixes": fixes,
+            }
+        )
+
+    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+        plan_md = "# No plan.md found."
+        todo_md = "# No todo.md found."
+        benchmark_definition_yaml = "# No benchmark_definition.yaml found."
+        assembly_definition_yaml = "# No assembly_definition.yaml found."
+
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("plan.md"):
+                plan_md = await self.ctx.worker_client.read_file("plan.md")
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("todo.md"):
+                todo_md = await self.ctx.worker_client.read_file("todo.md")
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
+                benchmark_definition_yaml = await self.ctx.worker_client.read_file(
+                    BENCHMARK_DEFINITION_FILE
+                )
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
+                assembly_definition_yaml = await self.ctx.worker_client.read_file(
+                    "assembly_definition.yaml"
+                )
+
+        inputs = {
+            "prompt": state.session.prompt,
+            "plan_md": plan_md,
+            "todo_md": todo_md,
+            "benchmark_definition_yaml": benchmark_definition_yaml,
+            "assembly_definition_yaml": assembly_definition_yaml,
+            "journal": state.journal,
+            "review_feedback": state.review_feedback or "No feedback provided.",
+        }
+
+        prediction, _, journal_entry = await self._run_program(
+            dspy.ReAct,
+            BenchmarkPlanReviewerSignature,
+            state,
+            inputs,
+            get_benchmark_tools,
+            [
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "assembly_definition.yaml",
+            ],
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+        )
+
+        if not prediction:
+            state.review_decision = ReviewDecision.REJECT_PLAN
+            state.review_feedback = (
+                "Rejected: Benchmark plan reviewer failed to complete."
+            )
+            state.journal += f"\n[Plan Reviewer] Failed: {journal_entry}"
+            return state
+
+        try:
+            review = ReviewResult.model_validate(prediction.review)
+            review = await self._enforce_render_inspection_gate(review)
+            review_path = await self._persist_review_result(
+                review, "benchmark-plan-review-round"
+            )
+        except Exception as exc:
+            state.review_decision = ReviewDecision.REJECT_PLAN
+            state.review_feedback = f"Rejected: failed to persist plan review: {exc}"
+            state.journal += (
+                f"\n[Plan Reviewer] Review persistence failed: {exc}\n{journal_entry}"
+            )
+            return state
+
+        state.review_decision = review.decision
+        state.review_feedback = f"{review.decision.value}: {review.reason}"
+        if review.required_fixes:
+            state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
+        state.journal += (
+            f"\n[Plan Reviewer] {state.review_feedback}\n"
+            f"Review file: {review_path}\n{journal_entry}"
+        )
+        state.messages.append(
+            AIMessage(content=f"Plan Review decision: {review.decision.value}")
+        )
+        return state
+
+
+@type_check
+async def plan_reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
+    session_id = str(state.session.session_id)
+    from controller.config.settings import settings as global_settings
+
+    worker_light_url = global_settings.worker_light_url
+    ctx = SharedNodeContext.create(
+        worker_light_url=worker_light_url,
+        session_id=session_id,
+        episode_id=state.episode_id,
+        agent_role=AgentName.BENCHMARK_PLAN_REVIEWER,
+    )
+    node = BenchmarkPlanReviewerNode(context=ctx)
     return await node(state)
 
 
