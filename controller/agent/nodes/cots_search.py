@@ -1,3 +1,5 @@
+from typing import Any
+
 import dspy
 import structlog
 from langchain_core.messages import AIMessage
@@ -7,7 +9,7 @@ from shared.type_checking import type_check
 
 from ..config import settings
 from ..state import AgentState
-from ..tools import get_engineer_tools
+from ..tools import get_cots_search_tools
 from .base import BaseNode, SharedNodeContext
 
 logger = structlog.get_logger(__name__)
@@ -20,37 +22,35 @@ class COTSSearchSignature(dspy.Signature):
     When done, use SUBMIT to provide a summary of the components found.
     """
 
-    task = dspy.InputField()
-    plan = dspy.InputField()
-    journal = dspy.InputField()
-    summary = dspy.OutputField(desc="A summary of the components found")
+    prompt = dspy.InputField()
+    search_summary = dspy.OutputField(desc="A summary of the components found")
 
 
 @type_check
 class COTSSearchNode(BaseNode):
     """
     COTS Search node: Searches for components based on current needs.
-    Refactored to use DSPy ReAct with remote worker execution.
+    Executes through the shared BaseNode runtime and provider-native tool loop.
     """
 
-    async def __call__(self, state: AgentState) -> AgentState:
-        inputs = {
-            "task": state.task,
-            "plan": state.plan,
-            "journal": state.journal,
-        }
-
+    async def run_search(self, *, state: Any, prompt: str) -> tuple[str | None, str]:
+        inputs = {"prompt": prompt}
         prediction, _, journal_entry = await self._run_program(
             dspy.ReAct,
             COTSSearchSignature,
             state,
             inputs,
-            get_engineer_tools,
+            get_cots_search_tools,
             [],
             AgentName.COTS_SEARCH,
         )
+        summary = getattr(prediction, "search_summary", None) if prediction else None
+        return summary, journal_entry
 
-        if not prediction:
+    async def __call__(self, state: AgentState) -> AgentState:
+        summary, journal_entry = await self.run_search(state=state, prompt=state.task)
+
+        if not summary:
             return state.model_copy(
                 update={
                     "journal": state.journal
@@ -58,7 +58,6 @@ class COTSSearchNode(BaseNode):
                 }
             )
 
-        summary = getattr(prediction, "summary", "No summary provided.")
         new_journal = state.journal + f"\n[COTS Search] {summary}" + journal_entry
 
         return state.model_copy(

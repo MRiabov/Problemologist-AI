@@ -312,6 +312,7 @@ async def execute_agent_task(
                     AgentName.ENGINEER_CODER,
                     AgentName.ENGINEER_PLAN_REVIEWER,
                     AgentName.ENGINEER_EXECUTION_REVIEWER,
+                    AgentName.COTS_SEARCH,
                 ]:
                     initial_input = {
                         "task": task,

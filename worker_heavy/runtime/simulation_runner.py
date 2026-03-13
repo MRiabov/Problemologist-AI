@@ -24,7 +24,10 @@ from worker_heavy.utils.validation import (
 logger = structlog.get_logger(__name__)
 
 _SPAWN_CONTEXT = multiprocessing.get_context("spawn")
-_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS = 30.0
+# Full simulation runs can include physics stepping, 24-view prerenders, and mp4
+# encoding. Keep a stricter budget than the client timeout, but leave enough
+# headroom for non-smoke artifact-producing runs.
+_SIMULATION_WALL_CLOCK_TIMEOUT_SECONDS = 120.0
 
 
 class SimulationExecutorOperationTimeoutError(RuntimeError):

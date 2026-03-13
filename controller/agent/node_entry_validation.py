@@ -220,7 +220,7 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
             node=AgentName.COTS_SEARCH,
-            required_state_fields=["episode_id"],
+            required_state_fields=["task", "episode_id"],
         ),
         AgentName.SKILL_AGENT: NodeEntryContract(
             node=AgentName.SKILL_AGENT,

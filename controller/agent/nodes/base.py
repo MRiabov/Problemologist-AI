@@ -15,7 +15,7 @@ from litellm import completion
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
 
-from controller.agent.config import LiteLLMRequestConfig, settings
+from controller.agent.config import LiteLLMRequestConfig, build_dspy_lm, settings
 from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.execution_limits import (
     AgentHardFailError,
@@ -84,42 +84,27 @@ class SharedNodeContext:
         if not fs:
             fs = RemoteFilesystemMiddleware(worker_client, agent_role=agent_role)
 
-        # WP05: Support mock LLMs for integration tests
+        request_config = settings.resolve_litellm_request_config(settings.llm_model)
         if settings.is_integration_test:
-            from controller.agent.mock_llm import MockDSPyLM
-
             logger.info("using_mock_llms_for_integration_test", session_id=session_id)
-            dspy_lm = MockDSPyLM(session_id=session_id)
         else:
             # T025: Initialize native tracing
             init_tracing()
 
-            # T012: Initialize DSPy LM (LiteLLM-backed) for Agent support.
-            request_config = settings.resolve_litellm_request_config(settings.llm_model)
-            api_key = request_config.api_key or "dummy"
-
-            # Respect repository configuration (config/agents_config.yaml) directly.
-            lm_max_tokens = settings.llm_max_tokens
-
-            lm_kwargs: dict[str, Any] = {
-                "api_key": api_key,
-                "cache": False,
-                "timeout": settings.llm_timeout_seconds,
-                "max_tokens": lm_max_tokens,
-            }
-            # Keep support for custom gateways and explicit compatibility endpoints.
-            if request_config.api_base:
-                lm_kwargs["api_base"] = request_config.api_base
             logger.info(
                 "lm_client_initialized",
                 provider=request_config.provider,
                 model=request_config.model,
                 api_base=request_config.api_base,
-                planner_token_cap=lm_max_tokens
+                planner_token_cap=settings.llm_max_tokens
                 if "planner" in agent_role.value
                 else None,
             )
-            dspy_lm = dspy.LM(request_config.model, **lm_kwargs)
+        dspy_lm = build_dspy_lm(
+            settings.llm_model,
+            session_id=session_id,
+            agent_role=agent_role.value,
+        )
 
         return cls(
             worker_light_url=worker_light_url,
@@ -406,6 +391,7 @@ class BaseNode:
             AgentName.BENCHMARK_PLANNER,
             AgentName.BENCHMARK_CODER,
             AgentName.BENCHMARK_REVIEWER,
+            AgentName.COTS_SEARCH,
             AgentName.ENGINEER_PLANNER,
             AgentName.ENGINEER_CODER,
             AgentName.ENGINEER_PLAN_REVIEWER,

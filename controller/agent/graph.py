@@ -694,3 +694,4 @@ engineer_planner_graph = _build_single_node_graph(
 electronics_planner_graph = _build_single_node_graph(
     AgentName.ELECTRONICS_PLANNER, electronics_planner_node
 )
+cots_search_graph = _build_single_node_graph(AgentName.COTS_SEARCH, cots_search_node)

@@ -62,6 +62,7 @@ execution:
       timeout_seconds: 300
       max_turns: 150
       max_total_tokens: 400000
+      native_tool_loop_max_iters: 16
     journalling_agent:
       timeout_seconds: 300
       max_turns: 150
@@ -526,7 +527,7 @@ agents:
       write:
         allow: []
         deny: ["**"]
-    tools: ["search_cots_catalog", "list_files", "read_file", "grep"]
+    tools: ["search_cots_catalog", "read_file"]
 
   journalling_agent:
     filesystem_permissions:

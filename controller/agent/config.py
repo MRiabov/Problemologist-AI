@@ -1,5 +1,6 @@
-from typing import Literal
+from typing import Any, Literal
 
+import dspy
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -126,3 +127,28 @@ class AgentSettings(BaseSettings):
 
 
 settings = AgentSettings()
+
+
+def build_dspy_lm(
+    model_name: str | None = None,
+    *,
+    session_id: str | None = None,
+    agent_role: str | None = None,
+) -> Any:
+    if settings.is_integration_test:
+        from controller.agent.mock_llm import MockDSPyLM
+
+        return MockDSPyLM(session_id=session_id, node_type=agent_role)
+
+    resolved_model = model_name or settings.llm_model
+    request_config = settings.resolve_litellm_request_config(resolved_model)
+    api_key = request_config.api_key or "dummy"
+    lm_kwargs: dict[str, Any] = {
+        "api_key": api_key,
+        "cache": False,
+        "timeout": settings.llm_timeout_seconds,
+        "max_tokens": settings.llm_max_tokens,
+    }
+    if request_config.api_base:
+        lm_kwargs["api_base"] = request_config.api_base
+    return dspy.LM(request_config.model, **lm_kwargs)

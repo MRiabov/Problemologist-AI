@@ -1,13 +1,12 @@
 from controller.agent.benchmark.graph import define_graph
 from controller.agent.graph import (
+    cots_search_graph,
     electronics_planner_graph,
     engineer_planner_graph,
 )
 from controller.agent.graph import (
     graph as engineering_graph,
 )
-from controller.config.settings import settings
-from shared.cots.agent import create_cots_search_agent
 from shared.enums import AgentName
 from shared.logging import get_logger
 
@@ -60,8 +59,7 @@ def create_agent_graph(
         return define_graph(), None
 
     if agent_name == AgentName.COTS_SEARCH:
-        # Specialized COTS search agent
-        return create_cots_search_agent(settings.llm_model), None
+        return cots_search_graph, None
 
     logger.error(
         "unknown_agent_name_falling_back_to_engineer",

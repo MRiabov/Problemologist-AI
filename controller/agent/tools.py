@@ -1,16 +1,13 @@
 import hashlib
 import json
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 
 import yaml
 
-from controller.agent.config import settings as agent_settings
 from controller.middleware.remote_fs import EditOp, RemoteFilesystemMiddleware
 from controller.observability.tracing import record_worker_events
-from shared.cots.agent import (
-    create_cots_search_agent,
-)
 from shared.cots.agent import (
     search_cots_catalog as base_search_cots_catalog,
 )
@@ -69,7 +66,11 @@ async def _invoke_cots_search_subagent(
     max_cost: float | None = None,
     category: str | None = None,
     limit: int = 5,
+    session_id: str | None = None,
 ) -> str:
+    from controller.agent.nodes.cots_search import cots_search_node
+    from controller.agent.state import AgentState
+
     requirement = _build_cots_subagent_requirement(
         query=query,
         max_weight_g=max_weight_g,
@@ -77,9 +78,14 @@ async def _invoke_cots_search_subagent(
         category=category,
         limit=limit,
     )
-    agent = create_cots_search_agent(agent_settings.llm_model)
-    result = await agent.ainvoke({"task": requirement})
-    messages = result.get("messages", []) if isinstance(result, dict) else []
+    effective_session_id = session_id or f"cots-search-{uuid.uuid4().hex[:8]}"
+    state = AgentState(
+        task=requirement,
+        session_id=effective_session_id,
+        episode_id=str(uuid.uuid4()),
+    )
+    result = await cots_search_node(state)
+    messages = result.messages if isinstance(result, AgentState) else []
     if messages:
         content = getattr(messages[-1], "content", None)
         if isinstance(content, str) and content.strip():
@@ -165,6 +171,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
             max_cost=max_cost,
             category=category,
             limit=limit,
+            session_id=session_id,
         )
 
     tools = [
@@ -189,6 +196,18 @@ def get_engineer_tools(
     Get the tools for the Engineer agent.
     """
     return get_common_tools(fs, session_id)
+
+
+def get_cots_search_tools(
+    fs: RemoteFilesystemMiddleware, session_id: str
+) -> list[Callable]:
+    """
+    Narrow COTS search to direct catalog lookup plus explicit file reads.
+    The subagent should not browse the workspace like a planner/coder.
+    """
+    common_tools = get_common_tools(fs, session_id)
+    allowed = {"search_cots_catalog", "read_file"}
+    return [tool for tool in common_tools if _tool_name(tool) in allowed]
 
 
 def get_engineer_planner_tools(
@@ -270,6 +289,7 @@ def get_engineer_planner_tools(
             max_cost=max_cost,
             category=category,
             limit=limit,
+            session_id=session_id,
         )
 
     async def validate_costing_and_price() -> dict:

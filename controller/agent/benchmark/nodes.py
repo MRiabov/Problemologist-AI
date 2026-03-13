@@ -34,6 +34,7 @@ from shared.simulation.schemas import (
 from shared.type_checking import type_check
 from shared.workers.schema import SimulationArtifacts, ValidationResultRecord
 
+from ..nodes.cots_search import COTSSearchNode
 from ..review_handover import validate_reviewer_handover
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
@@ -344,6 +345,9 @@ class BenchmarkPlannerNode(BaseNode):
             + '- Stop after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
             + "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
             + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
+            + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
+            + "- Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.\n"
+            + "- Do not use `cots_search` to price benchmark-owned fixtures or other benchmark context objects. Reserve pricing lookups for likely engineer-side solution parts, and if catalog search fails, stop retrying and use one heuristic estimate instead.\n"
         )
         user_prompt = "Benchmark planner inputs:\n" + json.dumps(
             inputs, indent=2, ensure_ascii=True, default=str
@@ -1199,39 +1203,6 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     return await node(state)
 
 
-class BenchmarkCOTSSearchSignature(dspy.Signature):
-    """
-    COTS Search node: Searches for components based on current needs for the benchmark.
-    You must use the provided tools to search for components.
-    When done, use SUBMIT to provide a summary of the components found.
-    """
-
-    prompt = dspy.InputField()
-    search_summary = dspy.OutputField(desc="A summary of the components found")
-
-
-@type_check
-class BenchmarkCOTSSearchNode(BaseNode):
-    """Refactored Benchmark COTS Search using BaseNode."""
-
-    async def __call__(self, state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-        inputs = {"prompt": state.session.prompt}
-
-        prediction, _, _ = await self._run_program(
-            dspy.ReAct,
-            BenchmarkCOTSSearchSignature,
-            state,
-            inputs,
-            get_benchmark_tools,
-            [],
-            AgentName.COTS_SEARCH,
-        )
-
-        summary = getattr(prediction, "search_summary", "No summary provided.")
-        state.messages.append(AIMessage(content=f"COTS Search summary: {summary}"))
-        return state
-
-
 @type_check
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
     session_id = str(state.session.session_id)
@@ -1242,10 +1213,14 @@ async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGenerator
         worker_light_url=worker_light_url,
         session_id=session_id,
         episode_id=state.episode_id,
-        agent_role=AgentName.BENCHMARK_CODER,
+        agent_role=AgentName.COTS_SEARCH,
     )
-    node = BenchmarkCOTSSearchNode(context=ctx)
-    return await node(state)
+    node = COTSSearchNode(context=ctx)
+    summary, _ = await node.run_search(state=state, prompt=state.session.prompt)
+    state.messages.append(
+        AIMessage(content=f"COTS Search summary: {summary or 'No summary provided.'}")
+    )
+    return state
 
 
 async def skills_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:

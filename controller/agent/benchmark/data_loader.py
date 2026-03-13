@@ -11,16 +11,22 @@ logger = structlog.get_logger(__name__)
 
 def load_benchmark_dataset(agent_type: AgentName) -> list[dspy.Example]:
     """
-    Loads a benchmark dataset from evals/datasets/ and converts to dspy.Example objects.
+    Loads a benchmark dataset and converts it to dspy.Example objects.
     """
-    dataset_path = Path("evals/datasets") / f"{agent_type}.json"
+    root_path = Path(__file__).parent.parent.parent.parent
+    candidate_paths = (
+        Path("dataset/data/seed/role_based") / f"{agent_type}.json",
+        root_path / "dataset" / "data" / "seed" / "role_based" / f"{agent_type}.json",
+        Path("evals/datasets") / f"{agent_type}.json",
+        root_path / "evals" / "datasets" / f"{agent_type}.json",
+    )
+    dataset_path = next((path for path in candidate_paths if path.exists()), None)
 
-    if not dataset_path.exists():
-        root_path = Path(__file__).parent.parent.parent.parent
-        dataset_path = root_path / "evals" / "datasets" / f"{agent_type}.json"
-
-    if not dataset_path.exists():
-        raise FileNotFoundError(f"Dataset not found at {dataset_path}")
+    if dataset_path is None:
+        searched_paths = ", ".join(str(path) for path in candidate_paths)
+        raise FileNotFoundError(
+            f"Dataset not found in any expected location: {searched_paths}"
+        )
 
     with dataset_path.open("r") as f:
         data = json.load(f)
