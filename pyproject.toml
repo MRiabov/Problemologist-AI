@@ -49,6 +49,7 @@ dependencies = [
     "numba>=0.61.0",
     "pyopengl-accelerate>=3.1.10",
     "spec-kitty-cli==0.16.1",
+    "litellm>=1.82.1",
 ]
 
 [dependency-groups]
