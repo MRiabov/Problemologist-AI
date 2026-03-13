@@ -35,6 +35,7 @@ def test_normalization_logic():
     mock_lm.scenarios = {
         "benchmark": {
             "benchmark_planner": {"thought": "P"},
+            "benchmark_plan_reviewer": {"thought": "PR"},
             "benchmark_coder": {"thought": "C"},
             "benchmark_reviewer": {"thought": "R"},
             "engineer_plan_reviewer": {"thought": "R"},
@@ -46,6 +47,9 @@ def test_normalization_logic():
 
     mock_lm.node_type = AgentName.BENCHMARK_PLANNER
     assert json_thought(mock_lm(prompt)) == "P"
+
+    mock_lm.node_type = AgentName.BENCHMARK_PLAN_REVIEWER
+    assert json_thought(mock_lm(prompt)) == "PR"
 
     mock_lm.node_type = AgentName.BENCHMARK_CODER
     assert json_thought(mock_lm(prompt)) == "C"

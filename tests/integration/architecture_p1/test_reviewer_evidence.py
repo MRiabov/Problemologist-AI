@@ -70,7 +70,8 @@ async def test_reviewer_evidence_completeness():
             for p in artifact_paths
             if "reviews/" in p
             and (
-                "benchmark-review-round-" in p
+                "benchmark-plan-review-round-" in p
+                or "benchmark-review-round-" in p
                 or "engineering-plan-review-round-" in p
                 or "engineering-execution-review-round-" in p
                 or "electronics-review-round-" in p
@@ -83,6 +84,7 @@ async def test_reviewer_evidence_completeness():
                 Path("config/agents_config.yaml").read_text(encoding="utf-8")
             )
             expected_paths = {
+                "benchmark_plan_reviewer": "reviews/benchmark-plan-review-round-*.md",
                 "engineer_plan_reviewer": "reviews/engineering-plan-review-round-*.md",
                 "engineer_execution_reviewer": "reviews/engineering-execution-review-round-*.md",
                 "benchmark_reviewer": "reviews/benchmark-review-round-*.md",

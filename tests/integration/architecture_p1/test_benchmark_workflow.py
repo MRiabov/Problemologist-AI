@@ -109,6 +109,9 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
+        assert any(p.endswith("assembly_definition.yaml") for p in artifact_paths), (
+            f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        )
         assert submit_plan_traces, (
             "Expected planner to call submit_plan before workflow completion."
         )
@@ -126,6 +129,20 @@ async def test_benchmark_planner_cad_reviewer_path():
         )
         assert any(p.endswith("simulation_result.json") for p in artifact_paths), (
             f"simulation_result.json missing. Artifacts: {artifact_paths}"
+        )
+        manifest_paths = [
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_plan_review_manifest.json")
+        ]
+        assert manifest_paths, (
+            f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
+        )
+        assert any(
+            p.endswith("benchmark-plan-review-round-1.md") for p in artifact_paths
+        ), (
+            "benchmark plan review file missing from artifacts. "
+            f"Artifacts: {artifact_paths}"
         )
         manifest_paths = [
             p for p in artifact_paths if p.endswith("benchmark_review_manifest.json")

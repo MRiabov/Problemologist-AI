@@ -295,6 +295,30 @@ async def _wait_for_planned_after_submit_plan_benchmark(
     return status
 
 
+async def _wait_for_benchmark_asset(
+    client: httpx.AsyncClient, session_id: str, suffix: str
+) -> list[str]:
+    matched_paths: list[str] = []
+    for _ in range(90):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
+        if ep_resp.status_code == 404:
+            await asyncio.sleep(1)
+            continue
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        matched_paths = [
+            asset.s3_path
+            for asset in (episode.assets or [])
+            if asset.s3_path.endswith(suffix)
+        ]
+        if matched_paths:
+            return matched_paths
+        if episode.status == EpisodeStatus.FAILED:
+            return matched_paths
+        await asyncio.sleep(1)
+    return matched_paths
+
+
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
@@ -467,7 +491,7 @@ async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
 )
 @pytest.mark.asyncio
 async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
-    """INT-114: Benchmark planner must emit explicit submit_plan TOOL_START before completion."""
+    """INT-114: Benchmark planner must submit to plan review before reaching PLANNED."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         req = BenchmarkGenerateRequest(
             prompt="INT-114 benchmark planner submission trace contract.",
@@ -487,14 +511,29 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
             "Expected submit_plan TOOL_START trace with node_type=benchmark_planner "
             f"in benchmark planner flow. Observed node_types={sorted(submit_node_types)}, status={status}"
         )
+        plan_review_manifest_paths = await _wait_for_benchmark_asset(
+            client, episode_id, "benchmark_plan_review_manifest.json"
+        )
+        assert plan_review_manifest_paths, (
+            "Expected benchmark plan review manifest after planner submit_plan. "
+            f"episode_id={episode_id}"
+        )
+        plan_review_paths = await _wait_for_benchmark_asset(
+            client, episode_id, "benchmark-plan-review-round-1.md"
+        )
+        assert plan_review_paths, (
+            "Expected persisted benchmark plan review file before PLANNED. "
+            f"episode_id={episode_id}"
+        )
         post_submit_status = await _wait_for_planned_after_submit_plan_benchmark(
             client, episode_id
         )
         assert post_submit_status != EpisodeStatus.FAILED, (
-            "Benchmark planner reached FAILED after submit_plan; expected PLANNED."
+            "Benchmark plan-review flow reached FAILED after submit_plan; expected PLANNED."
         )
         assert post_submit_status == EpisodeStatus.PLANNED, (
-            f"Expected benchmark planner to reach PLANNED after submit_plan, got {post_submit_status}."
+            "Expected benchmark plan-review approval to reach PLANNED, "
+            f"got {post_submit_status}."
         )
 
 

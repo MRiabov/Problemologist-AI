@@ -100,6 +100,14 @@ async def test_benchmark_to_engineer_handoff():
             f"simulation_result.json missing. Artifacts: {artifact_paths}"
         )
         manifest_paths = [
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_plan_review_manifest.json")
+        ]
+        assert manifest_paths, (
+            f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
+        )
+        manifest_paths = [
             p for p in artifact_paths if p.endswith("benchmark_review_manifest.json")
         ]
         assert manifest_paths, (

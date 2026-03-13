@@ -594,6 +594,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "INT-114 benchmark planner artifacts submitted."
+      - node: benchmark_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are internally consistent and ready for coding."
+              required_fixes: []
 
   INT-184:
     transcript:
@@ -4379,6 +4386,13 @@ scenarios:
               theme: "benchmark_test"
               reasoning: "Creating a simple path planning task."
               params: { wall_height: 5, goal_pos: [10, 10, 0] }
+      - node: benchmark_plan_reviewer
+        steps:
+          - finished: true
+            review:
+              decision: "APPROVED"
+              reason: "Planner handoff is consistent and ready for implementation."
+              required_fixes: []
       - node: benchmark_coder
         steps:
           - thought: "Implementing an import-safe benchmark script."
@@ -4503,19 +4517,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "INT-180 planning artifacts generated."
-      - node: electronics_planner
+      - node: benchmark_plan_reviewer
         steps:
-          - thought: "Mark electronics planning complete."
-            tool_name: "write_file"
-            tool_args:
-              {
-                path: "todo.md",
-                content: "- [x] Build part\n- [x] Electronics N/A",
-                overwrite: true,
-              }
-            expected_observation: "success"
           - finished: true
-            summary: "No electronics required."
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts are coherent and coding-ready."
+              required_fixes: []
       - node: benchmark_coder
         steps:
           - thought: "Emit a simple script."
@@ -5239,19 +5247,13 @@ scenarios:
             expected_observation: "submitted"
           - finished: true
             summary: "Electronics-eval plan generated."
-      - node: electronics_planner
+      - node: benchmark_plan_reviewer
         steps:
-          - thought: "Add an explicit unchecked electronics task for handoff."
-            tool_name: "write_file"
-            tool_args:
-              path: "todo.md"
-              content: |
-                - [x] Build frame
-                - [ ] Route wiring harness for motor power
-              overwrite: true
-            expected_observation: "success"
           - finished: true
-            summary: "Electronics wiring task added."
+            review:
+              decision: "APPROVED"
+              reason: "Planner artifacts and benchmark-owned object references are valid."
+              required_fixes: []
       - node: benchmark_coder
         steps:
           - thought: "Implementing basic geometry."

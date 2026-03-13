@@ -26,6 +26,7 @@ def test_create_agent_graph_returns_benchmark_graph():
 
     # Assert
     assert AgentName.BENCHMARK_PLANNER in agent.nodes
+    assert AgentName.BENCHMARK_PLAN_REVIEWER in agent.nodes
     assert AgentName.BENCHMARK_CODER in agent.nodes
     assert AgentName.BENCHMARK_REVIEWER in agent.nodes
     # Benchmark graph also has cots_search and skills

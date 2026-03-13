@@ -37,6 +37,7 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
         heavy_url=WORKER_HEAVY_URL,
     )
     reviewer_path_by_role = {
+        AgentName.BENCHMARK_PLAN_REVIEWER: "reviews/benchmark-plan-review-round-1.md",
         AgentName.ENGINEER_PLAN_REVIEWER: "reviews/engineering-plan-review-round-1.md",
         AgentName.ENGINEER_EXECUTION_REVIEWER: "reviews/engineering-execution-review-round-1.md",
         AgentName.BENCHMARK_REVIEWER: "reviews/benchmark-review-round-1.md",

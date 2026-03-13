@@ -15,7 +15,14 @@ from shared.enums import AgentName
 class _FakeFs:
     def __init__(self, files: dict[str, str]):
         self._files = files
-        self.client = type("Client", (), {"session_id": "s1"})()
+        self.client = type(
+            "Client",
+            (),
+            {
+                "session_id": "s1",
+                "write_file": self._client_write_file,
+            },
+        )()
         self.policy = type(
             "Policy",
             (),
@@ -28,6 +35,16 @@ class _FakeFs:
 
     async def read_file(self, path: str) -> str:
         return self._files[path]
+
+    async def _client_write_file(
+        self,
+        path: str,
+        content: str,
+        overwrite: bool = False,
+        bypass_agent_permissions: bool = False,
+    ):
+        self._files[path] = content
+        return True
 
     # The planner toolset includes other tools that we do not call in these tests.
     async def list_files(self, path: str = "/"):
@@ -81,6 +98,7 @@ async def test_benchmark_submit_plan_validates_and_submits(monkeypatch):
             "plan.md": "# Learning Objective\n",
             "todo.md": "- [ ] task\n",
             "benchmark_definition.yaml": "version: '1.0'\nobjectives:\n  primary: []\n",
+            "assembly_definition.yaml": "version: '1.0'\nconstraints: {}\n",
         }
     )
     tools = get_benchmark_planner_tools(fs, session_id="s1")
@@ -104,7 +122,13 @@ async def test_benchmark_submit_plan_validates_and_submits(monkeypatch):
     assert result["errors"] == []
     assert result["node_type"] == AgentName.BENCHMARK_PLANNER.value
     assert called["node_type"] == AgentName.BENCHMARK_PLANNER
-    assert called["files"] == ["benchmark_definition.yaml", "plan.md", "todo.md"]
+    assert called["files"] == [
+        "assembly_definition.yaml",
+        "benchmark_definition.yaml",
+        "plan.md",
+        "todo.md",
+    ]
+    assert ".manifests/benchmark_plan_review_manifest.json" in fs._files
 
 
 @pytest.mark.asyncio
