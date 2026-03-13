@@ -77,6 +77,36 @@ def _collect_events(
     return collect_and_cleanup_events(search_root, session_id=session_id)
 
 
+def _load_workspace_benchmark_definition(root: Path, *, session_id: str | None = None):
+    benchmark_path = root / "benchmark_definition.yaml"
+    if not benchmark_path.exists():
+        return None
+
+    raw = benchmark_path.read_text(encoding="utf-8")
+    is_valid, objectives_or_errors = validate_benchmark_definition_yaml(
+        raw,
+        session_id=session_id,
+    )
+    if not is_valid:
+        raise ValueError("; ".join(objectives_or_errors))
+    return objectives_or_errors
+
+
+def _normalize_render_paths(root: Path, render_paths: list[str]) -> list[str]:
+    normalized: list[str] = []
+    resolved_root = root.resolve()
+    for raw_path in render_paths:
+        try:
+            candidate = Path(raw_path)
+            if candidate.is_absolute():
+                normalized.append(str(candidate.resolve().relative_to(resolved_root)))
+            else:
+                normalized.append(str(candidate))
+        except Exception:
+            normalized.append(raw_path)
+    return normalized
+
+
 @contextlib.contextmanager
 def bundle_context(bundle_base64: str | None, default_root: Path):
     """Context manager to optionally extract a workspace bundle."""
@@ -338,7 +368,7 @@ async def api_simulate(
 
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts(
-                    render_paths=result.render_paths,
+                    render_paths=_normalize_render_paths(root, result.render_paths),
                     mjcf_content=result.mjcf_content,
                     stress_summaries=result.stress_summaries,
                     fluid_metrics=result.fluid_metrics,
@@ -542,6 +572,9 @@ async def api_preview(
                     session_root=root,
                     script_content=request.script_content,
                 )
+                objectives = _load_workspace_benchmark_definition(
+                    root, session_id=x_session_id
+                )
 
                 image_path = await asyncio.to_thread(
                     preview_design,
@@ -549,6 +582,7 @@ async def api_preview(
                     pitch=request.pitch,
                     yaw=request.yaw,
                     output_dir=root / "renders",
+                    objectives=objectives,
                 )
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
 

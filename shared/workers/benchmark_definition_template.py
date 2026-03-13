@@ -45,6 +45,7 @@ benchmark_parts:
     metadata:
       fixed: true
       material_id: "aluminum_6061"
+  # Every benchmark part must have a unique `part_id` and a unique `label`.
 
 # Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:
@@ -56,6 +57,8 @@ simulation_bounds:
 # -----------------------------------------------------------------------------
 # This object spawns at `start_position` (with runtime jitter applied).
 # Your design must reliably guide it to the goal_zone.
+# The full runtime AABB (`start_position +/- runtime_jitter +/- max(radius)`)
+# must remain inside `build_zone` on every axis.
 moved_object:
   label: "projectile_ball"
   shape: "sphere"

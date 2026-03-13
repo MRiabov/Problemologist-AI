@@ -952,7 +952,7 @@ def simulate(
             logger.warning("failed_to_load_controllers", error=str(e))
 
     try:
-        video_path = renders_dir / "simulation.mp4" if not smoke_test_mode else None
+        video_path = renders_dir / "simulation.mp4"
         sim_duration = 0.5 if smoke_test_mode else 30.0
         metrics = loop.step(
             control_inputs=control_inputs,
@@ -993,26 +993,23 @@ def simulate(
                 control_inputs=control_inputs,
                 duration=sim_duration,
                 dynamic_controllers=dynamic_controllers,
-                video_path=None,  # No video on retry
+                video_path=None,  # Skip video during emergency retry path
             )
 
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
 
-        if not smoke_test_mode:
-            render_paths = prerender_24_views(
-                component,
-                output_dir=str(renders_dir),
-                backend_type=backend_type,
-                session_id=session_id,
-                scene_path=str(scene_path),
-                smoke_test_mode=smoke_test_mode,
-            )
-            if video_path and video_path.exists():
-                render_paths.append(str(video_path))
-        else:
-            render_paths = []
+        render_paths = prerender_24_views(
+            component,
+            output_dir=str(renders_dir),
+            backend_type=backend_type,
+            session_id=session_id,
+            scene_path=str(scene_path),
+            smoke_test_mode=smoke_test_mode,
+        )
+        if video_path and video_path.exists():
+            render_paths.append(str(video_path))
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
@@ -1099,6 +1096,7 @@ def validate(
         smoke_test_mode=smoke_test_mode,
         particle_budget=particle_budget,
     )
+    objectives_model: BenchmarkDefinition | None = None
     solids = component.solids()
     if len(solids) > 1:
         for i in range(len(solids)):
@@ -1146,6 +1144,7 @@ def validate(
                     )
                     if location_contract_error:
                         return (False, location_contract_error)
+                    objectives_model = obj_model
                     effective_build_zone = obj_model.objectives.build_zone.model_dump()
             except Exception:
                 pass
@@ -1275,6 +1274,7 @@ def validate(
         prerender_24_views(
             component,
             output_dir=renders_dir,
+            objectives=objectives_model,
             backend_type=backend_type,
             session_id=session_id,
             smoke_test_mode=smoke_test_mode,

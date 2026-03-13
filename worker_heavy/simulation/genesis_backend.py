@@ -166,6 +166,54 @@ class GenesisBackend(PhysicsBackend):
                 "failed_to_load_mfg_config", error=str(e), session_id=self.session_id
             )
 
+    @staticmethod
+    def _zone_visual_rgba(zone_type: str | None) -> tuple[float, float, float, float]:
+        if zone_type == "goal":
+            return (0.0, 1.0, 0.0, 0.3)
+        if zone_type == "build":
+            return (0.55, 0.55, 0.55, 0.2)
+        return (1.0, 0.0, 0.0, 0.3)
+
+    def _add_zone_visual(self, ent_cfg) -> None:
+        if self.scene is None or gs is None:
+            return
+
+        pos = tuple(float(v) for v in (ent_cfg.pos or (0.0, 0.0, 0.0)))
+        if ent_cfg.size is not None:
+            size = tuple(float(v) for v in ent_cfg.size)
+        elif ent_cfg.min is not None and ent_cfg.max is not None:
+            size = tuple(float(ent_cfg.max[i] - ent_cfg.min[i]) / 2.0 for i in range(3))
+            pos = tuple(float(ent_cfg.min[i] + ent_cfg.max[i]) / 2.0 for i in range(3))
+        else:
+            return
+
+        color = self._zone_visual_rgba(getattr(ent_cfg, "zone_type", None))
+        surface = gs.surfaces.Default(color=color[:3], opacity=color[3])
+        base_kwargs = {"pos": pos, "size": size, "fixed": True}
+        morph_variants = (
+            {**base_kwargs, "collision": False, "visualization": True},
+            {**base_kwargs, "collision": False},
+            {**base_kwargs, "visualization": True},
+            base_kwargs,
+        )
+
+        last_error: Exception | None = None
+        for morph_kwargs in morph_variants:
+            try:
+                self.scene.add_entity(
+                    gs.morphs.Box(**morph_kwargs),
+                    surface=surface,
+                )
+                return
+            except TypeError as exc:
+                last_error = exc
+
+        if last_error is not None:
+            raise RuntimeError(
+                "Genesis failed to create zone visualization for "
+                f"{getattr(ent_cfg, 'name', '<unknown>')}: {last_error}"
+            )
+
     def load_scene(self, scene: SimulationScene, render_only: bool = False) -> None:
         with self._lock:
             # OPTIMIZATION/FIX: If same scene is already built, skip rebuild.
@@ -426,6 +474,7 @@ class GenesisBackend(PhysicsBackend):
                         )
 
                         if ent_cfg.is_zone:
+                            self._add_zone_visual(ent_cfg)
                             continue
 
                         material_id = ent_cfg.material_id

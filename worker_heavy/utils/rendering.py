@@ -12,6 +12,7 @@ from build123d import Compound
 from PIL import Image
 
 from shared.agents.config import load_agents_config
+from shared.models.schemas import BenchmarkDefinition
 from shared.simulation.backends import (
     StressField,
 )
@@ -86,6 +87,7 @@ def _build_depth_metadata(
 def prerender_24_views(
     component: Compound,
     output_dir: str | None = None,
+    objectives: BenchmarkDefinition | None = None,
     backend_type: SimulatorBackendType | None = None,
     session_id: str | None = None,
     scene_path: str | Path | None = None,
@@ -142,7 +144,9 @@ def prerender_24_views(
                     output_dir=build_dir, backend_type=resolved_backend_type
                 )
                 final_scene_path = builder.build_from_assembly(
-                    component, smoke_test_mode=smoke_test_mode
+                    component,
+                    objectives=objectives,
+                    smoke_test_mode=smoke_test_mode,
                 )
 
             # 2. Initialize Backend

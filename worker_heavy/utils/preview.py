@@ -12,6 +12,7 @@ import structlog
 from build123d import Compound, Part
 from PIL import Image
 
+from shared.models.schemas import BenchmarkDefinition
 from worker_heavy.simulation.builder import SimulationBuilder
 
 logger = structlog.get_logger(__name__)
@@ -22,6 +23,7 @@ def preview_design(
     pitch: float = -35.0,
     yaw: float = 45.0,
     output_dir: Path | None = None,
+    objectives: BenchmarkDefinition | None = None,
     width: int = 640,
     height: int = 480,
 ) -> Path:
@@ -45,7 +47,7 @@ def preview_design(
     with TemporaryDirectory() as temp_build_dir:
         build_dir = Path(temp_build_dir)
         builder = SimulationBuilder(output_dir=build_dir)
-        scene_path = builder.build_from_assembly(component)
+        scene_path = builder.build_from_assembly(component, objectives=objectives)
 
         # Load into MuJoCo
         model = mujoco.MjModel.from_xml_path(str(scene_path))

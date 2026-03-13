@@ -169,7 +169,12 @@ class CommonAssemblyTraverser:
         zone_size = None
         if label.startswith("zone_"):
             is_zone = True
-            zone_type = "goal" if "goal" in label else "forbid"
+            if "goal" in label:
+                zone_type = "goal"
+            elif "build" in label:
+                zone_type = "build"
+            else:
+                zone_type = "forbid"
             bb = child.bounding_box()
             zone_size = [bb.size.X / 2, bb.size.Y / 2, bb.size.Z / 2]
         return {"is_zone": is_zone, "type": zone_type, "size": zone_size}
@@ -542,7 +547,12 @@ class SceneCompiler:
 
         if is_zone:
             # Zone Logic (T005): goal = green, forbid = red
-            rgba = "0 1 0 0.3" if zone_type == "goal" else "1 0 0 0.3"
+            if zone_type == "goal":
+                rgba = "0 1 0 0.3"
+            elif zone_type == "build":
+                rgba = "0.55 0.55 0.55 0.2"
+            else:
+                rgba = "1 0 0 0.3"
             size_str = " ".join(map(str, zone_size)) if zone_size else "0.05"
             ET.SubElement(body, "site", name=name, type="box", size=size_str, rgba=rgba)
         else:
@@ -726,6 +736,25 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     zone_size=fz_size,
                     pos=fz_pos,
                 )
+
+            bz = objectives.objectives.build_zone
+            bz_pos = [
+                (bz.min[0] + bz.max[0]) / 2,
+                (bz.min[1] + bz.max[1]) / 2,
+                (bz.min[2] + bz.max[2]) / 2,
+            ]
+            bz_size = [
+                (bz.max[0] - bz.min[0]) / 2,
+                (bz.max[1] - bz.min[1]) / 2,
+                (bz.max[2] - bz.min[2]) / 2,
+            ]
+            self.compiler.add_body(
+                name="zone_build",
+                is_zone=True,
+                zone_type="build",
+                zone_size=bz_size,
+                pos=bz_pos,
+            )
 
         # 2. Add parts from assembly
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)
@@ -951,6 +980,20 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                         "zone_type": "forbid",
                     }
                 )
+
+            bz = objectives.objectives.build_zone
+            bz_pos = [(bz.min[i] + bz.max[i]) / 2 for i in range(3)]
+            bz_size = [(bz.max[i] - bz.min[i]) / 2 for i in range(3)]
+            scene_data["entities"].append(
+                {
+                    "name": "zone_build",
+                    "type": "box",
+                    "pos": bz_pos,
+                    "size": bz_size,
+                    "is_zone": True,
+                    "zone_type": "build",
+                }
+            )
 
         # 2. Add parts from assembly
         parts_data = CommonAssemblyTraverser.traverse(assembly, electronics)

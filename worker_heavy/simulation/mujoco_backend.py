@@ -220,18 +220,27 @@ class MuJoCoBackend(PhysicsBackend):
         segmentation_frame = None
 
         if include_rgb:
-            self.renderer.update_scene(self.data, camera=cam)
+            if cam is None:
+                self.renderer.update_scene(self.data)
+            else:
+                self.renderer.update_scene(self.data, camera=cam)
             frame = np.array(self.renderer.render(), copy=True)
 
         if include_depth:
             self.renderer.enable_depth_rendering()
-            self.renderer.update_scene(self.data, camera=cam)
+            if cam is None:
+                self.renderer.update_scene(self.data)
+            else:
+                self.renderer.update_scene(self.data, camera=cam)
             depth_frame = np.array(self.renderer.render(), copy=True)
             self.renderer.disable_depth_rendering()
 
         if include_segmentation:
             self.renderer.enable_segmentation_rendering()
-            self.renderer.update_scene(self.data, camera=cam)
+            if cam is None:
+                self.renderer.update_scene(self.data)
+            else:
+                self.renderer.update_scene(self.data, camera=cam)
             # MuJoCo returns (objid, objtype) pairs per pixel in segmentation mode.
             segmentation_frame = np.array(self.renderer.render(), copy=True)
             self.renderer.disable_segmentation_rendering()
