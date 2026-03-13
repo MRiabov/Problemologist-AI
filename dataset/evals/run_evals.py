@@ -3,6 +3,7 @@ import asyncio
 import contextlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -44,11 +45,13 @@ from shared.enums import (  # noqa: E402
     EpisodeStatus,
     EvalMode,
     GenerationKind,
+    ReviewDecision,
     SeedMatchMethod,
 )
 from shared.logging import configure_logging, get_logger  # noqa: E402
-from shared.models.schemas import EpisodeMetadata  # noqa: E402
+from shared.models.schemas import EpisodeMetadata, ReviewFrontmatter  # noqa: E402
 from shared.utils.evaluation import analyze_electronics_metrics  # noqa: E402
+from worker_heavy.utils.file_validation import validate_review_frontmatter  # noqa: E402
 
 load_dotenv()
 # Logging will be configured in main() to support redirection to logs/evals
@@ -70,6 +73,7 @@ class AgentEvalSpec(BaseModel):
     required_reviewer_handover_manifest: str | None = None
     required_reviewer_stage: str | None = None
     materialize_reviewer_handover: bool = False
+    review_filename_prefix: str | None = None
 
 
 class EvalDatasetItem(BaseModel):
@@ -79,6 +83,7 @@ class EvalDatasetItem(BaseModel):
     seed_artifact_dir: Path | None = None
     seed_files: dict[str, str] | None = None
     git_eval: "GitEvalConfig | None" = None
+    expected_decision: ReviewDecision | None = None
 
     model_config = ConfigDict(extra="allow")
 
@@ -304,6 +309,7 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.BENCHMARK_REVIEWER,
         required_trace_names=(AgentName.BENCHMARK_REVIEWER,),
         start_node=AgentName.BENCHMARK_REVIEWER,
+        review_filename_prefix="benchmark-review-round",
     ),
     # Mechanical engineering roles
     AgentName.ENGINEER_PLANNER: AgentEvalSpec(
@@ -328,12 +334,14 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_PLAN_REVIEWER,),
         start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        review_filename_prefix="engineering-plan-review-round",
     ),
     AgentName.ENGINEER_EXECUTION_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_EXECUTION_REVIEWER,),
         start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        review_filename_prefix="engineering-execution-review-round",
     ),
     # Electrical engineering roles inside the unified engineer graph
     AgentName.ELECTRONICS_PLANNER: AgentEvalSpec(
@@ -347,6 +355,7 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ELECTRONICS_REVIEWER,),
         start_node=AgentName.ELECTRONICS_REVIEWER,
+        review_filename_prefix="electronics-review-round",
     ),
     AgentName.COTS_SEARCH: AgentEvalSpec(
         mode=EvalMode.AGENT,
@@ -579,6 +588,101 @@ def _planned_counts_as_success(agent_name: AgentName, spec: AgentEvalSpec) -> bo
         AgentName.ELECTRONICS_PLANNER,
         AgentName.BENCHMARK_PLANNER,
     }
+
+
+def _requires_expected_review_decision(spec: AgentEvalSpec) -> bool:
+    return spec.review_filename_prefix is not None
+
+
+async def _load_latest_review_frontmatter(
+    *,
+    worker: WorkerClient,
+    review_filename_prefix: str,
+    session_id: str,
+) -> tuple[ReviewFrontmatter | None, str | None]:
+    pattern = re.compile(rf"^{re.escape(review_filename_prefix)}-(\d+)\.md$")
+    try:
+        entries = await worker.list_files("reviews", bypass_agent_permissions=True)
+    except FileNotFoundError:
+        return None, "reviews/ directory not found"
+    except Exception as exc:
+        return None, f"failed to list reviews/: {exc}"
+
+    latest_name: str | None = None
+    latest_round = -1
+    for entry in entries:
+        if entry.is_dir:
+            continue
+        match = pattern.fullmatch(entry.name)
+        if match is None:
+            continue
+        round_number = int(match.group(1))
+        if round_number > latest_round:
+            latest_round = round_number
+            latest_name = entry.name
+
+    if latest_name is None:
+        return (
+            None,
+            "no persisted review file matching "
+            f"reviews/{review_filename_prefix}-<n>.md",
+        )
+
+    review_path = f"reviews/{latest_name}"
+    try:
+        content = await worker.read_file(review_path, bypass_agent_permissions=True)
+    except Exception as exc:
+        return None, f"failed to read {review_path}: {exc}"
+
+    is_valid, review_data = validate_review_frontmatter(
+        content,
+        cad_agent_refused=True,
+        session_id=session_id,
+    )
+    if not is_valid:
+        details = (
+            ", ".join(review_data)
+            if isinstance(review_data, list)
+            else str(review_data)
+        )
+        return None, f"invalid review frontmatter in {review_path}: {details}"
+    if not isinstance(review_data, ReviewFrontmatter):
+        return None, f"unexpected review frontmatter payload for {review_path}"
+
+    return review_data, None
+
+
+async def _review_expectation_error(
+    *,
+    item: EvalDatasetItem,
+    spec: AgentEvalSpec,
+    session_id: str,
+) -> str | None:
+    expected_decision = item.expected_decision
+    review_filename_prefix = spec.review_filename_prefix
+    if expected_decision is None or review_filename_prefix is None:
+        return None
+
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        review_frontmatter, review_error = await _load_latest_review_frontmatter(
+            worker=worker,
+            review_filename_prefix=review_filename_prefix,
+            session_id=session_id,
+        )
+    finally:
+        await worker.aclose()
+
+    if review_error:
+        return review_error
+    if review_frontmatter is None:
+        return "missing persisted review frontmatter"
+    if review_frontmatter.decision != expected_decision:
+        return (
+            "expected review decision "
+            f"{expected_decision.value}, got {review_frontmatter.decision.value}"
+        )
+    return None
 
 
 async def _wait_for_controller_ready(
@@ -1162,12 +1266,54 @@ async def run_single_eval(
                                         error=completion_error,
                                     )
                                 else:
-                                    log.info("eval_completed")
-                                    success = True
+                                    review_error = await _review_expectation_error(
+                                        item=item,
+                                        spec=spec,
+                                        session_id=session_id,
+                                    )
+                                    if review_error:
+                                        log.error(
+                                            "eval_failed_expected_decision_mismatch",
+                                            session_id=session_id,
+                                            error=review_error,
+                                        )
+                                    else:
+                                        log.info("eval_completed")
+                                        success = True
                             break
 
                         if status == EpisodeStatus.FAILED:
-                            log.error("eval_failed", session_id=session_id)
+                            episode = await _fetch_episode(client, episode_id)
+                            missing_traces = _missing_required_traces(
+                                spec.required_trace_names, episode
+                            )
+                            if missing_traces:
+                                log.error(
+                                    "eval_failed_missing_traces",
+                                    missing_traces=missing_traces,
+                                    session_id=session_id,
+                                )
+                            else:
+                                review_error = await _review_expectation_error(
+                                    item=item,
+                                    spec=spec,
+                                    session_id=session_id,
+                                )
+                                if review_error:
+                                    log.error(
+                                        "eval_failed",
+                                        session_id=session_id,
+                                        error=review_error,
+                                    )
+                                elif (
+                                    item.expected_decision is not None
+                                    and item.expected_decision
+                                    != ReviewDecision.APPROVED
+                                ):
+                                    log.info("eval_failed_as_expected")
+                                    success = True
+                                else:
+                                    log.error("eval_failed", session_id=session_id)
                             break
 
                         if status == EpisodeStatus.CANCELLED:
@@ -1447,6 +1593,17 @@ async def main():
                         )
                         for item_raw in data
                     ]
+                    if _requires_expected_review_decision(AGENT_SPECS[agent]):
+                        missing_expectations = [
+                            item.id
+                            for item in datasets[agent]
+                            if item.expected_decision is None
+                        ]
+                        if missing_expectations:
+                            raise ValueError(
+                                f"{agent.value} eval rows missing expected_decision: "
+                                + ", ".join(missing_expectations)
+                            )
                 except json.JSONDecodeError:
                     logger.warning("dataset_json_decode_failed", path=str(json_path))
         else:

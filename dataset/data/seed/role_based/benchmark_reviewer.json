@@ -3,6 +3,7 @@
     "id": "br-011-sideways-ball-review",
     "task": "Review the seeded benchmark deliverables in the workspace for the sideways-ball benchmark. Validate feasibility, objective consistency, and obvious simulation blockers using the existing handoff artifacts.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_reviewer/br-011-sideways-ball-review",
+    "expected_decision": "APPROVED",
     "expected_criteria": "Reviewer returns structured decision, flags infeasibility if present, and approves only if constraints/objectives are coherent."
   }
 ]
