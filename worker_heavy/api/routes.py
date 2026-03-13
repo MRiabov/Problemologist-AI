@@ -687,6 +687,7 @@ async def api_submit(
                         encoding="utf-8"
                     )
                 stage_manifest_paths = (
+                    ".manifests/benchmark_plan_review_manifest.json",
                     ".manifests/benchmark_review_manifest.json",
                     ".manifests/engineering_plan_review_manifest.json",
                     ".manifests/engineering_execution_review_manifest.json",

@@ -323,6 +323,7 @@ async def execute_agent_task(
                     }
                 elif agent_name in [
                     AgentName.BENCHMARK_PLANNER,
+                    AgentName.BENCHMARK_PLAN_REVIEWER,
                     AgentName.BENCHMARK_CODER,
                     AgentName.BENCHMARK_REVIEWER,
                 ]:
@@ -340,13 +341,22 @@ async def execute_agent_task(
                     session = GenerationSession(
                         session_id=u_session_id,
                         prompt=task,
-                        status=SessionStatus.PLANNING,
+                        status=(
+                            SessionStatus.EXECUTING
+                            if agent_name == AgentName.BENCHMARK_CODER
+                            else (
+                                SessionStatus.VALIDATING
+                                if agent_name == AgentName.BENCHMARK_REVIEWER
+                                else SessionStatus.PLANNING
+                            )
+                        ),
                     )
                     initial_input = {
                         "session": session,
                         "messages": [HumanMessage(content=task)],
                         "current_script": "",
                         "review_round": 0,
+                        "start_node": agent_name.value,
                         "episode_id": str(episode_id),
                     }
                 else:
@@ -618,8 +628,60 @@ async def execute_agent_task(
                                         session_id=session_id,
                                     )
 
+                    async def sync_workspace_review_dir():
+                        """Sync reviewer outputs from the session workspace, not the /reviews mount."""
+                        try:
+                            review_files = await client.list_files(
+                                "reviews", bypass_agent_permissions=True
+                            )
+                        except Exception as e:
+                            logger.error(
+                                "failed_to_list_workspace_reviews_during_sync",
+                                error=str(e),
+                                session_id=session_id,
+                            )
+                            return
+
+                        from controller.observability.middleware_helper import (
+                            broadcast_file_update,
+                        )
+
+                        for file_info in review_files:
+                            if file_info.is_dir:
+                                continue
+
+                            path = f"reviews/{file_info.name}"
+                            content = None
+                            try:
+                                content = await client.read_file(
+                                    path, bypass_agent_permissions=True
+                                )
+                            except Exception:
+                                content = None
+
+                            await broadcast_file_update(
+                                str(episode_id), path, content or ""
+                            )
+
+                            if s3_client and content is not None:
+                                try:
+                                    await asyncio.to_thread(
+                                        s3_client.put_object,
+                                        Bucket=asset_bucket,
+                                        Key=path,
+                                        Body=content.encode("utf-8"),
+                                    )
+                                except Exception as e:
+                                    logger.error(
+                                        "failed_to_upload_workspace_review_to_s3",
+                                        path=path,
+                                        error=str(e),
+                                        session_id=session_id,
+                                    )
+
                     simulation_success_text: str | None = None
                     await sync_dir("/")
+                    await sync_workspace_review_dir()
                     # .manifests is system-owned metadata and may be denied via role
                     # policy through routed backend calls. Read directly with
                     # permission bypass so reviewer manifests still appear in assets.
@@ -629,6 +691,7 @@ async def execute_agent_task(
                         )
 
                         manifest_paths = (
+                            ".manifests/benchmark_plan_review_manifest.json",
                             ".manifests/benchmark_review_manifest.json",
                             ".manifests/engineering_plan_review_manifest.json",
                             ".manifests/engineering_execution_review_manifest.json",
