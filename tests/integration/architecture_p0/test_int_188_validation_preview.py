@@ -14,6 +14,7 @@ from shared.models.schemas import (
     BenchmarkDefinition,
     BoundingBox,
     Constraints,
+    ForbidZone,
     MovedObject,
     ObjectivesSection,
     PhysicsConfig,
@@ -74,6 +75,50 @@ def _default_objectives() -> BenchmarkDefinition:
         constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
         benchmark_parts=_default_benchmark_parts(),
     )
+
+
+def _zone_entry_for_label(
+    legend: list[dict[str, object]], label_prefix: str
+) -> dict[str, object] | None:
+    for entry in legend:
+        semantic_label = str(entry.get("semantic_label") or "")
+        instance_name = str(entry.get("instance_name") or "")
+        if semantic_label.startswith(label_prefix) or instance_name.startswith(
+            label_prefix
+        ):
+            return entry
+    return None
+
+
+def _mask_from_legend_color(
+    segmentation_image: np.ndarray, legend_entry: dict[str, object]
+) -> np.ndarray:
+    color = np.array(legend_entry["color_rgb"], dtype=np.uint8)
+    return np.all(segmentation_image == color, axis=2)
+
+
+def _assert_zone_tint(
+    rgb_image: np.ndarray,
+    segmentation_image: np.ndarray,
+    legend_entry: dict[str, object],
+    zone_type: str,
+) -> None:
+    mask = _mask_from_legend_color(segmentation_image, legend_entry)
+    assert mask.any(), legend_entry
+    mean_rgb = rgb_image[mask].mean(axis=0)
+    red, green, blue = mean_rgb.tolist()
+
+    if zone_type == "goal":
+        assert green > red + 15.0, mean_rgb
+        assert green > blue + 15.0, mean_rgb
+        return
+    if zone_type == "forbid":
+        assert red > green + 15.0, mean_rgb
+        assert red > blue + 15.0, mean_rgb
+        return
+
+    assert abs(red - green) < 18.0, mean_rgb
+    assert abs(green - blue) < 18.0, mean_rgb
 
 
 async def _write_standard_validation_inputs(
@@ -158,8 +203,14 @@ def build():
 
         objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
-                goal_zone=BoundingBox(min=(12.0, 12.0, 0.0), max=(16.0, 16.0, 6.0)),
-                forbid_zones=[],
+                goal_zone=BoundingBox(min=(10.0, -20.0, 0.0), max=(20.0, 20.0, 20.0)),
+                forbid_zones=[
+                    ForbidZone(
+                        name="preview_blocker",
+                        min=(-20.0, -20.0, 0.0),
+                        max=(-10.0, 20.0, 20.0),
+                    )
+                ],
                 build_zone=BoundingBox(min=(-20.0, -20.0, 0.0), max=(20.0, 20.0, 30.0)),
             ),
             physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
@@ -255,6 +306,60 @@ def build():
         first_legend_entry = segmentation_meta["segmentation_legend"][0]
         assert first_legend_entry["semantic_label"], first_legend_entry
         assert first_legend_entry["instance_id"], first_legend_entry
+
+        zone_checks = {
+            "zone_goal": "goal",
+            "zone_forbid": "forbid",
+            "zone_build": "build",
+        }
+        verified_zones: set[str] = set()
+        for rgb_name, segmentation_name in zip(
+            rgb_renders, segmentation_renders, strict=True
+        ):
+            segmentation_meta = manifest["artifacts"][f"renders/{segmentation_name}"]
+            legend = segmentation_meta["segmentation_legend"]
+            if not legend:
+                continue
+
+            rgb_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/read_blob",
+                json=ReadFileRequest(path=f"renders/{rgb_name}").model_dump(
+                    mode="json"
+                ),
+                headers=headers,
+            )
+            assert rgb_resp.status_code == 200, rgb_resp.text
+            rgb_image = np.array(
+                Image.open(io.BytesIO(rgb_resp.content)).convert("RGB")
+            )
+
+            segmentation_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/read_blob",
+                json=ReadFileRequest(path=f"renders/{segmentation_name}").model_dump(
+                    mode="json"
+                ),
+                headers=headers,
+            )
+            assert segmentation_resp.status_code == 200, segmentation_resp.text
+            segmentation_image = np.array(
+                Image.open(io.BytesIO(segmentation_resp.content)).convert("RGB")
+            )
+
+            for zone_label, zone_type in zone_checks.items():
+                if zone_label in verified_zones:
+                    continue
+                legend_entry = _zone_entry_for_label(legend, zone_label)
+                if legend_entry is None:
+                    continue
+                _assert_zone_tint(
+                    rgb_image,
+                    segmentation_image,
+                    legend_entry,
+                    zone_type,
+                )
+                verified_zones.add(zone_label)
+
+        assert verified_zones == set(zone_checks), verified_zones
 
         for render_name in (
             rgb_renders[0],

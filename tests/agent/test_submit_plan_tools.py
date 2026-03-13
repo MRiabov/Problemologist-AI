@@ -1,7 +1,14 @@
+import uuid
+
 import pytest
+from langchain_core.messages import AIMessage
 
 from controller.agent.benchmark.tools import get_benchmark_planner_tools
-from controller.agent.tools import get_engineer_planner_tools
+from controller.agent.state import AgentState
+from controller.agent.tools import (
+    _invoke_cots_search_subagent,
+    get_engineer_planner_tools,
+)
 from shared.enums import AgentName
 
 
@@ -102,7 +109,38 @@ async def test_benchmark_submit_plan_validates_and_submits(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_engineer_tools_expose_cots_subagent_wrapper_not_raw_search(monkeypatch):
-    fs = _FakeFs({})
+    fs = _FakeFs(
+        {
+            "assembly_definition.yaml": """
+constraints:
+  benchmark_max_unit_cost_usd: 100.0
+  benchmark_max_weight_g: 1000.0
+  planner_target_max_unit_cost_usd: 50.0
+  planner_target_max_weight_g: 500.0
+manufactured_parts:
+  - part_name: bracket
+    part_id: bracket
+    manufacturing_method: CNC
+    material_id: aluminum_6061
+    quantity: 1
+    part_volume_mm3: 1000.0
+    stock_bbox_mm: {x: 10.0, y: 10.0, z: 10.0}
+    stock_volume_mm3: 1000.0
+    removed_volume_mm3: 0.0
+    estimated_unit_cost_usd: 5.0
+cots_parts: []
+environment_drill_operations: []
+final_assembly:
+  - name: bracket
+    config:
+      dofs: []
+totals:
+  estimated_unit_cost_usd: 5.0
+  estimated_weight_g: 25.0
+  estimate_confidence: high
+"""
+        }
+    )
     tools = get_engineer_planner_tools(fs, session_id="s1")
     tool_names = {getattr(tool, "__name__", "") for tool in tools}
 
@@ -111,19 +149,85 @@ async def test_engineer_tools_expose_cots_subagent_wrapper_not_raw_search(monkey
 
     captured = {}
 
-    class _FakeAgent:
-        async def ainvoke(self, payload):
-            captured["payload"] = payload
-            return {"messages": [type("Msg", (), {"content": "candidate result"})()]}
+    async def _fake_cots_search_node(state):
+        captured["task"] = state.task
+        return state.model_copy(
+            update={"messages": [AIMessage(content="candidate result")]}
+        )
 
     monkeypatch.setattr(
-        "controller.agent.tools.create_cots_search_agent",
-        lambda _model_name: _FakeAgent(),
+        "controller.agent.nodes.cots_search.cots_search_node",
+        _fake_cots_search_node,
     )
 
     invoke_cots = _get_tool_by_name(tools, "invoke_cots_search_subagent")
     result = await invoke_cots(query="M3 bolt", category="fastener", limit=3)
 
     assert result == "candidate result"
-    assert "M3 bolt" in captured["payload"]["task"]
-    assert "category=fastener" in captured["payload"]["task"]
+    assert "M3 bolt" in captured["task"]
+    assert "category=fastener" in captured["task"]
+
+
+@pytest.mark.asyncio
+async def test_benchmark_planner_cots_guard_uses_exact_phrase_matching(monkeypatch):
+    fs = _FakeFs(
+        {
+            "benchmark_definition.yaml": """
+benchmark_parts:
+  - part_id: environment_fixture
+    label: environment_fixture
+moved_object:
+  label: ball
+  shape: sphere
+"""
+        }
+    )
+    tools = get_benchmark_planner_tools(fs, session_id="s1")
+    invoke_cots = _get_tool_by_name(tools, "invoke_cots_search_subagent")
+
+    captured: dict[str, str] = {}
+
+    async def _fake_invoke(**kwargs):
+        captured["query"] = kwargs["query"]
+        return "candidate result"
+
+    monkeypatch.setattr(
+        "controller.agent.benchmark.tools._invoke_cots_search_subagent",
+        _fake_invoke,
+    )
+
+    with pytest.raises(ValueError, match="Benchmark-owned fixtures"):
+        await invoke_cots(
+            query="price environment fixture bracket", category="fastener"
+        )
+
+    result = await invoke_cots(query="fixtured bracket", category="fastener")
+    assert result == "candidate result"
+    assert captured["query"] == "fixtured bracket"
+
+
+@pytest.mark.asyncio
+async def test_nested_cots_search_uses_uuid_episode_id(monkeypatch):
+    captured: dict[str, str] = {}
+
+    async def _fake_cots_search_node(state: AgentState):
+        captured["session_id"] = state.session_id
+        captured["episode_id"] = state.episode_id
+        return state.model_copy(
+            update={"messages": [AIMessage(content="candidate result")]}
+        )
+
+    monkeypatch.setattr(
+        "controller.agent.nodes.cots_search.cots_search_node",
+        _fake_cots_search_node,
+    )
+
+    result = await _invoke_cots_search_subagent(
+        query="M3 bolt",
+        category="fastener",
+        session_id="INT-012-readable-session",
+    )
+
+    assert result == "candidate result"
+    assert captured["session_id"] == "INT-012-readable-session"
+    uuid.UUID(captured["episode_id"])

@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from shared.cots.agent import create_cots_search_agent, search_cots_catalog
+from shared.cots.agent import search_cots_catalog
 from shared.cots.models import COTSItem
 
 
@@ -47,8 +47,3 @@ def test_search_cots_catalog_no_results():
         result = search_cots_catalog.invoke({"query": "nonexistent"})
 
         assert "No parts found" in result
-
-
-def test_create_cots_search_agent():
-    agent = create_cots_search_agent("gpt-4o")
-    assert agent is not None

@@ -1,15 +1,120 @@
 import asyncio
+import os
+import tempfile
 import uuid
 
+import cv2
+import numpy as np
 import pytest
+import yaml
 from httpx import AsyncClient
 
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus
+from shared.models.schemas import (
+    BenchmarkDefinition,
+    BoundingBox,
+    Constraints,
+    ForbidZone,
+    MovedObject,
+    ObjectivesSection,
+    PhysicsConfig,
+)
+from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import (
+    BenchmarkToolRequest,
+    BenchmarkToolResponse,
+    WriteFileRequest,
+)
 from tests.integration.contracts import BackupWorkflowResponse
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
+
+
+def _default_benchmark_parts():
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {"fixed": True, "material_id": "aluminum_6061"},
+        }
+    ]
+
+
+def _zone_video_script() -> str:
+    return """
+from build123d import *
+from shared.models.schemas import PartMetadata
+
+def build():
+    part = Sphere(3).move(Location((0, 0, 10)))
+    part.label = "target_ball"
+    part.metadata = PartMetadata(material_id="hardwood")
+    return part
+"""
+
+
+def _zone_video_objectives() -> BenchmarkDefinition:
+    return BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(10.0, -20.0, 0.0), max=(20.0, 20.0, 20.0)),
+            forbid_zones=[
+                ForbidZone(
+                    name="video_blocker",
+                    min=(-20.0, -20.0, 0.0),
+                    max=(-10.0, 20.0, 20.0),
+                )
+            ],
+            build_zone=BoundingBox(min=(-25.0, -25.0, 0.0), max=(25.0, 25.0, 35.0)),
+        ),
+        physics=PhysicsConfig(backend=SimulatorBackendType.MUJOCO),
+        simulation_bounds=BoundingBox(
+            min=(-40.0, -40.0, -10.0), max=(40.0, 40.0, 40.0)
+        ),
+        moved_object=MovedObject(
+            label="target_ball",
+            shape="sphere",
+            start_position=(0.0, 0.0, 10.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+        benchmark_parts=_default_benchmark_parts(),
+    )
+
+
+def _read_first_video_frame(video_bytes: bytes) -> np.ndarray:
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as tmp:
+        tmp.write(video_bytes)
+        tmp.flush()
+        capture = cv2.VideoCapture(tmp.name)
+        ok, frame_bgr = capture.read()
+        capture.release()
+    assert ok and frame_bgr is not None, (
+        "Failed to decode first frame from simulation video"
+    )
+    return cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+
+def _count_zone_pixels(frame_rgb: np.ndarray, zone_type: str) -> int:
+    red = frame_rgb[..., 0].astype(np.int16)
+    green = frame_rgb[..., 1].astype(np.int16)
+    blue = frame_rgb[..., 2].astype(np.int16)
+    if zone_type == "goal":
+        mask = (green > red + 20) & (green > blue + 20) & (green > 80)
+    elif zone_type == "forbid":
+        mask = (red > green + 20) & (red > blue + 20) & (red > 80)
+    else:
+        mean = (red + green + blue) / 3.0
+        mask = (
+            (np.abs(red - green) < 18)
+            & (np.abs(green - blue) < 18)
+            & (mean > 70)
+            & (mean < 210)
+        )
+    return int(mask.sum())
 
 
 @pytest.mark.integration_p1
@@ -67,6 +172,76 @@ async def test_render_artifact_generation_int_039():
             pytest.skip(
                 f"No discoverable visualization artifacts in this run. Assets: {assets}"
             )
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_render_artifact_generation_int_039_simulation_video_shows_objective_boxes():
+    """INT-039: simulation video artifacts retain goal/forbid/build box visuals."""
+    async with AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-039-{uuid.uuid4().hex[:8]}"
+        headers = {"X-Session-ID": session_id}
+
+        write_script_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content=_zone_video_script(),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_script_resp.status_code == 200, write_script_resp.text
+
+        objectives = _zone_video_objectives()
+        write_objectives_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.safe_dump(
+                    objectives.model_dump(mode="json"), sort_keys=False
+                ),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_objectives_resp.status_code == 200, write_objectives_resp.text
+
+        simulate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                backend=SimulatorBackendType.MUJOCO,
+                smoke_test_mode=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=300.0,
+        )
+        assert simulate_resp.status_code == 200, simulate_resp.text
+        simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+        assert simulate_data.artifacts is not None, simulate_data
+
+        video_path = next(
+            (
+                path
+                for path in simulate_data.artifacts.render_paths
+                if path.endswith(".mp4")
+            ),
+            None,
+        )
+        assert video_path is not None, simulate_data.artifacts.render_paths
+
+        video_resp = await client.get(
+            f"{WORKER_LIGHT_URL}/assets/{video_path}",
+            headers=headers,
+            timeout=300.0,
+        )
+        assert video_resp.status_code == 200, video_resp.text
+        frame_rgb = _read_first_video_frame(video_resp.content)
+
+        assert _count_zone_pixels(frame_rgb, "goal") > 50
+        assert _count_zone_pixels(frame_rgb, "forbid") > 50
+        assert _count_zone_pixels(frame_rgb, "build") > 50
 
 
 @pytest.mark.integration_p1

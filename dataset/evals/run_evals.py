@@ -11,11 +11,11 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pyrate_limiter import Duration, Limiter, Rate
 
 # Ensure repository root is importable when script is executed as a file.
@@ -78,8 +78,39 @@ class EvalDatasetItem(BaseModel):
     seed_dataset: Path | None = None
     seed_artifact_dir: Path | None = None
     seed_files: dict[str, str] | None = None
+    git_eval: "GitEvalConfig | None" = None
 
     model_config = ConfigDict(extra="allow")
+
+
+class GitStatusExpectation(BaseModel):
+    branch: str | None = None
+    is_dirty: bool | None = None
+    is_merging: bool | None = None
+    conflicts: list[str] | None = None
+
+
+class GitConflictResolutionStep(BaseModel):
+    file_path: str
+    strategy: Literal["ours", "theirs"]
+
+
+class GitEvalConfig(BaseModel):
+    setup_commands: list[str] = Field(default_factory=list)
+    commit_message: str | None = None
+    expect_commit_hash: bool | None = None
+    resolve_conflicts: list[GitConflictResolutionStep] = Field(default_factory=list)
+    abort_merge: bool = False
+    merge_complete_message: str | None = None
+    expected_status: GitStatusExpectation | None = None
+
+    @model_validator(mode="after")
+    def validate_merge_actions(self) -> "GitEvalConfig":
+        if self.abort_merge and self.merge_complete_message is not None:
+            raise ValueError(
+                "git_eval.abort_merge and git_eval.merge_complete_message are mutually exclusive"
+            )
+        return self
 
 
 def _truncate_text(value: str, *, limit: int = 160) -> str:
@@ -316,6 +347,11 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ELECTRONICS_REVIEWER,),
         start_node=AgentName.ELECTRONICS_REVIEWER,
+    ),
+    AgentName.COTS_SEARCH: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.COTS_SEARCH,
+        required_trace_names=(AgentName.COTS_SEARCH,),
     ),
     # Sidecars
     AgentName.SKILL_AGENT: AgentEvalSpec(
@@ -686,6 +722,53 @@ async def _completion_contract_error(
         await worker.aclose()
 
 
+def _validate_git_status(
+    status: Any, expectation: GitStatusExpectation | None
+) -> str | None:
+    if getattr(status, "error", None):
+        return f"git status returned error: {status.error}"
+
+    if expectation is None:
+        return None
+
+    if expectation.branch is not None and status.branch != expectation.branch:
+        return f"expected branch {expectation.branch!r}, got {status.branch!r}"
+
+    if expectation.is_dirty is not None and status.is_dirty != expectation.is_dirty:
+        return f"expected is_dirty={expectation.is_dirty}, got {status.is_dirty}"
+
+    if (
+        expectation.is_merging is not None
+        and status.is_merging != expectation.is_merging
+    ):
+        return f"expected is_merging={expectation.is_merging}, got {status.is_merging}"
+
+    if expectation.conflicts is not None:
+        actual_conflicts = sorted(status.conflicts)
+        expected_conflicts = sorted(expectation.conflicts)
+        if actual_conflicts != expected_conflicts:
+            return f"expected conflicts={expected_conflicts}, got {actual_conflicts}"
+
+    return None
+
+
+def _validate_git_commit_result(
+    *,
+    commit: Any,
+    expect_commit_hash: bool,
+    action_label: str,
+) -> str | None:
+    if not commit.success:
+        return f"{action_label} returned success=false: {commit.message}"
+
+    has_hash = commit.commit_hash is not None
+    if expect_commit_hash and not has_hash:
+        return f"{action_label} completed without a commit hash"
+    if not expect_commit_hash and has_hash:
+        return f"{action_label} unexpectedly produced commit hash {commit.commit_hash}"
+    return None
+
+
 async def _run_git_eval(
     item: EvalDatasetItem, stats: dict[AgentName, Any], agent_name: AgentName
 ):
@@ -693,6 +776,7 @@ async def _run_git_eval(
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
     log.info("eval_start")
 
+    git_eval = item.git_eval or GitEvalConfig()
     session_id = f"eval-git-{task_id}-{uuid.uuid4().hex[:8]}"
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
 
@@ -701,25 +785,105 @@ async def _run_git_eval(
 
     try:
         await worker.git_init()
-        await worker.write_file(
-            "git_eval_note.md",
-            f"# Git Eval {task_id}\n\n{item.task.strip()}\n",
-            overwrite=True,
-        )
-        commit = await worker.git_commit(message=f"eval({task_id}): git agent baseline")
-        status = await worker.git_status()
+        if item.seed_artifact_dir is not None or item.seed_files:
+            await _seed_eval_workspace(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+            )
 
-        if not commit.success:
-            failure_reason = "git commit endpoint returned success=false"
-        elif commit.commit_hash is None:
-            failure_reason = "git commit produced no commit hash"
-        elif getattr(status, "error", None):
-            failure_reason = f"git status returned error: {status.error}"
-        else:
+        if (
+            not git_eval.setup_commands
+            and item.seed_artifact_dir is None
+            and not item.seed_files
+        ):
+            await worker.write_file(
+                "git_eval_note.md",
+                f"# Git Eval {task_id}\n\n{item.task.strip()}\n",
+                overwrite=True,
+            )
+
+        for command in git_eval.setup_commands:
+            result = await worker.execute_command(command, timeout=60)
+            if result.timed_out:
+                failure_reason = f"setup command timed out: {command}"
+                break
+            if result.exit_code != 0:
+                stderr = _truncate_text(result.stderr or result.stdout or "")
+                failure_reason = (
+                    f"setup command failed with exit_code={result.exit_code}: "
+                    f"{command} ({stderr})"
+                )
+                break
+
+        requires_merge_flow = bool(
+            git_eval.resolve_conflicts
+            or git_eval.abort_merge
+            or git_eval.merge_complete_message is not None
+        )
+        if not failure_reason and requires_merge_flow:
+            merge_status = await worker.git_status()
+            failure_reason = _validate_git_status(merge_status, None)
+            if not failure_reason:
+                if not merge_status.is_merging:
+                    failure_reason = "expected setup to leave repository in merge state"
+                elif not merge_status.conflicts:
+                    failure_reason = (
+                        "expected setup to create conflicted files before merge action"
+                    )
+
+        if not failure_reason:
+            for step in git_eval.resolve_conflicts:
+                resolved = await worker.git_resolve(
+                    file_path=step.file_path,
+                    strategy=step.strategy,
+                )
+                if not resolved:
+                    failure_reason = (
+                        f"git resolve failed for {step.file_path} with strategy "
+                        f"{step.strategy}"
+                    )
+                    break
+
+        if not failure_reason and git_eval.abort_merge:
+            aborted = await worker.git_merge_abort()
+            if not aborted:
+                failure_reason = "git merge abort returned success=false"
+
+        commit = None
+        if not failure_reason and not git_eval.abort_merge:
+            if git_eval.merge_complete_message is not None:
+                commit = await worker.git_merge_complete(
+                    message=git_eval.merge_complete_message
+                )
+                action_label = "git merge complete"
+            else:
+                commit = await worker.git_commit(
+                    message=git_eval.commit_message
+                    or f"eval({task_id}): git agent baseline"
+                )
+                action_label = "git commit"
+
+            expected_hash = git_eval.expect_commit_hash
+            if expected_hash is None:
+                expected_hash = True
+            failure_reason = _validate_git_commit_result(
+                commit=commit,
+                expect_commit_hash=expected_hash,
+                action_label=action_label,
+            )
+
+        if not failure_reason:
+            status = await worker.git_status()
+            failure_reason = _validate_git_status(status, git_eval.expected_status)
+
+        if not failure_reason:
             success = True
             log.info("eval_completed", session_id=session_id)
     except Exception as exc:
         failure_reason = str(exc)
+    finally:
+        await worker.aclose()
 
     if not success:
         log.error("eval_failed", reason=failure_reason, session_id=session_id)
