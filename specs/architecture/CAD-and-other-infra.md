@@ -145,6 +145,7 @@ I suggest using a subagent for this. Give a prompt of what's necessary and let t
 
 Both planner agent and engineer can only prompt the searching agent for searching.
 
+### Drillability and fasteners
 
 ## Other infra
 
