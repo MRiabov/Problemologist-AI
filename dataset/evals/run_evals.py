@@ -26,12 +26,14 @@ if str(ROOT) not in sys.path:
 
 from controller.agent.node_entry_validation import (  # noqa: E402
     BENCHMARK_CODER_HANDOVER_CHECK,
+    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ValidationGraph,
     benchmark_coder_handover_custom_check_from_session_id,
+    benchmark_plan_reviewer_handover_custom_check_from_session_id,
     build_benchmark_node_contracts,
     build_engineer_node_contracts,
     evaluate_node_entry_contract,
@@ -304,6 +306,13 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         required_trace_names=(AgentName.BENCHMARK_CODER,),
         start_node=AgentName.BENCHMARK_CODER,
     ),
+    AgentName.BENCHMARK_PLAN_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_PLANNER,
+        required_trace_names=(AgentName.BENCHMARK_PLAN_REVIEWER,),
+        start_node=AgentName.BENCHMARK_PLAN_REVIEWER,
+        review_filename_prefix="benchmark-plan-review-round",
+    ),
     AgentName.BENCHMARK_REVIEWER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_REVIEWER,
@@ -493,6 +502,13 @@ async def _preflight_seeded_entry_contract(
         return
 
     custom_checks = {
+        BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK: (
+            lambda *, contract, state: (  # noqa: ARG005
+                benchmark_plan_reviewer_handover_custom_check_from_session_id(
+                    session_id=session_id,
+                )
+            )
+        ),
         BENCHMARK_CODER_HANDOVER_CHECK: (
             lambda *, contract, state: (
                 benchmark_coder_handover_custom_check_from_session_id(
@@ -581,7 +597,9 @@ def _episode_terminal(status: str | None) -> bool:
 
 
 def _planned_counts_as_success(agent_name: AgentName, spec: AgentEvalSpec) -> bool:
-    if spec.mode == EvalMode.BENCHMARK:
+    if agent_name == AgentName.BENCHMARK_PLAN_REVIEWER:
+        return True
+    if spec.mode == EvalMode.BENCHMARK and not _requires_expected_review_decision(spec):
         return True
     return agent_name in {
         AgentName.ENGINEER_PLANNER,
@@ -592,6 +610,15 @@ def _planned_counts_as_success(agent_name: AgentName, spec: AgentEvalSpec) -> bo
 
 def _requires_expected_review_decision(spec: AgentEvalSpec) -> bool:
     return spec.review_filename_prefix is not None
+
+
+def _review_artifact_pending(error: str | None) -> bool:
+    if not error:
+        return False
+    return error in {
+        "reviews/ directory not found",
+        "missing persisted review frontmatter",
+    } or error.startswith("no persisted review file matching ")
 
 
 async def _load_latest_review_frontmatter(
@@ -1182,6 +1209,31 @@ async def run_single_eval(
                                 _append_readable_log_line(result_text)
                                 seen_trace_results[trace_id] = result_text
 
+                        if _requires_expected_review_decision(spec):
+                            episode = await _fetch_episode(client, episode_id)
+                            missing_traces = _missing_required_traces(
+                                spec.required_trace_names, episode
+                            )
+                            if not missing_traces:
+                                review_error = await _review_expectation_error(
+                                    item=item,
+                                    spec=spec,
+                                    session_id=session_id,
+                                )
+                                if review_error is None:
+                                    log.info(
+                                        "eval_review_decision_matched", status=status
+                                    )
+                                    success = True
+                                    break
+                                if not _review_artifact_pending(review_error):
+                                    log.error(
+                                        "eval_failed_expected_decision_mismatch",
+                                        session_id=session_id,
+                                        error=review_error,
+                                    )
+                                    break
+
                         if (
                             status == EpisodeStatus.PLANNED
                             and _planned_counts_as_success(agent_name, spec)
@@ -1202,7 +1254,10 @@ async def run_single_eval(
                                     success = True
                                 break
 
-                            if spec.mode == EvalMode.BENCHMARK:
+                            if (
+                                spec.mode == EvalMode.BENCHMARK
+                                and not _requires_expected_review_decision(spec)
+                            ):
                                 log.info("eval_planned_confirming")
                                 confirm_url = (
                                     f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
@@ -1239,8 +1294,20 @@ async def run_single_eval(
                                             error=completion_error,
                                         )
                                     else:
-                                        log.info("eval_planned")
-                                        success = True
+                                        review_error = await _review_expectation_error(
+                                            item=item,
+                                            spec=spec,
+                                            session_id=session_id,
+                                        )
+                                        if review_error:
+                                            log.error(
+                                                "eval_failed_expected_decision_mismatch",
+                                                session_id=session_id,
+                                                error=review_error,
+                                            )
+                                        else:
+                                            log.info("eval_planned")
+                                            success = True
                                 break
 
                         if status == EpisodeStatus.COMPLETED:
