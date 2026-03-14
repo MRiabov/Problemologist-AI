@@ -1,0 +1,23 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "engineering_execution_reviewer",
+  "timestamp": "2026-03-11T12:00:00Z",
+  "session_id": "seed-eer-012-sideways-transfer-fake-cots",
+  "revision": "r1",
+  "script_path": "script.py",
+  "script_sha256": "13998b06fd7056728f03d8f5377340d4f028f5087532f5f705503f70eb2d317a",
+  "validation_success": true,
+  "validation_timestamp": 1710151320,
+  "simulation_success": true,
+  "simulation_summary": "Goal achieved: projectile_ball reached the goal zone, but the implementation references a non-catalog ghost gearmotor.",
+  "simulation_timestamp": 1710151365,
+  "goal_reached": true,
+  "renders": [
+    "renders/images/context_view_01.png",
+    "renders/images/context_view_02.png"
+  ],
+  "mjcf_path": "solution.xml",
+  "cad_path": "script.py",
+  "objectives_path": "benchmark_definition.yaml",
+  "assembly_definition_path": "assembly_definition.yaml"
+}

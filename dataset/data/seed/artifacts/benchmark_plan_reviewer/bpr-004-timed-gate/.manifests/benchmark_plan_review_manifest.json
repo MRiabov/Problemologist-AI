@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-004-timed-gate",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "2c7fa492c494195070483b583d9025cdd26c706a41989a6ca2b3550310a4fe67",
+    "benchmark_definition.yaml": "a5259867fa9cd89cab342e88606306636c54529555d4faba0cb5b12a2784dc7c",
+    "plan.md": "8e16c01b6640d9bdaf320ee4cc0643652693b58ad0200db38a93c7e91f061f03",
+    "todo.md": "53bfddc6c2502edc877179ce48d4e987ea95de1565f230da1b0e40f772349a27"
+  }
+}

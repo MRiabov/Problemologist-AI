@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-003-central-forbid-route",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "c723a99b12cda93c123b11a462d29bc494d3ed64eeee537bf94ca08a5bc158a6",
+    "benchmark_definition.yaml": "da17a4f6de78b574ed66856eff499cdbc11787c01e31821eda5fb93924424cae",
+    "plan.md": "5ba267503ab94d362ccc668c3025904a96aa58797dfc0453298d15736cbdb9e7",
+    "todo.md": "4eac21fde09ee9e7c1590b6b5dc4c2c2b0b859b558839b72e52c23a814f6d289"
+  }
+}

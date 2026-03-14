@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-006-low-friction-cube",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "6b7b16908f294dba45c5f486158066c2e5ba7eb2f3dbd1171cabb53101c7e331",
+    "benchmark_definition.yaml": "ec3c17476cae9ec361fafb9833b9d1881502c8cae784e4683c655acfcdf3ebe0",
+    "plan.md": "e4725ece34562dddec19b4c410bcaad2c05f3b90b20887424496cd477e69e792",
+    "todo.md": "0e4dda95f989ee9b431ca4766bbd12ece2f55a7797bc6bec3e026ab3b6030413"
+  }
+}

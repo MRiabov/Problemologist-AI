@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-012-gap-bridge-hidden-dof",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "ef4390d5a1f524b9d87bd3ffd50aaa5a8f6262e153be3867b22a09f5992784a3",
+    "benchmark_definition.yaml": "dbf273a4183f081e6f1a676877074174cc77a5ab95c7ce8e78ccc51cdac684da",
+    "plan.md": "1805cb572d6f1df87f45aa3f868505da136eb6020105669d6212b5cfbc6f195d",
+    "todo.md": "8fe76a5e33f6c3d26f4dcc40c14cedee084349f8032c433e4aea02365e818451"
+  }
+}

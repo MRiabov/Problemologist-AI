@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-002-gap-bridge",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "d95abfbb36b91cfb1dbc493077f63f347e94cc254fe0c8632097ad6022a29cad",
+    "benchmark_definition.yaml": "dbf273a4183f081e6f1a676877074174cc77a5ab95c7ce8e78ccc51cdac684da",
+    "plan.md": "48680638dfe87f0baab96712f3fcd70897e5fb5153d7e605d630891758e6e195",
+    "todo.md": "9ea08f757943686d4454b13d07d8ae10eef5105b93112699856a3cc73335d7d7"
+  }
+}

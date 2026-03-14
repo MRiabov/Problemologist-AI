@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-018-narrow-goal-throat-mismatch",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "ed830d46395cee39a84e683880463db201965fa35787e56ae70f88fd68b0e54b",
+    "benchmark_definition.yaml": "c826cbb918f172fc1e9e9a28de6fa2ca1e1fa8846e7487db508f0a311097015e",
+    "plan.md": "e03b1c619ef5ba7b3e1c94156d8a15719c416bdb7ed2702d625ae6d47cd53bc6",
+    "todo.md": "a43adfbb80c4e5d596a30f6276c11cd0453a5b9d833abfa204ac4039e80382f8"
+  }
+}

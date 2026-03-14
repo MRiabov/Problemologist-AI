@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-019-fast-transfer-hidden-brake-axis",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "ec2714aba522c9c6da3450c4f56ff1e5ee21e6e8ad4f6e02c0fdaf571f03d9d2",
+    "benchmark_definition.yaml": "1135e2b8895d4d7e8c523ce66fcb9b2ac3f2858b95e4514d8df3a706b042ceaa",
+    "plan.md": "21377d9f79a2612c1d42825cb0d9fc50de3e6ed4b9e0dc3e1bb8ebcfbbccde19",
+    "todo.md": "552e6dbbec68a244f497708d1f0204fcf8fc499202b920c157f9f9809db1e2bc"
+  }
+}

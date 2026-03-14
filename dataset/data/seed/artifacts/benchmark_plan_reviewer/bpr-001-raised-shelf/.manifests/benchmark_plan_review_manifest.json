@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-001-raised-shelf",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "3d094a485d89393538483ea7907c7b94dcd243d28c035ff955d5015129c6d0c0",
+    "benchmark_definition.yaml": "38ce4f068c95bd6371b62c5285349874d3bef69c9cb13e9d34559a4cac0af1ef",
+    "plan.md": "b683cbd9210e53a97610d4c8f0e7f2f22bf193f394cd302c68c3068dc2a1226b",
+    "todo.md": "c44dd7a83a88235433eb9c7e960187a0218128bece28c6febb787ce1e85adfb7"
+  }
+}

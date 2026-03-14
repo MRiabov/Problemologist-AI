@@ -68,5 +68,19 @@
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_plan_reviewer/epr-010-diverter-gate-wiring",
     "expected_decision": "APPROVED",
     "expected_criteria": "Engineering plan reviewer starts from a contract-valid seeded handoff for the electronics-powered diverter gate and issues a structured decision tied to feasibility, budgets, and justified DOFs."
+  },
+  {
+    "id": "epr-011-sideways-transfer-budget-overrun",
+    "task": "Review the seeded planner handoff for the sideways transfer reviewer stress case. Confirm the plan package is internally consistent across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, identify whether the final assembly metadata sneaks in extra motion beyond the planned single driven roller axis, and return a structured engineering plan review decision grounded in the seeded artifacts.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_plan_reviewer/epr-011-sideways-transfer-budget-overrun",
+    "expected_decision": "REJECT_PLAN",
+    "expected_criteria": "Engineering plan reviewer rejects planner handoffs when the seeded assembly metadata introduces extra or unjustified DOFs that conflict with the single-axis plan."
+  },
+  {
+    "id": "epr-012-sideways-transfer-fake-cots",
+    "task": "Review the seeded planner handoff for the sideways transfer fake-COTS variant. Confirm the plan package is internally consistent across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, verify that the selected motor remains a real catalog-backed COTS part rather than an invented placeholder, and return a structured engineering plan review decision grounded in the seeded artifacts.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_plan_reviewer/epr-012-sideways-transfer-fake-cots",
+    "expected_decision": "REJECT_PLAN",
+    "expected_criteria": "Engineering plan reviewer rejects planner handoffs when the seeded assembly references invented or non-catalog COTS parts."
   }
 ]

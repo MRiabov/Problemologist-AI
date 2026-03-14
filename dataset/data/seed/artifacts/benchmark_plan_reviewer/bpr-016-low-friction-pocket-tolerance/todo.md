@@ -1,0 +1,5 @@
+- [x] Keep the blocker and guide-wall geometry aligned across all planner artifacts.
+- [x] Preserve a wide upstream capture area before the goal pocket narrows.
+- [x] Keep the benchmark fully static with zero benchmark-side DOFs.
+- [x] Keep benchmark-local cost and weight under the declared customer caps.
+

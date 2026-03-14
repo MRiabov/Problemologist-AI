@@ -5,5 +5,19 @@
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_reviewer/br-011-sideways-ball-review",
     "expected_decision": "APPROVED",
     "expected_criteria": "Reviewer returns structured decision, flags infeasibility if present, and approves only if constraints/objectives are coherent."
+  },
+  {
+    "id": "br-012-sideways-ball-infeasible-goal",
+    "task": "Review the seeded benchmark deliverables in the workspace for the sideways-ball infeasible-goal variant. Validate feasibility, objective consistency, and obvious simulation blockers using the existing handoff artifacts, with particular attention to whether the seeded goal zone remains inside the benchmark build and simulation envelope.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_reviewer/br-012-sideways-ball-infeasible-goal",
+    "expected_decision": "REJECTED",
+    "expected_criteria": "Reviewer rejects benchmark packages when the seeded goal definition is internally inconsistent with the feasible build and simulation envelope."
+  },
+  {
+    "id": "br-013-sideways-ball-overlapping-goal-forbid",
+    "task": "Review the seeded benchmark deliverables in the workspace for the sideways-ball overlapping-goal-forbid variant. Validate feasibility, objective consistency, and obvious simulation blockers using the existing handoff artifacts, with particular attention to whether the seeded goal zone overlaps any forbid zone.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_reviewer/br-013-sideways-ball-overlapping-goal-forbid",
+    "expected_decision": "REJECTED",
+    "expected_criteria": "Reviewer rejects benchmark packages when seeded objective geometry is self-contradictory, including goal and forbid zone overlap."
   }
 ]

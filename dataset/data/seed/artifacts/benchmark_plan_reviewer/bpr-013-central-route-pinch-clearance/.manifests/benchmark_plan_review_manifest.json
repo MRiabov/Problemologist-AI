@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-013-central-route-pinch-clearance",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "c723a99b12cda93c123b11a462d29bc494d3ed64eeee537bf94ca08a5bc158a6",
+    "benchmark_definition.yaml": "da17a4f6de78b574ed66856eff499cdbc11787c01e31821eda5fb93924424cae",
+    "plan.md": "b5b0c8780e442e87fcea0f016fda36eccc8760c7b01fb71b1693488926b77a66",
+    "todo.md": "4eac21fde09ee9e7c1590b6b5dc4c2c2b0b859b558839b72e52c23a814f6d289"
+  }
+}

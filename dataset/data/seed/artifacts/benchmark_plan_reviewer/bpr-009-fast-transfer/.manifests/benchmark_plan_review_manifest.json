@@ -1,0 +1,12 @@
+{
+  "status": "ready_for_review",
+  "reviewer_stage": "benchmark_plan_reviewer",
+  "session_id": "seed-bpr-009-fast-transfer",
+  "planner_node_type": "benchmark_planner",
+  "artifact_hashes": {
+    "assembly_definition.yaml": "6ab251a2094d560fae8c5b2412e75526399f027a22483ad888b1cab5c4b3bd1e",
+    "benchmark_definition.yaml": "1135e2b8895d4d7e8c523ce66fcb9b2ac3f2858b95e4514d8df3a706b042ceaa",
+    "plan.md": "6a8a7aabf57be1de080da4fc6a79efbfa01bd98c7b41adad7902211e1eb6677a",
+    "todo.md": "b85ad6cf6fb1ef200f8deae95a16e8d756fc354d7815e9b2461bdb9399b4fd6a"
+  }
+}

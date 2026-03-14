@@ -68,5 +68,19 @@
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_execution_reviewer/eer-010-diverter-gate-wiring",
     "expected_decision": "APPROVED",
     "expected_criteria": "Engineering execution reviewer starts from a contract-valid seeded implementation package for the electronics-powered diverter gate, checks latest-revision evidence, and issues a structured decision about plan fidelity, robustness, and manufacturability."
+  },
+  {
+    "id": "eer-011-sideways-transfer-budget-overrun",
+    "task": "Review the seeded engineering execution package for the sideways transfer budget-overrun variant. Confirm the current `script.py`, planner artifacts, validation result, and simulation result all correspond to the latest revision, inspect the seeded render evidence when present, and determine whether the implemented assembly still respects the approved plan budget after the added guarding hardware. Return a structured engineering execution review decision grounded in the seeded evidence.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_execution_reviewer/eer-011-sideways-transfer-budget-overrun",
+    "expected_decision": "REJECT_CODE",
+    "expected_criteria": "Engineering execution reviewer rejects implementations that still function but materially diverge from the approved plan by exceeding the seeded cost budget."
+  },
+  {
+    "id": "eer-012-sideways-transfer-fake-cots",
+    "task": "Review the seeded engineering execution package for the sideways transfer fake-COTS variant. Confirm the current `script.py`, planner artifacts, validation result, and simulation result all correspond to the latest revision, inspect the seeded render evidence when present, and determine whether the implemented assembly still uses real catalog-backed COTS hardware rather than invented placeholders. Return a structured engineering execution review decision grounded in the seeded evidence.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_execution_reviewer/eer-012-sideways-transfer-fake-cots",
+    "expected_decision": "REJECT_CODE",
+    "expected_criteria": "Engineering execution reviewer rejects implementations that replace approved catalog-backed components with invented or non-reproducible COTS parts."
   }
 ]
