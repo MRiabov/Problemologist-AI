@@ -1,0 +1,2 @@
+- [x] Create implementation plan
+- [x] Keep artifacts review-ready

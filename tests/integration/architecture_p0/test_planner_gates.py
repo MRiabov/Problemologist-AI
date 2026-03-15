@@ -555,7 +555,7 @@ async def test_int_006_plan_structure_validation(
         base_files = {
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -609,7 +609,7 @@ async def test_int_007_todo_integrity(
         base_files = {
             "plan.md": valid_plan,
             "benchmark_definition.yaml": valid_objectives,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -664,7 +664,7 @@ async def test_int_008_objectives_validation(
         base_files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -709,7 +709,7 @@ async def test_int_008_objectives_validation(
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
-        "assembly_definition_yaml_invalid",
+        "benchmark_assembly_definition_yaml_invalid",
         "cost_estimation_yaml_validation_error",
     ]
 )
@@ -717,7 +717,7 @@ async def test_int_008_objectives_validation(
 async def test_int_009_cost_estimation_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
-    """INT-009: Verify assembly_definition.yaml schema and placeholders."""
+    """INT-009: Verify benchmark_assembly_definition.yaml schema and placeholders."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         base_files = {
             "plan.md": valid_plan,
@@ -731,7 +731,7 @@ async def test_int_009_cost_estimation_validation(
         await setup_workspace(
             client,
             base_headers,
-            {**base_files, "assembly_definition.yaml": template_cost},
+            {**base_files, "benchmark_assembly_definition.yaml": template_cost},
         )
         submit_req = BenchmarkToolRequest(script_path="solution.py")
         resp = await client.post(
@@ -750,7 +750,7 @@ async def test_int_009_cost_estimation_validation(
         await setup_workspace(
             client,
             base_headers,
-            {**base_files, "assembly_definition.yaml": invalid_cost},
+            {**base_files, "benchmark_assembly_definition.yaml": invalid_cost},
         )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
@@ -758,13 +758,13 @@ async def test_int_009_cost_estimation_validation(
             headers=base_headers,
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert "assembly_definition.yaml invalid" in data.message
+        assert "benchmark_assembly_definition.yaml invalid" in data.message
 
 
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
-        "assembly_definition_yaml_invalid",
+        "benchmark_assembly_definition_yaml_invalid",
         "cost_estimation_yaml_validation_error",
     ]
 )
@@ -793,7 +793,7 @@ async def test_int_011_planner_caps_enforcement(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
-            "assembly_definition.yaml": invalid_cost,
+            "benchmark_assembly_definition.yaml": invalid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -811,7 +811,7 @@ async def test_int_011_planner_caps_enforcement(
             headers=base_headers,
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert "assembly_definition.yaml invalid" in data.message
+        assert "benchmark_assembly_definition.yaml invalid" in data.message
         assert (
             "Planner target cost (60.0) must be less than or equal to benchmark max cost (50.0)"
             in data.message
@@ -840,7 +840,7 @@ async def test_int_015_engineer_handover_immutability(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -940,7 +940,7 @@ def build():
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
-            "assembly_definition.yaml": invalid_drilling_cost,
+            "benchmark_assembly_definition.yaml": invalid_drilling_cost,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -981,7 +981,7 @@ def build():
 @pytest.mark.allow_backend_errors(
     regexes=[
         "cost_estimation_yaml_invalid",
-        "assembly_definition_yaml_invalid",
+        "benchmark_assembly_definition_yaml_invalid",
     ]
 )
 @pytest.mark.asyncio
@@ -1049,7 +1049,7 @@ def build():
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
-            "assembly_definition.yaml": invalid_cost,
+            "benchmark_assembly_definition.yaml": invalid_cost,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1082,7 +1082,9 @@ def build():
         assert submit_resp.status_code == 200, submit_resp.text
         submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
         assert not submit_data.success
-        assert "assembly_definition.yaml invalid" in submit_data.message.lower()
+        assert (
+            "benchmark_assembly_definition.yaml invalid" in submit_data.message.lower()
+        )
         assert "benchmark drilling cost" in submit_data.message.lower()
 
 
@@ -1154,7 +1156,7 @@ def build():
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
-            "assembly_definition.yaml": invalid_cost,
+            "benchmark_assembly_definition.yaml": invalid_cost,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1219,7 +1221,7 @@ def build():
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": tight_objectives,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "script.py": expensive_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1262,7 +1264,7 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
-        "assembly_definition_yaml_invalid",
+        "benchmark_assembly_definition_yaml_invalid",
         "cost_estimation_yaml_validation_error",
     ]
 )
@@ -1291,7 +1293,7 @@ async def test_int_010_planner_pricing_script_integration(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
-            "assembly_definition.yaml": invalid_cost,
+            "benchmark_assembly_definition.yaml": invalid_cost,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1310,7 +1312,7 @@ async def test_int_010_planner_pricing_script_integration(
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert not data.success
-        assert "assembly_definition.yaml invalid" in data.message
+        assert "benchmark_assembly_definition.yaml invalid" in data.message
         assert "exceeds target" in data.message.lower()
 
 
@@ -1356,7 +1358,7 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
             client,
             base_headers,
             {
-                "assembly_definition.yaml": assembly_definition,
+                "benchmark_assembly_definition.yaml": assembly_definition,
                 "manufacturing_config.yaml": custom_config,
             },
         )
@@ -1380,7 +1382,7 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
 
         read_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/read",
-            json=ReadFileRequest(path="assembly_definition.yaml").model_dump(
+            json=ReadFileRequest(path="benchmark_assembly_definition.yaml").model_dump(
                 mode="json"
             ),
             headers=base_headers,
@@ -1469,7 +1471,7 @@ def build():
                 "plan.md": valid_plan,
                 "todo.md": valid_todo,
                 "benchmark_definition.yaml": objectives,
-                "assembly_definition.yaml": assembly_definition,
+                "benchmark_assembly_definition.yaml": assembly_definition,
                 "manufacturing_config.yaml": custom_config,
                 "script.py": goal_script,
             },
@@ -1582,7 +1584,7 @@ def build():
                 "plan.md": valid_plan,
                 "todo.md": valid_todo,
                 "benchmark_definition.yaml": objectives,
-                "assembly_definition.yaml": assembly_definition,
+                "benchmark_assembly_definition.yaml": assembly_definition,
                 "manufacturing_config.yaml": custom_config,
                 "script.py": goal_script,
             },
@@ -1660,7 +1662,7 @@ def build():
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)

@@ -1,0 +1,13 @@
+version: '1.0'
+constraints:
+  benchmark_max_unit_cost_usd: 250
+  benchmark_max_weight_g: 1000
+  planner_target_max_unit_cost_usd: 150
+  planner_target_max_weight_g: 500
+totals:
+  estimated_unit_cost_usd: 8
+  estimated_weight_g: 80
+  estimate_confidence: high
+manufactured_parts: []
+cots_parts: []
+final_assembly: []

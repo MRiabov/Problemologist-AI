@@ -1,0 +1,1 @@
+- [x] Emit trace-bearing planner artifacts

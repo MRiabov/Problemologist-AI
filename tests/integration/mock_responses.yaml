@@ -534,7 +534,7 @@ scenarios:
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
-              path: "assembly_definition.yaml"
+              path: "benchmark_assembly_definition.yaml"
               content: |
                 version: '1.0'
                 constraints:
@@ -4322,7 +4322,7 @@ scenarios:
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
-              path: "assembly_definition.yaml"
+              path: "benchmark_assembly_definition.yaml"
               content: |
                 version: '1.0'
                 constraints:
@@ -4478,7 +4478,7 @@ scenarios:
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
-              path: "assembly_definition.yaml"
+              path: "benchmark_assembly_definition.yaml"
               content: |
                 version: '1.0'
                 constraints:
@@ -5208,7 +5208,7 @@ scenarios:
             expected_observation: "success"
           - tool_name: "write_file"
             tool_args:
-              path: "assembly_definition.yaml"
+              path: "benchmark_assembly_definition.yaml"
               content: |
                 version: '1.0'
                 constraints:

@@ -1,0 +1,58 @@
+transcript:
+- node: engineer_planner
+  steps:
+  - thought: Planning for INT-174.
+    tool_name: write_file
+    tool_args:
+      path: plan.md
+      overwrite: true
+      content_file: INT-174/engineer_planner/entry_01/01__plan.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: todo.md
+      overwrite: true
+      content_file: INT-174/engineer_planner/entry_01/02__todo.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: assembly_definition.yaml
+      overwrite: true
+      content_file: INT-174/engineer_planner/entry_01/03__assembly_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-174/engineer_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - finished: true
+    summary: Plan for two parts generated.
+    plan:
+      theme: multi-part
+      difficulty_score: 0.2
+- node: engineer_coder
+  steps:
+  - thought: Creating two parts GLB.
+    tool_name: execute_command
+    tool_args:
+      command: from build123d import *; import trimesh; import os; os.makedirs('assets',
+        exist_ok=True); b1 = Box(10,10,10); b1.label = 'part1'; b2 = Box(5,5,5).translate((20,0,0));
+        b2.label = 'part2'; c = b1 + b2; export_stl(c, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb',
+        file_type='glb')
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: script.py
+      overwrite: true
+      content_file: INT-174/engineer_coder/entry_01/02__script.py
+    expected_observation: success
+  - finished: true
+    journal: Created two parts GLB.
+- node: engineer_reviewer
+  steps:
+  - finished: true
+    review:
+      decision: APPROVED
+      reason: The design satisfies all requirements.
+      required_fixes: []

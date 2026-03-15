@@ -1,0 +1,1 @@
+- [ ] Build static guide block

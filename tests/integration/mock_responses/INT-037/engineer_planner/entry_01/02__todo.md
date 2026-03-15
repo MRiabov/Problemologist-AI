@@ -1,0 +1,1 @@
+- [x] Build door assembly placeholder

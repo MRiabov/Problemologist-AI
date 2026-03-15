@@ -1,0 +1,1 @@
+- [x] Prepare simulation-ready artifacts

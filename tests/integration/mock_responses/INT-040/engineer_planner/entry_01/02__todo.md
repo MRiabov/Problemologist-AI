@@ -1,0 +1,1 @@
+- [x] Build linkage test part

@@ -1,0 +1,23 @@
+version: '1.0'
+constraints:
+  benchmark_max_unit_cost_usd: 100
+  benchmark_max_weight_g: 1000
+  planner_target_max_unit_cost_usd: 50
+  planner_target_max_weight_g: 500
+totals:
+  estimated_unit_cost_usd: 10
+  estimated_weight_g: 100
+  estimate_confidence: high
+manufactured_parts: []
+cots_parts:
+  - part_id: "MOCK-MOTOR-ID"
+    manufacturer: "Mock Motors Inc."
+    unit_cost_usd: 10.0
+    quantity: 1
+    source: "internal"
+    reproducibility:
+      catalog_version: "test-v1"
+      bd_warehouse_commit: "mock-commit"
+      catalog_snapshot_id: "snapshot-int-014"
+      generated_at: "2026-01-01T00:00:00Z"
+final_assembly: []

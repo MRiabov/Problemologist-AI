@@ -1,0 +1,1 @@
+- [x] Prepare observability artifacts

@@ -1,0 +1,39 @@
+transcript:
+- node: benchmark_planner
+  steps:
+  - thought: Designing benchmark scenario for INT-114.
+    tool_name: write_file
+    tool_args:
+      path: plan.md
+      overwrite: true
+      content_file: INT-114/benchmark_planner/entry_01/01__plan.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: todo.md
+      overwrite: true
+      content_file: INT-114/benchmark_planner/entry_01/02__todo.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-114/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-114/benchmark_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: submit_plan
+    expected_observation: submitted
+  - finished: true
+    summary: INT-114 benchmark planner artifacts submitted.
+- node: benchmark_plan_reviewer
+  steps:
+  - finished: true
+    review:
+      decision: APPROVED
+      reason: Planner artifacts are internally consistent and ready for coding.
+      required_fixes: []

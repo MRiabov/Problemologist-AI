@@ -1,0 +1,1 @@
+- [x] Build manufacturing test part
