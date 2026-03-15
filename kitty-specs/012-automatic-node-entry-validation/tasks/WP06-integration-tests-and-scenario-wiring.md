@@ -55,7 +55,7 @@ spec-kitty implement WP06 --base WP05
   - Prefer polling/state-based waits over sleeps.
 - Key files:
   - `specs/integration-tests.md`
-  - `tests/integration/mock_responses.yaml`
+  - `tests/integration/mock_responses/`
   - `tests/integration/architecture_p0/`
 
 ## Subtasks & Detailed Guidance
@@ -85,11 +85,11 @@ spec-kitty implement WP06 --base WP05
 ### T031 - Add mock transcript scenarios for invalid entry
 - Purpose: Deterministically trigger entry guard failures in integration mode.
 - Steps:
-  1. Add scenario keys in `tests/integration/mock_responses.yaml` for entry-failure paths.
+  1. Add scenario keys in `tests/integration/mock_responses/` for entry-failure paths.
   2. Ensure transcripts force transitions into nodes with missing prerequisites.
   3. Keep scenarios minimal and explicit about expected traces.
 - Files:
-  - `tests/integration/mock_responses.yaml`
+  - `tests/integration/mock_responses/`
 - Parallel: Yes.
 - Notes: Reuse existing scenario naming conventions.
 

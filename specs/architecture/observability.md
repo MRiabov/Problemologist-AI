@@ -94,7 +94,7 @@ We track the following structured domain events to compute the evaluation metric
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
     - if planner tried submitting the result without either of `plan.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
+21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review decision filepath, persisted review comments filepath, and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.
 24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
@@ -120,7 +120,7 @@ Visual-inspection-policy enforcement must also be reconstructable from traces ev
 
 #### Not just events, but numeric events
 
-Notably, outside of just events, we want to track crucial numbers; especially for metrics below. E.g. cost/weight estimate events from planners and actual cost/weight from validation, for error analysis. *Technically*, we don't exactly *need* an event because we have the benchmark_definition.yaml in s3, but extracting the data from `benchmark_definition.yaml` and other "numeric" files (yaml frontmatter included) will make it very handy for downstream analysis (and would save time for analysis downstream.)
+Notably, outside of just events, we want to track crucial numbers; especially for metrics below. E.g. cost/weight estimate events from planners and actual cost/weight from validation, for error analysis. *Technically*, we don't exactly *need* an event because we have the benchmark_definition.yaml in s3, but extracting the data from `benchmark_definition.yaml` and other numeric YAML artifacts (including reviewer checklist YAML) will make it very handy for downstream analysis (and would save time for analysis downstream.)
 
 #### Tracking seeds
 

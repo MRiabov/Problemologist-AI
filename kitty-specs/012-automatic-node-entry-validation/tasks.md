@@ -134,7 +134,7 @@
 
 - [x] T029 Add a new `INT-xxx` contract row in `specs/integration-tests.md` for automatic node-entry validation.
 - [x] T030 Create `tests/integration/architecture_p0/test_node_entry_validation.py` with entry rejection coverage for multiple node types.
-- [x] T031 Add integration scenario(s) to `tests/integration/mock_responses.yaml` that intentionally trigger invalid entry preconditions.
+- [x] T031 Add integration scenario(s) to `tests/integration/mock_responses/` that intentionally trigger invalid entry preconditions.
 - [x] T032 Add assertions that target node execution is skipped on rejected entry turns.
 - [x] T033 Add assertions for integration fail-fast behavior (`FAILED` transition without retry loop).
 - [x] T034 Add assertions for non-integration reroute behavior where supported by test harness mode.

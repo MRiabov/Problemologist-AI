@@ -166,10 +166,14 @@ Benchmark-side reviewer manifest naming:
 - Plan reviewer stage: `.manifests/benchmark_plan_review_manifest.json`
 - Execution reviewer stage: `.manifests/benchmark_review_manifest.json`
 
-Benchmark-side reviewer decision persistence naming:
+Benchmark-side reviewer persistence naming:
 
-- Plan reviewer writes: `reviews/benchmark-plan-review-round-<n>.md`
-- Execution reviewer writes: `reviews/benchmark-review-round-<n>.md`
+- Plan reviewer writes:
+  - `reviews/benchmark-plan-review-decision-round-<n>.yaml`
+  - `reviews/benchmark-plan-review-comments-round-<n>.yaml`
+- Execution reviewer writes:
+  - `reviews/benchmark-execution-review-decision-round-<n>.yaml`
+  - `reviews/benchmark-execution-review-comments-round-<n>.yaml`
 
 ## Engineer (problem solver)
 
@@ -343,10 +347,14 @@ Reviewer manifest naming in engineering:
 - Plan reviewer stage: `.manifests/engineering_plan_review_manifest.json`
 - Execution reviewer stage: `.manifests/engineering_execution_review_manifest.json`
 
-Reviewer decision persistence naming in engineering:
+Reviewer persistence naming in engineering:
 
-- Plan reviewer writes: `reviews/engineering-plan-review-round-<n>.md`
-- Execution reviewer writes: `reviews/engineering-execution-review-round-<n>.md`
+- Plan reviewer writes:
+  - `reviews/engineering-plan-review-decision-round-<n>.yaml`
+  - `reviews/engineering-plan-review-comments-round-<n>.yaml`
+- Execution reviewer writes:
+  - `reviews/engineering-execution-review-decision-round-<n>.yaml`
+  - `reviews/engineering-execution-review-comments-round-<n>.yaml`
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).

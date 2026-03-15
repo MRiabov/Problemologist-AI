@@ -110,25 +110,35 @@ Each agent starts with a template, roughly defined in [Starting folder structure
   - note: this role owns unified implementation, including electrical/wiring logic when the approved plan requires electronics
 - Engineering Plan Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/engineering-plan-review-round-*.md` only
+  - write:
+    - `reviews/engineering-plan-review-decision-round-*.yaml`
+    - `reviews/engineering-plan-review-comments-round-*.yaml`
 - Engineering Execution Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/engineering-execution-review-round-*.md` only
+  - write:
+    - `reviews/engineering-execution-review-decision-round-*.yaml`
+    - `reviews/engineering-execution-review-comments-round-*.yaml`
 - Benchmark Planner:
   - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
   - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `benchmark_assembly_definition.yaml` (benchmark-local draft, handed to engineering as read-only context)
 - Benchmark Plan Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `renders/**`, `journal.md`
-  - write: `reviews/benchmark-plan-review-round-*.md` only
+  - write:
+    - `reviews/benchmark-plan-review-decision-round-*.yaml`
+    - `reviews/benchmark-plan-review-comments-round-*.yaml`
 - Benchmark Coder:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
 - Benchmark Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/benchmark-review-round-*.md` only
+  - write:
+    - `reviews/benchmark-execution-review-decision-round-*.yaml`
+    - `reviews/benchmark-execution-review-comments-round-*.yaml`
 - Electronics Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
-  - write: `reviews/electronics-review-round-*.md` only
+  - write:
+    - `reviews/electronics-review-decision-round-*.yaml`
+    - `reviews/electronics-review-comments-round-*.yaml`
 - COTS Search subagent:
   - read: `parts.db` (read-only), COTS query helpers/CLI, and any constraints embedded in the single caller-provided request string
   - write: structured COTS result payload returned to caller
@@ -144,12 +154,17 @@ System-only metadata:
   - `.manifests/engineering_plan_review_manifest.json`
   - `.manifests/engineering_execution_review_manifest.json`
   - `.manifests/electronics_review_manifest.json`
-- Reviewer decision persistence filenames are explicit and role-scoped:
-  - `reviews/benchmark-plan-review-round-<n>.md`
-  - `reviews/benchmark-review-round-<n>.md`
-  - `reviews/engineering-plan-review-round-<n>.md`
-  - `reviews/engineering-execution-review-round-<n>.md`
-  - `reviews/electronics-review-round-<n>.md`
+- Reviewer persistence filenames are explicit and role-scoped:
+  - `reviews/benchmark-plan-review-decision-round-<n>.yaml`
+  - `reviews/benchmark-plan-review-comments-round-<n>.yaml`
+  - `reviews/benchmark-execution-review-decision-round-<n>.yaml`
+  - `reviews/benchmark-execution-review-comments-round-<n>.yaml`
+  - `reviews/engineering-plan-review-decision-round-<n>.yaml`
+  - `reviews/engineering-plan-review-comments-round-<n>.yaml`
+  - `reviews/engineering-execution-review-decision-round-<n>.yaml`
+  - `reviews/engineering-execution-review-comments-round-<n>.yaml`
+  - `reviews/electronics-review-decision-round-<n>.yaml`
+  - `reviews/electronics-review-comments-round-<n>.yaml`
 - All LLM agent roles are denied read/write/edit on `.manifests/**` via `config/agents_config.yaml`.
 
 Locking rule:
@@ -194,7 +209,7 @@ Rules:
 3. If a path is not matched by `allow`, access is denied by default.
 4. Agent-specific rules override `defaults` (defaults are fallback only).
 5. Tool availability can be broad, but path permissions are enforced per role by this file.
-6. Reviewer roles (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review files (`reviews/benchmark-plan-review-round-*.md`, `reviews/benchmark-review-round-*.md`, `reviews/engineering-plan-review-round-*.md`, `reviews/engineering-execution-review-round-*.md`, `reviews/electronics-review-round-*.md`).
+6. Reviewer roles (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
 7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
 8. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
 9. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
@@ -278,7 +293,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/engineering-plan-review-round-*.md"]
+      allow: ["reviews/engineering-plan-review-decision-round-*.yaml", "reviews/engineering-plan-review-comments-round-*.yaml"]
       deny: [".manifests/**"]
 
   Engineering Execution Reviewer:
@@ -286,7 +301,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/engineering-execution-review-round-*.md"]
+      allow: ["reviews/engineering-execution-review-decision-round-*.yaml", "reviews/engineering-execution-review-comments-round-*.yaml"]
       deny: [".manifests/**"]
 
   Benchmark Planner:
@@ -302,7 +317,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "benchmark_assembly_definition.yaml", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/benchmark-plan-review-round-*.md"]
+      allow: ["reviews/benchmark-plan-review-decision-round-*.yaml", "reviews/benchmark-plan-review-comments-round-*.yaml"]
       deny: [".manifests/**"]
 
   Benchmark Coder:
@@ -318,7 +333,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "benchmark_assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/benchmark-review-round-*.md"]
+      allow: ["reviews/benchmark-execution-review-decision-round-*.yaml", "reviews/benchmark-execution-review-comments-round-*.yaml"]
       deny: [".manifests/**"]
 
   COTS Search:
@@ -358,7 +373,7 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["reviews/electronics-review-round-*.md"]
+      allow: ["reviews/electronics-review-decision-round-*.yaml", "reviews/electronics-review-comments-round-*.yaml"]
       deny: [".manifests/**"]
 ```
 
@@ -562,10 +577,48 @@ Allowed reasons by agent role:
 
 ## Reviews by reviewers
 
-Reviews will be written by a markdown document and stored in `/reviews/` folder, to be able to access it later.
-Notably, to keep the agents accountable and enforce stricter and more consistent typing, agents would write a yaml frontmatter on reviews - with `accepted`, `rejected`, `confirm_plan_refusal`, `reject_plan_refusal` for `decision`.
+Reviews are stored in `/reviews/` as YAML artifact pairs.
 
-If the Benchmark Coder or Engineering Coder refuses the plan, either of `confirm_plan_refusal`, `reject_plan_refusal` can be selected, but only in this case (there must be validation for these fields).
+Each reviewer round writes:
+
+1. one decision YAML, which is the routing source of truth,
+2. one comments YAML, which carries the reviewer checklist and requested fixes.
+
+The decision YAML uses `decision` enums such as `APPROVED`, `REJECTED`, `REJECT_PLAN`, `REJECT_CODE`, `CONFIRM_PLAN_REFUSAL`, `REJECT_PLAN_REFUSAL`.
+
+If the Benchmark Coder or Engineering Coder refuses the plan, either of `CONFIRM_PLAN_REFUSAL` or `REJECT_PLAN_REFUSAL` can be selected, but only in that context.
+
+The comments YAML contains a canonical stage-specific checklist. Checklist values are `pass | fail | not_applicable`.
+
+Execution-review checklist example:
+
+```yaml
+checklist:
+  latest_revision_verified: pass
+  validation_success: pass
+  simulation_success: pass
+  visual_evidence_checked: pass
+  dynamic_evidence_checked: pass
+  plan_fidelity: pass
+  robustness: fail
+  cost_weight_compliance: pass
+  manufacturability_compliance: pass
+  dof_deviation_justified: fail
+```
+
+Plan-review checklist example:
+
+```yaml
+checklist:
+  artifacts_complete: pass
+  cross_artifact_consistency: pass
+  feasible_mechanism: fail
+  build_zone_fit: pass
+  budget_realism: pass
+  cots_valid: pass
+  dof_minimality: pass
+  ambiguity_free: fail
+```
 
 ## Token compression
 

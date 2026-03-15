@@ -22,8 +22,8 @@ The benchmark generator flow is:
 
 The split between benchmark plan review and benchmark execution review is mandatory.
 
-- `Benchmark Plan Reviewer` checks planner-hand-off quality before implementation starts and persists reviewer output to `reviews/benchmark-plan-review-round-<n>.md`.
-- `Benchmark Reviewer` remains the post-validation/post-simulation review gate for the implemented benchmark environment and persists reviewer output to `reviews/benchmark-review-round-<n>.md`.
+- `Benchmark Plan Reviewer` checks planner-hand-off quality before implementation starts and persists reviewer output to the benchmark-plan review YAML pair in `reviews/`.
+- `Benchmark Reviewer` remains the post-validation/post-simulation review gate for the implemented benchmark environment and persists reviewer output to the benchmark-execution review YAML pair in `reviews/`.
 
 ## Engineering workflow
 
@@ -44,6 +44,6 @@ Implementation ownership is intentionally unified.
 - We do not run separate mechanical and electrical implementation agents in sequence for the same workspace revision. That late serialized split creates avoidable cross-domain handoff damage when wiring, PSU placement, connector access, or route clearance require mechanical adjustments.
 - `Electronics Reviewer` stays as a specialist review gate for explicit-electronics tasks, but it reviews the unified coder output rather than owning a separate coding pass.
 
-- Plan review checks planning quality and contract completeness before implementation starts, and persists reviewer output to a stage-specific file (`reviews/engineering-plan-review-round-<n>.md`).
-- Execution review runs only after validation/simulation success artifacts are present for the latest revision, then checks robustness/non-flakiness and plan adherence, and persists reviewer output to `reviews/engineering-execution-review-round-<n>.md`.
+- Plan review checks planning quality and contract completeness before implementation starts, and persists reviewer output to an engineering-plan review YAML pair in `reviews/`.
+- Execution review runs only after validation/simulation success artifacts are present for the latest revision, then checks robustness/non-flakiness and plan adherence, and persists reviewer output to an engineering-execution review YAML pair in `reviews/`.
 - Visual-inspection policy for vision-using roles is config-driven via `config/agents_config.yaml`; required roles must inspect render images through `inspect_media(...)` before valid finish/approval when images are available for the current node/revision.

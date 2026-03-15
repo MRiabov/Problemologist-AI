@@ -61,6 +61,8 @@ We should be able to test evaluations on multiple tiers, specifically:
 4. The engineer, after simulation, would interpret the simulation results correctly [...] (how to enforce it? they wouldn't always need to view the results, they can use final positions table that should be output or text too.)
 5. The engineer will prefer CSG over sketches in 70% of the cases (soft requirement, but it makes it actually easier to build with code).
 6. If render images exist for the current revision, the Engineering Coder inspects at least the config-driven minimum number of images through `inspect_media(...)` before finishing. Current production policy is `min_images=1`.
+7. Given reviewer feedback from the prior round, the Engineering Coder resolves at least 70% of failed reviewer checklist items by the next round without introducing new blocker regressions.
+8. Given mixed-quality or non-ideal reviewer feedback, the Engineering Coder follows valid failed checklist items and resists incorrect or non-applicable requests in at least 70% of seeded cases.
 
 ##### Medium evals - Engineering Plan Reviewer
 
@@ -72,6 +74,7 @@ We should be able to test evaluations on multiple tiers, specifically:
 5. Price/weight realism gate: if target budgets are set unrealistically, the Plan Reviewer rejects and requests concrete planner fixes.
 6. Reviewer efficacy: plan-review feedback should lead to a corrected plan in at least 60% of failed first submissions.
 7. If render images exist for the current revision, the Plan Reviewer inspects at least the config-driven minimum number of images through `inspect_media(...)` before approval. Current production policy is `min_images=1`.
+8. The Plan Reviewer writes a stage-canonical checklist in the reviewer comments YAML, and the checklist keys/values match the seeded ground truth in at least 95% of cases.
 
 ##### Medium evals - Engineering Execution Reviewer
 
@@ -90,6 +93,7 @@ We should be able to test evaluations on multiple tiers, specifically:
     (this requirement is more so for prompt debugging - that we don't miss including something into the prompt/skill sections.)
 8. The model would be able to execute a search (or use a subagent) in COTS
 9. If render evidence exists, approval is valid only when the reviewer used the dedicated media-inspection tool rather than text-only file inspection.
+10. The Execution Reviewer writes a stage-canonical checklist in the reviewer comments YAML, and the checklist keys/values match the seeded ground truth in at least 95% of cases.
 
 <!-- Future: Given a prompt, the Engineering Planner doesn't use components that are out of stock -->
 
@@ -119,6 +123,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 4. Reviewer efficacy: benchmark plan-review feedback should lead to a corrected planner handoff in at least 60% of failed first submissions.
 5. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects missing motion-visible handoff data in at least 90% of seeded cases.
 6. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects overly underconstrained or puzzle-breaking benchmark-side DOFs in at least 85% of seeded bad-motion cases.
+7. The Benchmark Plan Reviewer writes a stage-canonical checklist in the reviewer comments YAML, and the checklist keys/values match the seeded ground truth in at least 95% of cases.
 
 ##### Medium evals - Benchmark Coder
 
@@ -127,6 +132,8 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 - First submission - 10 tool calls, 70% pass,
 - Second submission - 20 tool calls, 85% pass,
 - Third submission - 30 tool calls, 95% pass.
+2. Given reviewer feedback from the prior round, a Benchmark Coder resolves at least 70% of failed reviewer checklist items by the next round without introducing new blocker regressions.
+3. Given mixed-quality or non-ideal reviewer feedback, a Benchmark Coder follows valid failed checklist items and resists incorrect or non-applicable requests in at least 70% of seeded cases.
 
 ##### Medium evals - Benchmark Reviewer
 
@@ -136,6 +143,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 4. Given a moving benchmark with simulation video available, the Benchmark Reviewer inspects the latest dynamic evidence before approval in at least 95% of cases.
 5. Given a moving benchmark with overly underconstrained fixture motion, the Benchmark Reviewer rejects it in at least 80% of seeded cases.
 6. Given a moving benchmark whose declared fixture behavior does not match observed simulation behavior, the Benchmark Reviewer rejects it in at least 85% of seeded mismatch cases.
+7. The Benchmark Reviewer writes a stage-canonical checklist in the reviewer comments YAML, and the checklist keys/values match the seeded ground truth in at least 95% of cases.
 
 All visual-inspection evals above are config-driven rather than prompt-only. The source of truth for required roles and image-count thresholds is `config/agents_config.yaml` (`visual_inspection.required`, `visual_inspection.min_images`, `visual_inspection.reminder_interval`), and the requirement is conditional on actual render-image availability for the current node/revision.
 
@@ -177,6 +185,7 @@ All visual-inspection evals above are config-driven rather than prompt-only. The
     - Cheaper than the max price: 80% on first attempt, 90% after the first failure, 95% after the second failure.
     - Small error: 0-20% more expensive - In 10% on first attempt, 5% after the first error, 3% after the second failure (only small failyre, not including large error).
     - Large error: >20% more expensive - In 10% of first failure, 5% on second failure, 3% after after the second failure.
+4. Given reviewer feedback from the prior round, the Engineer improves the solution by flipping failed reviewer checklist items to passing in at least 70% of seeded revision loops while keeping previously passing checklist items stable in at least 90% of cases.
 
 ##### Reviewer
 

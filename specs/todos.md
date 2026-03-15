@@ -12,7 +12,7 @@ large (130+ tests), and changing the mock protocol now would create high debuggi
 
 ## Scope (What This Refactor Must Do)
 
-1. Replace scenario structure in `tests/integration/mock_responses.yaml` with a transcript model.
+1. Replace scenario structure in `tests/integration/mock_responses/` with a transcript model.
 2. Support ordered multi-agent turns in one scenario (`planner -> coder -> reviewer`, etc.).
 3. Represent tool interactions explicitly as step pairs:
    - model output selecting a tool
@@ -37,7 +37,7 @@ large (130+ tests), and changing the mock protocol now would create high debuggi
 
 ## Implementation Plan (When Resumed)
 
-1. Define transcript schema in `tests/integration/mock_responses.yaml` (new section) and document it.
+1. Define transcript schema in `tests/integration/mock_responses/` (new section) and document it.
 2. Implement transcript reader in `controller/agent/mock_llm.py` behind a feature flag or schema detection.
 3. Add compatibility adapter from old per-node schema to transcript runtime behavior.
 4. Migrate pilot scenarios and validate via `./scripts/run_integration_tests.sh` targeted tests.

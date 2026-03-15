@@ -26,7 +26,7 @@ The Engineering Planner will try to think of the cheapest and most efficient, bu
 Engineering Coder can refuse the plan if the plan was inappropriate, e.g. set too low price or the approach was inappropriate.
 In this case, the Engineering Coder must provide `plan_refusal.md` (with role-specific reasons + evidence). The Engineering Plan Reviewer validates that refusal and either confirms (`CONFIRM_PLAN_REFUSAL`) and routes back to planner, or rejects (`REJECT_PLAN_REFUSAL`) and routes back to coding.
 
-The "reviews" are made more deterministic by passing YAML frontmatter to markdown review documents (which are later parsed deterministically). The reviews and plans must be appropriate.
+Reviewer outputs are made deterministic by persisting two YAML artifacts per review round: a routing-owned decision file and a structured comments/checklist file. The reviews and plans must be appropriate.
 
 ## COTS subagent handoff contract
 
@@ -52,21 +52,33 @@ Validation rule:
 - The stage-specific manifest must carry valid revision/session metadata and `reviewer_stage`; mismatch is a fail-closed handover error.
 - Review-content validation and `plan_refusal.md` checks must run against the worker filesystem session (`metadata.worker_session_id` when present, otherwise `episode_id` fallback) to prevent cross-session artifact lookups.
 
-## Reviewer decision persistence naming contract
+## Reviewer persistence naming contract
 
-Reviewer decisions are persisted as reviewer-scoped markdown files. We do not use a shared review filename or shared per-round folder.
+Reviewer outputs are persisted as reviewer-scoped YAML file pairs. We do not use shared review filenames, markdown frontmatter review files, or shared per-round folders.
 
-Required reviewer decision files:
+Required reviewer file pairs:
 
-1. Benchmark Plan Reviewer: `reviews/benchmark-plan-review-round-<n>.md`
-2. Benchmark Reviewer: `reviews/benchmark-review-round-<n>.md`
-3. Engineering Plan Reviewer: `reviews/engineering-plan-review-round-<n>.md`
-4. Engineering Execution Reviewer: `reviews/engineering-execution-review-round-<n>.md`
-5. Electronics Reviewer: `reviews/electronics-review-round-<n>.md`
+1. Benchmark Plan Reviewer:
+   - `reviews/benchmark-plan-review-decision-round-<n>.yaml`
+   - `reviews/benchmark-plan-review-comments-round-<n>.yaml`
+2. Benchmark Reviewer:
+   - `reviews/benchmark-execution-review-decision-round-<n>.yaml`
+   - `reviews/benchmark-execution-review-comments-round-<n>.yaml`
+3. Engineering Plan Reviewer:
+   - `reviews/engineering-plan-review-decision-round-<n>.yaml`
+   - `reviews/engineering-plan-review-comments-round-<n>.yaml`
+4. Engineering Execution Reviewer:
+   - `reviews/engineering-execution-review-decision-round-<n>.yaml`
+   - `reviews/engineering-execution-review-comments-round-<n>.yaml`
+5. Electronics Reviewer:
+   - `reviews/electronics-review-decision-round-<n>.yaml`
+   - `reviews/electronics-review-comments-round-<n>.yaml`
 
-Validation rule:
+Validation rules:
 
-- Reviewer output is invalid if the decision is not persisted to the stage-specific file path for that reviewer/round.
+- Reviewer output is invalid if the stage-specific decision file is missing for that reviewer/round.
+- Reviewer output is invalid if the stage-specific comments/checklist file is missing for that reviewer/round.
+- Routing is driven only by the decision YAML. The comments/checklist YAML is explanatory and evaluative, not the source of truth for branch transition.
 
 ## Benchmark Planner and Benchmark Plan Reviewer
 
@@ -522,27 +534,62 @@ The Execution Reviewer (`Engineering Execution Reviewer`) is a post-validation/p
 
 1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
    - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
-2. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to `reviews/engineering-execution-review-round-<n>.md`.
+2. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to its stage-specific YAML review pair in `reviews/`.
 3. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.
 4. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.
 5. Optional code-quality review is secondary and should only block for concrete correctness/safety risks.
 
-The goal is to persist reviews into stage-specific review files (`reviews/engineering-plan-review-round-<n>.md`, `reviews/engineering-execution-review-round-<n>.md`, etc.) that agents can reference in later rounds, without routing free-form review text through in-memory-only state.
+The goal is to persist reviews into stage-specific YAML artifacts that agents can reference in later rounds, without routing free-form review text through in-memory-only state.
 
 Notably the Engineer will at this point already have passed the manufacturability constraint, cost constraint, and others.
 <!-- and others - I need to ideate/remember what else it should review for.  -->
 
-The reviews will also come with the following YAML frontmatter:
+The review artifact pair is strictly typed.
+
+The decision YAML is minimal and routing-owned:
 
 ```yaml
-decision: APPROVED # [APPROVED, REJECTED, REJECT_PLAN, REJECT_CODE, CONFIRM_PLAN_REFUSAL, REJECT_PLAN_REFUSAL]
-comments: [
-   # short commentary on issues, as a array.
-   # Up to 100 chars per issue.
-]
+reviewer_stage: engineering_execution
+round: 2
+reviewed_revision_id: rev_0021
+decision: REJECT_CODE # [APPROVED, REJECTED, REJECT_PLAN, REJECT_CODE, CONFIRM_PLAN_REFUSAL, REJECT_PLAN_REFUSAL]
+reason_codes:
+  - robustness
+  - dof_deviation_justified
+confidence: high
 ```
 
-As usual, the reviews will be strictly typed.
+The comments YAML is structured and reviewer-authored:
+
+```yaml
+summary: >
+  The implementation passes a single run but is not robust enough for approval.
+checklist:
+  latest_revision_verified: pass
+  validation_success: pass
+  simulation_success: pass
+  visual_evidence_checked: pass
+  dynamic_evidence_checked: pass
+  plan_fidelity: pass
+  robustness: fail
+  cost_weight_compliance: pass
+  manufacturability_compliance: pass
+  dof_deviation_justified: fail
+comments:
+  - "Fails robustness requirement under jitter."
+  - "Introduces extra moving axes beyond the approved plan."
+required_fixes:
+  - "Increase robustness under runtime jitter."
+  - "Remove unjustified extra DOFs or request replanning."
+```
+
+Checklist values are typed as `pass | fail | not_applicable`.
+
+Checklist keys are reviewer-stage-specific:
+
+1. Plan reviewers use planning keys such as `cross_artifact_consistency`, `feasible_mechanism`, `budget_realism`, and `dof_minimality`.
+2. Execution reviewers use implementation keys such as `latest_revision_verified`, `simulation_success`, `plan_fidelity`, `robustness`, and `dynamic_evidence_checked`.
+3. The checklist keys are canonical and schema-owned. They replace ad hoc issue identifiers for current reviewer evals.
 
 ## Clarification - definition of constraints in planning
 
@@ -554,7 +601,7 @@ As usual, the reviews will be strictly typed.
 
 Code is not to fall back to heuristic text parsing from agents; except of tools.
 
-If the agent is to record structured output or an enum, it'll record it as an enum.
+If the agent is to record structured output or an enum, it'll record it in the typed YAML artifacts above.
 
 ## Agents hard fail cases
 
