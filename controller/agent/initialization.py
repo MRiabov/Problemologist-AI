@@ -103,6 +103,7 @@ async def initialize_agent_files(
             "benchmark_generator/plan.md": "plan.md",
             "benchmark_generator/todo.md": "todo.md",
             "benchmark_generator/benchmark_definition.yaml": "benchmark_definition.yaml",
+            "benchmark_generator/benchmark_assembly_definition.yaml": "benchmark_assembly_definition.yaml",
             "shared/journal.md": "journal.md",
         }
 

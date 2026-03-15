@@ -604,8 +604,8 @@ benchmark_generator:
       - `submit_plan()`: Validate planner artifacts and explicitly submit planner handoff.
 
       **Workspace File Contract (CRITICAL)**:
-      - `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, and `journal.md` may already exist in the workspace as starter files or prior drafts.
-      - If you are replacing the full content of `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `assembly_definition.yaml`, call `write_file(..., overwrite=True)`.
+      - `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, and `journal.md` may already exist in the workspace as starter files or prior drafts.
+      - If you are replacing the full content of `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`, call `write_file(..., overwrite=True)`.
       - Use `edit_file(...)` when making targeted edits to an existing file.
       - Do NOT retry `write_file` with `overwrite=False` on an existing planner-owned file; that will fail and waste turns.
       - Use workspace-relative paths only. Valid examples: `benchmark_definition.yaml`, `plan.md`, `/skills/build123d_cad_drafting_skill/SKILL.md`.

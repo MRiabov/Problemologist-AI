@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Populate and validate assembly_definition.yaml for the Engineering Planner.
+Populate and validate the workspace assembly-definition YAML.
 Calculates stock volumes and removed volumes based on planner-provided dimensions.
 """
 
@@ -24,7 +24,12 @@ logger = structlog.get_logger(__name__)
 def main():
     file_path = Path("assembly_definition.yaml")
     if not file_path.exists():
-        print(f"Error: {file_path} not found.")
+        benchmark_path = Path("benchmark_assembly_definition.yaml")
+        file_path = benchmark_path if benchmark_path.exists() else file_path
+    if not file_path.exists():
+        print(
+            "Error: assembly_definition.yaml or benchmark_assembly_definition.yaml not found."
+        )
         sys.exit(1)
 
     try:
@@ -71,7 +76,7 @@ def main():
         file_path.write_text(updated_content, encoding="utf-8")
 
         # 4. Success Output
-        print("Success: assembly_definition.yaml validated and updated.")
+        print(f"Success: {file_path.name} validated and updated.")
         print(f"Total Estimated Cost: ${estimation.totals.estimated_unit_cost_usd:.2f}")
         print(f"Total Estimated Weight: {estimation.totals.estimated_weight_g:.1f}g")
 

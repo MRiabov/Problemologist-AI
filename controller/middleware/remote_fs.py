@@ -375,8 +375,11 @@ class RemoteFilesystemMiddleware:
                         )
                     ],
                 )
-            # WP06: Detect COTS selections in assembly_definition.yaml
-            if p_str == "assembly_definition.yaml":
+            # WP06: Detect COTS selections in assembly definition artifacts.
+            if p_str in {
+                "assembly_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+            }:
                 try:
                     import yaml
 

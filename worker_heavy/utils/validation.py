@@ -49,6 +49,21 @@ from .rendering import prerender_24_views
 logger = structlog.get_logger(__name__)
 
 
+def _find_workspace_assembly_definition(
+    root: Path, *, prefer_benchmark: bool = False
+) -> Path | None:
+    """Resolve the assembly-definition artifact for the active workflow."""
+    benchmark_path = root / "benchmark_assembly_definition.yaml"
+    engineer_path = root / "assembly_definition.yaml"
+    candidates = (
+        (benchmark_path, engineer_path) if prefer_benchmark else (engineer_path,)
+    )
+    for path in candidates:
+        if path.exists():
+            return path
+    return None
+
+
 def _load_valid_benchmark_definition(
     content: str, *, session_id: str | None = None
 ) -> BenchmarkDefinition:
@@ -803,8 +818,10 @@ def simulate(
                     confidence="high",
                 )
 
-    cost_est_path = working_dir / "assembly_definition.yaml"
-    if cost_est_path.exists():
+    cost_est_path = _find_workspace_assembly_definition(
+        working_dir, prefer_benchmark=True
+    )
+    if cost_est_path is not None:
         try:
             data = yaml.safe_load(cost_est_path.read_text(encoding="utf-8"))
             assembly_definition = AssemblyDefinition(**data)
@@ -1192,8 +1209,10 @@ def validate(
 
     # Check wire clearance if assembly definition is available
     if output_dir:
-        asm_path = output_dir / "assembly_definition.yaml"
-        if asm_path.exists():
+        asm_path = _find_workspace_assembly_definition(
+            output_dir, prefer_benchmark=True
+        )
+        if asm_path is not None:
             try:
                 data = yaml.safe_load(asm_path.read_text(encoding="utf-8"))
                 if data and "electronics" in data and "wiring" in data["electronics"]:
@@ -1310,10 +1329,12 @@ def validate_fem_manufacturability(
 
             from shared.workers.workbench_models import ManufacturingMethod
 
-            assembly_definition_path = session_root / "assembly_definition.yaml"
+            assembly_definition_path = _find_workspace_assembly_definition(
+                session_root, prefer_benchmark=True
+            )
             manufactured_labels: set[str] = set()
             assembly: AssemblyDefinition | None = None
-            if assembly_definition_path.exists():
+            if assembly_definition_path is not None:
                 assembly_data = yaml.safe_load(
                     assembly_definition_path.read_text(encoding="utf-8")
                 )
