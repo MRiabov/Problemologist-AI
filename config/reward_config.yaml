@@ -6,7 +6,10 @@
 #   2. Simulation success is the dominant reward term (largest weight).
 #   3. Validation gates give partial credit proportional to how far the agent got.
 #   4. Price/weight overages are penalised continuously, not zeroed out.
-#   5. Weights within each agent sum to 1.0.
+#   5. Weights within each agent sum to 1.0 across hard_checks,
+#      judge_evaluation, and any remaining milestones.
+#   6. hard_checks are deterministic/objective gates; judge_evaluation carries
+#      reviewer and LLM-as-a-judge signals with partial credit where available.
 #
 # Usage:
 #   from controller.agent.reward import load_reward_config
@@ -26,7 +29,7 @@ benchmark:
     description: >
       Scores the planner's ability to produce a valid, well-structured benchmark
       plan with correct cost/weight caps and a feasible environment geometry.
-    milestones:
+    hard_checks:
       # Gate 1 — plan artifacts exist and are non-empty
       plan_artifacts_present:
         weight: 0.05
@@ -74,20 +77,59 @@ benchmark:
           All COTS part IDs in benchmark_assembly_definition.yaml resolve to known
           entries in the parts catalog DB.
 
-      # Gate 7 — plan passes reviewer acceptance (downstream signal)
+    judge_evaluation:
+      # Judge 1 — plan passes reviewer acceptance
       reviewer_accepted:
-        weight: 0.55
+        weight: 0.10
         description: >
-          The benchmark reviewer accepted the plan without requesting a re-plan.
-          This is the dominant reward — a plan is only good if it produces an
-          acceptable benchmark.
+          The benchmark plan reviewer accepted the handoff without requesting
+          a re-plan.
+      checklist:
+        artifacts_complete:
+          weight: 0.03
+          description: >
+            Planner handoff artifacts are complete enough for benchmark plan review.
+        cross_artifact_consistency:
+          weight: 0.07
+          description: >
+            Benchmark objects, zones, and motion references are consistent across planner artifacts.
+        geometry_feasible:
+          weight: 0.06
+          description: >
+            Planned benchmark geometry is physically and spatially feasible.
+        objective_clearance_valid:
+          weight: 0.04
+          description: >
+            Goal/forbid/objective clearances are valid for the intended task.
+        randomization_valid:
+          weight: 0.04
+          description: >
+            Static and runtime randomization remain in bounds and reviewable.
+        motion_contract_complete:
+          weight: 0.02
+          description: >
+            Moving benchmark fixtures expose complete motion metadata for engineering intake.
+        benchmark_dof_minimality:
+          weight: 0.02
+          description: >
+            Benchmark-side degrees of freedom are minimal and puzzle-justified.
+        ambiguity_free:
+          weight: 0.02
+          description: >
+            Planner handoff is sufficiently specific and free of ambiguity.
+      feedback_response_score:
+        weight: 0.15
+        description: >
+          Fraction of valid failed reviewer checklist items addressed on the
+          next planner revision without introducing new blocker regressions.
+        partial: true
 
   # ── Benchmark CAD Engineer ───────────────────────────────────────────────
   benchmark_coder:
     description: >
       Scores the CAD engineer's ability to implement a valid, compilable, and
       physically stable benchmark environment.
-    milestones:
+    hard_checks:
       # Gate 1 — script compiles without errors
       script_compiles:
         weight: 0.08
@@ -126,13 +168,114 @@ benchmark:
         success_feedback: "Benchmark simulation environment is physically stable."
         failure_feedback: "Benchmark simulation is unstable (NaNs or explosions detected)."
 
-      # Gate 5 — reviewer accepted the benchmark
+    judge_evaluation:
+      # Judge 1 — reviewer accepted the benchmark
       reviewer_accepted:
-        weight: 0.55
+        weight: 0.10
         description: >
-          The benchmark reviewer accepted the implementation. Dominant reward.
+          The benchmark reviewer accepted the implementation.
         success_feedback: "Benchmark implementation was accepted by the reviewer."
         failure_feedback: "Benchmark implementation was rejected by the reviewer."
+      checklist:
+        latest_revision_verified:
+          weight: 0.03
+          description: >
+            Reviewer checked the latest implementation revision rather than stale output.
+        validation_success:
+          weight: 0.04
+          description: >
+            Validation success was correctly checked before benchmark approval.
+        simulation_success:
+          weight: 0.05
+          description: >
+            Simulation success was correctly checked before benchmark approval.
+        visual_evidence_checked:
+          weight: 0.02
+          description: >
+            Static visual evidence was inspected when available.
+        dynamic_evidence_checked:
+          weight: 0.03
+          description: >
+            Dynamic evidence was inspected for moving or powered benchmark fixtures.
+        plan_fidelity:
+          weight: 0.05
+          description: >
+            Implementation follows the approved benchmark plan or clearly justified deltas.
+        robustness:
+          weight: 0.04
+          description: >
+            Implementation is robust rather than seed-fragile.
+        constraint_compliance:
+          weight: 0.02
+          description: >
+            Benchmark environment remains within declared geometric and task constraints.
+        benchmark_motion_justified:
+          weight: 0.02
+          description: >
+            Benchmark-owned motion stays reviewable and appropriately constrained.
+      feedback_response_score:
+        weight: 0.15
+        description: >
+          Fraction of valid failed reviewer checklist items addressed on the
+          next coding revision without introducing new blocker regressions.
+        partial: true
+
+  # ── Benchmark Plan Reviewer ──────────────────────────────────────────────
+  benchmark_plan_reviewer:
+    description: >
+      Scores the benchmark plan reviewer's decision quality. Reward is based on
+      contract-complete review output plus rubric-aligned checklist judgment.
+    hard_checks:
+      review_artifacts_complete:
+        weight: 0.10
+        description: >
+          reviews/ contains the stage-specific benchmark-plan decision YAML and
+          comments/checklist YAML for the current round.
+    judge_evaluation:
+      decision_correct:
+        weight: 0.35
+        description: >
+          The plan decision matches seeded ground truth for accept/reject.
+      checklist:
+        artifacts_complete:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged planner artifact completeness.
+        cross_artifact_consistency:
+          weight: 0.08
+          description: >
+            Reviewer correctly judged cross-artifact benchmark consistency.
+        geometry_feasible:
+          weight: 0.07
+          description: >
+            Reviewer correctly judged benchmark geometry feasibility.
+        objective_clearance_valid:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged goal/forbid/objective clearance validity.
+        randomization_valid:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged randomization bounds and sanity.
+        motion_contract_complete:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged moving-fixture motion contract completeness.
+        benchmark_dof_minimality:
+          weight: 0.02
+          description: >
+            Reviewer correctly judged benchmark-side DOF minimality.
+        ambiguity_free:
+          weight: 0.02
+          description: >
+            Reviewer correctly judged whether the plan package was ambiguity-free.
+      review_actionable:
+        weight: 0.20
+        description: >
+          Rejections include concrete fixes aligned with the failed checklist
+          items. Acceptances receive full credit.
+        success_feedback: "Benchmark plan review was actionable."
+        failure_feedback: "Benchmark plan review lacked actionable fixes."
 
   # ── Benchmark Reviewer ───────────────────────────────────────────────────
   benchmark_reviewer:
@@ -140,26 +283,60 @@ benchmark:
       Scores the reviewer's decision quality. A reviewer is rewarded for
       correctly accepting solvable benchmarks and correctly rejecting broken ones.
       Evaluated post-hoc against engineer solve rate.
-    milestones:
+    hard_checks:
       # Gate 1 — review artifacts are complete
       review_artifacts_complete:
         weight: 0.10
         description: >
-          reviews/ directory contains a structured review file with decision,
-          reason category, and evidence (images viewed count, files checked).
-
-      # Gate 2 — decision is consistent with downstream engineer outcome
+          reviews/ directory contains the stage-specific benchmark-execution
+          decision YAML and comments/checklist YAML for the current round.
+    judge_evaluation:
+      # Judge 1 — decision is consistent with downstream engineer outcome
       # (post-hoc; computed after engineer attempts the benchmark)
       decision_correct:
-        weight: 0.60
+        weight: 0.35
         description: >
           Accepted benchmarks are solvable by the engineer (true positive).
           Rejected benchmarks were genuinely broken (true negative).
-          Partial: 0.60 for correct, 0.0 for incorrect (false accept/reject).
-
-      # Gate 3 — review is actionable (rejection includes fix suggestions)
+      checklist:
+        latest_revision_verified:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged that the latest revision was reviewed.
+        validation_success:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged validation status.
+        simulation_success:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged simulation success status.
+        visual_evidence_checked:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged whether visual evidence inspection was completed.
+        dynamic_evidence_checked:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged whether dynamic evidence was required and inspected.
+        plan_fidelity:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged plan-vs-implementation fidelity.
+        robustness:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged robustness rather than one-off success.
+        constraint_compliance:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged geometric and task-constraint compliance.
+        benchmark_motion_justified:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged whether benchmark-side motion remained justified.
       review_actionable:
-        weight: 0.30
+        weight: 0.20
         description: >
           If rejected: review includes at least one concrete, specific fix
           suggestion referencing a file and line/section. If accepted: N/A
@@ -170,11 +347,11 @@ benchmark:
 # ---------------------------------------------------------------------------
 engineer:
   # ── Engineering Planner ──────────────────────────────────────────────────
-  engineering_planner:
+  engineer_planner:
     description: >
       Scores the planner's ability to produce a feasible, cost-compliant
       engineering plan that the CAD engineer can implement.
-    milestones:
+    hard_checks:
       # Gate 1 — plan artifacts present and non-stub
       plan_artifacts_present:
         weight: 0.05
@@ -217,19 +394,66 @@ engineer:
           All parts declared in assembly_definition.yaml fit within the
           build_zone AABB from benchmark_definition.yaml (checked geometrically).
 
+    milestones:
       # Gate 7 — engineer successfully implemented the plan (downstream)
       engineer_implemented_successfully:
-        weight: 0.55
+        weight: 0.25
         description: >
           The CAD engineer produced a passing simulation based on this plan.
-          Dominant reward — a plan is only good if it leads to a working solution.
+          This measures downstream utility of the plan beyond review acceptance.
+
+    judge_evaluation:
+      reviewer_accepted:
+        weight: 0.10
+        description: >
+          The engineering plan reviewer accepted the handoff without requesting
+          planner changes.
+      checklist:
+        artifacts_complete:
+          weight: 0.01
+          description: >
+            Planner handoff artifacts are complete enough for engineering plan review.
+        cross_artifact_consistency:
+          weight: 0.03
+          description: >
+            Plan, benchmark, and assembly artifacts stay mutually consistent.
+        feasible_mechanism:
+          weight: 0.03
+          description: >
+            Planned mechanism is physically feasible and solveable.
+        budget_realism:
+          weight: 0.03
+          description: >
+            Plan uses realistic budget assumptions and cost estimates.
+        build_zone_fit:
+          weight: 0.02
+          description: >
+            Planned mechanism fits the benchmark build zone.
+        cots_valid:
+          weight: 0.01
+          description: >
+            Planned COTS selections are valid and properly identified.
+        dof_minimality:
+          weight: 0.01
+          description: >
+            Proposed motion complexity is minimal and mechanism-justified.
+        ambiguity_free:
+          weight: 0.01
+          description: >
+            Engineering plan is specific enough for implementation handoff.
+      feedback_response_score:
+        weight: 0.05
+        description: >
+          Fraction of valid failed reviewer checklist items addressed on the
+          next planner revision without introducing new blocker regressions.
+        partial: true
 
   # ── CAD Engineer (Mechanical Implementer) ────────────────────────────────
   engineer_coder:
     description: >
       Scores the CAD engineer's ability to produce a manufacturable,
       cost-compliant solution that passes simulation.
-    milestones:
+    hard_checks:
       # Gate 1 — script compiles
       script_compiles:
         weight: 0.05
@@ -284,24 +508,84 @@ engineer:
         success_feedback: "Assembly weight is within the maximum limit."
         failure_feedback: "Assembly weight exceeds the limit. Use lighter materials or hollow out solid regions."
 
+    milestones:
       # Gate 7 — simulation result (dominant term)
       simulation_result:
-        weight: 0.60
+        weight: 0.45
         description: >
           Simulation outcome. Full credit for success. Partial credit for
           failure proportional to progress toward goal:
             partial_score = 1.0 - (min_distance_achieved / initial_distance)
           Partial credit is discounted by 0.4 to incentivise full success:
-            score = 0.60 * partial_score * 0.4  (if failed)
-            score = 0.60                         (if success)
+            score = 0.45 * partial_score * 0.4  (if failed)
+            score = 0.45                         (if success)
         partial: true
-        success_formula: "0.60"
-        failure_formula: "0.60 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
+        success_formula: "0.45"
+        failure_formula: "0.45 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
         success_feedback: "The solution successfully solved the problem in simulation."
         failure_feedback: "The simulation failed to reach the goal. Re-examine mechanical stability, component placement, or movement range."
 
+    judge_evaluation:
+      reviewer_accepted:
+        weight: 0.02
+        description: >
+          The execution reviewer accepted the implementation.
+      checklist:
+        latest_revision_verified:
+          weight: 0.005
+          description: >
+            Latest implementation revision was the one evaluated for submission.
+        validation_success:
+          weight: 0.01
+          description: >
+            Validation success is satisfied at review time.
+        simulation_success:
+          weight: 0.015
+          description: >
+            Simulation success is satisfied at review time.
+        visual_evidence_checked:
+          weight: 0.005
+          description: >
+            Required static evidence has been inspected.
+        dynamic_evidence_checked:
+          weight: 0.005
+          description: >
+            Required dynamic evidence has been inspected.
+        plan_fidelity:
+          weight: 0.01
+          description: >
+            Implementation stays aligned with the approved plan.
+        robustness:
+          weight: 0.01
+          description: >
+            Solution is robust rather than passing a single lucky run.
+        cost_weight_compliance:
+          weight: 0.005
+          description: >
+            Final solution stays within cost and weight targets.
+        manufacturability_compliance:
+          weight: 0.01
+          description: >
+            Final solution remains manufacturable under the chosen process.
+        dof_deviation_justified:
+          weight: 0.005
+          description: >
+            Any DOF deviation from the approved plan is justified and reviewable.
+      feedback_response_score:
+        weight: 0.03
+        description: >
+          Fraction of valid failed reviewer checklist items addressed on the
+          next coding revision without introducing new blocker regressions.
+        partial: true
+      bad_feedback_resistance_score:
+        weight: 0.02
+        description: >
+          Score for following valid reviewer feedback while resisting incorrect
+          or non-applicable requests in mixed-quality review seeds.
+        partial: true
+
   # ── Electrical Engineer ──────────────────────────────────────────────────
-  electrical_engineer:
+  electronics_engineer:
     description: >
       Scores the electrical engineer's ability to design a valid, functional
       electrical subsystem (wiring, power budget, continuity).
@@ -337,29 +621,179 @@ engineer:
         success_formula: "0.55"
         failure_formula: "0.55 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
 
-  # ── Engineering Reviewer ─────────────────────────────────────────────────
-  engineering_reviewer:
+  # ── Engineering Plan Reviewer ────────────────────────────────────────────
+  engineer_plan_reviewer:
+    description: >
+      Scores the engineering plan reviewer's decision quality. Reward is based
+      on complete review artifacts plus rubric-aligned checklist judgment.
+    hard_checks:
+      review_artifacts_complete:
+        weight: 0.10
+        description: >
+          reviews/ contains the stage-specific engineering-plan decision YAML
+          and comments/checklist YAML for the current round.
+    judge_evaluation:
+      decision_correct:
+        weight: 0.35
+        description: >
+          The plan decision matches seeded ground truth for accept/reject.
+      checklist:
+        artifacts_complete:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged planner artifact completeness.
+        cross_artifact_consistency:
+          weight: 0.06
+          description: >
+            Reviewer correctly judged consistency across plan, benchmark, and assembly artifacts.
+        feasible_mechanism:
+          weight: 0.06
+          description: >
+            Reviewer correctly judged mechanism feasibility.
+        budget_realism:
+          weight: 0.06
+          description: >
+            Reviewer correctly judged cost and weight realism.
+        build_zone_fit:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged build-zone fit.
+        cots_valid:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged COTS validity and specificity.
+        dof_minimality:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged whether the mechanism used minimal justified DOFs.
+        ambiguity_free:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged whether the plan was implementation-ready and unambiguous.
+      review_actionable:
+        weight: 0.20
+        description: >
+          Rejections include specific fixes aligned with the failed checklist
+          items. Acceptances receive full credit.
+
+  # ── Electronics Reviewer ─────────────────────────────────────────────────
+  electronics_reviewer:
+    description: >
+      Scores the electronics reviewer's decision quality over electrical or
+      electromechanical implementation output.
+    hard_checks:
+      review_artifacts_complete:
+        weight: 0.10
+        description: >
+          reviews/ contains the stage-specific electronics decision YAML and
+          comments/checklist YAML for the current round.
+    judge_evaluation:
+      decision_correct:
+        weight: 0.35
+        description: >
+          The electrical review decision matches seeded ground truth for
+          accept/reject.
+      checklist:
+        latest_revision_verified:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged that the latest electrical revision was reviewed.
+        schematic_present:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged presence and completeness of electrical schematic artifacts.
+        power_budget_valid:
+          weight: 0.06
+          description: >
+            Reviewer correctly judged power-budget compliance.
+        circuit_continuity:
+          weight: 0.06
+          description: >
+            Reviewer correctly judged continuity and circuit validity.
+        electromechanical_clearance:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged electrical routing and electromechanical clearance.
+        plan_fidelity:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged fidelity to the approved electromechanical plan.
+        visual_evidence_checked:
+          weight: 0.02
+          description: >
+            Reviewer correctly judged static evidence inspection requirements.
+        dynamic_evidence_checked:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged dynamic electrical evidence inspection requirements.
+      review_actionable:
+        weight: 0.20
+        description: >
+          Rejections include specific fixes aligned with the failed checklist
+          items. Acceptances receive full credit.
+
+  # ── Engineering Execution Reviewer ───────────────────────────────────────
+  engineer_execution_reviewer:
     description: >
       Scores the reviewer's decision quality. Rewarded for correctly
       accepting working solutions and correctly rejecting broken ones.
-    milestones:
+    hard_checks:
       # Gate 1 — review artifacts complete
       review_artifacts_complete:
         weight: 0.10
         description: >
-          reviews/ contains a structured review with decision, reason, and
-          evidence (images viewed, files checked, simulation video watched).
-
-      # Gate 2 — decision correctness (post-hoc)
+          reviews/ contains the stage-specific engineering-execution decision
+          YAML and comments/checklist YAML for the current round.
+    judge_evaluation:
+      # Judge 1 — decision correctness (post-hoc)
       decision_correct:
-        weight: 0.60
+        weight: 0.35
         description: >
           Accepted solutions pass re-simulation. Rejected solutions were
           genuinely broken (verified by re-run).
-
-      # Gate 3 — review is actionable
+      checklist:
+        latest_revision_verified:
+          weight: 0.02
+          description: >
+            Reviewer correctly judged whether the latest revision was reviewed.
+        validation_success:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged validation success.
+        simulation_success:
+          weight: 0.04
+          description: >
+            Reviewer correctly judged simulation success.
+        visual_evidence_checked:
+          weight: 0.02
+          description: >
+            Reviewer correctly judged static evidence inspection.
+        dynamic_evidence_checked:
+          weight: 0.02
+          description: >
+            Reviewer correctly judged dynamic evidence inspection.
+        plan_fidelity:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged plan fidelity.
+        robustness:
+          weight: 0.06
+          description: >
+            Reviewer correctly judged robustness rather than one-off success.
+        cost_weight_compliance:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged cost and weight compliance.
+        manufacturability_compliance:
+          weight: 0.03
+          description: >
+            Reviewer correctly judged manufacturability compliance.
+        dof_deviation_justified:
+          weight: 0.05
+          description: >
+            Reviewer correctly judged whether DOF deviations were justified.
       review_actionable:
-        weight: 0.30
+        weight: 0.20
         description: >
           Rejections include specific, file-referenced fix suggestions.
           Acceptances: full credit automatically.
@@ -402,7 +836,7 @@ shared:
         formula: "max(0.0, 1.0 - (n_queries - 1) / 5.0)"
 
   # ── Skill Creator Subagent ───────────────────────────────────────────────
-  skill_creator:
+  skill_agent:
     description: >
       Scores the skill creator's ability to produce reusable, correct skills
       that improve downstream agent performance.

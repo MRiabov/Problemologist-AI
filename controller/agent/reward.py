@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 
 class MilestoneConfig(BaseModel):
@@ -26,11 +26,80 @@ class MilestoneConfig(BaseModel):
     failure_feedback: str | None = None
 
 
+class JudgeEvaluationConfig(BaseModel):
+    """Structured reward configuration for judge-based metrics."""
+
+    metrics: dict[str, MilestoneConfig] = Field(default_factory=dict)
+    checklist: dict[str, MilestoneConfig] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_layout(cls, data):
+        if data is None:
+            return {}
+        if isinstance(data, dict):
+            metrics = data.get("metrics")
+            checklist = data.get("checklist")
+            if metrics is None:
+                metrics = {
+                    key: value for key, value in data.items() if key != "checklist"
+                }
+            return {
+                "metrics": metrics or {},
+                "checklist": checklist or {},
+            }
+        return data
+
+    def all_milestones(self) -> dict[str, MilestoneConfig]:
+        merged = dict(self.metrics)
+        for checklist_key, milestone in self.checklist.items():
+            merged[f"checklist.{checklist_key}"] = milestone
+        return merged
+
+
 class AgentRewardConfig(BaseModel):
     """Configuration for an agent's reward structure."""
 
     description: str
-    milestones: dict[str, MilestoneConfig]
+    milestones: dict[str, MilestoneConfig] = Field(default_factory=dict)
+    hard_checks: dict[str, MilestoneConfig] = Field(default_factory=dict)
+    judge_evaluation: JudgeEvaluationConfig = Field(
+        default_factory=JudgeEvaluationConfig
+    )
+
+    @model_validator(mode="after")
+    def validate_milestone_layout(self) -> "AgentRewardConfig":
+        merged_keys = (
+            set(self.milestones)
+            | set(self.hard_checks)
+            | set(self.judge_evaluation.all_milestones())
+        )
+        total_count = (
+            len(self.milestones)
+            + len(self.hard_checks)
+            + len(self.judge_evaluation.all_milestones())
+        )
+        if not merged_keys:
+            raise ValueError("AgentRewardConfig must define at least one milestone")
+        if len(merged_keys) != total_count:
+            raise ValueError(
+                "Duplicate milestone names across milestones/hard_checks/judge_evaluation"
+            )
+        total_weight = sum(
+            milestone.weight for milestone in self.all_milestones().values()
+        )
+        if abs(total_weight - 1.0) > 1e-6:
+            raise ValueError(
+                f"AgentRewardConfig weights must sum to 1.0, got {total_weight:.3f}"
+            )
+        return self
+
+    def all_milestones(self) -> dict[str, MilestoneConfig]:
+        merged: dict[str, MilestoneConfig] = {}
+        merged.update(self.hard_checks)
+        merged.update(self.judge_evaluation.all_milestones())
+        merged.update(self.milestones)
+        return merged
 
 
 class RewardConfig(BaseModel):

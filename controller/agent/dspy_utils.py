@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from controller.clients.worker import WorkerClient
 from shared.enums import AgentName
@@ -42,6 +42,7 @@ class PredictionMetrics(BaseModel):
     cots_ids_valid: bool = True
     geometry_consistent: bool = True
     mechanism_fits_build_zone: bool = True
+    engineer_implemented_successfully: bool = False
 
     # Reviewing
     review_artifacts_complete: bool = False
@@ -50,6 +51,9 @@ class PredictionMetrics(BaseModel):
     reviewer_feedback: str | None = None
     review_actionable: bool = True
     decision_correct: bool = False
+    feedback_response_score: float = 0.0
+    bad_feedback_resistance_score: float = 0.0
+    checklist: dict[str, Any] = Field(default_factory=dict)
 
     # Electronics (WP3)
     schematic_present: bool = False
@@ -180,6 +184,53 @@ def cad_simulation_metric(
     feedback_parts = []
     context = {"prediction": prediction, "gold": gold}
 
+    def resolve_metric_value(name: str, aliases: list[str]) -> Any:
+        for candidate in [name, *aliases]:
+            if hasattr(prediction, candidate):
+                return getattr(prediction, candidate)
+        return None
+
+    def extract_checklist_value(obj: Any, key: str) -> Any:
+        checklist = getattr(obj, "checklist", None)
+        if isinstance(checklist, dict) and key in checklist:
+            return checklist[key]
+        attr_name = f"checklist_{key}"
+        if hasattr(obj, attr_name):
+            return getattr(obj, attr_name)
+        return None
+
+    def normalize_checklist_value(value: Any) -> float | None:
+        if value is None:
+            return None
+        if isinstance(value, bool):
+            return 1.0 if value else 0.0
+        if isinstance(value, int | float):
+            return max(0.0, min(1.0, float(value)))
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized == "pass":
+                return 1.0
+            if normalized == "fail":
+                return 0.0
+            if normalized in {"not_applicable", "n/a", "na"}:
+                return 1.0
+        return None
+
+    def inject_scalar_attrs(obj: Any) -> None:
+        if obj is None:
+            return
+        for attr_name in dir(obj):
+            if attr_name.startswith("_") or attr_name in context:
+                continue
+            try:
+                value = getattr(obj, attr_name)
+            except Exception:
+                continue
+            if callable(value):
+                continue
+            if isinstance(value, bool | int | float):
+                context[attr_name] = value
+
     # Map attributes for formula evaluation
     mapping = {
         "actual_cost": ["actual_cost"],
@@ -196,6 +247,7 @@ def cad_simulation_metric(
     }
 
     for obj in [prediction, gold]:
+        inject_scalar_attrs(obj)
         for target, sources in mapping.items():
             for src in sources:
                 if hasattr(obj, src):
@@ -220,20 +272,50 @@ def cad_simulation_metric(
 
     error_msg = getattr(prediction, "error", None)
 
-    for milestone_name, m in cfg.milestones.items():
+    for milestone_name, m in cfg.all_milestones().items():
         m_score = 0.0
         details = ""
+
+        if milestone_name.startswith("checklist."):
+            checklist_key = milestone_name.split(".", 1)[1]
+            pred_value = normalize_checklist_value(
+                extract_checklist_value(prediction, checklist_key)
+            )
+            gold_value = normalize_checklist_value(
+                extract_checklist_value(gold, checklist_key)
+            )
+            if gold_value is not None:
+                m_score = (
+                    1.0 if pred_value is not None and pred_value == gold_value else 0.0
+                )
+                details = (
+                    f"{checklist_key} matched seeded checklist."
+                    if m_score == 1.0
+                    else f"{checklist_key} mismatched seeded checklist."
+                )
+            else:
+                m_score = pred_value if pred_value is not None else 0.0
+                details = f"{checklist_key} checklist result: {m_score:.2f}"
+
+            score += m.weight * m_score
+            feedback_parts.append(details)
+            continue
 
         aliases = {
             "script_compiles": ["script_compiled", "compiled"],
             "simulation_result": ["simulation_success", "simulation_ran"],
             "cad_geometry_valid": ["geometry_valid", "cad_geometry_valid"],
             "reviewer_accepted": ["accepted", "reviewer_accepted"],
+            "engineer_implemented_successfully": [
+                "engineer_implemented_successfully",
+                "simulation_success",
+            ],
             "manufacturability_valid": ["manufacturability_valid"],
             "parts_within_build_zone": ["parts_within_build_zone"],
         }
-        candidates = [milestone_name, *aliases.get(milestone_name, [])]
-        is_triggered = any(getattr(prediction, c, False) for c in candidates)
+        candidates = aliases.get(milestone_name, [])
+        raw_value = resolve_metric_value(milestone_name, candidates)
+        is_triggered = bool(raw_value)
 
         if milestone_name == "script_compiles":
             if not is_triggered:
@@ -279,6 +361,13 @@ def cad_simulation_metric(
                 f = m.penalty_formula or m.formula
                 if f:
                     m_score = evaluate_formula(f, context)
+                    details = (
+                        m.success_feedback if m_score >= 0.9 else m.failure_feedback
+                    ) or f"{milestone_name} score: {m_score:.2f}"
+                elif isinstance(raw_value, int | float) and not isinstance(
+                    raw_value, bool
+                ):
+                    m_score = max(0.0, min(1.0, float(raw_value)))
                     details = (
                         m.success_feedback if m_score >= 0.9 else m.failure_feedback
                     ) or f"{milestone_name} score: {m_score:.2f}"
@@ -348,7 +437,7 @@ def map_events_to_prediction(
             )
             if any(path.endswith(f) for f in required_planner_files):
                 planned_files.add(Path(path).name)
-            if "review" in path.lower() and path.endswith(".md"):
+            if "review" in path.lower() and path.endswith(".yaml"):
                 metrics.review_artifacts_complete = True
             if "schematic" in path.lower():
                 metrics.schematic_present = True
@@ -410,6 +499,7 @@ def map_events_to_prediction(
             )
             if success:
                 metrics.simulation_success = True
+                metrics.engineer_implemented_successfully = True
             else:
                 metrics.error = str(
                     data.get("failure_reason")
@@ -435,6 +525,13 @@ def map_events_to_prediction(
             )
             metrics.reviewer_decision = decision
             metrics.reviewer_feedback = reason
+            checklist = (
+                data.get("checklist")
+                if isinstance(data, dict)
+                else getattr(data, "checklist", None)
+            )
+            if isinstance(checklist, dict):
+                metrics.checklist.update(checklist)
             if decision == "approve":
                 metrics.reviewer_accepted = True
             elif decision in ["reject_plan", "reject_code"]:

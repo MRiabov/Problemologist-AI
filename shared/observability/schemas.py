@@ -352,6 +352,7 @@ class ReviewDecisionEvent(BaseEvent):
     decision: ReviewDecision
     reason: str
     evidence_stats: ReviewEvidenceStats = Field(default_factory=ReviewEvidenceStats)
+    checklist: dict[str, str | float | bool] = Field(default_factory=dict)
 
 
 class ReviewEvent(BaseEvent):
@@ -362,6 +363,7 @@ class ReviewEvent(BaseEvent):
     decision: ReviewDecision
     comments: list[str] = Field(default_factory=list)
     review_id: str | None = None
+    checklist: dict[str, str | float | bool] = Field(default_factory=dict)
 
 
 # =============================================================================
