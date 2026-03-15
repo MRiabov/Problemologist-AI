@@ -92,7 +92,7 @@ The plan will have the following bullet points. The plan will be validated for c
 The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 2. A `todo.md` TODO list from the planner.
 3. A draft of `benchmark_definition.yaml` with rough values filled in.
-4. A draft of `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+4. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; handed to engineering as read-only benchmark context).
 5. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
@@ -101,12 +101,14 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 `Benchmark Plan Reviewer` gate requirements:
 
-- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-local `assembly_definition.yaml`.
+- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-local `benchmark_assembly_definition.yaml`.
 - Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Reject when planner artifacts mention benchmark objects, moving parts, joints, or zones that are not declared consistently across the planner handoff package.
   - Reject when benchmark-local DOF/control metadata introduces unsupported or unjustified benchmark-side motion.
+  - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis, motion limits or operating envelope, and whether the engineer may rely on the motion.
+  - Reject when benchmark-side motion is impossible, unstable, or clearly over- or underconstrained for the intended puzzle.
 - Approval effect:
   - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
@@ -115,6 +117,8 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 The Engineer agent(s) (for whom the first point of access is Engineering Planner) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
 The benchmark-owned environment, benchmark input objects, and benchmark objective markers are read-only task fixtures. They are validated for geometry correctness, placement, randomization, and benchmark solvability, but they are not validated for manufacturability or priced as manufactured outputs. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
+
+Benchmark-owned moving fixtures and benchmark-owned electronics are also read-only task fixtures. Their COTS identifiers and runtime metadata must be valid, but their cost and weight never flow into the engineer's final solution price or manufacturability totals.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
@@ -138,7 +142,27 @@ The engineer will also receive YAML files with:
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `assembly_definition.yaml` stays in the Benchmark Planner scope and is not handed over to engineering.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is also handed to engineering as read-only benchmark context.
+
+Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. The benchmark file is observation and interaction context, not an engineer-owned planning artifact.
+
+If the benchmark includes moving benchmark-owned fixtures, the engineer intake still needs motion-visible facts. Those facts may live in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The minimum contract for each moving benchmark fixture is:
+
+1. stable fixture identity,
+2. motion kind (`fixed`, `passive`, `motorized_revolute`, `motorized_prismatic`, or other explicitly supported type),
+3. motion axis or path reference,
+4. motion bounds, period, or controller-visible operating range,
+5. whether the motion is always-on, conditional, or externally triggered,
+6. whether the engineer may assume that the motion is available during solution execution.
+
+If a benchmark-owned fixture is meant to be interactable by engineering, the relevant component must declare `allows_engineer_interaction: true`. Supported examples include:
+
+1. plugging into a benchmark-owned PSU or power connector,
+2. toggling a benchmark-owned switch or relay input,
+3. inserting a part into a benchmark-owned slot, socket, rail, or guide,
+4. mechanically actuating a benchmark-owned control feature such as a lever, latch, or trigger.
+
+That flag is a permission, not transfer of ownership. The engineer may interact with the intended benchmark-owned surface, but may not redefine benchmark-owned components.
 
 #### Renders 
 
@@ -156,6 +180,13 @@ Reviewer evidence contract for renders:
 3. Text summaries such as `simulation_result.json` complement but do not replace visual inspection where the review contract says images must be checked.
 4. The required number of distinct images inspected is config-driven (`visual_inspection.min_images`); current production policy is `1`, but this must remain adjustable without code changes.
 5. Runtime reminder messages may be injected during long-running tool loops when required visual inspection has not yet been satisfied; these reminders are deterministic policy enforcement, not free-form prompt advice.
+
+For moving benchmarks, dynamic evidence is a separate requirement:
+
+1. static preview images remain required context artifacts,
+2. they are not sufficient evidence for benchmark-owned motion or powered fixture behavior,
+3. benchmark approval for moving benchmarks requires latest-revision simulation evidence, normally video,
+4. the `Benchmark Reviewer` must inspect that dynamic evidence before approval when it exists.
 
 
 ### A benchmark is reused multiple times

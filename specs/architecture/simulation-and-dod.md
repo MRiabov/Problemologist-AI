@@ -251,6 +251,21 @@ This is to prevent Engineering Coder and Benchmark Coder from creating impossibl
 
 To support moving parts (hinges, sliders, motors), we force build123d Joints from *to be created from predefined CAD components* almost always - e.g., again, revolute joints from bearings, rigid joints/weld constraints via fasteners.
 
+##### Benchmark fixture motion exception
+
+Benchmark-owned moving fixtures are reviewed under a weaker realism contract than engineering solutions.
+
+The rule is:
+
+1. benchmark fixtures may use less-complete physical support than engineer-authored mechanisms when the benchmark only needs stable, inspectable fixture behavior,
+2. benchmark fixtures may be implicitly powered in MVP and do not require full wiring realism,
+3. benchmark fixtures may use motors, bearings, and other COTS parts as read-only environment components when their identity is explicit,
+4. benchmark fixtures still must not rely on teleporting geometry, free energy, contradictory joint definitions, or unstable unconstrained motion that makes the puzzle non-reviewable,
+5. benchmark reviewers must scrutinize underconstrained fixture motion rather than applying the engineering minimum-DOF rule literally,
+6. benchmark-side motion must stay deterministic enough that engineering can reason about the environment from the declared handoff artifacts and simulation evidence.
+
+This exception is benchmark-only. It does not relax engineering realism requirements.
+
 ##### DOF minimality rule
 
 For engineering solutions, DOFs are constrained by intent, not by convenience.
@@ -259,6 +274,13 @@ For engineering solutions, DOFs are constrained by intent, not by convenience.
 2. A part may receive non-empty `dofs` only when the mechanism requires real motion to satisfy the objective.
 3. Each non-empty DOF assignment must map to a physical mechanism (bearing/motor/slider or equivalent allowed component) and a reviewer-visible rationale in planning artifacts.
 4. Excessive or unjustified DOFs are treated as a review failure (plan stage and/or execution stage), even if a single simulation run passes.
+
+For benchmark-owned fixtures, the rule is narrower:
+
+1. we do not require the same minimum-DOF realism rule used for engineering solutions,
+2. benchmark-side DOFs must still be the minimum motion needed to express the intended puzzle,
+3. benchmark-side DOFs must not be so underconstrained that the puzzle outcome depends on accidental floppiness rather than intended fixture behavior,
+4. reviewers must reject benchmark fixtures whose motion cannot be defended from the declared mechanism and observed dynamic evidence.
 
 Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
 

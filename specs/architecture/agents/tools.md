@@ -242,7 +242,7 @@ Run the workbench interface to validate the part for manufacturability; if passe
 3. Split the assembly into benchmark-owned read-only fixtures versus engineer-owned manufactured parts / COTS parts.
 4. Validate manufacturability as per the Workbench interface only for engineer-owned manufactured parts. Do not reject because benchmark environment/input-objective fixtures lack manufacturing metadata.
 5. Validate full-assembly placement and build-zone bounds, including interactions with the benchmark environment/objectives.
-6. Determine cost for engineer-owned manufactured parts and selected COTS parts only,
+6. Determine cost for engineer-owned manufactured parts and selected COTS parts only. Benchmark-owned COTS fixtures and benchmark-owned electronics never flow into engineer solution pricing,
 7. Validate for cost,
 8. Validate for weight.
 

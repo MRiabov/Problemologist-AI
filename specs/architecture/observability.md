@@ -93,7 +93,7 @@ We track the following structured domain events to compute the evaluation metric
 18. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
 19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
 20. Submission attempt without creating all necessary files.
-    - if planner tried submitting the result without either of `plan.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
+    - if planner tried submitting the result without either of `plan.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
 21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review filepath (for example `reviews/engineering-plan-review-round-4.md`), and evidence used (images viewed count, video viewed, files checked).
 22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
 23. Forbidden joint creation/adding logic.

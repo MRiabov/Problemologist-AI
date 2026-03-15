@@ -18,8 +18,9 @@ Metadata validation is ownership-sensitive:
 
 1. Engineer-created manufactured parts and planner-declared manufactured parts must carry the manufacturing/workbench metadata required for manufacturability validation and pricing.
 2. Benchmark-owned environment geometry, benchmark input objects, and benchmark objective markers are not treated as manufactured outputs.
-3. Those benchmark-owned read-only fixtures may carry physics/render metadata, but they are excluded from manufacturability validation and pricing.
-4. Missing `manufacturing_method` / `material_id` is therefore a hard validation failure only for engineer-owned manufactured parts (and planner-owned manufactured-part definitions), not for benchmark fixtures.
+3. Benchmark-owned COTS fixtures such as motors, bearings, or electronics remain benchmark fixtures even when they carry `cots_id`; they are excluded from engineer manufacturability validation and engineer pricing.
+4. Those benchmark-owned read-only fixtures may carry physics/render metadata, but they are excluded from manufacturability validation and pricing.
+5. Missing `manufacturing_method` / `material_id` is therefore a hard validation failure only for engineer-owned manufactured parts (and planner-owned manufactured-part definitions), not for benchmark fixtures.
 
 Benchmark definitions also carry a declarative benchmark-side fixture metadata layer in `benchmark_definition.yaml`.
 

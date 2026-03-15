@@ -116,15 +116,15 @@ Each agent starts with a template, roughly defined in [Starting folder structure
   - write: `reviews/engineering-execution-review-round-*.md` only
 - Benchmark Planner:
   - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
-  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `assembly_definition.yaml` (benchmark-local draft, not handed to engineering)
+  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `benchmark_assembly_definition.yaml` (benchmark-local draft, handed to engineering as read-only context)
 - Benchmark Plan Reviewer:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `renders/**`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `renders/**`, `journal.md`
   - write: `reviews/benchmark-plan-review-round-*.md` only
 - Benchmark Coder:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `reviews/**`, `renders/**`
   - write: `script.py`, additional `*.py` implementation files, `todo.md` (checkbox progress only), `journal.md`, `renders/**` (tool-generated), `plan_refusal.md` (only when refusing plan)
 - Benchmark Reviewer:
-  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
+  - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
   - write: `reviews/benchmark-review-round-*.md` only
 - Electronics Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `plan_refusal.md` (if present), `script.py`, implementation files, `renders/**`, `journal.md`
@@ -155,7 +155,7 @@ System-only metadata:
 Locking rule:
 
 - Before planner submission: planner may edit planner-owned files above.
-- After planner submission accepted: `benchmark_definition.yaml` and `assembly_definition.yaml` become read-only for Coder/Reviewer; only replanning can mutate them.
+- After planner submission accepted: benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer; engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer. Only replanning can mutate planner-owned files.
 - `benchmark_definition.yaml.benchmark_parts` is benchmark-owned fixture metadata. Coder/Reviewer must treat it as immutable task context, not as solution metadata.
 
 Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
@@ -294,12 +294,12 @@ agents:
       allow: ["skills/**", "utils/**", "plan.md", "todo.md", "journal.md"]
       deny: [".manifests/**"]
     write:
-      allow: ["plan.md", "todo.md", "journal.md", "benchmark_definition.yaml", "assembly_definition.yaml"]
+      allow: ["plan.md", "todo.md", "journal.md", "benchmark_definition.yaml", "benchmark_assembly_definition.yaml"]
       deny: ["skills/**", "utils/**", "reviews/**", "renders/**", "script.py", "**/*.py"]
 
   Benchmark Plan Reviewer:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "renders/**", "journal.md"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "benchmark_assembly_definition.yaml", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
       allow: ["reviews/benchmark-plan-review-round-*.md"]
@@ -307,15 +307,15 @@ agents:
 
   Benchmark Coder:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "reviews/**", "renders/**"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "benchmark_assembly_definition.yaml", "reviews/**", "renders/**"]
       deny: [".manifests/**"]
     write:
       allow: ["script.py", "**/*.py", "todo.md", "journal.md", "renders/**", "plan_refusal.md"]
-      deny: ["benchmark_definition.yaml", "assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
+      deny: ["benchmark_definition.yaml", "benchmark_assembly_definition.yaml", "plan.md", "skills/**", "utils/**", "reviews/**"]
 
   Benchmark Reviewer:
     read:
-      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
+      allow: ["skills/**", "utils/**", "plan.md", "todo.md", "benchmark_definition.yaml", "benchmark_assembly_definition.yaml", "plan_refusal.md", "script.py", "**/*.py", "renders/**", "journal.md"]
       deny: [".manifests/**"]
     write:
       allow: ["reviews/benchmark-review-round-*.md"]
@@ -364,13 +364,14 @@ agents:
 
 ## Immutability validation
 
-We assert that files (especially "control" files like `benchmark_definition.yaml` and `assembly_definition.yaml`) are not edited by coder agents, however they are edited by planner agents. We use git-based hash assertions for such files where they must be immutable.
+We assert that files (especially "control" files like `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, and `assembly_definition.yaml`) are not edited by coder agents, however they are edited by planner agents. We use git-based hash assertions for such files where they must be immutable.
 
 Control-file ownership split:
 
 1. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
-2. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-3. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
+2. `benchmark_assembly_definition.yaml` owns benchmark-local fixture structure, motion metadata, and benchmark-side implementation details. Engineering may read it as immutable benchmark context.
+3. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
+4. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 Essentially, the goal is a clear separation of concerns: planner files are edited by the planner, review files are edited by reviewer nodes, coder edits coder files; skill subagents modify only skill files, etc.
 

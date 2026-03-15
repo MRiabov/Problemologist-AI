@@ -113,10 +113,12 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 
 ##### Medium evals - Benchmark Plan Reviewer
 
-1. Given a benchmark planner handoff package, the Benchmark Plan Reviewer correctly identifies nonexistent benchmark objects or inconsistent object references across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `assembly_definition.yaml` in at least 90% of seeded cases.
+1. Given a benchmark planner handoff package, the Benchmark Plan Reviewer correctly identifies nonexistent benchmark objects or inconsistent object references across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `benchmark_assembly_definition.yaml` in at least 90% of seeded cases.
 2. Given a benchmark planner handoff package, the Benchmark Plan Reviewer rejects ambiguous, infeasible, or incomplete plans in at least 85% of seeded bad-plan cases.
 3. Given a benchmark planner handoff package with renders available, the Benchmark Plan Reviewer inspects at least the config-driven minimum number of images through the dedicated media-inspection tool before approval. Current production policy is `min_images=1`.
 4. Reviewer efficacy: benchmark plan-review feedback should lead to a corrected planner handoff in at least 60% of failed first submissions.
+5. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects missing motion-visible handoff data in at least 90% of seeded cases.
+6. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects overly underconstrained or puzzle-breaking benchmark-side DOFs in at least 85% of seeded bad-motion cases.
 
 ##### Medium evals - Benchmark Coder
 
@@ -131,6 +133,9 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 1. Given a benchmark package with renders available, the Benchmark Reviewer inspects at least the config-driven minimum number of images through the dedicated media-inspection tool before approval. Current production policy is `min_images=1`.
 2. Given a benchmark package with misleading text summaries but invalid visual geometry, the Benchmark Reviewer catches the issue in at least 70% of cases.
 3. Listing `renders/` without actual media inspection does not satisfy reviewer-evidence criteria.
+4. Given a moving benchmark with simulation video available, the Benchmark Reviewer inspects the latest dynamic evidence before approval in at least 95% of cases.
+5. Given a moving benchmark with overly underconstrained fixture motion, the Benchmark Reviewer rejects it in at least 80% of seeded cases.
+6. Given a moving benchmark whose declared fixture behavior does not match observed simulation behavior, the Benchmark Reviewer rejects it in at least 85% of seeded mismatch cases.
 
 All visual-inspection evals above are config-driven rather than prompt-only. The source of truth for required roles and image-count thresholds is `config/agents_config.yaml` (`visual_inspection.required`, `visual_inspection.min_images`, `visual_inspection.reminder_interval`), and the requirement is conditional on actual render-image availability for the current node/revision.
 

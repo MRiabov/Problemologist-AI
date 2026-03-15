@@ -23,7 +23,7 @@ The agent is to generate problems for an engineer to solve. This is important, a
     - Feasibility of solution
     - Lack of violation of environment constraints (no significant, etc.)
     - Proper randomization.
-    - No excessive degrees of freedom; all parts are fixed as they should be.
+    - No excessive or unjustified benchmark-side degrees of freedom.
 
 ## Output requirements
 
@@ -45,7 +45,9 @@ The benchmarks are consisting of CAD models which are converted into XML.
 
 The environments are made with static objects, dynamic objects, and motors. <!-- note - not sure if I handle dynamic objects atm. If I do, how are they specified in CAD? -->
 
-Motors require power to run, however, we don't bother with "wiring" yet.
+Benchmark-owned motors and electronics are treated as fixture behavior, not as engineer-owned electrical design. They still require strict COTS identification when they come from the catalog, but benchmark fixtures do not become part of engineer pricing or manufacturability targets.
+
+For benchmark-owned powered fixtures, we do not require benchmark-side wiring realism in MVP. Benchmark fixtures may be implicitly powered when the benchmark contract says so.
 
 Problems with motors and moving parts are verified more consistently because they are more prone to error.
 
@@ -67,7 +69,7 @@ Problems with motors and moving parts are verified more consistently because the
    - `support_wall`: center `[0, -35, 40]`, size `[120, 6, 80]`, static scale range `[0.9, 1.15]`.
    - `funnel_body`: center `[32, 10, 18]`, top radius `20`, bottom radius `7`, height `26`, static scale range `[0.9, 1.1]`.
    - `goal_bin`: AABB min `[26, 4, 0]`, max `[42, 20, 10]`.
-   - No moving parts in this benchmark (all `final_assembly.parts[*].dofs: []`).
+   - No moving parts in this benchmark (all `benchmark_assembly.parts[*].dofs: []`).
 
 3. **Input objective (moved object)**
    - Shape: `sphere`.
@@ -94,7 +96,7 @@ Problems with motors and moving parts are verified more consistently because the
 8. **Planner artifacts**
    - Write `todo.md` implementation checklist.
    - Write draft `benchmark_definition.yaml` matching this geometry/constraint data.
-   - Write draft `assembly_definition.yaml` with per-part DOFs/control in `final_assembly.parts` (benchmark-local; not handed to engineering).
+   - Write draft `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; handed to engineering as read-only benchmark context).
    - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 ```
 
@@ -139,21 +141,25 @@ The benchmark loop has two reviewer stages with different responsibilities.
 
 `Benchmark Plan Reviewer` responsibilities:
 
-1. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `assembly_definition.yaml`.
-2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
+1. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `benchmark_assembly_definition.yaml`.
+2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`.
 3. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
 4. Validate non-ambiguity and completeness of planner handoff artifacts.
 5. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
-6. Reject excessive or unjustified benchmark-side DOFs in benchmark-local `final_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
-7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+6. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion.
+7. Reject impossible or excessively underconstrained benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unstable/unreviewable joint setups.
+8. Reject excessive or unjustified benchmark-side DOFs in benchmark-local `benchmark_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
+9. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Benchmark Reviewer` responsibilities:
 
 1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations.
 2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
-3. Verify the benchmark remains solvable, properly randomized, and free of unintended excessive DOFs or unconstrained parts after implementation.
-4. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
-5. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+3. Verify the benchmark remains solvable, properly randomized, and free of unintended excessive DOFs or overly underconstrained moving fixtures after implementation.
+4. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on static validation preview alone.
+5. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
+6. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
+7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 Benchmark-side reviewer manifest naming:
 
@@ -208,7 +214,7 @@ The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
    - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight_g`).
-   - Do not read benchmark `assembly_definition.yaml`; benchmark cost estimation stays local to the Benchmark Planner.
+   - Read `benchmark_assembly_definition.yaml` as read-only benchmark context when it is present. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but do not treat it as an engineer-owned costing artifact.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 

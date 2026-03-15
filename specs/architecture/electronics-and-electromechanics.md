@@ -59,6 +59,21 @@ For explicit electromechanical tasks:
 3. simulation validates that design before or during motion,
 4. reviewers inspect the electrical evidence alongside the mechanical result.
 
+This rule applies to engineer-owned electromechanical solutions. Benchmark-owned electronics and powered fixtures follow a different contract defined below.
+
+### Benchmark fixture electronics are read-only environment behavior
+
+Benchmarks may include motors, bearings, relays, sensors, power supplies, and other electronics as benchmark-owned fixtures when they make the task more realistic or more interesting.
+
+The architecture rule is:
+
+1. benchmark-owned electronics are read-only environment fixtures, not part of the engineer-owned electrical design,
+2. strict COTS identification still applies to benchmark-owned catalog parts,
+3. benchmark-owned electronics do not contribute to engineer manufacturability validation, engineer price, or engineer weight totals,
+4. benchmark-owned powered fixtures may be implicitly powered in MVP,
+5. benchmark-owned powered fixtures do not require wiring realism unless the benchmark explicitly makes wiring part of the task,
+6. benchmark-owned motion still requires reviewer-visible dynamic evidence and a stable handoff contract.
+
 ### Planning is split, implementation is unified
 
 We split electrical planning from mechanical planning, but we do not split electrical coding into a second implementation owner after the mechanical coder.
@@ -125,6 +140,33 @@ electronics_requirements:
 ```
 
 This section declares what the task expects and what limits the engineer must respect. It is benchmark-owned, not an implementation artifact.
+
+When the benchmark itself contains electronics or powered moving fixtures, benchmark-owned fixture declarations also live in `benchmark_definition.yaml`.
+
+The stable fixture-facing contract is:
+
+```yaml
+benchmark_fixture_electronics:
+  fixtures:
+    - fixture_id: turntable_motor
+      cots_part_id: nema17_stepper_42x40
+      component_type: MOTOR
+      fixture_behavior:
+        motion_kind: motorized_revolute
+        axis: [0, 0, 1]
+        operating_range_deg: [0, 360]
+        control_mode: constant_speed
+        speed_deg_per_s: 180
+        availability: always_on
+      electrical_contract:
+        implicit_power: true
+        wiring_mode: omitted
+      allows_engineer_interaction: true
+```
+
+This contract is benchmark-owned environment metadata. It tells engineering what fixture behavior exists, not how to implement it.
+
+Engineer interaction with benchmark-owned electronics is allowed only when the specific benchmark-owned component declares `allows_engineer_interaction: true`. The engineer may then use the intended interaction surface, but may not rewrite benchmark wiring or mutate benchmark-owned electrical design.
 
 ### `assembly_definition.yaml`
 
@@ -251,6 +293,12 @@ A motorized mechanism only works when both of these are true:
 
 This makes electricity a real part of the engineering problem instead of decorative metadata.
 
+Benchmark-owned powered fixtures are the exception:
+
+1. benchmark-owned controller behavior may be treated as already powered when the benchmark contract declares `implicit_power: true`,
+2. this exception is allowed only for read-only benchmark fixtures,
+3. engineer-authored powered mechanisms still require explicit electrical design and power validation.
+
 ### Runtime coupling
 
 The simulation loop must support:
@@ -265,6 +313,8 @@ The simulation loop must support:
 Legacy episodes without an explicit `electronics` section may continue to behave as implicitly powered.
 
 That is a compatibility rule, not a design rule for new electromechanical tasks. New electronics benchmarks should state the electrical design explicitly.
+
+Benchmark-owned powered fixtures follow the same philosophy: implicit power is allowed only when the benchmark declares it explicitly as fixture behavior. We do not want silent powered motors that exist only in code and not in the benchmark contract.
 
 ## Physical wire contract
 
