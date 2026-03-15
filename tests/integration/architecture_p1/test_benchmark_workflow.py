@@ -109,9 +109,9 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
-        assert any(p.endswith("assembly_definition.yaml") for p in artifact_paths), (
-            f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
-        )
+        assert any(
+            p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
+        ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
         assert submit_plan_traces, (
             "Expected planner to call submit_plan before workflow completion."
         )

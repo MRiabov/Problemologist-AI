@@ -98,7 +98,7 @@ async def test_benchmark_submit_plan_validates_and_submits(monkeypatch):
             "plan.md": "# Learning Objective\n",
             "todo.md": "- [ ] task\n",
             "benchmark_definition.yaml": "version: '1.0'\nobjectives:\n  primary: []\n",
-            "assembly_definition.yaml": "version: '1.0'\nconstraints: {}\n",
+            "benchmark_assembly_definition.yaml": "version: '1.0'\nconstraints: {}\n",
         }
     )
     tools = get_benchmark_planner_tools(fs, session_id="s1")
@@ -123,8 +123,8 @@ async def test_benchmark_submit_plan_validates_and_submits(monkeypatch):
     assert result["node_type"] == AgentName.BENCHMARK_PLANNER.value
     assert called["node_type"] == AgentName.BENCHMARK_PLANNER
     assert called["files"] == [
-        "assembly_definition.yaml",
         "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
         "plan.md",
         "todo.md",
     ]

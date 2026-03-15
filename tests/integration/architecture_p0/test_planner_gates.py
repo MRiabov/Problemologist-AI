@@ -324,7 +324,7 @@ async def _wait_for_benchmark_asset(
     regexes=[
         "plan_md_missing",
         "todo_md_missing",
-        "assembly_definition_yaml_missing",
+        "benchmark_assembly_definition_yaml_missing",
     ]
 )
 @pytest.mark.asyncio
@@ -344,7 +344,7 @@ async def test_int_005_mandatory_artifacts_gate(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
-            "assembly_definition.yaml": valid_cost,
+            "benchmark_assembly_definition.yaml": valid_cost,
             "solution.py": minimal_script,
         }
 
@@ -388,11 +388,11 @@ async def test_int_005_mandatory_artifacts_gate(
         assert not data.success
         assert "todo.md is missing" in data.message
 
-        # 3. Missing assembly_definition.yaml
+        # 3. Missing benchmark_assembly_definition.yaml
         files = base_files.copy()
-        del files["assembly_definition.yaml"]
+        del files["benchmark_assembly_definition.yaml"]
         await setup_workspace(client, base_headers, files)
-        delete_cost_req = DeleteFileRequest(path="assembly_definition.yaml")
+        delete_cost_req = DeleteFileRequest(path="benchmark_assembly_definition.yaml")
         await client.post(
             f"{WORKER_LIGHT_URL}/fs/delete",
             json=delete_cost_req.model_dump(mode="json"),
@@ -405,7 +405,7 @@ async def test_int_005_mandatory_artifacts_gate(
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert not data.success
-        assert "assembly_definition.yaml is missing" in data.message
+        assert "benchmark_assembly_definition.yaml is missing" in data.message
 
 
 @pytest.mark.integration_p0
