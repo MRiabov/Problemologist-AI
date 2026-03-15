@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from controller.agent.nodes.electronics_engineer import electronics_engineer_node
 from langchain_core.messages import AIMessage
 
-from controller.agent.nodes.electronics_engineer import electronics_engineer_node
 from controller.agent.state import AgentState
 from shared.enums import AgentName
 

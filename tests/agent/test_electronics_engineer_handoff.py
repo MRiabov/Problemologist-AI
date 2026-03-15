@@ -1,9 +1,9 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from controller.agent.nodes.electronics_engineer import electronics_engineer_node
 
 from controller.agent.nodes.coder import coder_node
-from controller.agent.nodes.electronics_engineer import electronics_engineer_node
 from controller.agent.state import AgentState
 
 
