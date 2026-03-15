@@ -31,14 +31,14 @@ benchmark:
       plan_artifacts_present:
         weight: 0.05
         description: >
-          plan.md, benchmark_definition.yaml, assembly_definition.yaml, and todo.md all
+          plan.md, benchmark_definition.yaml, benchmark_assembly_definition.yaml, and todo.md all
           exist and are non-empty (not equal to template stubs).
 
       # Gate 2 — YAML files pass schema validation
       yaml_schema_valid:
         weight: 0.10
         description: >
-          benchmark_definition.yaml and assembly_definition.yaml pass Pydantic schema
+          benchmark_definition.yaml and benchmark_assembly_definition.yaml pass Pydantic schema
           validation (no missing required fields, correct types, valid units).
 
       # Gate 3 — cost estimate within benchmark cap
@@ -71,7 +71,7 @@ benchmark:
       cots_ids_valid:
         weight: 0.05
         description: >
-          All COTS part IDs in assembly_definition.yaml resolve to known
+          All COTS part IDs in benchmark_assembly_definition.yaml resolve to known
           entries in the parts catalog DB.
 
       # Gate 7 — plan passes reviewer acceptance (downstream signal)

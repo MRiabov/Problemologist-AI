@@ -332,6 +332,7 @@ engineer:
          - Treat planner-selected `cots_parts` and `final_assembly` part IDs as locked inputs by default. Do NOT reopen procurement research for parts that are already specified there.
       2. Read `benchmark_definition.yaml` for exact coordinates and runtime randomization.
          - Note: `max_unit_cost` and `max_weight` are set by the Planner in `benchmark_definition.yaml` and should match the `assembly_definition.yaml` targets.
+         - If `benchmark_assembly_definition.yaml` exists, treat it as read-only benchmark context describing benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction.
          - Read `benchmark_parts[].metadata.attachment_policy` before planning any fastener attachment to benchmark-owned fixtures.
          - If `attachment_policy` is absent, treat the benchmark part as non-attachable.
          - If `attachment_policy.drill_policy` is absent, treat drilling into that benchmark part as forbidden.
@@ -678,7 +679,7 @@ benchmark_generator:
       - Do not loop on discovery. Use at most:
         - 1 `list_files` call for orientation
         - 2 `read_file` calls for required context
-      - After that, write `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, run `submit_plan()`, and finish.
+      - After that, write `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, run `submit_plan()`, and finish.
       - Read the workspace objectives file using the literal path `benchmark_definition.yaml`, not an absolute path.
 
       **MANDATORY OUTPUT FILES (output ONLY these, no others)**:
@@ -688,12 +689,12 @@ benchmark_generator:
         `moved_object.start_position` must be a top-level field under `moved_object`; do not nest it under `static_randomization`.
         Every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.
         The moved object's full runtime AABB must stay inside `build_zone`: validate `start_position +/- runtime_jitter +/- max(static_randomization.radius)` on every axis before submission.
-      - `assembly_definition.yaml`: Planner-side cost/weight contract with valid part references only. Every referenced benchmark-owned object must already exist in `benchmark_definition.yaml`.
+      - `benchmark_assembly_definition.yaml`: Benchmark-side fixture/motion contract with valid part references only. Every referenced benchmark-owned object must already exist in `benchmark_definition.yaml`.
       - If any of these files already exist, overwrite them in place rather than creating alternates or retrying without overwrite.
       Do NOT create any other files (no summaries, specifications, or completion reports).
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
-      - **Plan submission (benchmark)**: Ensure `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` are complete and valid, then call `submit_plan()` and only finish after it returns `status=submitted`.
+      - **Plan submission (benchmark)**: Ensure `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` are complete and valid, then call `submit_plan()` and only finish after it returns `status=submitted`.
       - **Pricing assumptions**: Use COTS/manufacturing references for price assumptions, but reserve `cots_search` for likely engineer-owned solution parts with exact catalog identities.
         Do NOT price the benchmark-owned `moved_object` or environment fixtures through `cots_search`; pricing is for the likely engineer-side solution challenge, not benchmark-owned context objects.
         For passive gravity-fed or otherwise fully-manufactured solution concepts, do not invent speculative standard hardware such as bearings or motors just to create a catalog lookup.
@@ -723,7 +724,7 @@ benchmark_generator:
       - `plan.md`
       - `todo.md`
       - `benchmark_definition.yaml`
-      - `assembly_definition.yaml`
+      - `benchmark_assembly_definition.yaml`
       - `renders/**` if any planner-side renders already exist
 
       **Tools**:
@@ -737,7 +738,7 @@ benchmark_generator:
       **Review Criteria (MANDATORY)**:
       1. Reject any nonexistent object reference across planner artifacts.
       2. Reject inconsistent planner artifacts, including mismatched names, labels, part IDs, constraints, or attachment assumptions.
-      3. Confirm `assembly_definition.yaml` stays consistent with benchmark-owned objects declared in `benchmark_definition.yaml`.
+      3. Confirm `benchmark_assembly_definition.yaml` stays consistent with benchmark-owned objects declared in `benchmark_definition.yaml`.
       4. Confirm the plan is concrete enough for the coder without inventing new planner-stage objects.
       5. If any render exists in `renders/`, inspect at least one render with `inspect_media(path)` before approving.
 
@@ -863,8 +864,9 @@ benchmark_generator:
          - `part_type="static"` does NOT automatically make a part static. If you omit `fixed=True`, the exported scene can mark the part as dynamic and break simulation.
 
       **Artifact Ownership (CRITICAL)**:
-      - `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` are planner-stage handoff files.
-      - Treat `benchmark_definition.yaml` and `assembly_definition.yaml` as read-only unless they are missing and the workspace explicitly allows creation.
+      - `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` are planner-stage handoff files.
+      - Treat `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` as read-only unless they are missing and the workspace explicitly allows creation.
+      - If `benchmark_assembly_definition.yaml` marks a benchmark-owned component with `allows_engineer_interaction: true`, you may design against that intended interaction surface but you must not rewrite the benchmark file.
       - Your primary writable deliverable is `script.py`.
       - You may update `todo.md` checkbox progress and `journal.md`.
 
