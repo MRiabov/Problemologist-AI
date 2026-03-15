@@ -74,7 +74,7 @@ BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "plan.md",
     "todo.md",
     "benchmark_definition.yaml",
-    "assembly_definition.yaml",
+    "benchmark_assembly_definition.yaml",
 )
 REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "script.py",

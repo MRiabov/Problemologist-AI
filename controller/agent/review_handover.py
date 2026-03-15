@@ -146,8 +146,10 @@ async def validate_plan_reviewer_handover(
 
     if not await worker_client.exists("benchmark_definition.yaml"):
         return f"benchmark_definition.yaml missing for {expected_stage} handoff."
-    if not await worker_client.exists("assembly_definition.yaml"):
-        return f"assembly_definition.yaml missing for {expected_stage} handoff."
+    if not await worker_client.exists("benchmark_assembly_definition.yaml"):
+        return (
+            f"benchmark_assembly_definition.yaml missing for {expected_stage} handoff."
+        )
 
     try:
         benchmark_raw = await worker_client.read_file("benchmark_definition.yaml")
@@ -161,7 +163,9 @@ async def validate_plan_reviewer_handover(
             )
         benchmark_definition = benchmark_result
         assembly_definition = AssemblyDefinition.model_validate(
-            yaml.safe_load(await worker_client.read_file("assembly_definition.yaml"))
+            yaml.safe_load(
+                await worker_client.read_file("benchmark_assembly_definition.yaml")
+            )
             or {}
         )
     except Exception as e:

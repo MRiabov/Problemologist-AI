@@ -131,7 +131,7 @@ def get_benchmark_planner_tools(
             "plan.md",
             "todo.md",
             "benchmark_definition.yaml",
-            "assembly_definition.yaml",
+            "benchmark_assembly_definition.yaml",
         ]
         artifacts: dict[str, str] = {}
         missing_files: list[str] = []

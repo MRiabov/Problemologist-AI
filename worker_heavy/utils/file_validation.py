@@ -602,7 +602,7 @@ def validate_node_output(
                     "plan.md",
                     "todo.md",
                     "benchmark_definition.yaml",
-                    "assembly_definition.yaml",
+                    "benchmark_assembly_definition.yaml",
                 ],
                 AgentName.ENGINEER_CODER: [
                     "plan.md",
@@ -638,7 +638,7 @@ def validate_node_output(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
-                "assembly_definition.yaml",
+                "benchmark_assembly_definition.yaml",
             ],
             AgentName.ENGINEER_CODER: [
                 "plan.md",
@@ -701,7 +701,10 @@ def validate_node_output(
             if not is_valid:
                 # obj_res is list[str] on failure
                 errors.extend([f"benchmark_definition.yaml: {e}" for e in obj_res])
-        elif filename == "assembly_definition.yaml":
+        elif filename in {
+            "assembly_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+        }:
             effective_config = manufacturing_config
             if (
                 effective_config is None
@@ -718,7 +721,7 @@ def validate_node_output(
             )
             if not is_valid:
                 # asm_res is list[str] on failure
-                errors.extend([f"assembly_definition.yaml: {e}" for e in asm_res])
+                errors.extend([f"{filename}: {e}" for e in asm_res])
         elif filename == "plan_refusal.md":
             is_valid, refusal_res = validate_plan_refusal(
                 content, session_id=session_id

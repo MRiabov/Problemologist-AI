@@ -136,7 +136,7 @@ async def validate_benchmark_planner_handoff_artifacts(
         "plan.md",
         "todo.md",
         "benchmark_definition.yaml",
-        "assembly_definition.yaml",
+        "benchmark_assembly_definition.yaml",
     )
     artifacts: dict[str, str] = {}
 

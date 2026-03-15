@@ -181,7 +181,7 @@ class BenchmarkPlannerNode(BaseNode):
                     "plan.md",
                     "todo.md",
                     "benchmark_definition.yaml",
-                    "assembly_definition.yaml",
+                    "benchmark_assembly_definition.yaml",
                 ],
                 AgentName.BENCHMARK_PLANNER,
             )
@@ -853,7 +853,7 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 class BenchmarkPlanReviewerSignature(dspy.Signature):
     """
     Review the benchmark planning handoff before coding begins.
-    Inspect plan.md, todo.md, benchmark_definition.yaml, and assembly_definition.yaml.
+    Inspect plan.md, todo.md, benchmark_definition.yaml, and benchmark_assembly_definition.yaml.
     Reject plans that reference nonexistent objects or inconsistent planner artifacts.
     When done, use SUBMIT to provide the final review result.
     """
@@ -862,7 +862,7 @@ class BenchmarkPlanReviewerSignature(dspy.Signature):
     plan_md = dspy.InputField()
     todo_md = dspy.InputField()
     benchmark_definition_yaml = dspy.InputField()
-    assembly_definition_yaml = dspy.InputField()
+    benchmark_assembly_definition_yaml = dspy.InputField()
     journal = dspy.InputField()
     review_feedback = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
@@ -900,7 +900,9 @@ class BenchmarkPlanReviewerNode(BaseNode):
         plan_md = "# No plan.md found."
         todo_md = "# No todo.md found."
         benchmark_definition_yaml = "# No benchmark_definition.yaml found."
-        assembly_definition_yaml = "# No assembly_definition.yaml found."
+        benchmark_assembly_definition_yaml = (
+            "# No benchmark_assembly_definition.yaml found."
+        )
 
         with suppress(Exception):
             if await self.ctx.worker_client.exists("plan.md"):
@@ -914,9 +916,13 @@ class BenchmarkPlanReviewerNode(BaseNode):
                     BENCHMARK_DEFINITION_FILE
                 )
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
-                assembly_definition_yaml = await self.ctx.worker_client.read_file(
-                    "assembly_definition.yaml"
+            if await self.ctx.worker_client.exists(
+                "benchmark_assembly_definition.yaml"
+            ):
+                benchmark_assembly_definition_yaml = (
+                    await self.ctx.worker_client.read_file(
+                        "benchmark_assembly_definition.yaml"
+                    )
                 )
 
         inputs = {
@@ -924,7 +930,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
             "plan_md": plan_md,
             "todo_md": todo_md,
             "benchmark_definition_yaml": benchmark_definition_yaml,
-            "assembly_definition_yaml": assembly_definition_yaml,
+            "benchmark_assembly_definition_yaml": benchmark_assembly_definition_yaml,
             "journal": state.journal,
             "review_feedback": state.review_feedback or "No feedback provided.",
         }
@@ -939,7 +945,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
-                "assembly_definition.yaml",
+                "benchmark_assembly_definition.yaml",
             ],
             AgentName.BENCHMARK_PLAN_REVIEWER,
         )

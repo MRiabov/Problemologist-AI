@@ -136,8 +136,8 @@ def submit_for_review(
             "benchmark_definition.yaml is missing (required for submission)"
         )
 
-    # assembly_definition.yaml
-    cost_path = cwd / "assembly_definition.yaml"
+    # benchmark_assembly_definition.yaml
+    cost_path = cwd / "benchmark_assembly_definition.yaml"
     if cost_path.exists():
         from .file_validation import validate_assembly_definition_yaml
 
@@ -154,15 +154,19 @@ def submit_for_review(
         )
         if not is_valid:
             logger.error(
-                "assembly_definition_yaml_invalid",
+                "benchmark_assembly_definition_yaml_invalid",
                 errors=estimation,
                 session_id=session_id,
             )
-            raise ValueError(f"assembly_definition.yaml invalid: {estimation}")
+            raise ValueError(
+                f"benchmark_assembly_definition.yaml invalid: {estimation}"
+            )
     else:
-        logger.error("assembly_definition_yaml_missing", session_id=session_id)
+        logger.error(
+            "benchmark_assembly_definition_yaml_missing", session_id=session_id
+        )
         raise ValueError(
-            "assembly_definition.yaml is missing (required for submission)"
+            "benchmark_assembly_definition.yaml is missing (required for submission)"
         )
 
     # 2. Verify prior validation (INT-018) for current script revision
@@ -354,7 +358,7 @@ def submit_for_review(
     import shutil
 
     shutil.copy(objectives_path, renders_dir / "benchmark_definition.yaml")
-    shutil.copy(cost_path, renders_dir / "assembly_definition.yaml")
+    shutil.copy(cost_path, renders_dir / "benchmark_assembly_definition.yaml")
 
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
@@ -387,7 +391,9 @@ def submit_for_review(
         mjcf_path=str(renders_dir / "scene.xml"),
         cad_path=str(cad_path),
         objectives_path=str(renders_dir / "benchmark_definition.yaml"),
-        assembly_definition_path=str(renders_dir / "assembly_definition.yaml"),
+        assembly_definition_path=str(
+            renders_dir / "benchmark_assembly_definition.yaml"
+        ),
     )
 
     manifest_json = manifest.model_dump_json(indent=2)

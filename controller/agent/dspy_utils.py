@@ -320,7 +320,12 @@ def map_events_to_prediction(
 
     # Tracking for artifact presence
     planned_files = set()
-    required_planner_files = {"plan.md", "todo.md", "assembly_definition.yaml"}
+    required_planner_files = {
+        "plan.md",
+        "todo.md",
+        "assembly_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+    }
 
     for event in events:
         # Support both 'event_type' (BaseEvent) and 'type' (legacy/other)
