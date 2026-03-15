@@ -41,4 +41,4 @@ Test whether an engineer can solve a freestanding transfer benchmark where the e
 
 - `todo.md` tracks the ballast base, chute, stabilizer, and cradle implementation.
 - `benchmark_definition.yaml` mirrors the no-drill limits and objective layout.
-- `assembly_definition.yaml` records the freestanding benchmark-local parts and confirms zero DOFs.
+- `benchmark_assembly_definition.yaml` records the freestanding benchmark-local parts and confirms zero DOFs.

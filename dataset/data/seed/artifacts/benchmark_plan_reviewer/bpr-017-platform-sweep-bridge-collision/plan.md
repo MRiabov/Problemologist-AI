@@ -43,4 +43,4 @@ Test whether an engineer can receive a ball from a benchmark-owned moving lift p
 
 - `todo.md` tracks the lift platform, guide column, handoff bridge, and goal shelf implementation.
 - `benchmark_definition.yaml` mirrors the platform clearance keep-out and elevated goal geometry.
-- `assembly_definition.yaml` records the single platform lift axis and benchmark-local costs.
+- `benchmark_assembly_definition.yaml` records the single platform lift axis and benchmark-local costs.

@@ -43,4 +43,4 @@ Test whether an engineer can receive a ball near floor height and lift it onto a
 
 - `todo.md` captures the benchmark implementation checklist.
 - `benchmark_definition.yaml` mirrors the benchmark-owned geometry, objectives, and caps.
-- `assembly_definition.yaml` captures benchmark-local part DOFs and cost estimates for the floor, tower, shelf, and lift carriage.
+- `benchmark_assembly_definition.yaml` captures benchmark-local part DOFs and cost estimates for the floor, tower, shelf, and lift carriage.

@@ -44,4 +44,4 @@ Test whether an engineer can handle a fast lateral transfer benchmark that inclu
 
 - `todo.md` tracks the lane, driven roller, speed-bump guard, and goal tray implementation.
 - `benchmark_definition.yaml` mirrors the speed-oriented geometry and benchmark caps.
-- `assembly_definition.yaml` records the single roller DOF and benchmark-local costs.
+- `benchmark_assembly_definition.yaml` records the single roller DOF and benchmark-local costs.
