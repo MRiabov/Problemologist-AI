@@ -5,8 +5,10 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, "--select=E9,F,I"]
         files: \.py$
+        exclude: ^(tests/integration/mock_responses/|shared/assets/template_repos/)
       - id: ruff-format
         files: \.py$
+        exclude: ^(tests/integration/mock_responses/|shared/assets/template_repos/)
   - repo: local
     hooks:
       - id: record-skills-revision

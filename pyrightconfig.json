@@ -1,6 +1,17 @@
 {
-  "include": ["src"],
-  "exclude": ["**/__pycache__"],
+  "include": [
+    "controller",
+    "shared",
+    "worker_light",
+    "worker_heavy",
+    "tests",
+    "scripts"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "tests/integration/mock_responses",
+    "shared/assets/template_repos"
+  ],
   "reportMissingTypeStubs": false,
   "pythonVersion": "3.12",
   "typeCheckingMode": "basic"

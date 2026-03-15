@@ -1,5 +1,9 @@
 line-length = 88
 target-version = "py312"
+exclude = [
+    "tests/integration/mock_responses",
+    "shared/assets/template_repos",
+]
 
 [lint]
 select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH", "RUF"]
