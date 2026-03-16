@@ -419,9 +419,9 @@ def get_engineer_planner_tools(
             }
             manifest = PlanReviewManifest(
                 status="ready_for_review",
-                reviewer_stage="engineering_plan_reviewer",
+                reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER,
                 session_id=fs.client.session_id,
-                planner_node_type=planner_node_type.value,
+                planner_node_type=planner_node_type,
                 artifact_hashes=artifact_hashes,
             )
             await fs.client.write_file(

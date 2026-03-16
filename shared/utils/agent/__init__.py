@@ -7,6 +7,7 @@ import structlog
 from build123d import Compound
 from pydantic import BaseModel
 
+from shared.enums import AgentName
 from shared.utils.fasteners import HoleType as HoleType
 from shared.utils.fasteners import fastener_hole as fastener_hole
 from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
@@ -110,7 +111,7 @@ def submit_for_review(compound: Compound) -> bool:
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.handover import submit_for_review as real_submit
 
-        return real_submit(compound, reviewer_stage="benchmark_reviewer")
+        return real_submit(compound, reviewer_stage=AgentName.BENCHMARK_REVIEWER)
 
     # In light-worker execution (e.g., script runtime checks), avoid emitting
     # heavy-worker gate errors before prerequisites are present. The controller
@@ -130,7 +131,7 @@ def submit_for_review(compound: Compound) -> bool:
 
     payload = {
         "script_path": "script.py",
-        "reviewer_stage": "benchmark_reviewer",
+        "reviewer_stage": AgentName.BENCHMARK_REVIEWER,
     }
     res = _call_heavy_worker("/benchmark/submit", payload)
     return BenchmarkToolResponse.model_validate(res).success

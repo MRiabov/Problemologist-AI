@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
-from typing import Any, Literal, Protocol
+from typing import Any, Protocol
 
 import httpx
 from pydantic import BaseModel, Field, model_validator
@@ -21,6 +21,7 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
 from shared.simulation.schemas import CustomObjectives
+from shared.workers.schema import ReviewerStage
 
 REASON_OK = "ok"
 REASON_STATE_INVALID = "state_invalid"
@@ -252,11 +253,7 @@ async def reviewer_handover_custom_check_from_session_id(
     session_id: str | None,
     reviewer_label: str,
     manifest_path: str,
-    expected_stage: Literal[
-        "benchmark_reviewer",
-        "engineering_execution_reviewer",
-        "electronics_reviewer",
-    ],
+    expected_stage: ReviewerStage,
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -381,7 +378,7 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
         handover_error = await validate_plan_reviewer_handover(
             client,
             manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
-            expected_stage="benchmark_plan_reviewer",
+            expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
         )
     except Exception as exc:
         handover_error = f"plan reviewer handover validation exception: {exc}"
@@ -477,10 +474,7 @@ async def plan_reviewer_handover_custom_check_from_session_id(
 async def _materialize_reviewer_handover(
     client: WorkerClient,
     *,
-    reviewer_stage: Literal[
-        "engineering_execution_reviewer",
-        "electronics_reviewer",
-    ] = "engineering_execution_reviewer",
+    reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
 ) -> str | None:
     async def _run_with_transient_busy_retry(operation_name: str, coro_factory):
         deadline = asyncio.get_running_loop().time() + _TRANSIENT_BUSY_MAX_WAIT_SECONDS

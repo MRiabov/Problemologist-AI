@@ -19,6 +19,7 @@ from shared.workers.schema import (
     GitStatusResponse,
     GrepMatch,
     InspectTopologyResponse,
+    ReviewerStage,
 )
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
@@ -567,7 +568,7 @@ class WorkerClient:
         self,
         script_path: str = "script.py",
         script_content: str | None = None,
-        reviewer_stage: str | None = None,
+        reviewer_stage: ReviewerStage | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
         client = await self._get_client()
