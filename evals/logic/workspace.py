@@ -16,6 +16,7 @@ from controller.agent.node_entry_validation import (
     evaluate_node_entry_contract,
     plan_reviewer_handover_custom_check_from_session_id,
     reviewer_handover_custom_check_from_session_id,
+    validate_seeded_workspace_handoff_artifacts,
 )
 from controller.clients.worker import WorkerClient
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
@@ -133,14 +134,14 @@ async def preflight_seeded_entry_contract(
 
     custom_checks = {
         BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, _state: (
+            lambda *, contract, state: (  # noqa: ARG005
                 benchmark_plan_reviewer_handover_custom_check_from_session_id(
                     session_id=session_id,
                 )
             )
         ),
         BENCHMARK_CODER_HANDOVER_CHECK: (
-            lambda *, _contract, _state: (
+            lambda *, contract, state: (  # noqa: ARG005
                 benchmark_coder_handover_custom_check_from_session_id(
                     session_id=session_id,
                     custom_objectives=None,
@@ -148,7 +149,7 @@ async def preflight_seeded_entry_contract(
             )
         ),
         BENCHMARK_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, _state: reviewer_handover_custom_check_from_session_id(
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=session_id,
                 reviewer_label="Benchmark",
                 manifest_path=".manifests/benchmark_review_manifest.json",
@@ -156,14 +157,14 @@ async def preflight_seeded_entry_contract(
             )
         ),
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, _state: (
+            lambda *, contract, state: (  # noqa: ARG005
                 plan_reviewer_handover_custom_check_from_session_id(
                     session_id=session_id,
                 )
             )
         ),
         ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, _state: reviewer_handover_custom_check_from_session_id(
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=session_id,
                 reviewer_label="Execution",
                 manifest_path=".manifests/engineering_execution_review_manifest.json",
@@ -171,7 +172,7 @@ async def preflight_seeded_entry_contract(
             )
         ),
         ELECTRONICS_REVIEWER_HANDOVER_CHECK: (
-            lambda *, _contract, _state: reviewer_handover_custom_check_from_session_id(
+            lambda *, contract, state: reviewer_handover_custom_check_from_session_id(  # noqa: ARG005
                 session_id=session_id,
                 reviewer_label="Electronics",
                 manifest_path=".manifests/electronics_review_manifest.json",
@@ -197,6 +198,20 @@ async def preflight_seeded_entry_contract(
             custom_checks=custom_checks,
             integration_mode=True,
         )
+        if result.ok:
+            supplemental_errors = await validate_seeded_workspace_handoff_artifacts(
+                worker_client=worker,
+                target_node=target_node,
+            )
+
+            if supplemental_errors:
+                raise ValueError(
+                    f"Seeded entry contract invalid for {target_node.value}: "
+                    + "; ".join(
+                        f"{error.code}: {error.message}"
+                        for error in supplemental_errors
+                    )
+                )
     finally:
         await worker.aclose()
 

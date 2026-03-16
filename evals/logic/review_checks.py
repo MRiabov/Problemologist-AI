@@ -65,11 +65,11 @@ async def load_latest_review_frontmatter(
 
     prefixes = review_filename_candidates(review_filename_prefix)
     yaml_patterns = [
-        re.compile(rf"^{re.escape(prefix)}-decision-round-(\d+)\\.yaml$")
+        re.compile(rf"^{re.escape(prefix)}-decision-round-(\d+)\.yaml$")
         for prefix in prefixes
     ]
     md_patterns = [
-        re.compile(rf"^{re.escape(prefix)}-(\d+)\\.md$") for prefix in prefixes
+        re.compile(rf"^{re.escape(prefix)}-(\d+)\.md$") for prefix in prefixes
     ]
 
     latest_yaml_name: str | None = None
@@ -157,7 +157,7 @@ async def review_artifacts_complete_for_prefix(
 
     prefixes = review_filename_candidates(review_filename_prefix)
     decision_patterns = [
-        (prefix, re.compile(rf"^{re.escape(prefix)}-decision-round-(\d+)\\.yaml$"))
+        (prefix, re.compile(rf"^{re.escape(prefix)}-decision-round-(\d+)\.yaml$"))
         for prefix in prefixes
     ]
 
@@ -183,7 +183,7 @@ async def review_artifacts_complete_for_prefix(
         )
 
     md_patterns = [
-        re.compile(rf"^{re.escape(prefix)}-(\d+)\\.md$") for prefix in prefixes
+        re.compile(rf"^{re.escape(prefix)}-(\d+)\.md$") for prefix in prefixes
     ]
     return any(
         not entry.is_dir

@@ -1284,7 +1284,8 @@ async def run_single_eval(
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             if spec.mode == EvalMode.BENCHMARK:
-                session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
+                benchmark_session_id = uuid.uuid4()
+                session_id = str(benchmark_session_id)
                 eval_log_key = _resolve_eval_log_key(
                     task_id=task_id, session_id=session_id
                 )
