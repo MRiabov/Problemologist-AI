@@ -1,0 +1,120 @@
+from evals.logic.models import AgentEvalSpec
+from shared.enums import AgentName, EvalMode
+
+PLANNER_REQUIRED_FILES: dict[AgentName, tuple[str, ...]] = {
+    AgentName.BENCHMARK_PLANNER: (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+    ),
+    AgentName.ENGINEER_PLANNER: (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    ),
+    AgentName.ELECTRONICS_PLANNER: (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    ),
+}
+
+
+AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
+    AgentName.BENCHMARK_PLANNER: AgentEvalSpec(
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_PLANNER,
+        required_trace_names=(AgentName.BENCHMARK_PLANNER,),
+        start_node=AgentName.BENCHMARK_PLANNER,
+    ),
+    AgentName.BENCHMARK_CODER: AgentEvalSpec(
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_CODER,
+        required_trace_names=(AgentName.BENCHMARK_CODER,),
+        start_node=AgentName.BENCHMARK_CODER,
+    ),
+    AgentName.BENCHMARK_PLAN_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_PLANNER,
+        required_trace_names=(AgentName.BENCHMARK_PLAN_REVIEWER,),
+        start_node=AgentName.BENCHMARK_PLAN_REVIEWER,
+        review_filename_prefix="benchmark-plan-review",
+    ),
+    AgentName.BENCHMARK_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.BENCHMARK,
+        request_agent_name=AgentName.BENCHMARK_REVIEWER,
+        required_trace_names=(AgentName.BENCHMARK_REVIEWER,),
+        start_node=AgentName.BENCHMARK_REVIEWER,
+        review_filename_prefix="benchmark-execution-review",
+    ),
+    AgentName.ENGINEER_PLANNER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_PLANNER,
+        required_trace_names=(AgentName.ENGINEER_PLANNER,),
+        start_node=AgentName.ENGINEER_PLANNER,
+    ),
+    AgentName.ENGINEER_CODER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
+        required_trace_names=(AgentName.ENGINEER_CODER,),
+        start_node=AgentName.ENGINEER_CODER,
+        required_reviewer_handover_manifest=(
+            ".manifests/engineering_execution_review_manifest.json"
+        ),
+        required_reviewer_stage="engineering_execution_reviewer",
+        materialize_reviewer_handover=True,
+    ),
+    AgentName.ENGINEER_PLAN_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
+        required_trace_names=(AgentName.ENGINEER_PLAN_REVIEWER,),
+        start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        review_filename_prefix="engineering-plan-review",
+    ),
+    AgentName.ENGINEER_EXECUTION_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
+        required_trace_names=(AgentName.ENGINEER_EXECUTION_REVIEWER,),
+        start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        review_filename_prefix="engineering-execution-review",
+    ),
+    AgentName.ELECTRONICS_PLANNER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_PLANNER,
+        required_trace_names=(AgentName.ELECTRONICS_PLANNER,),
+        start_node=AgentName.ELECTRONICS_PLANNER,
+    ),
+    AgentName.ELECTRONICS_REVIEWER: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.ENGINEER_CODER,
+        required_trace_names=(AgentName.ELECTRONICS_REVIEWER,),
+        start_node=AgentName.ELECTRONICS_REVIEWER,
+        review_filename_prefix="electronics-review",
+    ),
+    AgentName.COTS_SEARCH: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.COTS_SEARCH,
+        required_trace_names=(AgentName.COTS_SEARCH,),
+    ),
+    AgentName.SKILL_AGENT: AgentEvalSpec(
+        mode=EvalMode.AGENT,
+        request_agent_name=AgentName.SKILL_AGENT,
+        required_trace_names=(AgentName.SKILL_AGENT,),
+    ),
+    AgentName.GIT_AGENT: AgentEvalSpec(
+        mode=EvalMode.GIT,
+        request_agent_name=AgentName.GIT_AGENT,
+    ),
+}
+
+
+JUDGE_REVIEWER_CHAIN: dict[AgentName, tuple[AgentName, ...]] = {
+    AgentName.BENCHMARK_PLANNER: (AgentName.BENCHMARK_PLAN_REVIEWER,),
+    AgentName.BENCHMARK_CODER: (AgentName.BENCHMARK_REVIEWER,),
+    AgentName.ENGINEER_PLANNER: (AgentName.ENGINEER_PLAN_REVIEWER,),
+    AgentName.ENGINEER_CODER: (AgentName.ENGINEER_EXECUTION_REVIEWER,),
+    AgentName.ELECTRONICS_PLANNER: (AgentName.ENGINEER_PLAN_REVIEWER,),
+}
