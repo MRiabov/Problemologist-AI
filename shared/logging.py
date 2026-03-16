@@ -1,10 +1,82 @@
 import json
 import logging
 import os
+import re
 import sys
+import threading
+from pathlib import Path
 
 import structlog
 from structlog.types import Processor
+
+_SESSION_KEY_INT_RE = re.compile(r"(INT-\d{3})", re.IGNORECASE)
+_SESSION_KEY_EVAL_RE = re.compile(r"\b([a-z]{1,12}-\d{3})\b", re.IGNORECASE)
+_TEST_NODE_INT_RE = re.compile(r"test_int_(\d{3})", re.IGNORECASE)
+_SAFE_PATH_CHARS_RE = re.compile(r"[^A-Za-z0-9._-]+")
+_SESSION_FANOUT_LOCK = threading.Lock()
+
+
+def _json_safe(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    return str(value)
+
+
+def _resolve_session_folder_key(event_dict: dict) -> str | None:
+    integration_test_id = event_dict.get("integration_test_id")
+    if isinstance(integration_test_id, str):
+        match = _SESSION_KEY_INT_RE.search(integration_test_id)
+        if match:
+            return match.group(1).upper()
+
+    session_id = event_dict.get("session_id")
+    if isinstance(session_id, str):
+        int_match = _SESSION_KEY_INT_RE.search(session_id)
+        if int_match:
+            return int_match.group(1).upper()
+        eval_match = _SESSION_KEY_EVAL_RE.search(session_id)
+        if eval_match:
+            return eval_match.group(1).lower()
+        normalized = session_id.strip()
+        if normalized:
+            return _SAFE_PATH_CHARS_RE.sub("_", normalized)[:80]
+
+    test_id = event_dict.get("test_id")
+    if isinstance(test_id, str):
+        int_match = _SESSION_KEY_INT_RE.search(test_id)
+        if int_match:
+            return int_match.group(1).upper()
+        node_match = _TEST_NODE_INT_RE.search(test_id)
+        if node_match:
+            return f"INT-{node_match.group(1)}"
+
+    return None
+
+
+def _append_session_fanout_line(
+    *,
+    root_dir: Path,
+    folder_key: str,
+    service_name: str,
+    payload: dict,
+    is_error: bool,
+) -> None:
+    safe_key = _SAFE_PATH_CHARS_RE.sub("_", folder_key).strip("._-") or "unscoped"
+    safe_service = _SAFE_PATH_CHARS_RE.sub("_", service_name).strip("._-") or "service"
+    session_dir = root_dir / safe_key
+    session_dir.mkdir(parents=True, exist_ok=True)
+    target = session_dir / f"{safe_service}.log"
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+    if is_error:
+        error_target = session_dir / f"{safe_service}_errors.log"
+        with error_target.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
 def configure_logging(service_name: str):
@@ -25,6 +97,10 @@ def configure_logging(service_name: str):
     extra_debug_log = os.getenv("EXTRA_DEBUG_LOG")
     extra_error_log = os.getenv("EXTRA_ERROR_LOG")
     extra_error_json_log = os.getenv("EXTRA_ERROR_JSON_LOG")
+    session_log_root_raw = os.getenv("SESSION_LOG_ROOT", "").strip()
+    session_log_root = (
+        Path(os.path.abspath(session_log_root_raw)) if session_log_root_raw else None
+    )
 
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -55,15 +131,6 @@ def configure_logging(service_name: str):
         extra_error_json_log_abs = os.path.abspath(extra_error_json_log)
         os.makedirs(os.path.dirname(extra_error_json_log_abs), exist_ok=True)
 
-        def _json_safe(value):
-            if value is None or isinstance(value, (str, int, float, bool)):
-                return value
-            if isinstance(value, dict):
-                return {str(k): _json_safe(v) for k, v in value.items()}
-            if isinstance(value, (list, tuple, set)):
-                return [_json_safe(item) for item in value]
-            return str(value)
-
         def persist_error_json(logger, method_name, event_dict):
             level = str(event_dict.get("level", method_name)).lower()
             if level in {"error", "exception", "critical"}:
@@ -80,6 +147,33 @@ def configure_logging(service_name: str):
             return event_dict
 
         processors.append(persist_error_json)
+
+    if session_log_root is not None:
+        session_log_root.mkdir(parents=True, exist_ok=True)
+
+        def persist_session_scoped_log(logger, method_name, event_dict):
+            folder_key = _resolve_session_folder_key(event_dict)
+            if not folder_key:
+                return event_dict
+
+            payload = _json_safe(dict(event_dict))
+            payload.setdefault("service", service_name)
+            level = str(event_dict.get("level", method_name)).lower()
+            is_error = level in {"error", "exception", "critical"}
+            try:
+                with _SESSION_FANOUT_LOCK:
+                    _append_session_fanout_line(
+                        root_dir=session_log_root,
+                        folder_key=folder_key,
+                        service_name=service_name,
+                        payload=payload,
+                        is_error=is_error,
+                    )
+            except OSError:
+                pass
+            return event_dict
+
+        processors.append(persist_session_scoped_log)
 
     if log_format == "json":
         processors.append(structlog.processors.dict_tracebacks)

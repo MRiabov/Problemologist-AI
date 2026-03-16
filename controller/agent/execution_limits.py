@@ -234,6 +234,7 @@ async def accumulate_episode_credit_usage(
     input_tokens: int | None,
     output_tokens: int | None,
     total_tokens: int | None,
+    cost_usd: float | None = None,
 ) -> None:
     episode_uuid = UUID(str(episode_id))
     in_tokens = max(0, int(input_tokens or 0))
@@ -242,6 +243,9 @@ async def accumulate_episode_credit_usage(
         max(0, int(total_tokens))
         if total_tokens is not None
         else in_tokens + out_tokens
+    )
+    normalized_cost_usd = (
+        max(0.0, float(cost_usd)) if isinstance(cost_usd, int | float) else 0.0
     )
 
     session_factory = get_sessionmaker()
@@ -260,6 +264,8 @@ async def accumulate_episode_credit_usage(
         current_usage["input_tokens"] = current_input + in_tokens
         current_usage["output_tokens"] = current_output + out_tokens
         current_usage["total_tokens"] = current_total + total
+        current_cost = float(current_usage.get("total_cost_usd") or 0.0)
+        current_usage["total_cost_usd"] = current_cost + normalized_cost_usd
         additional["credit_usage"] = current_usage
         metadata.additional_info = additional
         episode.metadata_vars = metadata.model_dump()

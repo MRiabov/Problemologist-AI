@@ -1423,6 +1423,25 @@ class BaseNode:
         return None
 
     @staticmethod
+    def _extract_cost_usd(usage: Any, direct_cost: Any) -> float | None:
+        """Extract per-call USD cost from usage payloads or direct cost fields."""
+        if isinstance(direct_cost, int | float):
+            return float(direct_cost)
+
+        if usage is None:
+            return None
+        if hasattr(usage, "model_dump"):
+            with suppress(Exception):
+                usage = usage.model_dump(mode="json")
+        if not isinstance(usage, dict):
+            return None
+
+        usage_cost = usage.get("cost")
+        if isinstance(usage_cost, int | float):
+            return float(usage_cost)
+        return None
+
+    @staticmethod
     def _extract_latency_ms(response: Any) -> float | None:
         """Extract per-call latency in milliseconds from provider response."""
         if response is None:
@@ -1576,6 +1595,10 @@ class BaseNode:
                             input_tokens=self._extract_prompt_tokens(usage),
                             output_tokens=self._extract_completion_tokens(usage),
                             total_tokens=self._extract_total_tokens(usage),
+                            cost_usd=self._extract_cost_usd(
+                                usage,
+                                entry.get("cost"),
+                            ),
                         )
                     )
 
