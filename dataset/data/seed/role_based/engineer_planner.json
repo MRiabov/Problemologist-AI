@@ -58,5 +58,41 @@
     "task": "Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a controlled drop or redirection that sends the projectile ball from the elevated start region into the lower bin goal zone. The plan should handle the vertical drop cleanly, remain manufacturable, and stay within the benchmark cost and weight caps.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-010-lower-bin",
     "expected_criteria": "Planner artifacts define a gravity-aware lower-bin solution, include concrete risk mitigations for bounce and escape, and produce valid engineering handoff files under the benchmark caps."
+  },
+  {
+    "id": "ep-011-missing-assembly-def",
+    "task": "Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a raised-shelf transfer, but intentionally omit `assembly_definition.yaml` from planner outputs while still writing `plan.md` and `todo.md`.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-001-raised-shelf",
+    "expected_criteria": "Negative case: planner omits required handoff artifact (`assembly_definition.yaml`) and should fail plan-artifact completeness checks."
+  },
+  {
+    "id": "ep-012-invalid-assembly-schema",
+    "task": "Use the seeded benchmark handoff to plan the gap-transfer mechanism, but intentionally write schema-invalid content into `assembly_definition.yaml` (incorrect field types or missing required sections).",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-002-gap-launch",
+    "expected_criteria": "Negative case: planner emits schema-invalid engineering assembly definition and should fail YAML/schema validation."
+  },
+  {
+    "id": "ep-013-cost-over-cap",
+    "task": "Use the seeded benchmark handoff to plan the central-forbid-route mechanism, but intentionally set planner-owned estimated cost above benchmark max_unit_cost while keeping the rest of the handoff coherent.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-003-central-forbid-route",
+    "expected_criteria": "Negative case: engineering planner exceeds benchmark cost cap and should be penalized by cost-within-cap logic."
+  },
+  {
+    "id": "ep-014-weight-over-cap",
+    "task": "Use the seeded benchmark handoff to plan the timed-gate mechanism, but intentionally set planner-owned estimated total weight above benchmark max_weight while keeping geometry otherwise plausible.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-004-timed-gate",
+    "expected_criteria": "Negative case: engineering planner exceeds benchmark weight cap and should be penalized by weight-within-cap logic."
+  },
+  {
+    "id": "ep-015-invalid-cots",
+    "task": "Use the seeded benchmark handoff to plan the no-drill transfer mechanism, but intentionally reference at least one invented/non-catalog COTS part id in `assembly_definition.yaml`.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-005-no-drill-transfer",
+    "expected_criteria": "Negative case: engineering planner references invalid COTS IDs and should fail COTS validity checks."
+  },
+  {
+    "id": "ep-016-build-zone-overflow",
+    "task": "Use the seeded benchmark handoff to plan a low-friction cube guide, but intentionally define one planned part footprint that extends outside the benchmark build_zone while keeping other fields valid.",
+    "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-006-low-friction-cube",
+    "expected_criteria": "Negative case: planned mechanism exceeds build-zone bounds and should fail mechanism-fit checks."
   }
 ]

@@ -48,5 +48,35 @@
     "id": "bp-010-ball-over-speed-bump",
     "task": "Create a benchmark where a steel ball 25mm radius starts on flat ground and must be moved 700mm to a goal, but a rounded speed bump or ridge sits midway between start and goal. The benchmark should force the machine to handle a terrain discontinuity rather than a frictionless flat push.",
     "expected_criteria": "Plan defines a steel spherical moved_object, a midpoint ridge or bump with realistic dimensions, start and goal zones on opposite sides of the terrain feature, feasible simulation bounds, and success criteria based on the ball finishing beyond the bump in the goal zone."
+  },
+  {
+    "id": "bp-011-missing-todo",
+    "task": "Create a benchmark where a 40mm steel ball must be transferred around a central blocker to a goal zone, but intentionally omit `todo.md` from the planner handoff package even if the rest of the plan is complete.",
+    "expected_criteria": "Negative case: planner omits a required artifact (`todo.md`) and should fail contract-level artifact completeness."
+  },
+  {
+    "id": "bp-012-invalid-yaml-types",
+    "task": "Create a benchmark plan for sideways ball transfer and intentionally write invalid scalar types in `benchmark_definition.yaml` (for example strings where numeric vectors are required).",
+    "expected_criteria": "Negative case: planner emits schema-invalid YAML content that should fail typed validation."
+  },
+  {
+    "id": "bp-013-cost-over-cap",
+    "task": "Create a benchmark plan that sets benchmark/customer max_unit_cost at 25 USD, then intentionally propose planner-owned estimated cost above that cap while keeping the rest of the handoff coherent.",
+    "expected_criteria": "Negative case: planner cost estimate exceeds cap and should be penalized by cost-within-cap logic."
+  },
+  {
+    "id": "bp-014-weight-over-cap",
+    "task": "Create a benchmark plan that sets max_weight at 800 g, then intentionally produce a planner-owned estimated assembly weight above that cap while keeping geometry otherwise plausible.",
+    "expected_criteria": "Negative case: planner weight estimate exceeds cap and should be penalized by weight-within-cap logic."
+  },
+  {
+    "id": "bp-015-goal-forbid-overlap",
+    "task": "Create a benchmark plan where the goal zone partially overlaps a forbid zone in `benchmark_definition.yaml`, while keeping other fields contract-complete.",
+    "expected_criteria": "Negative case: objective geometry is inconsistent (goal-forbid overlap) and should fail geometry consistency checks."
+  },
+  {
+    "id": "bp-016-invalid-cots-id",
+    "task": "Create a benchmark plan with benchmark-owned powered fixture metadata in `benchmark_assembly_definition.yaml` that references at least one intentionally non-existent catalog COTS id.",
+    "expected_criteria": "Negative case: benchmark assembly references invalid/non-catalog COTS IDs and should fail cots-id validation."
   }
 ]
