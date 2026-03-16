@@ -5,7 +5,7 @@
 - Primary focus: physics simulation contract and success/failure definition for generated solutions.
 - Defines constraints realism rules, allowed mechanisms/components, and CAD-joint-to-simulator mapping.
 - Specifies simulation constants, randomization assumptions, and validation expectations.
-- Detailed WP2/WP3 modality contracts live in [fluids-and-deformables.md](./fluids-and-deformables.md) and [electronics-and-electromechanics.md](./electronics-and-electromechanics.md).
+- Detailed fluids/deformables and electromechanical modality contracts live in [fluids-and-deformables.md](./fluids-and-deformables.md) and [electronics-and-electromechanics.md](./electronics-and-electromechanics.md).
 - Use this file for changes related to simulation semantics, constraints, or definition-of-done logic.
 
 ## Genesis for simulation

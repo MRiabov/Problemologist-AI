@@ -490,7 +490,7 @@ Make an explicit decision:
    - Mark them as future work
    - Remove or clearly demote them from the active benchmark protocol and acceptance criteria
 
-For MVP, the cleaner choice is likely to mark electronics out of scope unless there is already a near-term WP3-ready architecture with concrete artifacts and validators.
+For MVP, the cleaner choice is likely to mark electronics out of scope unless there is already a near-term electromechanical architecture with concrete artifacts and validators.
 
 #### Closure criteria
 

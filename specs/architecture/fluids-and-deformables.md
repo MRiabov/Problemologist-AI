@@ -5,7 +5,7 @@
 - Primary focus: the architecture contract for fluid benchmarks, deformable-material simulation, and stress-aware validation.
 - Defines what benchmark planners, engineers, reviewers, and the simulation stack must support when a task goes beyond rigid-body-only mechanics.
 - Defines the stable product-facing contracts in `benchmark_definition.yaml`, `manufacturing_config.yaml`, and the simulation/review artifact surface.
-- Use this file for WP2-level capability planning and product behavior.
+- Use this file for fluids, deformables, and stress-validation capability planning and product behavior.
 - Use [simulation-and-dod.md](./simulation-and-dod.md) for generic simulation semantics that apply to all physics modes.
 
 This document is intentionally high-level and stable. It describes what the system must support and how the major pieces fit together. It does not try to mirror the current source tree.
@@ -78,7 +78,7 @@ The planner and engineer can rely on a simple rule:
 
 ### `benchmark_definition.yaml`
 
-WP2 extends `benchmark_definition.yaml` with three architecture-level concepts:
+This capability extends `benchmark_definition.yaml` with three architecture-level concepts:
 
 1. physics backend selection,
 2. fluid definitions,
@@ -162,7 +162,7 @@ They are not optional debug metrics. They are part of what determines success or
 
 Material properties in `manufacturing_config.yaml` are part of the simulation contract.
 
-For WP2, the critical additions are:
+For this capability, the critical additions are:
 
 1. density,
 2. Young's modulus,
@@ -175,7 +175,7 @@ This is the bridge between manufacturability/pricing choices and structural beha
 
 ### `assembly_definition.yaml`
 
-WP2 does not require a new standalone fluid section inside `assembly_definition.yaml`.
+This capability does not require a new standalone fluid section inside `assembly_definition.yaml`.
 
 The main physical coupling comes from:
 
@@ -354,7 +354,7 @@ At the end of the run, the system must determine:
 
 ### Failure modes
 
-WP2 introduces or elevates these failure classes:
+This capability introduces or elevates these failure classes:
 
 - `FLUID_OBJECTIVE_FAILED`
 - `STRESS_OBJECTIVE_EXCEEDED`
@@ -499,4 +499,4 @@ The architecture intentionally leaves room for later tightening in these areas:
 4. more deterministic artifact generation for every stress-aware scenario,
 5. fewer environment-dependent skips for Genesis-heavy integration coverage.
 
-Those are refinement items, not reasons to keep WP2 out of the architecture.
+Those are refinement items, not reasons to keep this capability out of the architecture.

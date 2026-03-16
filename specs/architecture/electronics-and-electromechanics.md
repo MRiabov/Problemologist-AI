@@ -5,7 +5,7 @@
 - Primary focus: the architecture contract for electrical design, circuit validation, wire routing, power-gated actuation, and electromechanical review.
 - Defines the stable product-facing contracts in `benchmark_definition.yaml`, `assembly_definition.yaml`, and the simulation/review artifact surface for electronics.
 - Describes what the planner, electrical engineer, reviewer, backend, and frontend must support when a mechanism depends on electrical power.
-- Use this file for WP3-level architecture and capability planning.
+- Use this file for electromechanical architecture and capability planning.
 - Use [agents/overview.md](./agents/overview.md) and [agents/handover-contracts.md](./agents/handover-contracts.md) for the surrounding workflow contract.
 
 This document describes what the system must support and how the major pieces fit together. It is not intended to mirror the current code structure.
@@ -110,7 +110,7 @@ This matters because:
 
 The system already has controller functions for motors and moving parts.
 
-WP3 does not replace that layer. It adds a power gate:
+This layer does not replace controller logic. It adds a power gate:
 
 1. controller logic still says how a motor tries to move,
 2. the electrical layer decides whether it can move,
@@ -390,10 +390,9 @@ Electronics are part of the active engineering workflow.
 The architecture includes:
 
 1. an electronics planner,
-2. an electronics engineer,
-3. an electronics reviewer.
+2. an electronics reviewer.
 
-These roles exist because electrical planning, 3D harness routing, and circuit review are different tasks from pure geometry authoring.
+Electrical planning, 3D harness routing constraints, and circuit review remain distinct concerns from pure geometry authoring, but implementation ownership stays with the unified `Engineering Coder` described earlier in this document and in the core agent workflow specs.
 
 ### Responsibility split
 
