@@ -3,6 +3,7 @@ import hashlib
 import inspect
 import json
 import re
+import time
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
@@ -598,6 +599,12 @@ class BenchmarkPlannerNode(BaseNode):
 
         for retry_count in range(max_retries):
             try:
+                attempt_budget_seconds = max(
+                    30.0,
+                    (float(settings.dspy_program_timeout_seconds) / float(max_retries))
+                    - 5.0,
+                )
+                attempt_started_at = time.monotonic()
                 trace_watermark = (
                     await self._get_latest_trace_id(db_callback) if db_callback else 0
                 )
@@ -617,23 +624,62 @@ class BenchmarkPlannerNode(BaseNode):
                 last_submit_error_text: str | None = None
                 cots_search_budget = 2
                 cots_search_calls = 0
+                no_tool_call_streak = 0
+                completion_timeout_streak = 0
                 planner_execution_policy = self.ctx.fs.policy.get_execution_policy(
                     AgentName.BENCHMARK_PLANNER
                 )
                 for step_idx in range(
                     planner_execution_policy.native_tool_loop_max_iters
                 ):
-                    response = await asyncio.to_thread(
-                        completion,
-                        model=request_config.model,
-                        api_key=request_config.api_key,
-                        api_base=request_config.api_base,
-                        timeout=settings.native_tool_completion_timeout_seconds,
-                        max_tokens=min(settings.llm_max_tokens, 2048),
-                        messages=messages,
-                        tools=tool_schemas,
-                        tool_choice="auto",
-                    )
+                    elapsed_seconds = time.monotonic() - attempt_started_at
+                    if elapsed_seconds >= attempt_budget_seconds:
+                        raise RuntimeError(
+                            "Native benchmark planner attempt budget exceeded "
+                            f"({elapsed_seconds:.1f}s >= {attempt_budget_seconds:.1f}s)."
+                        )
+
+                    try:
+                        response = await asyncio.to_thread(
+                            completion,
+                            model=request_config.model,
+                            api_key=request_config.api_key,
+                            api_base=request_config.api_base,
+                            timeout=settings.native_tool_completion_timeout_seconds,
+                            max_tokens=min(settings.llm_max_tokens, 2048),
+                            messages=messages,
+                            tools=tool_schemas,
+                            tool_choice="auto",
+                        )
+                    except Exception as completion_err:
+                        error_text = (
+                            str(completion_err).strip()
+                            or "native completion call failed"
+                        )
+                        logger.warning(
+                            "benchmark_native_completion_failed",
+                            session_id=self.ctx.session_id,
+                            error=error_text,
+                            step_index=step_idx,
+                            retry_count=retry_count + 1,
+                        )
+                        completion_timeout_streak += 1
+                        messages.append(
+                            {
+                                "role": "system",
+                                "content": self._get_runtime_prompt(
+                                    "benchmark_generator.runtime.no_tool_call_nudge"
+                                ),
+                            }
+                        )
+                        if completion_timeout_streak >= 3:
+                            raise RuntimeError(
+                                "Native benchmark planner completion timed out "
+                                "repeatedly; aborting planner attempt."
+                            ) from completion_err
+                        continue
+
+                    completion_timeout_streak = 0
                     message = response.choices[0].message
                     assistant_text, tool_calls = self._extract_native_tool_calls(
                         message,
@@ -650,9 +696,32 @@ class BenchmarkPlannerNode(BaseNode):
                             )
 
                     if not tool_calls:
-                        raise ValueError(
-                            "Native benchmark planner returned no tool calls before submit_plan."
+                        no_tool_call_streak += 1
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": assistant_text
+                                or "No tool call emitted on this turn.",
+                            }
                         )
+                        messages.append(
+                            {
+                                "role": "system",
+                                "content": self._get_runtime_prompt(
+                                    "benchmark_generator.runtime.no_tool_call_nudge"
+                                    if no_tool_call_streak > 2
+                                    else "benchmark_generator.runtime.continue_from_workspace"
+                                ),
+                            }
+                        )
+                        if no_tool_call_streak >= 6:
+                            raise ValueError(
+                                "Native benchmark planner returned no tool calls "
+                                "repeatedly before submit_plan."
+                            )
+                        continue
+
+                    no_tool_call_streak = 0
 
                     messages.append(
                         self._assistant_message_with_tool_calls(
