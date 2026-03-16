@@ -4,9 +4,9 @@
   "session_id": "seed-bpr-016-low-friction-pocket-tolerance",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "assembly_definition.yaml": "6b7b16908f294dba45c5f486158066c2e5ba7eb2f3dbd1171cabb53101c7e331",
+    "benchmark_assembly_definition.yaml": "6b7b16908f294dba45c5f486158066c2e5ba7eb2f3dbd1171cabb53101c7e331",
     "benchmark_definition.yaml": "ec3c17476cae9ec361fafb9833b9d1881502c8cae784e4683c655acfcdf3ebe0",
-    "plan.md": "17c929cccd5e622bbb3121089b20295500674c91d12a2a35833072f826dcfef1",
+    "plan.md": "e35df7a42aa40b206b5b5bae25476d4ea6feae621df1218d3eb09c4b14bc231c",
     "todo.md": "0e4dda95f989ee9b431ca4766bbd12ece2f55a7797bc6bec3e026ab3b6030413"
   }
 }

@@ -580,6 +580,12 @@ benchmark_generator:
       The previous `{tool_name}` call had invalid arguments. Re-emit it with a valid JSON object.
     tool_call_failed_recover: |
       The previous `{tool_name}` call failed. Use the error to recover and continue from the current workspace state.
+    submit_succeeded_finish_now: |
+      `submit_plan()` succeeded. Stop exploratory calls and return the planner output now.
+    submit_rejected_fix_and_retry: |
+      `submit_plan()` rejected planner artifacts: {error_text}. Fix the files and call `submit_plan()` again immediately.
+    cots_search_budget_exhausted: |
+      COTS lookup budget reached ({max_calls} calls). Do not call COTS search again in this planner run. Use one heuristic estimate, finish file updates, and call `submit_plan()` now.
   planner:
     system: |
       You are an expert designer of spatial and geometric puzzles.
@@ -592,6 +598,7 @@ benchmark_generator:
       **MANDATORY READING**: Use filesystem tools to read:
       - `/skills/build123d_cad_drafting_skill/SKILL.md`
       - `benchmark_definition.yaml` (workspace root file only, path exactly `benchmark_definition.yaml`)
+      - `benchmark_assembly_definition.yaml` (workspace root template/seed file; preserve required schema sections)
 
       Read additional skills only when the prompt explicitly requires them:
       - `/skills/manufacturing-knowledge/SKILL.md` for strict cost/quantity constraints
@@ -690,6 +697,21 @@ benchmark_generator:
         Every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.
         The moved object's full runtime AABB must stay inside `build_zone`: validate `start_position +/- runtime_jitter +/- max(static_randomization.radius)` on every axis before submission.
       - `benchmark_assembly_definition.yaml`: Benchmark-side fixture/motion contract with valid part references only. Every referenced benchmark-owned object must already exist in `benchmark_definition.yaml`.
+        Keep full `AssemblyDefinition` schema shape. At minimum, populate:
+        - `constraints.benchmark_max_unit_cost_usd`
+        - `constraints.benchmark_max_weight_g`
+        - `constraints.planner_target_max_unit_cost_usd`
+        - `constraints.planner_target_max_weight_g`
+        - `totals.estimated_unit_cost_usd`
+        - `totals.estimated_weight_g`
+        - `totals.estimate_confidence`
+        Do not drop `constraints`, `totals`, or other template-required top-level keys.
+        For planner-stage handoff, prefer schema-safe minimal lists unless needed:
+        - `manufactured_parts: []`
+        - `cots_parts: []`
+        - `final_assembly: []`
+        If you do include `manufactured_parts`, each item must include full schema fields (including `stock_bbox_mm` as object keys `x/y/z`, not an array).
+        If you do include `final_assembly` entries, use `name/config` (`PartConfig`) or `subassembly_id/parts` (`SubassemblyEstimate`) shapes, not `part_id/label`.
       - If any of these files already exist, overwrite them in place rather than creating alternates or retrying without overwrite.
       Do NOT create any other files (no summaries, specifications, or completion reports).
 
@@ -741,6 +763,12 @@ benchmark_generator:
       3. Confirm `benchmark_assembly_definition.yaml` stays consistent with benchmark-owned objects declared in `benchmark_definition.yaml`.
       4. Confirm the plan is concrete enough for the coder without inventing new planner-stage objects.
       5. If any render exists in `renders/`, inspect at least one render with `inspect_media(path)` before approving.
+
+      **Read-Only Guardrails (MANDATORY)**:
+      - This is a review-only stage. Do NOT modify planner artifacts.
+      - Do NOT call `write_file`, `edit_file`, `search_cots_catalog`, or `invoke_cots_search_subagent`.
+      - Do NOT rewrite `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
+      - After checking required artifacts and at least one render (when present), return the structured decision immediately.
 
       **Decision Contract**:
       - Approve only when the full planner handoff is internally consistent and coding-ready.

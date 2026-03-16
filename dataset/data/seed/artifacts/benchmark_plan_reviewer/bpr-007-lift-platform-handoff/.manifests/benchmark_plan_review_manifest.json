@@ -4,9 +4,9 @@
   "session_id": "seed-bpr-007-lift-platform-handoff",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "assembly_definition.yaml": "8ad5ecc7280185eca76925fe23bd9bd3bb8c1388f6a8171dd842f7068ec2ed4f",
+    "benchmark_assembly_definition.yaml": "8ad5ecc7280185eca76925fe23bd9bd3bb8c1388f6a8171dd842f7068ec2ed4f",
     "benchmark_definition.yaml": "0998ea42a0a05734e70d0bf9ecb4925248627b5517b6adb3c330610fbc3cd906",
-    "plan.md": "d3a3744338dfbe98a41edb1c135f95469d7f497f91282790716d8c0f083a93a0",
+    "plan.md": "14cdb2ef9aca9a393d4621fbc2427e6391b45a54d350ae6a5458cba14df7f3f9",
     "todo.md": "6714943fb0b1b4a93a6f26c9e895af46eb7232e510d7f528cb88f1bd951a8ea8"
   }
 }

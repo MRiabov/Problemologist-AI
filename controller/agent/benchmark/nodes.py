@@ -355,6 +355,8 @@ class BenchmarkPlannerNode(BaseNode):
             + "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
             + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
             + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
+            + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric `constraints` and `totals` fields (do not delete template sections).\n"
+            + "- Prefer schema-safe minimal assembly for planner handoff: use empty `manufactured_parts`, `cots_parts`, and `final_assembly` unless you can provide fully valid entries (e.g., `stock_bbox_mm` must be an object with `x/y/z`, and final assembly parts use `name/config`).\n"
             + "- Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.\n"
             + "- Do not use `cots_search` to price benchmark-owned fixtures or other benchmark context objects. Reserve pricing lookups for likely engineer-side solution parts, and if catalog search fails, stop retrying and use one heuristic estimate instead.\n"
         )
@@ -574,7 +576,12 @@ class BenchmarkPlannerNode(BaseNode):
         from worker_heavy.utils.file_validation import validate_node_output
 
         max_retries = max(1, int(settings.dspy_program_max_retries))
-        validate_files = ["plan.md", "todo.md", "benchmark_definition.yaml"]
+        validate_files = [
+            "plan.md",
+            "todo.md",
+            "benchmark_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+        ]
         episode_id = getattr(state, "episode_id", None) or self.ctx.episode_id
         db_callback = None
         if episode_id and str(episode_id).strip():
@@ -607,6 +614,9 @@ class BenchmarkPlannerNode(BaseNode):
                     raise RuntimeError("Missing API key for native benchmark planner")
 
                 submitted = False
+                last_submit_error_text: str | None = None
+                cots_search_budget = 2
+                cots_search_calls = 0
                 planner_execution_policy = self.ctx.fs.policy.get_execution_policy(
                     AgentName.BENCHMARK_PLANNER
                 )
@@ -692,6 +702,24 @@ class BenchmarkPlannerNode(BaseNode):
                             )
                             continue
 
+                        if (
+                            tool_name == "invoke_cots_search_subagent"
+                            and cots_search_calls >= cots_search_budget
+                        ):
+                            budget_msg = self._get_runtime_prompt(
+                                "benchmark_generator.runtime.cots_search_budget_exhausted",
+                                max_calls=cots_search_budget,
+                            )
+                            messages.append(
+                                self._tool_response_message(
+                                    tool_call_id=tool_call.get("id", ""),
+                                    tool_name=str(tool_name),
+                                    content=budget_msg,
+                                )
+                            )
+                            messages.append({"role": "system", "content": budget_msg})
+                            continue
+
                         if tool_name == "submit_plan":
                             await self._normalize_benchmark_definition_yaml_artifact()
                             await self._normalize_todo_markdown_artifact()
@@ -736,6 +764,9 @@ class BenchmarkPlannerNode(BaseNode):
                             )
                         )
 
+                        if tool_name == "invoke_cots_search_subagent":
+                            cots_search_calls += 1
+
                         if tool_name == "submit_plan":
                             submission = result
                             if isinstance(submission, str):
@@ -747,6 +778,28 @@ class BenchmarkPlannerNode(BaseNode):
                                 and submission.get("status") == "submitted"
                             ):
                                 submitted = True
+                                messages.append(
+                                    {
+                                        "role": "system",
+                                        "content": self._get_runtime_prompt(
+                                            "benchmark_generator.runtime.submit_succeeded_finish_now"
+                                        ),
+                                    }
+                                )
+                            else:
+                                last_submit_error_text = (
+                                    self._submit_plan_error_message(submission)
+                                    or "unknown validation error"
+                                )
+                                messages.append(
+                                    {
+                                        "role": "system",
+                                        "content": self._get_runtime_prompt(
+                                            "benchmark_generator.runtime.submit_rejected_fix_and_retry",
+                                            error_text=last_submit_error_text,
+                                        ),
+                                    }
+                                )
 
                     if submitted:
                         break
@@ -767,10 +820,21 @@ class BenchmarkPlannerNode(BaseNode):
                             and submission.get("status") == "submitted"
                         ):
                             submitted = True
+                        else:
+                            last_submit_error_text = (
+                                self._submit_plan_error_message(submission)
+                                or last_submit_error_text
+                            )
 
                 if not submitted:
+                    submit_error_suffix = (
+                        f" Last submit_plan errors: {last_submit_error_text}"
+                        if last_submit_error_text
+                        else ""
+                    )
                     raise ValueError(
-                        "Native benchmark planner exhausted tool loop without successful submit_plan()."
+                        "Native benchmark planner exhausted tool loop without "
+                        f"successful submit_plan().{submit_error_suffix}"
                     )
 
                 results = await asyncio.gather(
@@ -939,12 +1003,30 @@ class BenchmarkPlanReviewerNode(BaseNode):
             "review_feedback": state.review_feedback or "No feedback provided.",
         }
 
+        def get_plan_reviewer_tools(fs, session_id):
+            tools = get_benchmark_tools(fs, session_id)
+            allowed_tools = {
+                "list_files",
+                "read_file",
+                "inspect_media",
+                "grep",
+                "execute_command",
+                "inspect_topology",
+            }
+            narrowed_tools = [
+                tool
+                for tool in tools
+                if getattr(tool, "name", getattr(tool, "__name__", None))
+                in allowed_tools
+            ]
+            return filter_tools_for_agent(fs, narrowed_tools)
+
         prediction, _, journal_entry = await self._run_program(
             dspy.ReAct,
             BenchmarkPlanReviewerSignature,
             state,
             inputs,
-            get_benchmark_tools,
+            get_plan_reviewer_tools,
             [
                 "plan.md",
                 "todo.md",
@@ -955,9 +1037,10 @@ class BenchmarkPlanReviewerNode(BaseNode):
         )
 
         if not prediction:
-            state.review_decision = ReviewDecision.REJECT_PLAN
+            state.review_decision = None
             state.review_feedback = (
-                "Rejected: Benchmark plan reviewer failed to complete."
+                "Plan reviewer output invalid: failed to produce a structured "
+                "review decision."
             )
             state.journal += f"\n[Plan Reviewer] Failed: {journal_entry}"
             return state
@@ -970,8 +1053,11 @@ class BenchmarkPlanReviewerNode(BaseNode):
                 review_comments_path,
             ) = await self._persist_review_result(review, "benchmark-plan-review")
         except Exception as exc:
-            state.review_decision = ReviewDecision.REJECT_PLAN
-            state.review_feedback = f"Rejected: failed to persist plan review: {exc}"
+            state.review_decision = None
+            state.review_feedback = (
+                "Plan reviewer output invalid: failed to persist structured "
+                f"review artifacts: {exc}"
+            )
             state.journal += (
                 f"\n[Plan Reviewer] Review persistence failed: {exc}\n{journal_entry}"
             )

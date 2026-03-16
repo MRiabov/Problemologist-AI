@@ -643,7 +643,9 @@ def define_graph():
             state.review_feedback = (
                 "Plan reviewer output invalid: missing structured review_decision."
             )
-        return AgentName.BENCHMARK_PLANNER
+        # Retry reviewer output formatting failures in-place instead of bouncing
+        # into planner retries that mutate planner artifacts without a decision.
+        return AgentName.BENCHMARK_PLAN_REVIEWER
 
     workflow.add_conditional_edges(
         AgentName.BENCHMARK_PLAN_REVIEWER,

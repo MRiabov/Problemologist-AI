@@ -4,9 +4,9 @@
   "session_id": "seed-bpr-010-lower-bin",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "assembly_definition.yaml": "fa0d78b4fcb99421040f8f6e99c7ff08138a51c0215dbce91d7381694b55817e",
+    "benchmark_assembly_definition.yaml": "fa0d78b4fcb99421040f8f6e99c7ff08138a51c0215dbce91d7381694b55817e",
     "benchmark_definition.yaml": "33692e29f125ba7a66f0ec747f5e4f95e5303a3c37c4b45d666e9b1b29de1457",
-    "plan.md": "fe84b3e67339d53408f49d49b1c2904c3f6267022f906e7d7498267c66dafe2c",
+    "plan.md": "5b65364bbe2754c87c15d152a2388b40d44088183cef46a65809091fb92fe25d",
     "todo.md": "8564006e924442c6da450a4d314f46ea43f6cc4164cbc393e5c1dae8c750d447"
   }
 }

@@ -4,6 +4,7 @@ import contextlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -17,7 +18,7 @@ from typing import Any, Literal
 import httpx
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from pyrate_limiter import Duration, Limiter, Rate
 
 # Ensure repository root is importable when script is executed as a file.
@@ -46,7 +47,11 @@ from controller.agent.node_entry_validation import (  # noqa: E402
     reviewer_handover_custom_check_from_session_id,
 )
 from controller.agent.review_handover import validate_reviewer_handover  # noqa: E402
-from controller.agent.reward import AgentRewardConfig, load_reward_config  # noqa: E402
+from controller.agent.reward import (  # noqa: E402
+    AgentRewardConfig,
+    MilestoneConfig,
+    load_reward_config,
+)
 from controller.clients.worker import WorkerClient  # noqa: E402
 from shared.enums import (  # noqa: E402
     AgentName,
@@ -82,6 +87,28 @@ class AgentEvalSpec(BaseModel):
     required_reviewer_stage: str | None = None
     materialize_reviewer_handover: bool = False
     review_filename_prefix: str | None = None
+
+
+PLANNER_REQUIRED_FILES: dict[AgentName, tuple[str, ...]] = {
+    AgentName.BENCHMARK_PLANNER: (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+    ),
+    AgentName.ENGINEER_PLANNER: (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    ),
+    AgentName.ELECTRONICS_PLANNER: (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    ),
+}
 
 
 class EvalDatasetItem(BaseModel):
@@ -323,14 +350,14 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.BENCHMARK_PLANNER,
         required_trace_names=(AgentName.BENCHMARK_PLAN_REVIEWER,),
         start_node=AgentName.BENCHMARK_PLAN_REVIEWER,
-        review_filename_prefix="benchmark-plan-review-round",
+        review_filename_prefix="benchmark-plan-review",
     ),
     AgentName.BENCHMARK_REVIEWER: AgentEvalSpec(
         mode=EvalMode.BENCHMARK,
         request_agent_name=AgentName.BENCHMARK_REVIEWER,
         required_trace_names=(AgentName.BENCHMARK_REVIEWER,),
         start_node=AgentName.BENCHMARK_REVIEWER,
-        review_filename_prefix="benchmark-review-round",
+        review_filename_prefix="benchmark-execution-review",
     ),
     # Mechanical engineering roles
     AgentName.ENGINEER_PLANNER: AgentEvalSpec(
@@ -355,14 +382,14 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_PLAN_REVIEWER,),
         start_node=AgentName.ENGINEER_PLAN_REVIEWER,
-        review_filename_prefix="engineering-plan-review-round",
+        review_filename_prefix="engineering-plan-review",
     ),
     AgentName.ENGINEER_EXECUTION_REVIEWER: AgentEvalSpec(
         mode=EvalMode.AGENT,
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ENGINEER_EXECUTION_REVIEWER,),
         start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
-        review_filename_prefix="engineering-execution-review-round",
+        review_filename_prefix="engineering-execution-review",
     ),
     # Electrical engineering roles inside the unified engineer graph
     AgentName.ELECTRONICS_PLANNER: AgentEvalSpec(
@@ -376,7 +403,7 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
         request_agent_name=AgentName.ENGINEER_CODER,
         required_trace_names=(AgentName.ELECTRONICS_REVIEWER,),
         start_node=AgentName.ELECTRONICS_REVIEWER,
-        review_filename_prefix="electronics-review-round",
+        review_filename_prefix="electronics-review",
     ),
     AgentName.COTS_SEARCH: AgentEvalSpec(
         mode=EvalMode.AGENT,
@@ -392,6 +419,12 @@ AGENT_SPECS: dict[AgentName, AgentEvalSpec] = {
     AgentName.GIT_AGENT: AgentEvalSpec(
         mode=EvalMode.GIT, request_agent_name=AgentName.GIT_AGENT
     ),
+}
+
+JUDGE_REVIEWER_CHAIN: dict[AgentName, tuple[AgentName, ...]] = {
+    AgentName.ENGINEER_PLANNER: (AgentName.ENGINEER_PLAN_REVIEWER,),
+    AgentName.ENGINEER_CODER: (AgentName.ENGINEER_EXECUTION_REVIEWER,),
+    AgentName.ELECTRONICS_PLANNER: (AgentName.ENGINEER_PLAN_REVIEWER,),
 }
 
 
@@ -472,6 +505,83 @@ def _resolve_check_value(
     return None
 
 
+def _normalize_checklist_value(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    if isinstance(value, int | float):
+        return max(0.0, min(1.0, float(value)))
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "pass":
+            return 1.0
+        if normalized == "fail":
+            return 0.0
+        if normalized in {"not_applicable", "n/a", "na"}:
+            return 1.0
+    return None
+
+
+def _resolve_metric_value_for_check(
+    check_name: str,
+    metrics: dict[str, Any],
+    *,
+    success: bool,
+) -> Any:
+    if check_name.startswith("checklist."):
+        checklist_key = check_name.split(".", 1)[1]
+        checklist = metrics.get("checklist")
+        if isinstance(checklist, dict):
+            return _normalize_checklist_value(checklist.get(checklist_key))
+        return None
+    return _resolve_check_value(check_name, metrics, success=success)
+
+
+def _check_needs_constraints(check_cfg: MilestoneConfig) -> bool:
+    formulas = [check_cfg.penalty_formula, check_cfg.formula]
+    return any(
+        isinstance(formula, str)
+        and ("max_unit_cost" in formula or "max_weight" in formula)
+        for formula in formulas
+    )
+
+
+def _score_milestone_check(
+    *,
+    check_name: str,
+    check_cfg: MilestoneConfig,
+    metrics: dict[str, Any],
+    success: bool,
+) -> tuple[float, bool]:
+    raw_value = _resolve_metric_value_for_check(check_name, metrics, success=success)
+    if check_cfg.partial:
+        formula = check_cfg.penalty_formula or check_cfg.formula
+        if formula:
+            score = evaluate_formula(formula, metrics)
+        elif isinstance(raw_value, int | float) and not isinstance(raw_value, bool):
+            score = float(raw_value)
+        else:
+            score = 1.0 if bool(raw_value) else 0.0
+    else:
+        if isinstance(raw_value, int | float) and not isinstance(raw_value, bool):
+            score = float(raw_value)
+        else:
+            score = 1.0 if bool(raw_value) else 0.0
+
+    score = max(0.0, min(1.0, float(score)))
+    return score, score >= 0.999
+
+
+def _extract_events_from_episodes(
+    episodes: list[dict[str, Any] | None],
+) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    for episode in episodes:
+        merged.extend(_extract_episode_events(episode))
+    return merged
+
+
 async def _load_constraint_context(session_id: str) -> dict[str, float]:
     if not session_id:
         return {}
@@ -505,6 +615,56 @@ async def _load_constraint_context(session_id: str) -> dict[str, float]:
     return {}
 
 
+async def _collect_metrics_for_checks(
+    *,
+    check_configs: dict[str, MilestoneConfig],
+    success: bool,
+    session_id: str,
+    episode_data: dict[str, Any] | None,
+    extra_episodes: list[dict[str, Any] | None] | None = None,
+    agent_name: AgentName | None = None,
+) -> dict[str, Any]:
+    episodes = [episode_data]
+    if extra_episodes:
+        episodes.extend(extra_episodes)
+
+    events = _extract_events_from_episodes(episodes)
+    metrics_model = map_events_to_prediction(events)
+    metrics = metrics_model.model_dump(mode="json")
+    metrics["task_success"] = success
+
+    check_names = set(check_configs.keys())
+    needs_worker_checks = check_names.intersection(
+        {"review_artifacts_complete", "plan_artifacts_present"}
+    )
+    if needs_worker_checks and session_id:
+        worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+        try:
+            if "review_artifacts_complete" in needs_worker_checks and agent_name:
+                review_prefix = AGENT_SPECS.get(agent_name).review_filename_prefix
+                if review_prefix:
+                    metrics[
+                        "review_artifacts_complete"
+                    ] = await _review_artifacts_complete_for_prefix(
+                        worker=worker,
+                        review_filename_prefix=review_prefix,
+                    )
+
+            if "plan_artifacts_present" in needs_worker_checks and agent_name:
+                required_files = PLANNER_REQUIRED_FILES.get(agent_name, ())
+                metrics["plan_artifacts_present"] = await _planner_artifacts_present(
+                    worker=worker,
+                    required_files=required_files,
+                )
+        finally:
+            await worker.aclose()
+
+    if any(_check_needs_constraints(check) for check in check_configs.values()):
+        metrics.update(await _load_constraint_context(session_id))
+
+    return metrics
+
+
 async def _record_hard_check_outcomes(
     *,
     stats: dict[AgentName, Any],
@@ -514,31 +674,22 @@ async def _record_hard_check_outcomes(
     success: bool,
     episode_data: dict[str, Any] | None,
     session_id: str,
-) -> None:
+) -> bool | None:
     cfg = reward_agent_configs.get(agent_name)
     if cfg is None or not cfg.hard_checks:
-        return
+        return None
 
-    events = _extract_episode_events(episode_data)
-    metrics_model = map_events_to_prediction(events)
-    metrics = metrics_model.model_dump(mode="json")
-    metrics["task_success"] = success
-
-    needs_constraints = any(
-        isinstance(check.penalty_formula, str)
-        and (
-            "max_unit_cost" in check.penalty_formula
-            or "max_weight" in check.penalty_formula
-        )
-        or isinstance(check.formula, str)
-        and ("max_unit_cost" in check.formula or "max_weight" in check.formula)
-        for check in cfg.hard_checks.values()
+    metrics = await _collect_metrics_for_checks(
+        check_configs=cfg.hard_checks,
+        success=success,
+        session_id=session_id,
+        episode_data=episode_data,
+        agent_name=agent_name,
     )
-    if needs_constraints:
-        metrics.update(await _load_constraint_context(session_id))
 
     hard_check_stats = stats[agent_name].setdefault("hard_checks", {})
     seed_id = item.id
+    all_passed = True
     for check_name, check_cfg in cfg.hard_checks.items():
         bucket = hard_check_stats.setdefault(
             check_name,
@@ -546,21 +697,63 @@ async def _record_hard_check_outcomes(
         )
         bucket["total"] += 1
 
-        raw_value = _resolve_check_value(check_name, metrics, success=success)
-        score = 0.0
-        if check_cfg.partial:
-            formula = check_cfg.penalty_formula or check_cfg.formula
-            if formula:
-                score = evaluate_formula(formula, metrics)
-            elif isinstance(raw_value, int | float) and not isinstance(raw_value, bool):
-                score = float(raw_value)
-            else:
-                score = 1.0 if bool(raw_value) else 0.0
-        else:
-            score = 1.0 if bool(raw_value) else 0.0
+        _, passed = _score_milestone_check(
+            check_name=check_name,
+            check_cfg=check_cfg,
+            metrics=metrics,
+            success=success,
+        )
+        if passed:
+            bucket["passed"] += 1
+        elif seed_id not in bucket["failed_seeds"]:
+            bucket["failed_seeds"].append(seed_id)
+            all_passed = False
 
-        score = max(0.0, min(1.0, float(score)))
-        passed = score >= 0.999
+    return all_passed
+
+
+async def _record_judge_outcomes(
+    *,
+    stats: dict[AgentName, Any],
+    reward_agent_configs: dict[AgentName, AgentRewardConfig],
+    agent_name: AgentName,
+    item: EvalDatasetItem,
+    success: bool,
+    session_id: str,
+    episode_data: dict[str, Any] | None,
+    extra_episodes: list[dict[str, Any] | None] | None = None,
+) -> None:
+    cfg = reward_agent_configs.get(agent_name)
+    if cfg is None:
+        return
+
+    judge_checks = cfg.judge_evaluation.all_milestones()
+    if not judge_checks:
+        return
+
+    metrics = await _collect_metrics_for_checks(
+        check_configs=judge_checks,
+        success=success,
+        session_id=session_id,
+        episode_data=episode_data,
+        extra_episodes=extra_episodes,
+        agent_name=agent_name,
+    )
+
+    judge_stats = stats[agent_name].setdefault("judge_checks", {})
+    seed_id = item.id
+    for check_name, check_cfg in judge_checks.items():
+        bucket = judge_stats.setdefault(
+            check_name,
+            HardCheckAggregate().model_dump(mode="json"),
+        )
+        bucket["total"] += 1
+        _, passed = _score_milestone_check(
+            check_name=check_name,
+            check_cfg=check_cfg,
+            metrics=metrics,
+            success=success,
+        )
         if passed:
             bucket["passed"] += 1
         elif seed_id not in bucket["failed_seeds"]:
@@ -788,7 +981,36 @@ def _review_artifact_pending(error: str | None) -> bool:
     return error in {
         "reviews/ directory not found",
         "missing persisted review frontmatter",
-    } or error.startswith("no persisted review file matching ")
+    } or error.startswith("no persisted review artifact matching ")
+
+
+def _review_filename_candidates(review_filename_prefix: str) -> list[str]:
+    candidates = [review_filename_prefix]
+    if review_filename_prefix.endswith("-round"):
+        candidates.append(review_filename_prefix[: -len("-round")])
+    # Keep deterministic ordering while removing duplicates.
+    return list(dict.fromkeys(candidates))
+
+
+def _parse_review_decision_yaml(
+    content: str, *, review_path: str
+) -> tuple[ReviewFrontmatter | None, str | None]:
+    try:
+        data = yaml.safe_load(content)
+    except yaml.YAMLError as exc:
+        return None, f"invalid YAML in {review_path}: {exc}"
+
+    if not isinstance(data, dict):
+        return None, f"unexpected YAML structure in {review_path}: expected mapping"
+
+    try:
+        return ReviewFrontmatter.model_validate(data), None
+    except ValidationError as exc:
+        errors = ", ".join(
+            f"{'.'.join(str(part) for part in err['loc'])}: {err['msg']}"
+            for err in exc.errors()
+        )
+        return None, f"invalid review decision payload in {review_path}: {errors}"
 
 
 async def _load_latest_review_frontmatter(
@@ -797,7 +1019,6 @@ async def _load_latest_review_frontmatter(
     review_filename_prefix: str,
     session_id: str,
 ) -> tuple[ReviewFrontmatter | None, str | None]:
-    pattern = re.compile(rf"^{re.escape(review_filename_prefix)}-(\d+)\.md$")
     try:
         entries = await worker.list_files("reviews", bypass_agent_permissions=True)
     except FileNotFoundError:
@@ -805,48 +1026,153 @@ async def _load_latest_review_frontmatter(
     except Exception as exc:
         return None, f"failed to list reviews/: {exc}"
 
-    latest_name: str | None = None
+    prefixes = _review_filename_candidates(review_filename_prefix)
+    yaml_patterns = [
+        re.compile(rf"^{re.escape(prefix)}-decision-round-(\d+)\.yaml$")
+        for prefix in prefixes
+    ]
+    md_patterns = [
+        re.compile(rf"^{re.escape(prefix)}-(\d+)\.md$") for prefix in prefixes
+    ]
+
+    latest_yaml_name: str | None = None
+    latest_yaml_round = -1
+    latest_md_name: str | None = None
+    latest_md_round = -1
+    for entry in entries:
+        if entry.is_dir:
+            continue
+        for pattern in yaml_patterns:
+            match = pattern.fullmatch(entry.name)
+            if match is not None:
+                round_number = int(match.group(1))
+                if round_number > latest_yaml_round:
+                    latest_yaml_round = round_number
+                    latest_yaml_name = entry.name
+                break
+        else:
+            for pattern in md_patterns:
+                match = pattern.fullmatch(entry.name)
+                if match is not None:
+                    round_number = int(match.group(1))
+                    if round_number > latest_md_round:
+                        latest_md_round = round_number
+                        latest_md_name = entry.name
+                    break
+
+    if latest_yaml_name is not None:
+        review_path = f"reviews/{latest_yaml_name}"
+        try:
+            content = await worker.read_file(review_path, bypass_agent_permissions=True)
+        except Exception as exc:
+            return None, f"failed to read {review_path}: {exc}"
+
+        review_data, review_error = _parse_review_decision_yaml(
+            content,
+            review_path=review_path,
+        )
+        if review_error is not None:
+            return None, review_error
+        if review_data is None:
+            return None, f"missing review decision payload in {review_path}"
+        return review_data, None
+
+    if latest_md_name is not None:
+        review_path = f"reviews/{latest_md_name}"
+        try:
+            content = await worker.read_file(review_path, bypass_agent_permissions=True)
+        except Exception as exc:
+            return None, f"failed to read {review_path}: {exc}"
+
+        is_valid, review_data = validate_review_frontmatter(
+            content,
+            cad_agent_refused=True,
+            session_id=session_id,
+        )
+        if not is_valid:
+            details = (
+                ", ".join(review_data)
+                if isinstance(review_data, list)
+                else str(review_data)
+            )
+            return None, f"invalid review frontmatter in {review_path}: {details}"
+        if not isinstance(review_data, ReviewFrontmatter):
+            return None, f"unexpected review frontmatter payload for {review_path}"
+        return review_data, None
+
+    return (
+        None,
+        "no persisted review artifact matching "
+        f"reviews/{review_filename_prefix}-decision-round-<n>.yaml "
+        f"or reviews/{review_filename_prefix}-<n>.md",
+    )
+
+
+async def _review_artifacts_complete_for_prefix(
+    *,
+    worker: WorkerClient,
+    review_filename_prefix: str,
+) -> bool:
+    try:
+        entries = await worker.list_files("reviews", bypass_agent_permissions=True)
+    except Exception:
+        return False
+
+    prefixes = _review_filename_candidates(review_filename_prefix)
+    decision_patterns = [
+        (prefix, re.compile(rf"^{re.escape(prefix)}-decision-round-(\d+)\.yaml$"))
+        for prefix in prefixes
+    ]
+
+    latest_prefix: str | None = None
     latest_round = -1
     for entry in entries:
         if entry.is_dir:
             continue
-        match = pattern.fullmatch(entry.name)
-        if match is None:
-            continue
-        round_number = int(match.group(1))
-        if round_number > latest_round:
-            latest_round = round_number
-            latest_name = entry.name
+        for prefix, pattern in decision_patterns:
+            match = pattern.fullmatch(entry.name)
+            if match is None:
+                continue
+            round_number = int(match.group(1))
+            if round_number > latest_round:
+                latest_round = round_number
+                latest_prefix = prefix
+            break
 
-    if latest_name is None:
-        return (
-            None,
-            "no persisted review file matching "
-            f"reviews/{review_filename_prefix}-<n>.md",
+    if latest_prefix is not None and latest_round > 0:
+        expected_comments = f"{latest_prefix}-comments-round-{latest_round}.yaml"
+        return any(
+            not entry.is_dir and entry.name == expected_comments for entry in entries
         )
 
-    review_path = f"reviews/{latest_name}"
-    try:
-        content = await worker.read_file(review_path, bypass_agent_permissions=True)
-    except Exception as exc:
-        return None, f"failed to read {review_path}: {exc}"
-
-    is_valid, review_data = validate_review_frontmatter(
-        content,
-        cad_agent_refused=True,
-        session_id=session_id,
+    md_patterns = [
+        re.compile(rf"^{re.escape(prefix)}-(\d+)\.md$") for prefix in prefixes
+    ]
+    return any(
+        not entry.is_dir
+        and any(pattern.fullmatch(entry.name) for pattern in md_patterns)
+        for entry in entries
     )
-    if not is_valid:
-        details = (
-            ", ".join(review_data)
-            if isinstance(review_data, list)
-            else str(review_data)
-        )
-        return None, f"invalid review frontmatter in {review_path}: {details}"
-    if not isinstance(review_data, ReviewFrontmatter):
-        return None, f"unexpected review frontmatter payload for {review_path}"
 
-    return review_data, None
+
+async def _planner_artifacts_present(
+    *,
+    worker: WorkerClient,
+    required_files: tuple[str, ...],
+) -> bool:
+    if not required_files:
+        return False
+
+    for rel_path in required_files:
+        try:
+            if not await worker.exists(rel_path, bypass_agent_permissions=True):
+                return False
+            content = await worker.read_file(rel_path, bypass_agent_permissions=True)
+        except Exception:
+            return False
+        if not isinstance(content, str) or not content.strip():
+            return False
+    return True
 
 
 async def _review_expectation_error(
@@ -991,6 +1317,133 @@ def _missing_required_traces(
     return [trace.value for trace in required if trace.value.lower() not in names]
 
 
+async def _run_reviewer_episode_for_judge(
+    *,
+    client: httpx.AsyncClient,
+    reviewer_agent: AgentName,
+    session_id: str,
+    task_description: str,
+    lineage: EpisodeMetadata,
+    log,
+) -> dict[str, Any] | None:
+    reviewer_spec = AGENT_SPECS.get(reviewer_agent)
+    if reviewer_spec is None:
+        log.warning("judge_reviewer_spec_missing", reviewer_agent=reviewer_agent.value)
+        return None
+
+    payload = {
+        "task": task_description,
+        "agent_name": reviewer_spec.request_agent_name or reviewer_agent,
+        "start_node": reviewer_agent,
+        "session_id": session_id,
+        "metadata_vars": lineage.model_dump(exclude_none=True),
+    }
+    response = await client.post(f"{CONTROLLER_URL}/agent/run", json=payload)
+    if response.status_code >= 400:
+        log.warning(
+            "judge_reviewer_trigger_failed",
+            reviewer_agent=reviewer_agent.value,
+            status_code=response.status_code,
+            response_text=response.text,
+            session_id=session_id,
+        )
+        return None
+
+    response_data = response.json()
+    episode_id = str(response_data.get("episode_id") or "")
+    if not episode_id:
+        log.warning(
+            "judge_reviewer_missing_episode_id",
+            reviewer_agent=reviewer_agent.value,
+            session_id=session_id,
+        )
+        return None
+
+    log.info(
+        "judge_reviewer_triggered",
+        reviewer_agent=reviewer_agent.value,
+        episode_id=episode_id,
+        session_id=session_id,
+    )
+
+    max_attempts = 60
+    attempt = 0
+    latest_episode: dict[str, Any] | None = None
+    while attempt < max_attempts:
+        attempt += 1
+        await asyncio.sleep(5)
+        try:
+            latest_episode = await _fetch_episode(client, episode_id)
+        except Exception:
+            log.exception(
+                "judge_reviewer_status_fetch_failed",
+                reviewer_agent=reviewer_agent.value,
+                episode_id=episode_id,
+            )
+            continue
+
+        status = latest_episode.get("status")
+        if status == EpisodeStatus.PLANNED or _episode_terminal(status):
+            break
+
+    if latest_episode is None:
+        log.warning(
+            "judge_reviewer_no_episode_data",
+            reviewer_agent=reviewer_agent.value,
+            episode_id=episode_id,
+        )
+        return None
+
+    if attempt >= max_attempts and not _episode_terminal(latest_episode.get("status")):
+        log.warning(
+            "judge_reviewer_timeout",
+            reviewer_agent=reviewer_agent.value,
+            episode_id=episode_id,
+            max_attempts=max_attempts,
+        )
+
+    missing_traces = _missing_required_traces(
+        reviewer_spec.required_trace_names, latest_episode
+    )
+    if missing_traces:
+        log.warning(
+            "judge_reviewer_missing_traces",
+            reviewer_agent=reviewer_agent.value,
+            episode_id=episode_id,
+            missing_traces=missing_traces,
+        )
+
+    return latest_episode
+
+
+async def _run_reviewer_chain_for_judge(
+    *,
+    client: httpx.AsyncClient,
+    agent_name: AgentName,
+    session_id: str,
+    task_description: str,
+    lineage: EpisodeMetadata,
+    log,
+) -> list[dict[str, Any]]:
+    reviewer_chain = JUDGE_REVIEWER_CHAIN.get(agent_name, ())
+    if not reviewer_chain:
+        return []
+
+    episodes: list[dict[str, Any]] = []
+    for reviewer_agent in reviewer_chain:
+        episode = await _run_reviewer_episode_for_judge(
+            client=client,
+            reviewer_agent=reviewer_agent,
+            session_id=session_id,
+            task_description=task_description,
+            lineage=lineage,
+            log=log,
+        )
+        if episode is not None:
+            episodes.append(episode)
+    return episodes
+
+
 async def _completion_contract_error(
     *,
     spec: AgentEvalSpec,
@@ -1070,6 +1523,46 @@ def _validate_git_commit_result(
     return None
 
 
+def _apply_default_non_frontend_integration_marker(command: str) -> str:
+    """Exclude frontend integration tests unless the command opts in explicitly."""
+    try:
+        tokens = shlex.split(command, posix=True)
+    except ValueError:
+        return command
+
+    if not tokens:
+        return command
+
+    cmd_index = 0
+    while cmd_index < len(tokens) and re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[cmd_index]
+    ):
+        cmd_index += 1
+
+    if cmd_index >= len(tokens):
+        return command
+
+    script_token = tokens[cmd_index]
+    if script_token not in {
+        "./scripts/run_integration_tests.sh",
+        "scripts/run_integration_tests.sh",
+    }:
+        return command
+
+    args = tokens[cmd_index + 1 :]
+    if any(arg == "-m" or arg.startswith("-m=") for arg in args):
+        return command
+    if any(
+        "tests/integration/frontend" in arg
+        or "tests/e2e" in arg
+        or "integration_frontend" in arg
+        for arg in args
+    ):
+        return command
+
+    return command + ' -m "integration_p0 or integration_p1 or integration_p2"'
+
+
 async def _run_git_eval(
     item: EvalDatasetItem,
     stats: dict[AgentName, Any],
@@ -1108,15 +1601,23 @@ async def _run_git_eval(
             )
 
         for command in git_eval.setup_commands:
-            result = await worker.execute_command(command, timeout=60)
+            command_to_run = _apply_default_non_frontend_integration_marker(command)
+            if command_to_run != command:
+                log.info(
+                    "setup_command_adjusted",
+                    original_command=command,
+                    adjusted_command=command_to_run,
+                )
+
+            result = await worker.execute_command(command_to_run, timeout=60)
             if result.timed_out:
-                failure_reason = f"setup command timed out: {command}"
+                failure_reason = f"setup command timed out: {command_to_run}"
                 break
             if result.exit_code != 0:
                 stderr = _truncate_text(result.stderr or result.stdout or "")
                 failure_reason = (
                     f"setup command failed with exit_code={result.exit_code}: "
-                    f"{command} ({stderr})"
+                    f"{command_to_run} ({stderr})"
                 )
                 break
 
@@ -1213,6 +1714,8 @@ async def run_single_eval(
     stats: dict[AgentName, Any],
     reward_agent_configs: dict[AgentName, AgentRewardConfig],
     verbose: bool = False,
+    run_judge: bool = False,
+    run_reviewers_with_judge: bool = False,
 ):
     """
     Runs a single evaluation task for a specific agent type.
@@ -1330,6 +1833,16 @@ async def run_single_eval(
                     episode_data=last_episode_data,
                     session_id=session_id,
                 )
+                if run_judge:
+                    await _record_judge_outcomes(
+                        stats=stats,
+                        reward_agent_configs=reward_agent_configs,
+                        agent_name=agent_name,
+                        item=item,
+                        success=False,
+                        session_id=session_id,
+                        episode_data=last_episode_data,
+                    )
                 return
             data = resp.json()
             episode_id = str(data.get(episode_id_key) or data.get("episode_id") or "")
@@ -1613,9 +2126,13 @@ async def run_single_eval(
 
                 worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
                 handler = METRIC_HANDLERS.get(agent_name)
-                if handler:
-                    await handler(worker, session_id, agent_stats)
-            await _record_hard_check_outcomes(
+                try:
+                    if handler:
+                        await handler(worker, session_id, agent_stats)
+                finally:
+                    await worker.aclose()
+
+            hard_checks_passed = await _record_hard_check_outcomes(
                 stats=stats,
                 reward_agent_configs=reward_agent_configs,
                 agent_name=agent_name,
@@ -1624,6 +2141,33 @@ async def run_single_eval(
                 episode_data=last_episode_data,
                 session_id=session_id,
             )
+            reviewer_episodes: list[dict[str, Any]] = []
+            if (
+                run_judge
+                and run_reviewers_with_judge
+                and success
+                and hard_checks_passed is True
+            ):
+                reviewer_episodes = await _run_reviewer_chain_for_judge(
+                    client=client,
+                    agent_name=agent_name,
+                    session_id=session_id,
+                    task_description=task_description,
+                    lineage=lineage,
+                    log=log,
+                )
+
+            if run_judge:
+                await _record_judge_outcomes(
+                    stats=stats,
+                    reward_agent_configs=reward_agent_configs,
+                    agent_name=agent_name,
+                    item=item,
+                    success=success,
+                    session_id=session_id,
+                    episode_data=last_episode_data,
+                    extra_episodes=reviewer_episodes,
+                )
         except asyncio.CancelledError:
             log.warning(
                 "eval_run_interrupted",
@@ -1650,6 +2194,16 @@ async def run_single_eval(
                 episode_data=last_episode_data,
                 session_id=session_id,
             )
+            if run_judge:
+                await _record_judge_outcomes(
+                    stats=stats,
+                    reward_agent_configs=reward_agent_configs,
+                    agent_name=agent_name,
+                    item=item,
+                    success=False,
+                    session_id=session_id,
+                    episode_data=last_episode_data,
+                )
             return
 
 
@@ -1672,6 +2226,19 @@ async def main():
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Print backend traces during polling"
+    )
+    parser.add_argument(
+        "--run-judge",
+        action="store_true",
+        help="Record judge/checklist pass rates from reward_config judge_evaluation",
+    )
+    parser.add_argument(
+        "--run-reviewers-with-judge",
+        action="store_true",
+        help=(
+            "When --run-judge is enabled, run reviewer stages after all hard checks "
+            "pass to populate reviewer checklist metrics."
+        ),
     )
     parser.add_argument(
         "--concurrency",
@@ -1697,6 +2264,9 @@ async def main():
         help="Log level for the console output (default: DEBUG)",
     )
     args = parser.parse_args()
+
+    if args.run_reviewers_with_judge and not args.run_judge:
+        parser.error("--run-reviewers-with-judge requires --run-judge")
 
     # Configure logging to directory (logs/evals)
     log_dir = ROOT / "logs" / "evals"
@@ -1855,6 +2425,7 @@ async def main():
             "wire_integrity_rate": 0.0,
             "power_efficiency_score": 0.0,
             "hard_checks": {},
+            "judge_checks": {},
         }
         for agent in agents_to_run
     }
@@ -1923,6 +2494,8 @@ async def main():
                     stats,
                     reward_agent_configs,
                     verbose=args.verbose,
+                    run_judge=args.run_judge,
+                    run_reviewers_with_judge=args.run_reviewers_with_judge,
                 )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))
@@ -1975,27 +2548,31 @@ async def main():
         agent: [item.id for item in datasets.get(agent, [])] for agent in agents_to_run
     }
 
-    hard_check_report: dict[str, Any] = {}
-    for agent, agent_stats in stats.items():
-        check_stats = agent_stats.get("hard_checks") or {}
-        agent_key = agent.value if isinstance(agent, AgentName) else str(agent)
-        ran_cases = agent_ran_cases.get(agent, [])
-        hard_checks_payload: dict[str, Any] = {}
-        for check_name, raw in check_stats.items():
-            total = int(raw.get("total", 0))
-            passed = int(raw.get("passed", 0))
-            failed_seeds = sorted(set(raw.get("failed_seeds", [])))
-            pass_rate = round((passed / total) * 100) if total else 0
-            hard_checks_payload[check_name] = {
-                "pass_rate": f"{pass_rate}%",
-                "passed": passed,
-                "total": total,
-                "failed_seeds": failed_seeds,
+    def _build_check_report(check_key: str, payload_key: str) -> dict[str, Any]:
+        report: dict[str, Any] = {}
+        for agent, agent_stats in stats.items():
+            check_stats = agent_stats.get(check_key) or {}
+            agent_key = agent.value if isinstance(agent, AgentName) else str(agent)
+            ran_cases = agent_ran_cases.get(agent, [])
+            checks_payload: dict[str, Any] = {}
+            for check_name, raw in check_stats.items():
+                total = int(raw.get("total", 0))
+                passed = int(raw.get("passed", 0))
+                failed_seeds = sorted(set(raw.get("failed_seeds", [])))
+                pass_rate = round((passed / total) * 100) if total else 0
+                checks_payload[check_name] = {
+                    "pass_rate": f"{pass_rate}%",
+                    "passed": passed,
+                    "total": total,
+                    "failed_seeds": failed_seeds,
+                }
+            report[agent_key] = {
+                "ran_cases": ran_cases,
+                payload_key: checks_payload,
             }
-        hard_check_report[agent_key] = {
-            "ran_cases": ran_cases,
-            "hard_checks": hard_checks_payload,
-        }
+        return report
+
+    hard_check_report = _build_check_report("hard_checks", "hard_checks")
 
     hard_check_report_path = log_dir / "hard_check_pass_rates.yaml"
     with hard_check_report_path.open("w", encoding="utf-8") as handle:
@@ -2022,6 +2599,35 @@ async def main():
         path=str(hard_check_report_path),
         agents=list(hard_check_report.keys()),
     )
+
+    if args.run_judge:
+        judge_report = _build_check_report("judge_checks", "judge_checks")
+        judge_report_path = log_dir / "judge_pass_rates.yaml"
+        with judge_report_path.open("w", encoding="utf-8") as handle:
+            yaml.safe_dump(
+                judge_report,
+                handle,
+                sort_keys=True,
+                allow_unicode=False,
+                default_flow_style=False,
+            )
+
+        print("Judge/checklist pass rates:")
+        print(
+            yaml.safe_dump(
+                judge_report,
+                sort_keys=True,
+                allow_unicode=False,
+                default_flow_style=False,
+            ).rstrip()
+        )
+        print(f"Judge report: {judge_report_path}")
+        logger.info(
+            "judge_report_written",
+            path=str(judge_report_path),
+            agents=list(judge_report.keys()),
+            reviewers_enabled=args.run_reviewers_with_judge,
+        )
 
     finish_time = time.time()
     duration = finish_time - start_time
