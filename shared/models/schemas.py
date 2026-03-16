@@ -627,6 +627,7 @@ class ReviewResult(BaseModel):
     decision: ReviewDecision
     reason: str
     required_fixes: list[str] = Field(default_factory=list)
+    checklist: dict[str, str | float | bool] = Field(default_factory=dict)
 
     @field_validator("decision", mode="before")
     @classmethod

@@ -163,7 +163,7 @@ def get_benchmark_planner_tools(
             }
             manifest = PlanReviewManifest(
                 status="ready_for_review",
-                reviewer_stage="benchmark_plan_reviewer",
+                reviewer_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
                 session_id=fs.client.session_id,
                 planner_node_type=AgentName.BENCHMARK_PLANNER,
                 artifact_hashes=artifact_hashes,

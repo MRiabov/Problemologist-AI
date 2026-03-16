@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import dspy
 import structlog
+import yaml
 from litellm import completion
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
@@ -167,8 +168,8 @@ class BaseNode:
     ) -> VisualInspectionPolicy:
         return self.ctx.fs.policy.get_visual_inspection_policy(node_type)
 
-    async def _next_review_round(self, review_filename_prefix: str) -> int:
-        pattern = re.compile(rf"^{re.escape(review_filename_prefix)}-(\d+)\.md$")
+    async def _next_review_round(self, review_slug: str) -> int:
+        pattern = re.compile(rf"^{re.escape(review_slug)}-decision-round-(\d+)\.yaml$")
         max_round = 0
         try:
             entries = await self.ctx.worker_client.list_files(
@@ -186,10 +187,15 @@ class BaseNode:
         return max_round + 1
 
     async def _persist_review_result(
-        self, review: ReviewResult, review_filename_prefix: str
-    ) -> str:
-        round_number = await self._next_review_round(review_filename_prefix)
-        review_path = f"reviews/{review_filename_prefix}-{round_number}.md"
+        self,
+        review: ReviewResult,
+        review_slug: str,
+        *,
+        round_number: int | None = None,
+    ) -> tuple[str, str]:
+        next_round = round_number or await self._next_review_round(review_slug)
+        decision_path = f"reviews/{review_slug}-decision-round-{next_round}.yaml"
+        comments_path = f"reviews/{review_slug}-comments-round-{next_round}.yaml"
 
         comments: list[str] = []
         reason = review.reason.strip()
@@ -201,37 +207,66 @@ class BaseNode:
         if not comments:
             comments.append(f"{review.decision.value} review")
 
-        lines = ["---", f"decision: {review.decision.value}", "comments:"]
-        for comment in comments:
-            lines.append(f"  - {json.dumps(comment)}")
-        lines.extend(["---", "", "# Review", ""])
-        lines.append(reason or "(no reason provided)")
-
-        if review.required_fixes:
-            lines.extend(["", "## Required Fixes"])
-            for fix in review.required_fixes:
-                if fix.strip():
-                    lines.append(f"- {fix.strip()}")
-
-        review_content = "\n".join(lines) + "\n"
-        write_ok = await self.ctx.worker_client.write_file(
-            review_path,
-            review_content,
+        decision_content = yaml.safe_dump(
+            {"decision": review.decision.value},
+            sort_keys=False,
+            allow_unicode=False,
+        )
+        comments_content = yaml.safe_dump(
+            {
+                "summary": reason or "(no reason provided)",
+                "comments": comments,
+                "required_fixes": [
+                    fix.strip()
+                    for fix in review.required_fixes
+                    if isinstance(fix, str) and fix.strip()
+                ],
+                "checklist": dict(getattr(review, "checklist", {}) or {}),
+            },
+            sort_keys=False,
+            allow_unicode=False,
+        )
+        decision_written = await self.ctx.worker_client.write_file(
+            decision_path,
+            decision_content,
             overwrite=True,
             bypass_agent_permissions=True,
         )
-        if not write_ok:
-            write_ok = await self.ctx.worker_client.write_file(
-                review_path,
-                review_content,
+        comments_written = await self.ctx.worker_client.write_file(
+            comments_path,
+            comments_content,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        )
+        if not decision_written:
+            decision_written = await self.ctx.worker_client.write_file(
+                decision_path,
+                decision_content,
                 overwrite=True,
                 bypass_agent_permissions=True,
             )
-        if not write_ok or not await self.ctx.worker_client.exists(
-            review_path, bypass_agent_permissions=True
+        if not comments_written:
+            comments_written = await self.ctx.worker_client.write_file(
+                comments_path,
+                comments_content,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
+        if (
+            not decision_written
+            or not comments_written
+            or not await self.ctx.worker_client.exists(
+                decision_path, bypass_agent_permissions=True
+            )
+            or not await self.ctx.worker_client.exists(
+                comments_path, bypass_agent_permissions=True
+            )
         ):
-            raise RuntimeError(f"review file was not materialized at {review_path}")
-        return review_path
+            raise RuntimeError(
+                "review files were not materialized at "
+                f"{decision_path} and {comments_path}"
+            )
+        return decision_path, comments_path
 
     def _get_runtime_prompt(self, key: str, **kwargs: Any) -> str:
         prompt = str(self.ctx.pm.get_prompt_value(key)).strip()

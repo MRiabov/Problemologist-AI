@@ -60,6 +60,7 @@ from shared.workers.schema import (
     PreviewDesignResponse,
     RenderArtifactMetadata,
     RenderManifest,
+    ReviewerStage,
     ScriptExecutionRequest,
 )
 
@@ -639,13 +640,13 @@ class RemoteFilesystemMiddleware:
     async def submit(
         self,
         script_path: str | Path,
-        reviewer_stage: str | None = None,
+        reviewer_stage: ReviewerStage | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker client."""
         p_str = str(script_path)
         effective_stage = reviewer_stage
         if effective_stage is None:
-            role_to_stage: dict[AgentName, str] = {
+            role_to_stage: dict[AgentName, ReviewerStage] = {
                 AgentName.BENCHMARK_CODER: "benchmark_reviewer",
                 AgentName.BENCHMARK_REVIEWER: "benchmark_reviewer",
                 AgentName.ELECTRONICS_REVIEWER: "electronics_reviewer",

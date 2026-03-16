@@ -4,10 +4,12 @@ from typing import Literal
 import yaml
 
 from controller.clients.worker import WorkerClient
+from shared.enums import AgentName
 from shared.models.schemas import AssemblyDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     PlanReviewManifest,
+    ReviewerStage,
     ReviewManifest,
     ValidationResultRecord,
 )
@@ -18,14 +20,9 @@ from worker_heavy.utils.file_validation import (
 )
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
-ReviewerStage = Literal[
-    "benchmark_reviewer",
-    "engineering_execution_reviewer",
-    "electronics_reviewer",
-]
 PlanReviewerStage = Literal[
-    "benchmark_plan_reviewer",
-    "engineering_plan_reviewer",
+    AgentName.BENCHMARK_PLAN_REVIEWER,
+    AgentName.ENGINEER_PLAN_REVIEWER,
 ]
 
 
@@ -110,7 +107,7 @@ async def validate_plan_reviewer_handover(
     worker_client: WorkerClient,
     *,
     manifest_path: str = ".manifests/engineering_plan_review_manifest.json",
-    expected_stage: PlanReviewerStage = "engineering_plan_reviewer",
+    expected_stage: PlanReviewerStage = AgentName.ENGINEER_PLAN_REVIEWER,
 ) -> str | None:
     """Validate planner-to-plan-reviewer handoff using stage-specific manifest."""
     if not await worker_client.exists(manifest_path):
@@ -146,10 +143,14 @@ async def validate_plan_reviewer_handover(
 
     if not await worker_client.exists("benchmark_definition.yaml"):
         return f"benchmark_definition.yaml missing for {expected_stage} handoff."
-    if not await worker_client.exists("benchmark_assembly_definition.yaml"):
-        return (
-            f"benchmark_assembly_definition.yaml missing for {expected_stage} handoff."
-        )
+
+    assembly_definition_path = (
+        "benchmark_assembly_definition.yaml"
+        if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER
+        else "assembly_definition.yaml"
+    )
+    if not await worker_client.exists(assembly_definition_path):
+        return f"{assembly_definition_path} missing for {expected_stage} handoff."
 
     try:
         benchmark_raw = await worker_client.read_file("benchmark_definition.yaml")
@@ -163,9 +164,7 @@ async def validate_plan_reviewer_handover(
             )
         benchmark_definition = benchmark_result
         assembly_definition = AssemblyDefinition.model_validate(
-            yaml.safe_load(
-                await worker_client.read_file("benchmark_assembly_definition.yaml")
-            )
+            yaml.safe_load(await worker_client.read_file(assembly_definition_path))
             or {}
         )
     except Exception as e:

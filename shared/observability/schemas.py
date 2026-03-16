@@ -345,6 +345,8 @@ class ReviewEvidenceStats(BaseModel):
     has_mfg_report: bool = False
     num_renders: int = 0
     simulations_run: int = 0
+    review_decision_path: str | None = None
+    review_comments_path: str | None = None
 
 
 class ReviewDecisionEvent(BaseEvent):

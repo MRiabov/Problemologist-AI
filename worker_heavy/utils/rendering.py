@@ -163,6 +163,23 @@ def prerender_24_views(
 
             # OPTIMIZATION: Use render_only=True to skip expensive physics build in Genesis.
             backend.load_scene(scene, render_only=True)
+            if resolved_backend_type == SimulatorBackendType.MUJOCO:
+                # Keep smoke-mode validation previews material-color dominant by
+                # hiding the checkerboard floor in render-only snapshots.
+                try:
+                    import mujoco
+
+                    floor_geom_id = mujoco.mj_name2id(
+                        backend.model,
+                        mujoco.mjtObj.mjOBJ_GEOM,
+                        "floor",
+                    )
+                    if floor_geom_id >= 0:
+                        backend.model.geom_rgba[floor_geom_id] = np.array(
+                            [0.0, 0.0, 0.0, 0.0], dtype=np.float32
+                        )
+                except Exception:
+                    logger.debug("mujoco_floor_hide_skipped", session_id=session_id)
 
             # NOTE: We skip backend.step() here because it requires a built physics scene,
             # and for 24-view static renders we only need the geometric/visual state.

@@ -666,13 +666,21 @@ async def api_submit(
                     session_root=root,
                     script_content=request.script_content,
                 )
+                reviewer_stage = request.reviewer_stage
+                if reviewer_stage is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "reviewer_stage is required for /benchmark/submit. "
+                            "Pass one of: benchmark_reviewer, "
+                            "engineering_execution_reviewer, electronics_reviewer."
+                        ),
+                    )
                 success = submit_for_review(
                     component,
                     cwd=root,
                     session_id=x_session_id,
-                    reviewer_stage=(
-                        request.reviewer_stage or "engineering_execution_reviewer"
-                    ),
+                    reviewer_stage=reviewer_stage,
                 )
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts()

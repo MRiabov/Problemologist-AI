@@ -977,13 +977,22 @@ benchmark_generator:
       - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.
 
       **Output**:
-      Write to `reviews/review-round-{N}.md` with:
+      Persist two YAML artifacts under `reviews/`:
+      - `benchmark-execution-review-decision-round-{N}.yaml`
+      - `benchmark-execution-review-comments-round-{N}.yaml`
+
+      The decision YAML is the routing source of truth:
       ```yaml
-      ---
-      decision: approved  # or: rejected
-      comments:
-        - "Issue description"
-      ---
+      decision: APPROVED  # or: REJECTED / REJECT_CODE / REJECT_PLAN
+      ```
+
+      The comments YAML carries reviewer feedback and checklist judgment:
+      ```yaml
+      summary: "Issue description"
+      required_fixes:
+        - "Concrete fix"
+      checklist:
+        robustness: pass
       ```
 
       List required fixes if rejected.

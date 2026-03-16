@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr, field_validator
 
@@ -16,6 +16,16 @@ from shared.simulation.schemas import (
     get_default_simulator_backend,
 )
 from shared.workers.workbench_models import ManufacturingMethod
+
+ReviewerStage: TypeAlias = Literal[
+    "benchmark_reviewer",
+    "engineering_execution_reviewer",
+    "electronics_reviewer",
+]
+
+LEGACY_REVIEWER_STAGE_ALIASES = {
+    "engineer_execution_reviewer": "engineering_execution_reviewer",
+}
 
 
 class ReadFileResponse(BaseModel):
@@ -204,14 +214,7 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Optional particle budget override.",
     )
-    reviewer_stage: (
-        Literal[
-            "benchmark_reviewer",
-            "engineering_execution_reviewer",
-            "electronics_reviewer",
-        ]
-        | None
-    ) = Field(
+    reviewer_stage: ReviewerStage | None = Field(
         default=None,
         description="Reviewer stage when calling /benchmark/submit.",
     )
@@ -221,6 +224,15 @@ class BenchmarkToolRequest(BaseModel):
     def normalize_backend(cls, value: object) -> object:
         if isinstance(value, str):
             return value.upper()
+        return value
+
+    @field_validator("reviewer_stage", mode="before")
+    @classmethod
+    def normalize_reviewer_stage(cls, value: object) -> object:
+        if isinstance(value, AgentName):
+            value = value.value
+        if isinstance(value, str):
+            return LEGACY_REVIEWER_STAGE_ALIASES.get(value, value)
         return value
 
 
@@ -306,11 +318,7 @@ class ReviewManifest(BaseModel):
     """Persisted handoff manifest used to gate reviewer entry."""
 
     status: Literal["ready_for_review"]
-    reviewer_stage: Literal[
-        "benchmark_reviewer",
-        "engineering_execution_reviewer",
-        "electronics_reviewer",
-    ]
+    reviewer_stage: ReviewerStage
     timestamp: str | None = None
     session_id: StrictStr
     revision: StrictStr | None = None
@@ -334,8 +342,8 @@ class PlanReviewManifest(BaseModel):
 
     status: Literal["ready_for_review"]
     reviewer_stage: Literal[
-        "benchmark_plan_reviewer",
-        "engineering_plan_reviewer",
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
     ]
     session_id: StrictStr
     planner_node_type: AgentName

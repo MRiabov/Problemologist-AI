@@ -22,10 +22,14 @@ from controller.agent.context_usage import (
 from controller.agent.nodes.base import BaseNode, SharedNodeContext
 from controller.agent.tools import filter_tools_for_agent
 from controller.observability.middleware_helper import record_events
+from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision, SessionStatus
 from shared.models.schemas import ReviewResult
 from shared.models.simulation import SimulationResult
-from shared.observability.schemas import ConversationLengthExceededEvent
+from shared.observability.schemas import (
+    ConversationLengthExceededEvent,
+    ReviewDecisionEvent,
+)
 from shared.simulation.schemas import (
     RandomizationStrategy,
     SimulatorBackendType,
@@ -961,9 +965,10 @@ class BenchmarkPlanReviewerNode(BaseNode):
         try:
             review = ReviewResult.model_validate(prediction.review)
             review = await self._enforce_render_inspection_gate(review)
-            review_path = await self._persist_review_result(
-                review, "benchmark-plan-review-round"
-            )
+            (
+                review_decision_path,
+                review_comments_path,
+            ) = await self._persist_review_result(review, "benchmark-plan-review")
         except Exception as exc:
             state.review_decision = ReviewDecision.REJECT_PLAN
             state.review_feedback = f"Rejected: failed to persist plan review: {exc}"
@@ -978,7 +983,24 @@ class BenchmarkPlanReviewerNode(BaseNode):
             state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
         state.journal += (
             f"\n[Plan Reviewer] {state.review_feedback}\n"
-            f"Review file: {review_path}\n{journal_entry}"
+            f"Decision file: {review_decision_path}\n"
+            f"Comments file: {review_comments_path}\n"
+            f"{journal_entry}"
+        )
+        await record_worker_events(
+            episode_id=state.episode_id,
+            events=[
+                ReviewDecisionEvent(
+                    decision=review.decision,
+                    reason=state.review_feedback,
+                    evidence_stats={
+                        "is_plan_review": True,
+                        "review_decision_path": review_decision_path,
+                        "review_comments_path": review_comments_path,
+                    },
+                    checklist=review.checklist,
+                )
+            ],
         )
         state.messages.append(
             AIMessage(content=f"Plan Review decision: {review.decision.value}")
@@ -1316,7 +1338,7 @@ class BenchmarkCoderNode(BaseNode):
                         # importable module with no in-module submission path.
                         submit_res = await self.ctx.worker_client.submit(
                             script_path=SCRIPT_FILE,
-                            reviewer_stage="benchmark_reviewer",
+                            reviewer_stage=AgentName.BENCHMARK_REVIEWER,
                         )
                         if not submit_res.success:
                             state.session.status = SessionStatus.REJECTED
@@ -1485,7 +1507,6 @@ class BenchmarkReviewerSignature(dspy.Signature):
     """
     Agentic review of the generated benchmark.
     You must use the provided tools to inspect the workspace.
-    You MUST use the 'write_review_file' tool to persist your review.
     When done, use SUBMIT to provide the final review result.
     """
 
@@ -1548,15 +1569,27 @@ class BenchmarkReviewerNode(BaseNode):
                     "benchmark_definition.yaml"
                 )
 
-        state.review_round = state.review_round + 1
-        review_filename = f"reviews/benchmark-review-round-{state.review_round}.md"
+        review_round = await self._next_review_round("benchmark-execution-review")
+        review_decision_filename = (
+            f"reviews/benchmark-execution-review-decision-round-{review_round}.yaml"
+        )
+        review_comments_filename = (
+            f"reviews/benchmark-execution-review-comments-round-{review_round}.yaml"
+        )
 
         # Specialized local tool
         async def write_review_file(path: str, content: str) -> str:
-            """Write the review to the review file."""
+            """Write one of the stage-specific review YAML files."""
             p = path.lstrip("/")
-            if p != review_filename.lstrip("/"):
-                return f"Error: Unauthorized path. You must write to {review_filename}"
+            allowed_paths = {
+                review_decision_filename.lstrip("/"),
+                review_comments_filename.lstrip("/"),
+            }
+            if p not in allowed_paths:
+                return (
+                    "Error: Unauthorized path. You must write to "
+                    f"{review_decision_filename} or {review_comments_filename}"
+                )
             success = await self.ctx.worker_client.write_file(path, content)
             return (
                 "Review written successfully." if success else "Error writing review."
@@ -1602,11 +1635,39 @@ class BenchmarkReviewerNode(BaseNode):
 
             review = ReviewResult.model_validate(prediction.review)
             review = await self._enforce_render_inspection_gate(review)
+            (
+                review_decision_path,
+                review_comments_path,
+            ) = await self._persist_review_result(
+                review,
+                "benchmark-execution-review",
+                round_number=review_round,
+            )
             state.review_decision = review.decision
             state.review_feedback = f"{review.decision.value}: {review.reason}"
-            state.journal += f"\n[Reviewer] {state.review_feedback}\n{journal_entry}"
+            state.journal += (
+                f"\n[Reviewer] {state.review_feedback}\n"
+                f"Decision file: {review_decision_path}\n"
+                f"Comments file: {review_comments_path}\n"
+                f"{journal_entry}"
+            )
             if review.required_fixes:
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
+            await record_worker_events(
+                episode_id=state.episode_id,
+                events=[
+                    ReviewDecisionEvent(
+                        decision=review.decision,
+                        reason=state.review_feedback,
+                        evidence_stats={
+                            "has_sim_report": True,
+                            "review_decision_path": review_decision_path,
+                            "review_comments_path": review_comments_path,
+                        },
+                        checklist=review.checklist,
+                    )
+                ],
+            )
         except Exception as e:
             logger.warning("benchmark_reviewer_node_failed", error=str(e))
             state.review_decision = ReviewDecision.REJECTED

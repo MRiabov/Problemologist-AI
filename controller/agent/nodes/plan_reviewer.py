@@ -162,9 +162,10 @@ class PlanReviewerNode(BaseNode):
 
         review = ReviewResult.model_validate(prediction.review)
         try:
-            review_path = await self._persist_review_result(
-                review, "engineering-plan-review-round"
-            )
+            (
+                review_decision_path,
+                review_comments_path,
+            ) = await self._persist_review_result(review, "engineering-plan-review")
         except Exception as exc:
             return state.model_copy(
                 update={
@@ -222,8 +223,10 @@ class PlanReviewerNode(BaseNode):
                     reason=feedback,
                     evidence_stats={
                         "is_plan_review": True,
-                        "review_file_path": review_path,
+                        "review_decision_path": review_decision_path,
+                        "review_comments_path": review_comments_path,
                     },
+                    checklist=review.checklist,
                 )
             ],
         )

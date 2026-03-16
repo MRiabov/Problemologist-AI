@@ -96,7 +96,27 @@ class ElectronicsReviewerNode(BaseNode):
                 }
             )
 
-        review = prediction.review
+        review = ReviewResult.model_validate(prediction.review)
+        try:
+            (
+                review_decision_path,
+                review_comments_path,
+            ) = await self._persist_review_result(review, "electronics-review")
+        except Exception as exc:
+            return state.model_copy(
+                update={
+                    "status": AgentStatus.FAILED,
+                    "feedback": (
+                        f"Electronics Reviewer failed to persist review files: {exc}"
+                    ),
+                    "journal": (
+                        state.journal
+                        + journal_entry
+                        + f"\n[Electronics Reviewer] Review persistence failed: {exc}"
+                    ),
+                    "turn_count": state.turn_count + 1,
+                }
+            )
         decision = review.decision
         feedback = review.reason
         if review.required_fixes:
@@ -142,7 +162,10 @@ class ElectronicsReviewerNode(BaseNode):
                     reason=feedback,
                     evidence_stats={
                         "is_electronics_review": True,
+                        "review_decision_path": review_decision_path,
+                        "review_comments_path": review_comments_path,
                     },
+                    checklist=review.checklist,
                 )
             ],
         )

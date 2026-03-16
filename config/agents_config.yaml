@@ -273,7 +273,11 @@ agents:
           ]
         deny: [".manifests/**"]
       write:
-        allow: ["reviews/engineering-plan-review-round-*.md"]
+        allow:
+          [
+            "reviews/engineering-plan-review-decision-round-*.yaml",
+            "reviews/engineering-plan-review-comments-round-*.yaml",
+          ]
         deny: [".manifests/**"]
     tools:
       [
@@ -316,7 +320,11 @@ agents:
           ]
         deny: [".manifests/**"]
       write:
-        allow: ["reviews/engineering-execution-review-round-*.md"]
+        allow:
+          [
+            "reviews/engineering-execution-review-decision-round-*.yaml",
+            "reviews/engineering-execution-review-comments-round-*.yaml",
+          ]
         deny: [".manifests/**"]
     tools:
       [
@@ -404,7 +412,11 @@ agents:
           ]
         deny: [".manifests/**"]
       write:
-        allow: ["reviews/benchmark-plan-review-round-*.md"]
+        allow:
+          [
+            "reviews/benchmark-plan-review-decision-round-*.yaml",
+            "reviews/benchmark-plan-review-comments-round-*.yaml",
+          ]
         deny: [".manifests/**"]
     tools:
       [
@@ -445,7 +457,11 @@ agents:
           ]
         deny: [".manifests/**"]
       write:
-        allow: ["reviews/benchmark-review-round-*.md"]
+        allow:
+          [
+            "reviews/benchmark-execution-review-decision-round-*.yaml",
+            "reviews/benchmark-execution-review-comments-round-*.yaml",
+          ]
         deny: [".manifests/**"]
     tools:
       [
@@ -536,7 +552,11 @@ agents:
           ]
         deny: [".manifests/**"]
       write:
-        allow: ["reviews/electronics-review-round-*.md"]
+        allow:
+          [
+            "reviews/electronics-review-decision-round-*.yaml",
+            "reviews/electronics-review-comments-round-*.yaml",
+          ]
         deny: [".manifests/**"]
     tools:
       [

@@ -238,8 +238,11 @@ class ExecutionReviewerNode(BaseNode):
             review = ReviewResult.model_validate(prediction.review)
             review = await self._enforce_render_inspection_gate(review)
             try:
-                review_path = await self._persist_review_result(
-                    review, "engineering-execution-review-round"
+                (
+                    review_decision_path,
+                    review_comments_path,
+                ) = await self._persist_review_result(
+                    review, "engineering-execution-review"
                 )
             except Exception as exc:
                 node_output_data = (
@@ -306,8 +309,10 @@ class ExecutionReviewerNode(BaseNode):
                         evidence_stats={
                             "has_sim_report": True,
                             "has_mfg_report": True,
-                            "review_file_path": review_path,
+                            "review_decision_path": review_decision_path,
+                            "review_comments_path": review_comments_path,
                         },
+                        checklist=review.checklist,
                     )
                 ],
             )

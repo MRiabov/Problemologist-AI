@@ -7,7 +7,7 @@ import structlog
 from build123d import Compound, export_step
 
 from shared.models.simulation import SimulationResult
-from shared.workers.schema import ReviewManifest, ValidationResultRecord
+from shared.workers.schema import ReviewerStage, ReviewManifest, ValidationResultRecord
 from worker_heavy.utils.dfm import validate_and_price_assembly
 from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
@@ -42,11 +42,22 @@ def _latest_git_revision(cwd: Path) -> str | None:
         return None
 
 
+def _resolve_submission_assembly_definition(
+    cwd: Path, reviewer_stage: ReviewerStage
+) -> tuple[Path, str]:
+    """Pick the stage-correct assembly definition artifact for review handover."""
+    if reviewer_stage == "benchmark_reviewer":
+        rel_path = "benchmark_assembly_definition.yaml"
+    else:
+        rel_path = "assembly_definition.yaml"
+    return cwd / rel_path, rel_path
+
+
 def submit_for_review(
     component: Compound,
     cwd: Path = Path(),
     session_id: str | None = None,
-    reviewer_stage: str = "engineering_execution_reviewer",
+    reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
 ):
     """
     Standardized handover from Coder to Reviewer.
@@ -57,6 +68,14 @@ def submit_for_review(
     logger.info(
         "handover_started", cwd=str(cwd), files=os.listdir(cwd), session_id=session_id
     )
+    normalized_stage = reviewer_stage
+    allowed_stages = {
+        "benchmark_reviewer",
+        "engineering_execution_reviewer",
+        "electronics_reviewer",
+    }
+    if normalized_stage not in allowed_stages:
+        raise ValueError(f"Unsupported reviewer_stage: {reviewer_stage}")
 
     renders_dir = cwd / os.getenv("RENDERS_DIR", "renders")
     manifests_dir = cwd / ".manifests"
@@ -136,8 +155,10 @@ def submit_for_review(
             "benchmark_definition.yaml is missing (required for submission)"
         )
 
-    # benchmark_assembly_definition.yaml
-    cost_path = cwd / "benchmark_assembly_definition.yaml"
+    # Stage-specific assembly_definition artifact
+    cost_path, assembly_definition_name = _resolve_submission_assembly_definition(
+        cwd, normalized_stage
+    )
     if cost_path.exists():
         from .file_validation import validate_assembly_definition_yaml
 
@@ -154,19 +175,15 @@ def submit_for_review(
         )
         if not is_valid:
             logger.error(
-                "benchmark_assembly_definition_yaml_invalid",
+                f"{cost_path.stem}_yaml_invalid",
                 errors=estimation,
                 session_id=session_id,
             )
-            raise ValueError(
-                f"benchmark_assembly_definition.yaml invalid: {estimation}"
-            )
+            raise ValueError(f"{assembly_definition_name} invalid: {estimation}")
     else:
-        logger.error(
-            "benchmark_assembly_definition_yaml_missing", session_id=session_id
-        )
+        logger.error(f"{cost_path.stem}_yaml_missing", session_id=session_id)
         raise ValueError(
-            "benchmark_assembly_definition.yaml is missing (required for submission)"
+            f"{assembly_definition_name} is missing (required for submission)"
         )
 
     # 2. Verify prior validation (INT-018) for current script revision
@@ -277,7 +294,7 @@ def submit_for_review(
     constraints = objectives_model.constraints
 
     manufactured_labels = {part.part_name for part in estimation.manufactured_parts}
-    if reviewer_stage != "benchmark_reviewer":
+    if normalized_stage != "benchmark_reviewer":
         from shared.workers.workbench_models import ManufacturingMethod
 
         method = (
@@ -304,7 +321,6 @@ def submit_for_review(
             raise ValueError(
                 f"Submission rejected (DFM): {validation_result.violations}"
             )
-
         if constraints:
             if (
                 constraints.max_unit_cost
@@ -358,7 +374,8 @@ def submit_for_review(
     import shutil
 
     shutil.copy(objectives_path, renders_dir / "benchmark_definition.yaml")
-    shutil.copy(cost_path, renders_dir / "benchmark_assembly_definition.yaml")
+    rendered_assembly_definition_path = renders_dir / assembly_definition_name
+    shutil.copy(cost_path, rendered_assembly_definition_path)
 
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
@@ -366,11 +383,6 @@ def submit_for_review(
         "engineering_execution_reviewer": "engineering_execution_review_manifest.json",
         "electronics_reviewer": "electronics_review_manifest.json",
     }
-    normalized_stage = (
-        reviewer_stage
-        if reviewer_stage in stage_to_manifest
-        else "engineering_execution_reviewer"
-    )
     manifest_name = stage_to_manifest[normalized_stage]
     manifest_path = manifests_dir / manifest_name
     manifest = ReviewManifest(
@@ -391,9 +403,7 @@ def submit_for_review(
         mjcf_path=str(renders_dir / "scene.xml"),
         cad_path=str(cad_path),
         objectives_path=str(renders_dir / "benchmark_definition.yaml"),
-        assembly_definition_path=str(
-            renders_dir / "benchmark_assembly_definition.yaml"
-        ),
+        assembly_definition_path=str(rendered_assembly_definition_path),
     )
 
     manifest_json = manifest.model_dump_json(indent=2)
