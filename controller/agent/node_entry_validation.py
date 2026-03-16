@@ -15,13 +15,27 @@ from controller.agent.benchmark_handover_validation import (
 from controller.agent.config import settings as agent_settings
 from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
+    validate_planner_artifacts_cross_contract,
     validate_reviewer_handover,
 )
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
+from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import CustomObjectives
-from shared.workers.schema import ReviewerStage
+from shared.workers.markdown_validator import validate_todo_md
+from shared.workers.schema import (
+    PlanReviewManifest,
+    ReviewerStage,
+    ReviewManifest,
+    ValidationResultRecord,
+)
+from worker_heavy.utils.file_validation import (
+    validate_assembly_definition_yaml,
+    validate_benchmark_definition_yaml,
+    validate_plan_md_structure,
+    validate_plan_refusal,
+)
 
 REASON_OK = "ok"
 REASON_STATE_INVALID = "state_invalid"
@@ -31,6 +45,22 @@ REASON_REVIEWER_ENTRY_BLOCKED = "reviewer_entry_blocked"
 REASON_POLICY_INVALID = "policy_invalid"
 REASON_NO_PREVIOUS_NODE = "no_previous_node"
 REASON_CUSTOM_CHECK_FAILED = "custom_check_failed"
+
+_SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
+    "plan.md",
+    "todo.md",
+    "plan_refusal.md",
+    "benchmark_definition.yaml",
+    "assembly_definition.yaml",
+    "benchmark_assembly_definition.yaml",
+    "validation_results.json",
+    "simulation_result.json",
+    ".manifests/benchmark_plan_review_manifest.json",
+    ".manifests/engineering_plan_review_manifest.json",
+    ".manifests/benchmark_review_manifest.json",
+    ".manifests/engineering_execution_review_manifest.json",
+    ".manifests/electronics_review_manifest.json",
+)
 
 
 class ValidationGraph(StrEnum):
@@ -260,7 +290,10 @@ async def reviewer_handover_custom_check_from_session_id(
         return [
             NodeEntryValidationError(
                 code=REASON_REVIEWER_ENTRY_BLOCKED,
-                message=f"{reviewer_label} reviewer handover check failed: missing session_id.",
+                message=(
+                    f"{reviewer_label} reviewer handover check failed: "
+                    "missing session_id."
+                ),
                 source=EntryValidationSource.HANDOVER,
             )
         ]
@@ -565,6 +598,166 @@ async def _materialize_reviewer_handover(
     return None
 
 
+def _plan_type_for_target(target_node: AgentName, plan_content: str) -> str:
+    if "benchmark" in target_node.value or "# Learning Objective" in plan_content:
+        return "benchmark"
+    return "engineering"
+
+
+def _seeded_schema_error(
+    *,
+    message: str,
+    artifact_path: str | None = None,
+) -> NodeEntryValidationError:
+    return NodeEntryValidationError(
+        code=REASON_HANDOVER_INVALID,
+        message=message,
+        source=EntryValidationSource.HANDOVER,
+        artifact_path=artifact_path,
+    )
+
+
+async def validate_seeded_workspace_handoff_artifacts(
+    *,
+    worker_client: WorkerClient,
+    target_node: AgentName,
+) -> list[NodeEntryValidationError]:
+    """Fail-closed schema + semantic checks for seeded/direct entry workspaces."""
+    errors: list[NodeEntryValidationError] = []
+    contents: dict[str, str] = {}
+
+    for rel_path in _SCHEMA_BACKED_HANDOFF_PATHS:
+        if await worker_client.exists(rel_path):
+            contents[rel_path] = await worker_client.read_file(rel_path)
+
+    for rel_path, content in contents.items():
+        if rel_path == "plan.md":
+            plan_type = _plan_type_for_target(target_node, content)
+            is_valid, plan_errors = validate_plan_md_structure(content, plan_type)
+            if not is_valid:
+                errors.extend(
+                    _seeded_schema_error(
+                        message=f"{rel_path}: {message}",
+                        artifact_path=rel_path,
+                    )
+                    for message in plan_errors
+                )
+            continue
+
+        if rel_path == "todo.md":
+            todo_result = validate_todo_md(content)
+            if not todo_result.is_valid:
+                errors.extend(
+                    _seeded_schema_error(
+                        message=f"{rel_path}: {message}",
+                        artifact_path=rel_path,
+                    )
+                    for message in todo_result.violations
+                )
+            continue
+
+        if rel_path == "plan_refusal.md":
+            is_valid, refusal_errors = validate_plan_refusal(content)
+            if not is_valid and isinstance(refusal_errors, list):
+                errors.extend(
+                    _seeded_schema_error(
+                        message=f"{rel_path}: {message}",
+                        artifact_path=rel_path,
+                    )
+                    for message in refusal_errors
+                )
+            continue
+
+        if rel_path == "benchmark_definition.yaml":
+            is_valid, benchmark_result = validate_benchmark_definition_yaml(
+                content,
+                session_id=worker_client.session_id,
+            )
+            if not is_valid and isinstance(benchmark_result, list):
+                errors.extend(
+                    _seeded_schema_error(
+                        message=f"{rel_path}: {message}",
+                        artifact_path=rel_path,
+                    )
+                    for message in benchmark_result
+                )
+            continue
+
+        if rel_path in {
+            "assembly_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+        }:
+            is_valid, assembly_result = validate_assembly_definition_yaml(
+                content,
+                session_id=worker_client.session_id,
+            )
+            if not is_valid and isinstance(assembly_result, list):
+                errors.extend(
+                    _seeded_schema_error(
+                        message=f"{rel_path}: {message}",
+                        artifact_path=rel_path,
+                    )
+                    for message in assembly_result
+                )
+            continue
+
+        try:
+            if rel_path == "validation_results.json":
+                ValidationResultRecord.model_validate_json(content)
+            elif rel_path == "simulation_result.json":
+                SimulationResult.model_validate_json(content)
+            elif rel_path in {
+                ".manifests/benchmark_plan_review_manifest.json",
+                ".manifests/engineering_plan_review_manifest.json",
+            }:
+                PlanReviewManifest.model_validate_json(content)
+            elif rel_path in {
+                ".manifests/benchmark_review_manifest.json",
+                ".manifests/engineering_execution_review_manifest.json",
+                ".manifests/electronics_review_manifest.json",
+            }:
+                ReviewManifest.model_validate_json(content)
+        except Exception as exc:  # pragma: no cover - defensive parse guard
+            errors.append(
+                _seeded_schema_error(
+                    message=f"{rel_path}: {exc}",
+                    artifact_path=rel_path,
+                )
+            )
+
+    present_paths = set(contents)
+
+    if {
+        "benchmark_definition.yaml",
+        "assembly_definition.yaml",
+    }.issubset(present_paths):
+        handover_error = await validate_planner_artifacts_cross_contract(
+            worker_client,
+            expected_stage=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+        if handover_error is not None:
+            errors.append(
+                _seeded_schema_error(
+                    message=f"engineering planner handoff: {handover_error}",
+                    artifact_path="assembly_definition.yaml",
+                )
+            )
+
+    if set(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS).issubset(present_paths):
+        benchmark_errors = await validate_benchmark_planner_handoff_artifacts(
+            worker_client
+        )
+        errors.extend(
+            _seeded_schema_error(
+                message=f"benchmark planner handoff: {message}",
+                artifact_path="benchmark_assembly_definition.yaml",
+            )
+            for message in benchmark_errors
+        )
+
+    return errors
+
+
 class ArtifactExistsFn(Protocol):
     async def __call__(self, path: str) -> bool: ...
 
@@ -719,9 +912,9 @@ async def evaluate_node_entry_contract(
 
 __all__ = [
     "BENCHMARK_CODER_HANDOVER_CHECK",
+    "BENCHMARK_PLANNER_HANDOFF_ARTIFACTS",
     "BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK",
     "BENCHMARK_PLAN_REVIEW_MANIFEST",
-    "BENCHMARK_PLANNER_HANDOFF_ARTIFACTS",
     "BENCHMARK_PREVIOUS_NODE_MAP",
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
     "ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK",
@@ -752,4 +945,5 @@ __all__ = [
     "integration_mode_enabled",
     "resolve_failure_disposition",
     "reviewer_handover_custom_check_from_session_id",
+    "validate_seeded_workspace_handoff_artifacts",
 ]

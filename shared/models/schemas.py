@@ -586,6 +586,7 @@ class TraceMetadata(BaseModel):
     # Review specific
     review_id: str | None = None
     decision: ReviewDecision | None = None
+    checklist: dict[str, str | float | bool] = Field(default_factory=dict)
 
     # Reasoning trace specific
     reasoning_step_index: int | None = None
@@ -656,6 +657,7 @@ class ReviewFrontmatter(StrictContractModel):
 
     decision: ReviewDecision
     comments: list[str] = []
+    evidence: dict[str, Any] | None = None
 
     @field_validator("decision", mode="before")
     @classmethod

@@ -249,6 +249,9 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Use node-entry validation with an engineering-plan-review custom check (parity with execution-review stale-revision checks).
+  - For seeded/direct starts, the controller-owned node-entry validation layer must schema-validate all present schema-backed handoff artifacts in the workspace (not only required-file presence) and fail closed on any typed-parse/contract error.
+  - For seeded/direct starts involving planner artifacts, that same controller validation path must also run the corresponding planner cross-contract semantic checks (engineering: `benchmark_definition.yaml` + `assembly_definition.yaml` attachment/cost checks; benchmark: benchmark planner handoff semantic checks).
+  - Evals may trigger seeded preflight, but they must call the controller validation path instead of re-implementing schema/handoff logic inside eval modules.
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
   - Reject inconsistent, infeasible, ambiguous, or incomplete plans.

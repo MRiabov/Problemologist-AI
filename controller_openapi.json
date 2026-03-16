@@ -3444,6 +3444,23 @@
               }
             ]
           },
+          "checklist": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Checklist"
+          },
           "reasoning_step_index": {
             "anyOf": [
               {

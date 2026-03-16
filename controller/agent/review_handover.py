@@ -141,6 +141,18 @@ async def validate_plan_reviewer_handover(
                 "re-run submit_plan() for latest planner revision."
             )
 
+    return await validate_planner_artifacts_cross_contract(
+        worker_client,
+        expected_stage=expected_stage,
+    )
+
+
+async def validate_planner_artifacts_cross_contract(
+    worker_client: WorkerClient,
+    *,
+    expected_stage: PlanReviewerStage = AgentName.ENGINEER_PLAN_REVIEWER,
+) -> str | None:
+    """Validate benchmark + assembly planner artifacts without requiring a manifest."""
     if not await worker_client.exists("benchmark_definition.yaml"):
         return f"benchmark_definition.yaml missing for {expected_stage} handoff."
 
