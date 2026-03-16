@@ -130,8 +130,8 @@ def build():
 @pytest.mark.asyncio
 async def test_int_132_full_electromechanical_path():
     """
-    INT-132: Full electromechanical workflow (mech -> elec -> reviewer).
-    This integration coverage validates the core mech + circuit + simulation path.
+    INT-132: Full electromechanical workflow with split planning and unified implementation.
+    This integration coverage validates the core mechanics + circuit + simulation path.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
         await _require_services(client)

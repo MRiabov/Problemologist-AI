@@ -267,7 +267,7 @@ def test_int_124_open_circuit_detection(monkeypatch):
 
 
 def test_int_127_backward_compat():
-    """INT-127: Implicit power=1.0 when no electronics section is present."""
+    """INT-127: Legacy implicit power=1.0 when no electronics section is present."""
     # Initialize loop WITHOUT electronics
     loop = SimulationLoop(xml_path="tests/assets/empty_scene.xml", electronics=None)
 

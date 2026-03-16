@@ -359,7 +359,9 @@ async def test_int_005_mandatory_artifacts_gate(
             headers=base_headers,
         )
 
-        submit_req = BenchmarkToolRequest(script_path="solution.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),
@@ -519,10 +521,17 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
             f"episode_id={episode_id}"
         )
         plan_review_paths = await _wait_for_benchmark_asset(
-            client, episode_id, "benchmark-plan-review-round-1.md"
+            client, episode_id, "benchmark-plan-review-decision-round-1.yaml"
         )
         assert plan_review_paths, (
-            "Expected persisted benchmark plan review file before PLANNED. "
+            "Expected persisted benchmark plan review decision file before PLANNED. "
+            f"episode_id={episode_id}"
+        )
+        plan_review_comment_paths = await _wait_for_benchmark_asset(
+            client, episode_id, "benchmark-plan-review-comments-round-1.yaml"
+        )
+        assert plan_review_comment_paths, (
+            "Expected persisted benchmark plan review comments file before PLANNED. "
             f"episode_id={episode_id}"
         )
         post_submit_status = await _wait_for_planned_after_submit_plan_benchmark(
@@ -564,7 +573,9 @@ async def test_int_006_plan_structure_validation(
         await setup_workspace(
             client, base_headers, {**base_files, "plan.md": invalid_plan}
         )
-        submit_req = BenchmarkToolRequest(script_path="solution.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),
@@ -618,7 +629,9 @@ async def test_int_007_todo_integrity(
         await setup_workspace(
             client, base_headers, {**base_files, "todo.md": invalid_todo}
         )
-        submit_req = BenchmarkToolRequest(script_path="solution.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),
@@ -680,7 +693,9 @@ async def test_int_008_objectives_validation(
             base_headers,
             {**base_files, "benchmark_definition.yaml": template_content},
         )
-        submit_req = BenchmarkToolRequest(script_path="solution.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),
@@ -733,7 +748,9 @@ async def test_int_009_cost_estimation_validation(
             base_headers,
             {**base_files, "benchmark_assembly_definition.yaml": template_cost},
         )
-        submit_req = BenchmarkToolRequest(script_path="solution.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),
@@ -798,7 +815,9 @@ async def test_int_011_planner_caps_enforcement(
         }
         await setup_workspace(client, base_headers, files)
         # Record validation
-        val_req = BenchmarkToolRequest(script_path="solution.py")
+        val_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
@@ -862,7 +881,9 @@ async def test_int_015_engineer_handover_immutability(
             client, base_headers, {"benchmark_definition.yaml": modified_objectives}
         )
         # Record validation
-        val_req = BenchmarkToolRequest(script_path="solution.py")
+        val_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
@@ -945,7 +966,9 @@ def build():
         }
         await setup_workspace(client, base_headers, files)
 
-        submit_req = BenchmarkToolRequest(script_path="script.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
@@ -1054,7 +1077,9 @@ def build():
         }
         await setup_workspace(client, base_headers, files)
 
-        submit_req = BenchmarkToolRequest(script_path="script.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
@@ -1161,7 +1186,9 @@ def build():
         }
         await setup_workspace(client, base_headers, files)
 
-        submit_req = BenchmarkToolRequest(script_path="script.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
@@ -1195,13 +1222,13 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-@pytest.mark.allow_backend_errors("submission_cost_limit_exceeded")
 async def test_int_019_hard_constraints_gates(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, valid_cost
 ):
-    """INT-019: Verify cost/weight/build-zone hard failure during submission."""
+    """INT-019: benchmark submit should not enforce engineering cost/weight caps."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Keep geometry valid/simulatable, then fail closed on cost/weight caps at submit.
+        # Keep geometry valid/simulatable and use very tight caps that would fail
+        # engineering submit; benchmark submit must still pass.
         expensive_script = """
 from build123d import *
 from shared.models.schemas import PartMetadata
@@ -1226,7 +1253,9 @@ def build():
         }
         await setup_workspace(client, base_headers, files)
 
-        val_req = BenchmarkToolRequest(script_path="script.py")
+        val_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
@@ -1252,12 +1281,15 @@ def build():
             headers=base_headers,
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
-        assert not data.success
-        assert "Submission rejected" in data.message
+        assert data.success, data.message
+        assert data.artifacts is not None
+        benchmark_manifest = data.artifacts.review_manifests_json.get(
+            ".manifests/benchmark_review_manifest.json"
+        )
+        assert benchmark_manifest is not None
+        parsed_manifest = json.loads(benchmark_manifest)
         assert (
-            "cost" in data.message.lower()
-            or "weight" in data.message.lower()
-            or "exceeds limit" in data.message.lower()
+            parsed_manifest.get("reviewer_stage") == AgentName.BENCHMARK_REVIEWER.value
         )
 
 
@@ -1298,7 +1330,9 @@ async def test_int_010_planner_pricing_script_integration(
         }
         await setup_workspace(client, base_headers, files)
         # Record validation
-        val_req = BenchmarkToolRequest(script_path="solution.py")
+        val_req = BenchmarkToolRequest(
+            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=val_req.model_dump(mode="json"),
@@ -1396,8 +1430,7 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-@pytest.mark.allow_backend_errors("submission_cost_limit_exceeded")
-async def test_int_019_single_part_submit_counts_workspace_drilling_cost(
+async def test_int_019_single_part_benchmark_submit_succeeds_without_cost_gate(
     session_id,
     base_headers,
     valid_plan,
@@ -1405,7 +1438,7 @@ async def test_int_019_single_part_submit_counts_workspace_drilling_cost(
     valid_objectives,
     valid_cost,
 ):
-    """INT-019: single-part submit must include workspace drilling cost in the cost gate."""
+    """INT-019: benchmark submit should ignore objective cost caps even with drilling."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         objectives = valid_objectives.model_copy(deep=True)
         objectives.constraints.max_unit_cost = 500.0
@@ -1477,7 +1510,9 @@ def build():
             },
         )
 
-        submit_req = BenchmarkToolRequest(script_path="script.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
@@ -1504,8 +1539,16 @@ def build():
         )
         assert submit_resp.status_code == 200, submit_resp.text
         submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
-        assert not submit_data.success
-        assert "submission rejected (cost)" in submit_data.message.lower()
+        assert submit_data.success, submit_data.message
+        assert submit_data.artifacts is not None
+        benchmark_manifest = submit_data.artifacts.review_manifests_json.get(
+            ".manifests/benchmark_review_manifest.json"
+        )
+        assert benchmark_manifest is not None
+        parsed_manifest = json.loads(benchmark_manifest)
+        assert (
+            parsed_manifest.get("reviewer_stage") == AgentName.BENCHMARK_REVIEWER.value
+        )
 
 
 @pytest.mark.integration_p0
@@ -1590,7 +1633,9 @@ def build():
             },
         )
 
-        submit_req = BenchmarkToolRequest(script_path="script.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         val_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/validate",
             json=submit_req.model_dump(mode="json"),
@@ -1675,7 +1720,9 @@ def build():
             headers=base_headers,
         )
 
-        submit_req = BenchmarkToolRequest(script_path="script.py")
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        )
         resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),

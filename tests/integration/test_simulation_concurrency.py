@@ -44,8 +44,8 @@ async def run_simulation(session_id: str):
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_simulation_concurrency_single_flight_busy_admission():
-    # INT-004: one external heavy job is admitted, concurrent requests fail fast
-    # with deterministic WORKER_BUSY responses (no in-worker queueing).
+    # INT-004: one external heavy job is admitted, /ready flips away from ready,
+    # and concurrent requests fail fast with deterministic WORKER_BUSY responses.
 
     session_ids = [f"sess_serialize_{i}_{int(time.time())}" for i in range(3)]
 

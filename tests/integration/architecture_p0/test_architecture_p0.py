@@ -155,7 +155,7 @@ async def test_int_003_session_filesystem_isolation(worker_light_client):
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_004_simulation_serialization():
-    """INT-004: heavy worker admits one job and rejects concurrent requests with WORKER_BUSY."""
+    """INT-004: heavy worker exposes single-flight admission, busy responses, and readiness gating."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_ids = [f"test-ser-{i}-{int(time.time())}" for i in range(3)]
 
@@ -210,9 +210,28 @@ def build():
                 payload = {"raw_text": resp.text}
             return resp.status_code, payload
 
-        results = await asyncio.gather(
-            *[_simulate(sid, bundle) for sid, bundle in zip(session_ids, bundles)]
+        first_task = asyncio.create_task(_simulate(session_ids[0], bundles[0]))
+        observed_not_ready = False
+        for _ in range(80):
+            if first_task.done():
+                break
+            ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready", timeout=5.0)
+            if ready_resp.status_code != 200:
+                observed_not_ready = True
+                break
+            await asyncio.sleep(0.1)
+
+        assert observed_not_ready, (
+            "expected /ready to report not-ready while the admitted heavy job was active"
         )
+
+        remaining_results = await asyncio.gather(
+            *[
+                _simulate(sid, bundle)
+                for sid, bundle in zip(session_ids[1:], bundles[1:])
+            ]
+        )
+        results = [await first_task, *remaining_results]
 
         admitted_successes = 0
         busy_count = 0

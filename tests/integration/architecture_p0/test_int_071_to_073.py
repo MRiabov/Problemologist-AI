@@ -6,7 +6,7 @@ import pytest
 
 from controller.clients.worker import WorkerClient
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
-from shared.enums import AgentName
+from shared.enums import AgentName, GenerationKind, SeedMatchMethod
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -36,16 +36,31 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
         session_id=session_id,
         heavy_url=WORKER_HEAVY_URL,
     )
-    reviewer_path_by_role = {
-        AgentName.BENCHMARK_PLAN_REVIEWER: "reviews/benchmark-plan-review-round-1.md",
-        AgentName.ENGINEER_PLAN_REVIEWER: "reviews/engineering-plan-review-round-1.md",
-        AgentName.ENGINEER_EXECUTION_REVIEWER: "reviews/engineering-execution-review-round-1.md",
-        AgentName.BENCHMARK_REVIEWER: "reviews/benchmark-review-round-1.md",
-        AgentName.ELECTRONICS_REVIEWER: "reviews/electronics-review-round-1.md",
+    reviewer_paths_by_role = {
+        AgentName.BENCHMARK_PLAN_REVIEWER: (
+            "reviews/benchmark-plan-review-decision-round-1.yaml",
+            "reviews/benchmark-plan-review-comments-round-1.yaml",
+        ),
+        AgentName.ENGINEER_PLAN_REVIEWER: (
+            "reviews/engineering-plan-review-decision-round-1.yaml",
+            "reviews/engineering-plan-review-comments-round-1.yaml",
+        ),
+        AgentName.ENGINEER_EXECUTION_REVIEWER: (
+            "reviews/engineering-execution-review-decision-round-1.yaml",
+            "reviews/engineering-execution-review-comments-round-1.yaml",
+        ),
+        AgentName.BENCHMARK_REVIEWER: (
+            "reviews/benchmark-execution-review-decision-round-1.yaml",
+            "reviews/benchmark-execution-review-comments-round-1.yaml",
+        ),
+        AgentName.ELECTRONICS_REVIEWER: (
+            "reviews/electronics-review-decision-round-1.yaml",
+            "reviews/electronics-review-comments-round-1.yaml",
+        ),
     }
     reviewer_fs_by_role = {
         role: RemoteFilesystemMiddleware(reviewer_client, agent_role=role)
-        for role in reviewer_path_by_role
+        for role in reviewer_paths_by_role
     }
 
     coder_client = WorkerClient(
@@ -59,7 +74,12 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
     )
     # Reviewer write scope: reviewer-specific stage files only.
     for role, fs in reviewer_fs_by_role.items():
-        assert await fs.write_file(reviewer_path_by_role[role], "Approved")
+        decision_path, comments_path = reviewer_paths_by_role[role]
+        assert await fs.write_file(decision_path, "decision: APPROVED\n")
+        assert await fs.write_file(
+            comments_path,
+            "summary: ok\nrequired_fixes: []\nchecklist: {}\n",
+        )
         with pytest.raises(PermissionError):
             await fs.write_file("plan.md", "forbidden")
         with pytest.raises(PermissionError):
@@ -72,7 +92,10 @@ async def test_int_071_filesystem_policy_precedence_and_reviewer_scope():
 
     # Deny > allow precedence for coder (**/*.py allowed, reviews/** denied)
     with pytest.raises(PermissionError):
-        await coder_fs.write_file("reviews/engineering-plan-review-round-2.md", "x")
+        await coder_fs.write_file(
+            "reviews/engineering-plan-review-decision-round-2.yaml",
+            "decision: APPROVED\n",
+        )
 
     # Unmatched path is denied
     with pytest.raises(PermissionError):
@@ -210,9 +233,12 @@ async def test_int_072_plan_refusal_validation_and_routing():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_073_observability_linkage():
-    """INT-073: user_session_id -> episode_id -> child IDs linkage is observable."""
+    """INT-073: session, child-ID, and lineage linkage is observable."""
     user_session_id = uuid.uuid4()
     session_id = f"INT-073-{uuid.uuid4().hex[:8]}"
+    seed_id = "seed-int-073"
+    seed_dataset = "integration/observability"
+    parent_seed_id = "parent-seed-int-073"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         create_resp = await client.post(
@@ -222,6 +248,13 @@ async def test_int_073_observability_linkage():
                 "session_id": session_id,
                 "user_session_id": str(user_session_id),
                 "agent_name": AgentName.ENGINEER_CODER,
+                "metadata_vars": {
+                    "seed_id": seed_id,
+                    "seed_dataset": seed_dataset,
+                    "seed_match_method": SeedMatchMethod.RUNTIME_EXPLICIT.value,
+                    "generation_kind": GenerationKind.INTEGRATION_TEST.value,
+                    "parent_seed_id": parent_seed_id,
+                },
             },
         )
         assert create_resp.status_code == 201
@@ -245,6 +278,14 @@ async def test_int_073_observability_linkage():
         episode_data = episode_resp.json()
 
         assert episode_data["user_session_id"] == str(user_session_id)
+        metadata = episode_data["metadata_vars"]
+        assert metadata["seed_id"] == seed_id
+        assert metadata["seed_dataset"] == seed_dataset
+        assert metadata["seed_match_method"] == SeedMatchMethod.RUNTIME_EXPLICIT.value
+        assert metadata["generation_kind"] == GenerationKind.INTEGRATION_TEST.value
+        assert metadata["parent_seed_id"] == parent_seed_id
+        assert metadata["is_integration_test"] is True
+        assert metadata["integration_test_id"] == "INT-073"
 
         review_trace = next(
             (

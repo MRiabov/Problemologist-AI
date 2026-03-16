@@ -70,11 +70,16 @@ async def test_reviewer_evidence_completeness():
             for p in artifact_paths
             if "reviews/" in p
             and (
-                "benchmark-plan-review-round-" in p
-                or "benchmark-review-round-" in p
-                or "engineering-plan-review-round-" in p
-                or "engineering-execution-review-round-" in p
-                or "electronics-review-round-" in p
+                "benchmark-plan-review-decision-round-" in p
+                or "benchmark-plan-review-comments-round-" in p
+                or "benchmark-execution-review-decision-round-" in p
+                or "benchmark-execution-review-comments-round-" in p
+                or "engineering-plan-review-decision-round-" in p
+                or "engineering-plan-review-comments-round-" in p
+                or "engineering-execution-review-decision-round-" in p
+                or "engineering-execution-review-comments-round-" in p
+                or "electronics-review-decision-round-" in p
+                or "electronics-review-comments-round-" in p
             )
         ]
         if not stage_review_paths:
@@ -84,18 +89,34 @@ async def test_reviewer_evidence_completeness():
                 Path("config/agents_config.yaml").read_text(encoding="utf-8")
             )
             expected_paths = {
-                "benchmark_plan_reviewer": "reviews/benchmark-plan-review-round-*.md",
-                "engineer_plan_reviewer": "reviews/engineering-plan-review-round-*.md",
-                "engineer_execution_reviewer": "reviews/engineering-execution-review-round-*.md",
-                "benchmark_reviewer": "reviews/benchmark-review-round-*.md",
-                "electronics_reviewer": "reviews/electronics-review-round-*.md",
+                "benchmark_plan_reviewer": {
+                    "reviews/benchmark-plan-review-decision-round-*.yaml",
+                    "reviews/benchmark-plan-review-comments-round-*.yaml",
+                },
+                "engineer_plan_reviewer": {
+                    "reviews/engineering-plan-review-decision-round-*.yaml",
+                    "reviews/engineering-plan-review-comments-round-*.yaml",
+                },
+                "engineer_execution_reviewer": {
+                    "reviews/engineering-execution-review-decision-round-*.yaml",
+                    "reviews/engineering-execution-review-comments-round-*.yaml",
+                },
+                "benchmark_reviewer": {
+                    "reviews/benchmark-execution-review-decision-round-*.yaml",
+                    "reviews/benchmark-execution-review-comments-round-*.yaml",
+                },
+                "electronics_reviewer": {
+                    "reviews/electronics-review-decision-round-*.yaml",
+                    "reviews/electronics-review-comments-round-*.yaml",
+                },
             }
             for role, expected in expected_paths.items():
                 role_cfg = cfg.get("agents", {}).get(role, {})
                 permissions = role_cfg.get("filesystem_permissions", role_cfg)
                 patterns = set(permissions.get("write", {}).get("allow", []))
-                assert expected in patterns, (
-                    f"{role} missing reviewer-stage write scope {expected}. "
+                missing = expected - patterns
+                assert not missing, (
+                    f"{role} missing reviewer-stage write scopes {sorted(missing)}. "
                     f"Found: {sorted(patterns)}"
                 )
                 assert "reviews/review-round-*.md" not in patterns, (
@@ -123,6 +144,15 @@ async def test_reviewer_evidence_completeness():
         review_traces = [trace for trace in traces if trace.name == "review_decision"]
         assert review_traces, "review_decision event missing."
         latest_review_trace = max(review_traces, key=lambda trace: trace.id)
+        checklist_payload = (
+            latest_review_trace.metadata_vars.checklist
+            if latest_review_trace.metadata_vars is not None
+            else None
+        )
+        assert isinstance(checklist_payload, dict), (
+            "review_decision event must carry checklist payload. "
+            f"Trace metadata: {latest_review_trace.metadata_vars}"
+        )
         assert any(
             trace.id < latest_review_trace.id for trace in inspect_media_traces
         ), "inspect_media must occur before the final review decision."

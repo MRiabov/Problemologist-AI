@@ -139,9 +139,17 @@ async def test_benchmark_planner_cad_reviewer_path():
             f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
         assert any(
-            p.endswith("benchmark-plan-review-round-1.md") for p in artifact_paths
+            p.endswith("benchmark-plan-review-decision-round-1.yaml")
+            for p in artifact_paths
         ), (
-            "benchmark plan review file missing from artifacts. "
+            "benchmark plan review decision file missing from artifacts. "
+            f"Artifacts: {artifact_paths}"
+        )
+        assert any(
+            p.endswith("benchmark-plan-review-comments-round-1.yaml")
+            for p in artifact_paths
+        ), (
+            "benchmark plan review comments file missing from artifacts. "
             f"Artifacts: {artifact_paths}"
         )
         manifest_paths = [

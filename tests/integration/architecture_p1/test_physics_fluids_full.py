@@ -193,9 +193,9 @@ async def test_int_131_full_fluid_objective_path():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
-async def test_int_133_elec_to_mech_conflict_signal():
+async def test_int_133_unified_electromechanical_conflict_signal():
     """
-    INT-133: Wire routing conflict signal for Elec -> Mech iteration path.
+    INT-133: Wire-routing conflict signal for the unified electromechanical loop.
     We validate deterministic conflict detection (wire clearance violation) via /benchmark/validate.
     """
     skip_unless_genesis(
