@@ -15,6 +15,7 @@ from threading import Lock
 from typing import Any, Literal
 
 import httpx
+import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pyrate_limiter import Duration, Limiter, Rate
@@ -24,6 +25,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from controller.agent.dspy_utils import (  # noqa: E402
+    evaluate_formula,
+    map_events_to_prediction,
+)
 from controller.agent.node_entry_validation import (  # noqa: E402
     BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
@@ -41,6 +46,7 @@ from controller.agent.node_entry_validation import (  # noqa: E402
     reviewer_handover_custom_check_from_session_id,
 )
 from controller.agent.review_handover import validate_reviewer_handover  # noqa: E402
+from controller.agent.reward import AgentRewardConfig, load_reward_config  # noqa: E402
 from controller.clients.worker import WorkerClient  # noqa: E402
 from shared.enums import (  # noqa: E402
     AgentName,
@@ -88,6 +94,12 @@ class EvalDatasetItem(BaseModel):
     expected_decision: ReviewDecision | None = None
 
     model_config = ConfigDict(extra="allow")
+
+
+class HardCheckAggregate(BaseModel):
+    total: int = 0
+    passed: int = 0
+    failed_seeds: list[str] = Field(default_factory=list)
 
 
 class GitStatusExpectation(BaseModel):
@@ -395,6 +407,164 @@ async def _handle_electronics_metrics(
 
 # Mapping of agent names to their specific metric handlers
 METRIC_HANDLERS = {}
+
+
+def _load_agent_reward_configs() -> dict[AgentName, AgentRewardConfig]:
+    try:
+        reward_cfg = load_reward_config()
+    except Exception:
+        logger.exception("reward_config_load_failed")
+        return {}
+
+    configs: dict[AgentName, AgentRewardConfig] = {}
+    for group in (reward_cfg.benchmark, reward_cfg.engineer, reward_cfg.shared):
+        for name, cfg in group.items():
+            with contextlib.suppress(ValueError):
+                configs[AgentName(name)] = cfg
+    return configs
+
+
+def _extract_episode_events(episode: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(episode, dict):
+        return []
+
+    traces = episode.get("traces")
+    if not isinstance(traces, list):
+        return []
+
+    events: list[dict[str, Any]] = []
+    for trace in traces:
+        if not isinstance(trace, dict):
+            continue
+        if str(trace.get("trace_type") or "").upper() != "EVENT":
+            continue
+        metadata = trace.get("metadata_vars")
+        if isinstance(metadata, dict):
+            events.append(metadata)
+            continue
+        parsed = _parse_trace_json_content(trace.get("content"))
+        if isinstance(parsed, dict):
+            events.append(parsed)
+    return events
+
+
+def _resolve_check_value(
+    check_name: str,
+    metrics: dict[str, Any],
+    *,
+    success: bool,
+) -> Any:
+    aliases: dict[str, tuple[str, ...]] = {
+        "script_compiles": ("script_compiled", "compiled"),
+        "simulation_result": ("simulation_success", "simulation_ran"),
+        "cad_geometry_valid": ("geometry_valid", "cad_geometry_valid"),
+        "reviewer_accepted": ("accepted", "reviewer_accepted"),
+        "engineer_implemented_successfully": (
+            "engineer_implemented_successfully",
+            "simulation_success",
+        ),
+    }
+    for key in (check_name, *aliases.get(check_name, ())):
+        if key in metrics:
+            return metrics[key]
+    if check_name == "task_success":
+        return success
+    return None
+
+
+async def _load_constraint_context(session_id: str) -> dict[str, float]:
+    if not session_id:
+        return {}
+
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        content = await worker.read_file("benchmark_definition.yaml")
+    finally:
+        await worker.aclose()
+
+    if not isinstance(content, str) or content.startswith("Error:"):
+        return {}
+
+    with contextlib.suppress(Exception):
+        parsed = yaml.safe_load(content)
+        if not isinstance(parsed, dict):
+            return {}
+        constraints = parsed.get("constraints")
+        if not isinstance(constraints, dict):
+            return {}
+        context: dict[str, float] = {}
+        max_unit_cost = constraints.get("max_unit_cost")
+        max_weight_g = constraints.get("max_weight_g", constraints.get("max_weight"))
+        if isinstance(max_unit_cost, int | float):
+            context["max_unit_cost"] = float(max_unit_cost)
+        if isinstance(max_weight_g, int | float):
+            context["max_weight_g"] = float(max_weight_g)
+            context["max_weight"] = float(max_weight_g)
+        return context
+
+    return {}
+
+
+async def _record_hard_check_outcomes(
+    *,
+    stats: dict[AgentName, Any],
+    reward_agent_configs: dict[AgentName, AgentRewardConfig],
+    agent_name: AgentName,
+    item: EvalDatasetItem,
+    success: bool,
+    episode_data: dict[str, Any] | None,
+    session_id: str,
+) -> None:
+    cfg = reward_agent_configs.get(agent_name)
+    if cfg is None or not cfg.hard_checks:
+        return
+
+    events = _extract_episode_events(episode_data)
+    metrics_model = map_events_to_prediction(events)
+    metrics = metrics_model.model_dump(mode="json")
+    metrics["task_success"] = success
+
+    needs_constraints = any(
+        isinstance(check.penalty_formula, str)
+        and (
+            "max_unit_cost" in check.penalty_formula
+            or "max_weight" in check.penalty_formula
+        )
+        or isinstance(check.formula, str)
+        and ("max_unit_cost" in check.formula or "max_weight" in check.formula)
+        for check in cfg.hard_checks.values()
+    )
+    if needs_constraints:
+        metrics.update(await _load_constraint_context(session_id))
+
+    hard_check_stats = stats[agent_name].setdefault("hard_checks", {})
+    seed_id = item.id
+    for check_name, check_cfg in cfg.hard_checks.items():
+        bucket = hard_check_stats.setdefault(
+            check_name,
+            HardCheckAggregate().model_dump(mode="json"),
+        )
+        bucket["total"] += 1
+
+        raw_value = _resolve_check_value(check_name, metrics, success=success)
+        score = 0.0
+        if check_cfg.partial:
+            formula = check_cfg.penalty_formula or check_cfg.formula
+            if formula:
+                score = evaluate_formula(formula, metrics)
+            elif isinstance(raw_value, int | float) and not isinstance(raw_value, bool):
+                score = float(raw_value)
+            else:
+                score = 1.0 if bool(raw_value) else 0.0
+        else:
+            score = 1.0 if bool(raw_value) else 0.0
+
+        score = max(0.0, min(1.0, float(score)))
+        passed = score >= 0.999
+        if passed:
+            bucket["passed"] += 1
+        elif seed_id not in bucket["failed_seeds"]:
+            bucket["failed_seeds"].append(seed_id)
 
 
 def _resolve_seed_artifact_dir(item: EvalDatasetItem) -> Path | None:
@@ -901,7 +1071,10 @@ def _validate_git_commit_result(
 
 
 async def _run_git_eval(
-    item: EvalDatasetItem, stats: dict[AgentName, Any], agent_name: AgentName
+    item: EvalDatasetItem,
+    stats: dict[AgentName, Any],
+    agent_name: AgentName,
+    reward_agent_configs: dict[AgentName, AgentRewardConfig],
 ):
     task_id = item.id
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
@@ -1023,12 +1196,22 @@ async def _run_git_eval(
     agent_stats["total"] += 1
     if success:
         agent_stats["success"] += 1
+    await _record_hard_check_outcomes(
+        stats=stats,
+        reward_agent_configs=reward_agent_configs,
+        agent_name=agent_name,
+        item=item,
+        success=success,
+        episode_data=None,
+        session_id=session_id,
+    )
 
 
 async def run_single_eval(
     item: EvalDatasetItem,
     agent_name: AgentName,
     stats: dict[AgentName, Any],
+    reward_agent_configs: dict[AgentName, AgentRewardConfig],
     verbose: bool = False,
 ):
     """
@@ -1037,7 +1220,12 @@ async def run_single_eval(
     spec = AGENT_SPECS[agent_name]
 
     if spec.mode == EvalMode.GIT:
-        await _run_git_eval(item, stats, agent_name)
+        await _run_git_eval(
+            item,
+            stats,
+            agent_name,
+            reward_agent_configs,
+        )
         return
 
     task_id = item.id
@@ -1067,6 +1255,7 @@ async def run_single_eval(
     success = False
     session_id = ""
     episode_id = ""
+    last_episode_data: dict[str, Any] | None = None
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
@@ -1132,6 +1321,15 @@ async def run_single_eval(
                     session_id=session_id,
                 )
                 stats[agent_name]["total"] += 1
+                await _record_hard_check_outcomes(
+                    stats=stats,
+                    reward_agent_configs=reward_agent_configs,
+                    agent_name=agent_name,
+                    item=item,
+                    success=False,
+                    episode_data=last_episode_data,
+                    session_id=session_id,
+                )
                 return
             data = resp.json()
             episode_id = str(data.get(episode_id_key) or data.get("episode_id") or "")
@@ -1156,6 +1354,7 @@ async def run_single_eval(
                     status_resp = await client.get(status_url)
                     if status_resp.status_code == 200:
                         status_data = status_resp.json()
+                        last_episode_data = status_data
                         status = status_data.get("status")
 
                         traces = status_data.get("traces", [])
@@ -1211,6 +1410,7 @@ async def run_single_eval(
 
                         if _requires_expected_review_decision(spec):
                             episode = await _fetch_episode(client, episode_id)
+                            last_episode_data = episode
                             missing_traces = _missing_required_traces(
                                 spec.required_trace_names, episode
                             )
@@ -1240,6 +1440,7 @@ async def run_single_eval(
                         ):
                             if agent_name == AgentName.BENCHMARK_PLANNER:
                                 episode = await _fetch_episode(client, episode_id)
+                                last_episode_data = episode
                                 missing_traces = _missing_required_traces(
                                     spec.required_trace_names, episode
                                 )
@@ -1273,6 +1474,7 @@ async def run_single_eval(
                                     break
                             else:
                                 episode = await _fetch_episode(client, episode_id)
+                                last_episode_data = episode
                                 missing_traces = _missing_required_traces(
                                     spec.required_trace_names, episode
                                 )
@@ -1312,6 +1514,7 @@ async def run_single_eval(
 
                         if status == EpisodeStatus.COMPLETED:
                             episode = await _fetch_episode(client, episode_id)
+                            last_episode_data = episode
                             missing_traces = _missing_required_traces(
                                 spec.required_trace_names, episode
                             )
@@ -1351,6 +1554,7 @@ async def run_single_eval(
 
                         if status == EpisodeStatus.FAILED:
                             episode = await _fetch_episode(client, episode_id)
+                            last_episode_data = episode
                             missing_traces = _missing_required_traces(
                                 spec.required_trace_names, episode
                             )
@@ -1411,6 +1615,15 @@ async def run_single_eval(
                 handler = METRIC_HANDLERS.get(agent_name)
                 if handler:
                     await handler(worker, session_id, agent_stats)
+            await _record_hard_check_outcomes(
+                stats=stats,
+                reward_agent_configs=reward_agent_configs,
+                agent_name=agent_name,
+                item=item,
+                success=success,
+                episode_data=last_episode_data,
+                session_id=session_id,
+            )
         except asyncio.CancelledError:
             log.warning(
                 "eval_run_interrupted",
@@ -1428,6 +1641,15 @@ async def run_single_eval(
         except Exception:
             log.exception("controller_request_failed")
             stats[agent_name]["total"] += 1
+            await _record_hard_check_outcomes(
+                stats=stats,
+                reward_agent_configs=reward_agent_configs,
+                agent_name=agent_name,
+                item=item,
+                success=False,
+                episode_data=last_episode_data,
+                session_id=session_id,
+            )
             return
 
 
@@ -1623,6 +1845,7 @@ async def main():
     ]
     datasets = {}
     agents_to_run = available_agents if requested_agent == "all" else [requested_agent]
+    reward_agent_configs = _load_agent_reward_configs()
 
     stats = {
         agent: {
@@ -1631,6 +1854,7 @@ async def main():
             "electrical_validity_rate": 0.0,
             "wire_integrity_rate": 0.0,
             "power_efficiency_score": 0.0,
+            "hard_checks": {},
         }
         for agent in agents_to_run
     }
@@ -1693,7 +1917,13 @@ async def main():
             async with semaphore:
                 if not args.no_rate_limit:
                     await asyncio.to_thread(limiter.try_acquire, "eval")
-                await run_single_eval(item, agent, stats, verbose=args.verbose)
+                await run_single_eval(
+                    item,
+                    agent,
+                    stats,
+                    reward_agent_configs,
+                    verbose=args.verbose,
+                )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))
     else:
@@ -1739,6 +1969,58 @@ async def main():
         overall_pass_rate_pct=round(overall, 1),
         passed_tasks=total_pass,
         total_tasks=total_count,
+    )
+
+    agent_ran_cases: dict[AgentName, list[str]] = {
+        agent: [item.id for item in datasets.get(agent, [])] for agent in agents_to_run
+    }
+
+    hard_check_report: dict[str, Any] = {}
+    for agent, agent_stats in stats.items():
+        check_stats = agent_stats.get("hard_checks") or {}
+        agent_key = agent.value if isinstance(agent, AgentName) else str(agent)
+        ran_cases = agent_ran_cases.get(agent, [])
+        hard_checks_payload: dict[str, Any] = {}
+        for check_name, raw in check_stats.items():
+            total = int(raw.get("total", 0))
+            passed = int(raw.get("passed", 0))
+            failed_seeds = sorted(set(raw.get("failed_seeds", [])))
+            pass_rate = round((passed / total) * 100) if total else 0
+            hard_checks_payload[check_name] = {
+                "pass_rate": f"{pass_rate}%",
+                "passed": passed,
+                "total": total,
+                "failed_seeds": failed_seeds,
+            }
+        hard_check_report[agent_key] = {
+            "ran_cases": ran_cases,
+            "hard_checks": hard_checks_payload,
+        }
+
+    hard_check_report_path = log_dir / "hard_check_pass_rates.yaml"
+    with hard_check_report_path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(
+            hard_check_report,
+            handle,
+            sort_keys=True,
+            allow_unicode=False,
+            default_flow_style=False,
+        )
+
+    print("Hard check pass rates:")
+    print(
+        yaml.safe_dump(
+            hard_check_report,
+            sort_keys=True,
+            allow_unicode=False,
+            default_flow_style=False,
+        ).rstrip()
+    )
+    print(f"Hard check report: {hard_check_report_path}")
+    logger.info(
+        "hard_check_report_written",
+        path=str(hard_check_report_path),
+        agents=list(hard_check_report.keys()),
     )
 
     finish_time = time.time()
