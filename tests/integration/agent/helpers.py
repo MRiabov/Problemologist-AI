@@ -19,6 +19,7 @@ def strip_ansi(value: str) -> str:
 
 def get_controller_log_path() -> Path:
     candidates = [
+        Path("logs/integration_tests/current/controller.log"),
         Path("logs/integration_tests/controller.log"),
         Path("logs/controller.log"),
     ]

@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Ensure integration test log directory exists
-mkdir -p logs/integration_test
+mkdir -p logs/integration_tests
 
 # Default to fail-fast integration triage when backend errors are already conclusive.
 # Override per run with:

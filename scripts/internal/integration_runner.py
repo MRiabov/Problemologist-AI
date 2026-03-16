@@ -219,6 +219,13 @@ def _build_test_level_backend_allowlist_payload_from_ast(
 
 
 def _allowlist_cache_path(repo_root: Path) -> Path:
+    integration_log_dir_raw = os.environ.get("INTEGRATION_LOG_DIR", "").strip()
+    if integration_log_dir_raw:
+        return (
+            Path(integration_log_dir_raw)
+            / "json"
+            / "backend_error_allowlisted_prefixes.json"
+        )
     return (
         repo_root
         / "logs"
@@ -457,7 +464,11 @@ def run_pytest_subprocess(
                 error_log_offsets[error_log] = 0
 
     # Ensure log directory exists
-    log_file = _repo_root() / "logs" / "integration_tests" / "full_test_output.log"
+    integration_log_dir_raw = os.environ.get("INTEGRATION_LOG_DIR", "").strip()
+    if integration_log_dir_raw:
+        log_file = Path(integration_log_dir_raw) / "full_test_output.log"
+    else:
+        log_file = _repo_root() / "logs" / "integration_tests" / "full_test_output.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     process = subprocess.Popen(
@@ -1021,6 +1032,36 @@ def _archive_log_dir(log_dir: Path, archive_dir: Path) -> None:
             continue
 
 
+def _prepare_integration_run_dir(logs_root: Path) -> Path:
+    runs_root = logs_root / "runs"
+    runs_root.mkdir(parents=True, exist_ok=True)
+    run_dir = runs_root / f"run_{time.strftime('%Y%m%d_%H%M%S')}"
+    suffix = 1
+    while run_dir.exists():
+        run_dir = runs_root / f"{run_dir.name}_{suffix}"
+        suffix += 1
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    current_link = logs_root / "current"
+    if current_link.exists() or current_link.is_symlink():
+        current_link.unlink()
+    current_link.symlink_to(run_dir.relative_to(logs_root))
+
+    now = time.time()
+    cutoff_seconds = 24 * 60 * 60
+    for child in runs_root.glob("run_*"):
+        try:
+            if now - child.stat().st_mtime > cutoff_seconds:
+                if child.is_dir():
+                    shutil.rmtree(child, ignore_errors=True)
+                else:
+                    child.unlink(missing_ok=True)
+        except OSError:
+            continue
+
+    return run_dir
+
+
 def _preemptive_cleanup() -> None:
     patterns = [
         "uvicorn.*18000",
@@ -1238,56 +1279,106 @@ def _run_force_kill_command(args: argparse.Namespace) -> int:
 def _link_current_logs(run_playwright: bool) -> None:
     repo_root = _repo_root()
     logs_root = repo_root / "logs"
+    integration_logs_root = logs_root / "integration_tests"
+    current_prefix = "integration_tests/current"
     links = [
-        ("integration_tests/controller.log", "controller.log"),
-        ("integration_tests/controller_debug.log", "controller_debug.log"),
-        ("integration_tests/controller_errors.log", "controller_errors.log"),
-        ("integration_tests/json/controller_errors.json", "controller_errors.json"),
-        ("integration_tests/worker_light.log", "worker_light.log"),
-        ("integration_tests/worker_light_debug.log", "worker_light_debug.log"),
-        ("integration_tests/worker_light_errors.log", "worker_light_errors.log"),
-        ("integration_tests/json/worker_light_errors.json", "worker_light_errors.json"),
-        ("integration_tests/worker_heavy.log", "worker_heavy.log"),
-        ("integration_tests/worker_heavy_debug.log", "worker_heavy_debug.log"),
-        ("integration_tests/worker_heavy_errors.log", "worker_heavy_errors.log"),
-        ("integration_tests/json/worker_heavy_errors.json", "worker_heavy_errors.json"),
-        ("integration_tests/worker_heavy_temporal.log", "worker_heavy_temporal.log"),
+        (f"{current_prefix}/controller.log", "controller.log"),
+        (f"{current_prefix}/controller_debug.log", "controller_debug.log"),
+        (f"{current_prefix}/controller_errors.log", "controller_errors.log"),
+        (f"{current_prefix}/json/controller_errors.json", "controller_errors.json"),
+        (f"{current_prefix}/worker_light.log", "worker_light.log"),
+        (f"{current_prefix}/worker_light_debug.log", "worker_light_debug.log"),
+        (f"{current_prefix}/worker_light_errors.log", "worker_light_errors.log"),
+        (f"{current_prefix}/json/worker_light_errors.json", "worker_light_errors.json"),
+        (f"{current_prefix}/worker_heavy.log", "worker_heavy.log"),
+        (f"{current_prefix}/worker_heavy_debug.log", "worker_heavy_debug.log"),
+        (f"{current_prefix}/worker_heavy_errors.log", "worker_heavy_errors.log"),
+        (f"{current_prefix}/json/worker_heavy_errors.json", "worker_heavy_errors.json"),
+        (f"{current_prefix}/worker_heavy_temporal.log", "worker_heavy_temporal.log"),
         (
-            "integration_tests/worker_heavy_temporal_debug.log",
+            f"{current_prefix}/worker_heavy_temporal_debug.log",
             "worker_heavy_temporal_debug.log",
         ),
         (
-            "integration_tests/worker_heavy_temporal_errors.log",
+            f"{current_prefix}/worker_heavy_temporal_errors.log",
             "worker_heavy_temporal_errors.log",
         ),
         (
-            "integration_tests/json/worker_heavy_temporal_errors.json",
+            f"{current_prefix}/json/worker_heavy_temporal_errors.json",
             "worker_heavy_temporal_errors.json",
         ),
-        ("integration_tests/temporal_worker.log", "temporal_worker.log"),
-        ("integration_tests/temporal_worker_debug.log", "temporal_worker_debug.log"),
-        ("integration_tests/temporal_worker_errors.log", "temporal_worker_errors.log"),
+        (f"{current_prefix}/temporal_worker.log", "temporal_worker.log"),
+        (f"{current_prefix}/temporal_worker_debug.log", "temporal_worker_debug.log"),
+        (f"{current_prefix}/temporal_worker_errors.log", "temporal_worker_errors.log"),
         (
-            "integration_tests/json/temporal_worker_errors.json",
+            f"{current_prefix}/json/temporal_worker_errors.json",
             "temporal_worker_errors.json",
         ),
-        ("integration_tests/full_test_output.log", "full_test_output.log"),
+        (f"{current_prefix}/full_test_output.log", "full_test_output.log"),
     ]
     if run_playwright:
         links.extend(
             [
-                ("integration_tests/frontend.log", "frontend.log"),
-                ("integration_tests/browser_console.log", "browser_console.log"),
+                (f"{current_prefix}/frontend.log", "frontend.log"),
+                (f"{current_prefix}/browser_console.log", "browser_console.log"),
             ]
         )
 
     logs_root.mkdir(parents=True, exist_ok=True)
+    integration_logs_root.mkdir(parents=True, exist_ok=True)
     for target, link_name in links:
         link_path = logs_root / link_name
         try:
             if link_path.exists() or link_path.is_symlink():
                 link_path.unlink()
             link_path.symlink_to(target)
+        except OSError:
+            continue
+
+    integration_compat_links = [
+        "controller.log",
+        "controller_debug.log",
+        "controller_errors.log",
+        "worker_light.log",
+        "worker_light_debug.log",
+        "worker_light_errors.log",
+        "worker_heavy.log",
+        "worker_heavy_debug.log",
+        "worker_heavy_errors.log",
+        "worker_heavy_temporal.log",
+        "worker_heavy_temporal_debug.log",
+        "worker_heavy_temporal_errors.log",
+        "temporal_worker.log",
+        "temporal_worker_debug.log",
+        "temporal_worker_errors.log",
+        "frontend.log",
+        "browser_console.log",
+        "full_test_output.log",
+    ]
+    for name in integration_compat_links:
+        compat_path = integration_logs_root / name
+        try:
+            if compat_path.exists() or compat_path.is_symlink():
+                compat_path.unlink()
+            compat_path.symlink_to(Path("current") / name)
+        except OSError:
+            continue
+
+    integration_json_compat = integration_logs_root / "json"
+    integration_json_compat.mkdir(parents=True, exist_ok=True)
+    for name in [
+        "controller_errors.json",
+        "worker_light_errors.json",
+        "worker_heavy_errors.json",
+        "worker_heavy_temporal_errors.json",
+        "temporal_worker_errors.json",
+        "backend_error_allowlisted_prefixes.json",
+    ]:
+        compat_path = integration_json_compat / name
+        try:
+            if compat_path.exists() or compat_path.is_symlink():
+                compat_path.unlink()
+            compat_path.symlink_to(Path("..") / "current" / "json" / name)
         except OSError:
             continue
 
@@ -1422,10 +1513,10 @@ def _run_integration_command(
 
     print("Starting Application Servers (Controller, Worker, Temporal Worker)...")
 
-    log_dir = repo_root / "logs" / "integration_tests"
+    integration_logs_root = repo_root / "logs" / "integration_tests"
+    log_dir = _prepare_integration_run_dir(integration_logs_root)
     json_log_dir = log_dir / "json"
-    archive_dir = repo_root / "logs" / "archives"
-    _archive_log_dir(log_dir, archive_dir)
+    os.environ["INTEGRATION_LOG_DIR"] = str(log_dir)
     _preemptive_cleanup()
 
     processes: list[StartedProcess] = []
@@ -1456,6 +1547,7 @@ def _run_integration_command(
 
         pythonpath = os.environ.get("PYTHONPATH", "")
         combined_pythonpath = f"{pythonpath}:." if pythonpath else "."
+        session_log_root = log_dir / "sessions"
         processes.extend(
             _start_processes_parallel(
                 [
@@ -1479,6 +1571,7 @@ def _run_integration_command(
                             "EXTRA_ERROR_JSON_LOG": str(
                                 json_log_dir / "worker_light_errors.json"
                             ),
+                            "SESSION_LOG_ROOT": str(session_log_root),
                         },
                         pid_file=repo_root / "logs" / "worker_light.pid",
                     ),
@@ -1502,6 +1595,7 @@ def _run_integration_command(
                             "EXTRA_ERROR_JSON_LOG": str(
                                 json_log_dir / "worker_heavy_errors.json"
                             ),
+                            "SESSION_LOG_ROOT": str(session_log_root),
                         },
                         pid_file=repo_root / "logs" / "worker_heavy.pid",
                     ),
@@ -1526,6 +1620,7 @@ def _run_integration_command(
                             "EXTRA_ERROR_JSON_LOG": str(
                                 json_log_dir / "worker_heavy_temporal_errors.json"
                             ),
+                            "SESSION_LOG_ROOT": str(session_log_root),
                         },
                         pid_file=repo_root / "logs" / "worker_heavy_temporal.pid",
                     ),
@@ -1548,6 +1643,7 @@ def _run_integration_command(
                             "EXTRA_ERROR_JSON_LOG": str(
                                 json_log_dir / "controller_errors.json"
                             ),
+                            "SESSION_LOG_ROOT": str(session_log_root),
                         },
                         pid_file=repo_root / "logs" / "controller.pid",
                     ),
@@ -1566,6 +1662,7 @@ def _run_integration_command(
                             "EXTRA_ERROR_JSON_LOG": str(
                                 json_log_dir / "temporal_worker_errors.json"
                             ),
+                            "SESSION_LOG_ROOT": str(session_log_root),
                         },
                         pid_file=repo_root / "logs" / "temporal_worker.pid",
                     ),
