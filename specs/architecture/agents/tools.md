@@ -229,6 +229,13 @@ The preferred execution path for the agent is to run the authored script itself,
    - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
 6. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
+Structured-output validation contract for planner/reviewer YAML artifacts:
+
+1. Schema validation is strict by default: unknown/extra fields are rejected.
+2. The strictness applies to nested models as well as top-level fields.
+3. Validation failures from unknown/extra fields are hard gate failures (`ok=false` for planner submission, invalid reviewer output for review persistence/routing).
+4. Any intentionally open-ended structure must be explicitly typed as such (for example, a specific metadata map). Runtime must not rely on parser permissiveness to accept unknown fields.
+
 ### Exact tools logic
 
 I will define exact tool (function) logic to avoid confusion.

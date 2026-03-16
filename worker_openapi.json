@@ -2775,6 +2775,7 @@
             "title": "Stall Current A"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "component_id",
@@ -2817,6 +2818,7 @@
             "default": []
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "power_supply"
@@ -3006,6 +3008,7 @@
             "title": "Location"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "voltage_dc",
@@ -3647,6 +3650,7 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "wire_id",
@@ -3669,6 +3673,7 @@
             "title": "Terminal"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "component",

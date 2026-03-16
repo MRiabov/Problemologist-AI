@@ -64,6 +64,12 @@ CoercedTuple3D = Annotated[
 CoercedTuple2D = Annotated[tuple[float, float], BeforeValidator(_coerce_to_tuple)]
 
 
+class StrictContractModel(BaseModel):
+    """Strict contract model that rejects unknown fields."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class CodeReference(BaseModel):
     """Reference to a specific line range in a file."""
 
@@ -96,7 +102,7 @@ class SchematicItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class BoundingBox(BaseModel):
+class BoundingBox(StrictContractModel):
     """Axis-aligned bounding box with min/max coordinates."""
 
     min: CoercedTuple3D
@@ -108,13 +114,13 @@ class BoundingBox(BaseModel):
 # =============================================================================
 
 
-class FluidProperties(BaseModel):
+class FluidProperties(StrictContractModel):
     viscosity_cp: float = 1.0
     density_kg_m3: float = 1000.0
     surface_tension_n_m: float = 0.07
 
 
-class FluidVolume(BaseModel):
+class FluidVolume(StrictContractModel):
     type: FluidShapeType
     center: CoercedTuple3D
     # For cylinder
@@ -124,7 +130,7 @@ class FluidVolume(BaseModel):
     size: CoercedTuple3D | None = None
 
 
-class FluidDefinition(BaseModel):
+class FluidDefinition(StrictContractModel):
     fluid_id: str
     properties: FluidProperties = FluidProperties()
     initial_volume: FluidVolume
@@ -135,7 +141,7 @@ class FluidDefinition(BaseModel):
     )
 
 
-class FluidContainmentObjective(BaseModel):
+class FluidContainmentObjective(StrictContractModel):
     type: FluidObjectiveType = FluidObjectiveType.FLUID_CONTAINMENT
     fluid_id: str
     containment_zone: BoundingBox
@@ -143,7 +149,7 @@ class FluidContainmentObjective(BaseModel):
     eval_at: FluidEvalAt = FluidEvalAt.END
 
 
-class FlowRateObjective(BaseModel):
+class FlowRateObjective(StrictContractModel):
     type: FluidObjectiveType = FluidObjectiveType.FLOW_RATE
     fluid_id: str
     gate_plane_point: CoercedTuple3D
@@ -152,7 +158,7 @@ class FlowRateObjective(BaseModel):
     tolerance: float = 0.2
 
 
-class MaxStressObjective(BaseModel):
+class MaxStressObjective(StrictContractModel):
     type: Literal["max_stress"] = "max_stress"
     part_label: str
     max_von_mises_mpa: float
@@ -163,7 +169,7 @@ class MaxStressObjective(BaseModel):
 # =============================================================================
 
 
-class ForbidZone(BaseModel):
+class ForbidZone(StrictContractModel):
     """A zone that the moved object must not enter."""
 
     name: str
@@ -171,7 +177,7 @@ class ForbidZone(BaseModel):
     max: CoercedTuple3D
 
 
-class ObjectivesSection(BaseModel):
+class ObjectivesSection(StrictContractModel):
     """The objective section of benchmark_definition.yaml."""
 
     goal_zone: BoundingBox
@@ -181,13 +187,13 @@ class ObjectivesSection(BaseModel):
     stress_objectives: list[MaxStressObjective] = []
 
 
-class StaticRandomization(BaseModel):
+class StaticRandomization(StrictContractModel):
     """Per-benchmark-run randomization of object properties."""
 
     radius: CoercedTuple2D | None = None
 
 
-class MovedObject(BaseModel):
+class MovedObject(StrictContractModel):
     """The object that must be guided to the goal zone."""
 
     label: str
@@ -197,7 +203,7 @@ class MovedObject(BaseModel):
     runtime_jitter: CoercedTuple3D
 
 
-class MotorControl(BaseModel):
+class MotorControl(StrictContractModel):
     """Control parameters for motor-type moving parts."""
 
     mode: MotorControlMode
@@ -205,7 +211,7 @@ class MotorControl(BaseModel):
     frequency: float | None = None
 
 
-class MovingPart(BaseModel):
+class MovingPart(StrictContractModel):
     """
     A moving part in the environment (motor or passive).
     Used for extraction from assembly.
@@ -217,7 +223,7 @@ class MovingPart(BaseModel):
     control: MotorControl | None = None
 
 
-class Constraints(BaseModel):
+class Constraints(StrictContractModel):
     """Cost and weight constraints for the engineer."""
 
     max_unit_cost: float
@@ -225,7 +231,7 @@ class Constraints(BaseModel):
     target_quantity: int | None = None
 
 
-class RandomizationMeta(BaseModel):
+class RandomizationMeta(StrictContractModel):
     """Metadata about randomization for reproducibility."""
 
     static_variation_id: str | None = None
@@ -287,7 +293,7 @@ class SceneDefinition(BaseModel):
 # =============================================================================
 
 
-class PhysicsConfig(BaseModel):
+class PhysicsConfig(StrictContractModel):
     """Configuration for the physics engine."""
 
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
@@ -300,7 +306,7 @@ class PhysicsConfig(BaseModel):
 # =============================================================================
 
 
-class PowerSupplyConfig(BaseModel):
+class PowerSupplyConfig(StrictContractModel):
     """Configuration for a DC power supply."""
 
     type: str = "mains_ac_rectified"
@@ -309,14 +315,14 @@ class PowerSupplyConfig(BaseModel):
     location: CoercedTuple3D | None = None
 
 
-class WiringConstraint(BaseModel):
+class WiringConstraint(StrictContractModel):
     """Constraints on wire routing and length."""
 
     max_total_wire_length_mm: float
     restricted_zones: list[ForbidZone] = []
 
 
-class ElectronicsRequirements(BaseModel):
+class ElectronicsRequirements(StrictContractModel):
     """Electronics requirements section for benchmark_definition.yaml."""
 
     power_supply_available: PowerSupplyConfig
@@ -336,7 +342,7 @@ class CircuitValidationResult(BaseModel):
     warnings: list[str] = []
 
 
-class BenchmarkPartDrillPolicy(BaseModel):
+class BenchmarkPartDrillPolicy(StrictContractModel):
     """Benchmark-owned drilling policy for an environment part."""
 
     allowed: bool = False
@@ -366,7 +372,7 @@ class BenchmarkPartDrillPolicy(BaseModel):
         return self
 
 
-class BenchmarkPartAttachmentPolicy(BaseModel):
+class BenchmarkPartAttachmentPolicy(StrictContractModel):
     """Benchmark-owned attachment policy for an environment part."""
 
     attachment_methods: list[BenchmarkAttachmentMethod] = Field(default_factory=list)
@@ -403,7 +409,7 @@ class BenchmarkPartAttachmentPolicy(BaseModel):
         return self
 
 
-class BenchmarkPartMetadata(BaseModel):
+class BenchmarkPartMetadata(StrictContractModel):
     """Benchmark-owned metadata for environment and fixture parts."""
 
     fixed: bool = False
@@ -420,7 +426,7 @@ class BenchmarkPartMetadata(BaseModel):
         return self
 
 
-class BenchmarkPartDefinition(BaseModel):
+class BenchmarkPartDefinition(StrictContractModel):
     """Metadata declaration for a benchmark-owned part or fixture."""
 
     part_id: str
@@ -428,7 +434,7 @@ class BenchmarkPartDefinition(BaseModel):
     metadata: BenchmarkPartMetadata
 
 
-class BenchmarkDefinition(BaseModel):
+class BenchmarkDefinition(StrictContractModel):
     """
     The benchmark_definition.yaml schema - central benchmark exchange object.
 
@@ -621,7 +627,7 @@ class EntryValidationContext(BaseModel):
 # =============================================================================
 
 
-class ReviewResult(BaseModel):
+class ReviewResult(StrictContractModel):
     """Structured output for the reviewer."""
 
     decision: ReviewDecision
@@ -637,7 +643,7 @@ class ReviewResult(BaseModel):
         return v
 
 
-class ReviewFrontmatter(BaseModel):
+class ReviewFrontmatter(StrictContractModel):
     """
     YAML frontmatter schema for review documents.
 
@@ -674,7 +680,7 @@ class ReviewFrontmatter(BaseModel):
         return v
 
 
-class PlanRefusalFrontmatter(BaseModel):
+class PlanRefusalFrontmatter(StrictContractModel):
     """
     YAML frontmatter for plan_refusal.md.
     Refusal logic must be structured, role-specific, and machine-validated.
@@ -711,7 +717,7 @@ class PlanRefusalFrontmatter(BaseModel):
 # =============================================================================
 
 
-class ManufacturedPartEstimate(BaseModel):
+class ManufacturedPartEstimate(StrictContractModel):
     """Assembly estimate for a manufactured part."""
 
     part_name: str
@@ -746,7 +752,7 @@ class ManufacturedPartEstimate(BaseModel):
     dfm_suggestions: list[str] = Field(default_factory=list)
 
 
-class CotsPartEstimate(BaseModel):
+class CotsPartEstimate(StrictContractModel):
     """Assembly estimate for a COTS part."""
 
     part_id: str
@@ -756,21 +762,21 @@ class CotsPartEstimate(BaseModel):
     source: str
 
 
-class AssemblyPartConfig(BaseModel):
+class AssemblyPartConfig(StrictContractModel):
     """Configuration for a part in an assembly, including motion metadata."""
 
     dofs: list[str] = []
     control: MotorControl | None = None
 
 
-class PartConfig(BaseModel):
+class PartConfig(StrictContractModel):
     """Configuration for a part in an assembly, including motion metadata."""
 
     name: str
     config: AssemblyPartConfig
 
 
-class JointEstimate(BaseModel):
+class JointEstimate(StrictContractModel):
     """Estimate for a joint in the assembly."""
 
     joint_id: str
@@ -778,7 +784,7 @@ class JointEstimate(BaseModel):
     type: str
 
 
-class SubassemblyEstimate(BaseModel):
+class SubassemblyEstimate(StrictContractModel):
     """Estimate for a subassembly within the final assembly."""
 
     subassembly_id: str
@@ -786,7 +792,7 @@ class SubassemblyEstimate(BaseModel):
     joints: list[JointEstimate] = []
 
 
-class CostTotals(BaseModel):
+class CostTotals(StrictContractModel):
     """Total estimation for the design."""
 
     estimated_unit_cost_usd: float
@@ -794,7 +800,7 @@ class CostTotals(BaseModel):
     estimate_confidence: Literal["low", "medium", "high"]
 
 
-class AssemblyUnits(BaseModel):
+class AssemblyUnits(StrictContractModel):
     """Units used in the estimation file."""
 
     length: str = "mm"
@@ -803,7 +809,7 @@ class AssemblyUnits(BaseModel):
     currency: str = "USD"
 
 
-class AssemblyConstraints(BaseModel):
+class AssemblyConstraints(StrictContractModel):
     """Cap values from benchmark vs planner targets."""
 
     benchmark_max_unit_cost_usd: float
@@ -817,14 +823,14 @@ class AssemblyConstraints(BaseModel):
 # =============================================================================
 
 
-class WireTerminal(BaseModel):
+class WireTerminal(StrictContractModel):
     """A terminal on an electronic component."""
 
     component: str
     terminal: str
 
 
-class WireConfig(BaseModel):
+class WireConfig(StrictContractModel):
     """Configuration for a physical wire in the assembly."""
 
     wire_id: str
@@ -835,7 +841,7 @@ class WireConfig(BaseModel):
     waypoints: list[tuple[float, float, float]] = []
     routed_in_3d: bool = False
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     @field_validator("waypoints", mode="before")
     @classmethod
@@ -845,7 +851,7 @@ class WireConfig(BaseModel):
         return v
 
 
-class ElectronicComponent(BaseModel):
+class ElectronicComponent(StrictContractModel):
     """A component in the electronic circuit."""
 
     component_id: str
@@ -856,7 +862,7 @@ class ElectronicComponent(BaseModel):
     stall_current_a: float | None = None
 
 
-class ElectronicsSection(BaseModel):
+class ElectronicsSection(StrictContractModel):
     """Electronics section of the assembly definition."""
 
     power_supply: PowerSupplyConfig
@@ -864,7 +870,7 @@ class ElectronicsSection(BaseModel):
     components: list[ElectronicComponent] = []
 
 
-class EnvironmentDrillOperation(BaseModel):
+class EnvironmentDrillOperation(StrictContractModel):
     """Planner-declared drill operation against a benchmark-owned fixture."""
 
     target_part_id: str
@@ -885,7 +891,7 @@ class EnvironmentDrillOperation(BaseModel):
         return self
 
 
-class AssemblyDefinition(BaseModel):
+class AssemblyDefinition(StrictContractModel):
     """
     Schema for assembly_definition.yaml.
     Output by the Engineering Planner to track cost risks.

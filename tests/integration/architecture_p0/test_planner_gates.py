@@ -720,6 +720,24 @@ async def test_int_008_objectives_validation(
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert "benchmark_definition.yaml invalid" in data.message
 
+        # 3. Unknown extra fields must fail closed (top-level and nested)
+        extra_obj = valid_objectives.model_dump(mode="json")
+        extra_obj["unknown_top_level"] = "forbidden"
+        extra_obj["objectives"]["goal_zone"]["unexpected_key"] = 123
+        await setup_workspace(
+            client,
+            base_headers,
+            {**base_files, "benchmark_definition.yaml": extra_obj},
+        )
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "benchmark_definition.yaml invalid" in data.message
+        assert "extra inputs are not permitted" in data.message.lower()
+
 
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
@@ -776,6 +794,37 @@ async def test_int_009_cost_estimation_validation(
         )
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert "benchmark_assembly_definition.yaml invalid" in data.message
+
+        # 3. Unknown extra fields must fail closed (top-level and nested)
+        extra_cost = {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 50.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 45.0,
+                "planner_target_max_weight_g": 900.0,
+                "unknown_constraint_key": True,
+            },
+            "totals": {
+                "estimated_unit_cost_usd": 30.0,
+                "estimated_weight_g": 500.0,
+                "estimate_confidence": "high",
+            },
+            "unknown_top_level": "forbidden",
+        }
+        await setup_workspace(
+            client,
+            base_headers,
+            {**base_files, "benchmark_assembly_definition.yaml": extra_cost},
+        )
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "benchmark_assembly_definition.yaml invalid" in data.message
+        assert "extra inputs are not permitted" in data.message.lower()
 
 
 @pytest.mark.integration_p0

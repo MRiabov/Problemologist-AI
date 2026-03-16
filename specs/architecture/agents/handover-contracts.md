@@ -80,6 +80,18 @@ Validation rules:
 - Reviewer output is invalid if the stage-specific comments/checklist file is missing for that reviewer/round.
 - Routing is driven only by the decision YAML. The comments/checklist YAML is explanatory and evaluative, not the source of truth for branch transition.
 
+## Structured schema strictness contract
+
+All planner/reviewer machine-readable outputs are strict-schema artifacts by default.
+
+Rules:
+
+1. Unknown/extra fields are rejected at validation time for handoff artifacts and reviewer artifacts.
+2. This rule applies recursively to nested objects inside those artifacts, not only to top-level keys.
+3. Unknown/extra fields must fail closed (handoff/review is invalid and routing does not progress on that output).
+4. Open-ended key/value sections are exception-only and must be explicitly modeled as open-ended in schema (for example, a dedicated metadata map). They are never implicitly accepted by parser defaults.
+5. If a schema intentionally allows extras for a specific field/model, that exception must be explicit in code and documented in architecture/runtime notes.
+
 ## Benchmark Planner and Benchmark Plan Reviewer
 
 The Benchmark Generator Planner will submit multiple files to the CAD implementing agent.
