@@ -32,6 +32,9 @@ class BenchmarkGeneratorState(BaseModel):
     entry_validation_errors: list[dict[str, str | None]] = Field(default_factory=list)
     entry_validation_trace_emitted: bool = False
     reviewer_handoff_block_count: int = 0  # Consecutive handoff invariant failures
+    repeated_failure_stage: str | None = None  # Last failing stage for loop detection
+    repeated_failure_fingerprint: str | None = None  # Normalized failure signature
+    repeated_failure_count: int = 0  # Consecutive repeats of identical signature
     review_round: int = 0  # Current review iteration
     turn_count: int = 0  # Total graph turns across planner/coder/reviewer loops
     journal: str = ""  # Reasoning journal

@@ -1,6 +1,7 @@
 import ast
 import asyncio
 import json
+import re
 import uuid
 from contextlib import suppress
 from datetime import UTC, datetime
@@ -83,6 +84,13 @@ from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
 logger = structlog.get_logger(__name__)
+_REPEATED_FAILURE_FINGERPRINT_THRESHOLD = 2
+_UUID_PATTERN = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+    re.IGNORECASE,
+)
+_HEX_TOKEN_PATTERN = re.compile(r"\b[0-9a-f]{16,}\b", re.IGNORECASE)
+_NUMBER_PATTERN = re.compile(r"\b\d+\b")
 
 
 async def _sidecars_disabled_for_state(state: BenchmarkGeneratorState) -> bool:
@@ -204,6 +212,105 @@ def _is_reviewer_handoff_blocked_feedback(review_feedback: str | None) -> bool:
     return (
         "reviewer handoff blocked" in text or "benchmark reviewer blocked" in text
     ) and ("review_manifest" in text or "submit_for_review" in text)
+
+
+def _normalize_failure_text(text: str | None) -> str:
+    normalized = (text or "").strip().lower()
+    if not normalized:
+        return ""
+    normalized = _UUID_PATTERN.sub("<uuid>", normalized)
+    normalized = _HEX_TOKEN_PATTERN.sub("<hex>", normalized)
+    normalized = _NUMBER_PATTERN.sub("<n>", normalized)
+    normalized = " ".join(normalized.split())
+    return normalized[:220]
+
+
+def _build_failure_fingerprint(
+    *,
+    state: BenchmarkGeneratorState,
+    stage: AgentName,
+    status: SessionStatus,
+) -> str | None:
+    if status not in {SessionStatus.REJECTED, SessionStatus.FAILED}:
+        return None
+
+    parts: list[str] = [f"stage:{stage.value}", f"status:{status.value.lower()}"]
+    if state.review_decision is not None:
+        parts.append(f"decision:{state.review_decision.value.lower()}")
+    if state.hard_fail_code:
+        parts.append(f"hard_fail:{state.hard_fail_code.lower()}")
+
+    feedback = _normalize_failure_text(state.review_feedback)
+    if feedback:
+        parts.append(f"feedback:{feedback}")
+
+    if state.session.validation_logs:
+        latest_log = _normalize_failure_text(state.session.validation_logs[-1])
+        if latest_log:
+            parts.append(f"log:{latest_log}")
+
+    fingerprint = "|".join(parts).strip()
+    return fingerprint or None
+
+
+def _record_repeated_failure(
+    *,
+    state: BenchmarkGeneratorState,
+    stage: AgentName,
+    fingerprint: str,
+) -> int:
+    stage_key = stage.value
+    if (
+        state.repeated_failure_stage == stage_key
+        and state.repeated_failure_fingerprint == fingerprint
+    ):
+        state.repeated_failure_count += 1
+    else:
+        state.repeated_failure_stage = stage_key
+        state.repeated_failure_fingerprint = fingerprint
+        state.repeated_failure_count = 1
+    return state.repeated_failure_count
+
+
+def _reset_repeated_failure(state: BenchmarkGeneratorState) -> None:
+    state.repeated_failure_stage = None
+    state.repeated_failure_fingerprint = None
+    state.repeated_failure_count = 0
+
+
+def _classify_repeated_failure(
+    fingerprint: str,
+) -> tuple[TerminalReason, FailureClass, str]:
+    lowered = fingerprint.lower()
+    if any(
+        token in lowered
+        for token in (
+            "resource_exhausted",
+            "quota",
+            "429",
+            "too many requests",
+            "rate limit",
+        )
+    ):
+        return (
+            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED,
+            FailureClass.INFRA_DEVOPS_FAILURE,
+            "provider_quota_or_rate_limit",
+        )
+    if any(
+        token in lowered
+        for token in ("handoff", "manifest", "submit_plan", "submit_for_review")
+    ):
+        return (
+            TerminalReason.HANDOFF_INVARIANT_VIOLATION,
+            FailureClass.AGENT_SEMANTIC_FAILURE,
+            "handoff_invariant_violation",
+        )
+    return (
+        TerminalReason.INTERNAL_ERROR,
+        FailureClass.AGENT_SEMANTIC_FAILURE,
+        "repeated_stage_failure",
+    )
 
 
 def _entry_validation_metadata_from_state(
@@ -1044,6 +1151,60 @@ async def _execute_graph_streaming(
             ):
                 new_status = SessionStatus.ACCEPTED
                 terminal_reason = TerminalReason.APPROVED
+
+            repeated_failure_stages = {
+                AgentName.BENCHMARK_PLANNER,
+                AgentName.BENCHMARK_PLAN_REVIEWER,
+                AgentName.BENCHMARK_CODER,
+                AgentName.BENCHMARK_REVIEWER,
+            }
+            if normalized_node_name in repeated_failure_stages and new_status in {
+                SessionStatus.REJECTED,
+                SessionStatus.FAILED,
+            }:
+                fingerprint = _build_failure_fingerprint(
+                    state=final_state,
+                    stage=normalized_node_name,
+                    status=new_status,
+                )
+                if fingerprint:
+                    repeated_count = _record_repeated_failure(
+                        state=final_state,
+                        stage=normalized_node_name,
+                        fingerprint=fingerprint,
+                    )
+                    logger.info(
+                        "benchmark_failure_fingerprint_observed",
+                        session_id=str(session_id),
+                        stage=normalized_node_name.value,
+                        repeated_count=repeated_count,
+                    )
+                    if (
+                        new_status == SessionStatus.REJECTED
+                        and repeated_count >= _REPEATED_FAILURE_FINGERPRINT_THRESHOLD
+                    ):
+                        (
+                            terminal_reason,
+                            failure_class,
+                            failure_category,
+                        ) = _classify_repeated_failure(fingerprint)
+                        new_status = SessionStatus.FAILED
+                        should_stop = True
+                        final_state.session.validation_logs.append(
+                            "fail_fast_repeated_failure_fingerprint: "
+                            f"stage={normalized_node_name.value} "
+                            f"count={repeated_count} "
+                            f"category={failure_category}"
+                        )
+                        logger.error(
+                            "benchmark_fail_fast_repeated_failure_fingerprint",
+                            session_id=str(session_id),
+                            stage=normalized_node_name.value,
+                            repeated_count=repeated_count,
+                            category=failure_category,
+                        )
+            else:
+                _reset_repeated_failure(final_state)
 
             # Final terminal state logic
             if new_status == SessionStatus.ACCEPTED:
