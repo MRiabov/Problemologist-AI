@@ -10,29 +10,5 @@
     "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `script.py`. Keep planner files consistent, update `todo.md`/`journal.md`, and keep `script.py` import-safe with no `__main__` block or in-module review submission call.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-tunnel",
     "expected_criteria": "Implements geometry and goal artifacts without planner-file regressions."
-  },
-  {
-    "id": "bc-003-syntax-error",
-    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `script.py`, but intentionally leave a Python syntax error in the final script (for example an unmatched bracket) and still update `todo.md`/`journal.md`.",
-    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball",
-    "expected_criteria": "Negative case: benchmark coder produces a non-compiling script and should fail script compilation hard checks."
-  },
-  {
-    "id": "bc-004-degenerate-mesh",
-    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `script.py`, but intentionally create at least one degenerate/invalid mesh output (for example zero-thickness sliver geometry).",
-    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-tunnel",
-    "expected_criteria": "Negative case: benchmark coder produces invalid CAD geometry that should fail mesh/geometry validation hard checks."
-  },
-  {
-    "id": "bc-005-zone-violation",
-    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `script.py`, but intentionally place geometry/objectives so constraints are violated (for example an overlap with forbid or out-of-bounds objective placement).",
-    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball",
-    "expected_criteria": "Negative case: benchmark constraints are violated and should fail constraint-satisfaction hard checks."
-  },
-  {
-    "id": "bc-006-unstable-sim",
-    "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `script.py`, but intentionally introduce dynamics that are likely to produce simulation instability (for example severe penetrations/explosive contact).",
-    "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-tunnel",
-    "expected_criteria": "Negative case: benchmark simulation is unstable and should fail simulation-stability hard checks."
   }
 ]
