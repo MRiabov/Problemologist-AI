@@ -5,10 +5,10 @@ units:
   mass: "g"
   currency: "USD"
 constraints:
-  benchmark_max_unit_cost_usd: 85.0
+  benchmark_max_unit_cost_usd: 120.0
   benchmark_max_weight_g: 1600.0
   planner_target_max_unit_cost_usd: 95.0
-  planner_target_max_weight_g: 1300.0
+  planner_target_max_weight_g: 1500.0
 manufactured_parts:
   - part_name: base_plate
     part_id: base_plate

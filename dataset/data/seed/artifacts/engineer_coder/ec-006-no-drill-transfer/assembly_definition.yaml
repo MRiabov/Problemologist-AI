@@ -95,5 +95,5 @@ final_assembly:
       dofs: []
 totals:
   estimated_unit_cost_usd: 42.75
-  estimated_weight_g: 980.0
+  estimated_weight_g: 807.0
   estimate_confidence: high

@@ -13,7 +13,7 @@ Use a completely freestanding twin-wall chute that receives the projectile ball 
 | exit_tray | 140 x 110 x 35 | hdpe | Goal-side tray settling the ball in the target |
 | ballast_block | 180 x 80 x 18 | steel_cold_rolled | Extra mass on the base to prevent tip-over |
 
-**Estimated Total Weight**: 980 g
+**Estimated Total Weight**: 807 g
 **Estimated Total Cost**: $42.75
 
 ## 3. Assembly Strategy

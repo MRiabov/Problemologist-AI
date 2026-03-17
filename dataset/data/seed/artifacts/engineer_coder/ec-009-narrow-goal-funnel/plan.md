@@ -13,7 +13,7 @@ Use a long precision funnel that captures the projectile ball over a wide upstre
 | throat_insert | 120 x 30 x 26 | hdpe | Final precision throat aligned to the goal width |
 | goal_pocket | 90 x 55 x 28 | hdpe | Final pocket overlapping the narrow goal zone |
 
-**Estimated Total Weight**: 1010 g
+**Estimated Total Weight**: 519 g
 **Estimated Total Cost**: $46.25
 
 ## 3. Assembly Strategy
