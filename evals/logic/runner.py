@@ -732,6 +732,60 @@ def _load_agent_reward_configs() -> dict[AgentName, AgentRewardConfig]:
     return configs
 
 
+async def _preflight_selected_seeded_tasks(
+    *,
+    tasks: list[tuple[EvalDatasetItem, AgentName]],
+) -> None:
+    failures: list[str] = []
+
+    for item, agent_name in tasks:
+        spec = AGENT_SPECS[agent_name]
+        if spec.mode == EvalMode.GIT:
+            continue
+        if item.seed_artifact_dir is None and not item.seed_files:
+            continue
+
+        session_id = f"eval-preflight-{item.id}-{uuid.uuid4().hex[:8]}"
+        try:
+            await _seed_eval_workspace(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+                root=ROOT,
+                worker_light_url=WORKER_LIGHT_URL,
+                logger=logger,
+            )
+            await _preflight_seeded_entry_contract(
+                item=item,
+                session_id=session_id,
+                agent_name=agent_name,
+                spec=spec,
+                worker_light_url=WORKER_LIGHT_URL,
+                logger=logger,
+            )
+            logger.info(
+                "eval_seed_entry_preflight_ready",
+                task_id=item.id,
+                agent_name=agent_name,
+                session_id=session_id,
+            )
+        except Exception as exc:
+            message = _truncate_text(str(exc), limit=400)
+            logger.error(
+                "eval_seed_entry_preflight_failed",
+                task_id=item.id,
+                agent_name=agent_name,
+                session_id=session_id,
+                error=message,
+            )
+            failures.append(f"- {agent_name.value}:{item.id}: {message}")
+
+    if failures:
+        raise ValueError(
+            "seeded preflight failed before run start:\n" + "\n".join(failures)
+        )
+
+
 def _extract_episode_events(episode: dict[str, Any] | None) -> list[dict[str, Any]]:
     if not isinstance(episode, dict):
         return []
@@ -2523,6 +2577,16 @@ async def main():
             tasks.append((item, agent))
 
     if tasks:
+        logger.info("eval_seed_preflight_start", total_tasks=len(tasks))
+        try:
+            await _preflight_selected_seeded_tasks(tasks=tasks)
+        except Exception as exc:
+            logger.error("eval_seed_preflight_abort", error=str(exc))
+            print("ERROR: eval seeded preflight failed before execution.")
+            print(str(exc))
+            sys.exit(1)
+        logger.info("eval_seed_preflight_completed", total_tasks=len(tasks))
+
         semaphore = asyncio.Semaphore(max(1, args.concurrency))
 
         async def _guarded(item: EvalDatasetItem, agent: AgentName):
