@@ -63,6 +63,20 @@ async def test_initialize_agent_files_benchmark():
 
 
 @pytest.mark.asyncio
+async def test_initialize_agent_files_benchmark_coder_includes_script_template():
+    mock_backend = MagicMock()
+    mock_backend.als_info = AsyncMock(return_value=[])
+    mock_backend.awrite = AsyncMock()
+
+    await initialize_agent_files(mock_backend, AgentName.BENCHMARK_CODER)
+
+    written_files = [args[0] for args, _ in mock_backend.awrite.call_args_list]
+    assert "benchmark_definition.yaml" in written_files
+    assert "benchmark_assembly_definition.yaml" in written_files
+    assert "script.py" in written_files
+
+
+@pytest.mark.asyncio
 async def test_initialize_agent_files_support():
     # Setup
     mock_backend = MagicMock()

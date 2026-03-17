@@ -1,11 +1,38 @@
-from build123d import *
+from __future__ import annotations
+
+from build123d import Align, Compound, Location, Sphere
+import yaml
+
+from utils.metadata import CompoundMetadata, PartMetadata
 
 
-# Define the environment and expose the final assembly at module scope.
-# environment = Compound(children=[...])
-#
-# Recommended runtime contract:
-# from utils.submission import validate, simulate, submit_for_review
-# validate_ok, validate_message = validate(environment)
-# sim_result = simulate(environment)
-# submit_for_review(environment)
+def _load_moved_object() -> dict:
+    """Load moved_object contract from planner handoff."""
+    with open("benchmark_definition.yaml", encoding="utf-8") as fh:
+        payload = yaml.safe_load(fh) or {}
+    moved = payload.get("moved_object", {})
+    return moved if isinstance(moved, dict) else {}
+
+
+def _build_moved_object(moved: dict):
+    label = str(moved.get("label", "projectile_ball"))
+    start = moved.get("start_position", [0.0, 0.0, 0.0])
+    radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
+    radius = float(max(radius_range)) if radius_range else 0.01
+    material_id = str(moved.get("material_id", "abs"))
+
+    ball = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER)).move(
+        Location((float(start[0]), float(start[1]), float(start[2])))
+    )
+    ball.label = label
+    ball.metadata = PartMetadata(material_id=material_id, fixed=False)
+    return ball
+
+
+_moved_object_contract = _load_moved_object()
+_moved_object = _build_moved_object(_moved_object_contract)
+
+# Add authored benchmark fixtures to this children list.
+result = Compound(children=[_moved_object])
+result.label = "benchmark_environment"
+result.metadata = CompoundMetadata()
