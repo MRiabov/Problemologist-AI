@@ -583,8 +583,8 @@ scenarios:
                       fixed: true
                       material_id: aluminum_6061
                 constraints:
-                  max_unit_cost: 200.0
-                  max_weight_g: 1200.0
+                  estimated_solution_cost_usd: 133.33333333333334
+                  estimated_solution_weight_g: 800.0
                 randomization:
                   static_variation_id: "v1.0"
                   runtime_jitter_enabled: true
@@ -4371,8 +4371,8 @@ scenarios:
                       fixed: true
                       material_id: aluminum_6061
                 constraints:
-                  max_unit_cost: 200.0
-                  max_weight_g: 1200.0
+                  estimated_solution_cost_usd: 133.33333333333334
+                  estimated_solution_weight_g: 800.0
                 randomization:
                   static_variation_id: "v1.0"
                   runtime_jitter_enabled: true
@@ -4510,7 +4510,9 @@ scenarios:
                     metadata:
                       fixed: true
                       material_id: aluminum_6061
-                constraints: {max_unit_cost: 200, max_weight_g: 1000.0}
+                constraints:
+                  estimated_solution_cost_usd: 133.33333333333334
+                  estimated_solution_weight_g: 666.6666666666666
               overwrite: true
             expected_observation: "success"
           - tool_name: "submit_plan"
@@ -5240,7 +5242,9 @@ scenarios:
                     metadata:
                       fixed: true
                       material_id: aluminum_6061
-                constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+                constraints:
+                  estimated_solution_cost_usd: 33.333333333333336
+                  estimated_solution_weight_g: 666.6666666666666
               overwrite: true
             expected_observation: "success"
           - tool_name: "submit_plan"

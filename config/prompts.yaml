@@ -625,16 +625,14 @@ benchmark_generator:
       2. Define the learning objective and measurable success/failure criteria.
       3. Design static geometry, input object behavior, and any moving parts with explicit randomization ranges.
       4. Validate solvability and objective clearance under randomization assumptions.
-      5. Build pricing/weight estimates from manufacturing/COTS references, then set cost/weight as envelopes (not exact spend targets).
+      5. Build pricing/weight estimates from manufacturing/COTS references.
          - Use `cots_search` only for likely engineer-owned solution parts that need an exact catalog-backed price.
          - Do NOT use `cots_search` for the benchmark-owned `moved_object`, benchmark-owned fixtures, or other task-context geometry.
          - For passive gravity-fed, no-motor, no-rotor benchmarks, do NOT speculate about bearings, shafts, motors, or other standard hardware just to justify pricing.
          - If you mention any hypothetical engineer-side off-the-shelf component in `plan.md` or pricing assumptions, you must first obtain its exact catalog `part_id` from `cots_search`. Without a returned `part_id`, do not name that COTS item.
          - If a benchmark-owned context object needs a rough cost/weight assumption, use one simple material/manufacturing heuristic instead of a catalog lookup loop.
-         - Compute `estimated_unit_cost_usd` and `estimated_weight_g`.
-         - Default to `max_unit_cost ~= 1.5x estimated_unit_cost_usd` (round up to practical values, not exact cents).
-         - Set `max_weight` with meaningful headroom (typically 1.2x-1.5x estimate).
-         - Include explicit `budget_leeway_pct` and `weight_leeway_pct`.
+         - Compute `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g`.
+         - Do NOT author `constraints.max_unit_cost` or `constraints.max_weight_g`; runtime derives both as `1.5x` your estimates during `submit_plan()`.
       6. Write `plan.md` using the required structure and write `todo.md` as executable implementation steps.
          - When replacing an existing draft/template file, use `write_file(..., overwrite=True)`.
       7. Run final logic/consistency checks (labels, constraints, randomization, pricing assumptions), then handoff.
@@ -647,11 +645,9 @@ benchmark_generator:
       3. **Validity**: No intersecting bodies in initial state.
 
       **Cost Envelope Policy (MANDATORY)**:
-      - Treat `max_unit_cost` and `max_weight` as hard ceilings, not exact targets to hit.
+      - Treat your estimate fields as the baseline realistic solution estimate.
+      - Runtime computes permissive ceilings from these estimates (`1.5x`) before handoff to engineering.
       - Do NOT overfit benchmark requirements so the engineer must spend to an exact value.
-      - Always provide an expected solution range (`expected_solution_cost_range_usd`, `expected_solution_weight_g`).
-      - If estimate confidence is low, increase leeway instead of tightening caps.
-      - Reject brittle budgets where caps are too close to estimates (minimum 20% buffer above high-end estimate).
 
       **Labeling Convention (CRITICAL)**:
       - `obstacle_<name>`: Static geometry (walls, floors).
@@ -674,9 +670,9 @@ benchmark_generator:
          - **Runtime**: Position jitter for robustness testing.
       - `## 7. Build123d Strategy`: CSG vs sketches, patterns to use.
       - `## 8. Cost & Weight Envelope`:
-         - `estimated_unit_cost_usd`, `max_unit_cost`, `budget_leeway_pct`
-         - `estimated_weight_g`, `max_weight`, `weight_leeway_pct`
-         - Short rationale for why these caps are challenging but non-brittle.
+         - `constraints.estimated_solution_cost_usd`
+         - `constraints.estimated_solution_weight_g`
+         - Short rationale for why these estimates are realistic.
       - `## 9. Part Metadata`:
          - All parts and assemblies MUST have metadata.
          - `PartMetadata` (for parts): requires `material_id` or `cots_id`.
@@ -727,8 +723,8 @@ benchmark_generator:
       - **Logic/constraint checks**: Ensure build zone, objectives, and randomization are consistent and solvable.
       - **Objective clearance**: Ensure objectives are not obstructed (>35% volume obstruction is invalid).
       - **Manufacturing quantities**: Include prototype (<5), small volume (<100), mass-manufacturing (≈3000) options.
-      - **Cost/weight fields**: Include quantity, estimated and max cost/weight, and explicit leeway percentages.
-      - **Budget brittleness check**: Default to ~50% cost headroom (`max_unit_cost ~= 1.5x estimate`) and enforce at least 20% buffer above high-end estimate.
+      - **Cost/weight fields**: Include quantity plus benchmark estimate fields (`constraints.estimated_solution_cost_usd`, `constraints.estimated_solution_weight_g`).
+      - **Budget headroom**: Runtime computes engineer-facing max caps from your estimates (`1.5x`).
       - **Price/weight prediction**: Provide expected price/weight range (target 80–120% accuracy).
 
       **WP2 Benchmark Design (Fluids & Stress)**:
