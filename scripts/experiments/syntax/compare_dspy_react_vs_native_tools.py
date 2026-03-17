@@ -6,8 +6,9 @@ This experiment is intentionally narrow:
 
 1. Capture the exact first-turn prompt/messages that DSPy ReAct generates for the
    benchmark planner path, without requiring a network call.
-2. Optionally send one real LiteLLM completion with native tools using the same
-   repo model/provider settings and inspect whether the provider returns tool_calls.
+2. Optionally send one real provider-native tool call through the shared DSPy LM
+   factory using the same repo model/provider settings and inspect whether the
+   model returns tool_calls.
 
 The goal is to prove whether syntax failures are caused by our prompting or by
 DSPy ReAct's own runtime contract.
@@ -23,10 +24,9 @@ from pathlib import Path
 from typing import Any
 
 import dspy
-from litellm import completion
 
 from controller.agent.benchmark.nodes import BenchmarkPlannerSignature
-from controller.agent.config import settings
+from controller.agent.config import build_dspy_lm, settings
 from controller.agent.prompt_manager import PromptManager
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -224,16 +224,17 @@ def run_native_tool_call(task_prompt: str) -> dict[str, Any]:
     ]
 
     try:
-        response = completion(
-            model=litellm_model,
-            api_key=api_key,
-            api_base=api_base,
-            timeout=settings.llm_timeout_seconds,
-            max_tokens=min(settings.llm_max_tokens, 2048),
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-        )
+        native_lm = build_dspy_lm(
+            litellm_model,
+            session_id="syntax-compare",
+            agent_role="syntax_compare",
+        ).copy(timeout=60, max_tokens=min(settings.llm_max_tokens, 2048))
+        with dspy.settings.context(lm=native_lm, adapter=dspy.ChatAdapter()):
+            response = native_lm(
+                messages=messages,
+                tools=tools,
+                tool_choice="auto",
+            )
     except Exception as exc:
         return {
             "mode": "native_tool_call",

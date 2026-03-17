@@ -7,6 +7,7 @@ from dspy.teleprompt import GEPA
 
 from controller.agent.benchmark.data_loader import load_benchmark_dataset
 from controller.agent.bootstrap import build_eval_program
+from controller.agent.config import build_dspy_lm
 from controller.agent.dspy_utils import cad_simulation_metric
 from shared.enums import AgentName
 
@@ -57,7 +58,15 @@ def optimize_agent(
         teleprompter = GEPA(
             metric=cad_simulation_metric,
             auto="light",  # "light" is usually enough for prompt evolution
-            reflection_lm=dspy.LM(reflection_model) if reflection_model else None,
+            reflection_lm=(
+                build_dspy_lm(
+                    reflection_model,
+                    session_id="optimizer-reflection",
+                    agent_role="optimizer",
+                )
+                if reflection_model
+                else None
+            ),
             num_threads=1,  # Keep it simple for simulation-heavy tasks
         )
     else:
@@ -109,6 +118,8 @@ if __name__ == "__main__":
     if not dspy.settings.lm:
         # Default to a reliable model from env or settings
         model = os.getenv("DSPY_OPTIMIZER_MODEL", "stepfun/step-3.5-flash:free")
-        dspy.settings.configure(lm=dspy.LM(model))
+        dspy.settings.configure(
+            lm=build_dspy_lm(model, session_id="optimizer", agent_role="optimizer")
+        )
 
     optimize_agent(args.agent, args.size, args.demos, use_gepa=not args.no_gepa)

@@ -11,6 +11,8 @@ from typing import Any
 
 import dspy
 
+from controller.agent.config import build_dspy_lm
+
 
 def fake_write_file(path: str, content: str, overwrite: bool = False) -> str:
     """Fake tool used only for syntax probing."""
@@ -90,7 +92,7 @@ def _provider_credentials() -> tuple[str | None, str | None]:
 
 
 def run_dspy_native_tool_probe(model: str) -> dict[str, Any]:
-    api_key, api_base = _provider_credentials()
+    api_key, _api_base = _provider_credentials()
     if not api_key:
         return {"skipped": True, "reason": "No API key configured for DSPy LM probe"}
 
@@ -98,14 +100,11 @@ def run_dspy_native_tool_probe(model: str) -> dict[str, Any]:
     signature = signature.append("tools", dspy.InputField(), type_=list[dspy.Tool])
     signature = signature.append("tool_calls", dspy.OutputField(), type_=dspy.ToolCalls)
 
-    lm = dspy.LM(
+    lm = build_dspy_lm(
         f"openrouter/{model}",
-        api_key=api_key,
-        api_base=api_base,
-        cache=False,
-        timeout=60,
-        max_tokens=512,
-    )
+        session_id="syntax-probe",
+        agent_role="syntax_probe",
+    ).copy(timeout=60, max_tokens=512)
     predict = dspy.Predict(signature)
     tool = dspy.Tool(fake_write_file)
     adapter = dspy.ChatAdapter(
@@ -136,23 +135,19 @@ def run_dspy_native_tool_probe(model: str) -> dict[str, Any]:
 
 
 def run_openrouter_native_tool_probe(model: str) -> dict[str, Any]:
-    api_key, api_base = _provider_credentials()
+    api_key, _api_base = _provider_credentials()
     if not api_key:
         return {
             "skipped": True,
             "reason": "No API key configured for OpenRouter probe",
         }
 
-    try:
-        from litellm import completion
-    except Exception as exc:  # pragma: no cover - diagnostic path
-        return {"skipped": True, "reason": f"litellm import failed: {exc}"}
-
-    response = completion(
-        model=f"openrouter/{model}",
-        api_key=api_key,
-        api_base=api_base,
-        timeout=60,
+    lm = build_dspy_lm(
+        f"openrouter/{model}",
+        session_id="syntax-probe",
+        agent_role="syntax_probe",
+    ).copy(timeout=60)
+    response = lm(
         messages=[
             {
                 "role": "user",
