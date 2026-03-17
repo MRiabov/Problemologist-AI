@@ -98,7 +98,14 @@ class AgentSettings(BaseSettings):
 
         if use_openrouter:
             if model_name.startswith("openrouter/"):
-                litellm_model = model_name
+                # LiteLLM's OpenRouter adapter expects the provider namespace to
+                # remain explicit for stealth models like `openrouter/healer-alpha`.
+                # Those arrive as a one-segment OpenRouter slug and need the extra
+                # `openrouter/` layer preserved for the provider router.
+                if model_name.count("/") == 1:
+                    litellm_model = f"openrouter/{model_name}"
+                else:
+                    litellm_model = model_name
             else:
                 normalized_model = model_name
                 # Preserve the existing direct-Gemini env shape while routing
