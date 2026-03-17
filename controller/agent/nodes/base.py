@@ -17,8 +17,8 @@ from sqlalchemy import func, select
 
 from controller.agent.config import (
     LiteLLMRequestConfig,
+    _is_transient_provider_rate_error,
     build_dspy_lm,
-    limited_completion,
     settings,
 )
 from controller.agent.context_usage import update_episode_context_usage
@@ -89,7 +89,7 @@ class SharedNodeContext:
         if not fs:
             fs = RemoteFilesystemMiddleware(worker_client, agent_role=agent_role)
 
-        request_config = settings.resolve_litellm_request_config(settings.llm_model)
+        request_config = settings.resolve_dspy_lm_request_config(settings.llm_model)
         if settings.is_integration_test:
             logger.info("using_mock_llms_for_integration_test", session_id=session_id)
         else:
@@ -546,7 +546,7 @@ class BaseNode:
         )
         return finish_tool, output_field_names
 
-    def _resolve_native_litellm_model(
+    def _resolve_native_dspy_model(
         self, *, prefer_multimodal: bool = False
     ) -> LiteLLMRequestConfig:
         model_name = settings.llm_model
@@ -554,7 +554,13 @@ class BaseNode:
             multimodal_model = load_agents_config().llm.multimodal_model
             if multimodal_model:
                 model_name = multimodal_model
-        return settings.resolve_litellm_request_config(model_name)
+        return settings.resolve_dspy_lm_request_config(model_name)
+
+    def _resolve_native_litellm_model(
+        self, *, prefer_multimodal: bool = False
+    ) -> LiteLLMRequestConfig:
+        """Backward-compatible alias for the DSPy model resolver."""
+        return self._resolve_native_dspy_model(prefer_multimodal=prefer_multimodal)
 
     @staticmethod
     def _native_schema_type(annotation: Any) -> str:
@@ -877,7 +883,7 @@ class BaseNode:
         if unmet_visual_requirement:
             messages.append({"role": "system", "content": unmet_visual_requirement})
         prefer_multimodal = bool(visual_policy.required and current_render_media_paths)
-        request_config = self._resolve_native_litellm_model(
+        request_config = self._resolve_native_dspy_model(
             prefer_multimodal=prefer_multimodal
         )
         logger.info(
@@ -889,15 +895,22 @@ class BaseNode:
             model=request_config.model,
             provider=request_config.provider,
         )
-        if not request_config.api_key:
-            raise RuntimeError(f"Missing API key for native tool loop: {node_type}")
-
         submit_plan_succeeded = False
         no_tool_call_streak = 0
-        for iteration in range(max_iters):
-            native_mock_completion = getattr(
-                self.ctx.dspy_lm, "native_tool_completion", None
+        native_lm = (
+            self.ctx.dspy_lm
+            if not prefer_multimodal
+            else build_dspy_lm(
+                request_config.model,
+                session_id=self.ctx.session_id,
+                agent_role=node_type.value,
             )
+        ).copy(
+            timeout=settings.native_tool_completion_timeout_seconds,
+            max_tokens=min(settings.llm_max_tokens, 2048),
+        )
+        for iteration in range(max_iters):
+            native_mock_completion = getattr(native_lm, "native_tool_completion", None)
             if callable(native_mock_completion):
                 message = native_mock_completion(
                     messages=messages,
@@ -906,14 +919,7 @@ class BaseNode:
                     completion_tool_name=completion_tool_name,
                 )
             else:
-                response = limited_completion(
-                    node_type=str(node_type),
-                    session_id=self.ctx.session_id,
-                    model=request_config.model,
-                    api_key=request_config.api_key,
-                    api_base=request_config.api_base,
-                    timeout=settings.native_tool_completion_timeout_seconds,
-                    max_tokens=min(settings.llm_max_tokens, 2048),
+                response = native_lm(
                     messages=messages,
                     tools=tool_schemas,
                     tool_choice="auto",
@@ -2238,6 +2244,15 @@ class BaseNode:
                 except AgentHardFailError:
                     raise
                 except Exception as err:
+                    if _is_transient_provider_rate_error(err):
+                        logger.error(
+                            f"{node_type}_dspy_rate_limited",
+                            session_id=self.ctx.session_id,
+                            error=str(err),
+                            retry_count=retry_count + 1,
+                            max_retries=max_retries,
+                        )
+                        raise RuntimeError(str(err)) from err
                     if _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER in str(err):
                         # Fail-fast for infra retry exhaustion; do not continue
                         # node-level retry loops.

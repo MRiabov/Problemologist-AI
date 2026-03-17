@@ -1,11 +1,11 @@
 import threading
 import time
 from collections import deque
+from functools import lru_cache
 from typing import Any, Deque, Literal
 
 import dspy
 import structlog
-from litellm import completion
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,7 +20,7 @@ def _load_agents_llm_config():
 
 
 class LiteLLMRequestConfig(BaseModel):
-    """Resolved LiteLLM request settings for one model invocation."""
+    """Resolved DSPy request settings for one model invocation."""
 
     model: str
     api_key: str | None
@@ -90,7 +90,7 @@ class AgentSettings(BaseSettings):
 
         return bool(self.openrouter_api_key)
 
-    def resolve_litellm_request_config(self, model_name: str) -> LiteLLMRequestConfig:
+    def resolve_dspy_lm_request_config(self, model_name: str) -> LiteLLMRequestConfig:
         api_base = self.openai_api_base
         use_openrouter = self.uses_openrouter(model_name)
         prefix = model_name.split("/", 1)[0] if "/" in model_name else None
@@ -135,6 +135,10 @@ class AgentSettings(BaseSettings):
             api_base=resolved_api_base,
             provider=provider,
         )
+
+    def resolve_litellm_request_config(self, model_name: str) -> LiteLLMRequestConfig:
+        """Backward-compatible alias for the DSPy request resolver."""
+        return self.resolve_dspy_lm_request_config(model_name)
 
 
 settings = AgentSettings()
@@ -188,68 +192,69 @@ def _is_transient_provider_rate_error(error: Exception) -> bool:
     return any(marker in text for marker in markers)
 
 
-def _call_with_provider_backoff(fn: Any, *args: Any, **kwargs: Any) -> Any:
-    max_attempts = 3
-    for attempt in range(1, max_attempts + 1):
-        try:
-            return fn(*args, **kwargs)
-        except Exception as error:
-            if attempt >= max_attempts or not _is_transient_provider_rate_error(error):
-                raise
-            sleep_seconds = float(2**attempt)
-            logger.warning(
-                "llm_provider_retry_backoff",
-                attempt=attempt,
-                max_attempts=max_attempts,
-                sleep_seconds=sleep_seconds,
-                error=str(error),
-            )
-            time.sleep(sleep_seconds)
+class RateLimitedDSPyLM(dspy.LM):
+    """DSPy LM subclass that adds process-local RPM limiting."""
 
+    def __init__(self, *args: Any, node_type: str, session_id: str, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.node_type = node_type
+        self.session_id = session_id
 
-def limited_completion(*, node_type: str, session_id: str, **kwargs: Any) -> Any:
-    wait_seconds = _limiter.acquire()
-    if wait_seconds > 0.0:
-        logger.info(
-            "llm_rate_limit_wait",
-            node_type=node_type,
-            session_id=session_id,
-            wait_seconds=round(wait_seconds, 3),
-            requests_per_minute=settings.llm_requests_per_minute,
-            model=kwargs.get("model"),
-        )
-    return _call_with_provider_backoff(completion, **kwargs)
-
-
-class RateLimitedLM:
-    """Transparent LM wrapper that rate-limits all DSPy LM calls."""
-
-    def __init__(self, inner: Any, *, node_type: str, session_id: str):
-        self._inner = inner
-        self._node_type = node_type
-        self._session_id = session_id
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    def forward(
+        self,
+        prompt: str | None = None,
+        messages: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> Any:
         wait_seconds = _limiter.acquire()
         if wait_seconds > 0.0:
             logger.info(
                 "llm_rate_limit_wait",
-                node_type=self._node_type,
-                session_id=self._session_id,
+                node_type=self.node_type,
+                session_id=self.session_id,
                 wait_seconds=round(wait_seconds, 3),
                 requests_per_minute=settings.llm_requests_per_minute,
-                model=getattr(self._inner, "model", None),
+                model=getattr(self, "model", None),
             )
-        return _call_with_provider_backoff(self._inner, *args, **kwargs)
+        request_kwargs = dict(kwargs)
+        try:
+            return super().forward(prompt=prompt, messages=messages, **request_kwargs)
+        except Exception as error:
+            if _is_transient_provider_rate_error(error):
+                logger.error(
+                    "llm_provider_rate_limited",
+                    node_type=self.node_type,
+                    session_id=self.session_id,
+                    error=str(error),
+                )
+            raise
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._inner, name)
 
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name in {"_inner", "_node_type", "_session_id"}:
-            object.__setattr__(self, name, value)
-            return
-        setattr(self._inner, name, value)
+@lru_cache(maxsize=16)
+def _build_cached_dspy_lm(
+    model: str,
+    api_key: str,
+    api_base: str | None,
+    timeout_seconds: int,
+    max_tokens: int,
+    num_retries: int,
+) -> RateLimitedDSPyLM:
+    lm_kwargs: dict[str, Any] = {
+        "api_key": api_key,
+        "cache": False,
+        "timeout": timeout_seconds,
+        "max_tokens": max_tokens,
+        "num_retries": num_retries,
+    }
+    if api_base:
+        lm_kwargs["api_base"] = api_base
+
+    return RateLimitedDSPyLM(
+        model,
+        **lm_kwargs,
+        node_type="shared",
+        session_id=settings.default_session_id,
+    )
 
 
 def build_dspy_lm(
@@ -264,19 +269,17 @@ def build_dspy_lm(
         return MockDSPyLM(session_id=session_id, node_type=agent_role)
 
     resolved_model = model_name or settings.llm_model
-    request_config = settings.resolve_litellm_request_config(resolved_model)
+    request_config = settings.resolve_dspy_lm_request_config(resolved_model)
     api_key = request_config.api_key or "dummy"
-    lm_kwargs: dict[str, Any] = {
-        "api_key": api_key,
-        "cache": False,
-        "timeout": settings.llm_timeout_seconds,
-        "max_tokens": settings.llm_max_tokens,
-    }
-    if request_config.api_base:
-        lm_kwargs["api_base"] = request_config.api_base
-    base_lm = dspy.LM(request_config.model, **lm_kwargs)
-    return RateLimitedLM(
-        base_lm,
-        node_type=agent_role or "unknown_node",
-        session_id=session_id or settings.default_session_id,
+    base_lm = _build_cached_dspy_lm(
+        request_config.model,
+        api_key,
+        request_config.api_base,
+        settings.llm_timeout_seconds,
+        settings.llm_max_tokens,
+        settings.dspy_program_max_retries,
     )
+    lm = base_lm.copy()
+    lm.node_type = agent_role or "unknown_node"
+    lm.session_id = session_id or settings.default_session_id
+    return lm

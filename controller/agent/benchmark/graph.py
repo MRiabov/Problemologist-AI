@@ -225,6 +225,16 @@ def _normalize_failure_text(text: str | None) -> str:
     return normalized[:220]
 
 
+def _normalized_failure_items(text: str | None) -> list[str]:
+    """Return deterministic, de-duplicated normalized fragments."""
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    fragments = [_normalize_failure_text(fragment) for fragment in raw.split(";")]
+    deduped = sorted({fragment for fragment in fragments if fragment})
+    return deduped
+
+
 def _build_failure_fingerprint(
     *,
     state: BenchmarkGeneratorState,
@@ -240,14 +250,38 @@ def _build_failure_fingerprint(
     if state.hard_fail_code:
         parts.append(f"hard_fail:{state.hard_fail_code.lower()}")
 
-    feedback = _normalize_failure_text(state.review_feedback)
-    if feedback:
-        parts.append(f"feedback:{feedback}")
+    feedback_items = _normalized_failure_items(state.review_feedback)
+    if feedback_items:
+        for item in feedback_items[:4]:
+            parts.append(f"feedback:{item}")
+    else:
+        feedback = _normalize_failure_text(state.review_feedback)
+        if feedback:
+            parts.append(f"feedback:{feedback}")
+
+    # Planner retries accumulate noisy validation logs over time, which can
+    # prevent stable fingerprint matching across equivalent failure cycles.
+    # For planner-stage loop detection, rely on normalized feedback/hard-fail
+    # signals and avoid trailing-log churn.
+    if stage == AgentName.BENCHMARK_PLANNER:
+        fingerprint = "|".join(parts).strip()
+        return fingerprint or None
 
     if state.session.validation_logs:
-        latest_log = _normalize_failure_text(state.session.validation_logs[-1])
-        if latest_log:
-            parts.append(f"log:{latest_log}")
+        # Use a short trailing window and deterministic ordering so equivalent
+        # planner failures produce the same fingerprint across retry turns.
+        trailing_logs = state.session.validation_logs[-8:]
+        normalized_logs = sorted(
+            {
+                normalized
+                for normalized in (
+                    _normalize_failure_text(log_item) for log_item in trailing_logs
+                )
+                if normalized
+            }
+        )
+        for log_text in normalized_logs[:4]:
+            parts.append(f"log:{log_text}")
 
     fingerprint = "|".join(parts).strip()
     return fingerprint or None
@@ -913,6 +947,13 @@ async def _execute_graph_streaming(
 ) -> BenchmarkGeneratorState:
     """Helper to run the graph with streaming and persistence."""
     final_state = initial_state
+    runtime_tracker_fields = {
+        "repeated_failure_stage",
+        "repeated_failure_fingerprint",
+        "repeated_failure_count",
+        "reviewer_handoff_block_count",
+        "turn_count",
+    }
 
     # Database tracing
     db_callback = DatabaseCallbackHandler(
@@ -952,6 +993,8 @@ async def _execute_graph_streaming(
             if isinstance(state_update, dict):
                 # Update field by field to avoid losing objects not in state_update
                 for key, value in state_update.items():
+                    if key in runtime_tracker_fields:
+                        continue
                     if hasattr(final_state, key):
                         # Special handling for plan which is a
                         # RandomizationStrategy model
@@ -973,7 +1016,11 @@ async def _execute_graph_streaming(
                                 value = GenerationSession.model_validate(value)
                         setattr(final_state, key, value)
             elif isinstance(state_update, BenchmarkGeneratorState):
-                final_state = state_update
+                for key in state_update.__class__.model_fields:
+                    if key in runtime_tracker_fields:
+                        continue
+                    if hasattr(final_state, key):
+                        setattr(final_state, key, getattr(state_update, key))
 
             # Determine new status
             new_status = final_state.session.status

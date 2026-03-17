@@ -14,7 +14,12 @@ import structlog
 import yaml
 from langchain_core.messages import AIMessage, HumanMessage
 
-from controller.agent.config import LiteLLMRequestConfig, limited_completion, settings
+from controller.agent.config import (
+    LiteLLMRequestConfig,
+    _is_transient_provider_rate_error,
+    build_dspy_lm,
+    settings,
+)
 from controller.agent.context_usage import (
     estimate_text_tokens,
     update_episode_context_usage,
@@ -274,12 +279,10 @@ class BenchmarkPlannerNode(BaseNode):
         )
         return state
 
-    def _resolve_native_litellm_model(
+    def _resolve_native_dspy_model(
         self, *, prefer_multimodal: bool = False
     ) -> LiteLLMRequestConfig:
-        return super()._resolve_native_litellm_model(
-            prefer_multimodal=prefer_multimodal
-        )
+        return super()._resolve_native_dspy_model(prefer_multimodal=prefer_multimodal)
 
     @staticmethod
     def _native_schema_type(annotation: Any) -> str:
@@ -621,9 +624,7 @@ class BenchmarkPlannerNode(BaseNode):
 
                 reasoning_chunks: list[str] = []
                 messages = self._build_native_planner_messages(inputs)
-                request_config = self._resolve_native_litellm_model()
-                if not request_config.api_key:
-                    raise RuntimeError("Missing API key for native benchmark planner")
+                request_config = self._resolve_native_dspy_model()
 
                 submitted = False
                 last_submit_error_text: str | None = None
@@ -645,15 +646,16 @@ class BenchmarkPlannerNode(BaseNode):
                         )
 
                     try:
-                        response = await asyncio.to_thread(
-                            limited_completion,
-                            node_type=str(AgentName.BENCHMARK_PLANNER),
+                        native_lm = build_dspy_lm(
+                            request_config.model,
                             session_id=self.ctx.session_id,
-                            model=request_config.model,
-                            api_key=request_config.api_key,
-                            api_base=request_config.api_base,
+                            agent_role=AgentName.BENCHMARK_PLANNER.value,
+                        ).copy(
                             timeout=settings.native_tool_completion_timeout_seconds,
                             max_tokens=min(settings.llm_max_tokens, 2048),
+                        )
+                        response = await asyncio.to_thread(
+                            native_lm,
                             messages=messages,
                             tools=tool_schemas,
                             tool_choice="auto",
@@ -969,6 +971,8 @@ class BenchmarkPlannerNode(BaseNode):
                     retry_count=retry_count + 1,
                     max_retries=max_retries,
                 )
+                if _is_transient_provider_rate_error(err):
+                    raise RuntimeError(str(err)) from err
                 journal_entry += f"\n[System Error] {err}"
                 if retry_count + 1 >= max_retries:
                     break
