@@ -295,6 +295,28 @@ def _collect_run_log_pointers(
                 event_name = _extract_run_log_event(clean_line)
                 event_token = event_name.lower()
                 line_token = clean_line.lower()
+                preferred_event_match = bool(
+                    event_token and event_token in event_tokens
+                ) or _line_matches_tokens(line_token, tokens=event_tokens)
+                errorish_line = (
+                    "[error" in line_token
+                    or " traceback" in line_token
+                    or " failed" in line_token
+                    or "exception" in line_token
+                )
+                has_scope_match = any(
+                    (
+                        session_token and session_token in line_token,
+                        episode_token and episode_token in line_token,
+                        task_token and task_token in line_token,
+                    )
+                )
+
+                if not has_scope_match and not preferred_event_match:
+                    continue
+                if not preferred_event_match and not errorish_line:
+                    continue
+
                 score = 0
                 if session_token and session_token in line_token:
                     score += 5
@@ -302,11 +324,9 @@ def _collect_run_log_pointers(
                     score += 4
                 if task_token and task_token in line_token:
                     score += 3
-                if event_token and event_token in event_tokens:
+                if preferred_event_match:
                     score += 4
-                if _line_matches_tokens(line_token, tokens=event_tokens):
-                    score += 2
-                if "[error" in line_token or " traceback" in line_token:
+                if errorish_line:
                     score += 1
 
                 if score <= 0:
@@ -396,7 +416,7 @@ def _build_seed_failure_pointer(
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
             if isinstance(metadata, dict):
                 metadata_status = _sanitize_readable_text(metadata.get("status"))
-                if metadata_status:
+                if metadata_status and not pointer.session_status:
                     pointer.session_status = metadata_status
 
     run_log_path = SESSION_LOG_ROOT.parent / "run_evals.log"
