@@ -36,7 +36,7 @@ objectives:
   goal_zone: {{min: [10,10,10], max: [12,12,12]}}
   build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
 simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
-moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+moved_object: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
 benchmark_parts:
   - part_id: environment_fixture
     label: environment_fixture
@@ -106,7 +106,7 @@ objectives:
   goal_zone: {{min: [10,10,10], max: [12,12,12]}}
   build_zone: {{min: [-100,-100,-100], max: [100,100,100]}}
 simulation_bounds: {{min: [-100,-100,-100], max: [100,100,100]}}
-moved_object: {{label: "obj", shape: "sphere", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
+moved_object: {{label: "obj", shape: "sphere", material_id: "abs", start_position: [0,0,0], runtime_jitter: [0,0,0]}}
 benchmark_parts:
   - part_id: environment_fixture
     label: environment_fixture

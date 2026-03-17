@@ -140,6 +140,7 @@ async def test_int_131_full_fluid_objective_path():
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(3, 3, 3),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -216,6 +217,7 @@ async def test_int_133_unified_electromechanical_conflict_signal():
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -332,6 +334,7 @@ async def test_int_134_stress_heatmap_render_artifact():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0.5),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -416,6 +419,7 @@ async def test_int_135_wire_clearance_validation():
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0),
                 runtime_jitter=(0, 0, 0),
             ),

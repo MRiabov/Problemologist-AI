@@ -74,6 +74,7 @@ def test_fem_breakage_detection(tmp_path):
             moved_object=MovedObject(
                 label="deformable_part",
                 shape="box",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 1),
                 runtime_jitter=(0, 0, 0),
             ),

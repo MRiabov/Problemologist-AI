@@ -67,6 +67,7 @@ def test_flow_rate_integration(genesis_backend, tmp_path):
         simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
         moved_object=MovedObject(
             label="target",
+            material_id="aluminum_6061",
             start_position=(0, 0, 0),
             runtime_jitter=(0, 0, 0),
             shape="box",

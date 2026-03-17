@@ -98,6 +98,7 @@ def _base_benchmark_definition_yaml() -> str:
             "moved_object": {
                 "label": "projectile_ball",
                 "shape": "sphere",
+                "material_id": "abs",
                 "start_position": [0, 0, 60],
                 "runtime_jitter": [0, 0, 0],
             },

@@ -77,6 +77,7 @@ def _zone_video_objectives() -> BenchmarkDefinition:
         moved_object=MovedObject(
             label="target_ball",
             shape="sphere",
+            material_id="aluminum_6061",
             start_position=(0.0, 0.0, 10.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
