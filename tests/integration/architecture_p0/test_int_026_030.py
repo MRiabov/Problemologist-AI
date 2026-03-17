@@ -118,6 +118,7 @@ async def test_int_026_mandatory_event_families():
             moved_object=MovedObject(
                 label="test_obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 5),
                 runtime_jitter=(0, 0, 0),
             ),

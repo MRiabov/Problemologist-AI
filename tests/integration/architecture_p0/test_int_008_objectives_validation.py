@@ -118,6 +118,7 @@ def build():
         "moved_object": {
             "label": "projectile_ball",
             "shape": "sphere",
+            "material_id": "abs",
             "static_randomization": {"radius": [0.25, 0.25]},
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
@@ -235,6 +236,7 @@ def build():
         "moved_object": {
             "label": "projectile_ball",
             "shape": "sphere",
+            "material_id": "abs",
             "static_randomization": {"radius": [0.25, 0.25]},
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
@@ -339,6 +341,7 @@ def build():
         "moved_object": {
             "label": "projectile_ball",
             "shape": "sphere",
+            "material_id": "abs",
             "static_randomization": {"radius": [0.25, 0.25]},
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],
@@ -434,6 +437,7 @@ def build():
         "moved_object": {
             "label": "projectile_ball",
             "shape": "sphere",
+            "material_id": "abs",
             "static_randomization": {"radius": [0.25, 0.25]},
             "start_position": [-4.0, 0.0, 0.5],
             "runtime_jitter": [0.1, 0.1, 0.1],

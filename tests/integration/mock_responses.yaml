@@ -75,7 +75,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -198,7 +198,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -260,7 +260,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -342,7 +342,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: projectile_ball, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -425,7 +425,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: projectile_ball, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -745,11 +745,6 @@ scenarios:
                     unit_cost_usd: 10.0
                     quantity: 1
                     source: "internal"
-                    reproducibility:
-                      catalog_version: "test-v1"
-                      bd_warehouse_commit: "mock-commit"
-                      catalog_snapshot_id: "snapshot-int-014"
-                      generated_at: "2026-01-01T00:00:00Z"
                 final_assembly: []
               overwrite: true
             expected_observation: "success"
@@ -899,7 +894,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -1022,7 +1017,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: projectile_ball, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -1947,7 +1942,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2063,7 +2058,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2179,7 +2174,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2296,7 +2291,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2421,7 +2416,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2557,7 +2552,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2698,7 +2693,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2814,7 +2809,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -2930,7 +2925,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -3046,7 +3041,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -3161,7 +3156,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: projectile_ball, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -3286,7 +3281,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: projectile_ball, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -3400,7 +3395,7 @@ scenarios:
                   goal_zone: {min: [5,5,5], max: [10,10,10]}
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -3524,7 +3519,7 @@ scenarios:
                   goal_zone: {min: [5,5,5], max: [10,10,10]}
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -3641,7 +3636,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-20,-20,-20], max: [20,20,20]}
                 simulation_bounds: {min: [-30,-30,-30], max: [30,30,30]}
-                moved_object: {label: projectile_ball, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: projectile_ball, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -4517,7 +4512,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -4647,7 +4642,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -4768,7 +4763,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -4892,7 +4887,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -5013,7 +5008,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -5131,7 +5126,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [1,1,1]}
                   build_zone: {min: [-10,-10,-10], max: [10,10,10]}
                 simulation_bounds: {min: [-20,-20,-20], max: [20,20,20]}
-                moved_object: {label: obj, shape: sphere, start_position: [0,0,0], runtime_jitter: [0,0,0]}
+                moved_object: {label: obj, shape: sphere, material_id: abs, start_position: [0,0,0], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture
@@ -5249,7 +5244,7 @@ scenarios:
                   goal_zone: {min: [0,0,0], max: [5,5,5]}
                   build_zone: {min: [-20,-20,0], max: [20,20,20]}
                 simulation_bounds: {min: [-50,-50,0], max: [50,50,50]}
-                moved_object: {label: "projectile_ball", shape: "sphere", start_position: [0,0,2], runtime_jitter: [0,0,0]}
+                moved_object: {label: "projectile_ball", shape: "sphere", material_id: "abs", start_position: [0,0,2], runtime_jitter: [0,0,0]}
                 benchmark_parts:
                   - part_id: environment_fixture
                     label: environment_fixture

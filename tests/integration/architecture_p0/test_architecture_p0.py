@@ -295,6 +295,7 @@ async def test_int_020_simulation_failure_taxonomy():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0.5, 0.5, 0.5),
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),
@@ -445,6 +446,7 @@ async def test_int_021_runtime_randomization_robustness():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0.5),
                 runtime_jitter=(0.1, 0.1, 0),
             ),
@@ -639,6 +641,7 @@ def build():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0.0, 0.0, 10.0),
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),
@@ -687,6 +690,7 @@ def build():
                 "moved_object": MovedObject(
                     label="target_box",
                     shape="sphere",
+                    material_id="aluminum_6061",
                     start_position=(0.0, 0.0, 3.0),
                     runtime_jitter=(2.0, 2.0, 1.0),
                 ),
@@ -757,6 +761,7 @@ def build():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0.0, 0.0, 10.0),
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),

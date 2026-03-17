@@ -93,6 +93,7 @@ async def test_int_101_physics_backend_selection():
             moved_object=MovedObject(
                 label="test_obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 5),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -200,6 +201,7 @@ async def test_int_105_fluid_containment_evaluation():
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -310,6 +312,7 @@ async def test_int_106_flow_rate_evaluation():
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -385,6 +388,7 @@ async def test_int_112_mujoco_backward_compat():
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0),
                 runtime_jitter=(0, 0, 0),
             ),

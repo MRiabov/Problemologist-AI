@@ -155,6 +155,7 @@ print(f"VALIDATE_MESSAGE={message}")
         moved_object=MovedObject(
             label="target_box",
             shape="sphere",
+            material_id="aluminum_6061",
             start_position=(0.0, 0.0, 4.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
@@ -174,6 +175,7 @@ print(f"VALIDATE_MESSAGE={message}")
         moved_object=MovedObject(
             label="target_box",
             shape="sphere",
+            material_id="aluminum_6061",
             start_position=(0.0, 0.0, 4.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
@@ -298,6 +300,7 @@ print(f"VALIDATE_MESSAGE={message}")
         moved_object=MovedObject(
             label="target_box",
             shape="box",
+            material_id="aluminum_6061",
             start_position=(0.0, 0.0, 0.2),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
@@ -401,6 +404,7 @@ print(f"VALIDATE_MESSAGE={message}")
         moved_object=MovedObject(
             label="target_box",
             shape="box",
+            material_id="aluminum_6061",
             start_position=(8.0, 0.0, 1.2),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
@@ -486,6 +490,7 @@ print(f"VALIDATE_MESSAGE={message}")
         moved_object=MovedObject(
             label="ground_plane",
             shape="box",
+            material_id="aluminum_6061",
             start_position=(0.0, 0.0, 0.5),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),

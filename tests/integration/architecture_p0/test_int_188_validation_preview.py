@@ -69,6 +69,7 @@ def _default_objectives() -> BenchmarkDefinition:
         moved_object=MovedObject(
             label="target_box",
             shape="sphere",
+            material_id="aluminum_6061",
             start_position=(0.0, 0.0, 10.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
@@ -220,6 +221,7 @@ def build():
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0.0, 0.0, 10.0),
                 runtime_jitter=(0.0, 0.0, 0.0),
             ),
@@ -422,6 +424,7 @@ def build():
                 moved_object=MovedObject(
                     label="target_box",
                     shape="sphere",
+                    material_id="aluminum_6061",
                     start_position=(0.0, 0.0, 10.0),
                     runtime_jitter=(0.0, 0.0, 0.0),
                 ),

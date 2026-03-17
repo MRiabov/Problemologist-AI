@@ -104,6 +104,7 @@ async def test_int_102_111_fem_material_validation(session_id, base_headers):
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 5),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -231,6 +232,7 @@ async def test_int_103_part_breakage_detection(session_id, base_headers):
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0.5),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -323,6 +325,7 @@ async def test_int_104_stress_reporting(session_id, base_headers):
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0.5),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -393,6 +396,7 @@ async def test_int_107_stress_objective_evaluation(session_id, base_headers):
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0.5),
                 runtime_jitter=(0, 0, 0),
             ),
@@ -479,6 +483,7 @@ async def test_int_109_physics_instability_abort(session_id, base_headers):
             moved_object=MovedObject(
                 label="target_box",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 0.5),
                 runtime_jitter=(0, 0, 0),
             ),

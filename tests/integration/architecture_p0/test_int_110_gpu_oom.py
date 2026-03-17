@@ -67,6 +67,7 @@ async def test_int_110_gpu_oom_retry(session_id, base_headers):
             moved_object=MovedObject(
                 label="obj",
                 shape="sphere",
+                material_id="aluminum_6061",
                 start_position=(0, 0, 5),
                 runtime_jitter=(0, 0, 0),
             ),
