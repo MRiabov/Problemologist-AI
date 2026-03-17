@@ -689,6 +689,7 @@ benchmark_generator:
       - `plan.md`: The structured plan above. Must start directly with `## 1. Learning Objective`. Do NOT include any preamble, task completion message, or free-form summary.
       - `todo.md`: Checklist for the coder.
       - `benchmark_definition.yaml`: Fully valid schema-compliant objectives with concrete numeric values (no placeholders), including goal/build/forbid geometry, moved object config, simulation bounds, and constraints.
+        `moved_object.material_id` must be explicitly set to a material from `manufacturing_config.yaml` (for example `abs`, `pla`, `aluminum_6061`).
         `moved_object.start_position` must be a top-level field under `moved_object`; do not nest it under `static_randomization`.
         Every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.
         The moved object's full runtime AABB must stay inside `build_zone`: validate `start_position +/- runtime_jitter +/- max(static_randomization.radius)` on every axis before submission.
@@ -1001,7 +1002,7 @@ benchmark_generator:
       - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.
 
       **Output**:
-      Persist two YAML artifacts under `reviews/`:
+      Runtime persists two YAML artifacts under `reviews/`:
       - `benchmark-execution-review-decision-round-{N}.yaml`
       - `benchmark-execution-review-comments-round-{N}.yaml`
 
@@ -1020,6 +1021,7 @@ benchmark_generator:
       ```
 
       List required fixes if rejected.
+      Complete by calling `submit_review` with a structured `ReviewResult`; runtime persistence remains authoritative.
 
 # -----------------------------------------------------------------------------
 # SUBAGENTS

@@ -78,6 +78,7 @@ This is mostly for integration tests where such bypass is convenient (for system
 - `search_cots_catalog` Search COTS parts catalog.
 - `invoke_cots_search_subagent(query: str)` Hand off one request string to the shared COTS Search node.
 - `submit_plan` Validate and submit planner handoff artifacts.
+- `submit_review` Submit reviewer final structured output (`ReviewResult`) for runtime-owned persistence/routing.
 - `write_review_file` Persist reviewer decision output to the stage-specific file.
 - `save_suggested_skill` Persist skill-agent suggested skill output.
 
@@ -106,6 +107,12 @@ ReAct is the first-line correction loop:
 1. The model produces output and calls tools.
 2. If a tool/validation response is not acceptable, ReAct continues the same node loop and retries.
 3. The agent converges on valid handoff output or exits due to hard limits (timeout/turn budget/token budget).
+
+Native completion-call naming contract:
+
+1. Native tool-loop reviewer nodes terminate by calling `submit_review(...)` exactly once with required signature output fields.
+2. Native tool-loop non-reviewer nodes terminate by calling `finish(...)` exactly once with required signature output fields.
+3. Planner nodes still require `submit_plan()` success before their final completion call.
 
 ### Config-driven anti-stall reminder policy
 
@@ -172,7 +179,7 @@ Note - used by default by
 - The gate is conditional on actual image availability in `renders/`. If no render images exist for the current node/revision, the media requirement does not trigger.
 - Runtime behavior is fail-closed:
   - for required non-reviewer roles in native tool-loop mode, `finish` is blocked until the configured image minimum is satisfied
-  - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt
+  - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt (enforced before accepting `submit_review`)
 - `read_file(...)` never satisfies visual-inspection policy, even if it points at a render path.
 
 #### Benchmark generator (CAD editor) tools

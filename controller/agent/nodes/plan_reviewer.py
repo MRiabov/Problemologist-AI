@@ -24,7 +24,7 @@ class PlanReviewerSignature(dspy.Signature):
     Engineer Plan Reviewer node: Evaluates the proposed mechanical and electrical plans.
     You must use the provided tools to read 'plan.md', 'todo.md', and 'assembly_definition.yaml'.
     Ensure the plan is physically feasible, within budget, and complete.
-    When done, use SUBMIT to provide your final ReviewResult.
+    When done, call `submit_review` with your final ReviewResult.
     """
 
     task = dspy.InputField()

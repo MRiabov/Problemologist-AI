@@ -455,11 +455,13 @@ class BaseNode:
         node_type: AgentName,
     ) -> type[dspy.Signature]:
         output_fields = ", ".join(signature_cls.output_fields.keys())
+        completion_tool_name = self._completion_tool_name(node_type)
         instructions = getattr(signature_cls, "instructions", "") or ""
         native_instructions = (
             "Use provider-native tool calls.\n"
             "Call the provided tools to inspect and modify the workspace.\n"
-            "When all required work is complete, call `finish` with these output "
+            "When all required work is complete, call "
+            f"`{completion_tool_name}` with these output "
             f"fields: {output_fields}.\n"
             "Do not emit textual tool-call markers such as `next_tool_name` or "
             "`next_tool_args`."
@@ -616,7 +618,10 @@ class BaseNode:
         return schemas
 
     def _build_finish_tool_schema(
-        self, signature_cls: type[dspy.Signature]
+        self,
+        signature_cls: type[dspy.Signature],
+        *,
+        tool_name: str = "finish",
     ) -> tuple[dict[str, Any], list[str]]:
         output_field_names = list(signature_cls.output_fields.keys())
         properties: dict[str, Any] = {}
@@ -638,7 +643,7 @@ class BaseNode:
             {
                 "type": "function",
                 "function": {
-                    "name": "finish",
+                    "name": tool_name,
                     "description": (
                         "Call this exactly once when the node is done. "
                         "Provide the final output fields for the node."
@@ -653,6 +658,21 @@ class BaseNode:
             },
             output_field_names,
         )
+
+    @staticmethod
+    def _is_reviewer_completion_node(node_type: AgentName) -> bool:
+        return node_type in {
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            AgentName.BENCHMARK_REVIEWER,
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
+            AgentName.ELECTRONICS_REVIEWER,
+        }
+
+    def _completion_tool_name(self, node_type: AgentName) -> str:
+        if self._is_reviewer_completion_node(node_type):
+            return "submit_review"
+        return "finish"
 
     @staticmethod
     def _coerce_message_text(content: Any) -> str:
@@ -800,20 +820,21 @@ class BaseNode:
     ) -> dspy.Prediction:
         instructions = getattr(signature_cls, "instructions", "") or ""
         requires_submit_plan = self._requires_submit_plan(node_type)
+        completion_tool_name = self._completion_tool_name(node_type)
         runtime_instructions = (
             "Runtime tool-calling contract:\n"
             "- Use provider-native tool calls only.\n"
             "- Call the provided tools to inspect and modify the workspace.\n"
             "- Do not emit textual tool-call wrappers such as `next_tool_name`, `next_tool_args`, or `[[ ## tool_calls ## ]]`.\n"
             "- Before each tool call, include one short plain-text reasoning sentence in assistant content.\n"
-            "- Call `finish` exactly once when all required work is complete.\n"
+            f"- Call `{completion_tool_name}` exactly once when all required work is complete.\n"
         )
         if requires_submit_plan:
             runtime_instructions += (
-                "- Call `submit_plan()` before `finish`.\n"
+                f"- Call `submit_plan()` before `{completion_tool_name}`.\n"
                 '- Stop exploratory work after `submit_plan()` returns `{ok: true, status: "submitted"}`.\n'
                 "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
-                "- Do not call `finish` until `submit_plan()` has succeeded.\n"
+                f"- Do not call `{completion_tool_name}` until `submit_plan()` has succeeded.\n"
                 "- Use `validate_costing_and_price()` for planner validation; do not browse `/scripts` or validator source files.\n"
             )
         system_prompt = (
@@ -824,7 +845,9 @@ class BaseNode:
         user_prompt = "Node inputs:\n" + json.dumps(
             inputs, indent=2, ensure_ascii=True, default=str
         )
-        finish_schema, finish_fields = self._build_finish_tool_schema(signature_cls)
+        finish_schema, finish_fields = self._build_finish_tool_schema(
+            signature_cls, tool_name=completion_tool_name
+        )
         tool_schemas = self._build_native_tool_schemas(
             tool_fns, extra_schemas=[finish_schema]
         )
@@ -876,6 +899,7 @@ class BaseNode:
                     messages=messages,
                     node_type=node_type,
                     finish_fields=finish_fields,
+                    completion_tool_name=completion_tool_name,
                 )
             else:
                 response = completion(
@@ -918,7 +942,7 @@ class BaseNode:
                     ).strip()
                     if requires_submit_plan and not submit_plan_succeeded:
                         no_tool_call_reminder += (
-                            " Call `submit_plan()` before `finish`."
+                            f" Call `submit_plan()` before `{completion_tool_name}`."
                         )
                 else:
                     no_tool_call_reminder = self._get_runtime_prompt(
@@ -975,7 +999,7 @@ class BaseNode:
                     )
                     continue
 
-                if tool_name == "finish":
+                if tool_name == completion_tool_name:
                     if requires_submit_plan and not submit_plan_succeeded:
                         submit_reminder = self._get_runtime_prompt(
                             self._runtime_prompt_key(node_type, "submit_before_finish")
@@ -983,7 +1007,7 @@ class BaseNode:
                         messages.append(
                             self._tool_response_message(
                                 tool_call_id=call.get("id", ""),
-                                tool_name="finish",
+                                tool_name=completion_tool_name,
                                 content=submit_reminder,
                             )
                         )
@@ -996,7 +1020,7 @@ class BaseNode:
                     ]
                     if missing_fields:
                         msg = (
-                            "finish tool call is missing required output fields: "
+                            f"{completion_tool_name} tool call is missing required output fields: "
                             + ", ".join(missing_fields)
                         )
                         raise ValueError(msg)
@@ -1013,7 +1037,7 @@ class BaseNode:
                         messages.append(
                             self._tool_response_message(
                                 tool_call_id=call.get("id", ""),
-                                tool_name="finish",
+                                tool_name=completion_tool_name,
                                 content=unmet_visual_requirement,
                             )
                         )

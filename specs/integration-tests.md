@@ -290,7 +290,7 @@ Determinism rule for this category:
 
 | ID | Priority | Test | Required assertions |
 |---|---|---|---|
-| INT-181 | P1 | Tool-loop ordering + termination contract | Trace/event order is consistent (`LLM` -> `TOOL_START` -> tool result -> next `LLM` ... -> finish), and the run terminates cleanly once scripted tools are exhausted. |
+| INT-181 | P1 | Tool-loop ordering + termination contract | Trace/event order is consistent (`LLM` -> `TOOL_START` -> tool result -> next `LLM` ... -> completion call), and the run terminates cleanly once scripted tools are exhausted (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops). |
 | INT-182 | P1 | Concurrent agent-run isolation (files + traces + context) | Parallel runs with different `X-Session-ID` do not leak files, steering context, or traces across sessions. |
 | INT-183 | P1 | Steerability queue single-consumption contract | Queued steering prompt is consumed once, affects subsequent node context in-run, and does not replay unexpectedly in later turns. |
 | INT-185 | P1 | Agent-failed tool error routing contract | Trigger a deterministic agent-caused tool failure (for example invalid write/edit arguments) through live APIs; assert tool error is surfaced back to the LM as an observation and the run continues with subsequent LM turn(s) under normal LM budgets. Assert no Temporal retry fan-out for the same failed tool request. |
@@ -490,7 +490,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-177 | Submit feedback in live UI after editing score/topics/comment before final submit; assert persisted record equals final edited values, not intermediate draft. | Unit-testing modal form reducer only. |
 | INT-178 | Reload browser mid-episode in live stack; assert same episode/workflow opens and chat/artifact panes repopulate from API state. | Snapshot-testing initial page layout without backend state restoration. |
 | INT-179 | Type valid and invalid `@` mentions directly in live chat input; assert valid structured payload creation and explicit validation errors for invalid mention syntax/ranges. | Parsing `@` tokens in an isolated helper test only. |
-| INT-181 | Execute a scripted multi-tool scenario through live APIs and assert persisted trace/event ordering and clean finish once tool list is exhausted. | Asserting mocked node transitions/tool arrays without runtime orchestration. |
+| INT-181 | Execute a scripted multi-tool scenario through live APIs and assert persisted trace/event ordering and clean completion once tool list is exhausted (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops). | Asserting mocked node transitions/tool arrays without runtime orchestration. |
 | INT-182 | Start parallel live agent runs with distinct sessions and assert no cross-session reads/writes/traces/context leakage. | Unit-testing session-keyed maps/locks without HTTP/system boundaries. |
 | INT-183 | Enqueue steering via live steerability endpoints during active run; assert single dequeue/consumption and downstream trace evidence in same episode. | Isolated queue unit test with mocked state transitions. |
 | INT-185 | Force a deterministic LM-caused invalid tool invocation over HTTP (for example invalid path/args policy violation), assert tool error observation reaches subsequent LM turn, and verify no Temporal retry loop is created for that request. | Calling runtime retry classifiers/helpers in-process without live controller-worker boundaries. |

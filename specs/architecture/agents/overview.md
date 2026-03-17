@@ -46,4 +46,4 @@ Implementation ownership is intentionally unified.
 
 - Plan review checks planning quality and contract completeness before implementation starts, and persists reviewer output to an engineering-plan review YAML pair in `reviews/`.
 - Execution review runs only after validation/simulation success artifacts are present for the latest revision, then checks robustness/non-flakiness and plan adherence, and persists reviewer output to an engineering-execution review YAML pair in `reviews/`.
-- Visual-inspection policy for vision-using roles is config-driven via `config/agents_config.yaml`; required roles must inspect render images through `inspect_media(...)` before valid finish/approval when images are available for the current node/revision.
+- Visual-inspection policy for vision-using roles is config-driven via `config/agents_config.yaml`; required roles must inspect render images through `inspect_media(...)` before valid completion/approval when images are available for the current node/revision (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops).

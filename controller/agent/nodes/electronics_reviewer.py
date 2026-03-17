@@ -23,7 +23,7 @@ class ElectronicsReviewerSignature(dspy.Signature):
     Electronics Reviewer node: Evaluates the electrical implementation.
     You must use the provided tools to read 'script.py' and any circuit-related files.
     Ensure the circuit is correctly defined, wires are routed properly, and it matches the electrical plan.
-    When done, use SUBMIT to provide your final ReviewResult.
+    When done, provide your final ReviewResult.
     """
 
     task = dspy.InputField()
@@ -41,6 +41,13 @@ class ElectronicsReviewerNode(BaseNode):
     """
     Electronics Reviewer node: Evaluates the electrical implementation.
     """
+
+    @staticmethod
+    def _normalize_electronics_decision(review: ReviewResult) -> ReviewResult:
+        """Electronics defects are implementation defects and must route as REJECT_CODE."""
+        if review.decision != ReviewDecision.REJECTED:
+            return review
+        return review.model_copy(update={"decision": ReviewDecision.REJECT_CODE})
 
     async def __call__(self, state: AgentState) -> AgentState:
         # Read objectives and assembly_definition for context
@@ -97,6 +104,7 @@ class ElectronicsReviewerNode(BaseNode):
             )
 
         review = ReviewResult.model_validate(prediction.review)
+        review = self._normalize_electronics_decision(review)
         try:
             (
                 review_decision_path,

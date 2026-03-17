@@ -28,7 +28,7 @@ class ExecutionReviewerSignature(dspy.Signature):
     """
     Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
     You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
-    When done, use SUBMIT to provide your final ReviewResult.
+    When done, call `submit_review` with your final ReviewResult.
     """
 
     task = dspy.InputField()

@@ -743,6 +743,7 @@ class MockDSPyLM(dspy.LM):
         messages: list[dict[str, Any]],
         node_type: AgentName,
         finish_fields: list[str],
+        completion_tool_name: str = "finish",
     ) -> SimpleNamespace:
         scenario_id = self._get_scenario_id()
         if scenario_id not in self.scenarios:
@@ -798,13 +799,13 @@ class MockDSPyLM(dspy.LM):
                         return self._native_message(
                             assistant_text=last_step.get("thought")
                             or last_step.get("reasoning", "Task complete."),
-                            tool_name="finish",
+                            tool_name=completion_tool_name,
                             tool_args=self._native_finish_payload(
                                 node_key=node_key,
                                 node_data=last_step,
                                 finish_fields=finish_fields,
                             ),
-                            call_id=f"mock_finish_{node_key.value}_idempotent",
+                            call_id=f"mock_{completion_tool_name}_{node_key.value}_idempotent",
                         )
 
                 raise ValueError(
@@ -850,13 +851,13 @@ class MockDSPyLM(dspy.LM):
                 self._transcript_states[self.session_id] = found_idx + 1
                 return self._native_message(
                     assistant_text=assistant_text,
-                    tool_name="finish",
+                    tool_name=completion_tool_name,
                     tool_args=self._native_finish_payload(
                         node_key=node_key,
                         node_data=step_data,
                         finish_fields=finish_fields,
                     ),
-                    call_id=f"mock_finish_{node_key.value}_{step_idx}",
+                    call_id=f"mock_{completion_tool_name}_{node_key.value}_{step_idx}",
                 )
 
             tool_name = step_data.get("tool_name")
@@ -886,13 +887,13 @@ class MockDSPyLM(dspy.LM):
 
         return self._native_message(
             assistant_text=thought,
-            tool_name="finish",
+            tool_name=completion_tool_name,
             tool_args=self._native_finish_payload(
                 node_key=node_key,
                 node_data=node_data,
                 finish_fields=finish_fields,
             ),
-            call_id=f"mock_finish_{node_key.value}_{tool_progress}",
+            call_id=f"mock_{completion_tool_name}_{node_key.value}_{tool_progress}",
         )
 
     def _is_finishing(self, text: str) -> bool:

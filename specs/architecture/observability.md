@@ -109,7 +109,7 @@ We track the following structured domain events to compute the evaluation metric
 Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
 
 1. When a role is subject to config-driven visual inspection (`config/agents_config.yaml`), the trace should make it possible to determine whether images existed, whether `inspect_media(...)` was called, and whether the configured minimum image count was satisfied.
-2. Runtime-injected reminder messages and fail-closed finish/approval refusals for missing visual inspection should therefore remain visible in persisted conversation/tool traces.
+2. Runtime-injected reminder messages and fail-closed completion/approval refusals for missing visual inspection should therefore remain visible in persisted conversation/tool traces (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops).
 3. `media_inspection` and `llm_media_attached` are the primary structured observability events for this path; reminder text may remain trace-visible rather than becoming a separate domain event unless later metrics require it.
 
 <!-- 20. Metric for "Jamming Rate"
