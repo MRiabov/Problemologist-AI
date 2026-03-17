@@ -12,11 +12,15 @@ from typing import TYPE_CHECKING, Any
 import dspy
 import structlog
 import yaml
-from litellm import completion
 from pydantic import TypeAdapter
 from sqlalchemy import func, select
 
-from controller.agent.config import LiteLLMRequestConfig, build_dspy_lm, settings
+from controller.agent.config import (
+    LiteLLMRequestConfig,
+    build_dspy_lm,
+    limited_completion,
+    settings,
+)
 from controller.agent.context_usage import update_episode_context_usage
 from controller.agent.execution_limits import (
     AgentHardFailError,
@@ -902,7 +906,9 @@ class BaseNode:
                     completion_tool_name=completion_tool_name,
                 )
             else:
-                response = completion(
+                response = limited_completion(
+                    node_type=str(node_type),
+                    session_id=self.ctx.session_id,
                     model=request_config.model,
                     api_key=request_config.api_key,
                     api_base=request_config.api_base,

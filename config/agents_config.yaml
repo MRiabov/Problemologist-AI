@@ -3,6 +3,7 @@ version: "1.0"
 llm:
   max_reasoning_tokens: 16384 # per turn, I assume.
   context_compaction_threshold_tokens: 225000
+  requests_per_minute: 40
   multimodal_model: null
 
 render:

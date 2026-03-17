@@ -13,9 +13,8 @@ import httpx
 import structlog
 import yaml
 from langchain_core.messages import AIMessage, HumanMessage
-from litellm import completion
 
-from controller.agent.config import LiteLLMRequestConfig, settings
+from controller.agent.config import LiteLLMRequestConfig, limited_completion, settings
 from controller.agent.context_usage import (
     estimate_text_tokens,
     update_episode_context_usage,
@@ -647,7 +646,9 @@ class BenchmarkPlannerNode(BaseNode):
 
                     try:
                         response = await asyncio.to_thread(
-                            completion,
+                            limited_completion,
+                            node_type=str(AgentName.BENCHMARK_PLANNER),
+                            session_id=self.ctx.session_id,
                             model=request_config.model,
                             api_key=request_config.api_key,
                             api_base=request_config.api_base,

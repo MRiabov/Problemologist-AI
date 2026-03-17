@@ -74,6 +74,7 @@ class AgentPolicy(BaseModel):
 class LLMPolicyConfig(BaseModel):
     max_reasoning_tokens: int = 16384
     context_compaction_threshold_tokens: int = 225000
+    requests_per_minute: int = Field(default=40, ge=1)
     multimodal_model: str | None = None
 
 

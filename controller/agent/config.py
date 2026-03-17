@@ -1,11 +1,18 @@
-from typing import Any, Literal
+import threading
+import time
+from collections import deque
+from typing import Any, Deque, Literal
 
 import dspy
-from pydantic import BaseModel
+import structlog
+from litellm import completion
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from controller.config.settings import settings as global_settings
 from shared.agents.config import load_agents_config
+
+logger = structlog.get_logger(__name__)
 
 
 def _load_agents_llm_config():
@@ -45,6 +52,10 @@ class AgentSettings(BaseSettings):
     llm_max_tokens: int = _load_agents_llm_config().max_reasoning_tokens
     context_compaction_threshold_tokens: int = (
         _load_agents_llm_config().context_compaction_threshold_tokens
+    )
+    llm_requests_per_minute: int = Field(
+        default=_load_agents_llm_config().requests_per_minute,
+        alias="LLM_REQUESTS_PER_MINUTE",
     )
     dspy_program_timeout_seconds: int = 300
     dspy_program_max_retries: int = 2
@@ -129,6 +140,118 @@ class AgentSettings(BaseSettings):
 settings = AgentSettings()
 
 
+class _SlidingWindowRateLimiter:
+    """Thread-safe per-process RPM limiter with queue-and-wait behavior."""
+
+    def __init__(self, requests_per_minute: int):
+        self._rpm = max(1, int(requests_per_minute))
+        self._window_seconds = 60.0
+        self._timestamps: Deque[float] = deque()
+        self._lock = threading.Lock()
+
+    def acquire(self) -> float:
+        """Block until a request slot is available; return total wait time."""
+        waited_seconds = 0.0
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                cutoff = now - self._window_seconds
+                while self._timestamps and self._timestamps[0] <= cutoff:
+                    self._timestamps.popleft()
+
+                if len(self._timestamps) < self._rpm:
+                    self._timestamps.append(now)
+                    return waited_seconds
+
+                oldest = self._timestamps[0]
+                sleep_for = max(0.0, self._window_seconds - (now - oldest))
+
+            if sleep_for > 0.0:
+                time.sleep(sleep_for)
+                waited_seconds += sleep_for
+
+
+_limiter = _SlidingWindowRateLimiter(settings.llm_requests_per_minute)
+
+
+def _is_transient_provider_rate_error(error: Exception) -> bool:
+    text = str(error).lower()
+    markers = (
+        "ratelimiterror",
+        "resource_exhausted",
+        '"code": 429',
+        'status": "resource_exhausted"',
+        "too many requests",
+        '"code": 503',
+        "service unavailable",
+    )
+    return any(marker in text for marker in markers)
+
+
+def _call_with_provider_backoff(fn: Any, *args: Any, **kwargs: Any) -> Any:
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as error:
+            if attempt >= max_attempts or not _is_transient_provider_rate_error(error):
+                raise
+            sleep_seconds = float(2**attempt)
+            logger.warning(
+                "llm_provider_retry_backoff",
+                attempt=attempt,
+                max_attempts=max_attempts,
+                sleep_seconds=sleep_seconds,
+                error=str(error),
+            )
+            time.sleep(sleep_seconds)
+
+
+def limited_completion(*, node_type: str, session_id: str, **kwargs: Any) -> Any:
+    wait_seconds = _limiter.acquire()
+    if wait_seconds > 0.0:
+        logger.info(
+            "llm_rate_limit_wait",
+            node_type=node_type,
+            session_id=session_id,
+            wait_seconds=round(wait_seconds, 3),
+            requests_per_minute=settings.llm_requests_per_minute,
+            model=kwargs.get("model"),
+        )
+    return _call_with_provider_backoff(completion, **kwargs)
+
+
+class RateLimitedLM:
+    """Transparent LM wrapper that rate-limits all DSPy LM calls."""
+
+    def __init__(self, inner: Any, *, node_type: str, session_id: str):
+        self._inner = inner
+        self._node_type = node_type
+        self._session_id = session_id
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        wait_seconds = _limiter.acquire()
+        if wait_seconds > 0.0:
+            logger.info(
+                "llm_rate_limit_wait",
+                node_type=self._node_type,
+                session_id=self._session_id,
+                wait_seconds=round(wait_seconds, 3),
+                requests_per_minute=settings.llm_requests_per_minute,
+                model=getattr(self._inner, "model", None),
+            )
+        return _call_with_provider_backoff(self._inner, *args, **kwargs)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in {"_inner", "_node_type", "_session_id"}:
+            object.__setattr__(self, name, value)
+            return
+        setattr(self._inner, name, value)
+
+
 def build_dspy_lm(
     model_name: str | None = None,
     *,
@@ -151,4 +274,9 @@ def build_dspy_lm(
     }
     if request_config.api_base:
         lm_kwargs["api_base"] = request_config.api_base
-    return dspy.LM(request_config.model, **lm_kwargs)
+    base_lm = dspy.LM(request_config.model, **lm_kwargs)
+    return RateLimitedLM(
+        base_lm,
+        node_type=agent_role or "unknown_node",
+        session_id=session_id or settings.default_session_id,
+    )
