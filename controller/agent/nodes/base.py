@@ -7,6 +7,7 @@ from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import dspy
@@ -924,7 +925,22 @@ class BaseNode:
                     tools=tool_schemas,
                     tool_choice="auto",
                 )
-                message = response.choices[0].message
+                if isinstance(response, list):
+                    first_response = response[0] if response else {}
+                    if isinstance(first_response, dict):
+                        message = SimpleNamespace(
+                            content=first_response.get("content")
+                            or first_response.get("text")
+                            or "",
+                            tool_calls=first_response.get("tool_calls") or [],
+                            provider_specific_fields=first_response.get(
+                                "provider_specific_fields"
+                            ),
+                        )
+                    else:
+                        message = first_response
+                else:
+                    message = response.choices[0].message
             assistant_text, tool_calls = self._extract_native_tool_calls(
                 message,
                 model_name=request_config.model,
