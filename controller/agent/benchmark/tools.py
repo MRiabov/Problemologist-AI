@@ -15,6 +15,63 @@ from shared.enums import AgentName
 from shared.models.schemas import PlannerSubmissionResult
 from shared.workers.schema import PlanReviewManifest
 
+BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER = 1.5
+
+
+def _canonicalize_benchmark_constraints(
+    benchmark_definition_content: str,
+) -> tuple[str, list[str]]:
+    """Fill benchmark runtime caps from planner-authored solution estimates."""
+    errors: list[str] = []
+    try:
+        raw_data = yaml.safe_load(benchmark_definition_content) or {}
+    except Exception as exc:
+        return benchmark_definition_content, [
+            f"benchmark_definition.yaml YAML parse error: {exc}"
+        ]
+
+    constraints = raw_data.get("constraints")
+    if not isinstance(constraints, dict):
+        return benchmark_definition_content, [
+            "benchmark_definition.yaml: constraints must be an object"
+        ]
+
+    estimated_cost = constraints.get("estimated_solution_cost_usd")
+    estimated_weight = constraints.get("estimated_solution_weight_g")
+    if not isinstance(estimated_cost, (int, float)):
+        errors.append(
+            "benchmark_definition.yaml: constraints.estimated_solution_cost_usd must be a number"
+        )
+    if not isinstance(estimated_weight, (int, float)):
+        errors.append(
+            "benchmark_definition.yaml: constraints.estimated_solution_weight_g must be a number"
+        )
+    if errors:
+        return benchmark_definition_content, errors
+
+    if float(estimated_cost) <= 0:
+        errors.append(
+            "benchmark_definition.yaml: constraints.estimated_solution_cost_usd must be > 0"
+        )
+    if float(estimated_weight) <= 0:
+        errors.append(
+            "benchmark_definition.yaml: constraints.estimated_solution_weight_g must be > 0"
+        )
+    if errors:
+        return benchmark_definition_content, errors
+
+    constraints["estimated_solution_cost_usd"] = float(estimated_cost)
+    constraints["estimated_solution_weight_g"] = float(estimated_weight)
+    constraints["max_unit_cost"] = (
+        float(estimated_cost) * BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER
+    )
+    constraints["max_weight_g"] = (
+        float(estimated_weight) * BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER
+    )
+
+    raw_data["constraints"] = constraints
+    return yaml.dump(raw_data, sort_keys=False), []
+
 
 def get_benchmark_planner_tools(
     fs: RemoteFilesystemMiddleware, session_id: str
@@ -154,6 +211,25 @@ def get_benchmark_planner_tools(
                 node_type=AgentName.BENCHMARK_PLANNER,
             )
             return result.model_dump(mode="json")
+
+        canonical_benchmark_definition, canonicalization_errors = (
+            _canonicalize_benchmark_constraints(artifacts["benchmark_definition.yaml"])
+        )
+        if canonicalization_errors:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=canonicalization_errors,
+                node_type=AgentName.BENCHMARK_PLANNER,
+            )
+            return result.model_dump(mode="json")
+
+        artifacts["benchmark_definition.yaml"] = canonical_benchmark_definition
+        await fs.write_file(
+            "benchmark_definition.yaml",
+            canonical_benchmark_definition,
+            overwrite=True,
+        )
 
         is_valid, errors = validate_node_output(AgentName.BENCHMARK_PLANNER, artifacts)
         if is_valid:

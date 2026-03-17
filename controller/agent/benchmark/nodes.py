@@ -144,8 +144,14 @@ class BenchmarkPlannerNode(BaseNode):
                         obj_data.constraints.max_unit_cost = (
                             custom_objectives.max_unit_cost
                         )
+                        obj_data.constraints.estimated_solution_cost_usd = (
+                            custom_objectives.max_unit_cost / 1.5
+                        )
                     if custom_objectives.max_weight is not None:
                         obj_data.constraints.max_weight_g = custom_objectives.max_weight
+                        obj_data.constraints.estimated_solution_weight_g = (
+                            custom_objectives.max_weight / 1.5
+                        )
                     if custom_objectives.target_quantity is not None:
                         obj_data.constraints.target_quantity = (
                             custom_objectives.target_quantity

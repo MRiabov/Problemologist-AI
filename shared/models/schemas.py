@@ -226,9 +226,25 @@ class MovingPart(StrictContractModel):
 class Constraints(StrictContractModel):
     """Cost and weight constraints for the engineer."""
 
-    max_unit_cost: float
-    max_weight_g: float
+    estimated_solution_cost_usd: float | None = None
+    estimated_solution_weight_g: float | None = None
+    max_unit_cost: float | None = None
+    max_weight_g: float | None = None
     target_quantity: int | None = None
+
+    @field_validator(
+        "estimated_solution_cost_usd",
+        "estimated_solution_weight_g",
+        "max_unit_cost",
+        "max_weight_g",
+    )
+    @classmethod
+    def validate_positive(cls, value: float | None) -> float | None:
+        if value is None:
+            return value
+        if value <= 0:
+            raise ValueError("must be > 0")
+        return value
 
 
 class RandomizationMeta(StrictContractModel):
@@ -443,7 +459,8 @@ class BenchmarkDefinition(StrictContractModel):
     - Guide the moved_object into the goal_zone
     - Stay WITHIN the build_zone
     - AVOID all forbid_zones
-    - Respect max_unit_cost and max_weight constraints
+    - Respect runtime-derived max_unit_cost and max_weight constraints
+      (from benchmark-estimated solution cost/weight)
     - Reference benchmark-owned part metadata for fixtures and environment parts
     """
 

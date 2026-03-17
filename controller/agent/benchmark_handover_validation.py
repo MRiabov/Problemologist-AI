@@ -51,7 +51,7 @@ def validate_benchmark_planner_handoff_payload(
                 if custom_objectives.max_unit_cost is not None:
                     observed = objectives.constraints.max_unit_cost
                     expected = custom_objectives.max_unit_cost
-                    if abs(observed - expected) > 1e-6:
+                    if observed is None or abs(observed - expected) > 1e-6:
                         errors.append(
                             "planner_semantic: objectives.constraints.max_unit_cost "
                             f"({observed}) does not match custom objective ({expected})"
@@ -59,7 +59,7 @@ def validate_benchmark_planner_handoff_payload(
                 if custom_objectives.max_weight is not None:
                     observed = objectives.constraints.max_weight_g
                     expected = custom_objectives.max_weight
-                    if abs(observed - expected) > 1e-6:
+                    if observed is None or abs(observed - expected) > 1e-6:
                         errors.append(
                             "planner_semantic: objectives.constraints.max_weight_g "
                             f"({observed}) does not match custom objective ({expected})"

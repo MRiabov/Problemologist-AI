@@ -12,7 +12,7 @@ BENCHMARK_DEFINITION_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
 # YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
 #   1. Staying WITHIN the `build_zone` (you cannot build outside it)
 #   2. AVOIDING all `forbid_zones` (contact = failure)
-#   3. Respecting `max_unit_cost` and `max_weight` constraints
+#   3. Respecting cost and weight constraints
 #
 # Benchmark-owned environment geometry and metadata in this file are READ-ONLY.
 # Engineering assembly motion metadata is stored under engineering
@@ -73,10 +73,12 @@ moved_object:
 # -----------------------------------------------------------------------------
 # YOUR CONSTRAINTS
 # -----------------------------------------------------------------------------
-# These are challenging but achievable. Exceeding them = rejection.
+# Planner/runtime contract:
+# - Planner authors `estimated_solution_*` fields.
+# - Runtime derives permissive max caps (1.5x estimates) for engineering gates.
 constraints:
-  max_unit_cost: 50.00  # USD - total cost of your manufactured parts
-  max_weight_g: 1200.0  # grams - total weight of your design
+  estimated_solution_cost_usd: 33.33
+  estimated_solution_weight_g: 800.0
 
 # Randomization metadata (for reproducibility)
 randomization:
