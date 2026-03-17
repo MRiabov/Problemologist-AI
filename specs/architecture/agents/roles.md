@@ -87,7 +87,8 @@ Problems with motors and moving parts are verified more consistently because the
    - min `[-60, -60, 0]`, max `[60, 60, 90]`.
 
 6. **Constraints handed to engineering**
-   - Benchmark/customer caps: `max_unit_cost <= 45.0 USD`, `max_weight <= 1.1 kg`.
+   - Planner authors realistic estimate fields in `benchmark_definition.yaml`: `constraints.estimated_solution_cost_usd: 30.0` and `constraints.estimated_solution_weight_g: 733.3`.
+   - Runtime derives benchmark/customer caps during `submit_plan()`: `max_unit_cost = 1.5 * estimated_solution_cost_usd = 45.0 USD`, `max_weight_g = 1.5 * estimated_solution_weight_g = 1100.0 g`.
 
 7. **Success criteria**
    - Success if the moved object's center enters `goal_zone` without touching any forbid zone.
@@ -128,8 +129,8 @@ moved_object:
   runtime_jitter: [2, 2, 1]
 
 constraints:
-  max_unit_cost: 45.0
-  max_weight_g: 1100.0
+  estimated_solution_cost_usd: 30.0
+  estimated_solution_weight_g: 733.3
 
 randomization:
   static_variation_id: "drop_ball_funnel_v2"
@@ -150,7 +151,8 @@ The benchmark loop has two reviewer stages with different responsibilities.
 6. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion.
 7. Reject impossible or excessively underconstrained benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unstable/unreviewable joint setups.
 8. Reject excessive or unjustified benchmark-side DOFs in benchmark-local `benchmark_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
-9. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+9. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
+10. This stage is review-only. `Benchmark Plan Reviewer` inspects planner artifacts and evidence but does not rewrite planner-owned files, and when render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Benchmark Reviewer` responsibilities:
 
@@ -218,7 +220,7 @@ The architect will create and persist a TODO list. The engineer must implement. 
 The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
-   - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, benchmark-level `max_unit_cost`/`max_weight_g`).
+   - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and runtime-derived benchmark/customer caps `max_unit_cost`/`max_weight_g`).
    - Read `benchmark_assembly_definition.yaml` as read-only benchmark context when it is present. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but do not treat it as an engineer-owned costing artifact.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).

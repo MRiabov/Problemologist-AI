@@ -116,12 +116,12 @@ The plan will have the following bullet points. The plan will be validated for c
 The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 2. A `todo.md` TODO list from the planner.
 3. A draft of `benchmark_definition.yaml` with rough values filled in.
-4. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; handed to engineering as read-only benchmark context).
+4. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; handed to engineering as read-only benchmark context). This file must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a minimal fixture declaration.
 5. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
-The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other.
-If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `benchmark_definition.yaml` and must not silently mutate those constraints.
+The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other. `moved_object.material_id` is mandatory and must reference a known material from `manufacturing_config.yaml`; empty strings or invented material IDs are invalid planner handoff.
+If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `benchmark_definition.yaml` and must not silently mutate those constraints. Runtime may backfill corresponding estimate fields only to keep the benchmark constraint contract internally consistent.
 
 `Benchmark Plan Reviewer` gate requirements:
 
@@ -130,9 +130,12 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Reject when planner artifacts mention benchmark objects, moving parts, joints, or zones that are not declared consistently across the planner handoff package.
+  - Reject when `moved_object.material_id` is missing, empty, or not known to `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
   - Reject when benchmark-local DOF/control metadata introduces unsupported or unjustified benchmark-side motion.
   - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis, motion limits or operating envelope, and whether the engineer may rely on the motion.
   - Reject when benchmark-side motion is impossible, unstable, or clearly over- or underconstrained for the intended puzzle.
+- Review-stage behavior:
+  - `Benchmark Plan Reviewer` is read-only with respect to planner-owned artifacts. It inspects, validates, and decides; it does not rewrite `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
 - Approval effect:
   - Only an approved benchmark plan reviewer handoff is allowed to pause in `PLANNED` state and unblock `Benchmark Coder`.
 
@@ -316,7 +319,7 @@ For each part:
 # YOUR MISSION: Guide the `moved_object` into the `goal_zone` while:
 #   1. Staying WITHIN the `build_zone` (you cannot build outside it)
 #   2. AVOIDING all `forbid_zones` (contact = failure)
-#   3. Respecting `max_unit_cost` and `max_weight` constraints
+#   3. Respecting runtime-derived `max_unit_cost` and `max_weight` caps
 #
 # Benchmark-owned environment geometry and metadata in this file are READ-ONLY.
 # Engineering assembly motion metadata is stored under engineering
@@ -371,7 +374,7 @@ simulation_bounds:
 moved_object:
   label: "projectile_ball"
   shape: "sphere"
-  material_id: abs
+  material_id: "abs"
   # Static randomization: shape varies between benchmark runs
   static_randomization:
     radius: [5, 10]  # [min, max] - actual value chosen per benchmark variant
@@ -383,10 +386,11 @@ moved_object:
 # -----------------------------------------------------------------------------
 # YOUR CONSTRAINTS
 # -----------------------------------------------------------------------------
-# These are challenging but achievable. Exceeding them = rejection.
+# Benchmark planner authors realistic estimate fields.
+# Runtime derives max caps as `1.5x` those estimates during `submit_plan()`.
 constraints:
-  max_unit_cost: 50.00  # USD - total cost of your manufactured parts
-  max_weight_g: 1200.0  # grams - total weight of your design
+  estimated_solution_cost_usd: 33.33
+  estimated_solution_weight_g: 800.0
 
 # Randomization metadata (for reproducibility)
 randomization:
@@ -396,7 +400,7 @@ randomization:
 
 `benchmark_definition.yaml` ownership rules:
 
-1. It owns benchmark/task geometry, randomization, benchmark/customer caps, and benchmark-owned fixture metadata.
+1. It owns benchmark/task geometry, randomization, benchmark/customer caps, benchmark planner estimates, and benchmark-owned fixture metadata.
 2. `benchmark_parts[].metadata` is benchmark-side metadata only. It describes read-only benchmark fixtures such as `fixed`, `material_id`, and attachment policy.
    - The Benchmark Planner defines which benchmark-owned parts are drillable or non-drillable through `attachment_policy`.
    - `attachment_policy.attachment_methods` is the allowlist of permitted engineer-to-fixture attachment methods.
@@ -410,6 +414,7 @@ randomization:
    - `attachment_policy.notes` is reviewer-facing guidance only and must not be treated as a machine-enforced fallback.
 3. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
 4. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
+5. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives `max_unit_cost` and `max_weight_g` from those estimates during `submit_plan()`.
 
 <!-- Note: we are using metric units and degrees. -->
 

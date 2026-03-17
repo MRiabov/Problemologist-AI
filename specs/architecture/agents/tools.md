@@ -234,7 +234,12 @@ The preferred execution path for the agent is to run the authored script itself,
 5. Persist the stage-specific plan-review manifest for the next reviewer gate:
    - Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
    - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
-6. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
+6. For `Benchmark Planner`, canonicalize benchmark constraints before final validation:
+   - require planner-authored `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g`,
+   - derive `constraints.max_unit_cost` and `constraints.max_weight_g` as `1.5x` those estimate fields,
+   - reject planner handoff if those estimate fields are missing, non-numeric, or non-positive.
+7. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
+8. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
 Structured-output validation contract for planner/reviewer YAML artifacts:
 
@@ -277,6 +282,12 @@ So:
 #### submit_for_review(compound: Compound)
 
 The Engineering Coder calls `submit_for_review(compound)` after validation and simulation pass for the latest code revision. This utility persists handover artifacts and marks the submission candidate as ready for review.
+
+Submission-stage contract:
+
+1. The submission call is reviewer-stage explicit; runtime must not guess a default reviewer stage when review submission is requested.
+2. Benchmark submission targets `Benchmark Reviewer` and resolves `benchmark_assembly_definition.yaml` as the stage-correct assembly artifact.
+3. Engineering and electronics submission targets resolve `assembly_definition.yaml` as the stage-correct assembly artifact.
 
 ## Prompt vs skill guidance
 
