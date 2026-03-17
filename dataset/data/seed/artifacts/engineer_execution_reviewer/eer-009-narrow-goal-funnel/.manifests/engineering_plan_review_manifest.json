@@ -1,11 +1,11 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "7c04c4e47e8b7547da39e7fc6faec2d0eba25b8ac8dbcdaa17f7737911e6bded",
+    "assembly_definition.yaml": "c2261488f9321677f275f0642224a0f05b5cc5b897ab4ec3d004ab733da12099",
     "plan.md": "ae3b6cf2d9dda366dbecbd4b9bf02328d53b928b6066b9876061ce46a0dc5928",
     "todo.md": "21f65b616b238e7fafbbe026d4e45e1fddc0e3a8bfe330e4f2e0fe70abfdfae5"
   },
   "planner_node_type": "engineer_planner",
-  "reviewer_stage": "engineering_plan_reviewer",
+  "reviewer_stage": "engineer_plan_reviewer",
   "session_id": "seed-eer-009-narrow-goal-funnel-plan",
   "status": "ready_for_review"
 }

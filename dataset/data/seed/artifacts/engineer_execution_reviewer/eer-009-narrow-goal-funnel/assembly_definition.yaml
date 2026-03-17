@@ -8,7 +8,7 @@ constraints:
   benchmark_max_unit_cost_usd: 75.0
   benchmark_max_weight_g: 1300.0
   planner_target_max_unit_cost_usd: 56.0
-  planner_target_max_weight_g: 980.0
+  planner_target_max_weight_g: 1030.0
 manufactured_parts:
   - part_name: funnel_base
     part_id: funnel_base
@@ -93,13 +93,6 @@ final_assembly:
   - name: precision_funnel
     config:
       dofs: []
-      parts:
-        - funnel_base
-        - wide_entry
-        - taper_left
-        - taper_right
-        - throat_insert
-        - goal_pocket
 totals:
   estimated_unit_cost_usd: 46.25
   estimated_weight_g: 1010.0

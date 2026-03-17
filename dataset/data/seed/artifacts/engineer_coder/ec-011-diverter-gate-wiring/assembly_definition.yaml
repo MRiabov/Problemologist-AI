@@ -56,9 +56,6 @@ final_assembly:
     config:
       dofs:
         - rotate_z
-      control:
-        mode: ON_OFF
-        speed: 1.0
   - name: gate_bracket
     config:
       dofs: []

@@ -86,16 +86,6 @@ final_assembly:
     config:
       dofs:
         - rotate_z
-      control:
-        mode: ON_OFF
-        speed: 1.0
-      parts:
-        - lift_base
-        - left_frame
-        - right_frame
-        - belt_bed
-        - upper_tray
-        - gearmotor_12v_60rpm
 totals:
   estimated_unit_cost_usd: 69.0
   estimated_weight_g: 1490.0

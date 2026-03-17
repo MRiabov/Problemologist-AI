@@ -28,9 +28,6 @@ moved_object:
   shape: sphere
   static_randomization:
     radius: [0.04, 0.04]
-    platform_height: [0.07, 0.09]
-    rail_y_offset: [-0.01, 0.01]
-    spawn_x_jitter: [-0.02, 0.02]
   start_position: [-0.5, 0.0, 0.12]
   runtime_jitter: [0.01, 0.005, 0.005]
 constraints:
@@ -45,22 +42,3 @@ assembly_totals:
   estimated_weight_g: 3900.0
   budget_leeway_pct: 50.0
   weight_leeway_pct: 28.0
-part_metadata:
-  platform_left:
-    material_id: aluminum_6061
-    part_type: static
-  platform_right:
-    material_id: aluminum_6061
-    part_type: static
-  guide_rail_lower:
-    material_id: steel_cold_rolled
-    part_type: static
-  guide_rail_upper:
-    material_id: steel_cold_rolled
-    part_type: static
-  ground_plane:
-    material_id: hdpe
-    part_type: static
-  projectile_ball:
-    material_id: steel_bearing
-    part_type: moved_object

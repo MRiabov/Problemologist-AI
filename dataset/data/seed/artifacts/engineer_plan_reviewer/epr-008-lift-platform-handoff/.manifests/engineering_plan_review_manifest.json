@@ -1,11 +1,11 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "a76363bd4ed32390a74f64aad2bef6a323ed038ff8ac1a25cd20c82972a85c72",
+    "assembly_definition.yaml": "31c0cb01c4b7add57ef24f9bfd7ded5d8a347b046f5f4b584615bf2294989bea",
     "plan.md": "4448a18eb7c70773f614e6fb778b6bac4b3b6aec06338bc2cc77c05d07f19487",
     "todo.md": "fe27e29c24f26cadef247ff2ddab40ed93c5f2a13537f8b4927b07f1e92555dc"
   },
   "planner_node_type": "engineer_planner",
-  "reviewer_stage": "engineering_plan_reviewer",
+  "reviewer_stage": "engineer_plan_reviewer",
   "session_id": "seed-epr-008-lift-platform-handoff",
   "status": "ready_for_review"
 }

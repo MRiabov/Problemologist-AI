@@ -93,13 +93,6 @@ final_assembly:
   - name: low_friction_route
     config:
       dofs: []
-      parts:
-        - slide_base
-        - entry_box
-        - guide_wall_left
-        - guide_wall_right
-        - blocker_bypass_panel
-        - goal_pocket
 totals:
   estimated_unit_cost_usd: 39.5
   estimated_weight_g: 870.0

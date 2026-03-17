@@ -5,7 +5,7 @@
     "todo.md": "b963cea3bbf422e616cfe39b3474aa73acf2274d61640fc78a9f7706eed51597"
   },
   "planner_node_type": "engineer_planner",
-  "reviewer_stage": "engineering_plan_reviewer",
+  "reviewer_stage": "engineer_plan_reviewer",
   "session_id": "seed-eer-002-gap-bridge-plan",
   "status": "ready_for_review"
 }

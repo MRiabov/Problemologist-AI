@@ -1,11 +1,11 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "8937a9faf7d32ed172af1833a44561f99a64417b310963b4eaed53d92215f3af",
-    "plan.md": "5ac23af85eb32c6db1c8bf0f33d42756a8d02cc215ee9447b559a1592ea98b36",
+    "assembly_definition.yaml": "dc1d78f2992c108d41e0eba4f575a563e1555d2fcbd583b6d3767b10430af73b",
+    "plan.md": "af28f357a16ed213c68dc53a6493e27cc4dc99fc404df523e555e3dd1994cb0e",
     "todo.md": "533b39257c9c19ddb698223bfd8bcee6eaee5cb1eeb3bf62fe92ab3475c6e6d0"
   },
   "planner_node_type": "electronics_planner",
-  "reviewer_stage": "engineering_plan_reviewer",
+  "reviewer_stage": "engineer_plan_reviewer",
   "session_id": "seed-epr-010-diverter-gate-wiring",
   "status": "ready_for_review"
 }

@@ -1,11 +1,11 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "5aa9e1a5f26819dab79c25e2dd4ff712d57a23cf2e7d8e654e51e86b8bb282f8",
+    "assembly_definition.yaml": "bea2bb50f7907172e9bbd68a6188eef7a310a4daf1b3d82f953704e70ebd53e2",
     "plan.md": "f7219a911c6dd0cad7bc8d4e6edbac4daa7e87972653ea25ee53cf89d80fd393",
     "todo.md": "a37a9f10846063124c00cbf7438180bb0c9b92b438c8acdea9512aa8cf4fc1f8"
   },
   "planner_node_type": "engineer_planner",
-  "reviewer_stage": "engineering_plan_reviewer",
+  "reviewer_stage": "engineer_plan_reviewer",
   "session_id": "seed-ec-007-low-friction-cube",
   "status": "ready_for_review"
 }

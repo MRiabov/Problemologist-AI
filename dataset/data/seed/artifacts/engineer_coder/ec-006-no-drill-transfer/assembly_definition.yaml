@@ -93,13 +93,6 @@ final_assembly:
   - name: freestanding_transfer
     config:
       dofs: []
-      parts:
-        - freestanding_base
-        - capture_funnel
-        - left_wall
-        - right_wall
-        - exit_tray
-        - ballast_block
 totals:
   estimated_unit_cost_usd: 42.75
   estimated_weight_g: 980.0

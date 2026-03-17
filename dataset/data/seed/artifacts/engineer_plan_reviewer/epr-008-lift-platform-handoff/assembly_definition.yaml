@@ -93,13 +93,6 @@ final_assembly:
   - name: platform_handoff
     config:
       dofs: []
-      parts:
-        - handoff_base
-        - catch_funnel
-        - upper_guide_left
-        - upper_guide_right
-        - goal_ramp
-        - platform_clearance_guard
 totals:
   estimated_unit_cost_usd: 39.25
   estimated_weight_g: 940.0

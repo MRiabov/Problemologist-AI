@@ -7,7 +7,7 @@ units:
 constraints:
   benchmark_max_unit_cost_usd: 85.0
   benchmark_max_weight_g: 1600.0
-  planner_target_max_unit_cost_usd: 67.0
+  planner_target_max_unit_cost_usd: 95.0
   planner_target_max_weight_g: 1300.0
 manufactured_parts:
   - part_name: base_plate
@@ -92,17 +92,6 @@ final_assembly:
     config:
       dofs:
         - rotate_x
-      control:
-        mode: ON_OFF
-        speed: 1.0
-      parts:
-        - base_plate
-        - entry_funnel
-        - roller_bed
-        - idler_guide
-        - goal_tray
-        - gearmotor_12v_60rpm
-        - safety_guard_set
 totals:
   estimated_unit_cost_usd: 92.5
   estimated_weight_g: 1400.0

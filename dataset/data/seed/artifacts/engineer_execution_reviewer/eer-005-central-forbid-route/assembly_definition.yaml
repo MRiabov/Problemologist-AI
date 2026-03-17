@@ -93,13 +93,6 @@ final_assembly:
   - name: routed_transfer
     config:
       dofs: []
-      parts:
-        - route_base
-        - entry_catcher
-        - outer_rail
-        - inner_rail
-        - blocker_skirt
-        - goal_tray
 totals:
   estimated_unit_cost_usd: 48.5
   estimated_weight_g: 1120.0

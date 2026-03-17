@@ -1,11 +1,11 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "866b1f670ff179d1cadd554d577c89b64354ea1f01d11d3a71d363b2223998c6",
+    "assembly_definition.yaml": "8a53d82c0be799b2e282fb221be9b2c803eeb22668cdda480fffe606f11db675",
     "plan.md": "569065e4441f707d14c392b66eee6786e66ecffe7631a4dec3486f982522b8ec",
     "todo.md": "8c370d85b785e93b33133f477ac57c5fff868bc139911b9a3592dd531b0095b5"
   },
   "planner_node_type": "engineer_planner",
-  "reviewer_stage": "engineering_plan_reviewer",
+  "reviewer_stage": "engineer_plan_reviewer",
   "session_id": "seed-ec-003-timed-gate-chute",
   "status": "ready_for_review"
 }

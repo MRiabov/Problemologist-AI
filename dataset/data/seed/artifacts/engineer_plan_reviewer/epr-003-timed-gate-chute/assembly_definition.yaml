@@ -99,17 +99,6 @@ final_assembly:
     config:
       dofs:
         - rotate_z
-      control:
-        mode: ON_OFF
-        speed: 1.0
-      parts:
-        - base_plate
-        - settling_chute
-        - metering_wheel_guard
-        - guide_rail
-        - post_gate_channel
-        - goal_cup
-        - gearmotor_12v_30rpm
 totals:
   estimated_unit_cost_usd: 67.5
   estimated_weight_g: 980.0

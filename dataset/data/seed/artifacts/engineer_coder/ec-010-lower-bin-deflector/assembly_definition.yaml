@@ -93,13 +93,6 @@ final_assembly:
   - name: lower_bin_redirector
     config:
       dofs: []
-      parts:
-        - catch_plate
-        - left_wall
-        - right_wall
-        - turn_lip
-        - lower_funnel
-        - support_column
 totals:
   estimated_unit_cost_usd: 43.75
   estimated_weight_g: 930.0

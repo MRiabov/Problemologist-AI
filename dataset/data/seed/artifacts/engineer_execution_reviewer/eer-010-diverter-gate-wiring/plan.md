@@ -10,9 +10,9 @@ Use a single pivoting diverter gate to switch the projectile ball from the neutr
 - **gate_motor**: 12V DC gearmotor that rotates the diverter gate.
 
 ## 3. Assembly Strategy
-- Bolt the `gate_bracket` to `mount_base` and keep both fixed.
-- Couple `gate_motor` output to `diverter_gate` through the left-wall mount.
-- Route electrical wiring through a left-wall cable corridor so no wire crosses the gate swing volume.
+1. Bolt the `gate_bracket` to `mount_base` and keep both fixed.
+2. Couple `gate_motor` output to `diverter_gate` through the left-wall mount.
+3. Route electrical wiring through a left-wall cable corridor so no wire crosses the gate swing volume.
 
 ## 4. Cost & Weight Budget
 - Benchmark caps: `max_unit_cost <= 65 USD`, `max_weight_g <= 1200 g`

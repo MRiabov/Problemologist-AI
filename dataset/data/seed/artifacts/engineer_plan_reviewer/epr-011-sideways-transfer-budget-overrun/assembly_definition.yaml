@@ -88,16 +88,6 @@ final_assembly:
       dofs:
         - rotate_x
         - translate_y
-      control:
-        mode: ON_OFF
-        speed: 1.0
-      parts:
-        - base_plate
-        - entry_funnel
-        - roller_bed
-        - idler_guide
-        - goal_tray
-        - gearmotor_12v_60rpm
 totals:
   estimated_unit_cost_usd: 62.5
   estimated_weight_g: 1240.0

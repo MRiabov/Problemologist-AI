@@ -31,7 +31,6 @@ moved_object:
   shape: sphere
   static_randomization:
     radius: [0.03, 0.03]
-    tunnel_width: [0.07, 0.08]
   start_position: [-0.42, 0.0, 0.09]
   runtime_jitter: [0.01, 0.004, 0.004]
 constraints:
