@@ -35,6 +35,25 @@ class HardCheckAggregate(BaseModel):
     total: int = 0
     passed: int = 0
     failed_seeds: list[str] = Field(default_factory=list)
+    failure_pointers: dict[str, "HardCheckFailurePointer"] = Field(default_factory=dict)
+
+
+class HardCheckRunLogPointer(BaseModel):
+    path: str
+    line: int
+    event: str | None = None
+    hint: str | None = None
+
+
+class HardCheckFailurePointer(BaseModel):
+    session_id: str | None = None
+    session_status: str | None = None
+    session_log_dir: str | None = None
+    log_pointers: list[str] = Field(default_factory=list)
+    run_log_pointers: list[HardCheckRunLogPointer] = Field(default_factory=list)
+    error_codes: list[str] = Field(default_factory=list)
+    error_messages: list[str] = Field(default_factory=list)
+    error_sources: list[str] = Field(default_factory=list)
 
 
 class GitStatusExpectation(BaseModel):

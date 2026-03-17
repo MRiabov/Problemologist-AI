@@ -40,6 +40,8 @@ from evals.logic.models import (
     GitEvalConfig,
     GitStatusExpectation,
     HardCheckAggregate,
+    HardCheckFailurePointer,
+    HardCheckRunLogPointer,
 )
 from evals.logic.review_checks import (
     planner_artifacts_present as _planner_artifacts_present,
@@ -92,6 +94,31 @@ _READABLE_AGENT_LOG_LOCK = Lock()
 SESSION_LOG_ROOT: Path | None = None
 
 _EVAL_KEY_RE = re.compile(r"([a-z]{1,12}-\d{3})", re.IGNORECASE)
+_ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+_RUN_LOG_EVENT_RE = re.compile(r"\[[^\]]+\]\s+([A-Za-z0-9_]+)\s+\[[^\]]+\]")
+_ERROR_LOG_CANDIDATE_FILES = (
+    "evals_errors.log",
+    "controller_errors.log",
+    "worker_light_errors.log",
+    "worker_heavy_errors.log",
+    "worker_heavy_temporal_errors.log",
+    "temporal_worker_errors.log",
+    "worker-light_errors.log",
+    "worker-heavy_errors.log",
+    "worker-heavy-temporal_errors.log",
+    "temporal-worker_errors.log",
+    "json/evals_errors.json",
+    "json/controller_errors.json",
+    "json/worker_light_errors.json",
+    "json/worker_heavy_errors.json",
+    "json/worker_heavy_temporal_errors.json",
+    "json/temporal_worker_errors.json",
+)
+_MAX_POINTER_CODES = 8
+_MAX_POINTER_MESSAGES = 8
+_MAX_POINTER_SOURCES = 8
+_MAX_POINTER_LOGS = 24
+_MAX_RUN_LOG_POINTERS = 3
 
 
 def _truncate_text(value: str, *, limit: int = 160) -> str:
@@ -147,6 +174,327 @@ def _parse_trace_json_content(raw_content: Any) -> dict[str, Any] | None:
             return parsed
 
     return None
+
+
+def _strip_ansi(value: str) -> str:
+    return _ANSI_ESCAPE_RE.sub("", value)
+
+
+def _extract_run_log_event(line: str) -> str:
+    match = _RUN_LOG_EVENT_RE.search(line)
+    if not match:
+        return ""
+    return _sanitize_readable_text(match.group(1))
+
+
+def _path_for_report(path: Path) -> str:
+    with contextlib.suppress(ValueError):
+        return str(path.relative_to(ROOT))
+    return str(path)
+
+
+def _append_unique_limited(target: list[str], value: Any, *, limit: int) -> None:
+    text = _sanitize_readable_text(value)
+    if not text:
+        return
+    if text in target:
+        return
+    if len(target) >= limit:
+        return
+    target.append(text)
+
+
+def _line_matches_tokens(line: str, *, tokens: list[str]) -> bool:
+    if not line:
+        return False
+    lowered = line.lower()
+    for token in tokens:
+        if token and token in lowered:
+            return True
+    return False
+
+
+def _iter_failure_log_paths(*, session_dir: Path) -> list[Path]:
+    search_roots: list[Path] = [session_dir]
+    if SESSION_LOG_ROOT is not None:
+        search_roots.append(SESSION_LOG_ROOT / "system")
+        search_roots.append(SESSION_LOG_ROOT.parent)
+
+    candidates: list[Path] = []
+    seen: set[str] = set()
+    for root in search_roots:
+        if not root.exists():
+            continue
+        for rel_path in _ERROR_LOG_CANDIDATE_FILES:
+            path = root / rel_path
+            if not path.exists():
+                continue
+            with contextlib.suppress(OSError):
+                key = str(path.resolve())
+                if key in seen:
+                    continue
+                seen.add(key)
+            candidates.append(path)
+    return candidates
+
+
+def _record_matches_failure_scope(
+    *,
+    line_text: str,
+    parsed: dict[str, Any] | None,
+    session_id: str,
+    episode_id: str,
+    task_id: str,
+    strict_scope: bool,
+) -> bool:
+    if strict_scope:
+        return True
+
+    tokens = [
+        _sanitize_readable_text(session_id).lower(),
+        _sanitize_readable_text(episode_id).lower(),
+        _sanitize_readable_text(task_id).lower(),
+    ]
+    if _line_matches_tokens(line_text, tokens=tokens):
+        return True
+
+    if not isinstance(parsed, dict):
+        return False
+
+    for key in ("session_id", "episode_id", "task_id", "seed_id", "benchmark_id"):
+        value = _sanitize_readable_text(parsed.get(key)).lower()
+        if value and value in tokens:
+            return True
+    return False
+
+
+def _collect_run_log_pointers(
+    *,
+    run_log_path: Path,
+    session_id: str,
+    episode_id: str,
+    task_id: str,
+    preferred_events: list[str],
+) -> list[HardCheckRunLogPointer]:
+    if not run_log_path.exists():
+        return []
+
+    session_token = _sanitize_readable_text(session_id).lower()
+    episode_token = _sanitize_readable_text(episode_id).lower()
+    task_token = _sanitize_readable_text(task_id).lower()
+    event_tokens = [token.lower() for token in preferred_events if token]
+    matches: list[tuple[int, int, str, str]] = []
+
+    with contextlib.suppress(Exception):
+        with run_log_path.open("r", encoding="utf-8", errors="replace") as handle:
+            for line_number, raw_line in enumerate(handle, start=1):
+                clean_line = _sanitize_readable_text(_strip_ansi(raw_line))
+                if not clean_line:
+                    continue
+
+                event_name = _extract_run_log_event(clean_line)
+                event_token = event_name.lower()
+                line_token = clean_line.lower()
+                score = 0
+                if session_token and session_token in line_token:
+                    score += 5
+                if episode_token and episode_token in line_token:
+                    score += 4
+                if task_token and task_token in line_token:
+                    score += 3
+                if event_token and event_token in event_tokens:
+                    score += 4
+                if _line_matches_tokens(line_token, tokens=event_tokens):
+                    score += 2
+                if "[error" in line_token or " traceback" in line_token:
+                    score += 1
+
+                if score <= 0:
+                    continue
+
+                matches.append((score, line_number, event_name, clean_line))
+
+    if not matches:
+        return []
+
+    matches.sort(key=lambda row: (row[0], row[1]), reverse=True)
+    pointers: list[HardCheckRunLogPointer] = []
+    seen_lines: set[int] = set()
+    report_path = _path_for_report(run_log_path)
+    for _, line_number, event_name, clean_line in matches:
+        if line_number in seen_lines:
+            continue
+        seen_lines.add(line_number)
+        pointers.append(
+            HardCheckRunLogPointer(
+                path=report_path,
+                line=line_number,
+                event=event_name or None,
+                hint=_truncate_text(clean_line, limit=220),
+            )
+        )
+        if len(pointers) >= _MAX_RUN_LOG_POINTERS:
+            break
+
+    return pointers
+
+
+def _build_seed_failure_pointer(
+    *,
+    task_id: str,
+    session_id: str,
+    episode_data: dict[str, Any] | None,
+    failure_context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    episode_id = _sanitize_readable_text((episode_data or {}).get("id"))
+    pointer = HardCheckFailurePointer(
+        session_id=session_id or None,
+        session_status=(
+            _sanitize_readable_text((episode_data or {}).get("status"))
+            if isinstance(episode_data, dict)
+            else None
+        )
+        or None,
+    )
+
+    if isinstance(failure_context, dict):
+        context_status = _sanitize_readable_text(failure_context.get("session_status"))
+        if context_status:
+            pointer.session_status = context_status
+
+        _append_unique_limited(
+            pointer.error_codes,
+            failure_context.get("error_code"),
+            limit=_MAX_POINTER_CODES,
+        )
+        _append_unique_limited(
+            pointer.error_messages,
+            failure_context.get("error_message"),
+            limit=_MAX_POINTER_MESSAGES,
+        )
+        _append_unique_limited(
+            pointer.error_sources,
+            failure_context.get("error_source"),
+            limit=_MAX_POINTER_SOURCES,
+        )
+
+    if SESSION_LOG_ROOT is None:
+        return pointer.model_dump(mode="json")
+
+    eval_log_key = _resolve_eval_log_key(task_id=task_id, session_id=session_id)
+    session_dir = SESSION_LOG_ROOT / eval_log_key
+    pointer.session_log_dir = _path_for_report(session_dir)
+
+    metadata_path = session_dir / "session_metadata.json"
+    _append_unique_limited(
+        pointer.log_pointers,
+        _path_for_report(metadata_path),
+        limit=_MAX_POINTER_LOGS,
+    )
+    if metadata_path.exists():
+        with contextlib.suppress(Exception):
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if isinstance(metadata, dict):
+                metadata_status = _sanitize_readable_text(metadata.get("status"))
+                if metadata_status:
+                    pointer.session_status = metadata_status
+
+    run_log_path = SESSION_LOG_ROOT.parent / "run_evals.log"
+    run_log_pointers = _collect_run_log_pointers(
+        run_log_path=run_log_path,
+        session_id=session_id,
+        episode_id=episode_id,
+        task_id=task_id,
+        preferred_events=list(pointer.error_codes),
+    )
+    pointer.run_log_pointers.extend(run_log_pointers)
+    if run_log_pointers:
+        _append_unique_limited(
+            pointer.log_pointers,
+            _path_for_report(run_log_path),
+            limit=_MAX_POINTER_LOGS,
+        )
+
+    for log_path in _iter_failure_log_paths(session_dir=session_dir):
+        _append_unique_limited(
+            pointer.log_pointers,
+            _path_for_report(log_path),
+            limit=_MAX_POINTER_LOGS,
+        )
+        strict_scope = log_path.is_relative_to(session_dir)
+        with contextlib.suppress(Exception):
+            with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+                for raw_line in handle:
+                    stripped = raw_line.strip()
+                    if not stripped:
+                        continue
+
+                    parsed: dict[str, Any] | None = None
+                    with contextlib.suppress(json.JSONDecodeError):
+                        parsed_candidate = json.loads(stripped)
+                        if isinstance(parsed_candidate, dict):
+                            parsed = parsed_candidate
+
+                    clean_line = _sanitize_readable_text(_strip_ansi(stripped))
+                    if not _record_matches_failure_scope(
+                        line_text=clean_line.lower(),
+                        parsed=parsed,
+                        session_id=session_id,
+                        episode_id=episode_id,
+                        task_id=task_id,
+                        strict_scope=strict_scope,
+                    ):
+                        continue
+
+                    if parsed is None:
+                        _append_unique_limited(
+                            pointer.error_messages,
+                            _truncate_text(clean_line, limit=220),
+                            limit=_MAX_POINTER_MESSAGES,
+                        )
+                        continue
+
+                    _append_unique_limited(
+                        pointer.error_codes,
+                        parsed.get("event"),
+                        limit=_MAX_POINTER_CODES,
+                    )
+                    _append_unique_limited(
+                        pointer.error_messages,
+                        parsed.get("error"),
+                        limit=_MAX_POINTER_MESSAGES,
+                    )
+                    _append_unique_limited(
+                        pointer.error_messages,
+                        parsed.get("exception"),
+                        limit=_MAX_POINTER_MESSAGES,
+                    )
+                    _append_unique_limited(
+                        pointer.error_messages,
+                        parsed.get("response_text"),
+                        limit=_MAX_POINTER_MESSAGES,
+                    )
+                    for err in parsed.get("errors") or []:
+                        _append_unique_limited(
+                            pointer.error_messages,
+                            _truncate_text(str(err), limit=220),
+                            limit=_MAX_POINTER_MESSAGES,
+                        )
+
+                    source_file = _sanitize_readable_text(parsed.get("filename"))
+                    source_line = parsed.get("lineno")
+                    if source_file:
+                        if isinstance(source_line, int):
+                            source_ref = f"{source_file}:{source_line}"
+                        else:
+                            source_ref = source_file
+                        _append_unique_limited(
+                            pointer.error_sources,
+                            source_ref,
+                            limit=_MAX_POINTER_SOURCES,
+                        )
+
+    return pointer.model_dump(mode="json")
 
 
 def _parse_task_id_filters(raw_task_id_filters: list[str] | None) -> set[str]:
@@ -602,6 +950,7 @@ async def _record_hard_check_outcomes(
     success: bool,
     episode_data: dict[str, Any] | None,
     session_id: str,
+    failure_context: dict[str, Any] | None = None,
 ) -> bool | None:
     cfg = reward_agent_configs.get(agent_name)
     if cfg is None or not cfg.hard_checks:
@@ -617,6 +966,7 @@ async def _record_hard_check_outcomes(
 
     hard_check_stats = stats[agent_name].setdefault("hard_checks", {})
     seed_id = item.id
+    failure_pointer: dict[str, Any] | None = None
     all_passed = True
     for check_name, check_cfg in cfg.hard_checks.items():
         bucket = hard_check_stats.setdefault(
@@ -633,9 +983,20 @@ async def _record_hard_check_outcomes(
         )
         if passed:
             bucket["passed"] += 1
-        elif seed_id not in bucket["failed_seeds"]:
-            bucket["failed_seeds"].append(seed_id)
+        else:
             all_passed = False
+            if failure_pointer is None:
+                failure_pointer = _build_seed_failure_pointer(
+                    task_id=item.id,
+                    session_id=session_id,
+                    episode_data=episode_data,
+                    failure_context=failure_context,
+                )
+            if seed_id not in bucket["failed_seeds"]:
+                bucket["failed_seeds"].append(seed_id)
+            failure_pointers = bucket.setdefault("failure_pointers", {})
+            if seed_id not in failure_pointers:
+                failure_pointers[seed_id] = failure_pointer
 
     return all_passed
 
@@ -1225,6 +1586,16 @@ async def _run_git_eval(
         success=success,
         episode_data=None,
         session_id=session_id,
+        failure_context=(
+            {
+                "error_code": "git_eval_failed",
+                "session_status": "failed",
+                "error_message": _truncate_text(failure_reason or "", limit=220),
+                "error_source": "evals/logic/runner.py",
+            }
+            if not success and failure_reason
+            else None
+        ),
     )
 
 
@@ -1366,6 +1737,14 @@ async def run_single_eval(
                     success=False,
                     episode_data=last_episode_data,
                     session_id=session_id,
+                    failure_context={
+                        "error_code": "eval_trigger_failed",
+                        "session_status": "trigger_failed",
+                        "error_message": _truncate_text(
+                            f"HTTP {resp.status_code}: {resp.text}", limit=220
+                        ),
+                        "error_source": "evals/logic/runner.py",
+                    },
                 )
                 if run_judge:
                     await _record_judge_outcomes(
@@ -1745,8 +2124,8 @@ async def run_single_eval(
                     )
                 )
             raise
-        except Exception:
-            log.exception("controller_request_failed")
+        except Exception as exc:
+            log.exception("controller_request_failed", session_id=session_id or None)
             stats[agent_name]["total"] += 1
             await _record_hard_check_outcomes(
                 stats=stats,
@@ -1756,6 +2135,12 @@ async def run_single_eval(
                 success=False,
                 episode_data=last_episode_data,
                 session_id=session_id,
+                failure_context={
+                    "error_code": "controller_request_failed",
+                    "session_status": "controller_request_failed",
+                    "error_message": _truncate_text(str(exc), limit=220),
+                    "error_source": "evals/logic/runner.py",
+                },
             )
             if run_judge:
                 await _record_judge_outcomes(
@@ -1973,6 +2358,17 @@ async def main():
                 (
                     "evals/current/temporal_worker_debug.log",
                     "temporal_worker_debug.log",
+                ),
+                ("evals/current/controller_errors.log", "controller_errors.log"),
+                ("evals/current/worker_light_errors.log", "worker_light_errors.log"),
+                ("evals/current/worker_heavy_errors.log", "worker_heavy_errors.log"),
+                (
+                    "evals/current/worker_heavy_temporal_errors.log",
+                    "worker_heavy_temporal_errors.log",
+                ),
+                (
+                    "evals/current/temporal_worker_errors.log",
+                    "temporal_worker_errors.log",
                 ),
                 ("evals/current/frontend.log", "frontend.log"),
                 ("evals/current/run_evals.log", "run_evals.log"),
@@ -2204,12 +2600,23 @@ async def main():
                 passed = int(raw.get("passed", 0))
                 failed_seeds = sorted(set(raw.get("failed_seeds", [])))
                 pass_rate = round((passed / total) * 100) if total else 0
-                checks_payload[check_name] = {
+                check_payload: dict[str, Any] = {
                     "pass_rate": f"{pass_rate}%",
                     "passed": passed,
                     "total": total,
                     "failed_seeds": failed_seeds,
                 }
+                raw_failure_pointers = raw.get("failure_pointers")
+                if isinstance(raw_failure_pointers, dict) and raw_failure_pointers:
+                    ordered_pointers: dict[str, Any] = {}
+                    for seed in failed_seeds:
+                        if seed in raw_failure_pointers:
+                            ordered_pointers[seed] = raw_failure_pointers[seed]
+                    for seed in sorted(raw_failure_pointers):
+                        if seed not in ordered_pointers:
+                            ordered_pointers[seed] = raw_failure_pointers[seed]
+                    check_payload["failure_pointers"] = ordered_pointers
+                checks_payload[check_name] = check_payload
             report[agent_key] = {
                 "ran_cases": ran_cases,
                 payload_key: checks_payload,
