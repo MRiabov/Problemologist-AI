@@ -34,8 +34,8 @@ moved_object:
   start_position: [-0.5, 0.0, 0.12]
   runtime_jitter: [0.01, 0.005, 0.005]
 constraints:
-  max_unit_cost: 120.0
-  max_weight_g: 5000.0
+  estimated_solution_cost_usd: 80.0
+  estimated_solution_weight_g: 3333.333333333333
 randomization:
   static_variation_id: v1.2
   runtime_jitter_enabled: true

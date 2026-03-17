@@ -34,8 +34,8 @@ moved_object:
   start_position: [-0.42, 0.0, 0.09]
   runtime_jitter: [0.01, 0.004, 0.004]
 constraints:
-  max_unit_cost: 90.0
-  max_weight_g: 3200.0
+  estimated_solution_cost_usd: 60.0
+  estimated_solution_weight_g: 2133.333333333333
 randomization:
   static_variation_id: tunnel-v1
   runtime_jitter_enabled: true
