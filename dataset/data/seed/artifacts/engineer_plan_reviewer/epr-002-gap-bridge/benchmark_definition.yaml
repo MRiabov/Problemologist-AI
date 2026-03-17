@@ -29,6 +29,7 @@ simulation_bounds:
 moved_object:
   label: transfer_cube
   shape: cube
+  material_id: abs
   static_randomization: {}
   start_position: [-250.0, 0.0, 70.0]
   runtime_jitter: [8.0, 8.0, 4.0]

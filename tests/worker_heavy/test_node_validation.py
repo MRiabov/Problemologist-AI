@@ -28,6 +28,7 @@ simulation_bounds:
 moved_object:
   label: "cube"
   shape: "box"
+  material_id: abs
   start_position: [0, 0, 0]
   runtime_jitter: [0, 0, 0]
 constraints:

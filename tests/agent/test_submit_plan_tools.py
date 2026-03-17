@@ -203,6 +203,7 @@ benchmark_parts:
 moved_object:
   label: ball
   shape: sphere
+  material_id: abs
 """
         }
     )

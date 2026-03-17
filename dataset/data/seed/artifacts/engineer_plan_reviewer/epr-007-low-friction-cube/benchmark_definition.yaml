@@ -29,6 +29,7 @@ simulation_bounds:
 moved_object:
   label: slider_cube
   shape: cube
+  material_id: abs
   static_randomization: {}
   start_position: [-280.0, 0.0, 24.0]
   runtime_jitter: [14.0, 12.0, 3.0]

@@ -109,6 +109,7 @@ simulation_bounds:
 moved_object:
   label: "test_ball"
   shape: "sphere"
+  material_id: abs
   start_position: [5, 5, 5]
   runtime_jitter: [0, 0, 0]
 constraints:

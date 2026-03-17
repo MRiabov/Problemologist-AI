@@ -198,9 +198,18 @@ class MovedObject(StrictContractModel):
 
     label: str
     shape: str
+    material_id: str
     static_randomization: StaticRandomization = StaticRandomization()
     start_position: CoercedTuple3D
     runtime_jitter: CoercedTuple3D
+
+    @field_validator("material_id")
+    @classmethod
+    def validate_material_id(cls, value: str) -> str:
+        material = value.strip()
+        if not material:
+            raise ValueError("material_id must be a non-empty string")
+        return material
 
 
 class MotorControl(StrictContractModel):

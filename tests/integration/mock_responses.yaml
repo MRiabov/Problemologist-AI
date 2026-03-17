@@ -572,6 +572,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   static_randomization:
                     radius: [1, 2]
                   start_position: [0, 0, 0]
@@ -762,6 +763,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -1142,6 +1144,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -1296,6 +1299,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
                 benchmark_parts:
@@ -1427,6 +1431,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
                 benchmark_parts:
@@ -1554,6 +1559,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
                 benchmark_parts:
@@ -1684,6 +1690,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
                 benchmark_parts:
@@ -1819,6 +1826,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0, 0, 0]
                   runtime_jitter: [0, 0, 0]
                 benchmark_parts:
@@ -3744,6 +3752,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -3840,6 +3849,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -3940,6 +3950,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -4051,6 +4062,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -4193,6 +4205,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   start_position: [0,0,20]
                   runtime_jitter: [1,1,1]
                 benchmark_parts:
@@ -4360,6 +4373,7 @@ scenarios:
                 moved_object:
                   label: "projectile_ball"
                   shape: "sphere"
+                  material_id: abs
                   static_randomization:
                     radius: [1, 2]
                   start_position: [0, 0, 0]

@@ -550,6 +550,7 @@ simulation_bounds: {min: [-20, -20, -20], max: [20, 20, 20]}
 moved_object:
   label: target_box
   shape: sphere
+  material_id: abs
   start_position: [0, 0, 0]
   runtime_jitter: [0, 0, 0]
 constraints:

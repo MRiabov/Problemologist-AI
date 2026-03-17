@@ -371,6 +371,7 @@ simulation_bounds:
 moved_object:
   label: "projectile_ball"
   shape: "sphere"
+  material_id: abs
   # Static randomization: shape varies between benchmark runs
   static_randomization:
     radius: [5, 10]  # [min, max] - actual value chosen per benchmark variant

@@ -4,6 +4,7 @@ objectives:
 moved_object:
   label: "projectile_ball"
   shape: "sphere"
+  material_id: abs
   start_position: [0,0,20]
   runtime_jitter: [1,1,1]
 benchmark_parts:

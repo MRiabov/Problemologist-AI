@@ -131,6 +131,20 @@ def validate_benchmark_definition_yaml(
 
         objectives = BenchmarkDefinition(**data)
 
+        material_id = objectives.moved_object.material_id
+        manufacturing_config = load_config()
+        known_material_ids = set(manufacturing_config.materials.keys())
+        known_material_ids.update(manufacturing_config.cnc.materials.keys())
+        known_material_ids.update(
+            manufacturing_config.injection_molding.materials.keys()
+        )
+        known_material_ids.update(manufacturing_config.three_dp.materials.keys())
+        if material_id not in known_material_ids:
+            return False, [
+                "moved_object.material_id must reference a known material from "
+                f"manufacturing_config.yaml (got '{material_id}')"
+            ]
+
         # WP2: Validate that fluids are NOT requested if using MuJoCo
         if objectives.physics.backend == SimulatorBackendType.MUJOCO:
             if objectives.fluids:

@@ -29,6 +29,7 @@ simulation_bounds:
 moved_object:
   label: projectile_ball
   shape: sphere
+  material_id: abs
   static_randomization:
     radius: [44.0, 46.0]
   start_position: [-200.0, 0.0, 60.0]

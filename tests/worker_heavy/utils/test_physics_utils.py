@@ -75,6 +75,7 @@ simulation_bounds: {min: [0,0,0], max: [1,1,1]}
 moved_object:
   label: x
   shape: sphere
+  material_id: abs
   start_position: [0,0,0]
   runtime_jitter: [0,0,0]
 constraints: {max_unit_cost: 0, max_weight_g: 0}
@@ -111,6 +112,7 @@ simulation_bounds: {min: [0,0,0], max: [1,1,1]}
 moved_object:
   label: x
   shape: sphere
+  material_id: abs
   start_position: [0,0,0]
   runtime_jitter: [0,0,0]
 constraints: {max_unit_cost: 0, max_weight_g: 0}

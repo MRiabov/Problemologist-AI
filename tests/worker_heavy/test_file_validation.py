@@ -32,6 +32,7 @@ simulation_bounds:
 moved_object:
   label: ball
   shape: sphere
+  material_id: abs
   start_position: [0, 0, 30]
   runtime_jitter: [2, 2, 1]
 constraints:
