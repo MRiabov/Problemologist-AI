@@ -13,6 +13,7 @@ from controller.agent.benchmark_handover_validation import (
     validate_benchmark_planner_handoff_artifacts,
 )
 from controller.agent.config import settings as agent_settings
+from controller.agent.render_validation import validate_render_images_non_black
 from controller.agent.review_handover import (
     validate_plan_reviewer_handover,
     validate_planner_artifacts_cross_contract,
@@ -60,6 +61,13 @@ _SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
     ".manifests/benchmark_review_manifest.json",
     ".manifests/engineering_execution_review_manifest.json",
     ".manifests/electronics_review_manifest.json",
+)
+
+_VISUAL_REVIEWER_TARGET_NODES: frozenset[AgentName] = frozenset(
+    {
+        AgentName.BENCHMARK_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
+    }
 )
 
 
@@ -754,6 +762,16 @@ async def validate_seeded_workspace_handoff_artifacts(
             )
             for message in benchmark_errors
         )
+
+    if target_node in _VISUAL_REVIEWER_TARGET_NODES:
+        render_error = await validate_render_images_non_black(worker_client)
+        if render_error is not None:
+            errors.append(
+                _seeded_schema_error(
+                    message=render_error,
+                    artifact_path="renders",
+                )
+            )
 
     return errors
 

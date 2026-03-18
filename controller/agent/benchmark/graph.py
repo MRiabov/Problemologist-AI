@@ -906,11 +906,6 @@ def define_graph():
                 return AgentName.BENCHMARK_CODER
             return AgentName.BENCHMARK_CODER
 
-        # Fallback for legacy behavior
-        if "APPROVED" in feedback:
-            if await _sidecars_disabled_for_state(state):
-                return END
-            return AgentName.SKILL_AGENT
         if feedback.startswith("STEERING:"):
             return AgentName.BENCHMARK_PLANNER
         return AgentName.BENCHMARK_CODER

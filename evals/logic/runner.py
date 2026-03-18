@@ -3,6 +3,7 @@ import asyncio
 import contextlib
 import json
 import os
+import random
 import re
 import shlex
 import shutil
@@ -69,6 +70,7 @@ from evals.logic.workspace import (
 from evals.logic.workspace import (
     seed_eval_workspace as _seed_eval_workspace,
 )
+from shared.agents.config import load_agents_config
 from shared.enums import (
     AgentName,
     EpisodeStatus,
@@ -831,6 +833,39 @@ def _extract_episode_cost_usd(episode: dict[str, Any] | None) -> float | None:
     return None
 
 
+def _extract_episode_failure_reason(episode: dict[str, Any] | None) -> str:
+    """Return a concise failure reason from episode metadata when available."""
+    if not isinstance(episode, dict):
+        return ""
+
+    metadata_raw = episode.get("metadata_vars")
+    if isinstance(metadata_raw, dict):
+        with contextlib.suppress(Exception):
+            metadata = EpisodeMetadata.model_validate(metadata_raw)
+            for candidate in (
+                metadata.error,
+                metadata.detailed_status,
+                metadata.terminal_reason,
+                metadata.failure_class,
+            ):
+                if candidate is None:
+                    continue
+                value = getattr(candidate, "value", candidate)
+                text = _sanitize_readable_text(value)
+                if text:
+                    return text
+
+    for key in ("error", "failure_reason", "reason", "detail", "message"):
+        value = episode.get(key)
+        if value is None:
+            continue
+        text = _sanitize_readable_text(value)
+        if text:
+            return text
+
+    return ""
+
+
 def _resolve_check_value(
     check_name: str,
     metrics: dict[str, Any],
@@ -1143,6 +1178,34 @@ def _planned_counts_as_success(agent_name: AgentName, spec: AgentEvalSpec) -> bo
         AgentName.ELECTRONICS_PLANNER,
         AgentName.BENCHMARK_PLANNER,
     }
+
+
+def _validate_unit_eval_allowlist(agent_name: AgentName, spec: AgentEvalSpec) -> None:
+    config = load_agents_config()
+    allowed = config.get_allowed_during_unit_eval(agent_name)
+    if not allowed:
+        raise ValueError(
+            f"unit-eval allowlist missing for {agent_name.value}; "
+            "configure allowed_during_unit_eval in config/agents_config.yaml"
+        )
+
+    required_roles: set[AgentName] = {agent_name}
+    if spec.request_agent_name is not None:
+        required_roles.add(spec.request_agent_name)
+    if spec.start_node is not None:
+        required_roles.add(spec.start_node)
+    required_roles.update(JUDGE_REVIEWER_CHAIN.get(agent_name, ()))
+
+    allowed_set = set(allowed)
+    missing_roles = sorted(
+        role.value for role in required_roles if role not in allowed_set
+    )
+    if missing_roles:
+        allowed_roles = ", ".join(role.value for role in allowed)
+        raise ValueError(
+            f"unit-eval allowlist for {agent_name.value} is missing required roles: "
+            f"{', '.join(missing_roles)}. Allowed roles: {allowed_roles}"
+        )
 
 
 async def _wait_for_controller_ready(
@@ -1686,6 +1749,7 @@ async def run_single_eval(
     Runs a single evaluation task for a specific agent type.
     """
     spec = AGENT_SPECS[agent_name]
+    _validate_unit_eval_allowlist(agent_name, spec)
 
     if spec.mode == EvalMode.GIT:
         await _run_git_eval(
@@ -2099,6 +2163,7 @@ async def run_single_eval(
                                     log.error(
                                         "eval_failed",
                                         session_id=session_id,
+                                        reason=review_error,
                                         error=review_error,
                                     )
                                 elif (
@@ -2109,7 +2174,16 @@ async def run_single_eval(
                                     log.info("eval_failed_as_expected")
                                     success = True
                                 else:
-                                    log.error("eval_failed", session_id=session_id)
+                                    log.error(
+                                        "eval_failed",
+                                        session_id=session_id,
+                                        reason=(
+                                            _extract_episode_failure_reason(
+                                                last_episode_data
+                                            )
+                                            or "episode reported FAILED"
+                                        ),
+                                    )
                             break
 
                         if status == EpisodeStatus.CANCELLED:
@@ -2267,6 +2341,11 @@ async def main():
     )
     parser.add_argument(
         "--limit", type=int, default=0, help="Limit number of eval items per agent"
+    )
+    parser.add_argument(
+        "--random",
+        action="store_true",
+        help="Randomize dataset selection before applying --limit",
     )
     parser.add_argument(
         "--task-id",
@@ -2542,7 +2621,16 @@ async def main():
                             item for item in data if item["id"] in selected_task_ids
                         ]
                     if args.limit > 0:
-                        data = data[: args.limit]
+                        if args.random:
+                            data = random.sample(data, k=min(args.limit, len(data)))
+                            logger.info(
+                                "random_eval_selection",
+                                agent=agent,
+                                limit=args.limit,
+                                selected_task_ids=[item["id"] for item in data],
+                            )
+                        else:
+                            data = data[: args.limit]
                     seed_dataset = json_path.relative_to(ROOT)
                     datasets[agent] = [
                         EvalDatasetItem.model_validate(

@@ -54,54 +54,6 @@ class PromptManager:
             ],
         }
 
-        # Add fallbacks for things not in prompts.yaml yet
-        templates.update(
-            {
-                "sidecar": """You are the Skill Learner. 
-Analyze the execution journal for the task: {{ task }}
-
-Journal:
-{{ journal }}
-
-Instructions:
-1. Identify any repeated struggles or successful breakthroughs.
-2. If a reusable pattern or "trick" is found, draft a new skill.
-3. If no significant new knowledge is found, say "No new skills identified."
-
-If suggesting a skill, output in this format:
-SKILL: <Short Title>
-CONTENT:
-# <Title>
-## Problem
-<Describe the problem encountered>
-## Solution
-<Describe the solution or best practice>
-## Example
-```python
-<Example code>
-```
-""",
-                "git_resolver": """You are a Git Merge Conflict Resolver.
-You have been given a file with git conflict markers (<<<<<<<, =======, >>>>>>>).
-
-Your task is to resolve the conflict intelligently.
-- The 'HEAD' (or 'ours') version is usually the Agent's new code or skill.
-- The 'remote' (or 'theirs') version is the existing code in the repository.
-
-Guidelines:
-1. Prefer the Agent's new content if it adds new value or fixes a problem.
-2. If the remote version has critical updates, try to merge them.
-3. Ensure the final code is syntactically correct and logical.
-4. Remove all conflict markers.
-
-Conflicting File Content:
-{{ content }}
-
-Output ONLY the resolved content. Do not include markdown code blocks (```) unless they are part of the file content itself.
-""",
-            }
-        )
-
         self.env = jinja2.Environment(loader=jinja2.DictLoader(templates))
 
     def render(self, template_name: str | AgentName, **kwargs: Any) -> str:

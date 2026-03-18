@@ -3,3 +3,4 @@ logs/** linguist-generated=true
 test_output/** linguist-generated=true
 controller_openapi.json linguist-generated=true
 worker_openapi.json linguist-generated=true
+dataset/data/seed/artifacts/benchmark_plan_reviewer/bpr-007-lift-platform-handoff/.manifests/benchmark_plan_review_manifest.json linguist-generated=true

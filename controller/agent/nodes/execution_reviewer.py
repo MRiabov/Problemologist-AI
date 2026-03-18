@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage
 from pydantic import BaseModel
 
 from controller.agent.config import settings
+from controller.agent.render_validation import validate_render_images_non_black
 from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
@@ -63,6 +64,20 @@ class ExecutionReviewerNode(BaseNode):
             return review
         if not await self._workspace_has_render_media():
             return review
+        render_error = await validate_render_images_non_black(self.ctx.worker_client)
+        if render_error is not None:
+            fixes = list(review.required_fixes or [])
+            fixes.append("Replace black or empty render images with visible renders.")
+            return review.model_copy(
+                update={
+                    "decision": ReviewDecision.REJECTED,
+                    "reason": (
+                        "Approval blocked: render media exists but at least one "
+                        "RGB render is black/empty."
+                    ),
+                    "required_fixes": fixes,
+                }
+            )
         if self._used_tool("inspect_media"):
             return review
         fixes = list(review.required_fixes or [])

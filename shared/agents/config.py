@@ -32,9 +32,38 @@ class AgentPolicy(BaseModel):
         default_factory=FilesystemPermissions
     )
     tools: list[str] | None = None
+    allowed_during_unit_eval: list[AgentName] = Field(default_factory=list)
     visual_inspection: VisualInspectionPolicy = Field(
         default_factory=VisualInspectionPolicy
     )
+
+    @field_validator("allowed_during_unit_eval", mode="before")
+    @classmethod
+    def _normalize_allowed_during_unit_eval(
+        cls, value: object
+    ) -> list[AgentName] | object:
+        if value is None:
+            return []
+        if isinstance(value, (str, AgentName)):
+            value = [value]
+        if not isinstance(value, list):
+            return value
+
+        normalized: list[AgentName] = []
+        seen: set[str] = set()
+        for raw_role in value:
+            if isinstance(raw_role, AgentName):
+                role = raw_role
+            else:
+                role_text = str(raw_role).strip()
+                if not role_text:
+                    continue
+                role = AgentName(role_text)
+            if role.value in seen:
+                continue
+            normalized.append(role)
+            seen.add(role.value)
+        return normalized
 
     @model_validator(mode="before")
     @classmethod
@@ -129,6 +158,15 @@ class AgentsConfig(BaseModel):
     execution: AgentExecutionConfig = Field(default_factory=AgentExecutionConfig)
     defaults: AgentPolicy = Field(default_factory=AgentPolicy)
     agents: dict[str, AgentPolicy] = Field(default_factory=dict)
+
+    def get_allowed_during_unit_eval(
+        self, agent_role: AgentName | str
+    ) -> tuple[AgentName, ...]:
+        key = agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        policy = self.agents.get(key)
+        if policy is None:
+            return ()
+        return tuple(policy.allowed_during_unit_eval)
 
 
 # Backward-compatible alias while import sites are migrated.

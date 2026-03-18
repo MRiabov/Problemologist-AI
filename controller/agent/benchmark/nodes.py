@@ -607,9 +607,15 @@ class BenchmarkPlannerNode(BaseNode):
 
         for retry_count in range(max_retries):
             try:
+                planner_execution_policy = self.ctx.fs.policy.get_execution_policy(
+                    AgentName.BENCHMARK_PLANNER
+                )
                 attempt_budget_seconds = max(
                     30.0,
-                    (float(settings.dspy_program_timeout_seconds) / float(max_retries))
+                    (
+                        float(planner_execution_policy.timeout_seconds)
+                        / float(max_retries)
+                    )
                     - 5.0,
                 )
                 attempt_started_at = time.monotonic()
@@ -632,9 +638,6 @@ class BenchmarkPlannerNode(BaseNode):
                 cots_search_calls = 0
                 no_tool_call_streak = 0
                 completion_timeout_streak = 0
-                planner_execution_policy = self.ctx.fs.policy.get_execution_policy(
-                    AgentName.BENCHMARK_PLANNER
-                )
                 for step_idx in range(
                     planner_execution_policy.native_tool_loop_max_iters
                 ):

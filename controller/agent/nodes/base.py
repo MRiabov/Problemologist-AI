@@ -1199,6 +1199,9 @@ class BaseNode:
             node_type
         ).native_tool_loop_max_iters
 
+    def _dspy_timeout_for_node(self, node_type: AgentName) -> float:
+        return float(self.ctx.fs.policy.get_execution_policy(node_type).timeout_seconds)
+
     def _get_tool_functions(
         self,
         tool_factory: Callable,
@@ -2029,7 +2032,7 @@ class BaseNode:
         prediction = None
         artifacts = {}
 
-        dspy_timeout = float(settings.dspy_program_timeout_seconds)
+        dspy_timeout = self._dspy_timeout_for_node(node_type)
 
         try:
             while retry_count < max_retries:

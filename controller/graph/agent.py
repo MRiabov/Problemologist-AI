@@ -32,6 +32,7 @@ def create_agent_graph(
         AgentName.ELECTRONICS_PLANNER,
         AgentName.ELECTRONICS_REVIEWER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.SKILL_AGENT,
     }:
         return engineering_graph, None
 
@@ -46,6 +47,7 @@ def create_agent_graph(
         AgentName.ENGINEER_PLAN_REVIEWER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
         AgentName.ELECTRONICS_REVIEWER,
+        AgentName.SKILL_AGENT,
     ]:
         # Unified engineering graph (Architect -> Engineer -> Critic)
         return engineering_graph, None

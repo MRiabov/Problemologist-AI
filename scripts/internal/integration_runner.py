@@ -912,6 +912,9 @@ def _bring_up_infra_and_migrate(integration_db_name: str) -> None:
     print("Infrastructure is up. Verifying Temporal gRPC stability...")
     _wait_for_temporal_stable_tcp()
 
+    print("Purging local S3 buckets before the run...")
+    _run(["uv", "run", "python", "scripts/cleanup_local_s3.py"])
+
     print(f"Ensuring integration database exists ({integration_db_name})...")
     _ensure_postgres_database(integration_db_name)
 
@@ -1453,6 +1456,7 @@ def _run_integration_command(
     os.environ["WORKER_URL"] = "http://127.0.0.1:18001"
     os.environ["WORKER_HEAVY_URL"] = "http://127.0.0.1:18002"
     os.environ["ASSET_S3_BUCKET"] = "problemologist"
+    os.environ["BACKUP_S3_BUCKET"] = "problemologist-backup"
     os.environ["BENCHMARK_SOURCE_BUCKET"] = "benchmarks-source"
     os.environ["BENCHMARK_ASSETS_BUCKET"] = "benchmarks-assets"
     os.environ["GENESIS_FORCE_CPU"] = "1"
@@ -1466,6 +1470,8 @@ def _run_integration_command(
         os.environ["SMOKE_TEST_MODE"] = "false"
 
     _load_env_file(repo_root / ".env")
+
+    _run(["bash", "scripts/env_down.sh"])
 
     if args.fast_sim:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"

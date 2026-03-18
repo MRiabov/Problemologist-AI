@@ -1823,7 +1823,7 @@
           },
           "timeout": {
             "type": "integer",
-            "maximum": 300.0,
+            "maximum": 600.0,
             "minimum": 1.0,
             "title": "Timeout",
             "default": 30

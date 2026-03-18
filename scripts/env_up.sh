@@ -29,6 +29,7 @@ export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
 export WORKER_URL="http://127.0.0.1:18001"
 export ASSET_S3_BUCKET="problemologist"
+export BACKUP_S3_BUCKET="${BACKUP_S3_BUCKET:-problemologist-backup}"
 
 # Load .env if it exists to pick up API keys (OpenAI, etc.)
 if [ -f .env ]; then
@@ -96,6 +97,9 @@ until python3 -c "import socket; socket.create_connection(('127.0.0.1', 17233), 
   sleep 2
   INFRA_COUNT=$((INFRA_COUNT + 1))
 done
+
+echo "Purging local S3 buckets before the run..."
+uv run python scripts/cleanup_local_s3.py
 
 echo "Running migrations..."
 uv run alembic upgrade head

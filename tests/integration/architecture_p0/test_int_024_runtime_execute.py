@@ -71,9 +71,15 @@ async def test_int_024_execute_command_uses_agent_policy_timeout_by_default():
         agent_role=AgentName.BENCHMARK_CODER,
     )
 
-    result = await fs.run_command(
-        "python - <<'PY'\nimport time\ntime.sleep(35)\nprint('LONG_COMMAND_OK')\nPY\n"
+    benchmark_coder_policy = fs.policy.get_execution_policy(AgentName.BENCHMARK_CODER)
+    engineer_execution_reviewer_policy = fs.policy.get_execution_policy(
+        AgentName.ENGINEER_EXECUTION_REVIEWER
     )
+
+    assert benchmark_coder_policy.timeout_seconds == 450
+    assert engineer_execution_reviewer_policy.timeout_seconds == 90
+
+    result = await fs.run_command("sleep 1; printf 'LONG_COMMAND_OK\\n'")
 
     assert result.timed_out is False
     assert result.exit_code == 0

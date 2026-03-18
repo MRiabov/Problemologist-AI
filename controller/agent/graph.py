@@ -574,6 +574,7 @@ def route_start(
     AgentName.ENGINEER_CODER,
     AgentName.ELECTRONICS_REVIEWER,
     AgentName.ENGINEER_EXECUTION_REVIEWER,
+    AgentName.SKILL_AGENT,
 ]:
     start_node = (state.start_node or "").strip()
     if not start_node:
@@ -592,6 +593,7 @@ def route_start(
         AgentName.ENGINEER_CODER,
         AgentName.ELECTRONICS_REVIEWER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
+        AgentName.SKILL_AGENT,
     }
     if requested not in allowed_start_nodes:
         logger.warning("unsupported_engineer_start_node", start_node=start_node)
