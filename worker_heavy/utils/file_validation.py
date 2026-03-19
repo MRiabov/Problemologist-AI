@@ -68,6 +68,11 @@ TEMPLATE_PLACEHOLDERS = [
 ]
 
 
+_MISSING_FILE_ERROR_RE = re.compile(
+    r"^Error:\s*File\s+'(?P<path>[^']+)'\s+not found\.?$", re.IGNORECASE
+)
+
+
 def _find_template_placeholders(filename: str, content: str) -> list[str]:
     """Return template placeholder markers, with Python-aware handling for ellipses."""
     found_placeholders = [
@@ -93,6 +98,18 @@ def _find_template_placeholders(filename: str, content: str) -> list[str]:
 
     found_placeholders.append("...")
     return found_placeholders
+
+
+def _is_missing_file_error(content: str, *, expected_path: str | None = None) -> bool:
+    """Return True when a read_file 404 placeholder was mistaken for content."""
+    match = _MISSING_FILE_ERROR_RE.match(content.strip())
+    if not match:
+        return False
+    if expected_path is None:
+        return True
+    returned_path = match.group("path").strip().lstrip("/")
+    normalized_expected = expected_path.strip().lstrip("/")
+    return returned_path == normalized_expected
 
 
 def validate_benchmark_definition_yaml(
@@ -594,6 +611,12 @@ def validate_node_output(
     """
     errors = []
 
+    def _missing_file(path: str) -> bool:
+        content = files_content_map.get(path)
+        if content is None or not content.strip():
+            return True
+        return _is_missing_file_error(content, expected_path=path)
+
     # 1. Required files check
     # If plan_refusal.md is present and valid, skip regular required files check
     if "plan_refusal.md" in files_content_map:
@@ -622,6 +645,7 @@ def validate_node_output(
                     "plan.md",
                     "todo.md",
                     "benchmark_definition.yaml",
+                    "script.py",
                 ],
                 AgentName.ELECTRONICS_PLANNER: [
                     "plan.md",
@@ -658,6 +682,7 @@ def validate_node_output(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+                "script.py",
             ],
             AgentName.ELECTRONICS_PLANNER: [
                 "plan.md",
@@ -678,11 +703,13 @@ def validate_node_output(
         }.get(node_type, [])
 
     for req_file in required_files:
-        if req_file not in files_content_map or not files_content_map[req_file].strip():
+        if _missing_file(req_file):
             errors.append(f"Missing required file: {req_file}")
 
     # 2. Template placeholder check
     for filename, content in files_content_map.items():
+        if _is_missing_file_error(content, expected_path=filename):
+            continue
         found_placeholders = _find_template_placeholders(filename, content)
         if found_placeholders:
             placeholder_list = ", ".join(found_placeholders)
@@ -692,6 +719,8 @@ def validate_node_output(
 
     # 3. Specific validation for known formats
     for filename, content in files_content_map.items():
+        if _is_missing_file_error(content, expected_path=filename):
+            continue
         if filename == "plan.md":
             plan_type = "engineering"  # Default to engineering for most nodes
             if "benchmark" in node_type or "# Learning Objective" in content:

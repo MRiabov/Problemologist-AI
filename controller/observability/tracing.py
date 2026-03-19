@@ -39,6 +39,13 @@ async def record_worker_events(
             select(Episode).where(Episode.id == episode_uuid)
         )
         episode = episode_res.scalar_one_or_none()
+        if episode is None:
+            logger.warning(
+                "record_worker_events_skipped_missing_episode",
+                episode_id=str(episode_uuid),
+                event_count=len(events),
+            )
+            return
         user_session_id = episode.user_session_id if episode else None
 
         logger.info(

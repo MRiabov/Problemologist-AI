@@ -73,6 +73,14 @@ async def sync_file_asset(episode_id_str: str, path: str, content: str):
         await sync_asset(episode_id_str, path, content)
 
 
+def _simulation_result_to_dict(res: Any) -> dict[str, Any]:
+    if hasattr(res, "model_dump"):
+        return res.model_dump(mode="json")
+    if isinstance(res, dict):
+        return res
+    return dict(res)
+
+
 def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailureMode:
     """Map raw failure reasons from simulation result to SimulationFailureMode enum."""
     if res_dict.get("success", True):
@@ -111,8 +119,9 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
     return SimulationFailureMode.NONE
 
 
-async def record_simulation_result(episode_id: str, res_dict: dict[str, Any]):
+async def record_simulation_result(episode_id: str, res: Any):
     """Records simulation result and instability events."""
+    res_dict = _simulation_result_to_dict(res)
     failure_reason = map_simulation_failure_reason(res_dict)
     simulation_run_id = uuid.uuid4().hex
 

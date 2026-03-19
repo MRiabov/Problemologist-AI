@@ -219,6 +219,7 @@ async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentStat
                 reviewer_label="Execution",
                 manifest_path=ENGINEERING_EXECUTION_REVIEW_MANIFEST,
                 expected_stage="engineering_execution_reviewer",
+                agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
             )
         ),
         ELECTRONICS_REVIEWER_HANDOVER_CHECK: (
@@ -227,6 +228,7 @@ async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentStat
                 reviewer_label="Electronics",
                 manifest_path=ELECTRONICS_REVIEW_MANIFEST,
                 expected_stage="electronics_reviewer",
+                agent_role=AgentName.ELECTRONICS_REVIEWER,
             )
         ),
     }

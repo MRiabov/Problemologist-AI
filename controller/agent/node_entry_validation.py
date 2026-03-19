@@ -292,6 +292,7 @@ async def reviewer_handover_custom_check_from_session_id(
     reviewer_label: str,
     manifest_path: str,
     expected_stage: ReviewerStage,
+    agent_role: AgentName | None = None,
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -310,6 +311,7 @@ async def reviewer_handover_custom_check_from_session_id(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
+        agent_role=agent_role or AgentName.ENGINEER_CODER,
     )
     try:
         handover_error = await validate_reviewer_handover(
@@ -371,6 +373,7 @@ async def benchmark_coder_handover_custom_check_from_session_id(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
+        agent_role=AgentName.BENCHMARK_CODER,
     )
     try:
         handoff_errors = await validate_benchmark_planner_handoff_artifacts(
@@ -414,6 +417,7 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
+        agent_role=AgentName.BENCHMARK_PLAN_REVIEWER,
     )
     try:
         handover_error = await validate_plan_reviewer_handover(
@@ -488,6 +492,7 @@ async def plan_reviewer_handover_custom_check_from_session_id(
         base_url=controller_settings.worker_light_url,
         heavy_url=controller_settings.worker_heavy_url,
         session_id=normalized_session_id,
+        agent_role=AgentName.ENGINEER_PLAN_REVIEWER,
     )
     try:
         handover_error = await validate_plan_reviewer_handover(

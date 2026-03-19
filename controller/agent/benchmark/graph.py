@@ -430,6 +430,7 @@ async def _custom_benchmark_reviewer_handover_check(
         reviewer_label="Benchmark",
         manifest_path=BENCHMARK_REVIEW_MANIFEST,
         expected_stage="benchmark_reviewer",
+        agent_role=AgentName.BENCHMARK_REVIEWER,
     )
 
 

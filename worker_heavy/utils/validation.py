@@ -229,7 +229,17 @@ def _validate_top_level_location_contract(component: Compound) -> str | None:
             (bbox.min.Y + bbox.max.Y) / 2,
             (bbox.min.Z + bbox.max.Z) / 2,
         )
-        if max(abs(axis) for axis in center) <= 0.05:
+        half_sizes = (
+            bbox.size.X / 2,
+            bbox.size.Y / 2,
+            bbox.size.Z / 2,
+        )
+
+        # A part that was created in place at the origin can legitimately have a
+        # non-zero bounding-box center when it is aligned to a face or edge.
+        # We only flag parts whose geometry is displaced beyond what the part's
+        # own dimensions explain, which is the pattern produced by `.translate(...)`.
+        if all(abs(center[i]) <= half_sizes[i] + 1e-6 for i in range(3)):
             continue
         offenders.append(label)
 

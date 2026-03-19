@@ -77,6 +77,7 @@ def test_validate_node_output_coder_success():
         "plan.md": VALID_ENGINEERING_PLAN,
         "todo.md": "- [ ] task 1",
         "benchmark_definition.yaml": VALID_BENCHMARK_DEFINITION_YAML,
+        "script.py": "from build123d import *\nresult = Box(1, 1, 1)\n",
     }
     is_valid, errors = validate_node_output("coder", files)
     assert is_valid, f"Validation failed with errors: {errors}"
@@ -88,9 +89,22 @@ def test_validate_node_output_benchmark_definition_template():
         "plan.md": "## 1. Solution Overview\nValid",
         "todo.md": "- [ ] task 1",
         "benchmark_definition.yaml": "objectives:\n  goal_zone:\n    min: [x, y, z]\n",
+        "script.py": "from build123d import *\nresult = Box(1, 1, 1)\n",
     }
     is_valid, errors = validate_node_output("coder", files)
     assert not is_valid
     assert any("benchmark_definition.yaml:" in e for e in errors) or any(
         "contains template placeholders" in e for e in errors
     )
+
+
+def test_validate_node_output_treats_missing_file_error_as_missing_artifact():
+    files = {
+        "plan.md": VALID_ENGINEERING_PLAN,
+        "todo.md": "- [ ] task 1",
+        "benchmark_definition.yaml": VALID_BENCHMARK_DEFINITION_YAML,
+        "script.py": "Error: File 'script.py' not found.",
+    }
+    is_valid, errors = validate_node_output("coder", files)
+    assert not is_valid
+    assert "Missing required file: script.py" in errors

@@ -85,6 +85,7 @@ class SharedNodeContext:
                 base_url=worker_light_url,
                 session_id=session_id,
                 heavy_url=settings.worker_heavy_url,
+                agent_role=agent_role,
             )
 
         if not fs:
@@ -772,6 +773,13 @@ class BaseNode:
         }
 
     @staticmethod
+    def _requires_script_artifact(node_type: AgentName) -> bool:
+        return node_type in {
+            AgentName.BENCHMARK_CODER,
+            AgentName.ENGINEER_CODER,
+        }
+
+    @staticmethod
     def _submit_plan_succeeded(result: Any) -> bool:
         payload = result
         if isinstance(payload, str):
@@ -898,6 +906,14 @@ class BaseNode:
         )
         submit_plan_succeeded = False
         no_tool_call_streak = 0
+
+        def workspace_file_exists_sync(path: str) -> bool:
+            future = asyncio.run_coroutine_threadsafe(
+                self.ctx.worker_client.exists(path),
+                self.ctx.main_loop,
+            )
+            return bool(future.result(timeout=10.0))
+
         native_lm = (
             self.ctx.dspy_lm
             if not prefer_multimodal
@@ -1041,6 +1057,26 @@ class BaseNode:
                         )
                         messages.append({"role": "system", "content": submit_reminder})
                         continue
+                    if self._requires_script_artifact(node_type):
+                        script_exists = workspace_file_exists_sync("script.py")
+                        refusal_exists = workspace_file_exists_sync("plan_refusal.md")
+                        if not script_exists and not refusal_exists:
+                            finish_reminder = (
+                                "Write script.py before finishing. "
+                                "If the plan is genuinely infeasible, write "
+                                "plan_refusal.md with evidence instead."
+                            )
+                            messages.append(
+                                self._tool_response_message(
+                                    tool_call_id=call.get("id", ""),
+                                    tool_name=completion_tool_name,
+                                    content=finish_reminder,
+                                )
+                            )
+                            messages.append(
+                                {"role": "system", "content": finish_reminder}
+                            )
+                            continue
                     missing_fields = [
                         field_name
                         for field_name in finish_fields
