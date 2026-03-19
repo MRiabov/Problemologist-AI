@@ -123,6 +123,41 @@ _MAX_POINTER_LOGS = 24
 _MAX_RUN_LOG_POINTERS = 3
 
 
+def _console_message(message: str) -> None:
+    print(message, flush=True)
+
+
+def _eval_case_label(
+    item: EvalDatasetItem, agent_name: AgentName, mode: EvalMode
+) -> str:
+    agent_label = (
+        agent_name.value if isinstance(agent_name, AgentName) else str(agent_name)
+    )
+    return f"{agent_label} {item.id} [{mode.value}]"
+
+
+def _emit_startup_log_pointers(
+    *,
+    current_link: Path,
+) -> None:
+    _console_message("Eval log files:")
+    _console_message(
+        f"{_path_for_report(current_link / 'run_evals.log')} - structured runner log for this run"
+    )
+    _console_message(
+        f"{_path_for_report(current_link / 'readable_agent_logs.log')} - condensed human-readable agent trace"
+    )
+    _console_message(
+        f"{_path_for_report(current_link / 'sessions')} - per-eval session logs and trace fanout"
+    )
+    _console_message(
+        f"{_path_for_report(current_link / 'hard_check_pass_rates.yaml')} - hard-check summary written at the end"
+    )
+    _console_message(
+        f"{_path_for_report(current_link / 'judge_pass_rates.yaml')} - judge/checklist summary written when --run-judge is enabled"
+    )
+
+
 def _truncate_text(value: str, *, limit: int = 160) -> str:
     text = value.strip()
     if len(text) <= limit:
@@ -1570,7 +1605,7 @@ async def _run_git_eval(
     stats: dict[AgentName, Any],
     agent_name: AgentName,
     reward_agent_configs: dict[AgentName, AgentRewardConfig],
-):
+) -> bool:
     task_id = item.id
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
     log.info("eval_start")
@@ -1734,6 +1769,7 @@ async def _run_git_eval(
             else None
         ),
     )
+    return success
 
 
 async def run_single_eval(
@@ -1750,13 +1786,18 @@ async def run_single_eval(
     """
     spec = AGENT_SPECS[agent_name]
     _validate_unit_eval_allowlist(agent_name, spec)
+    case_label = _eval_case_label(item, agent_name, spec.mode)
+    _console_message(f"eval case started: {case_label}")
 
     if spec.mode == EvalMode.GIT:
-        await _run_git_eval(
+        success = await _run_git_eval(
             item,
             stats,
             agent_name,
             reward_agent_configs,
+        )
+        _console_message(
+            f"eval case finished: {case_label} - {'success' if success else 'failed'}"
         )
         return
 
@@ -1790,275 +1831,322 @@ async def run_single_eval(
     last_episode_data: dict[str, Any] | None = None
     eval_log_key = _resolve_eval_log_key(task_id=task_id)
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            if spec.mode == EvalMode.BENCHMARK:
-                benchmark_session_id = uuid.uuid4()
-                session_id = str(benchmark_session_id)
-                eval_log_key = _resolve_eval_log_key(
-                    task_id=task_id, session_id=session_id
-                )
-                await _seed_eval_workspace(
-                    item=item,
-                    session_id=session_id,
-                    agent_name=agent_name,
-                    root=ROOT,
-                    worker_light_url=WORKER_LIGHT_URL,
-                    logger=logger,
-                )
-                await _preflight_seeded_entry_contract(
-                    item=item,
-                    session_id=session_id,
-                    agent_name=agent_name,
-                    spec=spec,
-                    worker_light_url=WORKER_LIGHT_URL,
-                    logger=logger,
-                )
-                url = f"{CONTROLLER_URL}/benchmark/generate"
-                payload = {
-                    "prompt": task_description,
-                    "session_id": session_id,
-                    "start_node": spec.start_node,
-                    "seed_id": lineage.seed_id,
-                    "seed_dataset": lineage.seed_dataset,
-                    "generation_kind": lineage.generation_kind,
-                }
-                status_url_template = f"{CONTROLLER_URL}/benchmark/{{session_id}}"
-                episode_id_key = "episode_id"
-                session_id_key = "session_id"
-            else:
-                session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            try:
+                if spec.mode == EvalMode.BENCHMARK:
+                    benchmark_session_id = uuid.uuid4()
+                    session_id = str(benchmark_session_id)
+                    eval_log_key = _resolve_eval_log_key(
+                        task_id=task_id, session_id=session_id
+                    )
+                    await _seed_eval_workspace(
+                        item=item,
+                        session_id=session_id,
+                        agent_name=agent_name,
+                        root=ROOT,
+                        worker_light_url=WORKER_LIGHT_URL,
+                        logger=logger,
+                    )
+                    await _preflight_seeded_entry_contract(
+                        item=item,
+                        session_id=session_id,
+                        agent_name=agent_name,
+                        spec=spec,
+                        worker_light_url=WORKER_LIGHT_URL,
+                        logger=logger,
+                    )
+                    url = f"{CONTROLLER_URL}/benchmark/generate"
+                    payload = {
+                        "prompt": task_description,
+                        "session_id": session_id,
+                        "start_node": spec.start_node,
+                        "seed_id": lineage.seed_id,
+                        "seed_dataset": lineage.seed_dataset,
+                        "generation_kind": lineage.generation_kind,
+                    }
+                    status_url_template = f"{CONTROLLER_URL}/benchmark/{{session_id}}"
+                    episode_id_key = "episode_id"
+                    session_id_key = "session_id"
+                else:
+                    session_id = f"eval-{task_id}-{uuid.uuid4().hex[:8]}"
 
-                await _seed_eval_workspace(
-                    item=item,
-                    session_id=session_id,
-                    agent_name=agent_name,
-                    root=ROOT,
-                    worker_light_url=WORKER_LIGHT_URL,
-                    logger=logger,
-                )
-                await _preflight_seeded_entry_contract(
-                    item=item,
-                    session_id=session_id,
-                    agent_name=agent_name,
-                    spec=spec,
-                    worker_light_url=WORKER_LIGHT_URL,
-                    logger=logger,
-                )
+                    await _seed_eval_workspace(
+                        item=item,
+                        session_id=session_id,
+                        agent_name=agent_name,
+                        root=ROOT,
+                        worker_light_url=WORKER_LIGHT_URL,
+                        logger=logger,
+                    )
+                    await _preflight_seeded_entry_contract(
+                        item=item,
+                        session_id=session_id,
+                        agent_name=agent_name,
+                        spec=spec,
+                        worker_light_url=WORKER_LIGHT_URL,
+                        logger=logger,
+                    )
 
-                url = f"{CONTROLLER_URL}/agent/run"
-                payload = {
-                    "task": task_description,
-                    "agent_name": spec.request_agent_name or agent_name,
-                    "start_node": spec.start_node or agent_name,
-                    "session_id": session_id,
-                    "metadata_vars": lineage.model_dump(exclude_none=True),
-                }
-                status_url_template = f"{CONTROLLER_URL}/episodes/{{episode_id}}"
-                episode_id_key = "episode_id"
-                session_id_key = "session_id"
+                    url = f"{CONTROLLER_URL}/agent/run"
+                    payload = {
+                        "task": task_description,
+                        "agent_name": spec.request_agent_name or agent_name,
+                        "start_node": spec.start_node or agent_name,
+                        "session_id": session_id,
+                        "metadata_vars": lineage.model_dump(exclude_none=True),
+                    }
+                    status_url_template = f"{CONTROLLER_URL}/episodes/{{episode_id}}"
+                    episode_id_key = "episode_id"
+                    session_id_key = "session_id"
 
-            resp = await client.post(url, json=payload)
-            if resp.status_code >= 400:
-                log.error(
-                    "eval_trigger_failed",
-                    status_code=resp.status_code,
-                    response_text=resp.text,
-                    session_id=session_id,
-                )
-                stats[agent_name]["total"] += 1
-                await _record_hard_check_outcomes(
-                    stats=stats,
-                    reward_agent_configs=reward_agent_configs,
-                    agent_name=agent_name,
-                    item=item,
-                    success=False,
-                    episode_data=last_episode_data,
-                    session_id=session_id,
-                    failure_context={
-                        "error_code": "eval_trigger_failed",
-                        "session_status": "trigger_failed",
-                        "error_message": _truncate_text(
-                            f"HTTP {resp.status_code}: {resp.text}", limit=220
-                        ),
-                        "error_source": "evals/logic/runner.py",
-                    },
-                )
-                if run_judge:
-                    await _record_judge_outcomes(
+                resp = await client.post(url, json=payload)
+                if resp.status_code >= 400:
+                    log.error(
+                        "eval_trigger_failed",
+                        status_code=resp.status_code,
+                        response_text=resp.text,
+                        session_id=session_id,
+                    )
+                    stats[agent_name]["total"] += 1
+                    await _record_hard_check_outcomes(
                         stats=stats,
                         reward_agent_configs=reward_agent_configs,
                         agent_name=agent_name,
                         item=item,
                         success=False,
-                        session_id=session_id,
                         episode_data=last_episode_data,
+                        session_id=session_id,
+                        failure_context={
+                            "error_code": "eval_trigger_failed",
+                            "session_status": "trigger_failed",
+                            "error_message": _truncate_text(
+                                f"HTTP {resp.status_code}: {resp.text}", limit=220
+                            ),
+                            "error_source": "evals/logic/runner.py",
+                        },
                     )
-                _write_eval_session_metadata(
-                    eval_log_key=eval_log_key,
-                    payload={
-                        "agent_name": agent_name.value,
-                        "episode_id": episode_id or None,
-                        "eval_mode": spec.mode.value,
-                        "session_id": session_id or None,
-                        "status": "trigger_failed",
-                        "success": False,
-                        "task_id": task_id,
-                    },
+                    if run_judge:
+                        await _record_judge_outcomes(
+                            stats=stats,
+                            reward_agent_configs=reward_agent_configs,
+                            agent_name=agent_name,
+                            item=item,
+                            success=False,
+                            session_id=session_id,
+                            episode_data=last_episode_data,
+                        )
+                    _write_eval_session_metadata(
+                        eval_log_key=eval_log_key,
+                        payload={
+                            "agent_name": agent_name.value,
+                            "episode_id": episode_id or None,
+                            "eval_mode": spec.mode.value,
+                            "session_id": session_id or None,
+                            "status": "trigger_failed",
+                            "success": False,
+                            "task_id": task_id,
+                        },
+                    )
+                    return
+
+                data = resp.json()
+                episode_id = str(
+                    data.get(episode_id_key) or data.get("episode_id") or ""
                 )
-                return
-            data = resp.json()
-            episode_id = str(data.get(episode_id_key) or data.get("episode_id") or "")
-            response_session_id = data.get(session_id_key) or data.get("session_id")
-            if response_session_id:
-                session_id = str(response_session_id)
-                eval_log_key = _resolve_eval_log_key(
-                    task_id=task_id, session_id=session_id
+                response_session_id = data.get(session_id_key) or data.get("session_id")
+                if response_session_id:
+                    session_id = str(response_session_id)
+                    eval_log_key = _resolve_eval_log_key(
+                        task_id=task_id, session_id=session_id
+                    )
+
+                status_url = status_url_template.format(
+                    session_id=session_id, episode_id=episode_id
                 )
+                max_attempts = 120
+                attempt = 0
+                seen_trace_ids = set()
+                seen_trace_errors: dict[int, str] = {}
+                seen_trace_results: dict[int, str] = {}
 
-            status_url = status_url_template.format(
-                session_id=session_id, episode_id=episode_id
-            )
-            max_attempts = 120
-            attempt = 0
-            seen_trace_ids = set()
-            seen_trace_errors: dict[int, str] = {}
-            seen_trace_results: dict[int, str] = {}
+                while attempt < max_attempts:
+                    await asyncio.sleep(5)
+                    attempt += 1
 
-            while attempt < max_attempts:
-                await asyncio.sleep(5)
-                attempt += 1
+                    try:
+                        status_resp = await client.get(status_url)
+                        if status_resp.status_code == 200:
+                            status_data = status_resp.json()
+                            last_episode_data = status_data
+                            status = status_data.get("status")
 
-                try:
-                    status_resp = await client.get(status_url)
-                    if status_resp.status_code == 200:
-                        status_data = status_resp.json()
-                        last_episode_data = status_data
-                        status = status_data.get("status")
-
-                        traces = status_data.get("traces", [])
-                        for trace in sorted(traces, key=lambda t: t.get("id", 0)):
-                            trace_id = trace.get("id")
-                            readable_line = _format_readable_trace_line(
-                                episode=status_data,
-                                trace=trace,
-                                default_agent_name=readable_agent_name,
-                            )
-                            if trace_id not in seen_trace_ids:
-                                # DEBUG trace lines are always written to logs.
-                                # They are also shown on console with DEBUG level.
-                                log.debug(
-                                    "trace_log",
-                                    trace_id=trace_id,
-                                    content=trace.get("content"),
+                            traces = status_data.get("traces", [])
+                            for trace in sorted(traces, key=lambda t: t.get("id", 0)):
+                                trace_id = trace.get("id")
+                                readable_line = _format_readable_trace_line(
+                                    episode=status_data,
+                                    trace=trace,
+                                    default_agent_name=readable_agent_name,
                                 )
-                                # --verbose prints the same lines via INFO.
-                                if verbose:
-                                    log.info(
+                                if trace_id not in seen_trace_ids:
+                                    log.debug(
                                         "trace_log",
                                         trace_id=trace_id,
                                         content=trace.get("content"),
                                     )
-                                if readable_line:
+                                    if verbose:
+                                        log.info(
+                                            "trace_log",
+                                            trace_id=trace_id,
+                                            content=trace.get("content"),
+                                        )
+                                    if readable_line:
+                                        _append_readable_log_line(
+                                            readable_line, eval_log_key=eval_log_key
+                                        )
+                                    seen_trace_ids.add(trace_id)
+
+                                error_line = _format_readable_trace_line(
+                                    episode=status_data,
+                                    trace=trace,
+                                    default_agent_name=readable_agent_name,
+                                    detail_mode="error",
+                                )
+                                error_text = error_line or ""
+                                prior_error_text = seen_trace_errors.get(trace_id, "")
+                                if error_text and error_text != prior_error_text:
                                     _append_readable_log_line(
-                                        readable_line, eval_log_key=eval_log_key
+                                        error_text, eval_log_key=eval_log_key
                                     )
-                                seen_trace_ids.add(trace_id)
+                                    seen_trace_errors[trace_id] = error_text
 
-                            error_line = _format_readable_trace_line(
-                                episode=status_data,
-                                trace=trace,
-                                default_agent_name=readable_agent_name,
-                                detail_mode="error",
-                            )
-                            error_text = error_line or ""
-                            prior_error_text = seen_trace_errors.get(trace_id, "")
-                            if error_text and error_text != prior_error_text:
-                                _append_readable_log_line(
-                                    error_text, eval_log_key=eval_log_key
+                                result_line = _format_readable_trace_line(
+                                    episode=status_data,
+                                    trace=trace,
+                                    default_agent_name=readable_agent_name,
+                                    detail_mode="result",
                                 )
-                                seen_trace_errors[trace_id] = error_text
-
-                            result_line = _format_readable_trace_line(
-                                episode=status_data,
-                                trace=trace,
-                                default_agent_name=readable_agent_name,
-                                detail_mode="result",
-                            )
-                            result_text = result_line or ""
-                            prior_result_text = seen_trace_results.get(trace_id, "")
-                            if result_text and result_text != prior_result_text:
-                                _append_readable_log_line(
-                                    result_text, eval_log_key=eval_log_key
-                                )
-                                seen_trace_results[trace_id] = result_text
-
-                        if _requires_expected_review_decision(spec):
-                            episode = await _fetch_episode(client, episode_id)
-                            last_episode_data = episode
-                            missing_traces = _missing_required_traces(
-                                spec.required_trace_names, episode
-                            )
-                            if not missing_traces:
-                                review_error = await _review_expectation_error(
-                                    item=item,
-                                    spec=spec,
-                                    session_id=session_id,
-                                    worker_light_url=WORKER_LIGHT_URL,
-                                )
-                                if review_error is None:
-                                    log.info(
-                                        "eval_review_decision_matched", status=status
+                                result_text = result_line or ""
+                                prior_result_text = seen_trace_results.get(trace_id, "")
+                                if result_text and result_text != prior_result_text:
+                                    _append_readable_log_line(
+                                        result_text, eval_log_key=eval_log_key
                                     )
-                                    success = True
-                                    break
-                                if not _review_artifact_pending(review_error):
-                                    log.error(
-                                        "eval_failed_expected_decision_mismatch",
-                                        session_id=session_id,
-                                        error=review_error,
-                                    )
-                                    break
+                                    seen_trace_results[trace_id] = result_text
 
-                        if (
-                            status == EpisodeStatus.PLANNED
-                            and _planned_counts_as_success(agent_name, spec)
-                        ):
-                            if agent_name == AgentName.BENCHMARK_PLANNER:
+                            if _requires_expected_review_decision(spec):
                                 episode = await _fetch_episode(client, episode_id)
                                 last_episode_data = episode
                                 missing_traces = _missing_required_traces(
                                     spec.required_trace_names, episode
                                 )
-                                if missing_traces:
-                                    log.error(
-                                        "eval_failed_missing_traces",
-                                        missing_traces=missing_traces,
+                                if not missing_traces:
+                                    review_error = await _review_expectation_error(
+                                        item=item,
+                                        spec=spec,
                                         session_id=session_id,
+                                        worker_light_url=WORKER_LIGHT_URL,
                                     )
-                                else:
-                                    log.info("eval_planned")
-                                    success = True
-                                break
+                                    if review_error is None:
+                                        log.info(
+                                            "eval_review_decision_matched",
+                                            status=status,
+                                        )
+                                        success = True
+                                        break
+                                    if not _review_artifact_pending(review_error):
+                                        log.error(
+                                            "eval_failed_expected_decision_mismatch",
+                                            session_id=session_id,
+                                            error=review_error,
+                                        )
+                                        break
 
                             if (
-                                spec.mode == EvalMode.BENCHMARK
-                                and not _requires_expected_review_decision(spec)
+                                status == EpisodeStatus.PLANNED
+                                and _planned_counts_as_success(agent_name, spec)
                             ):
-                                log.info("eval_planned_confirming")
-                                confirm_url = (
-                                    f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
-                                )
-                                confirm_resp = await client.post(confirm_url, json={})
-                                if confirm_resp.status_code >= 400:
-                                    log.error(
-                                        "benchmark_confirm_failed",
-                                        status_code=confirm_resp.status_code,
-                                        response_text=confirm_resp.text,
-                                        session_id=session_id,
+                                if agent_name == AgentName.BENCHMARK_PLANNER:
+                                    episode = await _fetch_episode(client, episode_id)
+                                    last_episode_data = episode
+                                    missing_traces = _missing_required_traces(
+                                        spec.required_trace_names, episode
                                     )
+                                    if missing_traces:
+                                        log.error(
+                                            "eval_failed_missing_traces",
+                                            missing_traces=missing_traces,
+                                            session_id=session_id,
+                                        )
+                                    else:
+                                        log.info("eval_planned")
+                                        success = True
                                     break
-                            else:
+
+                                if (
+                                    spec.mode == EvalMode.BENCHMARK
+                                    and not _requires_expected_review_decision(spec)
+                                ):
+                                    log.info("eval_planned_confirming")
+                                    confirm_url = f"{CONTROLLER_URL}/benchmark/{session_id}/confirm"
+                                    confirm_resp = await client.post(
+                                        confirm_url, json={}
+                                    )
+                                    if confirm_resp.status_code >= 400:
+                                        log.error(
+                                            "benchmark_confirm_failed",
+                                            status_code=confirm_resp.status_code,
+                                            response_text=confirm_resp.text,
+                                            session_id=session_id,
+                                        )
+                                        break
+                                else:
+                                    episode = await _fetch_episode(client, episode_id)
+                                    last_episode_data = episode
+                                    missing_traces = _missing_required_traces(
+                                        spec.required_trace_names, episode
+                                    )
+                                    if missing_traces:
+                                        log.error(
+                                            "eval_failed_missing_traces",
+                                            missing_traces=missing_traces,
+                                            session_id=session_id,
+                                        )
+                                    else:
+                                        completion_error = (
+                                            await _completion_contract_error(
+                                                spec=spec,
+                                                session_id=session_id,
+                                            )
+                                        )
+                                        if completion_error:
+                                            log.error(
+                                                "eval_failed_completion_contract",
+                                                session_id=session_id,
+                                                error=completion_error,
+                                            )
+                                        else:
+                                            review_error = (
+                                                await _review_expectation_error(
+                                                    item=item,
+                                                    spec=spec,
+                                                    session_id=session_id,
+                                                    worker_light_url=WORKER_LIGHT_URL,
+                                                )
+                                            )
+                                            if review_error:
+                                                log.error(
+                                                    "eval_failed_expected_decision_mismatch",
+                                                    session_id=session_id,
+                                                    error=review_error,
+                                                )
+                                            else:
+                                                log.info("eval_planned")
+                                                success = True
+                                    break
+
+                            if status == EpisodeStatus.COMPLETED:
                                 episode = await _fetch_episode(client, episode_id)
                                 last_episode_data = episode
                                 missing_traces = _missing_required_traces(
@@ -2095,32 +2183,21 @@ async def run_single_eval(
                                                 error=review_error,
                                             )
                                         else:
-                                            log.info("eval_planned")
+                                            log.info("eval_completed")
                                             success = True
                                 break
 
-                        if status == EpisodeStatus.COMPLETED:
-                            episode = await _fetch_episode(client, episode_id)
-                            last_episode_data = episode
-                            missing_traces = _missing_required_traces(
-                                spec.required_trace_names, episode
-                            )
-                            if missing_traces:
-                                log.error(
-                                    "eval_failed_missing_traces",
-                                    missing_traces=missing_traces,
-                                    session_id=session_id,
+                            if status == EpisodeStatus.FAILED:
+                                episode = await _fetch_episode(client, episode_id)
+                                last_episode_data = episode
+                                missing_traces = _missing_required_traces(
+                                    spec.required_trace_names, episode
                                 )
-                            else:
-                                completion_error = await _completion_contract_error(
-                                    spec=spec,
-                                    session_id=session_id,
-                                )
-                                if completion_error:
+                                if missing_traces:
                                     log.error(
-                                        "eval_failed_completion_contract",
+                                        "eval_failed_missing_traces",
+                                        missing_traces=missing_traces,
                                         session_id=session_id,
-                                        error=completion_error,
                                     )
                                 else:
                                     review_error = await _review_expectation_error(
@@ -2131,201 +2208,179 @@ async def run_single_eval(
                                     )
                                     if review_error:
                                         log.error(
-                                            "eval_failed_expected_decision_mismatch",
+                                            "eval_failed",
                                             session_id=session_id,
+                                            reason=review_error,
                                             error=review_error,
                                         )
-                                    else:
-                                        log.info("eval_completed")
+                                    elif (
+                                        item.expected_decision is not None
+                                        and item.expected_decision
+                                        != ReviewDecision.APPROVED
+                                    ):
+                                        log.info("eval_failed_as_expected")
                                         success = True
-                            break
+                                    else:
+                                        log.error(
+                                            "eval_failed",
+                                            session_id=session_id,
+                                            reason=(
+                                                _extract_episode_failure_reason(
+                                                    last_episode_data
+                                                )
+                                                or "episode reported FAILED"
+                                            ),
+                                        )
+                                break
 
-                        if status == EpisodeStatus.FAILED:
-                            episode = await _fetch_episode(client, episode_id)
-                            last_episode_data = episode
-                            missing_traces = _missing_required_traces(
-                                spec.required_trace_names, episode
-                            )
-                            if missing_traces:
-                                log.error(
-                                    "eval_failed_missing_traces",
-                                    missing_traces=missing_traces,
-                                    session_id=session_id,
+                            if status == EpisodeStatus.CANCELLED:
+                                log.warning("eval_cancelled")
+                                break
+
+                            if attempt % 6 == 0:
+                                log.info(
+                                    "eval_still_running", status=status, attempt=attempt
                                 )
-                            else:
-                                review_error = await _review_expectation_error(
-                                    item=item,
-                                    spec=spec,
-                                    session_id=session_id,
-                                    worker_light_url=WORKER_LIGHT_URL,
-                                )
-                                if review_error:
-                                    log.error(
-                                        "eval_failed",
-                                        session_id=session_id,
-                                        reason=review_error,
-                                        error=review_error,
-                                    )
-                                elif (
-                                    item.expected_decision is not None
-                                    and item.expected_decision
-                                    != ReviewDecision.APPROVED
-                                ):
-                                    log.info("eval_failed_as_expected")
-                                    success = True
-                                else:
-                                    log.error(
-                                        "eval_failed",
-                                        session_id=session_id,
-                                        reason=(
-                                            _extract_episode_failure_reason(
-                                                last_episode_data
-                                            )
-                                            or "episode reported FAILED"
-                                        ),
-                                    )
-                            break
-
-                        if status == EpisodeStatus.CANCELLED:
-                            log.warning("eval_cancelled")
-                            break
-
-                        if attempt % 6 == 0:
-                            log.info(
-                                "eval_still_running", status=status, attempt=attempt
+                        else:
+                            log.warning(
+                                "eval_status_check_failed",
+                                status_code=status_resp.status_code,
                             )
-                    else:
-                        log.warning(
-                            "eval_status_check_failed",
-                            status_code=status_resp.status_code,
-                        )
-                except Exception:
-                    log.exception("eval_status_check_exception")
+                    except Exception:
+                        log.exception("eval_status_check_exception")
 
-            if attempt >= max_attempts:
-                log.warning("eval_timeout", max_attempts=max_attempts)
+                if attempt >= max_attempts:
+                    log.warning("eval_timeout", max_attempts=max_attempts)
 
-            agent_stats = stats[agent_name]
-            eval_cost_usd = _extract_episode_cost_usd(last_episode_data)
-            agent_stats["total"] += 1
-            if eval_cost_usd is not None:
-                agent_stats["total_cost_usd"] += eval_cost_usd
-                agent_stats["costed_cases"] += 1
-            if success:
-                agent_stats["success"] += 1
+                agent_stats = stats[agent_name]
+                eval_cost_usd = _extract_episode_cost_usd(last_episode_data)
+                agent_stats["total"] += 1
+                if eval_cost_usd is not None:
+                    agent_stats["total_cost_usd"] += eval_cost_usd
+                    agent_stats["costed_cases"] += 1
+                if success:
+                    agent_stats["success"] += 1
 
-                worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
-                handler = METRIC_HANDLERS.get(agent_name)
-                try:
-                    if handler:
-                        await handler(worker, session_id, agent_stats)
-                finally:
-                    await worker.aclose()
+                    worker = WorkerClient(
+                        base_url=WORKER_LIGHT_URL, session_id=session_id
+                    )
+                    handler = METRIC_HANDLERS.get(agent_name)
+                    try:
+                        if handler:
+                            await handler(worker, session_id, agent_stats)
+                    finally:
+                        await worker.aclose()
 
-            hard_checks_passed = await _record_hard_check_outcomes(
-                stats=stats,
-                reward_agent_configs=reward_agent_configs,
-                agent_name=agent_name,
-                item=item,
-                success=success,
-                episode_data=last_episode_data,
-                session_id=session_id,
-            )
-            reviewer_episodes: list[dict[str, Any]] = []
-            if (
-                run_judge
-                and run_reviewers_with_judge
-                and success
-                and hard_checks_passed is True
-            ):
-                reviewer_episodes = await _run_reviewer_chain_for_judge(
-                    client=client,
-                    agent_name=agent_name,
-                    session_id=session_id,
-                    task_description=task_description,
-                    lineage=lineage,
-                    log=log,
-                )
-
-            if run_judge:
-                await _record_judge_outcomes(
+                hard_checks_passed = await _record_hard_check_outcomes(
                     stats=stats,
                     reward_agent_configs=reward_agent_configs,
                     agent_name=agent_name,
                     item=item,
                     success=success,
-                    session_id=session_id,
                     episode_data=last_episode_data,
-                    extra_episodes=reviewer_episodes,
+                    session_id=session_id,
                 )
-        except asyncio.CancelledError:
-            log.warning(
-                "eval_run_interrupted",
-                session_id=session_id or None,
-                episode_id=episode_id or None,
-            )
-            if episode_id:
-                await asyncio.shield(
-                    _request_episode_interrupt(
-                        episode_id,
+                reviewer_episodes: list[dict[str, Any]] = []
+                if (
+                    run_judge
+                    and run_reviewers_with_judge
+                    and success
+                    and hard_checks_passed is True
+                ):
+                    reviewer_episodes = await _run_reviewer_chain_for_judge(
+                        client=client,
+                        agent_name=agent_name,
+                        session_id=session_id,
+                        task_description=task_description,
+                        lineage=lineage,
                         log=log,
                     )
+
+                if run_judge:
+                    await _record_judge_outcomes(
+                        stats=stats,
+                        reward_agent_configs=reward_agent_configs,
+                        agent_name=agent_name,
+                        item=item,
+                        success=success,
+                        session_id=session_id,
+                        episode_data=last_episode_data,
+                        extra_episodes=reviewer_episodes,
+                    )
+            except asyncio.CancelledError:
+                log.warning(
+                    "eval_run_interrupted",
+                    session_id=session_id or None,
+                    episode_id=episode_id or None,
                 )
-            raise
-        except Exception as exc:
-            log.exception("controller_request_failed", session_id=session_id or None)
-            stats[agent_name]["total"] += 1
-            await _record_hard_check_outcomes(
-                stats=stats,
-                reward_agent_configs=reward_agent_configs,
-                agent_name=agent_name,
-                item=item,
-                success=False,
-                episode_data=last_episode_data,
-                session_id=session_id,
-                failure_context={
-                    "error_code": "controller_request_failed",
-                    "session_status": "controller_request_failed",
-                    "error_message": _truncate_text(str(exc), limit=220),
-                    "error_source": "evals/logic/runner.py",
-                },
-            )
-            if run_judge:
-                await _record_judge_outcomes(
+                if episode_id:
+                    await asyncio.shield(
+                        _request_episode_interrupt(
+                            episode_id,
+                            log=log,
+                        )
+                    )
+                raise
+            except Exception as exc:
+                log.exception(
+                    "controller_request_failed", session_id=session_id or None
+                )
+                stats[agent_name]["total"] += 1
+                await _record_hard_check_outcomes(
                     stats=stats,
                     reward_agent_configs=reward_agent_configs,
                     agent_name=agent_name,
                     item=item,
                     success=False,
-                    session_id=session_id,
                     episode_data=last_episode_data,
+                    session_id=session_id,
+                    failure_context={
+                        "error_code": "controller_request_failed",
+                        "session_status": "controller_request_failed",
+                        "error_message": _truncate_text(str(exc), limit=220),
+                        "error_source": "evals/logic/runner.py",
+                    },
                 )
-            _write_eval_session_metadata(
-                eval_log_key=eval_log_key,
-                payload={
-                    "agent_name": agent_name.value,
-                    "episode_id": episode_id or None,
-                    "eval_mode": spec.mode.value,
-                    "session_id": session_id or None,
-                    "status": "controller_request_failed",
-                    "success": False,
-                    "task_id": task_id,
-                },
-            )
-            return
-
-    _write_eval_session_metadata(
-        eval_log_key=eval_log_key,
-        payload={
-            "agent_name": agent_name.value,
-            "episode_id": episode_id or None,
-            "eval_mode": spec.mode.value,
-            "session_id": session_id or None,
-            "status": "completed",
-            "success": success,
-            "task_id": task_id,
-        },
-    )
+                if run_judge:
+                    await _record_judge_outcomes(
+                        stats=stats,
+                        reward_agent_configs=reward_agent_configs,
+                        agent_name=agent_name,
+                        item=item,
+                        success=False,
+                        session_id=session_id,
+                        episode_data=last_episode_data,
+                    )
+                _write_eval_session_metadata(
+                    eval_log_key=eval_log_key,
+                    payload={
+                        "agent_name": agent_name.value,
+                        "episode_id": episode_id or None,
+                        "eval_mode": spec.mode.value,
+                        "session_id": session_id or None,
+                        "status": "controller_request_failed",
+                        "success": False,
+                        "task_id": task_id,
+                    },
+                )
+                return
+        _write_eval_session_metadata(
+            eval_log_key=eval_log_key,
+            payload={
+                "agent_name": agent_name.value,
+                "episode_id": episode_id or None,
+                "eval_mode": spec.mode.value,
+                "session_id": session_id or None,
+                "status": "completed",
+                "success": success,
+                "task_id": task_id,
+            },
+        )
+    finally:
+        _console_message(
+            f"eval case finished: {case_label} - {'success' if success else 'failed'}"
+            + (f" session_id={session_id}" if session_id else "")
+        )
 
 
 async def main():
@@ -2391,9 +2446,9 @@ async def main():
         "--log-level",
         "--log_level",
         type=str,
-        default="DEBUG",
+        default="ERROR",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Log level for the console output (default: DEBUG)",
+        help="Console log level; detailed logs are written to files (default: ERROR)",
     )
     args = parser.parse_args()
     selected_task_ids = _parse_task_id_filters(args.task_id)
@@ -2466,13 +2521,13 @@ async def main():
     READABLE_AGENT_LOG_FILE = readable_log_file
     SESSION_LOG_ROOT = session_log_root
 
-    print(f"Logging to: {log_file} (and symlinked at {latest_log})")
-    print(f"Readable agent logs: {readable_log_file}")
-    print(f"Per-eval session logs: {session_log_root}")
+    _emit_startup_log_pointers(
+        current_link=current_link,
+    )
     logger.info("eval_run_start", log_dir=str(log_dir))
 
     start_time = time.time()
-    print(f"Agent Evals Started at: {time.ctime(start_time)}")
+    _console_message(f"Agent evals started: {time.ctime(start_time)}")
 
     # Run env_up.sh before checking health or starting evaluations
     if not args.skip_env_up:
@@ -2538,8 +2593,8 @@ async def main():
 
         except subprocess.CalledProcessError as e:
             logger.warning("env_up_failed", stdout=e.stdout, stderr=e.stderr)
-            print(f"ERROR: env_up.sh failed with exit code {e.returncode}")
-            print(f"Check logs for details: {log_file}")
+            _console_message(f"ERROR: env_up.sh failed with exit code {e.returncode}")
+            _console_message(f"Check logs for details: {_path_for_report(log_file)}")
             sys.exit(1)
         except Exception:
             logger.exception("env_up_exception")
@@ -2670,8 +2725,8 @@ async def main():
             await _preflight_selected_seeded_tasks(tasks=tasks)
         except Exception as exc:
             logger.error("eval_seed_preflight_abort", error=str(exc))
-            print("ERROR: eval seeded preflight failed before execution.")
-            print(str(exc))
+            _console_message("ERROR: eval seeded preflight failed before execution.")
+            _console_message(str(exc))
             sys.exit(1)
         logger.info("eval_seed_preflight_completed", total_tasks=len(tasks))
 
@@ -2807,30 +2862,11 @@ async def main():
             default_flow_style=False,
         )
 
-    print("Hard check pass rates:")
-    print(
-        yaml.safe_dump(
-            hard_check_report,
-            sort_keys=True,
-            allow_unicode=False,
-            default_flow_style=False,
-        ).rstrip()
-    )
-    print(f"Hard check report: {hard_check_report_path}")
     logger.info(
         "hard_check_report_written",
         path=str(hard_check_report_path),
         agents=list(hard_check_report.keys()),
     )
-    if total_costed_cases > 0:
-        avg_cost = total_cost_usd / total_costed_cases
-        print(
-            "Average eval case cost: "
-            f"${avg_cost:.6f} "
-            f"(total ${total_cost_usd:.6f} across {total_costed_cases} costed cases)"
-        )
-    else:
-        print("Average eval case cost: unavailable (no cost telemetry recorded)")
 
     if args.run_judge:
         judge_report = _build_check_report("judge_checks", "judge_checks")
@@ -2844,16 +2880,6 @@ async def main():
                 default_flow_style=False,
             )
 
-        print("Judge/checklist pass rates:")
-        print(
-            yaml.safe_dump(
-                judge_report,
-                sort_keys=True,
-                allow_unicode=False,
-                default_flow_style=False,
-            ).rstrip()
-        )
-        print(f"Judge report: {judge_report_path}")
         logger.info(
             "judge_report_written",
             path=str(judge_report_path),
@@ -2863,8 +2889,8 @@ async def main():
 
     finish_time = time.time()
     duration = finish_time - start_time
-    print(f"Agent Evals Finished at: {time.ctime(finish_time)}")
-    print(f"Total Duration: {duration:.2f}s")
+    _console_message(f"Agent evals finished: {time.ctime(finish_time)}")
+    _console_message(f"Total duration: {duration:.2f}s")
     logger.info("eval_run_finished", duration_s=round(duration, 2))
 
 
@@ -2872,7 +2898,7 @@ def run_cli() -> None:
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Agent evals interrupted.")
+        _console_message("Agent evals interrupted.")
 
 
 if __name__ == "__main__":

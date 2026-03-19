@@ -136,6 +136,12 @@ Validation-preview tests should therefore assert:
 7. RGB preview output reflects configured material colors for differing `material_id` values.
 8. When `benchmark_definition.yaml` contains `goal_zone`, `forbid_zones`, and `build_zone`, the RGB preview output includes visible green, red, and gray objective boxes rather than dropping those visuals.
 
+### Heavy-request routing contract
+
+Controller-initiated heavy operations are expected to travel through Temporal workflows. Integration tests that verify product behavior from controller or agent tool paths should assert workflow lifecycle, persisted events, and returned results from the Temporal-mediated path.
+
+Direct `worker-heavy` HTTP requests remain valid only in integration tests that exercise worker-level boundaries such as single-flight admission, crash containment, and preview artifact generation. They are not the product-path routing model for controller tool calls.
+
 ## Required integration test suite
 
 Priorities:
@@ -295,6 +301,7 @@ Determinism rule for this category:
 | INT-183 | P1 | Steerability queue single-consumption contract | Queued steering prompt is consumed once, affects subsequent node context in-run, and does not replay unexpectedly in later turns. |
 | INT-185 | P1 | Agent-failed tool error routing contract | Trigger a deterministic agent-caused tool failure (for example invalid write/edit arguments) through live APIs; assert tool error is surfaced back to the LM as an observation and the run continues with subsequent LM turn(s) under normal LM budgets. Assert no Temporal retry fan-out for the same failed tool request. |
 | INT-186 | P1 | System-failed tool retry cap + infra terminalization contract | Trigger infrastructure/transport unavailability for a live tool request; assert Temporal retries are capped at 3 attempts for the same tool request/stage, then fail closed. Assert terminal metadata reports `terminal_reason=SYSTEM_TOOL_RETRY_EXHAUSTED` and `failure_class=INFRA_DEVOPS_FAILURE`. Assert retry attempts are infra-level and do not inflate LM tool-call budget accounting. |
+| INT-192 | P1 | Controller script-tools Temporal proxy contract | Call the controller `/api/script-tools/validate`, `/api/script-tools/simulate`, and `/api/script-tools/submit` entrypoints from a live session and assert they return the expected benchmark response payload while `worker-heavy` is temporarily busy. The controller proxy must wait through the Temporal-mediated heavy path instead of surfacing a raw `503 WORKER_BUSY` from the product path. |
 
 INT-186 exception note: a deterministic mock scenario in `tests/integration/mock_responses/` is acceptable for this case because the target is a devops/infra regression contract (system-tool transport failure and retry exhaustion), not product/business logic. This exception is scoped to INT-186 only and does not relax the no-mock rule for other integration tests.
 
@@ -500,7 +507,7 @@ This section exists to force implementation as true integration tests, not unit 
 
 - `tests/integration/smoke/`: INT-001..INT-004 (fast baseline).
 - `tests/integration/architecture_p0/`: INT-005..INT-030, INT-053..INT-056, INT-061..INT-063, INT-070..INT-075, INT-101..INT-114, INT-120..INT-128, INT-184, INT-187.
-- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141.
+- `tests/integration/architecture_p1/`: INT-031..INT-045, INT-057..INT-060, INT-064..INT-069, INT-131..INT-141, INT-192.
 - `tests/integration/evals_p2/`: INT-046..INT-052, INT-151..INT-156.
 - `tests/integration/agent/p1/`: INT-181, INT-182, INT-183, INT-185, INT-186.
 - `tests/integration/frontend/p0/`: INT-157, INT-158, INT-159, INT-162, INT-163, INT-164, INT-165, INT-167, INT-170, INT-172, INT-173, INT-174, INT-177.

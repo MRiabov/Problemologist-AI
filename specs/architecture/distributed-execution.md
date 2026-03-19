@@ -61,7 +61,7 @@ The worker API is physically split into two specialized services to optimize res
 ### Routing Contract (Controller -> Workers)
 
 - Controller routes light operations to light worker, (default light worker endpoint). The light worker executes scripts, which can ping the load balancer handling heavy workers.
-- Controller routes heavy operations to `WORKER_HEAVY_URL`.
+- Controller routes heavy operations through Temporal workflows, not directly to `WORKER_HEAVY_URL`.
 - All worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
 - Heavy-worker admission is fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
@@ -81,7 +81,7 @@ Backend responsibility is split by operation purpose:
 3. Static preview generation for `/benchmark/validate` uses MuJoCo by default even when `physics.backend=genesis`.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 
-Direct `worker-heavy` HTTP endpoints (`/benchmark/*`) are an adapter/debug surface, not an alternate orchestration model with independent queueing semantics.
+Direct `worker-heavy` HTTP endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.
 
 Temporal task delivery remains worker-poll based (long-poll task queues), while workflow completion is returned through Temporal result APIs. We do not define a Temporal-server-push webhook delivery mode for activity task dispatch in this architecture.
 
@@ -122,9 +122,9 @@ Note: we want to offload work from `worker_heavy` as much as possible because:
 
 ### Worker filesystem and communication
 
-Upon requesting simulation or rendering, worker light will send a gzip file of all necessary code to worker. The worker light will also git commit when sending a heavy simulation.
+Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The controller-worker Temporal path owns the actual heavy dispatch, retry, and completion tracking.
 
-Predominantly, worker light communicates with worker heavy directly; with exceptions of termination signals from controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy is hidden behind a Temporal setup, which also can act as the load balancer.
+Predominantly, worker light communicates with controller-worker orchestration for heavy dispatch; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy is hidden behind Temporal/controller-worker orchestration, which also acts as the admission and retry boundary.
 
 ### OpenAPI Artifacts
 
