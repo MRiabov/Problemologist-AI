@@ -99,7 +99,7 @@ class AgentSettings(BaseSettings):
         if use_openrouter:
             if model_name.startswith("openrouter/"):
                 # LiteLLM's OpenRouter adapter expects the provider namespace to
-                # remain explicit for stealth models like `openrouter/healer-alpha`.
+                # remain explicit for cloaked models like `openrouter/healer-alpha`.
                 # Those arrive as a one-segment OpenRouter slug and need the extra
                 # `openrouter/` layer preserved for the provider router.
                 if model_name.count("/") == 1:
