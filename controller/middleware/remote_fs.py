@@ -18,6 +18,7 @@ from controller.workflows.execution import ScriptExecutionWorkflow
 from controller.workflows.heavy import (
     HeavyPreviewWorkflow,
     HeavySimulationWorkflow,
+    HeavySubmitWorkflow,
     HeavyValidationWorkflow,
 )
 from shared.agents.config import resolve_agents_config_path
@@ -53,6 +54,7 @@ from shared.workers.schema import (
     HeavyPreviewParams,
     HeavyPreviewResponse,
     HeavySimulationParams,
+    HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
     InspectTopologyResponse,
@@ -535,6 +537,7 @@ class RemoteFilesystemMiddleware:
         self,
         script_path: str | Path,
         backend: SimulatorBackendType | None = None,
+        smoke_test_mode: bool | None = None,
     ) -> BenchmarkToolResponse | SimulationResult:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
@@ -553,10 +556,10 @@ class RemoteFilesystemMiddleware:
             res = await self.temporal_client.execute_workflow(
                 HeavySimulationWorkflow.run,
                 HeavySimulationParams(
-                    bundle_bytes=bundle,
+                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
                     backend=resolved_backend,
-                    smoke_test_mode=False,
+                    smoke_test_mode=smoke_test_mode,
                     session_id=self.client.session_id,
                 ),
                 id=f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
@@ -581,7 +584,7 @@ class RemoteFilesystemMiddleware:
             res: HeavyPreviewResponse = await self.temporal_client.execute_workflow(
                 HeavyPreviewWorkflow.run,
                 HeavyPreviewParams(
-                    bundle_bytes=bundle,
+                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
                     pitch=pitch,
                     yaw=yaw,
@@ -610,7 +613,7 @@ class RemoteFilesystemMiddleware:
             res = await self.temporal_client.execute_workflow(
                 HeavyValidationWorkflow.run,
                 HeavyValidationParams(
-                    bundle_bytes=bundle,
+                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
                     session_id=self.client.session_id,
                 ),
@@ -654,7 +657,22 @@ class RemoteFilesystemMiddleware:
                 AgentName.ENGINEER_EXECUTION_REVIEWER: "engineering_execution_reviewer",
             }
             effective_stage = role_to_stage.get(self.agent_role)
-        res = await self.client.submit(p_str, reviewer_stage=effective_stage)
+
+        if self.temporal_client:
+            bundle = await self.client.bundle_session()
+            res = await self.temporal_client.execute_workflow(
+                HeavySubmitWorkflow.run,
+                HeavySubmitParams(
+                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
+                    script_path=p_str,
+                    reviewer_stage=effective_stage or "engineering_execution_reviewer",
+                    session_id=self.client.session_id,
+                ),
+                id=f"sub-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
+                task_queue="simulation-task-queue",
+            )
+        else:
+            res = await self.client.submit(p_str, reviewer_stage=effective_stage)
 
         benchmark_roles = {
             AgentName.BENCHMARK_PLANNER,

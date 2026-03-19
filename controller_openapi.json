@@ -693,6 +693,162 @@
         }
       }
     },
+    "/api/script-tools/validate": {
+      "post": {
+        "tags": [
+          "script-tools"
+        ],
+        "summary": "Validate Script",
+        "operationId": "validate_script_api_script_tools_validate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/script-tools/simulate": {
+      "post": {
+        "tags": [
+          "script-tools"
+        ],
+        "summary": "Simulate Script",
+        "operationId": "simulate_script_api_script_tools_simulate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/script-tools/submit": {
+      "post": {
+        "tags": [
+          "script-tools"
+        ],
+        "summary": "Submit Script",
+        "operationId": "submit_script_api_script_tools_submit_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/skills/": {
       "get": {
         "tags": [
@@ -1517,6 +1673,162 @@
         }
       }
     },
+    "/script-tools/validate": {
+      "post": {
+        "tags": [
+          "script-tools"
+        ],
+        "summary": "Validate Script",
+        "operationId": "validate_script_script_tools_validate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/script-tools/simulate": {
+      "post": {
+        "tags": [
+          "script-tools"
+        ],
+        "summary": "Simulate Script",
+        "operationId": "simulate_script_script_tools_simulate_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/script-tools/submit": {
+      "post": {
+        "tags": [
+          "script-tools"
+        ],
+        "summary": "Submit Script",
+        "operationId": "submit_script_script_tools_submit_post",
+        "parameters": [
+          {
+            "name": "x-session-id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "X-Session-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BenchmarkToolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/skills/": {
       "get": {
         "tags": [
@@ -2255,6 +2567,58 @@
         ],
         "title": "BackupTriggerResponse"
       },
+      "BaseEvent": {
+        "properties": {
+          "event_type": {
+            "$ref": "#/components/schemas/ObservabilityEventType"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "event_type"
+        ],
+        "title": "BaseEvent",
+        "description": "Base class for all observability events."
+      },
       "BenchmarkConfirmResponse": {
         "properties": {
           "status": {
@@ -2427,6 +2791,47 @@
           "objectives"
         ],
         "title": "BenchmarkObjectivesResponse"
+      },
+      "BenchmarkToolResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "high"
+          },
+          "artifacts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationArtifacts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/BaseEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "BenchmarkToolResponse",
+        "description": "Response from a benchmark tool."
       },
       "CodeReference": {
         "properties": {
@@ -2983,6 +3388,32 @@
         "title": "FailureClass",
         "description": "High-level failure ownership classification for terminal outcomes."
       },
+      "FailureReason": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "TIMEOUT",
+          "OUT_OF_BOUNDS",
+          "FORBID_ZONE_HIT",
+          "PART_BREAKAGE",
+          "MOTOR_OVERLOAD",
+          "STABILITY_ISSUE",
+          "PHYSICS_INSTABILITY",
+          "SHORT_CIRCUIT",
+          "OVERCURRENT",
+          "WIRE_TORN",
+          "OPEN_CIRCUIT",
+          "ASSET_GENERATION_FAILED",
+          "FLUID_OBJECTIVE_FAILED",
+          "STRESS_OBJECTIVE_EXCEEDED",
+          "ELECTRONICS_FLUID_DAMAGE",
+          "VALIDATION_FAILED",
+          "MANUFACTURABILITY_FAILED",
+          "VERIFICATION_ERROR"
+        ],
+        "title": "FailureReason",
+        "description": "Unified failure modes for physics and electronics simulation."
+      },
       "FeedbackRequest": {
         "properties": {
           "score": {
@@ -3006,6 +3437,39 @@
           "score"
         ],
         "title": "FeedbackRequest"
+      },
+      "FluidMetricResult": {
+        "properties": {
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "fluid_id": {
+            "type": "string",
+            "title": "Fluid Id"
+          },
+          "measured_value": {
+            "type": "number",
+            "title": "Measured Value"
+          },
+          "target_value": {
+            "type": "number",
+            "title": "Target Value"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric_type",
+          "fluid_id",
+          "measured_value",
+          "target_value",
+          "passed"
+        ],
+        "title": "FluidMetricResult"
       },
       "GenerationKind": {
         "type": "string",
@@ -3140,6 +3604,125 @@
         ],
         "title": "MessageRequest"
       },
+      "MultiRunResult": {
+        "properties": {
+          "num_scenes": {
+            "type": "integer",
+            "title": "Num Scenes"
+          },
+          "success_count": {
+            "type": "integer",
+            "title": "Success Count"
+          },
+          "success_rate": {
+            "type": "number",
+            "title": "Success Rate"
+          },
+          "is_consistent": {
+            "type": "boolean",
+            "title": "Is Consistent"
+          },
+          "individual_results": {
+            "items": {
+              "$ref": "#/components/schemas/SimulationMetrics"
+            },
+            "type": "array",
+            "title": "Individual Results"
+          },
+          "fail_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fail Reasons"
+          },
+          "scene_build_count": {
+            "type": "integer",
+            "title": "Scene Build Count",
+            "default": 1
+          },
+          "backend_run_count": {
+            "type": "integer",
+            "title": "Backend Run Count",
+            "default": 1
+          },
+          "batched_execution": {
+            "type": "boolean",
+            "title": "Batched Execution",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "num_scenes",
+          "success_count",
+          "success_rate",
+          "is_consistent",
+          "individual_results",
+          "fail_reasons"
+        ],
+        "title": "MultiRunResult",
+        "description": "Result of batched runtime-randomization verification."
+      },
+      "ObservabilityEventType": {
+        "type": "string",
+        "enum": [
+          "component_usage",
+          "tool_invocation",
+          "manufacturability_check",
+          "scene_validation",
+          "render_request_engineer",
+          "render_request_benchmark",
+          "simulation_request",
+          "simulation_result",
+          "cots_search",
+          "cots_selection",
+          "plan_submission_benchmark",
+          "plan_submission_engineer",
+          "escalation_request",
+          "escalation_decision",
+          "lint_failure_code",
+          "lint_failure_docs",
+          "logic_failure",
+          "skill_edit",
+          "skill_read",
+          "ls_files_tool",
+          "grep_tool",
+          "read_file_tool",
+          "inspect_media_tool",
+          "write_file_tool",
+          "edit_files_tool",
+          "run_command_tool",
+          "git_init_tool",
+          "git_commit_tool",
+          "simulation_instability",
+          "submission_validation",
+          "cost_weight_delta",
+          "library_usage",
+          "review_decision",
+          "circuit_validation",
+          "wire_routing",
+          "power_budget_check",
+          "electrical_failure",
+          "elec_agent_handover",
+          "circuit_simulation",
+          "wire_torn",
+          "power_budget_warning",
+          "simulation_backend_selected",
+          "part_breakage",
+          "fluid_containment_check",
+          "flow_rate_check",
+          "stress_summary",
+          "meshing_failure",
+          "physics_instability",
+          "gpu_oom_retry",
+          "conversation_length_exceeded",
+          "node_entry_validation_failed",
+          "media_inspection",
+          "llm_media_attached"
+        ],
+        "title": "ObservabilityEventType"
+      },
       "ResponseStatus": {
         "type": "string",
         "enum": [
@@ -3200,6 +3783,51 @@
         ],
         "title": "RunSimulationRequest"
       },
+      "ScriptToolRequest": {
+        "properties": {
+          "script_path": {
+            "type": "string",
+            "title": "Script Path",
+            "default": "script.py"
+          },
+          "agent_role": {
+            "$ref": "#/components/schemas/AgentName",
+            "default": "engineer_coder"
+          },
+          "backend": {
+            "$ref": "#/components/schemas/SimulatorBackendType"
+          },
+          "smoke_test_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoke Test Mode"
+          },
+          "reviewer_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "benchmark_reviewer",
+                  "engineering_execution_reviewer",
+                  "electronics_reviewer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Stage"
+          }
+        },
+        "type": "object",
+        "title": "ScriptToolRequest"
+      },
       "SeedMatchMethod": {
         "type": "string",
         "enum": [
@@ -3221,6 +3849,278 @@
           "SUBASSEMBLY"
         ],
         "title": "SelectionLevel"
+      },
+      "SimulationArtifacts": {
+        "properties": {
+          "render_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Render Paths"
+          },
+          "render_blobs_base64": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Render Blobs Base64"
+          },
+          "mjcf_content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mjcf Content"
+          },
+          "stress_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/StressSummary"
+            },
+            "type": "array",
+            "title": "Stress Summaries"
+          },
+          "fluid_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/FluidMetricResult"
+            },
+            "type": "array",
+            "title": "Fluid Metrics"
+          },
+          "circuit_validation_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Validation Result"
+          },
+          "scene_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Path"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "verification_result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MultiRunResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total_cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Cost"
+          },
+          "total_weight_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Weight G"
+          },
+          "validation_results_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Results Json"
+          },
+          "simulation_result_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulation Result Json"
+          },
+          "review_manifest_json": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Manifest Json"
+          },
+          "review_manifests_json": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Review Manifests Json"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SimulationArtifacts",
+        "description": "Structured artifacts from a simulation run."
+      },
+      "SimulationFailure": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/FailureReason"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "SimulationFailure",
+        "description": "Structured failure information for simulation."
+      },
+      "SimulationMetrics": {
+        "properties": {
+          "total_time": {
+            "type": "number",
+            "title": "Total Time",
+            "default": 0.0
+          },
+          "total_energy": {
+            "type": "number",
+            "title": "Total Energy",
+            "default": 0.0
+          },
+          "max_velocity": {
+            "type": "number",
+            "title": "Max Velocity",
+            "default": 0.0
+          },
+          "max_stress": {
+            "type": "number",
+            "title": "Max Stress",
+            "default": 0.0
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false
+          },
+          "fail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Reason"
+          },
+          "fail_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FailureReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stress_summaries": {
+            "items": {
+              "$ref": "#/components/schemas/StressSummary"
+            },
+            "type": "array",
+            "title": "Stress Summaries"
+          },
+          "stress_fields": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/StressFieldData"
+            },
+            "type": "object",
+            "title": "Stress Fields"
+          },
+          "fluid_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/FluidMetricResult"
+            },
+            "type": "array",
+            "title": "Fluid Metrics"
+          },
+          "events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence",
+            "default": "high"
+          }
+        },
+        "type": "object",
+        "title": "SimulationMetrics"
       },
       "SimulatorBackendType": {
         "type": "string",
@@ -3315,6 +4215,85 @@
           "text"
         ],
         "title": "SteerablePrompt"
+      },
+      "StressFieldData": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "stress": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Stress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "stress"
+        ],
+        "title": "StressFieldData",
+        "description": "Serializable version of StressField."
+      },
+      "StressSummary": {
+        "properties": {
+          "part_label": {
+            "type": "string",
+            "title": "Part Label"
+          },
+          "max_von_mises_pa": {
+            "type": "number",
+            "title": "Max Von Mises Pa"
+          },
+          "mean_von_mises_pa": {
+            "type": "number",
+            "title": "Mean Von Mises Pa"
+          },
+          "safety_factor": {
+            "type": "number",
+            "title": "Safety Factor"
+          },
+          "location_of_max": {
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Location Of Max"
+          },
+          "utilization_pct": {
+            "type": "number",
+            "title": "Utilization Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "part_label",
+          "max_von_mises_pa",
+          "mean_von_mises_pa",
+          "safety_factor",
+          "location_of_max",
+          "utilization_pct"
+        ],
+        "title": "StressSummary"
       },
       "TerminalReason": {
         "type": "string",

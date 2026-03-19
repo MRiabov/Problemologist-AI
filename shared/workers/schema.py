@@ -444,7 +444,7 @@ class PreviewDesignResponse(BaseModel):
 class HeavySimulationParams(BaseModel):
     """Parameters for worker_run_simulation activity."""
 
-    bundle_bytes: bytes
+    bundle_base64: StrictStr
     script_path: str
     backend: SimulatorBackendType
     smoke_test_mode: bool | None = None
@@ -454,7 +454,7 @@ class HeavySimulationParams(BaseModel):
 class HeavyValidationParams(BaseModel):
     """Parameters for worker_validate_design activity."""
 
-    bundle_bytes: bytes
+    bundle_base64: StrictStr
     script_path: str
     session_id: str
     smoke_test_mode: bool | None = None
@@ -463,10 +463,19 @@ class HeavyValidationParams(BaseModel):
 class HeavyPreviewParams(BaseModel):
     """Parameters for worker_preview_design activity."""
 
-    bundle_bytes: bytes
+    bundle_base64: StrictStr
     script_path: str
     pitch: float = -45.0
     yaw: float = 45.0
+
+
+class HeavySubmitParams(BaseModel):
+    """Parameters for worker_submit_for_review activity."""
+
+    bundle_base64: StrictStr
+    script_path: str
+    reviewer_stage: ReviewerStage
+    session_id: str
 
 
 class HeavyValidationResponse(BaseModel):

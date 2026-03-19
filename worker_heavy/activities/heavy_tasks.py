@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import tempfile
 from pathlib import Path
 
@@ -9,13 +10,17 @@ from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.loader import load_component_from_script
 from shared.workers.schema import (
+    BenchmarkToolResponse,
     HeavyPreviewParams,
     HeavyPreviewResponse,
     HeavySimulationParams,
+    HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
+    SimulationArtifacts,
 )
 from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
+from worker_heavy.utils.handover import submit_for_review
 from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.validation import validate
 
@@ -44,10 +49,58 @@ def _extract_bundle(bundle_bytes: bytes, target_dir: Path):
             Path(tf_path).unlink()
 
 
+def _decode_bundle(bundle_base64: str) -> bytes:
+    return base64.b64decode(bundle_base64)
+
+
+def _collect_submission_artifacts(root: Path) -> SimulationArtifacts:
+    artifacts = SimulationArtifacts()
+
+    validation_result_path = root / "validation_results.json"
+    if validation_result_path.exists():
+        artifacts.validation_results_json = validation_result_path.read_text(
+            encoding="utf-8"
+        )
+
+    sim_result_path = root / "simulation_result.json"
+    if sim_result_path.exists():
+        artifacts.simulation_result_json = sim_result_path.read_text(encoding="utf-8")
+
+    stage_manifest_paths = (
+        ".manifests/benchmark_plan_review_manifest.json",
+        ".manifests/benchmark_review_manifest.json",
+        ".manifests/engineering_plan_review_manifest.json",
+        ".manifests/engineering_execution_review_manifest.json",
+        ".manifests/electronics_review_manifest.json",
+    )
+    review_manifests: dict[str, str] = {}
+    for rel_path in stage_manifest_paths:
+        manifest_path = root / rel_path
+        if manifest_path.exists():
+            review_manifests[rel_path] = manifest_path.read_text(encoding="utf-8")
+    artifacts.review_manifests_json = review_manifests
+
+    render_blobs_base64: dict[str, str] = {}
+    renders_dir = root / "renders"
+    if renders_dir.exists():
+        for render_path in sorted(renders_dir.iterdir()):
+            if not render_path.is_file():
+                continue
+            if render_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".mp4"}:
+                continue
+            rel_path = str(render_path.relative_to(root))
+            artifacts.render_paths.append(rel_path)
+            render_blobs_base64[rel_path] = base64.b64encode(
+                render_path.read_bytes()
+            ).decode("ascii")
+    artifacts.render_blobs_base64 = render_blobs_base64
+    return artifacts
+
+
 @activity.defn(name="worker_run_simulation")
 async def run_simulation_activity(params: HeavySimulationParams) -> SimulationResult:
     """Execute physics simulation from a session bundle."""
-    bundle_bytes = params.bundle_bytes
+    bundle_bytes = _decode_bundle(params.bundle_base64)
     script_path = params.script_path
     backend = params.backend
     smoke_test_mode = params.smoke_test_mode
@@ -77,7 +130,7 @@ async def validate_design_activity(
     params: HeavyValidationParams,
 ) -> HeavyValidationResponse:
     """Execute geometric validation from a session bundle."""
-    bundle_bytes = params.bundle_bytes
+    bundle_bytes = _decode_bundle(params.bundle_base64)
     script_path = params.script_path
     session_id = params.session_id
     smoke_test_mode = params.smoke_test_mode
@@ -105,7 +158,7 @@ async def validate_design_activity(
 @activity.defn(name="worker_preview_design")
 async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewResponse:
     """Render design preview from a session bundle."""
-    bundle_bytes = params.bundle_bytes
+    bundle_bytes = _decode_bundle(params.bundle_base64)
     script_path = params.script_path
     pitch = params.pitch
     yaw = params.yaw
@@ -139,4 +192,38 @@ async def preview_design_activity(params: HeavyPreviewParams) -> HeavyPreviewRes
             success=True,
             image_bytes=image_path.read_bytes() if image_path.exists() else None,
             filename=image_path.name if image_path.exists() else None,
+        )
+
+
+@activity.defn(name="worker_submit_for_review")
+async def submit_for_review_activity(
+    params: HeavySubmitParams,
+) -> BenchmarkToolResponse:
+    """Execute review handover submission from a session bundle."""
+    bundle_bytes = _decode_bundle(params.bundle_base64)
+    script_path = params.script_path
+    reviewer_stage = params.reviewer_stage
+    session_id = params.session_id
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _extract_bundle(bundle_bytes, root)
+
+        component = load_component_from_script(
+            script_path=root / script_path,
+            session_root=root,
+        )
+
+        success = await asyncio.to_thread(
+            submit_for_review,
+            component,
+            cwd=root,
+            session_id=session_id,
+            reviewer_stage=reviewer_stage,
+        )
+
+        return BenchmarkToolResponse(
+            success=success,
+            message="Handover complete" if success else "Handover failed",
+            artifacts=_collect_submission_artifacts(root),
         )

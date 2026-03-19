@@ -8,6 +8,7 @@ from build123d import Compound
 from pydantic import BaseModel
 
 from shared.enums import AgentName
+from shared.simulation.schemas import get_default_simulator_backend
 from shared.utils.fasteners import HoleType as HoleType
 from shared.utils.fasteners import fastener_hole as fastener_hole
 from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
@@ -15,6 +16,8 @@ from shared.workers.schema import BenchmarkToolResponse, PlanRefusal
 logger = structlog.get_logger(__name__)
 SCRIPT_IMPORT_MODE_ENV = "PROBLEMOLOGIST_SCRIPT_IMPORT_MODE"
 SCRIPT_IMPORT_DEFERRED_MESSAGE = "Deferred during control-plane script import."
+CONTROLLER_URL_ENV = "CONTROLLER_URL"
+AGENT_NAME_ENV = "AGENT_NAME"
 
 # --- Proxy Logic ---
 
@@ -38,6 +41,39 @@ def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
         return {"success": False, "message": str(e)}
 
 
+def _controller_base_url() -> str | None:
+    url = os.getenv(CONTROLLER_URL_ENV)
+    if not url:
+        return None
+    return url.rstrip("/")
+
+
+def _script_agent_role() -> str:
+    return os.getenv(AGENT_NAME_ENV, AgentName.ENGINEER_CODER.value)
+
+
+def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict | None:
+    controller_url = _controller_base_url()
+    if not controller_url:
+        return None
+    session_id = os.getenv("SESSION_ID", "default")
+    url = f"{controller_url}/api/script-tools/{action.lstrip('/')}"
+    headers = {"X-Session-ID": session_id}
+    try:
+        with httpx.Client(timeout=600.0) as client:
+            resp = client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+    except Exception as e:
+        logger.error(
+            "controller_script_tool_failed",
+            action=action,
+            error=str(e),
+            session_id=session_id,
+        )
+        raise
+
+
 # --- Agent Utils ---
 
 
@@ -57,7 +93,21 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
 
         return real_simulate(compound, **kwargs)
 
-    # In light worker, we call heavy worker
+    controller_payload = {
+        "script_path": "script.py",
+        "agent_role": _script_agent_role(),
+        "backend": kwargs.get("backend", get_default_simulator_backend()),
+        "smoke_test_mode": kwargs.get("smoke_test_mode"),
+    }
+    controller_res = _call_controller_script_tool(
+        "simulate",
+        controller_payload,
+    )
+    if controller_res is not None:
+        return BenchmarkToolResponse.model_validate(controller_res)
+
+    # In non-controller contexts, fall back to the heavy worker for standalone
+    # local tooling and worker-level tests.
     payload = {"script_path": "script.py", **kwargs}
     res = _call_heavy_worker("/benchmark/simulate", payload)
     return BenchmarkToolResponse.model_validate(res)
@@ -72,7 +122,20 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
 
         return real_validate(compound, **kwargs)
 
-    # In light worker, we call heavy worker
+    controller_payload = {
+        "script_path": "script.py",
+        "agent_role": _script_agent_role(),
+    }
+    controller_res = _call_controller_script_tool(
+        "validate",
+        controller_payload,
+    )
+    if controller_res is not None:
+        parsed = BenchmarkToolResponse.model_validate(controller_res)
+        return parsed.success, parsed.message
+
+    # In non-controller contexts, fall back to the heavy worker for standalone
+    # local tooling and worker-level tests.
     payload = {"script_path": "script.py", **kwargs}
     res = _call_heavy_worker("/benchmark/validate", payload)
     parsed = BenchmarkToolResponse.model_validate(res)
@@ -113,9 +176,22 @@ def submit_for_review(compound: Compound) -> bool:
 
         return real_submit(compound, reviewer_stage=AgentName.BENCHMARK_REVIEWER)
 
-    # In light-worker execution (e.g., script runtime checks), avoid emitting
-    # heavy-worker gate errors before prerequisites are present. The controller
-    # runs the authoritative submit call after validate+simulate in sequence.
+    controller_payload = {
+        "script_path": "script.py",
+        "agent_role": _script_agent_role(),
+        "reviewer_stage": AgentName.BENCHMARK_REVIEWER.value,
+    }
+    controller_res = _call_controller_script_tool(
+        "submit",
+        controller_payload,
+    )
+    if controller_res is not None:
+        parsed = BenchmarkToolResponse.model_validate(controller_res)
+        return parsed.success
+
+    # In non-controller contexts, avoid emitting heavy-worker gate errors before
+    # prerequisites are present. The controller runs the authoritative submit
+    # call after validate+simulate in sequence.
     if not Path("validation_results.json").exists():
         logger.info(
             "submit_for_review_deferred_missing_validation",

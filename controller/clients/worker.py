@@ -1,11 +1,12 @@
 import asyncio
 import base64
+import os
 from typing import Any, Literal
 
 import httpx
 import structlog
 
-from shared.enums import ResponseStatus
+from shared.enums import AgentName, ResponseStatus
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -35,6 +36,8 @@ class WorkerClient:
         session_id: str,
         http_client: httpx.AsyncClient | None = None,
         heavy_url: str | None = None,
+        controller_url: str | None = None,
+        agent_role: AgentName | str = AgentName.ENGINEER_CODER,
     ):
         """Initialize the worker client.
 
@@ -47,7 +50,14 @@ class WorkerClient:
         self.base_url = base_url.rstrip("/")
         self.light_url = self.base_url
         self.heavy_url = (heavy_url or base_url).rstrip("/")
+        controller_base_url = controller_url or os.getenv("CONTROLLER_URL")
+        self.controller_url = (
+            controller_base_url.rstrip("/") if controller_base_url else None
+        )
         self.session_id = session_id
+        self.agent_role = (
+            agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        )
         self.headers = {"X-Session-ID": session_id}
         self.http_client = http_client
         self._loop_clients: dict[int, httpx.AsyncClient] = {}
@@ -95,6 +105,35 @@ class WorkerClient:
         # We no longer close the client here to allow connection pooling across requests.
         # The client will be closed when aclose() is called or the instance is destroyed.
         pass
+
+    @staticmethod
+    def _default_reviewer_stage(agent_role: AgentName | str) -> ReviewerStage | None:
+        role_value = (
+            agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
+        )
+        role_to_stage: dict[str, ReviewerStage] = {
+            AgentName.BENCHMARK_CODER.value: "benchmark_reviewer",
+            AgentName.BENCHMARK_REVIEWER.value: "benchmark_reviewer",
+            AgentName.ELECTRONICS_REVIEWER.value: "electronics_reviewer",
+            AgentName.ENGINEER_CODER.value: "engineering_execution_reviewer",
+            AgentName.ENGINEER_EXECUTION_REVIEWER.value: "engineering_execution_reviewer",
+        }
+        return role_to_stage.get(role_value)
+
+    async def _call_controller_script_tool(
+        self, action: str, payload: dict[str, Any]
+    ) -> BenchmarkToolResponse | None:
+        if not self.controller_url:
+            return None
+        client = await self._get_client()
+        response = await client.post(
+            f"{self.controller_url}/api/script-tools/{action.lstrip('/')}",
+            json=payload,
+            headers=self.headers,
+            timeout=600.0,
+        )
+        response.raise_for_status()
+        return BenchmarkToolResponse.model_validate(response.json())
 
     async def aclose(self):
         """Explicitly close all HTTP clients created for different loops."""
@@ -471,14 +510,34 @@ class WorkerClient:
         script_path: str = "script.py",
         script_content: str | None = None,
         backend: SimulatorBackendType | None = None,
+        smoke_test_mode: bool | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker."""
+        resolved_backend = backend or get_default_simulator_backend()
+        if self.controller_url:
+            payload = {
+                "script_path": script_path,
+                "agent_role": self.agent_role,
+                "backend": resolved_backend,
+                "smoke_test_mode": smoke_test_mode,
+            }
+            if script_content is not None:
+                raise NotImplementedError(
+                    "controller script-tools proxy does not accept script_content"
+                )
+            parsed = await self._call_controller_script_tool("simulate", payload)
+            if parsed is None:
+                raise RuntimeError("controller script-tools proxy unavailable")
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
+
         client = await self._get_client()
         try:
-            resolved_backend = backend or get_default_simulator_backend()
             payload = {"script_path": script_path, "backend": resolved_backend}
             if script_content is not None:
                 payload["script_content"] = script_content
+            if smoke_test_mode is not None:
+                payload["smoke_test_mode"] = smoke_test_mode
 
             await self._add_bundle_to_payload(payload)
 
@@ -512,6 +571,21 @@ class WorkerClient:
         self, script_path: str = "script.py", script_content: str | None = None
     ) -> BenchmarkToolResponse:
         """Trigger geometric validation via worker."""
+        if self.controller_url:
+            payload = {
+                "script_path": script_path,
+                "agent_role": self.agent_role,
+            }
+            if script_content is not None:
+                raise NotImplementedError(
+                    "controller script-tools proxy does not accept script_content"
+                )
+            parsed = await self._call_controller_script_tool("validate", payload)
+            if parsed is None:
+                raise RuntimeError("controller script-tools proxy unavailable")
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
+
         client = await self._get_client()
         try:
             payload = {"script_path": script_path}
@@ -571,13 +645,32 @@ class WorkerClient:
         reviewer_stage: ReviewerStage | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger handover to review via worker."""
+        effective_stage = reviewer_stage or self._default_reviewer_stage(
+            self.agent_role
+        )
+        if self.controller_url:
+            payload = {
+                "script_path": script_path,
+                "agent_role": self.agent_role,
+                "reviewer_stage": effective_stage,
+            }
+            if script_content is not None:
+                raise NotImplementedError(
+                    "controller script-tools proxy does not accept script_content"
+                )
+            parsed = await self._call_controller_script_tool("submit", payload)
+            if parsed is None:
+                raise RuntimeError("controller script-tools proxy unavailable")
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
+
         client = await self._get_client()
         try:
             payload = {"script_path": script_path}
             if script_content is not None:
                 payload["script_content"] = script_content
-            if reviewer_stage:
-                payload["reviewer_stage"] = reviewer_stage
+            if effective_stage:
+                payload["reviewer_stage"] = effective_stage
 
             await self._add_bundle_to_payload(payload)
 

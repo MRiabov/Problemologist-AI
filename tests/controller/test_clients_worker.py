@@ -17,6 +17,11 @@ def mock_httpx_client():
         yield mock_client
 
 
+@pytest.fixture(autouse=True)
+def clear_controller_url_env(monkeypatch):
+    monkeypatch.delenv("CONTROLLER_URL", raising=False)
+
+
 @pytest.mark.asyncio
 async def test_worker_client_init():
     client = WorkerClient("http://worker-light:8000/", "test-session")
@@ -229,9 +234,12 @@ async def test_submit(mock_httpx_client):
 
     mock_httpx_client.post.assert_called_once_with(
         "http://worker-light:8000/benchmark/submit",
-        json={"script_path": "script.py"},
+        json={
+            "script_path": "script.py",
+            "reviewer_stage": "engineering_execution_reviewer",
+        },
         headers={"X-Session-ID": "test-session"},
-        timeout=30.0,
+        timeout=60.0,
     )
 
 

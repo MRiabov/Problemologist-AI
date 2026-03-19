@@ -4,9 +4,11 @@ from temporalio import workflow
 
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
+    BenchmarkToolResponse,
     HeavyPreviewParams,
     HeavyPreviewResponse,
     HeavySimulationParams,
+    HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
 )
@@ -48,5 +50,18 @@ class HeavyPreviewWorkflow:
             "worker_preview_design",
             params,
             start_to_close_timeout=timedelta(minutes=2),
+            task_queue="heavy-tasks-queue",
+        )
+
+
+@workflow.defn
+class HeavySubmitWorkflow:
+    @workflow.run
+    async def run(self, params: HeavySubmitParams) -> BenchmarkToolResponse:
+        """Run review handover submission on a heavy worker."""
+        return await workflow.execute_activity(
+            "worker_submit_for_review",
+            params,
+            start_to_close_timeout=timedelta(minutes=10),
             task_queue="heavy-tasks-queue",
         )
