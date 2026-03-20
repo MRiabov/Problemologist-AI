@@ -1,0 +1,176 @@
+{
+  "project_name": "Problemologist-AI",
+  "last_updated": "2026-03-20",
+  "repository_type": "multi-part",
+  "primary_languages": ["Python", "TypeScript"],
+  "architecture_type": "controller-led split-worker platform",
+  "core_parts": [
+    {
+      "part_id": "controller",
+      "name": "Controller",
+      "location": "controller/",
+      "entry_point": "controller/api/main.py",
+      "auxiliary_entry_points": [
+        "controller/temporal_worker.py"
+      ],
+      "purpose": "Orchestrates episodes, agent graphs, review gates, persistence, observability, and worker routing.",
+      "tech_stack": [
+        "FastAPI",
+        "LangGraph",
+        "DSPy",
+        "Temporal",
+        "PostgreSQL",
+        "SQLAlchemy",
+        "Pydantic",
+        "Langfuse"
+      ],
+      "integration_points": [
+        "worker_light",
+        "worker_heavy",
+        "frontend",
+        "shared"
+      ]
+    },
+    {
+      "part_id": "worker_light",
+      "name": "Worker Light",
+      "location": "worker_light/",
+      "entry_point": "worker_light/app.py",
+      "purpose": "Handles session filesystem access, git, shell execution, linting, asset serving, and lightweight inspection.",
+      "tech_stack": [
+        "FastAPI",
+        "Filesystem routing",
+        "Git helpers",
+        "Shell execution",
+        "Linting"
+      ],
+      "integration_points": [
+        "controller",
+        "shared"
+      ]
+    },
+    {
+      "part_id": "worker_heavy",
+      "name": "Worker Heavy",
+      "location": "worker_heavy/",
+      "entry_point": "worker_heavy/app.py",
+      "auxiliary_entry_points": [
+        "worker_heavy/temporal_worker.py"
+      ],
+      "purpose": "Runs validation, simulation, preview rendering, workbench analysis, and heavy handoff gating.",
+      "tech_stack": [
+        "FastAPI",
+        "Genesis",
+        "MuJoCo",
+        "build123d",
+        "Temporal",
+        "Preview rendering",
+        "Manufacturing workbenches"
+      ],
+      "integration_points": [
+        "controller",
+        "shared",
+        "worker_light"
+      ]
+    },
+    {
+      "part_id": "frontend",
+      "name": "Frontend",
+      "location": "frontend/",
+      "entry_point": "frontend/src/main.tsx",
+      "purpose": "Provides the secondary operator dashboard for episodes, traces, assets, simulation views, and feedback.",
+      "tech_stack": [
+        "React 19",
+        "TypeScript",
+        "Vite",
+        "Tailwind CSS",
+        "Three.js",
+        "OpenAPI-generated client"
+      ],
+      "integration_points": [
+        "controller",
+        "shared"
+      ]
+    },
+    {
+      "part_id": "shared",
+      "name": "Shared Layer",
+      "location": "shared/",
+      "entry_point": "shared/models/schemas.py",
+      "purpose": "Owns the strict contracts, enums, simulation schemas, observability schemas, and worker request/response models.",
+      "tech_stack": [
+        "Pydantic",
+        "Shared enums",
+        "Observability schemas",
+        "Simulation schemas",
+        "Worker protocol models"
+      ],
+      "integration_points": [
+        "controller",
+        "worker_light",
+        "worker_heavy",
+        "frontend"
+      ]
+    }
+  ],
+  "supporting_areas": [
+    {
+      "path": "config/",
+      "purpose": "Runtime policy, prompts, render, lint, and manufacturability configuration",
+      "notable_files": [
+        "agents_config.yaml",
+        "prompts.yaml",
+        "manufacturing_config.yaml",
+        "reward_config.yaml",
+        "lint_config.yaml"
+      ]
+    },
+    {
+      "path": "scripts/",
+      "purpose": "Environment bootstrap, teardown, and integration-test execution",
+      "notable_files": [
+        "env_up.sh",
+        "env_down.sh",
+        "run_integration_tests.sh"
+      ]
+    },
+    {
+      "path": "tests/",
+      "purpose": "Integration and UI coverage for the running services",
+      "notable_files": [
+        "integration/",
+        "frontend/"
+      ]
+    },
+    {
+      "path": "dataset/",
+      "purpose": "Seed data and evaluation artifacts",
+      "notable_files": [
+        "data/",
+        "evals/"
+      ]
+    },
+    {
+      "path": "skills/",
+      "purpose": "Runtime-mounted skills consumed by the agent workflows",
+      "notable_files": [
+        "*/SKILL.md"
+      ]
+    }
+  ],
+  "documentation": {
+    "canonical": [
+      "docs/index.md",
+      "docs/project-overview.md",
+      "docs/source-tree-analysis.md",
+      "docs/backend-reference.md",
+      "docs/architecture.md",
+      "docs/api-contracts.md",
+      "docs/data-models.md",
+      "docs/component-inventory.md",
+      "docs/deployment-guide.md",
+      "docs/development-guide.md",
+      "docs/spec-coverage.md"
+    ]
+  }
+}

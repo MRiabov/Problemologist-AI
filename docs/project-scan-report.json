@@ -1,0 +1,98 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-03-20T07:17:13Z",
+    "last_updated": "2026-03-20T07:36:02Z",
+    "completed": "2026-03-20T07:36:02Z"
+  },
+  "mode": "full_rescan",
+  "scan_level": "deep",
+  "project_root": "/home/maksym/Work/proj/Problemologist/Problemologist-AI",
+  "project_knowledge": "/home/maksym/Work/proj/Problemologist/Problemologist-AI/docs",
+  "completed_steps": [
+    {
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2026-03-20T07:17:13Z",
+      "outputs": [
+        "docs/index.md",
+        "docs/project-overview.md",
+        "docs/source-tree-analysis.md",
+        "docs/architecture.md",
+        "docs/api-contracts.md",
+        "docs/data-models.md",
+        "docs/development-guide.md"
+      ],
+      "summary": "Classified the repository as a multi-part backend-first controller-worker platform and generated the canonical core documentation set."
+    },
+    {
+      "step": "step_2",
+      "status": "completed",
+      "timestamp": "2026-03-20T07:26:58Z",
+      "outputs": [
+        "docs/index.md",
+        "docs/architecture.md",
+        "docs/api-contracts.md",
+        "docs/data-models.md",
+        "docs/development-guide.md",
+        "docs/component-inventory.md",
+        "docs/deployment-guide.md",
+        "docs/backend-reference.md",
+        "docs/spec-coverage.md",
+        "docs/project-parts.json"
+      ],
+      "summary": "Refreshed the docs bundle to be self-contained, added the backend reference, coverage matrix, frontend component inventory, deployment guide, and normalized the machine-readable project metadata."
+    }
+  ],
+  "current_step": "complete",
+  "findings": {
+    "project_classification": {
+      "repository_type": "multi-part",
+      "parts_count": 5,
+      "primary_language": "Python first; TypeScript for secondary UI",
+      "architecture_type": "backend-first controller-led split-worker platform"
+    },
+    "technology_stack": [
+      {
+        "part_id": "controller",
+        "tech_summary": "FastAPI, LangGraph, DSPy, Temporal, PostgreSQL, SQLAlchemy, Pydantic, Structlog, Langfuse"
+      },
+      {
+        "part_id": "worker_light",
+        "tech_summary": "FastAPI, session filesystem routing, git helpers, shell execution, linting, asset serving"
+      },
+      {
+        "part_id": "worker_heavy",
+        "tech_summary": "FastAPI, Genesis, MuJoCo, build123d, manufacturing workbenches, preview and simulation tooling"
+      },
+      {
+        "part_id": "frontend",
+        "tech_summary": "React 19, TypeScript, Vite, Tailwind CSS, OpenAPI-generated client, Three.js, secondary UI surface"
+      },
+      {
+        "part_id": "shared",
+        "tech_summary": "Strict Pydantic models, enums, simulation schemas, observability events, and filesystem policy helpers"
+      }
+    ]
+  },
+  "outputs_generated": [
+    "docs/index.md",
+    "docs/project-overview.md",
+    "docs/source-tree-analysis.md",
+    "docs/backend-reference.md",
+    "docs/architecture.md",
+    "docs/api-contracts.md",
+    "docs/data-models.md",
+    "docs/development-guide.md",
+    "docs/component-inventory.md",
+    "docs/deployment-guide.md",
+    "docs/spec-coverage.md",
+    "docs/project-parts.json",
+    "docs/project-scan-report.json"
+  ],
+  "resume_instructions": "Documentation is complete. Start with docs/index.md, then use docs/backend-reference.md for backend/runtime questions, docs/component-inventory.md only for UI work, and docs/deployment-guide.md for operational questions.",
+  "validation_status": {
+    "last_validated": "2026-03-20T07:36:02Z",
+    "validation_errors": []
+  }
+}
