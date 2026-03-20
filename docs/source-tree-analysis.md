@@ -19,7 +19,7 @@ The repository is organized around a controller-led runtime with split worker se
 |-- scripts/
 |-- tests/
 |-- dataset/
-|-- kitty-specs/
+|-- _bmad-output/
 |-- docs/
 |-- skills/
 |-- website/
@@ -39,7 +39,7 @@ The repository is organized around a controller-led runtime with split worker se
 | `scripts/` | Local environment and test automation scripts | `env_up.sh`, `env_down.sh`, `run_integration_tests.sh`, `cleanup_local_s3.py` |
 | `tests/` | Integration coverage and support test data | `integration/`, `e2e/`, `controller/`, `worker_light/`, `worker_heavy/` |
 | `dataset/` | Seed data and eval scaffolding | `data/`, `evals/` |
-| `kitty-specs/` | Story, research, and implementation planning artifacts | `*/plan.md`, `*/tasks.md`, `*/research.md`, `*/status.json` |
+| `_bmad-output/planning-artifacts/` | BMAD planning artifacts such as PRDs, epics, stories, and supporting research notes | `prd.md`, `epics.md`, `*.md` |
 | `docs/` | Self-contained project documentation bundle | `index.md`, `project-overview.md`, `source-tree-analysis.md`, `backend-reference.md`, `architecture.md`, `api-contracts.md`, `data-models.md`, `component-inventory.md`, `deployment-guide.md`, `development-guide.md`, `spec-coverage.md` |
 | `skills/` | Runtime skill repository mounted into agent sessions | `build123d_cad_drafting_skill`, `electronics-engineering`, `manufacturing-knowledge`, `mechanical-engineering`, `runtime-script-contract`, `skill-creator`, `spec-editing-style-guide` |
 | `website/` | Standalone static mirror of the marketing site | Asset mirror and published site files |

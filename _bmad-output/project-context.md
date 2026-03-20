@@ -12,7 +12,7 @@ existing_patterns_found: 12
 
 # Project Context for AI Agents
 
-This repo is brownfield. Treat `specs/desired_architecture.md` and the files under `specs/architecture/` as the source of truth. If README/docs disagree with those specs, the specs win.
+This repo is brownfield. Treat `specs/desired_architecture.md` and the files under `specs/architecture/` as the strongest reference point for architectural intent until you explicitly retire them. The docs bundle mirrors those decisions for day-to-day BMAD runs, but if README/docs disagree with specs, the specs still win.
 
 ## Technology Stack
 

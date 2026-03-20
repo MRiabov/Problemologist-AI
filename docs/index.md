@@ -36,7 +36,7 @@ This documentation set is intentionally self-contained. It describes the live ba
 | Evaluation data | [`dataset/`](../dataset) | Seed data and eval artifacts used by benchmark workflows |
 | Skill repository | [`skills/`](../skills) | Runtime-mounted skills used by the agent workflows |
 | Website mirror | [`website/`](../website) | Standalone static mirror of the published marketing site |
-| Planning artifacts | [`kitty-specs/`](../kitty-specs) | Story plans, task slices, and supporting research notes |
+| Planning artifacts | [`_bmad-output/planning-artifacts/`](../_bmad-output/planning-artifacts) | Generated PRD, epics, stories, and supporting planning outputs |
 
 ## Core Docs
 
