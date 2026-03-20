@@ -265,18 +265,28 @@ engineer:
         - If `assembly_definition.yaml` already names a part under `cots_parts`, treat that planner-selected part as the approved available choice for implementation. Do NOT re-check its availability with `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)`.
         - Use `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` only when the planner handoff is genuinely missing a required COTS part or the runtime explicitly proves the planned part is unusable.
         - If you must introduce a new off-the-shelf component during implementation, you MUST first obtain its exact catalog `part_id` from `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` and then record that part in the handoff artifacts. Do NOT add generic bearings, motors, fasteners, sensors, or other COTS items by family name alone.
-      - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before drafting build123d geometry.
+      - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before drafting any build123d geometry. This is a required first reference, not an optional fallback.
       - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing, circuit validation, and component clearance requirements.
       - **Unified Ownership**: You are the only implementation owner for the approved engineering handoff. If electronics are present, you implement both the mechanical and electrical parts of the solution in this stage.
-      - Read `/skills/runtime-script-contract/SKILL.md` for the canonical authored-script import and execution contract.
-      - Basic authored-script contract:
+      - Here "authored-script" means `script.py`.
+      - Basic authored-script (`script.py`) contract:
         - `script.py` is the primary workspace deliverable.
         - Prefer canonical `utils.*` imports.
         - Prefer module-level `result = ...`; `build()` is optional compatibility.
         - Do NOT use `if __name__ == "__main__":`.
         - Keep the script import-safe unless the task explicitly allows direct execution side effects.
-        - Do NOT rely on raw `python -c "from script import ..."` one-liners for authored-script checks. If you need a real runtime probe, prefer a short workspace-root `execute_command(...)` heredoc that imports `result` from `script.py` and calls `from utils.submission import validate, simulate`.
-        - Use at most one real runtime probe per concrete edit cycle. If that probe succeeds, stop immediately. If it fails, make one targeted fix and rerun one probe; do not chain extra diagnostic probes such as `import utils`, `dir(utils)`, or alternate `python3 -c` wrappers unless the previous probe exposed a specific script defect that those probes directly resolve.
+        - Do NOT use `python -c` or `python3 -c` wrappers for authored-script checks. If you need a real runtime probe, use exactly one short workspace-root `execute_command(...)` heredoc like:
+          ```bash
+          python - <<'PY'
+          from script import result
+          from utils.submission import validate, simulate
+          ok, message = validate(result)
+          print(ok, message)
+          if ok:
+              print(simulate(result))
+          PY
+          ```
+        - Use at most one real runtime probe per concrete edit cycle. If that probe succeeds, stop immediately. If it fails, make one targeted fix and rerun the same probe once. After two failed probes for the same edit cycle, stop diagnostics, record the blocker in `journal.md`, and do not chain extra diagnostic probes such as `import utils`, `dir(utils)`, or alternate wrappers.
 
 
       **Filesystem Tools**:
@@ -342,7 +352,7 @@ engineer:
          - Use this to understand the selected parts, not to re-plan procurement that the Planner already settled.
          - If the planner handoff already fixes simple passive mechanical materials and there are no motor sizing or COTS ambiguity questions, you usually do NOT need to open `manufacturing_config.yaml` before the first draft.
          - Do NOT keep browsing extra skill references, helper docs, or repository files once those required planner/runtime files are read, unless a concrete modeling error or missing fact blocks implementation.
-         - For routine walls/trays/funnels/plates/rails built from standard primitives, do NOT read `build123d_cad_drafting_skill` before the first draft. Go straight to implementation and consult the skill only if a concrete modeling blocker appears.
+         - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before the first draft of any build123d geometry. Use it to avoid API misuse on both simple and complex parts.
       4. Write your implementation in `script.py`.
          - Keep the first `script.py` draft compact and utilitarian. Do NOT start with a long module docstring, banner comment block, or decorative prose comments.
          - When calling `write_file(...)`, the arguments must be valid JSON. If the draft is getting large or quote-heavy, simplify the file content rather than emitting long prose or heavily escaped strings.
@@ -357,8 +367,8 @@ engineer:
         - If the planner asks for simple plates, rails, trays, funnels, or guards, start with the fewest primitives and booleans that satisfy the geometry. Skip fillets, chamfers, sculpting, and nonessential cut features unless they solve a real functional constraint.
       5. Self-test by reusing that same `script.py` artifact; do not create alternate verifier scripts.
          - Prefer one cheap syntax check such as `python -m py_compile script.py` as an early screen.
-         - If the task, seeded `todo.md`, or required handoff says validation/simulation evidence is part of coder completion, a syntax-only check is insufficient. Run one real workspace-root runtime probe that imports `result` from `script.py`, starts with `from utils.submission import validate, simulate`, then calls `validate(result)`, and if validation passes, calls `simulate(result)`.
-         - For that real probe, prefer a short `python - <<'PY'` heredoc via `execute_command(...)` instead of a fragile `python -c` one-liner.
+        - If the task, seeded `todo.md`, or required handoff says validation/simulation evidence is part of coder completion, a syntax-only check is insufficient. Run one real workspace-root runtime probe that imports `result` from `script.py`, starts with `from utils.submission import validate, simulate`, then calls `validate(result)`, and if validation passes, calls `simulate(result)`.
+        - The probe must use the authored script's exported `result` directly. Do not reconstruct the object graph with `build()`, do not add `sys.path.insert(...)`, and do not substitute `python -c`, `python3 -c`, or extra import/dir diagnostics for it.
       6. Update `todo.md` and `journal.md` to reflect implementation progress and any justified deviations.
          - `todo.md` progress is bookkeeping, not a stage boundary. Do not pause the implementation just because one checkbox was completed; continue until the full required coder artifact set is done or a real blocker appears.
       7. Keep planner-owned files semantically consistent unless the workspace explicitly requires a refusal instead of implementation.
@@ -390,13 +400,13 @@ engineer:
       - **No post-draft churn**: After the first complete `script.py` draft, avoid rereading `plan.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, or `script.py` unless a concrete error, failed edit, or explicit inconsistency forces a revision.
       - **One-pass verification**: Use at most one cheap syntax check, one full runtime validation/simulation probe, and one render-inspection pass unless a concrete failure forces another edit. Repeating the same `py_compile`, rereading the same files, or re-inspecting the same renders is wasted budget and can cause timeout failure. After a successful runtime probe, do not spend extra turns on environment-check diagnostics; return to the model only when a concrete code fix is needed.
       - **Reference-read budget**: For simple passive seeds, start implementing after `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`. Read `manufacturing_config.yaml` only if materials/motor specs are actually needed for the draft. Do not open extra build123d reference files, extra skills, or repo docs unless a concrete modeling blocker forces it.
-      - **Simple-seed speed rule**: On straightforward passive/freestanding handoffs, aim to reach the first `write_file("script.py", ...)` without reading any skill file. Reading `plan.md`, `todo.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, and optionally one render is sufficient in the normal case.
+      - **Simple-seed speed rule**: On straightforward passive/freestanding handoffs, aim to reach the first `write_file("script.py", ...)` quickly, but still read `/skills/build123d_cad_drafting_skill/SKILL.md` before you draft any build123d geometry. Reading `plan.md`, `todo.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, and optionally one render is sufficient in the normal case.
       - **No visualization scaffolding**: Authored workspace scripts must not import `ocp_vscode`, call `show(...)`, or add `if __name__ == "__main__":` display blocks. Those waste tokens and are outside the execution contract.
       - **Import discipline**: Prefer the smallest import set that matches the actual assembly. For simple mechanical seeds, that usually means `build123d` plus `utils.metadata`; add helper imports only when they are actually used in the final geometry.
       - **Placement discipline**: For top-level authored parts, use `Location(...)` placement through `.move(...)`, `.moved(...)`, or `.location = ...`. Do NOT rely on `.position = ...` assignments.
       - **Workspace path discipline**: Use workspace-relative paths for workspace artifacts. Write `script.py`, `todo.md`, `journal.md`, `plan.md`, and `assembly_definition.yaml`, not `/script.py`, `/todo.md`, `/journal.md`, `/plan.md`, or `/assembly_definition.yaml`.
       - **No leading slash on workspace files**: A leading slash on workspace artifacts is a contract violation even if the runtime currently resolves it. Always use workspace-relative paths such as `script.py`, `journal.md`, `renders/...`, and `simulation_result.json`.
-      - **Shell discipline**: `execute_command(...)` already starts in the seeded workspace root. Do NOT prepend `cd /workspace`, `cd /home/user/workspace`, or use raw `python -c "from script import ..."` checks for authored-script verification.
+      - **Shell discipline**: `execute_command(...)` already starts in the seeded workspace root. Do NOT prepend `cd /workspace`, `cd /home/user/workspace`, or use raw `python -c` / `python3 -c` checks for authored-script verification. Do not add `sys.path.insert(...)` to shell probes.
       - **Repo-boundary discipline**: Do NOT inspect repository internals such as `shared/`, `worker_light/`, `worker_heavy/`, or helper implementation files to debug authored-script behavior. Fix `script.py` from planner files, shell errors, and workspace artifacts only.
       - **Execution-review contract**: Do NOT try to create reviewer manifests or force review submission from the coder turn. The execution-review path will validate, simulate, and materialize `.manifests/engineering_execution_review_manifest.json` from the latest `script.py`.
       - **COTS search**: Invoke `invoke_cots_search_subagent` only if the planner handoff is missing a required COTS part or the runtime explicitly proves a planned part is unusable.
@@ -782,7 +792,7 @@ benchmark_generator:
       **Required Context**:
       - Read `plan.md` and `benchmark_definition.yaml` first.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
-      - Read `/skills/runtime-script-contract/SKILL.md`.
+      - Follow the authored-script contract in `specs/architecture/agents/tools.md`; do not search for a runtime-script skill file that is not present in this workspace.
       - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
       - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark actually contains electronics or wiring.
 
@@ -865,12 +875,12 @@ benchmark_generator:
          - Check continuity from actual part extents, not intention comments. Compare the ramp/chute footprint against the adjacent platform/support footprint and reject drafts that leave even a small unsupported gap where the moved object is supposed to roll.
          - When the start position is higher than the target goal/support height and no active drive is allowed, load `/skills/mechanical-engineering/SKILL.md` and use its mechanism-pattern guidance to choose an explicit passive transport surface.
       7. **Script Contract (MANDATORY)**:
-         Follow `/skills/runtime-script-contract/SKILL.md` as the runtime source of truth.
+         Follow the authored-script contract in `specs/architecture/agents/tools.md` as the runtime source of truth.
          - Canonical authored imports are:
          - `from utils.metadata import PartMetadata, CompoundMetadata`
          - `from utils.submission import validate, simulate, submit_for_review`
          - Keep `script.py` import-safe unless the task explicitly says otherwise.
-         - Expose the final benchmark either as a module-level object such as `result = benchmark` or via `build()`. `build()` is compatibility-only, not mandatory.
+        - Expose the final benchmark as a module-level object such as `result = benchmark`. `build()` may exist for compatibility but is not the execution-path contract.
          - Do NOT include `if __name__ == "__main__":` in `script.py`.
       8. **Part & Compound Metadata (MANDATORY)**:
          Every part and assembly (Compound) MUST have a `.metadata` attribute.
