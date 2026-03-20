@@ -2,6 +2,7 @@ import os
 import re
 import time
 import uuid
+from pathlib import Path
 
 import httpx
 import pytest
@@ -137,3 +138,43 @@ def test_int_161_tool_activity_and_reasoning_visibility(page: Page):
     expect(
         page.get_by_text(re.compile(re.escape(expected_snippet))).first
     ).to_be_visible(timeout=30000)
+
+    readable_log_path = Path("logs/integration_tests/current/readable_agent_logs.log")
+    label_candidates = {episode_id[:7]}
+    metadata = ep_resp.json().get("metadata_vars") or {}
+    if isinstance(metadata, dict):
+        for key in ("worker_session_id", "benchmark_id"):
+            value = metadata.get(key)
+            if isinstance(value, str) and value.strip():
+                label_candidates.add(value.strip()[:7])
+
+    readable_log_text = ""
+    for _ in range(45):
+        if readable_log_path.exists():
+            readable_log_text = readable_log_path.read_text(encoding="utf-8")
+            run_lines = [
+                line
+                for line in readable_log_text.splitlines()
+                if any(label in line for label in label_candidates)
+            ]
+            if any("OUTPUT" in line for line in run_lines) and any(
+                "REASONING" in line for line in run_lines
+            ):
+                break
+        time.sleep(1)
+
+    run_lines = [
+        line
+        for line in readable_log_text.splitlines()
+        if any(label in line for label in label_candidates)
+    ]
+    assert run_lines, "Expected readable_agent_logs.log entries for this episode."
+    assert all(re.match(r"^t=\d+s \| ", line) for line in run_lines), (
+        "Expected readable_agent_logs.log lines to include elapsed seconds."
+    )
+    assert any("OUTPUT" in line for line in run_lines), (
+        "Expected readable_agent_logs.log to include model output lines."
+    )
+    assert any("REASONING" in line for line in run_lines), (
+        "Expected readable_agent_logs.log to include reasoning lines."
+    )
