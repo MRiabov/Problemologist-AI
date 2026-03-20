@@ -120,16 +120,16 @@ For native tool-loop nodes, if the model produces more than 5 consecutive no-too
 
 ### The "tools" as Python functions - Utils
 
-For agent-authored CAD scripts, the canonical import surface is a top-level `utils` package exposed in the runtime environment. Agent code should import helper functions and metadata types from that package, not from `shared.*` implementation paths.
+For submission scripts, the canonical import surface is a top-level `utils` package exposed in the runtime environment. Agent code should import helper functions and metadata types from that package, not from `shared.*` implementation paths.
 
-Canonical authored-script imports:
+Canonical submission-script imports:
 
 ```py
 from utils.submission import validate, simulate, submit_for_review
 from utils.metadata import PartMetadata, CompoundMetadata
 ```
 
-`shared.utils.agent` and `shared.models.schemas` remain implementation modules inside the repo, but they are no longer the agent-facing contract. If runtime internals still route through those paths, that is compatibility plumbing rather than the intended authored-script API.
+`shared.utils.agent` and `shared.models.schemas` remain implementation modules inside the repo, but they are no longer the agent-facing contract. If runtime internals still route through those paths, that is compatibility plumbing rather than the intended submission script API.
 
 I propose the following set of tools (their usage is below). Notably, the tools are python imports and functions, called right in one of the edited files!
 
@@ -199,7 +199,7 @@ Note - used by default by
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
 <!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
 
-For benchmark and engineering authored scripts, direct Python calls inside the authored script are the canonical usage. The intended pattern is:
+For benchmark and engineering submission scripts, direct Python calls inside the submission script are the canonical usage. The intended pattern is:
 
 ```py
 from utils.submission import validate, simulate, submit_for_review
@@ -212,9 +212,9 @@ simulate(result)
 submit_for_review(result)
 ```
 
-The preferred execution path for the agent is to run the authored script itself, typically via a terminal command such as `python script.py`. A separate `execute_command("python -c ...")` wrapper that reconstructs the same object graph outside the script is not the normative contract.
+The preferred execution path for the agent is to run the submission script itself, typically via a terminal command such as `python script.py`. A separate `execute_command("python -c ...")` wrapper that reconstructs the same object graph outside the script is not the normative contract.
 
-`build()` may still exist as a compatibility helper, but it is no longer a required authored-script entrypoint. The architecture contract is the authored script itself, not an import-only `build()` API.
+`build()` may still exist as a compatibility helper, but it is no longer a required submission-script entrypoint. The architecture contract is the submission script itself, not an import-only `build()` API.
 
 ### Planner tools
 

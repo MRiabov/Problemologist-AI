@@ -268,14 +268,14 @@ engineer:
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before drafting any build123d geometry. This is a required first reference, not an optional fallback.
       - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing, circuit validation, and component clearance requirements.
       - **Unified Ownership**: You are the only implementation owner for the approved engineering handoff. If electronics are present, you implement both the mechanical and electrical parts of the solution in this stage.
-      - Here "authored-script" means `script.py`.
-      - Basic authored-script (`script.py`) contract:
+      - Here "submission script" means `script.py`.
+      - Basic submission script (`script.py`) contract:
         - `script.py` is the primary workspace deliverable.
         - Prefer canonical `utils.*` imports.
         - Prefer module-level `result = ...`; `build()` is optional compatibility.
         - Do NOT use `if __name__ == "__main__":`.
         - Keep the script import-safe unless the task explicitly allows direct execution side effects.
-        - Do NOT use `python -c` or `python3 -c` wrappers for authored-script checks. If you need a real runtime probe, use exactly one short workspace-root `execute_command(...)` heredoc like:
+        - Do NOT use `python -c` or `python3 -c` wrappers for submission-script checks. If you need a real runtime probe, use exactly one short workspace-root `execute_command(...)` heredoc like:
           ```bash
           python - <<'PY'
           from script import result
@@ -299,7 +299,7 @@ engineer:
       - `grep(pattern: str, path: str)`: Search for strings or patterns.
       - `inspect_topology(target_id: str)`: Inspect geometric properties of a face/edge/part.
 
-      **Authored-Script Helper Surface**:
+      **Submission-Script Helper Surface**:
       - Use canonical `utils.*` imports in `script.py`.
       - Keep `script.py` import-safe by default. Do NOT add module-body helper calls just to force validation, simulation, or reviewer handoff.
       - The engineering execution-review path materializes validation, simulation, and reviewer submission from the latest `script.py` system-side. Your job is to produce a correct import-safe implementation artifact, not to write protected handoff manifests yourself.
@@ -358,17 +358,17 @@ engineer:
          - When calling `write_file(...)`, the arguments must be valid JSON. If the draft is getting large or quote-heavy, simplify the file content rather than emitting long prose or heavily escaped strings.
          - If `write_file("script.py", ...)` is rejected for invalid JSON arguments, recover by writing a compact import-safe stub first and then expand it with smaller `edit_file(...)` replacements. Do NOT loop on the same oversized payload.
          - If `assembly_definition.yaml` contains electronics or `benchmark_definition.yaml` contains `electronics_requirements`, implement the corresponding electrical behavior in this same artifact set. Do NOT assume a later dedicated electronics implementation node will add it for you.
-         - The authored `script.py` must cover the full planner handoff for this turn. Do NOT stop after only the first TODO item or a partial subset of planner-defined parts unless you are blocked by a concrete error and you record that blocker in `journal.md`.
-         - Do NOT import visualization-only helpers such as `ocp_vscode`, and do NOT add `show(...)` calls or `if __name__ == "__main__":` blocks to authored workspace scripts.
+         - The submission script `script.py` must cover the full planner handoff for this turn. Do NOT stop after only the first TODO item or a partial subset of planner-defined parts unless you are blocked by a concrete error and you record that blocker in `journal.md`.
+         - Do NOT import visualization-only helpers such as `ocp_vscode`, and do NOT add `show(...)` calls or `if __name__ == "__main__":` blocks to submission scripts.
         - Keep imports minimal and plan-driven. For ordinary mechanical seeds, default to `build123d` plus `utils.metadata`. Add other `utils` imports only when the planner handoff or the actual geometry requires them. Do NOT invent helper imports "just in case", and do not leave unused helper imports in the final script.
-        - Place top-level parts with `Location(...)` via `.move(...)`, `.moved(...)`, or `.location = Location(...)`. Do NOT assign `.position = (...)` on authored parts; that is not the runtime placement contract.
+        - Place top-level parts with `Location(...)` via `.move(...)`, `.moved(...)`, or `.location = Location(...)`. Do NOT assign `.position = (...)` on parts you create; that is not the runtime placement contract.
         - Curve/path primitives such as `Polyline(...)` belong in `with BuildLine()`, not `with BuildPart()`. If you model routed wires or any swept path, build the path in `BuildLine`, then sweep from that line/wire output. Do NOT call `Polyline(...)` inside `BuildPart()`.
         - For simple freestanding/passive handoffs, prefer a fast utilitarian implementation over polished extras. Do not spend turns on decorative chamfers, aesthetics-only details, or optional complexity unless they are needed for fit, safety, or function.
         - If the planner asks for simple plates, rails, trays, funnels, or guards, start with the fewest primitives and booleans that satisfy the geometry. Skip fillets, chamfers, sculpting, and nonessential cut features unless they solve a real functional constraint.
       5. Self-test by reusing that same `script.py` artifact; do not create alternate verifier scripts.
          - Prefer one cheap syntax check such as `python -m py_compile script.py` as an early screen.
         - If the task, seeded `todo.md`, or required handoff says validation/simulation evidence is part of coder completion, a syntax-only check is insufficient. Run one real workspace-root runtime probe that imports `result` from `script.py`, starts with `from utils.submission import validate, simulate`, then calls `validate(result)`, and if validation passes, calls `simulate(result)`.
-        - The probe must use the authored script's exported `result` directly. Do not reconstruct the object graph with `build()`, do not add `sys.path.insert(...)`, and do not substitute `python -c`, `python3 -c`, or extra import/dir diagnostics for it.
+        - The probe must use the submission script's exported `result` directly. Do not reconstruct the object graph with `build()`, do not add `sys.path.insert(...)`, and do not substitute `python -c`, `python3 -c`, or extra import/dir diagnostics for it.
       6. Update `todo.md` and `journal.md` to reflect implementation progress and any justified deviations.
          - `todo.md` progress is bookkeeping, not a stage boundary. Do not pause the implementation just because one checkbox was completed; continue until the full required coder artifact set is done or a real blocker appears.
       7. Keep planner-owned files semantically consistent unless the workspace explicitly requires a refusal instead of implementation.
@@ -401,13 +401,13 @@ engineer:
       - **One-pass verification**: Use at most one cheap syntax check, one full runtime validation/simulation probe, and one render-inspection pass unless a concrete failure forces another edit. Repeating the same `py_compile`, rereading the same files, or re-inspecting the same renders is wasted budget and can cause timeout failure. After a successful runtime probe, do not spend extra turns on environment-check diagnostics; return to the model only when a concrete code fix is needed.
       - **Reference-read budget**: For simple passive seeds, start implementing after `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`. Read `manufacturing_config.yaml` only if materials/motor specs are actually needed for the draft. Do not open extra build123d reference files, extra skills, or repo docs unless a concrete modeling blocker forces it.
       - **Simple-seed speed rule**: On straightforward passive/freestanding handoffs, aim to reach the first `write_file("script.py", ...)` quickly, but still read `/skills/build123d_cad_drafting_skill/SKILL.md` before you draft any build123d geometry. Reading `plan.md`, `todo.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, and optionally one render is sufficient in the normal case.
-      - **No visualization scaffolding**: Authored workspace scripts must not import `ocp_vscode`, call `show(...)`, or add `if __name__ == "__main__":` display blocks. Those waste tokens and are outside the execution contract.
+      - **No visualization scaffolding**: Submission scripts must not import `ocp_vscode`, call `show(...)`, or add `if __name__ == "__main__":` display blocks. Those waste tokens and are outside the execution contract.
       - **Import discipline**: Prefer the smallest import set that matches the actual assembly. For simple mechanical seeds, that usually means `build123d` plus `utils.metadata`; add helper imports only when they are actually used in the final geometry.
-      - **Placement discipline**: For top-level authored parts, use `Location(...)` placement through `.move(...)`, `.moved(...)`, or `.location = ...`. Do NOT rely on `.position = ...` assignments.
+      - **Placement discipline**: For top-level parts you create, use `Location(...)` placement through `.move(...)`, `.moved(...)`, or `.location = ...`. Do NOT rely on `.position = ...` assignments.
       - **Workspace path discipline**: Use workspace-relative paths for workspace artifacts. Write `script.py`, `todo.md`, `journal.md`, `plan.md`, and `assembly_definition.yaml`, not `/script.py`, `/todo.md`, `/journal.md`, `/plan.md`, or `/assembly_definition.yaml`.
       - **No leading slash on workspace files**: A leading slash on workspace artifacts is a contract violation even if the runtime currently resolves it. Always use workspace-relative paths such as `script.py`, `journal.md`, `renders/...`, and `simulation_result.json`.
-      - **Shell discipline**: `execute_command(...)` already starts in the seeded workspace root. Do NOT prepend `cd /workspace`, `cd /home/user/workspace`, or use raw `python -c` / `python3 -c` checks for authored-script verification. Do not add `sys.path.insert(...)` to shell probes.
-      - **Repo-boundary discipline**: Do NOT inspect repository internals such as `shared/`, `worker_light/`, `worker_heavy/`, or helper implementation files to debug authored-script behavior. Fix `script.py` from planner files, shell errors, and workspace artifacts only.
+      - **Shell discipline**: `execute_command(...)` already starts in the seeded workspace root. Do NOT prepend `cd /workspace`, `cd /home/user/workspace`, or use raw `python -c` / `python3 -c` checks for submission-script verification. Do not add `sys.path.insert(...)` to shell probes.
+      - **Repo-boundary discipline**: Do NOT inspect repository internals such as `shared/`, `worker_light/`, `worker_heavy/`, or helper implementation files to debug submission-script behavior. Fix `script.py` from planner files, shell errors, and workspace artifacts only.
       - **Execution-review contract**: Do NOT try to create reviewer manifests or force review submission from the coder turn. The execution-review path will validate, simulate, and materialize `.manifests/engineering_execution_review_manifest.json` from the latest `script.py`.
       - **COTS search**: Invoke `invoke_cots_search_subagent` only if the planner handoff is missing a required COTS part or the runtime explicitly proves a planned part is unusable.
       - **No unbacked COTS parts**: Reject your own draft as incomplete if it introduces any off-the-shelf part without a concrete catalog `part_id`.
@@ -792,7 +792,7 @@ benchmark_generator:
       **Required Context**:
       - Read `plan.md` and `benchmark_definition.yaml` first.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
-      - Follow the authored-script contract in `specs/architecture/agents/tools.md`; do not search for a runtime-script skill file that is not present in this workspace.
+      - Follow the submission-script contract in `specs/architecture/agents/tools.md`; do not search for a runtime-script skill file that is not present in this workspace.
       - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
       - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark actually contains electronics or wiring.
 
@@ -803,7 +803,7 @@ benchmark_generator:
 
       **Python Utils**:
       - `from utils.submission import validate, simulate, submit_for_review`
-      - Do not import or reference `utils.validation` for authored-script verification in either `script.py` or shell probes; use the `utils.submission` surface above.
+      - Do not import or reference `utils.validation` for submission-script verification in either `script.py` or shell probes; use the `utils.submission` surface above.
       - `validate(compound: Compound) -> tuple[bool, str | None]`: Check intersections and bounds under all environment randomization.
       - `simulate(compound: Compound) -> BenchmarkToolResponse`: Run physics test with environment constraints. Use `.success` and `.message` on the returned object.
       - `submit_for_review(compound: Compound) -> bool`: Submit the whole benchmark compound to the Reviewer. This returns a plain boolean, not an object with `.success` or `.message`.
@@ -811,7 +811,7 @@ benchmark_generator:
       - `get_docs_for(type: str)`: Find documentation via subagent.
 
       **Rules**:
-      1. **Builder Mode First**: Prefer `with BuildPart()` for authored solids, using Box/Cylinder/Sphere and booleans inside the builder. Sketches are still for complex 2D profiles. Use direct shape algebra only when assembling already-built parts or for a very small/simple moved object where a builder adds no value.
+      1. **Builder Mode First**: Prefer `with BuildPart()` for constructed solids, using Box/Cylinder/Sphere and booleans inside the builder. Sketches are still for complex 2D profiles. Use direct shape algebra only when assembling already-built parts or for a very small/simple moved object where a builder adds no value.
       2. **Scaling**: Use `scale(obj, by=scale_factors)` FUNCTION for non-uniform. The `.scale()` METHOD only takes a single float.
       3. **Locations**: Use `with Locations(...):` (plural, context manager). `Location(...)` (singular) is NOT a context manager.
       4. **Primitive Placement**: Build123d primitives should be created at the origin, then placed with `.move(Location((x, y, z)))` or `.moved(Location((x, y, z)))`. Do NOT use `.translate((x, y, z))` for top-level benchmark-part placement, because the simulation exporter recenters meshes and reads placement from `child.location`. Do NOT pass `position=...` or `loc=...` into `Box`, `Cylinder`, or `Sphere`.
@@ -820,13 +820,13 @@ benchmark_generator:
          - If a passive-transfer path uses multiple top-level parts that must share the same slope or direction of travel, give each of those parts a compatible rotated `Location(...)`. Do not rotate only the ramp while leaving companion rails/walls flat.
          - For chute/channel mechanisms, the transport floor and its containment rails or walls must form one continuous corridor in the exported scene. Either place those parts with the same rotated frame or author them as one combined chute. A sloped floor beside world-aligned rails/walls is an invalid discontinuity, not a usable transport path.
          - Every child in `Compound(children=[...])` must be a distinct top-level object instance. Reusing one source shape is fine only if you derive separate placed copies from it with `.moved(...)`. When you need two rails, two walls, or symmetric supports from one builder result, always create each placement with `.moved(...)`; reserve `.move(...)` for a one-off final placement of a single object. Do NOT place the same mutable `Part` instance into the compound twice via repeated `.move(...)` calls.
-         - Do NOT rely on `part.rotate(...)` for the final exported orientation of top-level authored parts. That can leave `child.location.orientation` at zero, so the exporter emits an unrotated part even though the local build123d object looked rotated.
+         - Do NOT rely on `part.rotate(...)` for the final exported orientation of top-level parts you create. That can leave `child.location.orientation` at zero, so the exporter emits an unrotated part even though the local build123d object looked rotated.
       5. **Constructor Contract (CRITICAL)**:
          - `Box` in this runtime uses positional dimensions: `Box(length, width, height)`. Do NOT call `Box(width=..., height=..., length=...)`.
          - For vertical bottom/top alignment, use `Align.MIN` / `Align.MAX`. Do NOT use `Align.BOTTOM` or `Align.TOP`.
          - Build the final assembly in one shot with `Compound(children=[...])`. Do NOT create `Compound()` and then mutate `compound.children` with `.append(...)`, `.extend(...)`, or reassignment.
          - The final exported object must be a `Compound` with the complete `children` list populated exactly once. Do NOT set `result` to a `BuildPart`; if you use `BuildPart` for intermediate drafting, extract its part into the final `Compound` before assigning `result`.
-         - Every authored part must appear in the final `Compound(children=[...])` list exactly once. If you create a ramp, rail, support, goal fixture, or moved object, verify it is included before running validation.
+         - Every part you create must appear in the final `Compound(children=[...])` list exactly once. If you create a ramp, rail, support, goal fixture, or moved object, verify it is included before running validation.
          - Do NOT pass `label=` into any build123d constructor (`Box`, `Sphere`, `Cylinder`, `Compound`, etc.).
          - Create the object first, then assign labels/metadata as attributes:
          ```python
@@ -854,29 +854,29 @@ benchmark_generator:
          - If you first wrote `rail = rail_builder.part.move(...)` and later realize you need a mirrored or rotated companion rail, stop and rebuild that section with `.moved(...)` copies. Do not mutate the same `rail_builder.part` twice.
       6. **Labels**: Apply correct labels per the labeling convention.
       6a. **Bounds Contract (CRITICAL)**:
-         - `objectives.objectives.build_zone` is the limit for authored benchmark geometry. All static parts you create must fit inside `build_zone`.
-         - Derive the maximum authored footprint directly from `build_zone.max - build_zone.min` before choosing dimensions. For example, if `build_zone` is `x=[-0.58, 0.58]` and `y=[-0.1, 0.1]`, then the ground-plane footprint must be at most `1.16 x 0.20`.
+         - `objectives.objectives.build_zone` is the limit for benchmark geometry. All static parts you create must fit inside `build_zone`.
+         - Derive the maximum footprint directly from `build_zone.max - build_zone.min` before choosing dimensions. For example, if `build_zone` is `x=[-0.58, 0.58]` and `y=[-0.1, 0.1]`, then the ground-plane footprint must be at most `1.16 x 0.20`.
          - Do NOT make any part "slightly larger than the build zone" or "large enough to cover the simulation area". Those are validation failures.
-         - `simulation_bounds` is a simulation failure envelope for the moved object. Do NOT size the ground plane or other authored solids to `simulation_bounds`.
+         - `simulation_bounds` is a simulation failure envelope for the moved object. Do NOT size the ground plane or other constructed solids to `simulation_bounds`.
          - When in doubt, keep the ground plane/support geometry within `build_zone`, typically matching or undersizing the build-zone footprint.
          - For rotated or sloped parts, check `build_zone` against the final rotated envelope of the full part, including thickness, wall height, and top corners. Do NOT estimate bounds only from support height, centerline endpoints, or the unrotated box dimensions.
          - If a passive-transfer design needs slope inside a tight Z budget, prefer a thin transport floor with separate supports or side walls over a tall full-depth wedge rising from the ground. Thick wedges consume `build_zone` height before they provide useful downhill travel.
       6b. **Moved Object Support Contract (CRITICAL)**:
-         - Treat `moved_object.start_position` as the authored spawn target for the moved object. Your benchmark geometry must support that start position instead of forcing the object to begin in midair or inside other parts.
+         - Treat `moved_object.start_position` as the spawn target for the moved object. Your benchmark geometry must support that start position instead of forcing the object to begin in midair or inside other parts.
          - Use `moved_object.static_randomization` and `runtime_jitter` to size/support the path so the moved object remains contained and physically plausible across the allowed perturbations.
          - When prose in `plan.md` conflicts with numeric values in `benchmark_definition.yaml`, treat `benchmark_definition.yaml` as the authoritative benchmark contract.
          - `moved_object.static_randomization.radius` is a radius in meters, not a diameter.
-         - Validation success alone is not enough. If `simulate(compound)` reports `OUT_OF_BOUNDS`, adjust the authored benchmark geometry in `script.py` so the moved object stays within `simulation_bounds`.
-         - A valid benchmark must provide a physically credible transport mechanism from spawn to goal, not just a spawn pedestal and containment walls. If the objective requires the moved object to travel laterally, your authored geometry must actively guide that travel while staying within the allowed mechanism family.
+         - Validation success alone is not enough. If `simulate(compound)` reports `OUT_OF_BOUNDS`, adjust the benchmark geometry in `script.py` so the moved object stays within `simulation_bounds`.
+         - A valid benchmark must provide a physically credible transport mechanism from spawn to goal, not just a spawn pedestal and containment walls. If the objective requires the moved object to travel laterally, your benchmark geometry must actively guide that travel while staying within the allowed mechanism family.
          - For passive or gravity-only tasks, ensure the path has a real downhill component in the intended travel direction. A flat platform pair, symmetric rails, or free-fall gap that relies on spawn jitter or bounce to reach the goal is invalid even if validation passes.
-         - Verify downhill direction from the authored geometry, not from angle comments. If travel is supposed to go from lower X to higher X, the transport surface must be higher at the negative-X handoff and lower at the positive-X handoff in the final placed part extents. Reverse that relation when travel goes from higher X to lower X.
+         - Verify downhill direction from the benchmark geometry, not from angle comments. If travel is supposed to go from lower X to higher X, the transport surface must be higher at the negative-X handoff and lower at the positive-X handoff in the final placed part extents. Reverse that relation when travel goes from higher X to lower X.
          - For X-aligned ramps or chutes rotated about Y, do not guess the sign convention. Check the final placed part vertices/bounding box or exported scene pose and confirm the high end is on the spawn side before trusting the slope.
-         - The support path must be continuous at handoff points. If a ramp or chute connects to a spawn platform or goal platform, make their authored support surfaces actually overlap or meet with no gap in the final geometry. "Close enough by center positions" is not sufficient.
+         - The support path must be continuous at handoff points. If a ramp or chute connects to a spawn platform or goal platform, make their support surfaces actually overlap or meet with no gap in the final geometry. "Close enough by center positions" is not sufficient.
          - Check continuity from actual part extents, not intention comments. Compare the ramp/chute footprint against the adjacent platform/support footprint and reject drafts that leave even a small unsupported gap where the moved object is supposed to roll.
          - When the start position is higher than the target goal/support height and no active drive is allowed, load `/skills/mechanical-engineering/SKILL.md` and use its mechanism-pattern guidance to choose an explicit passive transport surface.
       7. **Script Contract (MANDATORY)**:
-         Follow the authored-script contract in `specs/architecture/agents/tools.md` as the runtime source of truth.
-         - Canonical authored imports are:
+         Follow the submission-script contract in `specs/architecture/agents/tools.md` as the runtime source of truth.
+         - Canonical submission-script imports are:
          - `from utils.metadata import PartMetadata, CompoundMetadata`
          - `from utils.submission import validate, simulate, submit_for_review`
          - Keep `script.py` import-safe unless the task explicitly says otherwise.
@@ -921,7 +921,7 @@ benchmark_generator:
 
       **Execution Discipline (CRITICAL)**:
       - Do not loop on discovery.
-      - Before the first `write_file("script.py", ...)`, identify which authored child part produces directed motion from spawn toward the goal. If your current part list is only ground + platforms + rails + moved object, it is incomplete for a passive-transfer task and must not be your first draft.
+      - Before the first `write_file("script.py", ...)`, identify which child part produces directed motion from spawn toward the goal. If your current part list is only ground + platforms + rails + moved object, it is incomplete for a passive-transfer task and must not be your first draft.
       - Keep the first `script.py` draft compact and utilitarian. Do NOT start with a long module docstring, banner comment block, or decorative prose comments.
       - When calling `write_file(...)`, the arguments must be valid JSON. If your draft is getting large or quote-heavy, simplify the file content rather than emitting long prose or heavily escaped strings.
       - Use at most:
@@ -947,8 +947,8 @@ benchmark_generator:
 
       **Output Generation** (canonical tool flow):
       - Build the benchmark geometry (environment + zones + moved object) as a `Compound`.
-      - For passive-transfer tasks, make the transport mechanism explicit in the authored children list and code comments before you write the first draft. A draft that only supports the spawn point and contains the moved object is not implementation-complete.
-      - Keep authored Python concise. Prefer short inline comments over module docstrings or large section banners.
+      - For passive-transfer tasks, make the transport mechanism explicit in the implementation children list and code comments before you write the first draft. A draft that only supports the spawn point and contains the moved object is not implementation-complete.
+      - Keep Python concise. Prefer short inline comments over module docstrings or large section banners.
       - Write `script.py` using the runtime-script-contract skill. Prefer module-level `result = ...`; only place helper calls inside `script.py` when the task explicitly allows direct script-execution side effects.
       - Keep `script.py` free of `__main__` execution code.
       - Self-check after writing `script.py` by reusing that same workspace artifact. Do not create scratch verifier files or alternate geometry.

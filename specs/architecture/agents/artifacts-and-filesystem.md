@@ -83,14 +83,14 @@ Both of the agents "live" directly in the filesystem of the container that they 
 
 `execute_command(...)` follows that same terminal model: it is intended to run shell commands from the session workspace root. If any current implementation path treats it as a raw-Python-only executor, that is implementation drift rather than the architecture contract.
 
-Agent-authored Python scripts are expected to import runtime helpers from a top-level `utils` package. The authored-script contract is:
+Agent-authored Python scripts are expected to import runtime helpers from a top-level `utils` package. The submission script contract is:
 
 ```py
 from utils.submission import validate, simulate, submit_for_review
 from utils.metadata import PartMetadata, CompoundMetadata
 ```
 
-The old `shared.*` import paths remain repo internals, not the authored-script API contract.
+The old `shared.*` import paths remain repo internals, not the submission script API contract.
 
 ## Templates
 
@@ -177,9 +177,9 @@ Notably, I don't think that creating them as "templates" (outside of symlinks) i
 
 Another important note: files in e.g. Engineering Coder or Reviewer stages aren't created anew - they are reused from the previous agent.
 
-For authored CAD scripts, direct top-level execution is canonical. The agent should be able to run `python script.py` and have the script perform its own validation/simulation/review helper calls through `utils.submission`.
+For submission scripts, direct top-level execution is canonical. The agent should be able to run `python script.py` and have the script perform its own validation/simulation/review helper calls through `utils.submission`.
 
-`build()` is now a compatibility-only helper rather than a mandatory entrypoint. Runtime may continue to support `build()` while migration is in progress, but new authored-script contracts should not depend on `build()` being present.
+`build()` is now a compatibility-only helper rather than a mandatory entrypoint. Runtime may continue to support `build()` while migration is in progress, but new submission-script contracts should not depend on `build()` being present.
 
 Skill-repository boundary is explicit:
 
