@@ -185,6 +185,34 @@ def _sanitize_readable_text(value: Any) -> str:
     return text.strip()
 
 
+def _parse_trace_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+
+    with contextlib.suppress(ValueError):
+        return datetime.fromisoformat(text)
+
+    return None
+
+
+def _format_elapsed_prefix(*, episode: dict[str, Any], trace: dict[str, Any]) -> str:
+    episode_started_at = _parse_trace_datetime(episode.get("created_at"))
+    trace_started_at = _parse_trace_datetime(trace.get("created_at"))
+    if episode_started_at is None or trace_started_at is None:
+        return "t=0s | "
+
+    elapsed_seconds = int((trace_started_at - episode_started_at).total_seconds())
+    if elapsed_seconds < 0:
+        elapsed_seconds = 0
+    return f"t={elapsed_seconds}s | "
+
+
 def _short_run_label(episode: dict[str, Any]) -> str:
     metadata = episode.get("metadata_vars") or {}
     if not isinstance(metadata, dict):
@@ -642,6 +670,35 @@ def _format_tool_args(trace: dict[str, Any]) -> str:
     return " ".join(parts)
 
 
+def _format_reasoning_suffix(metadata: dict[str, Any]) -> str:
+    suffix_parts: list[str] = []
+    step_index = metadata.get("reasoning_step_index")
+    if isinstance(step_index, int):
+        suffix_parts.append(f"step={step_index}")
+
+    source = _sanitize_readable_text(metadata.get("reasoning_source"))
+    if source:
+        suffix_parts.append(f"source={source}")
+
+    if not suffix_parts:
+        return ""
+    return " [" + " ".join(suffix_parts) + "]"
+
+
+def _extract_output_text(content: Any) -> str:
+    text = _sanitize_readable_text(content)
+    if not text:
+        return ""
+
+    marker = "Result:"
+    if marker not in text:
+        return text
+
+    _, result_text = text.split(marker, 1)
+    result_text = result_text.strip()
+    return result_text or text
+
+
 def _format_readable_trace_line(
     *,
     episode: dict[str, Any],
@@ -657,16 +714,33 @@ def _format_readable_trace_line(
 
     if trace_type == "LLM_END" and detail_mode == "default":
         agent_name = _sanitize_readable_text(trace.get("name")) or default_agent_name
-        prefix = f"{agent_name} | {run_label} | "
+        prefix = _format_elapsed_prefix(episode=episode, trace=trace)
+        prefix += f"{agent_name} | {run_label} | "
         text = _sanitize_readable_text(trace.get("content"))
         if not text:
             return None
-        return prefix + text
+        return (
+            prefix
+            + "REASONING"
+            + _format_reasoning_suffix(metadata)
+            + " "
+            + _truncate_text(text, limit=220)
+        )
+
+    if trace_type == "LOG" and detail_mode == "default":
+        agent_name = _sanitize_readable_text(trace.get("name")) or default_agent_name
+        prefix = _format_elapsed_prefix(episode=episode, trace=trace)
+        prefix += f"{agent_name} | {run_label} | "
+        text = _extract_output_text(trace.get("content"))
+        if not text:
+            return None
+        return prefix + "OUTPUT " + _truncate_text(text, limit=220)
 
     if trace_type != "TOOL_START":
         return None
 
     prefix = f"{default_agent_name} | {run_label} | "
+    prefix = _format_elapsed_prefix(episode=episode, trace=trace) + prefix
     error_text = _sanitize_readable_text(metadata.get("error"))
     if detail_mode == "error":
         if not error_text:
@@ -2415,6 +2489,14 @@ async def main():
         "--verbose", action="store_true", help="Print backend traces during polling"
     )
     parser.add_argument(
+        "--fast-sim",
+        action="store_true",
+        help=(
+            "Use MuJoCo as the simulation backend for this eval run "
+            "(faster, reduced fidelity)."
+        ),
+    )
+    parser.add_argument(
         "--run-judge",
         action="store_true",
         help="Record judge/checklist pass rates from reward_config judge_evaluation",
@@ -2455,6 +2537,11 @@ async def main():
 
     if args.task_id and not selected_task_ids:
         parser.error("--task-id provided but no valid task IDs were parsed")
+
+    if args.fast_sim:
+        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
+    else:
+        os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
 
     if args.run_reviewers_with_judge and not args.run_judge:
         parser.error("--run-reviewers-with-judge requires --run-judge")
@@ -2520,6 +2607,11 @@ async def main():
     logger = get_logger(__name__)
     READABLE_AGENT_LOG_FILE = readable_log_file
     SESSION_LOG_ROOT = session_log_root
+    logger.info(
+        "eval_simulation_backend_selected",
+        backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "GENESIS"),
+        fast_sim=args.fast_sim,
+    )
 
     _emit_startup_log_pointers(
         current_link=current_link,

@@ -52,6 +52,15 @@ class CommonAssemblyTraverser:
     """Unifies assembly traversal and metadata resolution."""
 
     @staticmethod
+    def _resolve_material_id(metadata: Any) -> str | None:
+        material_id = getattr(metadata, "material_id", None)
+        if material_id:
+            return material_id
+        if getattr(metadata, "cots_id", None):
+            return "cots-generic"
+        return None
+
+    @staticmethod
     def traverse(
         assembly: Compound, electronics: Any | None = None
     ) -> list[AssemblyPartData]:
@@ -155,7 +164,7 @@ class CommonAssemblyTraverser:
 
         return {
             "is_fixed": metadata.is_fixed,
-            "material_id": getattr(metadata, "material_id", None),
+            "material_id": CommonAssemblyTraverser._resolve_material_id(metadata),
             "cots_id": getattr(metadata, "cots_id", None),
             "joint_type": joint_type,
             "joint_axis": joint_axis,
@@ -774,6 +783,9 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     euler=data.euler,
                 )
             else:
+                material_id = data.material_id or (
+                    "cots-generic" if data.cots_id else None
+                )
                 mesh_path_base = self.assets_dir / data.label
                 # Use coarser mesh for smoke tests
                 tolerance = 1.0 if smoke_test_mode else 0.1
@@ -803,7 +815,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                     joint_type=data.joint_type,
                     joint_axis=data.joint_axis,
                     joint_range=data.joint_range,
-                    geom_rgba=self._resolve_geom_rgba(data.material_id, mfg_config),
+                    geom_rgba=self._resolve_geom_rgba(material_id, mfg_config),
                 )
                 body_locations[data.label] = (data.pos, data.euler)
 
@@ -1033,7 +1045,8 @@ class GenesisSimulationBuilder(SimulationBuilderBase):
                 "name": data.label,
                 "pos": data.pos,
                 "euler": data.euler,
-                "material_id": data.material_id,
+                "material_id": data.material_id
+                or ("cots-generic" if data.cots_id else None),
                 "fixed": data.is_fixed,
                 "joint": {
                     "type": data.joint_type,

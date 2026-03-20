@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 import trimesh
@@ -121,4 +122,33 @@ def test_genesis_builder_no_msh_when_fem_disabled(
 
     # Assert
     assert not mock_tetra.called
+
+
+@patch("worker_heavy.utils.mesh_utils.tetrahedralize")
+@patch(
+    "worker_heavy.utils.mesh_utils.repair_mesh_file",
+    side_effect=mock_repair_side_effect,
+)
+@patch("worker_heavy.simulation.builder.export_stl", side_effect=create_dummy_stl)
+def test_genesis_builder_cots_only_metadata_gets_material_fallback(
+    mock_export_stl, mock_repair, mock_tetra, tmp_path
+):
+    from shared.models.schemas import PartMetadata
+
+    output_dir = tmp_path / "output"
+    builder = GenesisSimulationBuilder(output_dir)
+
+    box = Box(10, 10, 10)
+    box.label = "cots_only_part"
+    box.metadata = PartMetadata(cots_id="MG996R")
+    assembly = Compound(children=[box])
+
+    scene_path = builder.build_from_assembly(assembly)
+    payload = json.loads(scene_path.read_text())
+
+    entity = next(
+        entity for entity in payload["entities"] if entity["name"] == "cots_only_part"
+    )
+
+    assert entity["material_id"] == "cots-generic"
     assert not mock_repair.called
