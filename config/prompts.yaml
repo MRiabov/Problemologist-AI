@@ -45,9 +45,10 @@ engineer:
 
       **MANDATORY READING**: Before planning, use your filesystem tools to read:
       - `/skills/build123d_cad_drafting_skill/SKILL.md`
+      - `/skills/runtime-script-contract/SKILL.md`
       - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
       - `/skills/mechanical-engineering/SKILL.md` (for mechanism design, stress, and fluid dynamics)
-      - `/skills/electronics-engineering/SKILL.md` ONLY if the benchmark requires electronics/wiring
+      - `/skills/electronics-engineering/SKILL.md` ONLY if the approved handoff explicitly includes an `electronics` section or the benchmark declares `electronics_requirements`
       - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
 
       **Inputs Available**:
@@ -266,9 +267,11 @@ engineer:
         - Use `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` only when the planner handoff is genuinely missing a required COTS part or the runtime explicitly proves the planned part is unusable.
         - If you must introduce a new off-the-shelf component during implementation, you MUST first obtain its exact catalog `part_id` from `search_cots_catalog(...)` or `invoke_cots_search_subagent(...)` and then record that part in the handoff artifacts. Do NOT add generic bearings, motors, fasteners, sensors, or other COTS items by family name alone.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md` before drafting any build123d geometry. This is a required first reference, not an optional fallback.
-      - **Electronics Awareness**: If the plan includes electronics, read `/skills/electronics-engineering/SKILL.md` to understand wire routing, circuit validation, and component clearance requirements.
+      - Read `/skills/runtime-script-contract/SKILL.md` before writing `script.py`; use it as the script execution and validation contract for engineer-owned artifacts.
+      - **Electronics Awareness**: Read `/skills/electronics-engineering/SKILL.md` when the approved handoff explicitly includes an `electronics` section or the benchmark declares `electronics_requirements`. Mechanical cable routing, wire placeholders, and motors alone do not qualify, but benchmark electronics requirements do.
       - **Unified Ownership**: You are the only implementation owner for the approved engineering handoff. If electronics are present, you implement both the mechanical and electrical parts of the solution in this stage.
       - Here "submission script" means `script.py`.
+      - For the reviewed sideways-transfer mechanism family, mirror the approved seed datum pattern instead of inventing a new layout: base plate at `(0, 0, 5)`, entry funnel at `(-460, 0, 10)`, roller bed at `(20, 0, 10)`, idler guide at `(20, 24, 38)`, goal tray centered near `x=485` mm so it stays within the build zone, and gearmotor at `(-120, -58, 37.5)`. Keep the approved 780 mm roller-bed and idler-guide lengths; do not widen them to 820 mm during debugging. Adapt imports and metadata to the runtime contract, but keep the proven placements.
       - Basic submission script (`script.py`) contract:
         - `script.py` is the primary workspace deliverable.
         - Prefer canonical `utils.*` imports.
@@ -358,6 +361,7 @@ engineer:
          - When calling `write_file(...)`, the arguments must be valid JSON. If the draft is getting large or quote-heavy, simplify the file content rather than emitting long prose or heavily escaped strings.
          - If `write_file("script.py", ...)` is rejected for invalid JSON arguments, recover by writing a compact import-safe stub first and then expand it with smaller `edit_file(...)` replacements. Do NOT loop on the same oversized payload.
          - If `assembly_definition.yaml` contains electronics or `benchmark_definition.yaml` contains `electronics_requirements`, implement the corresponding electrical behavior in this same artifact set. Do NOT assume a later dedicated electronics implementation node will add it for you.
+         - Do NOT import `utils.electronics`, `shared.*`, or `worker_heavy.*` helpers from `script.py`; those are runtime internals, not the authored submission-script contract.
          - The submission script `script.py` must cover the full planner handoff for this turn. Do NOT stop after only the first TODO item or a partial subset of planner-defined parts unless you are blocked by a concrete error and you record that blocker in `journal.md`.
          - Do NOT import visualization-only helpers such as `ocp_vscode`, and do NOT add `show(...)` calls or `if __name__ == "__main__":` blocks to submission scripts.
         - Keep imports minimal and plan-driven. For ordinary mechanical seeds, default to `build123d` plus `utils.metadata`. Add other `utils` imports only when the planner handoff or the actual geometry requires them. Do NOT invent helper imports "just in case", and do not leave unused helper imports in the final script.
@@ -437,14 +441,13 @@ engineer:
       ```python
       from utils.metadata import PartMetadata, CompoundMetadata
 
-      # Individual parts: require material_id OR cots_id
-      # NOTE: Engineers must NOT use fixed=True; parts must be grounded by joints/fasteners.
+      # Individual parts: require material_id OR cots_id.
       part.metadata = PartMetadata(
           manufacturing_method="CNC",
-          material_id="aluminum-6061"
+          material_id="aluminum_6061"
       )
 
-      # COTS parts: use cots_id and DO NOT set manufacturing_method="COTS"
+      # COTS parts: use cots_id and do not set manufacturing_method="COTS"
       motor.metadata = PartMetadata(
           cots_id="gearmotor_12v_60rpm"
       )
@@ -455,6 +458,7 @@ engineer:
       - `manufacturing_method` is only for manufactured parts and the only valid values are `CNC`, `3DP`, and `IM`.
       - Never set `manufacturing_method="COTS"`.
       - For motors, wires, bearings, fasteners, power supplies, and other catalog items, set `cots_id=...` and leave `manufacturing_method` unset unless the part is actually manufactured in-house.
+      - Do not copy benchmark-only `fixed=True` examples into engineer-owned scripts.
 
       **Refusing a Plan**:
       If the plan is inappropriate (e.g., price/weight set too low, approach is fundamentally flawed), you may call `refuse_plan(reason: str)` with evidence.
@@ -794,7 +798,7 @@ benchmark_generator:
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
       - Follow the submission-script contract in `specs/architecture/agents/tools.md`; do not search for a runtime-script skill file that is not present in this workspace.
       - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
-      - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark actually contains electronics or wiring.
+      - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark explicitly contains an `electronics` section.
 
       **Filesystem Tools** (via deepagents):
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
