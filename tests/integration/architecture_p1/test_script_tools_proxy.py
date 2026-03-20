@@ -192,7 +192,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
     busy_session_id = f"INT-192-BUSY-{uuid.uuid4().hex[:8]}"
     tool_session_id = f"INT-192-TOOLS-{uuid.uuid4().hex[:8]}"
 
-    async with httpx.AsyncClient(timeout=600.0) as client:
+    async with httpx.AsyncClient(timeout=1000.0) as client:
         await _write_session_workspace(client, busy_session_id, "busy_script.py")
         await _write_session_workspace(client, tool_session_id, "script.py")
 
@@ -216,7 +216,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
                     backend=SimulatorBackendType.MUJOCO,
                 ).model_dump(mode="json"),
                 headers={"X-Session-ID": busy_session_id},
-                timeout=600.0,
+                timeout=1000.0,
             )
         )
 
@@ -237,7 +237,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
                 "agent_role": AgentName.BENCHMARK_CODER.value,
             },
             headers={"X-Session-ID": tool_session_id},
-            timeout=600.0,
+            timeout=1000.0,
         )
 
         assert validate_resp.status_code == 200, validate_resp.text
@@ -253,7 +253,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
                 "agent_role": AgentName.BENCHMARK_CODER.value,
             },
             headers={"X-Session-ID": tool_session_id},
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert simulate_resp.status_code == 200, simulate_resp.text
         simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
@@ -269,7 +269,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
                 "reviewer_stage": "benchmark_reviewer",
             },
             headers={"X-Session-ID": tool_session_id},
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert submit_resp.status_code == 200, submit_resp.text
         submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())

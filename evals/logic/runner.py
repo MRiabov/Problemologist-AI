@@ -2038,14 +2038,25 @@ async def run_single_eval(
                 status_url = status_url_template.format(
                     session_id=session_id, episode_id=episode_id
                 )
-                max_attempts = 120
+                # Match the eval wait window to the configured agent timeout.
+                # The runner polls every 5s, so this keeps the wall-clock cap
+                # aligned with the agent budget instead of hard-coding 120.
+                poll_interval_seconds = 5
+                agent_timeout_seconds = int(
+                    load_agents_config().execution.agents[agent_name].timeout_seconds
+                )
+                max_attempts = max(
+                    1,
+                    (agent_timeout_seconds + poll_interval_seconds - 1)
+                    // poll_interval_seconds,
+                )
                 attempt = 0
                 seen_trace_ids = set()
                 seen_trace_errors: dict[int, str] = {}
                 seen_trace_results: dict[int, str] = {}
 
                 while attempt < max_attempts:
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(poll_interval_seconds)
                     attempt += 1
 
                     try:
@@ -2489,11 +2500,12 @@ async def main():
         "--verbose", action="store_true", help="Print backend traces during polling"
     )
     parser.add_argument(
-        "--fast-sim",
-        action="store_true",
+        "--full-sim",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help=(
-            "Use MuJoCo as the simulation backend for this eval run "
-            "(faster, reduced fidelity)."
+            "Use the full-fidelity simulation backend for this eval run "
+            "(default: enabled)."
         ),
     )
     parser.add_argument(
@@ -2538,10 +2550,10 @@ async def main():
     if args.task_id and not selected_task_ids:
         parser.error("--task-id provided but no valid task IDs were parsed")
 
-    if args.fast_sim:
-        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
-    else:
+    if args.full_sim:
         os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
+    else:
+        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
 
     if args.run_reviewers_with_judge and not args.run_judge:
         parser.error("--run-reviewers-with-judge requires --run-judge")
@@ -2610,7 +2622,7 @@ async def main():
     logger.info(
         "eval_simulation_backend_selected",
         backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "GENESIS"),
-        fast_sim=args.fast_sim,
+        full_sim=args.full_sim,
     )
 
     _emit_startup_log_pointers(

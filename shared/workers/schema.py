@@ -163,7 +163,7 @@ class ExecuteRequest(BaseModel):
     """Request to execute a shell command in the session workspace."""
 
     code: StrictStr = Field(..., min_length=1)
-    timeout: StrictInt = Field(default=30, ge=1, le=600)
+    timeout: StrictInt = Field(default=30, ge=1, le=1000)
 
 
 class ExecuteResponse(BaseModel):

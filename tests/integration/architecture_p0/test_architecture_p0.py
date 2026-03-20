@@ -103,7 +103,7 @@ async def test_int_002_controller_worker_execution_boundary():
         resp = await client.post(
             f"{CONTROLLER_URL}/api/agent/run",
             json=req.model_dump(mode="json"),
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert resp.status_code == 202
         agent_run_resp = AgentRunResponse.model_validate(resp.json())
@@ -202,7 +202,7 @@ def build():
                 f"{WORKER_HEAVY_URL}/benchmark/simulate",
                 json=sim_req.model_dump(mode="json"),
                 headers={"X-Session-ID": session_id},
-                timeout=600.0,
+                timeout=1000.0,
             )
             try:
                 payload = resp.json()
@@ -377,7 +377,7 @@ run()
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=sim_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
-            timeout=600.0,
+            timeout=1000.0,
         )
 
         assert resp.status_code == 200
@@ -416,7 +416,7 @@ run()
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=success_sim_req.model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert success_resp.status_code == 200
         success_data = BenchmarkToolResponse.model_validate(success_resp.json())

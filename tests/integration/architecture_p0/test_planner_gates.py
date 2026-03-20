@@ -1032,7 +1032,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1143,7 +1143,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1252,7 +1252,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1319,7 +1319,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=val_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1576,7 +1576,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1699,7 +1699,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1812,7 +1812,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())
@@ -1859,7 +1859,7 @@ def build():
             f"{WORKER_HEAVY_URL}/benchmark/simulate",
             json=submit_req.model_dump(mode="json"),
             headers=base_headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert sim_resp.status_code == 200, sim_resp.text
         sim_data = BenchmarkToolResponse.model_validate(sim_resp.json())

@@ -1473,15 +1473,15 @@ def _run_integration_command(
 
     _run(["bash", "scripts/env_down.sh"])
 
-    if args.fast_sim:
-        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
-        print("Fast simulation backend selected: MuJoCo")
-    else:
+    if args.full_sim:
         os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
         print(
             "Integration default simulation backend: "
             f"{os.environ['SIMULATION_DEFAULT_BACKEND']}"
         )
+    else:
+        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
+        print("Fast simulation backend selected: MuJoCo")
 
     # Keep integration-test infra deterministic even when .env defines DB URLs.
     os.environ["POSTGRES_URL"] = integration_db_url
@@ -1848,9 +1848,10 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--down", action="store_true")
     run_parser.add_argument("--no-smoke", action="store_true")
     run_parser.add_argument(
-        "--fast-sim",
-        action="store_true",
-        help="Use MuJoCo as the simulation backend for this run (faster, reduced fidelity).",
+        "--full-sim",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use the full-fidelity simulation backend for this run (default: enabled).",
     )
     run_parser.add_argument(
         "--wait-cleanup",

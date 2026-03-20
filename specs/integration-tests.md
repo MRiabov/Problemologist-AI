@@ -68,6 +68,9 @@ The integration suite is designed for high-velocity local execution and CI parit
 ./scripts/run_integration_tests.sh tests/integration/test_full_workflow.py
 ```
 
+The integration and eval entrypoints default to full-fidelity simulation. Use
+`--no-full-sim` only when you explicitly need the faster MuJoCo path.
+
 ### Simulation Backend Matrix Execution Contract
 
 The simulation-facing integration suite must run as a two-backend matrix aligned with `specs/architecture/distributed-execution.md` and `specs/architecture/simulation-and-dod.md`.

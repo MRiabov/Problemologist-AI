@@ -292,7 +292,7 @@ totals:
 async def test_int_134_stress_heatmap_render_artifact():
     """INT-134: Stress heatmap render artifacts are generated and discoverable."""
     skip_unless_genesis("INT-134 requires Genesis FEM stress rendering.")
-    async with httpx.AsyncClient(timeout=600.0) as client:
+    async with httpx.AsyncClient(timeout=1000.0) as client:
         await _require_service(client, "worker-light", WORKER_LIGHT_URL)
         await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
         session_id = f"INT-134-{uuid.uuid4().hex[:8]}"
@@ -373,7 +373,7 @@ def build():
                 script_path="script.py", smoke_test_mode=True
             ).model_dump(mode="json"),
             headers={"X-Session-ID": session_id},
-            timeout=600.0,
+            timeout=1000.0,
         )
         assert resp.status_code == 200, resp.text
         data = BenchmarkToolResponse.model_validate(resp.json())

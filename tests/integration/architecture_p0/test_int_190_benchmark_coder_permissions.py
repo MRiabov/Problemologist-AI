@@ -111,7 +111,7 @@ def test_int_190_agent_execution_timeouts_are_role_specific():
     cfg = yaml.safe_load(Path("config/agents_config.yaml").read_text(encoding="utf-8"))
     execution_agents = cfg["execution"]["agents"]
 
-    assert execution_agents["engineer_coder"]["timeout_seconds"] == 450
+    assert execution_agents["engineer_coder"]["timeout_seconds"] == 1000
     assert execution_agents["benchmark_coder"]["timeout_seconds"] == 450
     assert execution_agents["engineer_plan_reviewer"]["timeout_seconds"] == 90
     assert execution_agents["benchmark_reviewer"]["timeout_seconds"] == 90

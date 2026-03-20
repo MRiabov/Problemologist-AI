@@ -24,7 +24,7 @@ execution:
       max_total_tokens: 400000
       native_tool_loop_max_iters: 48
     engineer_coder:
-      timeout_seconds: 450
+      timeout_seconds: 1000
       max_turns: 150
       max_total_tokens: 400000
       native_tool_loop_max_iters: 48

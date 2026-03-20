@@ -130,7 +130,7 @@ class WorkerClient:
             f"{self.controller_url}/api/script-tools/{action.lstrip('/')}",
             json=payload,
             headers=self.headers,
-            timeout=600.0,
+            timeout=1000.0,
         )
         response.raise_for_status()
         return BenchmarkToolResponse.model_validate(response.json())
@@ -545,7 +545,7 @@ class WorkerClient:
                 f"{self.heavy_url}/benchmark/simulate",
                 json=payload,
                 headers=self.headers,
-                timeout=600.0,
+                timeout=1000.0,
             )
             response.raise_for_status()
             parsed = BenchmarkToolResponse.model_validate(response.json())

@@ -60,7 +60,7 @@ def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict |
     url = f"{controller_url}/api/script-tools/{action.lstrip('/')}"
     headers = {"X-Session-ID": session_id}
     try:
-        with httpx.Client(timeout=600.0) as client:
+        with httpx.Client(timeout=1000.0) as client:
             resp = client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
             return resp.json()
