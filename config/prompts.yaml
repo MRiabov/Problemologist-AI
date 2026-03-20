@@ -275,7 +275,8 @@ engineer:
         - Prefer module-level `result = ...`; `build()` is optional compatibility.
         - Do NOT use `if __name__ == "__main__":`.
         - Keep the script import-safe unless the task explicitly allows direct execution side effects.
-        - Do NOT rely on raw `python -c "from script import ..."` one-liners for authored-script checks. If you need a real runtime probe, prefer a short workspace-root `execute_command(...)` heredoc that imports `result` from `script.py` and calls the canonical `utils.submission` helpers.
+        - Do NOT rely on raw `python -c "from script import ..."` one-liners for authored-script checks. If you need a real runtime probe, prefer a short workspace-root `execute_command(...)` heredoc that imports `result` from `script.py` and calls `from utils.submission import validate, simulate`.
+        - Use at most one real runtime probe per concrete edit cycle. If that probe succeeds, stop immediately. If it fails, make one targeted fix and rerun one probe; do not chain extra diagnostic probes such as `import utils`, `dir(utils)`, or alternate `python3 -c` wrappers unless the previous probe exposed a specific script defect that those probes directly resolve.
 
 
       **Filesystem Tools**:
@@ -356,7 +357,7 @@ engineer:
         - If the planner asks for simple plates, rails, trays, funnels, or guards, start with the fewest primitives and booleans that satisfy the geometry. Skip fillets, chamfers, sculpting, and nonessential cut features unless they solve a real functional constraint.
       5. Self-test by reusing that same `script.py` artifact; do not create alternate verifier scripts.
          - Prefer one cheap syntax check such as `python -m py_compile script.py` as an early screen.
-         - If the task, seeded `todo.md`, or required handoff says validation/simulation evidence is part of coder completion, a syntax-only check is insufficient. Run one real workspace-root runtime probe that imports `result` from `script.py`, calls `validate(result)`, and if validation passes, calls `simulate(result)`.
+         - If the task, seeded `todo.md`, or required handoff says validation/simulation evidence is part of coder completion, a syntax-only check is insufficient. Run one real workspace-root runtime probe that imports `result` from `script.py`, starts with `from utils.submission import validate, simulate`, then calls `validate(result)`, and if validation passes, calls `simulate(result)`.
          - For that real probe, prefer a short `python - <<'PY'` heredoc via `execute_command(...)` instead of a fragile `python -c` one-liner.
       6. Update `todo.md` and `journal.md` to reflect implementation progress and any justified deviations.
          - `todo.md` progress is bookkeeping, not a stage boundary. Do not pause the implementation just because one checkbox was completed; continue until the full required coder artifact set is done or a real blocker appears.
@@ -387,7 +388,7 @@ engineer:
       - **Full handoff completeness**: `script.py` must implement the planner-defined assembly, not just the first few parts. Finishing with planner parts still missing is a failure, even if some TODO items were checked off.
       - **Exit discipline**: Once `script.py` exists, the required validation level for this seed has passed, the required `todo.md` / `journal.md` updates are done, and no concrete blocking error is present, return immediately. If the task or seeded TODO requires validation/simulation evidence, do not exit on `py_compile` alone.
       - **No post-draft churn**: After the first complete `script.py` draft, avoid rereading `plan.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, or `script.py` unless a concrete error, failed edit, or explicit inconsistency forces a revision.
-      - **One-pass verification**: Use at most one cheap syntax check, one full runtime validation/simulation probe, and one render-inspection pass unless a concrete failure forces another edit. Repeating the same `py_compile`, rereading the same files, or re-inspecting the same renders is wasted budget and can cause timeout failure.
+      - **One-pass verification**: Use at most one cheap syntax check, one full runtime validation/simulation probe, and one render-inspection pass unless a concrete failure forces another edit. Repeating the same `py_compile`, rereading the same files, or re-inspecting the same renders is wasted budget and can cause timeout failure. After a successful runtime probe, do not spend extra turns on environment-check diagnostics; return to the model only when a concrete code fix is needed.
       - **Reference-read budget**: For simple passive seeds, start implementing after `plan.md`, `todo.md`, `assembly_definition.yaml`, and `benchmark_definition.yaml`. Read `manufacturing_config.yaml` only if materials/motor specs are actually needed for the draft. Do not open extra build123d reference files, extra skills, or repo docs unless a concrete modeling blocker forces it.
       - **Simple-seed speed rule**: On straightforward passive/freestanding handoffs, aim to reach the first `write_file("script.py", ...)` without reading any skill file. Reading `plan.md`, `todo.md`, `assembly_definition.yaml`, `benchmark_definition.yaml`, and optionally one render is sufficient in the normal case.
       - **No visualization scaffolding**: Authored workspace scripts must not import `ocp_vscode`, call `show(...)`, or add `if __name__ == "__main__":` display blocks. Those waste tokens and are outside the execution contract.
@@ -413,6 +414,7 @@ engineer:
       - **Result**: What happened.
       - **Reflection**: What you learned.
       - **Next Step**: What you'll do next.
+      - When writing a new journal entry, use `write_file(..., overwrite=True)` for the full file or `edit_file(...)` with a non-empty `old_string` copied from the current file contents. Do not call `edit_file` with an empty `old_string`; it is not a valid append mechanism.
       If a tool fails >4 times, log a **Struggle** entry with a unique observation ID.
 
       **TODO List** (`todo.md`):
@@ -791,6 +793,7 @@ benchmark_generator:
 
       **Python Utils**:
       - `from utils.submission import validate, simulate, submit_for_review`
+      - Do not import or reference `utils.validation` for authored-script verification in either `script.py` or shell probes; use the `utils.submission` surface above.
       - `validate(compound: Compound) -> tuple[bool, str | None]`: Check intersections and bounds under all environment randomization.
       - `simulate(compound: Compound) -> BenchmarkToolResponse`: Run physics test with environment constraints. Use `.success` and `.message` on the returned object.
       - `submit_for_review(compound: Compound) -> bool`: Submit the whole benchmark compound to the Reviewer. This returns a plain boolean, not an object with `.success` or `.message`.
@@ -812,6 +815,7 @@ benchmark_generator:
          - `Box` in this runtime uses positional dimensions: `Box(length, width, height)`. Do NOT call `Box(width=..., height=..., length=...)`.
          - For vertical bottom/top alignment, use `Align.MIN` / `Align.MAX`. Do NOT use `Align.BOTTOM` or `Align.TOP`.
          - Build the final assembly in one shot with `Compound(children=[...])`. Do NOT create `Compound()` and then mutate `compound.children` with `.append(...)`, `.extend(...)`, or reassignment.
+         - The final exported object must be a `Compound` with the complete `children` list populated exactly once. Do NOT set `result` to a `BuildPart`; if you use `BuildPart` for intermediate drafting, extract its part into the final `Compound` before assigning `result`.
          - Every authored part must appear in the final `Compound(children=[...])` list exactly once. If you create a ramp, rail, support, goal fixture, or moved object, verify it is included before running validation.
          - Do NOT pass `label=` into any build123d constructor (`Box`, `Sphere`, `Cylinder`, `Compound`, etc.).
          - Create the object first, then assign labels/metadata as attributes:
