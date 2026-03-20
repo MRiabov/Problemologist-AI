@@ -2,11 +2,13 @@ import asyncio
 import base64
 from contextlib import suppress
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 import structlog
 from temporalio.client import Client
+from temporalio.common import WorkflowIDConflictPolicy
+from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from controller.clients.worker import WorkerClient
 from controller.observability.middleware_helper import (
@@ -156,6 +158,31 @@ class RemoteFilesystemMiddleware:
     def _can_read(self, path: str | Path) -> bool:
         """Boolean read check helper to avoid raising during result filtering."""
         return self.policy.check_permission(self.agent_role, "read", path)
+
+    async def _execute_or_use_existing_workflow(
+        self,
+        workflow: Any,
+        workflow_id: str,
+        params: Any,
+        *,
+        result_type: type | None = None,
+    ) -> Any:
+        """Start a workflow or attach to the running execution for the same ID."""
+        try:
+            return await self.temporal_client.execute_workflow(
+                workflow,
+                params,
+                id=workflow_id,
+                task_queue="simulation-task-queue",
+                result_type=result_type,
+                id_conflict_policy=WorkflowIDConflictPolicy.USE_EXISTING,
+            )
+        except WorkflowAlreadyStartedError:
+            handle = self.temporal_client.get_workflow_handle(
+                workflow_id,
+                result_type=result_type,
+            )
+            return await handle.result()
 
     @staticmethod
     def _normalized_suffix(path: str | Path) -> str:
@@ -472,6 +499,7 @@ class RemoteFilesystemMiddleware:
                         ),
                         id=f"exec-{self.client.session_id}-{hash(command) % 10**8}",
                         task_queue="simulation-task-queue",
+                        id_conflict_policy=WorkflowIDConflictPolicy.USE_EXISTING,
                     )
                 # Fallback to direct client call if Temporal is not available
                 return await self.client.execute_command(command, timeout=timeout)
@@ -551,10 +579,10 @@ class RemoteFilesystemMiddleware:
         if self.temporal_client:
             # Bundle from light worker
             bundle = await self.client.bundle_session()
-
-            # Execute via Temporal
-            res = await self.temporal_client.execute_workflow(
+            workflow_id = f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            res = await self._execute_or_use_existing_workflow(
                 HeavySimulationWorkflow.run,
+                workflow_id,
                 HeavySimulationParams(
                     bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
@@ -562,8 +590,7 @@ class RemoteFilesystemMiddleware:
                     smoke_test_mode=smoke_test_mode,
                     session_id=self.client.session_id,
                 ),
-                id=f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
-                task_queue="simulation-task-queue",
+                result_type=SimulationResult,
             )
             await record_simulation_result(self.client.session_id, res)
             return res
@@ -581,16 +608,17 @@ class RemoteFilesystemMiddleware:
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            res: HeavyPreviewResponse = await self.temporal_client.execute_workflow(
+            workflow_id = f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            res: HeavyPreviewResponse = await self._execute_or_use_existing_workflow(
                 HeavyPreviewWorkflow.run,
+                workflow_id,
                 HeavyPreviewParams(
                     bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
                     pitch=pitch,
                     yaw=yaw,
                 ),
-                id=f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
-                task_queue="simulation-task-queue",
+                result_type=HeavyPreviewResponse,
             )
             return PreviewDesignResponse(
                 success=res.success,
@@ -610,15 +638,16 @@ class RemoteFilesystemMiddleware:
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            res = await self.temporal_client.execute_workflow(
+            workflow_id = f"val-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            res = await self._execute_or_use_existing_workflow(
                 HeavyValidationWorkflow.run,
+                workflow_id,
                 HeavyValidationParams(
                     bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
                     session_id=self.client.session_id,
                 ),
-                id=f"val-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
-                task_queue="simulation-task-queue",
+                result_type=HeavyValidationResponse,
             )
         else:
             res = await self.client.validate(p_str)
@@ -660,16 +689,16 @@ class RemoteFilesystemMiddleware:
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            res = await self.temporal_client.execute_workflow(
+            workflow_id = f"sub-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            res = await self._execute_or_use_existing_workflow(
                 HeavySubmitWorkflow.run,
+                workflow_id,
                 HeavySubmitParams(
                     bundle_base64=base64.b64encode(bundle).decode("utf-8"),
                     script_path=p_str,
                     reviewer_stage=effective_stage or "engineering_execution_reviewer",
                     session_id=self.client.session_id,
                 ),
-                id=f"sub-{self.client.session_id}-{abs(hash(p_str)) % 10**8}",
-                task_queue="simulation-task-queue",
             )
         else:
             res = await self.client.submit(p_str, reviewer_stage=effective_stage)
