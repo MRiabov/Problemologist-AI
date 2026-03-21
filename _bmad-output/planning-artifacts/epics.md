@@ -1,0 +1,1656 @@
+---
+stepsCompleted:
+  - step-01-validate-prerequisites
+  - step-02-design-epics
+inputDocuments:
+  - _bmad-output/planning-artifacts/prd.md
+  - _bmad-output/planning-artifacts/architecture.md
+  - specs/desired_architecture.md
+  - specs/business-usecase.md
+  - specs/dataset-generation.md
+  - specs/frontend-specs.md
+  - specs/integration-tests.md
+  - specs/todos.md
+  - specs/architecture/primary-system-objectives.md
+  - specs/architecture/agents/overview.md
+  - specs/architecture/agents/roles.md
+  - specs/architecture/agents/handover-contracts.md
+  - specs/architecture/agents/artifacts-and-filesystem.md
+  - specs/architecture/agents/tools.md
+  - specs/architecture/agent/debug-codex-agent.md
+  - specs/architecture/distributed-execution.md
+  - specs/architecture/CAD-and-other-infra.md
+  - specs/architecture/evals-and-gates.md
+  - specs/architecture/simulation-and-dod.md
+  - specs/architecture/observability.md
+  - specs/architecture/fluids-and-deformables.md
+  - specs/architecture/electronics-and-electromechanics.md
+  - specs/architecture/workbenches.md
+  - specs/architecture/auxillary/simulation-optimization-attempts.md
+  - specs/architecture/dependency-research/dspy-react.md
+  - specs/architecture/spec-reviews/round-1.md
+  - specs/plan-style-traits.md
+---
+
+# Problemologist-AI - Epic Breakdown
+
+## Overview
+
+This document provides the complete epic and story breakdown for Problemologist-AI, decomposing the requirements from the PRD, architecture, and supporting specs into implementable stories.
+
+## Requirements Inventory
+
+### Functional Requirements
+
+FR1: Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem.
+FR2: Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization.
+FR3: The system can represent benchmark-owned fixtures and benchmark-owned electronics as read-only context unless interaction is explicitly allowed.
+FR4: The system can represent allowed attachment and drilling points in the benchmark setup.
+FR5: The system can validate that a benchmark is solvable and reject ambiguous, impossible, or incomplete setups.
+FR6: The system can pass benchmark setup artifacts into the solution workflow.
+FR7: Human engineers can receive verified design solutions to a benchmark.
+FR8: Human engineers can revise a failed solution and try again against the same benchmark.
+FR9: The system can support benchmark-definition and solution workflows as separate but connected episode types.
+FR10: The system can preserve handoff artifacts between benchmark setup and solution work.
+FR11: The system can support reasoned accept/reject decisions for benchmark and solution outputs.
+FR12: Human engineers can choose rigid-body preview simulation or higher-fidelity FEM when needed.
+FR13: The system can require circuit validity before electromechanical simulation.
+FR14: The system can support fluids, deformables, and stress-aware validation when selected.
+FR15: The system can preserve simulation and render evidence for later inspection.
+FR16: Users can configure the prices used for costing.
+FR17: The system can evaluate whether a solution is manufacturable at the requested production volume.
+FR18: The system can evaluate setup cost and variable cost separately.
+FR19: The system can evaluate weight, size, and form-factor constraints together.
+FR20: The system can compare manufacturing options across quantities and choose the appropriate one.
+FR21: The system can include COTS parts in cost and manufacturability evaluation.
+FR22: The system can identify unnecessary or unjustified degrees of freedom in a solution.
+FR23: The system can prefer the valid candidate with fewer unnecessary degrees of freedom, actuators, and parts when multiple solutions satisfy the benchmark.
+FR24: The system can flag over-actuated solutions and solutions with unnecessary degrees of freedom during review.
+FR25: The system can persist complete episode traces, artifacts, and lineage.
+FR26: The system can export solved episodes and benchmarks as training-ready dataset rows.
+FR27: Researchers and companies can use completed episodes for training or RL.
+FR28: Dataset operators can exclude episodes that fail schema validity, completeness, or lineage integrity checks.
+FR29: Dataset operators can manage coverage by seed and problem family.
+FR30: The system can generate repeatable episode variants from different seeds.
+FR31: The system can expose logs, traces, and terminal reasons for each episode.
+FR32: Maintainers can reproduce and diagnose failed episodes from persisted artifacts and traces.
+FR33: The system can surface explicit fallback behavior and failure classification.
+FR34: The system can compare executed runtime paths against the documented supported feature set and flag mismatches as validation failures.
+FR35: The system can keep failed episodes replayable from persisted artifacts and traces.
+FR36: The system can accept corrective steering prompts during an active run with attached structured CAD or code context.
+FR37: The system can let users switch CAD selection mode between faces, parts/bodies, and subassemblies, and preserve the selected entity in the prompt payload.
+FR38: The system can preserve steering context, selection metadata, and resulting edits in traces and replay artifacts.
+
+### NonFunctional Requirements
+
+NFR1: The benchmark-verification and solution-revision loop shall complete in under 15 minutes at the 95th percentile for the standard Phase 1 benchmark suite.
+NFR2: Static preview artifacts shall be available for 100% of benchmarks that produce render evidence before final proof artifacts are accepted.
+NFR3: Benchmarks that do not declare a physics mode shall not trigger heavy physics, FEM, or fluid evaluation.
+NFR4: Planning and review requests shall return an initial response within 2 seconds at the 95th percentile while heavy evaluation is pending.
+NFR5: Repeated validation of the same unchanged revision shall produce 0 new heavy evaluations and shall return the previously persisted result or a no-op status.
+NFR6: Any request with missing artifacts, invalid schemas, stale manifests, unsupported mechanisms, invalid circuits, or missing review evidence shall end in terminal failure with no success state.
+NFR7: Partial output, inferred success, and silent fallback shall never be classified as success.
+NFR8: Configuration mismatches, capacity limits, and retry exhaustion shall return deterministic terminal reasons and a retriable/non-retriable classification.
+NFR9: 100% of terminal episodes shall include a concrete terminal reason and failure classification.
+NFR10: 100% of completed episodes shall be reconstructable from persisted traces, logs, artifacts, and lineage IDs without rerunning the solver.
+NFR11: Every user session, episode, simulation run, review, COTS query, and seed record shall have joinable identifiers in persisted records and exports.
+NFR12: Every tool call, review decision, media inspection action, and error event shall emit a machine-readable record and remain available for the debugging retention window.
+NFR13: Every failed episode shall include a replay bundle that reproduces the failure state in replay mode.
+NFR14: Reasoning and tool-call traces shall be retained for the full episode lifetime and remain accessible in replay views.
+NFR15: When render evidence exists, the review record shall identify the exact latest-revision media artifact that was inspected.
+NFR16: Episode lineage and seed lineage shall persist across benchmark generation and engineering execution for 100% of exported episodes.
+NFR17: Every dataset export shall include the source episode ID, revision hash, and artifact hash.
+NFR18: Training dataset exports shall exclude integration-test runs and known-corrupted episodes.
+NFR19: Handoff artifacts shall validate against the same schema at creation, storage, review, and export time; any schema drift shall reject the episode.
+NFR20: Backups shall restore persisted run metadata and artifact references with 100% integrity in periodic restore tests.
+NFR21: Untrusted generated code shall not mutate persistent workflow state directly; all state changes shall be mediated by validated artifacts and recorded actions.
+NFR22: Concurrent heavy evaluation requests for the same episode shall either start, return a deterministic busy status, or fail with a terminal reason within the request timeout.
+NFR23: Benchmark-owned artifacts shall remain read-only during engineering runs, and engineer-owned outputs shall remain separate from benchmark context.
+NFR24: 100% of accepted solutions shall include a final proof artifact that is distinct from any preview artifact.
+NFR25: Validation, review, and export artifacts shall round-trip through storage and retrieval without loss of required fields or schema drift.
+
+### Additional Requirements
+
+- Controller/worker/Temporal split remains mandatory; generated code executes off the controller in isolated worker processes.
+- Planner and reviewer handoffs are strict-schema artifacts with stage-specific manifests, no silent fallback, and fail-closed routing on stale, missing, or invalid artifacts.
+- Planner-owned derived values such as cost caps are deterministic outputs of validator tooling, not freeform authoring.
+- Benchmark-owned fixtures, electronics, and motion context are read-only unless the benchmark explicitly declares engineer interaction.
+- Benchmark setup must preserve distinct benchmark-owned vs engineer-owned artifact boundaries and hash-based immutability across handoff.
+- `/benchmark/validate` uses MuJoCo for static preview by default; Genesis parity is validated through dedicated simulation paths, not preview reruns.
+- Static preview must persist RGB, depth, segmentation, and render manifests when enabled.
+- Reviewer roles must inspect render media with `inspect_media(...)` when render evidence exists; text-only file listing is insufficient.
+- Simulation and validation must emit durable artifacts, events, and lineage; `events.jsonl` is batch transport, while Postgres and Langfuse are query sources.
+- Dataset generation must preserve seed, episode, and review lineage, exclude integration-test and corrupted windows, and support replayable exports.
+- Electromechanical tasks require explicit circuit validation, power budgets, wire routing, wire tear handling, and electrical evidence surfaces.
+- Fluids, deformables, and stress-aware tasks require Genesis-backed final validation and structured stress/fluid artifacts.
+- The roadmap expands through gravity, actuators, FEM, fluids, and electronics, with each family split into simulation, benchmark-generation agents, and engineering agents.
+- Steering is a late-stage cross-cutting capability over the agents, not a first-milestone feature, and belongs after the gravity baseline is defined.
+- Supported workbenches and mechanisms are finite and explicit; unsupported mechanisms fail closed.
+- The frontend is an evidence surface for session history, chat/trace inspection, CAD viewer, code viewer, simulation playback, and feedback, not the source of truth.
+- Live steering must preserve selection metadata for faces, parts, bodies, subassemblies, and code ranges in traces and prompt payloads.
+- Codex debug mode uses workspace-relative paths, a local submission helper, and the same fail-closed workspace contract as runtime.
+- OpenAPI generation, strict schemas, and integration tests remain part of the repository contract and must stay in sync with controller behavior.
+- No silent fallback or degraded-success paths: any fallback must be explicit, traceable, and machine-readable.
+
+### UX Design Requirements
+
+- No separate UX design specification was provided in the planning artifacts.
+- Frontend requirements from `specs/frontend-specs.md` were treated as cross-check requirements and are captured in the additional requirements set.
+
+### FR Coverage Map
+
+FR1: Epic 1 - Human operators can define benchmark goals, zones, interactions, and randomization and get a fail-closed result
+FR2: Epic 1 - Benchmark-owned fixtures and electronics remain read-only unless interaction is explicit
+FR3: Epic 1 - Allowed attachment and drilling points are declared in the benchmark setup
+FR4: Epic 1 - The benchmark setup preserves read-only benchmark context boundaries
+FR5: Epic 1 - Benchmark solvability is validated and ambiguous or impossible setups are rejected
+FR6: Epic 1 - Benchmark setup artifacts are passed into the solution workflow
+FR7: Epic 2 - Human engineers can receive verified design solutions to a benchmark
+FR8: Epic 2 - Human engineers can revise failed solutions against the same benchmark
+FR9: Epic 2 - Benchmark and solution workflows remain separate but connected
+FR10: Epic 2 - Handoff artifacts are preserved between benchmark setup and solution work
+FR11: Epic 2 - Review decisions support accept/reject of benchmark and solution outputs
+FR12: Epic 11 - Human engineers can choose rigid-body preview simulation or higher-fidelity FEM when needed
+FR13: Epic 17 - Circuit validity is required before electromechanical simulation
+FR14: Epic 11 / Epic 14 - Fluids, deformables, and stress-aware validation are supported when selected
+FR15: Epic 4 - Simulation and render evidence is preserved for later inspection
+FR16: Epic 3 - Users can configure the prices used for costing
+FR17: Epic 3 - The system can evaluate manufacturability at the requested production volume
+FR18: Epic 3 - The system can separate setup cost from variable cost
+FR19: Epic 3 - The system can evaluate weight, size, and form-factor constraints together
+FR20: Epic 3 - The system can compare manufacturing options across quantities
+FR21: Epic 3 - The system can include COTS parts in cost and manufacturability evaluation
+FR22: Epic 3 - The system can identify unnecessary or unjustified degrees of freedom
+FR23: Epic 3 - The system can prefer the valid candidate with fewer unnecessary degrees of freedom, actuators, and parts
+FR24: Epic 3 - The system can flag over-actuated solutions during review
+FR25: Epic 4 - Complete episode traces, artifacts, and lineage are persisted
+FR26: Epic 4 - Solved episodes and benchmarks can be exported as training-ready dataset rows
+FR27: Epic 4 - Completed episodes can be used for training or RL
+FR28: Epic 4 - Episodes that fail schema, completeness, or lineage checks can be excluded
+FR29: Epic 4 - Coverage by seed and problem family can be managed
+FR30: Epic 4 - Repeatable episode variants can be generated from different seeds
+FR31: Epic 4 - Logs, traces, and terminal reasons are exposed for each episode
+FR32: Epic 4 - Failed episodes can be reproduced and diagnosed from persisted artifacts and traces
+FR33: Epic 4 - Explicit fallback behavior and failure classification are surfaced
+FR34: Epic 4 - Runtime paths can be compared against the documented supported feature set and mismatches flagged
+FR35: Epic 4 - Failed episodes remain replayable from persisted artifacts and traces
+FR36: Epic 20 - Corrective steering prompts can be attached with CAD or code context
+FR37: Epic 20 - CAD selection mode can switch between faces, parts/bodies, and subassemblies while preserving selection
+FR38: Epic 20 - Steering context, selection metadata, and resulting edits are preserved in traces and replay artifacts
+
+## Epic List
+
+The first five epics are platform foundations. The remaining epics are capability-family epics. Gravity is the baseline benchmark family, and steering is intentionally late-stage.
+
+### Epic 1: Benchmark Creation & Validation
+Human operators can author benchmark packages, and the system rejects invalid benchmark definitions with explicit, deterministic reasons before acceptance. The baseline gravity-capable simulation contract is included here as a validation dependency, not as a separate epic.
+
+### Epic 2: Human Solution Workflow
+Human engineers can take an approved benchmark, run candidate solutions against it, inspect pass/fail evidence, and iterate after failure without rebuilding the benchmark.
+
+### Epic 3: Cost, Weight, and Manufacturability
+Human operators can validate solutions against cost, weight, and manufacturability constraints using real manufacturing and COTS data.
+
+### Epic 4: Dataset Export & Replay
+Researchers and companies can export completed runs as inspectable, reproducible dataset rows with traces, artifacts, lineage, and replayable failures.
+
+### Epic 5: UI, Visualization, and Demo
+Human operators can inspect runs, visualize CAD and simulation evidence, resume sessions, and present the system through a browser UI.
+
+### Epic 6: Gravity: Benchmarks
+Benchmark generator agents can reliably ship valid gravity-only benchmarks that human engineers can work against.
+
+### Epic 7: Gravity: Engineering
+Engineering agents can solve gravity-only benchmarks with verified solutions.
+
+### Epic 8: Actuators: Simulation
+Upgrade simulation fidelity for powered motion, actuators, and motion limits.
+
+### Epic 9: Actuators: Benchmarks
+Benchmark generator agents can ship valid actuator-capable benchmark sets with enough validation coverage for engineering intake.
+
+### Epic 10: Actuators: Engineering
+Engineering agents can solve actuator benchmarks with verified solutions.
+
+### Epic 11: FEM: Simulation
+Upgrade simulation fidelity for deformables, stress, and breakage.
+
+### Epic 12: FEM: Benchmarks
+Benchmark generator agents can ship FEM benchmark sets with stress-aware objectives and sufficient validation coverage.
+
+### Epic 13: FEM: Engineering
+Engineering agents can solve FEM benchmarks with verified, stress-aware solutions.
+
+### Epic 14: Fluids: Simulation
+Upgrade simulation fidelity for fluid containment, flow, and fluid-solid interaction.
+
+### Epic 15: Fluids: Benchmarks
+Benchmark generator agents can ship fluid benchmark sets with containment and flow objectives.
+
+### Epic 16: Fluids: Engineering
+Engineering agents can solve fluid benchmarks with verified solutions.
+
+### Epic 17: Electronics: Simulation
+Upgrade simulation fidelity for circuit validity, wire routing, and power-gated actuation.
+
+### Epic 18: Electronics: Benchmarks
+Benchmark generator agents can ship electromechanical benchmark sets with valid circuit and wiring requirements.
+
+### Epic 19: Electronics: Engineering
+Engineering agents can solve electromechanical benchmarks with verified circuit, wiring, and motion behavior.
+
+### Epic 20: Steering & Control
+Human operators can steer the active benchmark generator and engineering agents with selected CAD/code context and targeted corrections.
+
+### Epic 21: Market Fit & Hardening
+Define the target market and harden the product for that market.
+
+## Epic 1: Benchmark Creation & Validation
+Human operators can author benchmark packages, and the system rejects invalid benchmark definitions with explicit, deterministic reasons before acceptance. The baseline gravity-capable simulation contract is included here as a validation dependency, not as a separate epic.
+
+### Story 1.1: Benchmark Geometry and Objectives
+As a human operator, I want to define benchmark goals, forbid zones, build zones, and runtime randomization so that the benchmark has a clear, bounded, solvable contract.
+
+**Acceptance Criteria:**
+
+**Given** valid geometry inputs
+**When** the benchmark is validated
+**Then** the system accepts only non-intersecting, in-bounds objective geometry
+**And** the benchmark package preserves the declared goal, forbid, and build zones
+
+**Given** runtime randomization values
+**When** the benchmark is saved
+**Then** those ranges are persisted and visible in the benchmark package
+
+### Story 1.2: Benchmark-Owned Fixtures and Interaction Rules
+As a human operator, I want to declare benchmark-owned fixtures and electronics with explicit interaction permissions so that benchmark context stays read-only for an engineer solving the benchmark unless interaction is explicitly allowed.
+
+**Acceptance Criteria:**
+
+**Given** benchmark-owned fixtures or electronics
+**When** they are declared
+**Then** they remain read-only for the engineer by default
+
+**Given** a fixture marked as interactable
+**When** the benchmark is validated
+**Then** the interaction surface is explicit and machine-readable
+
+### Story 1.3: Solvability Validation and Fail-Closed Rejection
+As a human operator, I want the system to validate solvability and reject invalid setups so that ambiguous, impossible, or unsupported benchmark definitions never enter the solution workflow.
+
+**Acceptance Criteria:**
+
+**Given** an invalid benchmark candidate
+**When** validation runs
+**Then** the system fails closed with an explicit reason code
+
+**Given** obstructed goals, impossible geometry, or unsupported motion
+**When** the preview or validation path runs
+**Then** the benchmark is rejected rather than partially accepted
+
+**Given** a benchmark that is technically valid but still not solvable logically
+**When** the validation tool evaluates it
+**Then** the tool rejects it explicitly
+
+### Story 1.4: Handoff Artifacts, Versioning, and Reproducibility
+As a human operator, I want validated benchmark artifacts and preview evidence persisted so that downstream solution workflows can consume a stable, inspectable benchmark package, and I want to have no questions about reproducibility of the experiment.
+
+**Acceptance Criteria:**
+
+**Given** a valid benchmark
+**When** it is submitted
+**Then** the required handoff artifacts, environment version, and manifest are persisted for the latest revision only
+
+**Given** render evidence exists
+**When** the benchmark is reviewed
+**Then** the latest-revision preview artifacts are available for inspection and traceable in the episode record
+
+**Given** the persisted benchmark package
+**When** it is reloaded later
+**Then** the environment version and artifact hashes make the experiment reproducible
+
+### Story 1.5: Review Colleague Benchmarks for Solvability
+As a human operator, I want to review a colleague's benchmark for solvability so that I can reject technically valid but logically unsolvable problems before they are handed to engineering.
+
+**Acceptance Criteria:**
+
+**Given** a benchmark that passes schema and geometry checks but is logically unsolvable
+**When** I review it
+**Then** I can reject it explicitly
+
+**Given** a benchmark that is solvable
+**When** I review it
+**Then** I can approve it for downstream solution work
+
+## Epic 2: Human Solution Workflow
+Human engineers can take an approved benchmark, work a solution against it, inspect pass/fail evidence, and iterate after failure. Human engineers can also review a colleague's solution for physical robustness under runtime jitter and reject flaky results.
+
+### Story 2.1: Start Solution Episode from Approved Benchmark
+As a human engineer, I want to start solution work from an approved benchmark so that I can solve against the same benchmark context that was validated.
+
+**Acceptance Criteria:**
+
+**Given** an approved benchmark revision
+**When** solution work starts
+**Then** the benchmark package and environment version are carried forward unchanged into the solution workspace
+
+**Given** a gravity-only benchmark
+**When** solution work starts
+**Then** the solution is evaluated in physically correct rigid-body simulation and the outcome follows physical reality
+
+**Given** an unapproved or stale benchmark revision
+**When** I start solution work
+**Then** the system blocks the episode with an explicit failure reason
+
+### Story 2.2: Inspect Solution Evidence and Terminal Outcome
+As a human engineer, I want to inspect simulation results, render evidence, and terminal reasons so that I know why a candidate solution passed or failed.
+
+**Acceptance Criteria:**
+
+**Given** a completed attempt
+**When** I inspect the run
+**Then** the system exposes the latest validation or simulation evidence and the terminal reason
+
+**Given** render or video evidence exists
+**When** I inspect the run
+**Then** the latest-revision media is available and traceable
+
+**Given** the attempt failed
+**When** I inspect the outcome
+**Then** the failure classification is explicit and not implied
+
+### Story 2.3: Revise and Retry Against the Same Benchmark
+As a human engineer, I want to revise a failed solution and try again against the same benchmark so that I can converge on a passing design without redefining the problem.
+
+**Acceptance Criteria:**
+
+**Given** a failed solution
+**When** I create a revision
+**Then** the benchmark definition and environment version remain unchanged
+
+**Given** a revised solution is submitted
+**When** validation runs again
+**Then** the new attempt is evaluated against the same benchmark contract
+
+**Given** multiple solution revisions exist
+**When** I inspect the episode
+**Then** I can compare the outcomes of the revisions against the same benchmark package
+
+### Story 2.4: Review Peer Solutions for Stability
+As a human engineer, I want to review a colleague's solution under runtime jitter so that I can reject solutions that only work in a lucky run.
+
+**Acceptance Criteria:**
+
+**Given** a solution has jittered evaluation results
+**When** I review it
+**Then** the system exposes pass/fail across the required variations
+
+**Given** the solution is flaky or unstable
+**When** I review it
+**Then** I can reject it with an explicit reason
+
+**Given** the solution is robust across the required jitter cases
+**When** I review it
+**Then** I can approve it for the next workflow stage
+
+<!-- Remaining epic sections will be appended sequentially during story generation. -->
+
+## Epic 3: Cost, Weight, and Manufacturability
+Human operators can validate solutions against cost, weight, and manufacturability constraints using real manufacturing and COTS data, and the system can prefer simpler valid designs over more complex ones when multiple candidates satisfy the same benchmark.
+
+### Story 3.1: Configure Real Cost Inputs
+As a human operator, I want to configure the prices used for costing from real manufacturing and catalog data so that the system evaluates designs with defensible price assumptions instead of invented numbers.
+
+**Acceptance Criteria:**
+
+**Given** a cost sheet or catalog source with known part pricing
+**When** I configure the costing inputs
+**Then** the system stores the selected price assumptions for later validation
+
+**Given** a missing or invalid price source
+**When** the costing inputs are validated
+**Then** the system rejects the configuration with an explicit reason
+
+### Story 3.2: Evaluate Manufacturability at the Requested Quantity
+As a human operator, I want the system to evaluate whether a solution is manufacturable at the requested production volume so that I can distinguish a prototype answer from a small-batch or mass-production answer.
+
+**Acceptance Criteria:**
+
+**Given** a requested production quantity
+**When** manufacturability is evaluated
+**Then** the system separates setup cost from variable cost
+
+**Given** a design that exceeds the allowed cost or weight envelope for the requested quantity
+**When** validation runs
+**Then** the solution is rejected with an explicit reason
+
+**Given** multiple manufacturing methods are possible for the same part
+**When** the system evaluates the design
+**Then** the chosen method is the one that satisfies the requirements within the allowed envelope
+
+### Story 3.3: Evaluate Weight, Size, Form Factor, and COTS
+As a human operator, I want the system to evaluate weight, size, and form-factor constraints together, and include COTS parts in the cost and manufacturability result, so that the answer reflects what can actually be built.
+
+**Acceptance Criteria:**
+
+**Given** a design that includes COTS parts
+**When** the solution is priced and weighed
+**Then** the catalog parts are included in the total cost and weight
+
+**Given** a design that violates size, weight, or form-factor limits
+**When** validation runs
+**Then** the system rejects it with an explicit reason
+
+**Given** a candidate part without a valid catalog or manufacturing reference
+**When** the design is reviewed
+**Then** the system flags the missing reference instead of assuming a price or weight
+
+### Story 3.4: Prefer the Simpler Valid Solution
+As a human operator, I want the system to identify unnecessary or unjustified degrees of freedom and flag over-actuated solutions during review so that I can prefer the valid candidate with fewer unnecessary moving parts.
+
+**Acceptance Criteria:**
+
+**Given** two or more valid candidates for the same benchmark
+**When** the system compares them
+**Then** it prefers the candidate with fewer unnecessary degrees of freedom, actuators, and parts
+
+**Given** a solution with unjustified extra movement
+**When** I review it
+**Then** I can reject it as over-actuated or unnecessarily complex
+
+**Given** a solution whose movement is justified by the benchmark objective
+**When** I review it
+**Then** the system does not flag it as over-actuated merely because it moves
+
+## Epic 4: Dataset Export & Replay
+Researchers and companies can export completed runs as inspectable, reproducible dataset rows with traces, artifacts, lineage, immutable run bundles, and replayable failures. Invalid or corrupted episodes are excluded at export time.
+
+### Story 4.1: Persist Immutable Run and Release Bundles
+As a human operator, I want validated benchmark artifacts, preview evidence, and immutable run or release manifests persisted so that downstream solution workflows can consume a stable, inspectable benchmark package and I have no questions about reproducibility of the experiment.
+
+**Acceptance Criteria:**
+
+**Given** a valid benchmark or official evaluation run
+**When** it is persisted
+**Then** the system stores the required manifest bundle, environment version, and revision identifiers for the latest revision only
+
+**Given** the persisted bundle
+**When** I inspect it later
+**Then** I can trace the benchmark revision, solution revision, environment version, joinable session and episode identifiers, and preview evidence from the same bundle without relying on undocumented runtime state
+
+**Given** render evidence exists
+**When** the benchmark or run is archived
+**Then** the latest-revision preview artifacts remain linked to the bundle and remain inspectable
+
+### Story 4.2: Export Training-Ready Dataset Rows
+As a dataset operator, I want completed benchmark and solution episodes exported as training-ready dataset rows so that I can use them for supervised training or RL.
+
+**Acceptance Criteria:**
+
+**Given** a completed episode that passes schema, completeness, and lineage checks
+**When** export runs
+**Then** the row includes the source episode ID, revision hash, artifact hash, seed metadata, and required media or manifest artifacts
+
+**Given** a row missing required metadata or with invalid lineage
+**When** export runs
+**Then** the row is excluded
+
+**Given** a completed benchmark or solution row
+**When** I inspect it later
+**Then** I can recover the source benchmark, the solution, the review artifacts, and the joinable session and episode identifiers from persisted metadata alone
+
+### Story 4.3: Replay Failed Episodes and Surface Deterministic Failures
+As a maintainer, I want failed episodes to remain replayable from persisted artifacts and traces so that I can reproduce and diagnose failures without rerunning the original solver.
+
+**Acceptance Criteria:**
+
+**Given** a failed episode
+**When** replay mode loads it
+**Then** the replay bundle reconstructs the failure state using persisted artifacts only
+
+**Given** a terminal episode
+**When** I inspect it
+**Then** the terminal reason, failure classification, and explicit fallback or unsupported-feature mismatch are present
+
+**Given** missing artifacts, stale manifests, unsupported mechanisms, invalid circuits, or missing review evidence
+**When** replay runs
+**Then** it fails closed with a concrete reason rather than a success state
+
+### Story 4.4: Curate Seed Coverage and Exclude Corrupted Data
+As a dataset operator, I want to manage coverage by seed and problem family so that the exported dataset stays balanced, representative, and free of known-corrupted rows.
+
+**Acceptance Criteria:**
+
+**Given** repeated seed variants or underrepresented families
+**When** export prioritization runs
+**Then** seed coverage is tracked through `seed_id`, `seed_dataset`, `seed_match_method`, `generation_kind`, and `parent_seed_id`
+
+**Given** integration-test runs or known-corrupted windows
+**When** export runs
+**Then** those rows are excluded
+
+**Given** different seeds for the same benchmark family
+**When** I inspect the export
+**Then** the dataset retains the seed lineage needed to reproduce the variation
+
+## Epic 5: UI, Visualization, and Demo
+Human operators can inspect session history, review traces and artifacts, visualize CAD, simulation, and circuit evidence, watch agent output in real time, interrupt active runs, and present completed runs through a browser UI.
+
+### Story 5.1: Inspect Session History and Run Timeline
+As a human operator, I want a session history and run timeline so that I can inspect the progress and outcome of benchmark and solution runs in one place.
+
+**Acceptance Criteria:**
+
+**Given** a session
+**When** I open it in the UI
+**Then** I can see the episode history, status, terminal reason, and progress of the active or completed run
+
+**Given** backend traces and tool calls exist
+**When** I inspect the run
+**Then** the UI renders those persisted records rather than fabricating placeholders
+
+**Given** an interrupted run
+**When** I reopen the session
+**Then** I can resume from the last persisted state
+
+**Given** context usage telemetry exists
+**When** I inspect the run
+**Then** the UI shows it
+
+### Story 5.2: Visualize CAD and Simulation Evidence
+As a human operator, I want to visualize CAD models, render evidence, and simulation playback so that I can verify the run visually rather than from text alone.
+
+**Acceptance Criteria:**
+
+**Given** a completed episode with CAD assets
+**When** I open the viewer
+**Then** I can inspect the model and hide or isolate parts
+
+**Given** simulation renders or video exist
+**When** I open the run
+**Then** I can play, pause, and scrub the evidence over time
+
+**Given** circuit or electronics evidence exists
+**When** I inspect the run
+**Then** the UI shows the relevant circuit view or wiring evidence
+
+**Given** latest-revision media exists
+**When** I inspect the run
+**Then** the UI binds the view to the latest revision rather than stale prior media
+
+### Story 5.3: View Code and Artifacts
+As a human operator, I want to view code, plans, and other files in the browser so that I can inspect the actual artifacts that produced the run.
+
+**Acceptance Criteria:**
+
+**Given** a run has plan, TODO, code, or review files
+**When** I open the artifact viewer
+**Then** the file tree, line numbers, and syntax coloring are available
+
+**Given** a markdown or code file is selected
+**When** I inspect it
+**Then** the UI shows the exact file contents from the persisted artifact set
+
+**Given** a benchmark or solution run
+**When** I inspect its artifacts
+**Then** I can see the related manifests, logs, and review outputs in the same workspace
+
+### Story 5.4: Collect Feedback and Present Demos
+As a human operator, I want to submit feedback and present completed runs through the UI so that I can capture review input and demonstrate system capability without leaving the browser.
+
+**Acceptance Criteria:**
+
+**Given** a completed model output
+**When** I submit feedback
+**Then** I can provide thumbs up or down, a short explanation, and a common feedback topic
+
+**Given** a completed run
+**When** I present it in demo mode
+**Then** the UI surfaces the relevant session, CAD, simulation, and artifact views in a stable layout
+
+**Given** feedback is recorded
+**When** I inspect the run later
+**Then** the feedback is persisted alongside the episode record and can be reviewed later
+
+### Story 5.5: Inspect Live Agent Output and Interrupt Execution
+As a human operator, I want to see the agent's output and reasoning in real time, and interrupt execution when it goes off track, so that I can catch logical errors early.
+
+**Acceptance Criteria:**
+
+**Given** an active agent run
+**When** I inspect the session
+**Then** I can see tool-call activity and reasoning traces as they arrive from the backend
+
+**Given** I need to stop a run
+**When** I press the stop button
+**Then** the controller interrupts the active agent execution
+
+**Given** reasoning traces are required but unavailable
+**When** I inspect the run
+**Then** the UI shows an explicit missing-trace state instead of pretending success
+
+## Epic 6: Gravity: Benchmarks
+Benchmark generator agents can reliably produce valid gravity-only benchmarks that human engineers can work against, and the benchmark family stays within rigid-body mechanics and gravity.
+
+### Story 6.1: Generate Gravity-Only Benchmarks
+As a human operator, I want benchmark generator agents to produce gravity-only benchmark candidates so that the benchmark family stays within rigid-body mechanics and gravity.
+
+**Acceptance Criteria:**
+
+**Given** a gravity benchmark seed or prompt
+**When** generation runs
+**Then** the candidate remains within the rigid-body, gravity-only scope and does not introduce actuators, FEM, fluids, or electronics
+
+**Given** an unsupported mechanism or modality
+**When** generation runs
+**Then** the candidate is rejected rather than silently adapted
+
+**Given** a generated benchmark candidate
+**When** it is reviewed
+**Then** its objective, zones, and motion assumptions are explicit enough for a human engineer to work against it
+
+### Story 6.2: Produce a Representative Gravity Validation Set
+As a human operator, I want a sufficiently broad gravity-only validation set so that engineers can work against meaningful variations rather than a single toy case.
+
+**Acceptance Criteria:**
+
+**Given** the gravity benchmark family
+**When** seeds are generated
+**Then** the set includes multiple variants across object shape, placement, size, and objective arrangement
+
+**Given** the validation set
+**When** I inspect it
+**Then** it is broad enough to exercise the benchmark generator against repeatable gravity-only cases
+
+**Given** a family member is duplicated too closely
+**When** the set is curated
+**Then** the duplicate is excluded or marked as redundant
+
+### Story 6.3: Refine Gravity Benchmark Quality
+As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated gravity benchmarks remain solvable, unambiguous, and suitable for engineering intake.
+
+**Acceptance Criteria:**
+
+**Given** reviewer feedback on a gravity benchmark
+**When** the benchmark is regenerated
+**Then** the next revision preserves the solvable contract and resolves the flagged issue
+
+**Given** a technically valid but poor gravity benchmark
+**When** review runs
+**Then** it can be rejected as unsuitable for engineering intake
+
+**Given** repeated gravity benchmark generations
+**When** I inspect the run set
+**Then** rejected examples are preserved for debugging and dataset analysis
+
+### Story 6.4: Reliable Gravity Benchmark Output and Reviews
+As a human operator, I want gravity benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 gravity benchmark generation attempts
+**When** I review the outputs
+**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+
+**Given** an AI-generated gravity benchmark review
+**When** I inspect it
+**Then** the review explains the problem or acceptance reason clearly enough for a human to follow
+
+**Given** a gravity benchmark review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 7: Gravity: Engineering
+Engineering agents can solve gravity-only benchmarks with verified solutions that behave correctly in rigid-body simulation under gravity.
+
+### Story 7.1: Solve Gravity-Only Benchmarks
+As a human operator, I want engineering agents to solve gravity-only benchmarks so that the system can produce a working solution for a rigid-body problem under gravity.
+
+**Acceptance Criteria:**
+
+**Given** an approved gravity benchmark
+**When** engineering runs
+**Then** the agent produces a candidate solution against the same benchmark contract
+
+**Given** a gravity-only solution attempt
+**When** it is evaluated
+**Then** the result is judged in physically correct rigid-body simulation under gravity
+
+**Given** the candidate solution fails
+**When** the run terminates
+**Then** the failure reason is explicit and the agent can continue from the same benchmark
+
+### Story 7.2: Verify Physics-Correct Gravity Solutions
+As a human operator, I want gravity solutions to be verified against physical reality so that a passing solution is not only syntactically valid but physically plausible.
+
+**Acceptance Criteria:**
+
+**Given** a passing gravity solution
+**When** the solution is reviewed
+**Then** it respects rigid-body mechanics, gravity, and the benchmark-defined zones and objectives
+
+**Given** a solution that only works due to simulation artifacts or unstable behavior
+**When** it is checked
+**Then** it is rejected as flaky or physically implausible
+
+**Given** a solution that passes under the required conditions
+**When** validation completes
+**Then** the solution is accepted as a verified gravity-only result
+
+### Story 7.3: Persist Final Proof for Gravity Solutions
+As a human operator, I want the final gravity solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
+
+**Acceptance Criteria:**
+
+**Given** an accepted gravity solution
+**When** it is finalized
+**Then** the final proof artifact is distinct from any preview artifact and is persisted with the episode
+
+**Given** the solution evidence exists
+**When** I inspect the episode later
+**Then** I can review the exact render, simulation, and terminal metadata used to accept the run
+
+**Given** the gravity solution is revisited later
+**When** the bundle is reloaded
+**Then** the persisted artifacts are sufficient to reproduce the accepted result without rerunning the solver
+
+### Story 7.4: Reliable Gravity Solution Output and Reviews
+As a human operator, I want gravity solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 gravity solution attempts
+**When** I review the outputs
+**Then** at least 8 of the solutions are valid without me correcting the solution
+
+**Given** an AI-generated gravity solution review
+**When** I inspect it
+**Then** the review explains the pass or fail decision clearly enough for a human to follow
+
+**Given** a gravity solution review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 8: Actuators: Simulation
+Upgrade simulation fidelity for powered motion, actuators, and motion limits so that actuator-enabled benchmarks behave physically consistently.
+
+### Story 8.1: Model Actuator-Driven Motion
+As a human operator, I want to define actuator behavior and have it simulated accurately so that powered motion is evaluated against the motion I actually declared.
+
+**Acceptance Criteria:**
+
+**Given** an actuator definition with a declared controller function or motion profile
+**When** simulation runs
+**Then** the system applies that declared behavior to the motion model and records the resulting motion
+
+**Given** a benchmark that uses powered movement
+**When** it is simulated
+**Then** the motion follows the declared actuator behavior rather than a hand-authored teleport or constraint shortcut
+
+**Given** a time-based or position-based actuator controller
+**When** the benchmark is evaluated
+**Then** the actuator command is interpreted from the declared control function rather than inferred from unrelated simulation state
+
+**Given** an unsupported motion type
+**When** simulation runs
+**Then** the run fails closed rather than inventing motion behavior
+
+### Story 8.2: Enforce Motion Limits and Overload Behavior
+As a human operator, I want motion limits and overload behavior to be enforced so that benchmarks involving actuators remain physically believable.
+
+**Acceptance Criteria:**
+
+**Given** an actuator with defined torque, speed, or stroke limits
+**When** the commanded motion exceeds those limits
+**Then** the simulation records a deterministic overload or failure reason
+
+**Given** a motion path that leaves the allowed envelope
+**When** simulation runs
+**Then** the system marks the run as failed rather than allowing unlimited motion
+
+**Given** a powered benchmark that lacks required motion metadata
+**When** it is validated
+**Then** it is rejected instead of being approximated silently
+
+### Story 8.3: Expose Actuator Evidence in Review
+As a human operator, I want actuator motion and controller evidence to be visible so that I can inspect powered behavior and use it in benchmark validation.
+
+**Acceptance Criteria:**
+
+**Given** an actuator-enabled run
+**When** I inspect the episode
+**Then** I can see the actuator state, commanded control path, and resulting motion evidence
+
+**Given** a review stage for a benchmark involving actuators
+**When** evidence is available
+**Then** the review surface can distinguish actuator motion from passive gravity motion
+
+**Given** the simulation fails
+**When** I inspect the run
+**Then** the failure classification identifies the motion-limit or overload condition explicitly
+
+## Epic 9: Actuators: Benchmarks
+Benchmark generator agents can ship valid actuator-capable benchmark sets with enough validation coverage for engineering intake, and the benchmarks describe powered motion explicitly enough for engineers to work against them.
+
+### Story 9.1: Generate Benchmarks Involving Actuators
+As a human operator, I want benchmark generator agents to produce benchmark candidates involving actuators so that the benchmark family includes powered motion instead of only passive gravity cases.
+
+**Acceptance Criteria:**
+
+**Given** a prompt or seed involving actuators
+**When** generation runs
+**Then** the candidate declares the actuator type, motion kind, axis or path, and operating envelope explicitly
+
+**Given** an unsupported actuator or motion type
+**When** generation runs
+**Then** the candidate is rejected rather than silently adapted
+
+**Given** a generated benchmark candidate
+**When** it is reviewed
+**Then** the powered motion is explicit enough for a human engineer to work against it
+
+### Story 9.2: Produce a Representative Actuator Validation Set
+As a human operator, I want a sufficiently broad actuator validation set so that engineers can work against meaningful powered-motion variations rather than a single toy case.
+
+**Acceptance Criteria:**
+
+**Given** the actuator benchmark family
+**When** seeds are generated
+**Then** the set includes multiple variants across actuator type, stroke, speed, load, and motion direction
+
+**Given** the validation set
+**When** I inspect it
+**Then** it is broad enough to exercise the benchmark generator against repeatable powered-motion cases
+
+**Given** two benchmark variants are materially identical
+**When** the set is curated
+**Then** the duplicate is excluded or marked as redundant
+
+### Story 9.3: Refine Actuator Benchmark Quality
+As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated benchmarks involving actuators remain solvable, unambiguous, and suitable for engineering intake.
+
+**Acceptance Criteria:**
+
+**Given** reviewer feedback on a benchmark involving actuators
+**When** the benchmark is regenerated
+**Then** the next revision preserves the powered-motion contract and resolves the flagged issue
+
+**Given** a technically valid but poor actuator benchmark
+**When** review runs
+**Then** it can be rejected as unsuitable for engineering intake
+
+**Given** repeated actuator benchmark generations
+**When** I inspect the run set
+**Then** rejected examples are preserved for debugging and dataset analysis
+
+### Story 9.4: Reliable Actuator Benchmark Output and Reviews
+As a human operator, I want actuator benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 actuator benchmark generation attempts
+**When** I review the outputs
+**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+
+**Given** an AI-generated actuator benchmark review
+**When** I inspect it
+**Then** the review explains the problem or acceptance reason clearly enough for a human to follow
+
+**Given** an actuator benchmark review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 10: Actuators: Engineering
+Engineering agents can solve actuator-capable benchmarks with verified solutions that respect powered motion limits and remain stable under review.
+
+### Story 10.1: Solve Benchmarks Involving Actuators
+As a human operator, I want engineering agents to solve benchmarks involving actuators so that the system can produce a working solution for a powered-motion problem.
+
+**Acceptance Criteria:**
+
+**Given** an approved benchmark involving actuators
+**When** engineering runs
+**Then** the agent produces a candidate solution against the same benchmark contract
+
+**Given** an actuator-enabled solution attempt
+**When** it is evaluated
+**Then** the result is judged against the declared powered-motion behavior and physical envelope
+
+**Given** the candidate solution fails
+**When** the run terminates
+**Then** the failure reason is explicit and the agent can continue from the same benchmark
+
+### Story 10.2: Verify Actuator Solutions Under Load
+As a human operator, I want actuator solutions to be verified under load and runtime jitter so that a passing solution is not just lucky or unstable.
+
+**Acceptance Criteria:**
+
+**Given** a passing actuator solution
+**When** the solution is reviewed
+**Then** it respects motion limits, load expectations, and the benchmark-defined objectives
+
+**Given** a solution that only works because the actuator behavior is unstable or lucky
+**When** it is checked
+**Then** it is rejected as flaky or physically implausible
+
+**Given** a solution that passes under the required conditions
+**When** validation completes
+**Then** the solution is accepted as a verified actuator-capable result
+
+### Story 10.3: Persist Final Proof for Actuator Solutions
+As a human operator, I want the final actuator solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
+
+**Acceptance Criteria:**
+
+**Given** an accepted actuator solution
+**When** it is finalized
+**Then** the final proof artifact is distinct from any preview artifact and is persisted with the episode
+
+**Given** the solution evidence exists
+**When** I inspect the episode later
+**Then** I can review the exact render, simulation, and terminal metadata used to accept the run
+
+**Given** the actuator solution is revisited later
+**When** the bundle is reloaded
+**Then** the persisted artifacts are sufficient to reproduce the accepted result without rerunning the solver
+
+### Story 10.4: Reliable Actuator Solution Output and Reviews
+As a human operator, I want actuator solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 actuator solution attempts
+**When** I review the outputs
+**Then** at least 8 of the solutions are valid without me correcting the solution
+
+**Given** an AI-generated actuator solution review
+**When** I inspect it
+**Then** the review explains the pass or fail decision clearly enough for a human to follow
+
+**Given** an actuator solution review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 11: FEM: Simulation
+Upgrade simulation fidelity for deformables, stress, and breakage so that FEM-backed benchmarks behave physically consistently.
+
+### Story 11.1: Model Deformable and Stress-Aware Behavior
+As a human operator, I want deformable and stress-aware simulation to be explicit so that tasks beyond rigid-body mechanics are evaluated correctly.
+
+**Acceptance Criteria:**
+
+**Given** a benchmark that requests FEM or soft-material behavior
+**When** simulation runs
+**Then** the backend uses the configured deformable or stress-aware path rather than a rigid-only approximation
+
+**Given** a stress-aware run
+**When** it completes
+**Then** the system records structured stress summaries for the inspected parts
+
+**Given** a rigid-only benchmark
+**When** it is simulated
+**Then** the FEM path is not activated accidentally
+
+### Story 11.2: Enforce Stress Thresholds and Breakage
+As a human operator, I want stress thresholds and breakage to be enforced so that failures are distinct and physically meaningful.
+
+**Acceptance Criteria:**
+
+**Given** a part whose stress exceeds its defined limit
+**When** simulation runs
+**Then** the run fails with the part identified explicitly
+
+**Given** a breakage event
+**When** it is recorded
+**Then** the system persists the failure reason, peak stress, and location of the failure
+
+**Given** a stress-aware benchmark that would otherwise appear to pass
+**When** breakage or stress failure occurs
+**Then** the run is not classified as successful
+
+### Story 11.3: Expose FEM Review Artifacts
+As a human operator, I want stress summaries and heatmaps visible in review so that I can inspect failure reasons without reading raw solver output.
+
+**Acceptance Criteria:**
+
+**Given** a FEM run with field data
+**When** I inspect the episode
+**Then** I can view the stress summaries and stress heatmaps associated with the latest revision
+
+**Given** a stress-aware failure
+**When** I inspect the run
+**Then** the review surface makes the hotspot and failure mode understandable
+
+**Given** a final FEM result
+**When** it is archived
+**Then** the durable artifacts include the structured stress result and review evidence
+
+## Epic 12: FEM: Benchmarks
+Benchmark generator agents can ship FEM benchmark sets with stress-aware objectives and enough validation coverage for engineering intake, and the benchmarks describe deformable behavior explicitly enough for engineers to work against them.
+
+### Story 12.1: Generate FEM Benchmarks
+As a human operator, I want benchmark generator agents to produce FEM benchmark candidates so that the benchmark family includes deformable and stress-aware problems instead of only rigid-body cases.
+
+**Acceptance Criteria:**
+
+**Given** an FEM benchmark seed or prompt
+**When** generation runs
+**Then** the candidate declares `physics.fem_enabled`, the relevant material classes, and the stress objectives explicitly
+
+**Given** an unsupported deformable or stress scenario
+**When** generation runs
+**Then** the candidate is rejected rather than silently adapted
+
+**Given** a generated benchmark candidate
+**When** it is reviewed
+**Then** the deformable or stress-aware behavior is explicit enough for a human engineer to work against it
+
+### Story 12.2: Produce a Representative FEM Validation Set
+As a human operator, I want a sufficiently broad FEM validation set so that engineers can work against meaningful deformable variations rather than a single toy case.
+
+**Acceptance Criteria:**
+
+**Given** the FEM benchmark family
+**When** seeds are generated
+**Then** the set includes multiple variants across material class, load path, stress target, and part geometry
+
+**Given** the validation set
+**When** I inspect it
+**Then** it is broad enough to exercise the benchmark generator against repeatable FEM cases
+
+**Given** two benchmark variants are materially identical
+**When** the set is curated
+**Then** the duplicate is excluded or marked as redundant
+
+### Story 12.3: Refine FEM Benchmark Quality
+As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated FEM benchmarks remain solvable, unambiguous, and suitable for engineering intake.
+
+**Acceptance Criteria:**
+
+**Given** reviewer feedback on an FEM benchmark
+**When** the benchmark is regenerated
+**Then** the next revision preserves the stress-aware contract and resolves the flagged issue
+
+**Given** a technically valid but poor FEM benchmark
+**When** review runs
+**Then** it can be rejected as unsuitable for engineering intake
+
+**Given** repeated FEM benchmark generations
+**When** I inspect the run set
+**Then** rejected examples are preserved for debugging and dataset analysis
+
+### Story 12.4: Reliable FEM Benchmark Output and Reviews
+As a human operator, I want FEM benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 FEM benchmark generation attempts
+**When** I review the outputs
+**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+
+**Given** an AI-generated FEM benchmark review
+**When** I inspect it
+**Then** the review explains the problem or acceptance reason clearly enough for a human to follow
+
+**Given** an FEM benchmark review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 13: FEM: Engineering
+Engineering agents can solve FEM benchmarks with verified, stress-aware solutions that remain stable under review and produce acceptable structural outcomes.
+
+### Story 13.1: Solve FEM Benchmarks
+As a human operator, I want engineering agents to solve FEM benchmarks so that the system can produce a working solution for a deformable or stress-aware problem.
+
+**Acceptance Criteria:**
+
+**Given** an approved FEM benchmark
+**When** engineering runs
+**Then** the agent produces a candidate solution against the same benchmark contract
+
+**Given** a FEM-enabled solution attempt
+**When** it is evaluated
+**Then** the result is judged against the declared deformable behavior, stress objectives, and physical envelope
+
+**Given** the candidate solution fails
+**When** the run terminates
+**Then** the failure reason is explicit and the agent can continue from the same benchmark
+
+### Story 13.2: Verify FEM Solutions Under Load
+As a human operator, I want FEM solutions to be verified under load and runtime jitter so that a passing solution is not just lucky or structurally unstable.
+
+**Acceptance Criteria:**
+
+**Given** a passing FEM solution
+**When** the solution is reviewed
+**Then** it respects the stress thresholds, material constraints, and benchmark-defined objectives
+
+**Given** a solution that only works because the structural response is unstable or lucky
+**When** it is checked
+**Then** it is rejected as flaky or physically implausible
+
+**Given** a solution that passes under the required conditions
+**When** validation completes
+**Then** the solution is accepted as a verified FEM-capable result
+
+### Story 13.3: Persist Final Proof for FEM Solutions
+As a human operator, I want the final FEM solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
+
+**Acceptance Criteria:**
+
+**Given** an accepted FEM solution
+**When** it is finalized
+**Then** the final proof artifact is distinct from any preview artifact and is persisted with the episode
+
+**Given** the solution evidence exists
+**When** I inspect the episode later
+**Then** I can review the exact render, stress summary, and terminal metadata used to accept the run
+
+**Given** the FEM solution is revisited later
+**When** the bundle is reloaded
+**Then** the persisted artifacts are sufficient to reproduce the accepted result without rerunning the solver
+
+### Story 13.4: Reliable FEM Solution Output and Reviews
+As a human operator, I want FEM solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 FEM solution attempts
+**When** I review the outputs
+**Then** at least 8 of the solutions are valid without me correcting the solution
+
+**Given** an AI-generated FEM solution review
+**When** I inspect it
+**Then** the review explains the pass or fail decision clearly enough for a human to follow
+
+**Given** a FEM solution review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 14: Fluids: Simulation
+Upgrade simulation fidelity for fluid containment, flow, and fluid-solid interaction so that fluid-enabled benchmarks behave physically consistently.
+
+### Story 14.1: Model Fluid Containment and Flow
+As a human operator, I want fluid containment and flow to be simulated explicitly so that liquid behavior is not treated as a hidden assumption.
+
+**Acceptance Criteria:**
+
+**Given** a benchmark that requests fluid behavior
+**When** simulation runs
+**Then** the backend uses the configured fluid-capable path rather than a rigid-only approximation
+
+**Given** a fluid containment objective
+**When** the run completes
+**Then** the system records structured fluid metrics for the containment result
+
+**Given** a fluid benchmark with flow objectives
+**When** it is simulated
+**Then** the flow rate or equivalent fluid objective is measured rather than inferred
+
+### Story 14.2: Enforce Fluid-Solid Interaction and Failure
+As a human operator, I want fluid-solid interaction and failure to be enforced so that fluid benchmarks remain physically meaningful.
+
+**Acceptance Criteria:**
+
+**Given** a fluid benchmark where containment is lost
+**When** simulation runs
+**Then** the run fails with an explicit containment or spill reason
+
+**Given** fluid contact with a protected component or electronics
+**When** simulation runs
+**Then** the run records the appropriate hard failure instead of passing silently
+
+**Given** a fluid or flow benchmark that would otherwise appear to pass
+**When** instability or hard failure occurs
+**Then** the run is not classified as successful
+
+### Story 14.3: Expose Fluid Review Artifacts
+As a human operator, I want fluid metrics and dynamic evidence visible in review so that I can inspect failure reasons without reading raw solver output.
+
+**Acceptance Criteria:**
+
+**Given** a fluid run with dynamic evidence
+**When** I inspect the episode
+**Then** I can view the fluid metrics, rendered evidence, and failure classification associated with the latest revision
+
+**Given** a fluid benchmark review
+**When** evidence is available
+**Then** the review surface can distinguish containment loss, flow miss, and instability
+
+**Given** a final fluid result
+**When** it is archived
+**Then** the durable artifacts include the structured fluid result and review evidence
+
+## Epic 15: Fluids: Benchmarks
+Benchmark generator agents can ship fluid benchmark sets with containment and flow objectives and enough validation coverage for engineering intake, and the benchmarks describe fluid behavior explicitly enough for engineers to work against them.
+
+### Story 15.1: Generate Fluid Benchmarks
+As a human operator, I want benchmark generator agents to produce fluid benchmark candidates so that the benchmark family includes containment and flow problems instead of only rigid-body cases.
+
+**Acceptance Criteria:**
+
+**Given** a fluid benchmark seed or prompt
+**When** generation runs
+**Then** the candidate declares the fluid body, initial volume, containment objective, and flow objective explicitly
+
+**Given** an unsupported fluid or containment scenario
+**When** generation runs
+**Then** the candidate is rejected rather than silently adapted
+
+**Given** a generated benchmark candidate
+**When** it is reviewed
+**Then** the fluid behavior is explicit enough for a human engineer to work against it
+
+### Story 15.2: Produce a Representative Fluid Validation Set
+As a human operator, I want a sufficiently broad fluid validation set so that engineers can work against meaningful liquid variations rather than a single toy case.
+
+**Acceptance Criteria:**
+
+**Given** the fluid benchmark family
+**When** seeds are generated
+**Then** the set includes multiple variants across fluid volume, container geometry, flow target, and containment geometry
+
+**Given** the validation set
+**When** I inspect it
+**Then** it is broad enough to exercise the benchmark generator against repeatable fluid cases
+
+**Given** two benchmark variants are materially identical
+**When** the set is curated
+**Then** the duplicate is excluded or marked as redundant
+
+### Story 15.3: Refine Fluid Benchmark Quality
+As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated fluid benchmarks remain solvable, unambiguous, and suitable for engineering intake.
+
+**Acceptance Criteria:**
+
+**Given** reviewer feedback on a fluid benchmark
+**When** the benchmark is regenerated
+**Then** the next revision preserves the fluid contract and resolves the flagged issue
+
+**Given** a technically valid but poor fluid benchmark
+**When** review runs
+**Then** it can be rejected as unsuitable for engineering intake
+
+**Given** repeated fluid benchmark generations
+**When** I inspect the run set
+**Then** rejected examples are preserved for debugging and dataset analysis
+
+### Story 15.4: Reliable Fluid Benchmark Output and Reviews
+As a human operator, I want fluid benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 fluid benchmark generation attempts
+**When** I review the outputs
+**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+
+**Given** an AI-generated fluid benchmark review
+**When** I inspect it
+**Then** the review explains the problem or acceptance reason clearly enough for a human to follow
+
+**Given** a fluid benchmark review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 16: Fluids: Engineering
+Engineering agents can solve fluid benchmarks with verified solutions that respect containment, flow, and stability requirements.
+
+### Story 16.1: Solve Fluid Benchmarks
+As a human operator, I want engineering agents to solve fluid benchmarks so that the system can produce a working solution for a containment or flow problem.
+
+**Acceptance Criteria:**
+
+**Given** an approved fluid benchmark
+**When** engineering runs
+**Then** the agent produces a candidate solution against the same benchmark contract
+
+**Given** a fluid-enabled solution attempt
+**When** it is evaluated
+**Then** the result is judged against the declared containment, flow, and physical envelope
+
+**Given** the candidate solution fails
+**When** the run terminates
+**Then** the failure reason is explicit and the agent can continue from the same benchmark
+
+### Story 16.2: Verify Fluid Solutions Under Load
+As a human operator, I want fluid solutions to be verified under load and runtime jitter so that a passing solution is not just lucky or unstable.
+
+**Acceptance Criteria:**
+
+**Given** a passing fluid solution
+**When** the solution is reviewed
+**Then** it respects containment, flow targets, and the benchmark-defined objectives
+
+**Given** a solution that only works because the fluid behavior is unstable or lucky
+**When** it is checked
+**Then** it is rejected as flaky or physically implausible
+
+**Given** a fluid benchmark that includes electronics or powered fixtures
+**When** the solution is evaluated
+**Then** fluid contact with electrical components is treated as a hard failure
+
+### Story 16.3: Persist Final Proof for Fluid Solutions
+As a human operator, I want the final fluid solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
+
+**Acceptance Criteria:**
+
+**Given** an accepted fluid solution
+**When** it is finalized
+**Then** the final proof artifact is distinct from any preview artifact and is persisted with the episode
+
+**Given** the solution evidence exists
+**When** I inspect the episode later
+**Then** I can review the exact render, fluid metrics, and terminal metadata used to accept the run
+
+**Given** the fluid solution is revisited later
+**When** the bundle is reloaded
+**Then** the persisted artifacts are sufficient to reproduce the accepted result without rerunning the solver
+
+### Story 16.4: Reliable Fluid Solution Output and Reviews
+As a human operator, I want fluid solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 fluid solution attempts
+**When** I review the outputs
+**Then** at least 8 of the solutions are valid without me correcting the solution
+
+**Given** an AI-generated fluid solution review
+**When** I inspect it
+**Then** the review explains the pass or fail decision clearly enough for a human to follow
+
+**Given** a fluid solution review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 17: Electronics: Simulation
+Upgrade simulation fidelity for circuit validity, wire routing, and power-gated actuation so that electromechanical benchmarks behave physically consistently.
+
+### Story 17.1: Model Circuit-Valid Powered Behavior
+As a human operator, I want circuit validity and powered behavior to be simulated explicitly so that motors do not move without a valid electrical design.
+
+**Acceptance Criteria:**
+
+**Given** a benchmark that depends on electrical power
+**When** simulation runs
+**Then** the system validates the circuit before allowing powered motion to proceed
+
+**Given** a valid circuit and powered mechanism
+**When** the run completes
+**Then** the mechanical result is gated by electrical power availability rather than assumed implicitly
+
+**Given** an invalid or missing circuit
+**When** simulation runs
+**Then** the run fails closed with a circuit-related reason
+
+### Story 17.2: Enforce Wiring, Current, and Power Failure Modes
+As a human operator, I want wiring and power failure modes to be enforced so that electromechanical benchmarks remain physically meaningful.
+
+**Acceptance Criteria:**
+
+**Given** a short circuit, open circuit, floating node, or overcurrent condition
+**When** simulation runs
+**Then** the run records a deterministic electrical failure reason
+
+**Given** a wire route that violates the benchmark-defined physical path or gauge limits
+**When** simulation runs
+**Then** the run fails rather than allowing an invalid powered design
+
+**Given** an electrical benchmark that would otherwise appear to pass
+**When** the power state is invalid
+**Then** the run is not classified as successful
+
+### Story 17.3: Expose Schematic and Route Evidence
+As a human operator, I want schematic and wire-route evidence visible in review so that I can inspect electrical failure reasons without reading raw solver output.
+
+**Acceptance Criteria:**
+
+**Given** an electromechanical run with electrical evidence
+**When** I inspect the episode
+**Then** I can view the schematic, routed wires, and failure classification associated with the latest revision
+
+**Given** a powered benchmark review
+**When** evidence is available
+**Then** the review surface can distinguish circuit failure, routing failure, and power-gated motion failure
+
+**Given** a final electromechanical result
+**When** it is archived
+**Then** the durable artifacts include the structured electrical result and review evidence
+
+## Epic 18: Electronics: Benchmarks
+Benchmark generator agents can ship electromechanical benchmark sets with valid circuit and wiring requirements and enough validation coverage for engineering intake, and the benchmarks describe powered behavior explicitly enough for engineers to work against them.
+
+### Story 18.1: Generate Benchmarks Involving Electronics
+As a human operator, I want benchmark generator agents to produce benchmark candidates involving electronics so that powered mechanisms have explicit circuit and wiring requirements rather than hidden assumptions.
+
+**Acceptance Criteria:**
+
+**Given** a prompt or seed involving electronics
+**When** generation runs
+**Then** the candidate declares the power supply, components, wire route, and powered motion contract explicitly
+
+**Given** an unsupported circuit or wiring scenario
+**When** generation runs
+**Then** the candidate is rejected rather than silently adapted
+
+**Given** a generated benchmark candidate
+**When** it is reviewed
+**Then** the electrical behavior is explicit enough for a human engineer to work against it
+
+### Story 18.2: Produce a Representative Electronics Validation Set
+As a human operator, I want a sufficiently broad electronics validation set so that engineers can work against meaningful electromechanical variations rather than a single toy case.
+
+**Acceptance Criteria:**
+
+**Given** the electronics benchmark family
+**When** seeds are generated
+**Then** the set includes multiple variants across power supply, component family, wiring path, and load conditions
+
+**Given** the validation set
+**When** I inspect it
+**Then** it is broad enough to exercise the benchmark generator against repeatable electromechanical cases
+
+**Given** two benchmark variants are materially identical
+**When** the set is curated
+**Then** the duplicate is excluded or marked as redundant
+
+### Story 18.3: Refine Electronics Benchmark Quality
+As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated benchmarks involving electronics remain solvable, unambiguous, and suitable for engineering intake.
+
+**Acceptance Criteria:**
+
+**Given** reviewer feedback on a benchmark involving electronics
+**When** the benchmark is regenerated
+**Then** the next revision preserves the circuit and wiring contract and resolves the flagged issue
+
+**Given** a technically valid but poor electronics benchmark
+**When** review runs
+**Then** it can be rejected as unsuitable for engineering intake
+
+**Given** repeated electronics benchmark generations
+**When** I inspect the run set
+**Then** rejected examples are preserved for debugging and dataset analysis
+
+### Story 18.4: Reliable Electronics Benchmark Output and Reviews
+As a human operator, I want electronics benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 electronics benchmark generation attempts
+**When** I review the outputs
+**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+
+**Given** an AI-generated electronics benchmark review
+**When** I inspect it
+**Then** the review explains the problem or acceptance reason clearly enough for a human to follow
+
+**Given** an electronics benchmark review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 19: Electronics: Engineering
+Engineering agents can solve electromechanical benchmarks with verified solutions that respect circuit validity, wiring constraints, and power-gated actuation.
+
+### Story 19.1: Solve Benchmarks Involving Electronics
+As a human operator, I want engineering agents to solve benchmarks involving electronics so that the system can produce a working solution for a powered mechanism.
+
+**Acceptance Criteria:**
+
+**Given** an approved benchmark involving electronics
+**When** engineering runs
+**Then** the agent produces a candidate solution against the same benchmark contract
+
+**Given** an electromechanical solution attempt
+**When** it is evaluated
+**Then** the result is judged against the declared circuit, wiring, power, and physical envelope
+
+**Given** the candidate solution fails
+**When** the run terminates
+**Then** the failure reason is explicit and the agent can continue from the same benchmark
+
+### Story 19.2: Verify Electromechanical Solutions Under Load
+As a human operator, I want electromechanical solutions to be verified under load and runtime jitter so that a passing solution is not just lucky or electrically unsafe.
+
+**Acceptance Criteria:**
+
+**Given** a passing electromechanical solution
+**When** the solution is reviewed
+**Then** it respects circuit validity, power budget, wire routing, and benchmark-defined objectives
+
+**Given** a solution that only works because the electrical behavior is unstable or lucky
+**When** it is checked
+**Then** it is rejected as flaky or physically implausible
+
+**Given** a fluid benchmark with electronics or a benchmark with benchmark-owned powered fixtures
+**When** the solution is evaluated
+**Then** fluid contact with electrical components is treated as a hard failure
+
+### Story 19.3: Persist Final Proof for Electromechanical Solutions
+As a human operator, I want the final electromechanical solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
+
+**Acceptance Criteria:**
+
+**Given** an accepted electromechanical solution
+**When** it is finalized
+**Then** the final proof artifact is distinct from any preview artifact and is persisted with the episode
+
+**Given** the solution evidence exists
+**When** I inspect the episode later
+**Then** I can review the exact schematic, wire-route, simulation, and terminal metadata used to accept the run
+
+**Given** the electromechanical solution is revisited later
+**When** the bundle is reloaded
+**Then** the persisted artifacts are sufficient to reproduce the accepted result without rerunning the solver
+
+### Story 19.4: Reliable Electromechanical Solution Output and Reviews
+As a human operator, I want electromechanical solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+
+**Acceptance Criteria:**
+
+**Given** 10 electromechanical solution attempts
+**When** I review the outputs
+**Then** at least 8 of the solutions are valid without me correcting the solution
+
+**Given** an AI-generated electromechanical solution review
+**When** I inspect it
+**Then** the review explains the pass or fail decision clearly enough for a human to follow
+
+**Given** an electromechanical solution review is unclear
+**When** I read it
+**Then** I can reject it as insufficiently explainable
+
+## Epic 20: Steering & Control
+Human operators can steer the active benchmark generator and engineering agents with selected CAD or code context and targeted corrections, and the selected context is preserved in traces and prompt payloads.
+
+### Story 20.1: Attach CAD and Code Context to Steering Prompts
+As a human operator, I want to attach selected CAD parts, faces, subassemblies, or code lines to a steering prompt so that I can direct an agent with precise context.
+
+**Acceptance Criteria:**
+
+**Given** a selected CAD entity or code span
+**When** I attach it to a steering prompt
+**Then** the selected context is preserved in the prompt payload and trace metadata
+
+**Given** multiple selected items
+**When** I submit the steering prompt
+**Then** the selected items remain distinct rather than being collapsed into an ambiguous blob
+
+**Given** an invalid or stale selection
+**When** I submit the steering prompt
+**Then** the system rejects it with an explicit failure reason
+
+### Story 20.2: Apply Corrective Steering During Active Runs
+As a human operator, I want to send corrective steering during an active run so that I can refine the agent's direction when I notice an incorrect assumption early.
+
+**Acceptance Criteria:**
+
+**Given** an active benchmark-generation or engineering run
+**When** I submit a corrective steering prompt
+**Then** the agent receives the selected context and the correction while the run is still active
+
+**Given** a completed or terminal run
+**When** I try to steer it
+**Then** the system blocks the request rather than pretending that the run is still active
+
+**Given** a steering correction changes the agent's direction
+**When** the run continues
+**Then** the resulting edits remain linked to the steering action in the trace
+
+### Story 20.3: Preserve Steering Provenance
+As a maintainer, I want steering context and resulting edits preserved so that I can debug the effect of steering and replay it later if needed.
+
+**Acceptance Criteria:**
+
+**Given** a steering action
+**When** I inspect the episode later
+**Then** I can see the original selection metadata, the steering prompt, and the resulting agent output
+
+**Given** steering is used repeatedly in one episode
+**When** I inspect the trace
+**Then** each steering action remains attributable to the exact selected context and revision
+
+**Given** no steering occurred
+**When** I inspect the episode
+**Then** the trace remains clean and does not synthesize fake steering events
+
+## Epic 21: Market Fit & Hardening
+Define the first target market and harden the product around that market so that the release has a clear customer profile, quality bar, and scope boundary.
+
+### Story 21.1: Define the Target Market
+As a product owner, I want to define the first target market and core use case so that product decisions are anchored to a concrete customer segment.
+
+**Acceptance Criteria:**
+
+**Given** the current product strategy
+**When** market definition is completed
+**Then** the target market, primary user type, and primary benchmark family are documented
+
+**Given** competing market options
+**When** a decision is made
+**Then** the selected market is explicit and the unselected options are marked as out of scope
+
+### Story 21.2: Translate Market Needs into Product Requirements
+As a product owner, I want market-specific requirements to be translated into product constraints so that implementation work stays aligned to the chosen market.
+
+**Acceptance Criteria:**
+
+**Given** the selected market
+**When** product requirements are updated
+**Then** the release scope, benchmark scope, and UI surface reflect the chosen market
+
+**Given** a requested feature that does not serve the chosen market
+**When** it is reviewed
+**Then** it is deferred or rejected with an explicit rationale
+
+### Story 21.3: Harden for Release
+As a product owner, I want the product hardened for the chosen market so that the release is reliable, supportable, and ready for external use.
+
+**Acceptance Criteria:**
+
+**Given** the target market and release scope
+**When** hardening work is completed
+**Then** the product has the required quality gates, observability, and operational constraints for that market
+
+**Given** the release candidate
+**When** it is reviewed
+**Then** the system is judged against the market-specific quality bar rather than an abstract internal prototype bar
