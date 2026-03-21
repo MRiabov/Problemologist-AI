@@ -146,6 +146,57 @@ async def test_int_184_engineer_fail_fast_and_skip_target_node():
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
+        "node_entry_validation_rejected",
+        "benchmark_assembly_definition.yaml",
+        "missing_artifact",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_184_engineer_planner_requires_benchmark_assembly_definition():
+    """
+    INT-184: Engineer planner entry must fail closed when benchmark_assembly_definition.yaml is absent.
+    """
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+        req = AgentRunRequest(
+            task="INT-184 engineer planner requires benchmark assembly context.",
+            session_id=session_id,
+            agent_name=AgentName.ENGINEER_PLANNER,
+            start_node=AgentName.ENGINEER_PLANNER,
+        )
+        run_resp = await client.post(
+            f"{CONTROLLER_URL}/api/agent/run",
+            json=req.model_dump(mode="json"),
+        )
+        assert run_resp.status_code == 202, run_resp.text
+        run = AgentRunResponse.model_validate(run_resp.json())
+
+        episode = await _poll_engineer_episode(
+            client,
+            str(run.episode_id),
+            terminal_statuses={EpisodeStatus.FAILED, EpisodeStatus.COMPLETED},
+        )
+        assert episode.status == EpisodeStatus.FAILED
+
+        entry = _entry_validation_from_episode(episode)
+        assert entry.node == AgentName.ENGINEER_PLANNER
+        assert entry.disposition == EntryFailureDisposition.FAIL_FAST
+        assert entry.reason_code == "missing_artifact"
+        assert entry.reroute_target is None
+        assert any(
+            error.artifact_path == "benchmark_assembly_definition.yaml"
+            for error in entry.errors
+        )
+        assert any(
+            "benchmark_assembly_definition.yaml" in error.message
+            for error in entry.errors
+        )
+        assert not _node_start_traces(episode, AgentName.ENGINEER_PLANNER.value)
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
         "continue_generation_invalid_episode_status",
     ]
 )

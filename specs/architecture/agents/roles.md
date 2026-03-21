@@ -98,7 +98,7 @@ Problems with motors and moving parts are verified more consistently because the
 8. **Planner artifacts**
    - Write `todo.md` implementation checklist.
    - Write draft `benchmark_definition.yaml` matching this geometry/constraint data.
-   - Write draft `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; handed to engineering as read-only benchmark context).
+   - Write draft `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; required engineer-stage handoff artifact).
    - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 ```
 
