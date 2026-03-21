@@ -54,7 +54,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -177,7 +177,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -538,7 +538,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 50
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1200
                   planner_target_max_unit_cost_usd: 25
                   planner_target_max_weight_g: 600
@@ -2395,7 +2395,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -2531,7 +2531,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -3615,7 +3615,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -4334,7 +4334,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 50
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1200
                   planner_target_max_unit_cost_usd: 25
                   planner_target_max_weight_g: 600
@@ -4621,7 +4621,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -4742,7 +4742,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500
@@ -4866,7 +4866,7 @@ scenarios:
               content: |
                 version: '1.0'
                 constraints:
-                  benchmark_max_unit_cost_usd: 500
+                  benchmark_max_unit_cost_usd: 200
                   benchmark_max_weight_g: 1000
                   planner_target_max_unit_cost_usd: 200
                   planner_target_max_weight_g: 500

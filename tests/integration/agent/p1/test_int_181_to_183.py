@@ -16,6 +16,8 @@ from tests.integration.agent.helpers import (
     get_controller_log_path,
     read_log_segment,
     run_agent_episode,
+    seed_benchmark_assembly_definition,
+    seed_execution_reviewer_handover,
     strip_ansi,
     wait_for_episode_terminal,
     wait_for_queue_empty,
@@ -170,6 +172,21 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
             headers={"X-Session-ID": session_b},
         )
         assert write_b.status_code == 200, write_b.text
+
+        await asyncio.gather(
+            seed_benchmark_assembly_definition(client, session_a),
+            seed_benchmark_assembly_definition(client, session_b),
+            seed_execution_reviewer_handover(
+                client,
+                session_id=session_a,
+                int_id="INT-182",
+            ),
+            seed_execution_reviewer_handover(
+                client,
+                session_id=session_b,
+                int_id="INT-182",
+            ),
+        )
 
         run_a, run_b = await asyncio.gather(
             client.post(

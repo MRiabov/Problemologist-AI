@@ -145,3 +145,9 @@ async def test_int_060_langfuse_feedback_contract():
             json=bad_feedback_request.model_dump(),
         )
         assert bad_feedback_resp.status_code == 404
+
+        invalid_feedback_resp = await client.post(
+            f"{CONTROLLER_URL}/episodes/{episode_id}/traces/{trace_id}/feedback",
+            json={"score": 2},
+        )
+        assert invalid_feedback_resp.status_code == 422

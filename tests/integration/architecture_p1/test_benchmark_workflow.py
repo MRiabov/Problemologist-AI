@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 
 import pytest
 from httpx import AsyncClient
@@ -187,3 +188,28 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert "__main__" not in script_resp.text
         assert "from utils.metadata import" in script_resp.text
         assert "from utils.submission import" in script_resp.text
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_benchmark_request_validation_rejects_invalid_objectives():
+    """The benchmark API must reject invalid deterministic objective values."""
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        invalid_generate = await client.post(
+            "/benchmark/generate",
+            json={
+                "prompt": "Create a benchmark",
+                "max_cost": -1,
+            },
+        )
+        assert invalid_generate.status_code == 422
+
+        invalid_update = await client.post(
+            f"/benchmark/{uuid.uuid4()}/objectives",
+            json={
+                "max_cost": 0,
+                "max_weight": -5,
+                "target_quantity": 0,
+            },
+        )
+        assert invalid_update.status_code == 422

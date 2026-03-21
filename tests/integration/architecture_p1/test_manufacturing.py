@@ -13,9 +13,12 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
+from shared.workers.schema import AnalyzeRequest
+from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
+WORKER_HEAVY_URL = "http://127.0.0.1:18002"
 
 
 @pytest.mark.integration_p1
@@ -138,3 +141,43 @@ async def test_manufacturing_methods_and_materials():
                 if ep.status in [EpisodeStatus.COMPLETED, EpisodeStatus.FAILED]:
                     break
             await asyncio.sleep(2)
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_worker_analyze_rejects_unknown_material():
+    """The heavy worker must fail closed on unknown material IDs."""
+    script = """
+from build123d import Box, Location
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+
+def build():
+    part = Box(10, 10, 10)
+    part = part.move(Location((0, 0, 5)))
+    part.label = "test_part"
+    part.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC,
+        material_id="unobtanium",
+    )
+    return part
+"""
+
+    async with AsyncClient(base_url=WORKER_HEAVY_URL, timeout=300.0) as client:
+        request = AnalyzeRequest(
+            script_path="script.py",
+            script_content=script,
+            method=ManufacturingMethod.CNC,
+            quantity=1,
+        )
+        resp = await client.post(
+            "/benchmark/analyze",
+            json=request.model_dump(mode="json"),
+            headers={"X-Session-ID": f"INT-035-{uuid.uuid4().hex[:8]}"},
+        )
+        assert resp.status_code == 200, resp.text
+        result = WorkbenchResult.model_validate(resp.json())
+        assert result.is_manufacturable is False
+        assert any(
+            "Unknown material_id" in violation for violation in result.violations
+        )
