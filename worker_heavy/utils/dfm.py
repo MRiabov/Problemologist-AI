@@ -147,6 +147,22 @@ def validate_declared_assembly_cost(
     return []
 
 
+def validate_exact_declared_assembly_cost(
+    assembly_definition: AssemblyDefinition,
+    config: ManufacturingConfig,
+) -> list[str]:
+    """Ensure planner totals exactly match the deterministic declared cost."""
+    expected_cost = calculate_declared_assembly_cost(assembly_definition, config)
+    actual_cost = round(assembly_definition.totals.estimated_unit_cost_usd, 2)
+    if actual_cost != expected_cost:
+        return [
+            "assembly_definition.totals.estimated_unit_cost_usd "
+            f"(${actual_cost:.2f}) must equal the deterministic declared cost "
+            f"(${expected_cost:.2f})"
+        ]
+    return []
+
+
 def validate_and_price(
     part: Part | Compound,
     method: ManufacturingMethod,

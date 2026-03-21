@@ -15,8 +15,8 @@ from shared.workers.schema import (
 )
 from worker_heavy.utils.file_validation import (
     validate_benchmark_definition_yaml,
-    validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
+    validate_planner_handoff_cross_contract,
 )
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
@@ -209,11 +209,12 @@ async def validate_planner_artifacts_cross_contract(
     except Exception as e:
         return f"planner handoff pricing-config parse failure: {e}"
 
-    cost_errors = validate_declared_planner_cost_contract(
+    cross_contract_errors = validate_planner_handoff_cross_contract(
+        benchmark_definition=benchmark_definition,
         assembly_definition=assembly_definition,
         manufacturing_config=manufacturing_config,
     )
-    if cost_errors:
-        return "; ".join(cost_errors)
+    if cross_contract_errors:
+        return "; ".join(cross_contract_errors)
 
     return None

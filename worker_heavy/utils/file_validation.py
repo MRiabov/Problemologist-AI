@@ -33,7 +33,10 @@ from shared.observability.events import emit_event
 from shared.observability.schemas import LintFailureDocsEvent, LogicFailureEvent
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.workbench_models import ManufacturingConfig
-from worker_heavy.utils.dfm import validate_declared_assembly_cost
+from worker_heavy.utils.dfm import (
+    validate_declared_assembly_cost,
+    validate_exact_declared_assembly_cost,
+)
 from worker_heavy.utils.validation import _validate_benchmark_definition_consistency
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
@@ -493,6 +496,61 @@ def validate_declared_planner_cost_contract(
     return validate_declared_assembly_cost(assembly_definition, manufacturing_config)
 
 
+def validate_exact_planner_cost_contract(
+    *,
+    assembly_definition: AssemblyDefinition,
+    manufacturing_config: ManufacturingConfig,
+) -> list[str]:
+    """Validate that planner totals exactly match deterministic declared costs."""
+    return validate_exact_declared_assembly_cost(
+        assembly_definition, manufacturing_config
+    )
+
+
+def validate_planner_handoff_cross_contract(
+    *,
+    benchmark_definition: BenchmarkDefinition,
+    assembly_definition: AssemblyDefinition,
+    manufacturing_config: ManufacturingConfig,
+) -> list[str]:
+    """Validate copied benchmark caps and normalized planner totals exactly."""
+    errors: list[str] = []
+
+    cap_pairs = (
+        (
+            "benchmark_definition.constraints.max_unit_cost",
+            benchmark_definition.constraints.max_unit_cost,
+            "assembly_definition.constraints.benchmark_max_unit_cost_usd",
+            assembly_definition.constraints.benchmark_max_unit_cost_usd,
+        ),
+        (
+            "benchmark_definition.constraints.max_weight_g",
+            benchmark_definition.constraints.max_weight_g,
+            "assembly_definition.constraints.benchmark_max_weight_g",
+            assembly_definition.constraints.benchmark_max_weight_g,
+        ),
+    )
+    for expected_label, expected_value, observed_label, observed_value in cap_pairs:
+        if expected_value is None:
+            errors.append(
+                f"{expected_label} is missing; cannot validate copied planner caps"
+            )
+            continue
+        if round(observed_value, 2) != round(expected_value, 2):
+            errors.append(
+                f"{observed_label} ({observed_value:.2f}) must equal "
+                f"{expected_label} ({expected_value:.2f})"
+            )
+
+    errors.extend(
+        validate_exact_planner_cost_contract(
+            assembly_definition=assembly_definition,
+            manufacturing_config=manufacturing_config,
+        )
+    )
+    return errors
+
+
 def validate_review_frontmatter(
     content: str, cad_agent_refused: bool = False, session_id: str | None = None
 ) -> tuple[bool, ReviewFrontmatter | list[str]]:
@@ -610,6 +668,9 @@ def validate_node_output(
         (False, list[str]) with error messages if invalid
     """
     errors = []
+    benchmark_definition_model: BenchmarkDefinition | None = None
+    assembly_definition_models: dict[str, AssemblyDefinition] = {}
+    effective_config = manufacturing_config
 
     def _missing_file(path: str) -> bool:
         content = files_content_map.get(path)
@@ -744,19 +805,22 @@ def validate_node_output(
             if not is_valid:
                 # obj_res is list[str] on failure
                 errors.extend([f"benchmark_definition.yaml: {e}" for e in obj_res])
+            else:
+                benchmark_definition_model = obj_res
         elif filename in {
             "assembly_definition.yaml",
             "benchmark_assembly_definition.yaml",
         }:
-            effective_config = manufacturing_config
-            if (
-                effective_config is None
-                and "manufacturing_config.yaml" in files_content_map
-            ):
-                custom_config = yaml.safe_load(
-                    files_content_map["manufacturing_config.yaml"]
-                )
-                effective_config = load_merged_config(override_data=custom_config or {})
+            if effective_config is None:
+                if "manufacturing_config.yaml" in files_content_map:
+                    custom_config = yaml.safe_load(
+                        files_content_map["manufacturing_config.yaml"]
+                    )
+                    effective_config = load_merged_config(
+                        override_data=custom_config or {}
+                    )
+                else:
+                    effective_config = load_config()
             is_valid, asm_res = validate_assembly_definition_yaml(
                 content,
                 session_id=session_id,
@@ -765,6 +829,8 @@ def validate_node_output(
             if not is_valid:
                 # asm_res is list[str] on failure
                 errors.extend([f"{filename}: {e}" for e in asm_res])
+            else:
+                assembly_definition_models[filename] = asm_res
         elif filename == "plan_refusal.md":
             is_valid, refusal_res = validate_plan_refusal(
                 content, session_id=session_id
@@ -775,6 +841,20 @@ def validate_node_output(
                 else:
                     # Should not happen based on validate_plan_refusal return type
                     errors.append("plan_refusal.md: Invalid structure")
+
+    if benchmark_definition_model is not None and assembly_definition_models:
+        if effective_config is None:
+            effective_config = load_config()
+        for filename, assembly_definition_model in assembly_definition_models.items():
+            cross_contract_errors = validate_planner_handoff_cross_contract(
+                benchmark_definition=benchmark_definition_model,
+                assembly_definition=assembly_definition_model,
+                manufacturing_config=effective_config,
+            )
+            if cross_contract_errors:
+                errors.extend(
+                    [f"{filename}: {message}" for message in cross_contract_errors]
+                )
 
     return len(errors) == 0, errors
 

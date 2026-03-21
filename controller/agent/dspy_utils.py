@@ -6,7 +6,7 @@ import structlog
 from pydantic import BaseModel, Field
 
 from controller.clients.worker import WorkerClient
-from shared.enums import AgentName
+from shared.enums import AgentName, ReviewDecision
 from shared.observability.schemas import ObservabilityEventType
 
 logger = structlog.get_logger(__name__)
@@ -536,9 +536,14 @@ def map_events_to_prediction(
             )
             if isinstance(checklist, dict):
                 metrics.checklist.update(checklist)
-            if decision == "approve":
+            decision_value = str(getattr(decision, "value", decision)).strip().lower()
+            if decision_value == ReviewDecision.APPROVED.value.lower():
                 metrics.reviewer_accepted = True
-            elif decision in ["reject_plan", "reject_code"]:
+            elif decision_value in {
+                ReviewDecision.REJECTED.value.lower(),
+                ReviewDecision.REJECT_PLAN.value.lower(),
+                ReviewDecision.REJECT_CODE.value.lower(),
+            }:
                 metrics.review_actionable = len(reason) > 20
 
         # 6. Electronics (WP3)

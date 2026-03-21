@@ -1,4 +1,5 @@
 import argparse
+import ast
 import asyncio
 import contextlib
 import json
@@ -235,6 +236,11 @@ def _parse_trace_json_content(raw_content: Any) -> dict[str, Any] | None:
 
     with contextlib.suppress(json.JSONDecodeError):
         parsed = json.loads(raw_content)
+        if isinstance(parsed, dict):
+            return parsed
+
+    with contextlib.suppress(ValueError, SyntaxError):
+        parsed = ast.literal_eval(raw_content)
         if isinstance(parsed, dict):
             return parsed
 
@@ -913,10 +919,20 @@ def _extract_episode_events(episode: dict[str, Any] | None) -> list[dict[str, An
             continue
         metadata = trace.get("metadata_vars")
         if isinstance(metadata, dict):
-            events.append(metadata)
+            event = dict(metadata)
+            parsed = _parse_trace_json_content(trace.get("content"))
+            if isinstance(parsed, dict):
+                for key, value in parsed.items():
+                    event.setdefault(key, value)
+            if "event_type" not in event and trace.get("name"):
+                event["event_type"] = trace["name"]
+            events.append(event)
             continue
         parsed = _parse_trace_json_content(trace.get("content"))
         if isinstance(parsed, dict):
+            if "event_type" not in parsed and trace.get("name"):
+                parsed = dict(parsed)
+                parsed["event_type"] = trace["name"]
             events.append(parsed)
     return events
 

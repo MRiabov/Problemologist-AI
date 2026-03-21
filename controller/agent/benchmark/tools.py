@@ -9,6 +9,7 @@ from controller.agent.tools import (
     _invoke_cots_search_subagent,
     filter_tools_for_agent,
     get_common_tools,
+    run_validate_and_price_script,
 )
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.enums import AgentName
@@ -229,6 +230,27 @@ def get_benchmark_planner_tools(
             "benchmark_definition.yaml",
             canonical_benchmark_definition,
             overwrite=True,
+        )
+
+        pricing_result = await run_validate_and_price_script(fs)
+        if not pricing_result["ok"]:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "validate_costing_and_price failed: "
+                    + (
+                        str(pricing_result["stderr"]).strip()
+                        or str(pricing_result["stdout"]).strip()
+                        or "pricing script returned a non-zero exit status"
+                    )
+                ],
+                node_type=AgentName.BENCHMARK_PLANNER,
+            )
+            return result.model_dump(mode="json")
+
+        artifacts["benchmark_assembly_definition.yaml"] = await fs.read_file(
+            "benchmark_assembly_definition.yaml"
         )
 
         is_valid, errors = validate_node_output(AgentName.BENCHMARK_PLANNER, artifacts)

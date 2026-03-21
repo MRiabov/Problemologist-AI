@@ -25,6 +25,26 @@ def _runtime_skill_script_path(*relative_parts: str) -> Path:
     return Path(__file__).resolve().parents[2].joinpath(*relative_parts)
 
 
+async def run_validate_and_price_script(
+    fs: RemoteFilesystemMiddleware,
+) -> dict[str, object]:
+    """Run the canonical planner pricing script and return a structured result."""
+    validator_path = _runtime_skill_script_path(
+        "skills",
+        "manufacturing-knowledge",
+        "scripts",
+        "validate_and_price.py",
+    )
+    response = await fs.run_command(f"python {validator_path}")
+    return {
+        "ok": response.exit_code == 0 and not response.timed_out,
+        "stdout": response.stdout,
+        "stderr": response.stderr,
+        "exit_code": response.exit_code,
+        "timed_out": response.timed_out,
+    }
+
+
 def filter_tools_for_agent(
     fs: RemoteFilesystemMiddleware, tools: list[Callable]
 ) -> list[Callable]:
@@ -300,20 +320,7 @@ def get_engineer_planner_tools(
         Returns:
             {"ok": bool, "stdout": str, "stderr": str, "exit_code": int, "timed_out": bool}
         """
-        validator_path = _runtime_skill_script_path(
-            "skills",
-            "manufacturing-knowledge",
-            "scripts",
-            "validate_and_price.py",
-        )
-        response = await fs.run_command(f"python {validator_path}")
-        return {
-            "ok": response.exit_code == 0 and not response.timed_out,
-            "stdout": response.stdout,
-            "stderr": response.stderr,
-            "exit_code": response.exit_code,
-            "timed_out": response.timed_out,
-        }
+        return await run_validate_and_price_script(fs)
 
     async def submit_plan() -> dict:
         """
@@ -324,8 +331,8 @@ def get_engineer_planner_tools(
         """
         from worker_heavy.utils.file_validation import (
             validate_benchmark_definition_yaml,
-            validate_declared_planner_cost_contract,
             validate_environment_attachment_contract,
+            validate_exact_planner_cost_contract,
             validate_node_output,
         )
         from worker_heavy.workbenches.config import load_config, load_merged_config
@@ -372,6 +379,27 @@ def get_engineer_planner_tools(
             else load_config()
         )
 
+        pricing_result = await run_validate_and_price_script(fs)
+        if not pricing_result["ok"]:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "validate_costing_and_price failed: "
+                    + (
+                        str(pricing_result["stderr"]).strip()
+                        or str(pricing_result["stdout"]).strip()
+                        or "pricing script returned a non-zero exit status"
+                    )
+                ],
+                node_type=planner_node_type,
+            )
+            return result.model_dump(mode="json")
+
+        artifacts["assembly_definition.yaml"] = await fs.read_file(
+            "assembly_definition.yaml"
+        )
+
         is_valid, errors = validate_node_output(
             AgentName.ENGINEER_PLANNER,
             artifacts,
@@ -404,7 +432,7 @@ def get_engineer_planner_tools(
                     errors.extend(
                         [f"attachment_contract: {msg}" for msg in attachment_errors]
                     )
-            cost_errors = validate_declared_planner_cost_contract(
+            cost_errors = validate_exact_planner_cost_contract(
                 assembly_definition=assembly_model,
                 manufacturing_config=manufacturing_config,
             )
