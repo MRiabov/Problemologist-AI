@@ -299,7 +299,7 @@ class BenchmarkToolResponse(BaseModel):
 
     success: bool
     message: str
-    confidence: str = "high"
+    confidence: Literal["low", "medium", "high", "approximate"] = "high"
     artifacts: SimulationArtifacts | None = None
     events: list[BaseEvent] = Field(default_factory=list)
 

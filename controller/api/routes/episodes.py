@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 import httpx
 import structlog
@@ -76,7 +76,7 @@ def _normalize_plan_markdown(plan_content: str | None) -> str | None:
 
 
 class FeedbackRequest(BaseModel):
-    score: int  # 1 for up, 0 for down
+    score: Literal[0, 1]
     comment: str | None = None
 
     @field_validator("comment")

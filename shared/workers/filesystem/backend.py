@@ -231,10 +231,12 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             normalized = normalized[len("workspace/") :]
 
         rel = normalized.lstrip("/")
-        path = (self.root / rel).resolve()
-        # Verify that the resolved path is still within the root directory
-        if not str(path).startswith(str(self.root.resolve())):
-            raise PermissionError(f"Path traversal attempted: {virtual_path}")
+        root = self.root.resolve()
+        path = (root / rel).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise PermissionError(f"Path traversal attempted: {virtual_path}") from exc
         return path
 
     def _virtual(self, local_path: Path) -> str:

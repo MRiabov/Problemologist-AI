@@ -34,10 +34,12 @@ def analyze_component(
             try:
                 method = ManufacturingMethod(str(method_raw).upper())
             except ValueError:
-                logger.warning(
+                logger.error(
                     "invalid_manufacturing_method_in_metadata", method=method_raw
                 )
-                method = ManufacturingMethod.CNC
+                raise ValueError(
+                    f"Unknown manufacturing method in component metadata: {method_raw!r}"
+                ) from None
 
     return validate_and_price(
         component,

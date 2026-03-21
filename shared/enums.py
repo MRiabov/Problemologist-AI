@@ -198,6 +198,13 @@ class EvalMode(StrEnum):
     GIT = "git"
 
 
+class EvalRunnerBackend(StrEnum):
+    """Execution backend used by the eval runner."""
+
+    CONTROLLER = "controller"
+    CODEX = "codex"
+
+
 class FailureReason(UppercaseStrEnum):
     """Unified failure modes for physics and electronics simulation."""
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -65,7 +65,7 @@ class SimulationMetrics(BaseModel):
     )  # part_label -> StressFieldData
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     events: list[dict] = Field(default_factory=list)
-    confidence: str = "high"
+    confidence: Literal["low", "medium", "high", "approximate"] = "high"
 
 
 class SimulationResult(BaseModel):
@@ -81,7 +81,7 @@ class SimulationResult(BaseModel):
     fluid_metrics: list[FluidMetricResult] = Field(default_factory=list)
     total_cost: float = 0.0
     total_weight_g: float = 0.0
-    confidence: str = "high"
+    confidence: Literal["low", "medium", "high", "approximate"] = "high"
 
 
 class MultiRunResult(BaseModel):

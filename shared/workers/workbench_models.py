@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -72,7 +72,7 @@ class MaterialDefinition(BaseModel):
     yield_stress_pa: float | None = None
     ultimate_stress_pa: float | None = None
     elongation_at_break: float | None = None
-    material_class: str = "rigid"  # "rigid" | "soft" | "elastomer"
+    material_class: Literal["rigid", "soft", "elastomer"] = "rigid"
 
 
 class WireDefinition(BaseModel):

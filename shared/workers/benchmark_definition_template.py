@@ -23,21 +23,21 @@ BENCHMARK_DEFINITION_YAML_TEMPLATE = """# [TEMPLATE] - DO NOT USE FOR SIMULATION
 objectives:
   # SUCCESS: The moved_object's center enters this volume
   goal_zone:
-    min: [0.0, 0.0, 0.0]
-    max: [0.0, 0.0, 0.0]
+    min: [6.0, -2.0, 0.0]
+    max: [10.0, 2.0, 4.0]
 
   # FAILURE: Any contact with these volumes fails the simulation
   forbid_zones:
     - name: "obstacle_collision_zone"
-      min: [0.0, 0.0, 0.0]
-      max: [0.0, 0.0, 0.0]
+      min: [3.0, -3.0, 0.0]
+      max: [4.0, 3.0, 4.0]
     # Additional forbid zones may be listed here
 
   # CONSTRAINT: Your entire design MUST fit within these bounds
   # Parts placed outside will fail validation
   build_zone:
-    min: [0.0, 0.0, 0.0]
-    max: [0.0, 0.0, 0.0]
+    min: [-10.0, -10.0, -10.0]
+    max: [10.0, 10.0, 10.0]
 
 benchmark_parts:
   - part_id: "environment_fixture"
@@ -68,11 +68,11 @@ moved_object:
   material_id: "abs"
   # Static randomization: shape varies between benchmark runs
   static_randomization:
-    radius: [5.0, 10.0]  # [min, max] - actual value chosen per benchmark variant
+    radius: [1.0, 2.0]  # [min, max] - actual value chosen per benchmark variant
   start_position: [0.0, 0.0, 0.0]
   # Runtime jitter: small position variation per simulation run
   # Your solution must handle ALL positions within this range
-  runtime_jitter: [2.0, 2.0, 1.0]  # [+/-x, +/-y, +/-z] mm
+  runtime_jitter: [0.5, 0.5, 0.5]  # [+/-x, +/-y, +/-z] mm
 
 # -----------------------------------------------------------------------------
 # YOUR CONSTRAINTS

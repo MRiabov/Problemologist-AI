@@ -2657,18 +2657,18 @@
           "start_node": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/AgentName"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Start Node"
+            ]
           },
           "max_cost": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"
@@ -2679,7 +2679,8 @@
           "max_weight": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"
@@ -2690,7 +2691,8 @@
           "target_quantity": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 1.0
               },
               {
                 "type": "null"
@@ -2804,6 +2806,12 @@
           },
           "confidence": {
             "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "approximate"
+            ],
             "title": "Confidence",
             "default": "high"
           },
@@ -2964,7 +2972,8 @@
           "max_unit_cost": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"
@@ -2975,7 +2984,8 @@
           "max_weight": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"
@@ -2986,7 +2996,8 @@
           "target_quantity": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 1.0
               },
               {
                 "type": "null"
@@ -2997,8 +3008,7 @@
           "additional_constraints": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Additional Constraints",
-            "default": {}
+            "title": "Additional Constraints"
           }
         },
         "type": "object",
@@ -3418,6 +3428,10 @@
         "properties": {
           "score": {
             "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
             "title": "Score"
           },
           "comment": {
@@ -4115,6 +4129,12 @@
           },
           "confidence": {
             "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "approximate"
+            ],
             "title": "Confidence",
             "default": "high"
           }
@@ -4627,7 +4647,8 @@
           "max_cost": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"
@@ -4638,7 +4659,8 @@
           "max_weight": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "null"
@@ -4649,7 +4671,8 @@
           "target_quantity": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "minimum": 1.0
               },
               {
                 "type": "null"

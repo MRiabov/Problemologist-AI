@@ -10,8 +10,16 @@ import type { SimulationArtifacts } from './SimulationArtifacts';
 export type BenchmarkToolResponse = {
     success: boolean;
     message: string;
-    confidence?: string;
+    confidence?: BenchmarkToolResponse.confidence;
     artifacts?: (SimulationArtifacts | null);
     events?: Array<BaseEvent>;
 };
+export namespace BenchmarkToolResponse {
+    export enum confidence {
+        LOW = 'low',
+        MEDIUM = 'medium',
+        HIGH = 'high',
+        APPROXIMATE = 'approximate',
+    }
+}
 

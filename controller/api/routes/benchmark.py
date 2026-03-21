@@ -23,8 +23,8 @@ from controller.api.schemas import (
 from controller.clients.worker import WorkerClient
 from controller.persistence.db import get_db
 from controller.persistence.models import Episode, Trace
-from shared.enums import GenerationKind, ResponseStatus
-from shared.models.schemas import CustomObjectives
+from shared.enums import AgentName, GenerationKind, ResponseStatus
+from shared.models.schemas import BenchmarkDefinition, CustomObjectives
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -39,10 +39,10 @@ _PROMPT_LOG_PREVIEW_LIMIT = 500
 class BenchmarkGenerateRequest(BaseModel):
     prompt: str
     session_id: uuid.UUID | None = None
-    start_node: str | None = None
-    max_cost: float | None = None
-    max_weight: float | None = None
-    target_quantity: int | None = None
+    start_node: AgentName | None = None
+    max_cost: float | None = Field(default=None, gt=0)
+    max_weight: float | None = Field(default=None, gt=0)
+    target_quantity: int | None = Field(default=None, ge=1)
     seed_id: str | None = None
     seed_dataset: str | None = None
     generation_kind: GenerationKind | None = None
@@ -254,9 +254,9 @@ async def get_session(
 
 
 class UpdateObjectivesRequest(BaseModel):
-    max_cost: float | None = None
-    max_weight: float | None = None
-    target_quantity: int | None = None
+    max_cost: float | None = Field(default=None, gt=0)
+    max_weight: float | None = Field(default=None, gt=0)
+    target_quantity: int | None = Field(default=None, ge=1)
 
 
 @router.post("/{session_id}/objectives", response_model=BenchmarkObjectivesResponse)
@@ -325,6 +325,10 @@ async def update_objectives(
                 )
             if request.target_quantity is not None:
                 obj_data.constraints.target_quantity = request.target_quantity
+
+            obj_data = BenchmarkDefinition.model_validate(
+                obj_data.model_dump(mode="python")
+            )
 
             # Actually, we need to MERGE metadata_vars to avoid losing objectives.
             # Update the episode's metadata_vars as well to persist it locally

@@ -5,6 +5,7 @@ from shared.type_checking import type_check
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
+    MaterialDefinition,
     WorkbenchContext,
     WorkbenchResult,
 )
@@ -12,6 +13,31 @@ from worker_heavy.workbenches.analysis_utils import compute_part_hash
 from worker_heavy.workbenches.base import Workbench
 
 logger = structlog.get_logger()
+
+
+def _resolve_3dp_material(
+    part: Part | Compound | Solid, config: ManufacturingConfig
+) -> tuple[str, MaterialDefinition]:
+    metadata = getattr(part, "metadata", None)
+    material_name = getattr(metadata, "material_id", None)
+    if not material_name:
+        material_name = config.defaults.get("material")
+    material_name = str(material_name).strip() if material_name is not None else ""
+    if not material_name:
+        raise ValueError(
+            "3D printing requires part.metadata.material_id or config.defaults.material"
+        )
+
+    three_dp_cfg = config.three_dp
+    material_cfg = (
+        three_dp_cfg.materials.get(material_name) if three_dp_cfg else None
+    ) or config.materials.get(material_name)
+    if not material_cfg:
+        raise ValueError(
+            f"Unknown material_id '{material_name}' for 3D printing costing"
+        )
+
+    return material_name, material_cfg
 
 
 @type_check
@@ -28,35 +54,7 @@ def calculate_3dp_cost(
     if not three_dp_cfg:
         raise ValueError("3D Printing configuration missing")
 
-    # Resolve material from part metadata or fallback to default
-    metadata = getattr(part, "metadata", None)
-    material_name = (
-        getattr(metadata, "material_id", None)
-        if metadata
-        else config.defaults.get("material", "abs")
-    ) or config.defaults.get("material", "abs")
-
-    if material_name not in three_dp_cfg.materials:
-        # Fallback to first available if specific one is missing
-        if three_dp_cfg.materials:
-            material_name = next(iter(three_dp_cfg.materials.keys()))
-        else:
-            material_name = "abs"
-
-    material_cfg = three_dp_cfg.materials.get(material_name)
-    if not material_cfg:
-        material_cfg = config.materials.get(material_name) or config.materials.get(
-            "abs"
-        )
-        if not material_cfg:
-            from shared.workers.workbench_models import MaterialDefinition
-
-            material_cfg = MaterialDefinition(
-                name="Fallback ABS",
-                density_g_cm3=1.04,
-                cost_per_kg=20.0,
-                machine_hourly_rate=20.0,
-            )
+    material_name, material_cfg = _resolve_3dp_material(part, config)
 
     logger.info("calculating_3dp_cost", material=material_name, quantity=quantity)
 
@@ -154,20 +152,13 @@ def analyze_3dp(
         unit_cost = cost_breakdown.unit_cost
     except Exception as e:
         logger.warning("3dp_cost_calculation_failed", error=str(e))
+        violations.append(f"3D printing costing failed: {e}")
         unit_cost = 0.0
         cost_breakdown = None
 
     # 4. Weight Calculation
-    metadata = getattr(part, "metadata", None)
-    material_name = (
-        getattr(metadata, "material_id", None)
-        if metadata
-        else config.defaults.get("material", "abs")
-    ) or config.defaults.get("material", "abs")
-    three_dp_cfg = config.three_dp
-    density = 1.04  # fallback (ABS)
-    if three_dp_cfg and material_name in three_dp_cfg.materials:
-        density = three_dp_cfg.materials[material_name].density_g_cm3
+    material_name, material_cfg = _resolve_3dp_material(part, config)
+    density = material_cfg.density_g_cm3
 
     weight_g = (part.volume / 1000.0) * density
 

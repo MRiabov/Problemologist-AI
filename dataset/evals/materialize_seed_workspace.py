@@ -2,7 +2,7 @@
 
 This is an inspection helper, not the eval runner. It copies the seeded
 artifacts for a single dataset row into a persistent temp directory and writes
-the row prompt to `prompt.md` so you can inspect the exact workspace contents
+the Codex prompt to `prompt.md` so you can inspect the exact workspace contents
 an agent would start from.
 """
 
@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,42 +20,27 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from evals.logic.codex_workspace import (  # noqa: E402
+    launch_codex_exec,
+    open_codex_ui,
+)
+from evals.logic.codex_workspace import (
+    materialize_seed_workspace as materialize_codex_workspace,
+)
 from evals.logic.models import EvalDatasetItem  # noqa: E402
-from shared.agent_templates import load_common_template_files  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
 
 DATASET_ROOTS = (
     ROOT / "dataset" / "evals" / "datasets",
     ROOT / "dataset" / "data" / "seed" / "role_based",
 )
-VENV_BIN = ROOT / ".venv" / "bin"
-
-
-def _resolve_seed_artifact_dir(item: EvalDatasetItem) -> Path | None:
-    if item.seed_artifact_dir is None:
-        return None
-
-    artifact_dir = Path(item.seed_artifact_dir)
-    if artifact_dir.is_absolute():
-        return artifact_dir
-
-    repo_relative = ROOT / artifact_dir
-    if repo_relative.exists():
-        return repo_relative
-
-    if item.seed_dataset is not None:
-        dataset_relative = (ROOT / item.seed_dataset).parent / artifact_dir
-        if dataset_relative.exists():
-            return dataset_relative
-
-    return repo_relative
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Create a local temp workspace from a seeded eval row and write "
-            "prompt.md for inspection."
+            "prompt.md for inspection or Codex launching."
         )
     )
     parser.add_argument(
@@ -180,133 +164,6 @@ def _ensure_destination(
     return Path(tempfile.mkdtemp(prefix=prefix))
 
 
-def _copy_tree(src_root: Path, dst_root: Path) -> list[str]:
-    copied: list[str] = []
-    for src_path in sorted(p for p in src_root.rglob("*") if p.is_file()):
-        if "__pycache__" in src_path.parts or src_path.suffix in {".pyc", ".pyo"}:
-            continue
-        rel_path = src_path.relative_to(src_root)
-        dst_path = dst_root / rel_path
-        dst_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src_path, dst_path)
-        copied.append(rel_path.as_posix())
-    return copied
-
-
-def _write_inline_files(dst_root: Path, seed_files: dict[str, str] | None) -> list[str]:
-    if not seed_files:
-        return []
-
-    copied: list[str] = []
-    for rel_path, content in sorted(seed_files.items()):
-        dst_path = dst_root / rel_path
-        dst_path.parent.mkdir(parents=True, exist_ok=True)
-        dst_path.write_text(content, encoding="utf-8")
-        copied.append(rel_path)
-    return copied
-
-
-def _write_template_files(dst_root: Path) -> list[str]:
-    copied: list[str] = []
-    for rel_path, content in load_common_template_files().items():
-        dst_path = dst_root / rel_path
-        dst_path.parent.mkdir(parents=True, exist_ok=True)
-        dst_path.write_text(content, encoding="utf-8")
-        copied.append(rel_path)
-    return copied
-
-
-def _write_prompt(dst_root: Path, task: str) -> None:
-    prompt_path = dst_root / "prompt.md"
-    prompt_path.write_text(task.rstrip() + "\n", encoding="utf-8")
-
-
-def _build_codex_env(*, agent: AgentName, task_id: str) -> dict[str, str]:
-    env = dict(os.environ)
-    py_path = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = f"{ROOT}{os.pathsep}{py_path}" if py_path else str(ROOT)
-    if VENV_BIN.exists():
-        current_path = env.get("PATH", "")
-        env["PATH"] = (
-            f"{VENV_BIN}{os.pathsep}{current_path}" if current_path else str(VENV_BIN)
-        )
-        env.setdefault("VIRTUAL_ENV", str(ROOT / ".venv"))
-    env.setdefault("CONTROLLER_URL", "http://localhost:18000")
-    env.setdefault("WORKER_LIGHT_URL", "http://localhost:18001")
-    env.setdefault("AGENT_NAME", agent.value)
-    env.setdefault("SESSION_ID", f"local-codex-{agent.value}-{task_id}-{os.getpid()}")
-    return env
-
-
-def _launch_codex_exec(
-    workspace_dir: Path,
-    prompt: str,
-    *,
-    agent: AgentName,
-    task_id: str,
-    yolo: bool,
-) -> int:
-    cmd = [
-        "codex",
-        "exec",
-        "-c",
-        "shell_environment_policy.inherit=all",
-        "--cd",
-        str(workspace_dir),
-        "--skip-git-repo-check",
-    ]
-    if yolo:
-        cmd.append("--yolo")
-    else:
-        cmd.append("--full-auto")
-    cmd.append("-")
-    print("launching: " + " ".join(cmd))
-    completed = subprocess.run(
-        cmd,
-        input=prompt,
-        text=True,
-        env=_build_codex_env(agent=agent, task_id=task_id),
-        check=False,
-    )
-    return completed.returncode
-
-
-def _open_codex_ui(
-    workspace_dir: Path,
-    prompt: str,
-    *,
-    agent: AgentName,
-    task_id: str,
-    yolo: bool,
-) -> int:
-    if not (workspace_dir / ".git").exists():
-        subprocess.run(
-            ["git", "init", "-q", str(workspace_dir)],
-            check=False,
-            env=dict(os.environ),
-        )
-    cmd = [
-        "codex",
-        "-c",
-        "shell_environment_policy.inherit=all",
-        "--cd",
-        str(workspace_dir),
-        "--no-alt-screen",
-    ]
-    if yolo:
-        cmd.insert(1, "--yolo")
-    else:
-        cmd.insert(1, "--full-auto")
-    cmd.append(prompt)
-    print("launching: " + " ".join(cmd))
-    completed = subprocess.run(
-        cmd,
-        env=_build_codex_env(agent=agent, task_id=task_id),
-        check=False,
-    )
-    return completed.returncode
-
-
 def _env_up() -> None:
     env_up_path = ROOT / "scripts" / "env_up.sh"
     if not env_up_path.exists():
@@ -332,26 +189,18 @@ def main() -> None:
     row = _select_row(rows, task_id=args.task_id, agent=agent)
 
     workspace_dir = _ensure_destination(args.output_dir, agent=agent, task_id=row.id)
+    materialized = materialize_codex_workspace(
+        item=row,
+        agent_name=agent,
+        workspace_dir=workspace_dir,
+    )
 
-    copied_paths: list[str] = []
-    copied_paths.extend(_write_template_files(workspace_dir))
-    artifact_dir = _resolve_seed_artifact_dir(row)
-    if artifact_dir is not None:
-        if not artifact_dir.exists():
-            raise FileNotFoundError(
-                f"Seed artifact directory not found: {artifact_dir}"
-            )
-        copied_paths.extend(_copy_tree(artifact_dir, workspace_dir))
-
-    copied_paths.extend(_write_inline_files(workspace_dir, row.seed_files))
-    _write_prompt(workspace_dir, row.task)
-    copied_paths.append("prompt.md")
-
-    print(f"workspace: {workspace_dir}")
+    print(f"workspace: {materialized.workspace_dir}")
+    print(f"prompt: {materialized.prompt_path}")
     print(f"agent: {agent.value}")
     print(f"task_id: {row.id}")
     print("files:")
-    for rel_path in copied_paths:
+    for rel_path in materialized.copied_paths:
         print(f"  - {rel_path}")
 
     if args.launch_codex and args.open_codex:
@@ -362,10 +211,10 @@ def main() -> None:
 
     if args.launch_codex:
         raise SystemExit(
-            _launch_codex_exec(
-                workspace_dir,
-                row.task,
-                agent=agent,
+            launch_codex_exec(
+                materialized.workspace_dir,
+                materialized.prompt_text,
+                agent_name=agent,
                 task_id=row.id,
                 yolo=args.yolo,
             )
@@ -373,10 +222,10 @@ def main() -> None:
 
     if args.open_codex:
         raise SystemExit(
-            _open_codex_ui(
-                workspace_dir,
-                row.task,
-                agent=agent,
+            open_codex_ui(
+                materialized.workspace_dir,
+                materialized.prompt_text,
+                agent_name=agent,
                 task_id=row.id,
                 yolo=args.yolo,
             )

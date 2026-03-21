@@ -20,6 +20,14 @@ export type SimulationMetrics = {
     stress_fields?: Record<string, StressFieldData>;
     fluid_metrics?: Array<FluidMetricResult>;
     events?: Array<Record<string, any>>;
-    confidence?: string;
+    confidence?: SimulationMetrics.confidence;
 };
+export namespace SimulationMetrics {
+    export enum confidence {
+        LOW = 'low',
+        MEDIUM = 'medium',
+        HIGH = 'high',
+        APPROXIMATE = 'approximate',
+    }
+}
 

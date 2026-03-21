@@ -7,6 +7,7 @@ from shared.type_checking import type_check
 from shared.workers.workbench_models import (
     CostBreakdown,
     ManufacturingConfig,
+    MaterialDefinition,
     WorkbenchContext,
     WorkbenchResult,
 )
@@ -18,6 +19,31 @@ from worker_heavy.workbenches.analysis_utils import (
 from worker_heavy.workbenches.base import Workbench
 
 logger = structlog.get_logger()
+
+
+def _resolve_im_material(
+    part: Part | Compound | Solid, config: ManufacturingConfig
+) -> tuple[str, MaterialDefinition]:
+    metadata = getattr(part, "metadata", None)
+    material_name = getattr(metadata, "material_id", None)
+    if not material_name:
+        material_name = config.defaults.get("material")
+    material_name = str(material_name).strip() if material_name is not None else ""
+    if not material_name:
+        raise ValueError(
+            "Injection molding requires part.metadata.material_id or config.defaults.material"
+        )
+
+    im_cfg = config.injection_molding
+    material_cfg = (
+        im_cfg.materials.get(material_name) if im_cfg else None
+    ) or config.materials.get(material_name)
+    if not material_cfg:
+        raise ValueError(
+            f"Unknown material_id '{material_name}' for injection molding costing"
+        )
+
+    return material_name, material_cfg
 
 
 @type_check
@@ -131,34 +157,7 @@ def _calculate_im_cost(
     if not im_cfg:
         raise ValueError("Injection Molding configuration missing")
 
-    # Resolve material from part metadata or fallback to default
-    metadata = getattr(part, "metadata", None)
-    material_name = (
-        getattr(metadata, "material_id", None)
-        if metadata
-        else config.defaults.get("material", "abs")
-    ) or config.defaults.get("material", "abs")
-
-    if material_name not in im_cfg.materials:
-        # Fallback to first available if specific one is missing
-        material_name = (
-            next(iter(im_cfg.materials.keys())) if im_cfg.materials else "abs"
-        )
-
-    material_cfg = im_cfg.materials.get(material_name)
-    if not material_cfg:
-        material_cfg = config.materials.get(material_name) or config.materials.get(
-            "abs"
-        )
-        if not material_cfg:
-            from shared.workers.workbench_models import MaterialDefinition
-
-            material_cfg = MaterialDefinition(
-                name="Fallback ABS",
-                density_g_cm3=1.04,
-                cost_per_kg=2.5,
-                machine_hourly_rate=60.0,
-            )
+    material_name, material_cfg = _resolve_im_material(part, config)
     costs_cfg = im_cfg.costs
 
     logger.info("calculating_im_cost", material=material_name, quantity=quantity)
@@ -267,16 +266,8 @@ def analyze_im(
     cost_breakdown = _calculate_im_cost(part, config, quantity=quantity)
 
     # 5. Weight Calculation
-    metadata = getattr(part, "metadata", None)
-    material_name = (
-        getattr(metadata, "material_id", None)
-        if metadata
-        else config.defaults.get("material", "abs")
-    ) or config.defaults.get("material", "abs")
-    im_cfg = config.injection_molding
-    density = 1.04  # fallback (ABS)
-    if im_cfg and material_name in im_cfg.materials:
-        density = im_cfg.materials[material_name].density_g_cm3
+    material_name, material_cfg = _resolve_im_material(part, config)
+    density = material_cfg.density_g_cm3
 
     weight_g = (part.volume / 1000.0) * density
 

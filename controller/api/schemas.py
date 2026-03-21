@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 
@@ -242,9 +242,10 @@ class AgentRunRequest(BaseModel):
 
 class BenchmarkGenerateRequest(BaseModel):
     prompt: str
-    max_cost: float | None = None
-    max_weight: float | None = None
-    target_quantity: int | None = None
+    start_node: AgentName | None = None
+    max_cost: float | None = Field(default=None, gt=0)
+    max_weight: float | None = Field(default=None, gt=0)
+    target_quantity: int | None = Field(default=None, ge=1)
     seed_id: str | None = None
     seed_dataset: str | None = None
     generation_kind: str | None = None
@@ -266,9 +267,9 @@ class ConfirmRequest(BaseModel):
 
 
 class UpdateObjectivesRequest(BaseModel):
-    max_cost: float | None = None
-    max_weight: float | None = None
-    target_quantity: int | None = None
+    max_cost: float | None = Field(default=None, gt=0)
+    max_weight: float | None = Field(default=None, gt=0)
+    target_quantity: int | None = Field(default=None, ge=1)
 
 
 class RunSimulationRequest(BaseModel):
@@ -278,7 +279,7 @@ class RunSimulationRequest(BaseModel):
 
 
 class FeedbackRequest(BaseModel):
-    score: int  # 1 for up, 0 for down
+    score: Literal[0, 1]
     comment: str | None = None
 
     @field_validator("comment")

@@ -36,6 +36,15 @@ from controller.agent.reward import (
     load_reward_config,
 )
 from controller.clients.worker import WorkerClient
+from evals.logic.codex_workspace import (
+    launch_codex_exec as _launch_codex_exec,
+)
+from evals.logic.codex_workspace import (
+    materialize_seed_workspace as _materialize_codex_workspace,
+)
+from evals.logic.codex_workspace import (
+    verify_workspace_for_agent as _verify_codex_workspace_for_agent,
+)
 from evals.logic.models import (
     AgentEvalSpec,
     EvalDatasetItem,
@@ -76,6 +85,7 @@ from shared.enums import (
     AgentName,
     EpisodeStatus,
     EvalMode,
+    EvalRunnerBackend,
     GenerationKind,
     ReviewDecision,
     SeedMatchMethod,
@@ -92,6 +102,7 @@ logger = get_logger(__name__)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
+EVAL_RUNNER_BACKEND_ENV = "EVAL_RUNNER_BACKEND"
 READABLE_AGENT_LOG_FILE: Path | None = None
 _READABLE_AGENT_LOG_LOCK = Lock()
 SESSION_LOG_ROOT: Path | None = None
@@ -1862,6 +1873,156 @@ async def _run_git_eval(
     return success
 
 
+async def _run_codex_eval(
+    *,
+    item: EvalDatasetItem,
+    stats: dict[AgentName, Any],
+    agent_name: AgentName,
+    case_label: str,
+    run_judge: bool = False,
+    run_reviewers_with_judge: bool = False,
+) -> bool:
+    if run_judge or run_reviewers_with_judge:
+        raise ValueError(
+            "runner backend 'codex' does not support --run-judge or "
+            "--run-reviewers-with-judge yet"
+        )
+
+    task_id = item.id
+    spec = AGENT_SPECS[agent_name]
+    session_id = f"codex-{task_id}-{uuid.uuid4().hex[:8]}"
+    eval_log_key = _resolve_eval_log_key(task_id=task_id, session_id=session_id)
+    codex_workspace_root = (
+        SESSION_LOG_ROOT.parent if SESSION_LOG_ROOT is not None else ROOT
+    ) / "codex-workspaces"
+    codex_workspace_root.mkdir(parents=True, exist_ok=True)
+    workspace_dir = codex_workspace_root / (
+        f"{agent_name.value}-{task_id}-{uuid.uuid4().hex[:8]}"
+    )
+
+    log = logger.bind(
+        task_id=task_id,
+        agent_name=agent_name,
+        eval_mode=spec.mode,
+        runner_backend=EvalRunnerBackend.CODEX.value,
+    )
+    log.info("eval_start", backend=EvalRunnerBackend.CODEX.value)
+
+    success = False
+    failure_reason = ""
+    launch_return_code: int | None = None
+    verification_result = None
+
+    try:
+        materialized = _materialize_codex_workspace(
+            item=item,
+            agent_name=agent_name,
+            workspace_dir=workspace_dir,
+        )
+        log.info(
+            "codex_workspace_materialized",
+            workspace_dir=str(materialized.workspace_dir),
+            prompt_path=str(materialized.prompt_path),
+            copied_paths=materialized.copied_paths,
+        )
+        _write_eval_session_metadata(
+            eval_log_key=eval_log_key,
+            payload={
+                "agent_name": agent_name.value,
+                "episode_id": None,
+                "eval_mode": spec.mode.value,
+                "runner_backend": EvalRunnerBackend.CODEX.value,
+                "session_id": session_id,
+                "status": "materialized",
+                "success": False,
+                "task_id": task_id,
+                "workspace_dir": str(materialized.workspace_dir),
+                "prompt_path": str(materialized.prompt_path),
+            },
+        )
+
+        launch_return_code = await asyncio.to_thread(
+            _launch_codex_exec,
+            materialized.workspace_dir,
+            materialized.prompt_text,
+            agent_name=agent_name,
+            task_id=task_id,
+            yolo=True,
+        )
+        if launch_return_code != 0:
+            failure_reason = f"codex exited with code {launch_return_code}"
+
+        verification_result = await _verify_codex_workspace_for_agent(
+            workspace_dir=materialized.workspace_dir,
+            agent_name=agent_name,
+            session_id=session_id,
+            expected_decision=item.expected_decision,
+        )
+        if verification_result.success and not failure_reason:
+            success = True
+            log.info(
+                "eval_completed",
+                session_id=session_id,
+                verification=verification_result.verification_name,
+            )
+        elif not verification_result.success:
+            verification_failure = "; ".join(verification_result.errors) or (
+                f"{verification_result.verification_name} failed"
+            )
+            if failure_reason:
+                failure_reason = f"{failure_reason}; {verification_failure}"
+            else:
+                failure_reason = verification_failure
+    except FileNotFoundError as exc:
+        failure_reason = str(exc)
+        log.error("codex_cli_missing", session_id=session_id, error=failure_reason)
+    except Exception as exc:
+        failure_reason = str(exc)
+        log.exception("codex_eval_failed", session_id=session_id)
+
+    agent_stats = stats[agent_name]
+    agent_stats["total"] += 1
+    if success:
+        agent_stats["success"] += 1
+
+    _write_eval_session_metadata(
+        eval_log_key=eval_log_key,
+        payload={
+            "agent_name": agent_name.value,
+            "episode_id": None,
+            "eval_mode": spec.mode.value,
+            "runner_backend": EvalRunnerBackend.CODEX.value,
+            "session_id": session_id,
+            "status": "completed" if success else "failed",
+            "success": success,
+            "task_id": task_id,
+            "workspace_dir": str(workspace_dir),
+            "launch_return_code": launch_return_code,
+            "verification_name": (
+                verification_result.verification_name
+                if verification_result is not None
+                else None
+            ),
+            "verification_errors": (
+                verification_result.errors if verification_result is not None else []
+            ),
+            "verification_details": (
+                verification_result.details if verification_result is not None else {}
+            ),
+            "failure_reason": failure_reason or None,
+        },
+    )
+
+    if not success:
+        log.error("eval_failed", reason=failure_reason, session_id=session_id)
+
+    _console_message(
+        f"eval case finished: {case_label} - {'success' if success else 'failed'}"
+        + f" session_id={session_id}"
+    )
+    return success
+
+
 async def run_single_eval(
     item: EvalDatasetItem,
     agent_name: AgentName,
@@ -1870,6 +2031,7 @@ async def run_single_eval(
     verbose: bool = False,
     run_judge: bool = False,
     run_reviewers_with_judge: bool = False,
+    runner_backend: EvalRunnerBackend = EvalRunnerBackend.CONTROLLER,
 ):
     """
     Runs a single evaluation task for a specific agent type.
@@ -1888,6 +2050,17 @@ async def run_single_eval(
         )
         _console_message(
             f"eval case finished: {case_label} - {'success' if success else 'failed'}"
+        )
+        return
+
+    if runner_backend == EvalRunnerBackend.CODEX:
+        await _run_codex_eval(
+            item=item,
+            stats=stats,
+            agent_name=agent_name,
+            case_label=case_label,
+            run_judge=run_judge,
+            run_reviewers_with_judge=run_reviewers_with_judge,
         )
         return
 
@@ -2553,6 +2726,16 @@ async def main():
         "--skip-env-up", action="store_true", help="Skip running scripts/env_up.sh"
     )
     parser.add_argument(
+        "--runner-backend",
+        type=str,
+        default=os.getenv(EVAL_RUNNER_BACKEND_ENV, EvalRunnerBackend.CONTROLLER.value),
+        choices=[backend.value for backend in EvalRunnerBackend],
+        help=(
+            "Execution backend for eval runs. controller uses the existing "
+            "HTTP orchestration path; codex launches local Codex workspaces."
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         "--log_level",
         type=str,
@@ -2570,6 +2753,16 @@ async def main():
         os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
     else:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
+
+    runner_backend = EvalRunnerBackend(args.runner_backend)
+
+    if runner_backend == EvalRunnerBackend.CODEX and (
+        args.run_judge or args.run_reviewers_with_judge
+    ):
+        parser.error(
+            "--runner-backend codex does not support --run-judge or "
+            "--run-reviewers-with-judge yet"
+        )
 
     if args.run_reviewers_with_judge and not args.run_judge:
         parser.error("--run-reviewers-with-judge requires --run-judge")
@@ -2640,6 +2833,7 @@ async def main():
         backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "GENESIS"),
         full_sim=args.full_sim,
     )
+    logger.info("eval_runner_backend_selected", backend=runner_backend.value)
 
     _emit_startup_log_pointers(
         current_link=current_link,
@@ -2649,8 +2843,10 @@ async def main():
     start_time = time.time()
     _console_message(f"Agent evals started: {time.ctime(start_time)}")
 
-    # Run env_up.sh before checking health or starting evaluations
-    if not args.skip_env_up:
+    # Run env_up.sh before checking health or starting evaluations.
+    # Codex backend runs locally against the materialized workspace and does not
+    # require controller/worker services to be booted for the agent loop.
+    if runner_backend == EvalRunnerBackend.CONTROLLER and not args.skip_env_up:
         logger.info("env_up_start")
         try:
             env_up_path = ROOT / "scripts" / "env_up.sh"
@@ -2739,20 +2935,21 @@ async def main():
         logger.error("agent_not_in_specs", agent=requested_agent, session_id="eval")
         sys.exit(1)
 
-    # Check health
-    logger.info("controller_health_check_start", url=CONTROLLER_URL)
-    try:
-        await _wait_for_controller_ready()
-    except Exception:
-        logger.exception("controller_unreachable", url=CONTROLLER_URL)
-        sys.exit(1)
+    if runner_backend == EvalRunnerBackend.CONTROLLER:
+        # Check health
+        logger.info("controller_health_check_start", url=CONTROLLER_URL)
+        try:
+            await _wait_for_controller_ready()
+        except Exception:
+            logger.exception("controller_unreachable", url=CONTROLLER_URL)
+            sys.exit(1)
 
-    logger.info("worker_health_check_start", url=WORKER_LIGHT_URL)
-    try:
-        await _wait_for_worker_ready()
-    except Exception:
-        logger.exception("worker_unreachable", url=WORKER_LIGHT_URL)
-        sys.exit(1)
+        logger.info("worker_health_check_start", url=WORKER_LIGHT_URL)
+        try:
+            await _wait_for_worker_ready()
+        except Exception:
+            logger.exception("worker_unreachable", url=WORKER_LIGHT_URL)
+            sys.exit(1)
 
     dataset_roots = [
         Path(__file__).parent / "datasets",
@@ -2839,7 +3036,7 @@ async def main():
         for item in dataset:
             tasks.append((item, agent))
 
-    if tasks:
+    if tasks and runner_backend == EvalRunnerBackend.CONTROLLER:
         logger.info("eval_seed_preflight_start", total_tasks=len(tasks))
         try:
             await _preflight_selected_seeded_tasks(tasks=tasks)
@@ -2849,7 +3046,16 @@ async def main():
             _console_message(str(exc))
             sys.exit(1)
         logger.info("eval_seed_preflight_completed", total_tasks=len(tasks))
+    elif tasks:
+        logger.info(
+            "eval_seed_preflight_skipped",
+            total_tasks=len(tasks),
+            runner_backend=runner_backend.value,
+        )
+    else:
+        logger.warning("no_tasks_to_run")
 
+    if tasks:
         semaphore = asyncio.Semaphore(max(1, args.concurrency))
 
         async def _guarded(item: EvalDatasetItem, agent: AgentName):
@@ -2864,11 +3070,10 @@ async def main():
                     verbose=args.verbose,
                     run_judge=args.run_judge,
                     run_reviewers_with_judge=args.run_reviewers_with_judge,
+                    runner_backend=runner_backend,
                 )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))
-    else:
-        logger.warning("no_tasks_to_run")
 
     logger.info("evaluation_report_start")
 

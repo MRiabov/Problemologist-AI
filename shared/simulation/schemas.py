@@ -13,14 +13,18 @@ class SimulatorBackendType(StrEnum):
 
 
 def get_default_simulator_backend() -> SimulatorBackendType:
-    """Resolve default backend from environment with a safe Genesis fallback."""
+    """Resolve default backend from environment.
+
+    Empty values default to Genesis for compatibility. Invalid explicit values
+    fail closed instead of silently falling back to a different backend.
+    """
     raw_value = os.getenv("SIMULATION_DEFAULT_BACKEND", "").strip().upper()
     if not raw_value:
         return SimulatorBackendType.GENESIS
     try:
         return SimulatorBackendType(raw_value)
     except ValueError:
-        return SimulatorBackendType.GENESIS
+        raise ValueError("SIMULATION_DEFAULT_BACKEND must be one of: MUJOCO, GENESIS")
 
 
 class SimulationRequest(BaseModel):
@@ -28,8 +32,8 @@ class SimulationRequest(BaseModel):
     mjcf_content: str | None = None
     compound_json: str | None = None
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
-    dt: float = 0.01
-    duration: float = 5.0
+    dt: float = Field(default=0.01, gt=0)
+    duration: float = Field(default=5.0, gt=0)
     randomize: bool = False
 
 
@@ -43,19 +47,19 @@ class BackendSimulationResult(BaseModel):
 class CustomObjectives(BaseModel):
     """User-defined objectives/constraints for the benchmark."""
 
-    max_unit_cost: float | None = None
-    max_weight: float | None = None
-    target_quantity: int | None = None
-    additional_constraints: dict[str, Any] = {}
+    max_unit_cost: float | None = Field(default=None, gt=0)
+    max_weight: float | None = Field(default=None, gt=0)
+    target_quantity: int | None = Field(default=None, ge=1)
+    additional_constraints: dict[str, Any] = Field(default_factory=dict)
 
 
 class RandomizationStrategy(BaseModel):
     """Structured strategy for benchmark randomization."""
 
     theme: str
-    target_object_properties: dict[str, Any] = {}
-    environment_perturbations: dict[str, Any] = {}
-    difficulty_score: float = 0.5
+    target_object_properties: dict[str, Any] = Field(default_factory=dict)
+    environment_perturbations: dict[str, Any] = Field(default_factory=dict)
+    difficulty_score: float = Field(default=0.5, ge=0.0, le=1.0)
     reasoning: str | None = None
 
 

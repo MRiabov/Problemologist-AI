@@ -187,7 +187,7 @@ def load_agents_config(config_path: str | Path | None = None) -> AgentsConfig:
         Path(config_path) if config_path is not None else resolve_agents_config_path()
     )
     if resolved_path is None:
-        return AgentsConfig()
+        raise FileNotFoundError("Agents configuration file not found")
 
     try:
         with resolved_path.open("r", encoding="utf-8") as handle:
@@ -199,4 +199,4 @@ def load_agents_config(config_path: str | Path | None = None) -> AgentsConfig:
             config_path=str(resolved_path),
             error=str(exc),
         )
-        return AgentsConfig()
+        raise

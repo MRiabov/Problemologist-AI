@@ -2644,6 +2644,12 @@
           },
           "confidence": {
             "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "approximate"
+            ],
             "title": "Confidence",
             "default": "high"
           },
@@ -3384,6 +3390,12 @@
           },
           "confidence": {
             "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "approximate"
+            ],
             "title": "Confidence",
             "default": "high"
           }
