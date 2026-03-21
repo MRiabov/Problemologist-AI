@@ -29,7 +29,7 @@ class ExecutionReviewerSignature(dspy.Signature):
     """
     Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
     You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
-    You also receive read-only benchmark_assembly_definition.yaml context when present.
+    You also receive required read-only benchmark_assembly_definition.yaml handoff context.
     When done, call `submit_review` with your final ReviewResult.
     """
 
@@ -107,17 +107,13 @@ class ExecutionReviewerNode(BaseNode):
         )
         try:
             assembly_definition = "# No assembly_definition.yaml found."
-            benchmark_assembly_definition = (
-                "# No benchmark_assembly_definition.yaml found."
-            )
             with suppress(Exception):
                 if await self.ctx.worker_client.exists("assembly_definition.yaml"):
                     assembly_definition = await self.ctx.worker_client.read_file(
                         "assembly_definition.yaml"
                     )
-            benchmark_assembly_definition = await self._read_optional_workspace_file(
-                "benchmark_assembly_definition.yaml",
-                "# No benchmark_assembly_definition.yaml found.",
+            benchmark_assembly_definition = await self._read_required_workspace_file(
+                "benchmark_assembly_definition.yaml"
             )
             plan_markdown = state.plan or ""
             if await self.ctx.worker_client.exists("plan.md"):
@@ -229,7 +225,11 @@ class ExecutionReviewerNode(BaseNode):
             }
 
             # Validate existence of key reports
-            validate_files = ["simulation_result.json", "assembly_definition.yaml"]
+            validate_files = [
+                "simulation_result.json",
+                "assembly_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+            ]
 
             prediction, _artifacts, journal_entry = await self._run_program(
                 program_cls=dspy.ReAct,

@@ -22,7 +22,7 @@ class ElectronicsReviewerSignature(dspy.Signature):
     """
     Electronics Reviewer node: Evaluates the electrical implementation.
     You must use the provided tools to read 'script.py' and any circuit-related files.
-    You also receive read-only benchmark_assembly_definition.yaml context when present.
+    You also receive required read-only benchmark_assembly_definition.yaml handoff context.
     Ensure the circuit is correctly defined, wires are routed properly, and it matches the electrical plan.
     When done, provide your final ReviewResult.
     """
@@ -66,9 +66,8 @@ class ElectronicsReviewerNode(BaseNode):
                 assembly_definition = await self.ctx.worker_client.read_file(
                     "assembly_definition.yaml"
                 )
-        benchmark_assembly_definition = await self._read_optional_workspace_file(
-            "benchmark_assembly_definition.yaml",
-            "# No benchmark_assembly_definition.yaml found.",
+        benchmark_assembly_definition = await self._read_required_workspace_file(
+            "benchmark_assembly_definition.yaml"
         )
 
         plan_refusal = ""
@@ -88,7 +87,11 @@ class ElectronicsReviewerNode(BaseNode):
         }
 
         # Validate existence of key files
-        validate_files = ["script.py", "assembly_definition.yaml"]
+        validate_files = [
+            "script.py",
+            "assembly_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+        ]
 
         prediction, _artifacts, journal_entry = await self._run_program(
             program_cls=dspy.ReAct,

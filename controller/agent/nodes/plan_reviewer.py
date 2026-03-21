@@ -23,7 +23,7 @@ class PlanReviewerSignature(dspy.Signature):
     """
     Engineer Plan Reviewer node: Evaluates the proposed mechanical and electrical plans.
     You must use the provided tools to read 'plan.md', 'todo.md', and 'assembly_definition.yaml'.
-    You also receive read-only benchmark_assembly_definition.yaml context when present.
+    You also receive required read-only benchmark_assembly_definition.yaml handoff context.
     Ensure the plan is physically feasible, within budget, and complete.
     When done, call `submit_review` with your final ReviewResult.
     """
@@ -60,9 +60,8 @@ class PlanReviewerNode(BaseNode):
                 assembly_definition = await self.ctx.worker_client.read_file(
                     "assembly_definition.yaml"
                 )
-        benchmark_assembly_definition = await self._read_optional_workspace_file(
-            "benchmark_assembly_definition.yaml",
-            "# No benchmark_assembly_definition.yaml found.",
+        benchmark_assembly_definition = await self._read_required_workspace_file(
+            "benchmark_assembly_definition.yaml"
         )
 
         plan_markdown = state.plan or ""
@@ -145,7 +144,12 @@ class PlanReviewerNode(BaseNode):
             "journal": state.journal,
         }
 
-        validate_files = ["plan.md", "todo.md", "assembly_definition.yaml"]
+        validate_files = [
+            "plan.md",
+            "todo.md",
+            "assembly_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+        ]
 
         prediction, _artifacts, journal_entry = await self._run_program(
             program_cls=dspy.ReAct,

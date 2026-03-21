@@ -109,6 +109,9 @@ PREVIOUS_NODE_MAPS: Mapping[ValidationGraph, Mapping[AgentName, AgentName | None
     ValidationGraph.BENCHMARK: BENCHMARK_PREVIOUS_NODE_MAP,
 }
 
+ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS: tuple[str, ...] = (
+    "benchmark_assembly_definition.yaml",
+)
 BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "plan.md",
     "todo.md",
@@ -125,6 +128,7 @@ ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
     "todo.md",
     "benchmark_definition.yaml",
     "assembly_definition.yaml",
+    *ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
 )
 BENCHMARK_PLAN_REVIEW_MANIFEST = ".manifests/benchmark_plan_review_manifest.json"
 ENGINEERING_PLAN_REVIEW_MANIFEST = ".manifests/engineering_plan_review_manifest.json"
@@ -240,10 +244,12 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_PLANNER: NodeEntryContract(
             node=AgentName.ENGINEER_PLANNER,
             required_state_fields=["task", "episode_id"],
+            required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
         ),
         AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
             node=AgentName.ELECTRONICS_PLANNER,
             required_state_fields=["task", "episode_id"],
+            required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
         ),
         AgentName.ENGINEER_PLAN_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_PLAN_REVIEWER,
@@ -259,12 +265,16 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
             node=AgentName.ELECTRONICS_REVIEWER,
             required_state_fields=["episode_id"],
-            required_artifacts=["script.py"],
+            required_artifacts=[
+                "script.py",
+                *ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
+            ],
             custom_check=ELECTRONICS_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_EXECUTION_REVIEWER,
             required_state_fields=["episode_id"],
+            required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
             custom_check=ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(
@@ -941,6 +951,7 @@ __all__ = [
     "BENCHMARK_PREVIOUS_NODE_MAP",
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
     "ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK",
+    "ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS",
     "ENGINEER_PLANNER_HANDOFF_ARTIFACTS",
     "ENGINEER_PREVIOUS_NODE_MAP",
     "PREVIOUS_NODE_MAPS",

@@ -181,6 +181,12 @@ class BaseNode:
                 return await self.ctx.worker_client.read_file(path)
         return missing_text
 
+    async def _read_required_workspace_file(self, path: str) -> str:
+        """Read a workspace file and fail closed if it is missing."""
+        if not await self.ctx.worker_client.exists(path):
+            raise ValueError(f"required workspace file missing: {path}")
+        return await self.ctx.worker_client.read_file(path)
+
     async def _next_review_round(self, review_slug: str) -> int:
         pattern = re.compile(rf"^{re.escape(review_slug)}-decision-round-(\d+)\.yaml$")
         max_round = 0
