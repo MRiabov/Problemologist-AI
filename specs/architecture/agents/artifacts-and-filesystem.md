@@ -94,9 +94,9 @@ The old `shared.*` import paths remain repo internals, not the submission script
 
 ## Templates
 
-Reusable starter files are defined once in `shared/agent_templates/`. Controller initialization, worker startup, eval workspace materialization, and integration-test fixture expansion copy those files into each workspace before node entry. `worker_light/agent_files/` is the runtime mirror used by worker bootstrap and local inspection; it must not drift from `shared/agent_templates/`.
+Reusable starter files are defined once in `shared/agent_templates/common/`. Controller initialization, worker startup, eval workspace materialization, and integration-test fixture expansion copy those files into each workspace before node entry. `worker_light/agent_files/` is the runtime mirror used by worker bootstrap and local inspection; it must not drift from `shared/agent_templates/common/`.
 
-Row-specific seed artifacts still live in their row-local seed directories. The shared template pack covers only the boilerplate files that should not be duplicated across folders.
+Row-specific seed artifacts still live in their row-local seed directories. The shared template pack covers only the boilerplate files that should not be duplicated across folders. Role-specific planner scaffolds remain in their existing template-repo locations and are not duplicated into the common starter pack.
 
 ### Initial files for each agent and read-write permissions
 
@@ -175,7 +175,7 @@ Locking rule:
 - After planner submission accepted: benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer; engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer. Only replanning can mutate planner-owned files.
 - `benchmark_definition.yaml.benchmark_parts` is benchmark-owned fixture metadata. Coder/Reviewer must treat it as immutable task context, not as solution metadata.
 
-Template files are intentional source artifacts, not ad hoc runtime defaults or symlinks. They are versioned in `shared/agent_templates/`, copied into workspaces, and then validated as part of the normal workspace bootstrap and eval/integration materialization path. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
+Template files are intentional source artifacts, not ad hoc runtime defaults or symlinks. The reusable common starters are versioned in `shared/agent_templates/common/`, copied into workspaces, and then validated as part of the normal workspace bootstrap and eval/integration materialization path. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
 
 Another important note: files in e.g. Engineering Coder or Reviewer stages aren't created anew - they are reused from the previous agent.
 
@@ -227,9 +227,9 @@ Rules:
 19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
 20. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
 21. Those flags control whether MuJoCo-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
-22. `shared/agent_templates/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
+22. `shared/agent_templates/common/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
 23. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
-24. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
+24. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/common/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
@@ -463,7 +463,7 @@ We define the file structure as follows, individual agents adapt to individual n
 ├── journal.md                  # [Read-Write] Decisions, reasoning, and execution log
 ├── todo.md                     # [Read-Write] Execution plan
 ├── plan.md                     # A plan
-└── script.py                   # [Read-Write] Main execution script (copied from shared/agent_templates/)
+└── script.py                   # [Read-Write] Main execution script (copied from shared/agent_templates/common/)
 
 <!-- The agent can create more than one .py file. -->
 ```

@@ -42,9 +42,9 @@ The inputs to each model are as described in @desired_architecture.md document. 
 Note that skills and utils files are loaded at runtime (currently from the most recent version, to avoid git work)
 
 When the exact same starter artifact recurs across rows or agent families, store that body once in
-`shared/agent_templates/` and copy it into the workspace from there. Dataset rows should keep only row-specific custom
-artifacts in their seed folders; common boilerplate such as `script.py`, `todo.md`, `journal.md`, and default
-`plan.md` bodies should not be duplicated in the row bundle.
+`shared/agent_templates/common/` and copy it into the workspace from there. Dataset rows should keep only row-specific
+custom artifacts in their seed folders; common boilerplate such as `script.py`, `todo.md`, and `journal.md` should not
+be duplicated in the row bundle.
 
 This means that the dataset rows (it actually is archives on s3; the only item in DB is metadata) must contain all of them; or nulls where nullable. They will be later persisted as files.
 
