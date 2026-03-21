@@ -108,6 +108,7 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 - Fast evals: markdown validity reaches 95% on the first prompt, code validity reaches 90% on average tool calls, build123d code validity reaches 95%, and output YAML validity reaches 95%.
 - Benchmark generation: benchmark planner passes reviewer scrutiny in 80% of cases; benchmark coder reaches 95% physical validity after 30 turns and three reviewer submissions.
 - Engineering solving: the engineer reaches the goal within 30 tool calls and three simulation attempts, with first/second/third submission pass rates of 70%, 85%, and 95%.
+- Scope gate: Phase 2 electromechanical work and Phase 3 fluids work do not begin until the core solver reaches at least 80% success on a mechanics-only eval dataset of at least 10 demo problems, with the suite weighted toward gravity-driven rigid-body problems, on repeated evaluation runs.
 - Robustness: if one simulation passes, at least 70% of runtime-jitter variations also pass.
 - Manufacturability: manufacturability checks pass in 70% of validation/pricing calls and 90% of expected simulation/submission calls, improving to 95% and 97% on second and third attempts.
 - Review quality: reviewers reject inconsistent, infeasible, ambiguous, or over-actuated solutions at the architecture thresholds, and canonical checklist keys/values match seeded ground truth in at least 95% of cases.
@@ -116,7 +117,9 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 ## Product Scope
 
 ### MVP Strategy & Philosophy
-Phase 1 should launch as a problem-solving MVP with debugging-first instrumentation. The first useful outcome is a verified episode that solves a bounded mechanical task, produces a dataset row, and can be diagnosed when it fails. Phase 1 should optimize for correctness, replayability, and triage speed rather than platform breadth.
+Phase 1 should launch as a problem-solving MVP with debugging-first instrumentation. The first useful outcome is a verified episode that solves a bounded pure-mechanics task, produces a dataset row, and can be diagnosed when it fails. Phase 1 should optimize for correctness, replayability, and triage speed rather than platform breadth.
+
+Phase 1 stays in rigid-body mechanics. Electromechanical and fluids capabilities are deferred until the mechanics eval gate is met and reproducible, so the team does not widen scope before the core solver is credible.
 
 ### Resource Requirements
 A lean core team is sufficient for Phase 1 if the team has one owner for the agentic/environment loop and one owner for infra/CAD/simulation. Explicit capacity must be reserved for observability, failure triage, and replayable debugging, because the environment is expensive to debug without those controls.
@@ -155,15 +158,18 @@ A lean core team is sufficient for Phase 1 if the team has one owner for the age
 - Deterministic terminal reasons must distinguish success, refusal, invalid input, missing artifact, unsupported behavior, and simulation failure.
 - Failed episodes must remain replayable from persisted artifacts and traces.
 
+### Phase Boundary
+Phase 1 is limited to pure rigid-body mechanics. Electromechanical and fluids work remain out of scope until the scope gate in Success Criteria is met and reproducible on repeated eval runs. Phase 2 and Phase 3 are the post-gate expansion path, not parallel tracks.
+
 ### Post-MVP Features
-**Phase 2 Growth:**
+**Phase 2 Growth (post-gate only):**
 - Electromechanical tasks with powered mechanisms and circuit validation.
 - Robustness and jitter-heavy evaluation.
 - Richer dataset packaging and consumer tooling.
-- Improved analytics and inspection UX.
+- Frontend / Inspection Surface: browser-based inspection of traces, artifacts, CAD, simulation, code, and electronics evidence; live steering context; feedback submission; and session resume after reload.
 - Optional collaboration features if they become necessary.
 
-**Phase 3 Expansion:**
+**Phase 3 Expansion (post-gate only):**
 - Fluids, deformables, and broader multiphysics.
 - Broader benchmark families and more agent roles.
 - Open-source framework polish.
@@ -176,7 +182,7 @@ A lean core team is sufficient for Phase 1 if the team has one owner for the age
 - Broad collaboration workflows are out of scope until the environment loop is stable.
 
 ### Risk Mitigation Strategy
-**Technical Risks:** keep the first release to a narrow mechanical task class, keep the agent chain short and sequential, fail closed on invalid artifacts, keep preview simulation separate from proof simulation, and use debuggability as a first-order constraint.
+**Technical Risks:** keep the first release to a narrow mechanical task class, keep the agent chain short and sequential, fail closed on invalid artifacts, keep preview simulation separate from proof simulation, use debuggability as a first-order constraint, and do not widen scope into electromechanical or fluids work before the mechanics gate is satisfied.
 
 **Market Risks:** make the MVP useful to a single human engineer first, ensure every solved episode becomes a dataset row, and prove training-data value with concrete exports and reproducibility.
 

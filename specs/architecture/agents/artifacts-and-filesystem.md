@@ -4,7 +4,7 @@
 
 - Primary focus: runtime framework and filesystem contract for all agent workflows.
 - Defines DSPy/LangGraph/Langfuse architecture and strict reasoning/tool trace requirements.
-- Specifies agent artifact surfaces, file templates, and role-based path permissions (`agents_config.yaml` policy model).
+- Specifies agent artifact surfaces, shared template sources, and role-based path permissions (`agents_config.yaml` policy model).
 - Use this file for runtime plumbing, file immutability, and access-control decisions.
 
 We use DSPy.ReAct as the primary agent runtime (reasoning + tool use) and LangGraph to manage agent architecture/orchestration. Langfuse is used for observability.
@@ -94,15 +94,17 @@ The old `shared.*` import paths remain repo internals, not the submission script
 
 ## Templates
 
-Each agent starts with a template, roughly defined in [Starting folder structure for various agents](#starting-folder-structure-for-various-agents).  It is predefined for each agent and we will test it.
+Reusable starter files are defined once in `shared/agent_templates/`. Controller initialization, worker startup, eval workspace materialization, and integration-test fixture expansion copy those files into each workspace before node entry. `worker_light/agent_files/` is the runtime mirror used by worker bootstrap and local inspection; it must not drift from `shared/agent_templates/`.
+
+Row-specific seed artifacts still live in their row-local seed directories. The shared template pack covers only the boilerplate files that should not be duplicated across folders.
 
 ### Initial files for each agent and read-write permissions
 
 - Engineering Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml` (benchmark-owned constraints), `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml` (benchmark-owned constraints), `plan.md` (if materialized from shared templates), `todo.md` (if materialized from shared templates), `journal.md` (if materialized from shared templates)
   - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `benchmark_definition.yaml` (benchmark-owned task fields plus planner-owned internal max targets under benchmark caps)
 - Electronics Planner:
-  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md`, `todo.md`, `journal.md`
+  - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md` (if materialized from shared templates), `todo.md` (if materialized from shared templates), `journal.md` (if materialized from shared templates)
   - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned electrical handoff), `benchmark_definition.yaml` (benchmark-owned electrical requirements and planner-owned constraints only)
 - Engineering Coder:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `assembly_definition.yaml`, `reviews/**`, `renders/**`
@@ -119,7 +121,7 @@ Each agent starts with a template, roughly defined in [Starting folder structure
     - `reviews/engineering-execution-review-decision-round-*.yaml`
     - `reviews/engineering-execution-review-comments-round-*.yaml`
 - Benchmark Planner:
-  - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if pre-seeded template), `todo.md` (if pre-seeded template), `journal.md` (if pre-seeded template)
+  - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if materialized from shared templates), `todo.md` (if materialized from shared templates), `journal.md` (if materialized from shared templates)
   - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `benchmark_assembly_definition.yaml` (benchmark-local draft, handed to engineering as read-only context)
 - Benchmark Plan Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `renders/**`, `journal.md`
@@ -173,7 +175,7 @@ Locking rule:
 - After planner submission accepted: benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer; engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer. Only replanning can mutate planner-owned files.
 - `benchmark_definition.yaml.benchmark_parts` is benchmark-owned fixture metadata. Coder/Reviewer must treat it as immutable task context, not as solution metadata.
 
-Notably, I don't think that creating them as "templates" (outside of symlinks) is necessary as they are programmatically assembled. That said, if they are programmatically assembled, it should be tested; could be a centralized schema creation. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
+Template files are intentional source artifacts, not ad hoc runtime defaults or symlinks. They are versioned in `shared/agent_templates/`, copied into workspaces, and then validated as part of the normal workspace bootstrap and eval/integration materialization path. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
 
 Another important note: files in e.g. Engineering Coder or Reviewer stages aren't created anew - they are reused from the previous agent.
 
@@ -194,7 +196,7 @@ Skill-repository boundary is explicit:
 
 ### Template auto-validation
 
-Where possible, templates would have a validation schema. E.g. (in particular) for YAML files, we would define a validation schema
+Where possible, templates have a validation schema. YAML templates in particular should be schema-validated when they are materialized into a workspace, so starter drift is caught at source rather than after a node has already started.
 
 ## `agents_config.yaml` (path permissions policy)
 
@@ -225,6 +227,9 @@ Rules:
 19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
 20. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
 21. Those flags control whether MuJoCo-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
+22. `shared/agent_templates/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
+23. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
+24. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
@@ -458,7 +463,7 @@ We define the file structure as follows, individual agents adapt to individual n
 ├── journal.md                  # [Read-Write] Decisions, reasoning, and execution log
 ├── todo.md                     # [Read-Write] Execution plan
 ├── plan.md                     # A plan
-└── script.py                   # [Read-Write] Main execution script (from template)
+└── script.py                   # [Read-Write] Main execution script (copied from shared/agent_templates/)
 
 <!-- The agent can create more than one .py file. -->
 ```
