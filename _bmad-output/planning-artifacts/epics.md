@@ -15,116 +15,84 @@ inputDocuments:
   - specs/architecture/CAD-and-other-infra.md
   - specs/architecture/evals-and-gates.md
   - specs/architecture/simulation-and-dod.md
+  - specs/architecture/workbenches.md
   - specs/architecture/electronics-and-electromechanics.md
   - specs/architecture/fluids-and-deformables.md
   - specs/architecture/observability.md
+  - specs/frontend-specs.md
   - specs/business-usecase.md
   - specs/dataset-generation.md
-  - specs/frontend-specs.md
   - specs/integration-tests.md
   - specs/todos.md
-  - docs/architecture.md
-  - docs/project-overview.md
-  - docs/spec-coverage.md
 ---
 
 # Problemologist-AI - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for Problemologist-AI, decomposing the requirements from the architecture, business, frontend, and integration specs into implementable stories.
+This document is a regenerated planning artifact for Problemologist-AI. It keeps functional requirements, non-functional requirements, architecture/file-contract requirements, and UX requirements separated so the epic list stays aligned with current source specs instead of stale backlog notes.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
-- FR1: The platform shall support agent action execution and persistence.
-  - Agent actions execute in a session-scoped runtime substrate.
-  - Generated files, traces, and state persist across tool calls and later turns.
-  - Later turns and handoffs resume from the persisted session state.
-  - The benchmark and engineering workflow specifics that used to sit under this umbrella are covered by FR2-FR10.
-- FR2: The platform shall support a benchmark planner role that can author `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, then submit the plan through `submit_plan()`.
-- FR3: The platform shall support a benchmark plan reviewer that validates plan consistency, benchmark solvability, moving-fixture visibility, and persists decision/comments YAML plus the stage manifest.
-- FR4: The platform shall support a benchmark coder that implements approved benchmarks and can refuse infeasible plans through `plan_refusal.md`.
-- FR5: The platform shall support a benchmark reviewer that validates implemented benchmark geometry, render evidence, simulation evidence, and hands the benchmark off to engineering.
-- FR6: The platform shall support an engineering planner that authors `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` for a solution proposal.
-- FR7: The platform shall support an electronics planner that augments the engineering plan with electrical requirements, component choices, and wiring intent when powered mechanisms are needed.
-- FR8: The platform shall support an engineering plan reviewer that validates the combined mechanical/electrical plan before coding, including budget realism and DOF minimization.
-- FR9: The platform shall support a unified engineering coder that implements mechanical and electrical solution logic in one revision and can refuse invalid plans through `plan_refusal.md`.
-- FR10: The platform shall support an electronics reviewer and an engineering execution reviewer that validate the unified implementation after validation and simulation succeed.
-- FR11: The platform shall enforce reviewer-specific stage manifests and reviewer decision/comments YAML pairs for every review stage.
-- FR12: The platform shall enforce read-only benchmark-owned fixtures, benchmark motion metadata, and benchmark drill/attachment permissions across handoff and coding stages.
-- FR13: The platform shall allow COTS search through a read-only subagent with reproducible catalog results and no unintended workspace mutation.
-- FR14: The platform shall expose agent-facing utilities for validation, simulation, review submission, pricing, rendering, and documentation lookup through the canonical `utils` package.
-- FR15: The platform shall enforce workspace-relative filesystem permissions with read/write isolation, read-only mounts, and `.manifests/**` denial for agent roles.
-- FR16: The platform shall keep controller, worker-light, worker-heavy, and controller-worker responsibilities split so heavy simulation and validation run outside the controller process.
-- FR17: The platform shall provide single-flight heavy-worker admission with deterministic busy responses and readiness changes while jobs are active.
-- FR18: The platform shall route heavy operations through Temporal workflows for durable execution and retry handling.
-- FR19: The platform shall persist important files and generated assets to the worker filesystem and S3-backed storage with session-scoped isolation.
-- FR20: The platform shall generate static validation preview renders as a 24-view package and persist render manifests, including RGB, depth, and segmentation siblings when enabled.
-- FR21: The platform shall support MuJoCo-backed static validation preview by default, even when the simulation backend is Genesis, while keeping simulation backend selection explicit.
-- FR22: The platform shall support simulation on the selected physics backend and keep validation preview distinct from simulation parity.
-- FR23: The platform shall validate benchmark geometry against build, goal, and forbid zones, simulation bounds, and runtime randomization ranges before submission or review.
-- FR24: The platform shall support benchmark-owned fixture metadata, including `benchmark_parts`, `fixed`, `cots_id`, `material_id`, attachment policy, and drill policy.
-- FR25: The platform shall require move-object and objective metadata, including mandatory material IDs that resolve to known materials.
-- FR26: The platform shall map build123d joints to simulator joints and constraints and validate realistic fastener-based rigid connections.
-- FR27: The platform shall support motor and actuator controller functions including constant, sinusoidal, square, trapezoidal, and position-based control.
-- FR28: The platform shall enforce manufacturability validation and pricing across supported workbenches and materials, and reject unsupported or invalid parts.
-- FR29: The platform shall account for benchmark drilling costs when environment drill operations are declared.
-- FR30: The platform shall evaluate simulation success and failure for goal hit, forbid hit, out-of-bounds, timeout, instability, overload, and breakage conditions.
-- FR31: The platform shall support runtime randomization and batch verification over multiple jittered scenes in one admitted heavy-worker job.
-- FR32: The platform shall support electromechanical benchmark and solution features including power supplies, circuits, wires, power-gated actuation, and wire-routing clearance and tear behavior.
-- FR33: The platform shall reject invalid circuits, open circuits, short circuits, overcurrent conditions, and wire-routing violations before expensive simulation proceeds.
-- FR34: The platform shall support fluid and deformable-material benchmarks, including Genesis backend selection, fluid definitions, fluid objectives, stress objectives, and breakage handling.
-- FR35: The platform shall emit reasoning, tool-call, simulation, review, and lineage traces incrementally and make them available for frontend, review, and training-data use.
-- FR36: The platform shall persist observability metadata including `user_session_id`, `episode_id`, simulation/review/trace IDs, seeds, and related lineage fields.
-- FR37: The platform shall support dataset generation and cleaning by persisting all workflow inputs and outputs, prioritizing underrepresented seeds, and excluding invalid or polluted data.
-- FR38: The platform shall provide a user-facing frontend that supports benchmark and engineering sessions, session history, chat, CAD viewer, code viewer, plan approval, and interrupt and steer actions.
-- FR39: The platform shall surface user feedback collection on model outputs, including thumbs up/down, editable comments, and issue topics.
-- FR40: The platform shall support evaluation gates and fail-closed terminal states so invalid artifacts or missing evidence never progress as success.
+- FR1: The platform shall isolate each user session and episode in its own workspace, persist generated files and traces across turns, and support resumption after interruption.
+- FR2: The platform shall route long-running validation and simulation to `worker-heavy` through Temporal with single-flight admission and deterministic busy responses.
+- FR3: The platform shall classify validation and simulation results, including goal-hit, forbid-hit, out-of-bounds, timeout, instability, and breakage outcomes, and aggregate jittered runs when applicable.
+- FR4: The platform shall persist incremental reasoning, tool-call, simulation, review, and lineage evidence with joinable session, episode, run, review, and seed IDs.
+- FR5: The platform shall enforce strict schema validation, stage manifests, and fail-closed terminal states for planner/reviewer handoffs and evaluation transitions.
+- FR6: The platform shall support benchmark generation, benchmark review, benchmark implementation, and benchmark refusal/handoff workflows.
+- FR7: The platform shall support engineering planning, plan review, unified mechanical and electrical coding, refusal, and execution review workflows.
+- FR8: The platform shall expose canonical agent utilities for validation, pricing, simulation, rendering, review submission, and docs lookup.
+- FR9: The platform shall enforce workspace-relative filesystem permissions, read-only mounts, and denied writes to protected directories such as `.manifests/**`.
+- FR10: The platform shall support manufacturable CAD solutions with COTS search, workbench/material pricing, drilling cost accounting, and joint/fastener validation.
+- FR11: The platform shall provide a shared inspection workspace UI with session history, chat, CAD, code, electronics views, plan approval controls, and feedback.
+- FR12: The platform shall support live steering via selected CAD and code context, plus interrupt controls during generation.
+- FR13: The platform shall support electromechanical planning and implementation, including power, circuits, wires, power-gated actuation, and actuator control modes.
+- FR14: The platform shall support fluid and deformable-material benchmarks with backend-appropriate validation and failure semantics.
+- FR15: The platform shall persist dataset-ready bundles, clean invalid or polluted runs, and prioritize underrepresented seeds for reuse or training.
+- FR16: The platform shall keep benchmark-owned fixtures, benchmark-owned electronics, and benchmark motion metadata as read-only environment inputs during downstream engineering stages.
 
-### NonFunctional Requirements
+### Non-Functional Requirements
 
-- NFR1: All planner and reviewer machine-readable outputs shall be strict-schema artifacts and shall reject unknown or extra fields recursively.
-- NFR2: Reasoning and tool traces shall be emitted incrementally and the system shall fail closed when required traces are absent in modes that require them.
-- NFR3: Visual inspection shall be required only when render images exist, and the dedicated `inspect_media(...)` tool shall be used; text-only file listing shall not count.
-- NFR4: The heavy-worker service shall remain single-flight with deterministic busy responses and shall not implement an internal multi-job queue.
-- NFR5: Validation preview shall remain MuJoCo-based by default and shall not be treated as Genesis parity evidence.
-- NFR6: Heavy simulation and validation shall remain crash-contained behind isolated worker process boundaries rather than running LLM-generated code on the controller.
-- NFR7: All critical APIs shall remain schema-valid and compatible with strict OpenAPI and schemathesis-style checks.
-- NFR8: Observability shall capture all required IDs, seeds, events, and error streams so runs are queryable and attributable.
-- NFR9: Episode terminal states shall always include explicit failure classification when the episode fails.
-- NFR10: All run provenance relevant to evaluation shall remain reproducible across seeds, variants, and backend selection.
-- NFR11: The UI shall stream updates in near real time and shall not wait for workflow completion to show traces or tool activity.
-- NFR12: The system shall keep compatibility paths explicit and shall not hide fallback or degraded behavior as ordinary success.
-- NFR13: The filesystem policy shall prevent agent writes to forbidden mounts and to `.manifests/**`.
-- NFR14: Integration verification shall be HTTP-only against the running compose stack rather than unit-style internal invocation.
-- NFR15: Artifact persistence shall remain traceable through DB, S3, and review files without losing session/episode linkage.
+- NFR1: Planner and reviewer machine-readable artifacts shall be strict-schema documents and shall reject unknown or extra fields recursively.
+- NFR2: Required reasoning, tool-call, and review traces shall be emitted incrementally; missing required traces shall fail closed instead of synthesizing data.
+- NFR3: When render images exist, reviewer approval shall require `inspect_media(...)`; file listings or textual descriptions do not satisfy the visual-inspection policy.
+- NFR4: The heavy-worker service shall remain single-flight and shall not implement an internal multi-job queue.
+- NFR5: Validation preview shall use MuJoCo by default and shall not be treated as proof of simulation-backend parity.
+- NFR6: Heavy simulation and validation shall remain crash-contained behind isolated worker processes and durable Temporal execution boundaries.
+- NFR7: Critical APIs shall remain schema-valid and compatible with HTTP-only integration verification against the running compose stack.
+- NFR8: Observability shall capture required IDs, seeds, events, and error streams so runs remain queryable and attributable.
+- NFR9: Terminal states shall always include explicit failure classification and deterministic reason codes.
+- NFR10: Run provenance shall remain reproducible across seeds, runtime jitter, static variants, and backend selection.
+- NFR11: The UI shall stream workflow updates in near real time and expose context usage and compaction telemetry.
+- NFR12: File-system policy shall prevent writes to forbidden mounts and `.manifests/**`.
+- NFR13: Known fallback or degraded behavior shall be explicit and machine-readable; silent success-like degradation is not allowed.
+- NFR14: Artifact persistence shall remain traceable through database, object storage, and review files without losing session/episode linkage.
+- NFR15: Skills and shared boilerplate artifacts shall remain runtime-mounted read-only inputs rather than workspace writes.
 
-### Additional Requirements
+### Architecture and File Contract Requirements
 
-- The benchmark planner handoff shall include a `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` package, and planner submission shall persist `.manifests/benchmark_plan_review_manifest.json`.
+- The benchmark planner handoff shall include `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`, and planner submission shall persist `.manifests/benchmark_plan_review_manifest.json`.
 - The engineering planner handoff shall include `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`, and planner submission shall persist `.manifests/engineering_plan_review_manifest.json`.
-- Reviewer output shall always be persisted as stage-specific YAML decision/comments pairs under `reviews/`, and routing shall depend only on the decision YAML.
-- `benchmark_definition.yaml` shall carry objective zones, randomization, and planner-authored estimate fields that derive `max_unit_cost` and `max_weight_g`.
-- `benchmark_definition.yaml` shall include `moved_object.material_id`, and the value shall resolve to a known material in `manufacturing_config.yaml`.
+- Reviewers shall persist stage-specific YAML decision/comments pairs under `reviews/`, and routing shall depend only on the decision YAML.
+- `benchmark_definition.yaml` shall carry objective zones, runtime randomization, and planner-authored estimate fields that derive `max_unit_cost` and `max_weight_g`.
+- `benchmark_definition.yaml.moved_object.material_id` shall resolve to a known material in `manufacturing_config.yaml`.
 - `benchmark_assembly_definition.yaml` shall always be a schema-valid full `AssemblyDefinition`, even when the benchmark uses a minimal fixture declaration.
 - `benchmark_definition.yaml.benchmark_parts` shall represent benchmark-owned fixtures, including attachment policy and drill policy, and those fixtures shall remain read-only for engineering.
 - `assembly_definition.yaml.environment_drill_operations` shall validate against benchmark-side drill policy and shall add benchmark drilling cost when present.
-- `assembly_definition.yaml.electronics` shall hold the engineer-owned electrical design, while `benchmark_definition.yaml.electronics_requirements` shall hold benchmark-owned electrical constraints.
+- `assembly_definition.yaml.electronics` shall hold the engineer-owned electrical design, while benchmark-owned electrical constraints remain in the benchmark definition.
 - Physical wire routes shall be waypoint-based, gauge-aware, length-aware, and clearance-validated, with wire tear reducing power to the affected path.
-- Static preview renders shall produce a `renders/render_manifest.json` file with per-image modality metadata and segmentation legends that distinguish repeated instances.
-- Render modality emission shall be controlled by `config/agents_config.yaml`, and the current policy shall keep RGB, depth, and segmentation enabled unless configuration says otherwise.
+- Static preview renders shall produce `renders/render_manifest.json` with per-image modality metadata and segmentation legends that distinguish repeated instances.
+- Render modality emission shall be controlled by `config/agents_config.yaml`.
+- `controller_openapi.json`, `worker_openapi.json`, and `frontend/openapi.json` shall remain generated contract artifacts, and API changes shall regenerate them through the repository hook flow rather than by manual sync.
+- `events.jsonl` shall remain the worker-side batch transport artifact for episode observability; the controller shall ingest it at episode end and normalize it into canonical database rows, failing closed on truncation, duplication, or schema mismatch.
 - The worker filesystem shall keep `/utils`, `/skills`, `/reviews`, and `/config` read-only while leaving the workspace root writable.
-- Heavy operations shall use Temporal as the durable execution boundary, and direct `worker-heavy` HTTP endpoints shall remain integration-test/debug only.
-- `inspect_media(...)` shall be the only agent-facing way to inspect render images or video frames, and review approval shall remain invalid without required inspection when renders exist.
-- The project shall keep benchmark-side moving fixtures and benchmark-owned electronics as read-only environment behavior, not engineer-owned implementation targets.
-- The dataset generation pipeline shall persist all useful workflow artifacts and metadata into dataset rows and shall prioritize underrepresented seeds instead of iterating blindly.
-- Deferred backlog from `specs/todos.md`: integration mock responses shall eventually migrate from per-node fixtures to transcript-based scenarios with ordered tool/observation turns.
-- Deferred backlog from `specs/todos.md`: agent tool transport shall eventually support a WebSocket protocol with strict correlation IDs while preserving HTTP compatibility during migration.
-- Deferred backlog from `specs/todos.md`: fallback or degraded behavior shall be explicit and machine-readable rather than hidden behind ordinary success responses.
-- Evaluation infrastructure shall own seeded preflight, cross-contract semantic checks, and HTTP-only integration verification; callers must not duplicate those validators locally.
-- The system shall continue to treat skills as runtime-mounted artifacts, with skill and docs lookup available to agents through the documented tool surface.
+- Heavy operations shall use Temporal as the durable execution boundary, and direct `worker-heavy` HTTP endpoints shall remain integration-test and debug only.
+- `inspect_media(...)` shall be the only agent-facing way to inspect render images or video frames.
+- Controller-first communication shall remain the principle for frontend and asset access, with the controller brokering persisted artifacts and backend state for the UI.
+- When identical starter artifacts recur, shared boilerplate shall be reused from `shared/agent_templates/common/` rather than duplicated in seed rows.
+- Deferred backlog items in `specs/todos.md` are intentionally not promoted into the current epic scope unless they already affect a current contract.
 
 ### UX Design Requirements
 
@@ -146,107 +114,82 @@ This document provides the complete epic and story breakdown for Problemologist-
 
 ### FR Coverage Map
 
-FR1: Epic 1 - Execute agent actions in a session-scoped runtime and persist their state
-FR2: Epic 7 - Author benchmark planner handoff artifacts and submit the benchmark plan
-FR3: Epic 7 - Review benchmark plans for consistency, solvability, and motion visibility
-FR4: Epic 7 - Implement approved benchmark plans and refuse infeasible ones
-FR5: Epic 7 - Review implemented benchmarks and hand off solved benchmarks to engineering
-FR6: Epic 3 - Author engineering planner handoff artifacts for a solution proposal
-FR7: Epic 9 - Add electrical planning, component choices, and wiring intent for powered mechanisms
-FR8: Epic 3 - Review the combined mechanical plan before coding
-FR9: Epic 3 - Implement the unified mechanical solution and refuse invalid plans
-FR10: Epic 9 - Review unified electromechanical implementations after validation and simulation
-FR11: Epic 3 - Persist stage-specific review manifests and decision/comments YAML pairs
-FR12: Epic 7 - Keep benchmark-owned fixtures, motion metadata, and drill permissions read-only for engineering
-FR13: Epic 4 - Search the COTS catalog without mutating workspace state
-FR14: Epic 3 - Expose canonical agent-facing utilities for validation, simulation, pricing, review, rendering, and docs lookup
-FR15: Epic 1 - Enforce workspace-relative filesystem permissions and read-only mounts
-FR16: Epic 1 - Keep controller, worker-light, worker-heavy, and controller-worker responsibilities split
-FR17: Epic 1 - Enforce single-flight heavy-worker admission and deterministic busy responses
-FR18: Epic 1 - Route heavy operations through Temporal for durable execution and retry handling
-FR19: Epic 1 - Persist important files and generated assets with session-scoped isolation
-FR20: Epic 7 - Generate the 24-view static validation preview package and render manifests
-FR21: Epic 7 - Use MuJoCo-backed validation preview by default while keeping simulation backend selection explicit
-FR22: Epic 1 - Keep validation preview distinct from actual simulation parity
-FR23: Epic 7 - Validate benchmark geometry, zones, bounds, and runtime randomization before submission or review
-FR24: Epic 7 - Support benchmark-owned fixture metadata and attachment/drill policy
-FR25: Epic 7 - Require move-object and objective metadata, including mandatory material IDs
-FR26: Epic 4 - Map build123d joints to simulator joints and validate realistic rigid connections
-FR27: Epic 9 - Support motor and actuator controller functions for benchmark and solution flow
-FR28: Epic 4 - Enforce manufacturability validation and pricing across supported workbenches
-FR29: Epic 4 - Account for benchmark drilling costs when environment drilling is declared
-FR30: Epic 1 - Classify simulation success and failure outcomes consistently
-FR31: Epic 1 - Run batch verification over multiple jittered scenes in one admitted heavy-worker job
-FR32: Epic 8 - Support power supplies, circuits, wires, and power-gated actuation
-FR33: Epic 8 - Reject invalid circuits and wire-routing violations before simulation
-FR34: Epic 10 - Support fluid and deformable-material benchmarks with Genesis behavior
-FR35: Epic 2 - Emit reasoning, tool-call, simulation, review, and lineage traces incrementally
-FR36: Epic 2 - Persist observability metadata, session IDs, episode IDs, and seed lineage
-FR37: Epic 12 - Generate dataset-ready outputs and clean invalid or polluted data
-FR38: Epic 6 - Provide the interactive benchmark/engineering workspace with chat, CAD, and code views
-FR39: Epic 6 - Collect thumbs up/down feedback with comments and topic tags
-FR40: Epic 3 - Enforce fail-closed terminal states so invalid artifacts never progress as success
+FR1: Epic 1 - Session isolation, durable artifact persistence, and resumability
+FR2: Epic 1 - Heavy-worker routing and single-flight admission
+FR3: Epic 1 - Result taxonomy and batched jittered validation
+FR4: Epic 2 - Incremental traces and joinable lineage IDs
+FR5: Epic 3 - Strict schema validation, manifests, and fail-closed gates
+FR6: Epic 8 - Benchmark planner, reviewer, coder, and refusal workflow
+FR7: Epic 4 - Engineering planner, reviewer, coder, and refusal workflow
+FR8: Epic 4 - Canonical validation, pricing, simulation, rendering, review, and docs utilities
+FR9: Epic 1 - Filesystem isolation and protected mounts
+FR10: Epic 5 - Manufacturable CAD, COTS, pricing, and joint/fastener checks
+FR11: Epic 7 - Shared inspection UI and feedback controls
+FR12: Epic 6 - CAD and code context steering plus interrupt handling
+FR13: Epic 9 and Epic 10 - Electromechanical power, wiring, and actuator control
+FR14: Epic 11 and Epic 12 - Fluids, deformables, and failure semantics
+FR15: Epic 13 - Dataset-ready bundles and corpus cleaning/prioritization
+FR16: Epic 8 - Read-only benchmark fixtures and motion metadata during handoff
 
 ## Epic List
 
 ### Epic 1: Provide agent runtime and persistence
 Users can execute agent actions in a session-scoped workspace with durable persistence, isolated execution, and fail-closed runtime gates.
-**FRs covered:** FR1, FR15, FR16, FR17, FR18, FR19, FR22, FR30, FR31
+**FRs covered:** FR1, FR2, FR3, FR9
 
 ### Epic 2: Capture observability, lineage, and review evidence
-Users can reconstruct what happened, where, and why through complete traces, IDs, metrics, and logs.
-**FRs covered:** FR35, FR36
+Users can reconstruct what happened, where, and why through complete traces, IDs, and evidence links.
+**FRs covered:** FR4
 
 ### Epic 3: Build evaluation and verification infrastructure
-Users can validate handoff artifacts, enforce strict schema and cross-contract checks, and keep seeded and integration verification fail-closed.
-**FRs covered:** FR40
-**Relevant NFRs/additional requirements:** NFR1, NFR2, NFR3, NFR7, NFR9, NFR14, NFR15, seeded-eval preflight contract, integration-test HTTP-only boundaries
+Users can validate handoff artifacts, generated API contracts, and cross-contract checks, and keep seeded and integration verification fail-closed.
+**FRs covered:** FR5
 
-### Epic 4: Run planner, reviewer, coder, and refusal workflows
-Users can move benchmark and engineering work through the correct handoff gates with the right files, manifests, and submission controls.
-**FRs covered:** FR6, FR8, FR9, FR11, FR14
+### Epic 4: Run engineering planner, reviewer, coder, refusal, and execution review workflows
+Users can move engineering work through the correct handoff gates with the right files, manifests, and submission controls.
+**FRs covered:** FR7, FR8
 
 ### Epic 5: Design manufacturable CAD solutions with validated materials and COTS
 Users can build priced, manufacturable mechanical solutions from real materials, joints, workbenches, and catalog parts.
-**FRs covered:** FR13, FR26, FR28, FR29
+**FRs covered:** FR10
 
 ### Epic 6: Steer agents with precise context and prompt control
 Users can point to exact parts, lines, and code context so the agent receives the right local evidence and prompt hints.
-**Relevant UX/additional requirements:** UX-DR8, UX-DR14, exact-point selection, line-targeted steering, `@` mentions
+**FRs covered:** FR12
 
 ### Epic 7: Provide the interactive workspace and feedback UI
 Users can monitor sessions, inspect CAD and code, interrupt runs, and rate outputs in one shared interface.
-**FRs covered:** FR38, FR39
+**FRs covered:** FR11
 
 ### Epic 8: Generate and certify benchmarks
 Users can author benchmark problems, validate geometry and randomization, and certify solved benchmark packages for engineering intake.
-**FRs covered:** FR2, FR3, FR4, FR5, FR12, FR20, FR21, FR23, FR24, FR25
+**FRs covered:** FR6, FR16
 
 ### Epic 9: Solve electromechanical wiring and circuit problems
 Users can specify power, circuits, wires, and physical wire routing, and reject invalid electrical designs before simulation.
-**FRs covered:** FR32, FR33
+**FRs covered:** FR13
 
 ### Epic 10: Solve powered electromechanical mechanisms
 Users can plan and optimize powered mechanisms with electrical planning, specialist review, and unified implementation.
-**FRs covered:** FR7, FR10, FR27
+**FRs covered:** FR13
 
 ### Epic 11: Model fluids and fluid-electronics coupling
 Users can define fluid tasks, run them on Genesis, and treat fluid exposure to electronics as a hard failure mode.
-**FRs covered:** FR34
+**FRs covered:** FR14
 
 ### Epic 12: Validate deformables, stress, and breakage
 Users can reason about FEM-enabled materials, stress summaries, and breakage outcomes for structural tasks.
-**Relevant additional requirements:** `physics.fem_enabled`, stress objectives, breakage handling, stress summaries, stress heatmaps
+**FRs covered:** FR14
 
 ### Epic 13: Generate, clean, and recycle dataset-ready artifacts
 Researchers and companies can produce training- and RL-ready data from completed runs and filter polluted or underrepresented data.
-**FRs covered:** FR37
+**FRs covered:** FR15
 
 ## Epic 1: Provide agent runtime and persistence
 Users can execute agent actions in a session-scoped workspace with durable persistence, isolated execution, and fail-closed runtime gates.
 
 ### Story 1.1: Isolated session workspaces and durable artifacts
-As a human engineer, I want my controller-managed LLM agent to use a separate workspace and trace history for each episode, so that files, assets, and reasoning never leak across runs.
+As a human software engineer, I want my controller-managed LLM agent to use a separate workspace and trace history for each episode, so that files, assets, and reasoning never leak across runs.
 
 **Acceptance Criteria:**
 
@@ -272,7 +215,7 @@ As a human software engineer, I want my `Engineering` or `Benchmark` LLM agent t
 **Then** the response is a deterministic busy result and no internal queue is created
 
 ### Story 1.3: Classify validation and simulation outcomes
-As a human engineer, I want my `Engineering Coder` LLM agent to report distinct validation and simulation terminal states, so that I can trust robustness checks across jittered scenes.
+As a human software engineer, I want my `Engineering Coder` LLM agent to report distinct validation and simulation terminal states, so that I can trust robustness checks across jittered scenes.
 
 **Acceptance Criteria:**
 
@@ -282,7 +225,20 @@ As a human engineer, I want my `Engineering Coder` LLM agent to report distinct 
 
 **Given** one admitted job runs multiple jittered scenes
 **When** simulation completes
-**Then** pass/fail statistics are aggregated and outcomes are classified as goal-hit, forbid-hit, out-of-bounds, timeout, or instability
+**Then** pass/fail statistics are aggregated and outcomes are classified as goal-hit, forbid-hit, out-of-bounds, timeout, instability, or breakage
+
+### Story 1.4: Protect runtime mounts and generated manifests
+As a human software engineer, I want the runtime filesystem policy to keep shared mounts read-only and reject agent writes to protected paths, so that generated artifacts and policy directories stay isolated from workspace edits.
+
+**Acceptance Criteria:**
+
+**Given** an agent tries to write to `/utils`, `/skills`, `/reviews`, `/config`, or `.manifests/**`
+**When** the filesystem policy evaluates the request
+**Then** the write is rejected and the workspace remains unchanged
+
+**Given** the agent writes into the workspace root
+**When** the path is allowed by role policy
+**Then** the write succeeds without altering read-only mounted inputs
 
 ## Epic 2: Capture observability, lineage, and review evidence
 Users can reconstruct what happened, where, and why through complete traces, IDs, and evidence links.
@@ -312,6 +268,19 @@ As a human evaluator, I want every run artifact to carry joinable lineage IDs, s
 **Given** media is inspected for review
 **When** the media-inspection action is recorded
 **Then** the inspection event is linked to the exact episode and revision that was viewed
+
+### Story 2.3: Normalize worker event batches into canonical records
+As a human evaluator, I want worker-side `events.jsonl` batches to be ingested into canonical database rows, so that replay, audit, and dataset extraction use the same event source of truth.
+
+**Acceptance Criteria:**
+
+**Given** a worker finishes an episode and writes `events.jsonl`
+**When** the controller ingests the batch
+**Then** the events are normalized into canonical Postgres rows, ingestion is idempotent, and the rows remain joinable to the episode and revision
+
+**Given** `events.jsonl` is truncated, duplicated, or schema-invalid
+**When** ingestion runs
+**Then** ingestion fails closed and no success-like event state is persisted
 
 ## Epic 3: Build evaluation and verification infrastructure
 Users can validate handoff artifacts, enforce strict schema and cross-contract checks, and keep seeded and integration verification fail-closed.
@@ -359,6 +328,19 @@ As a human software engineer, I want my evaluation pipeline to fail closed on cr
 **When** the episode terminalizes
 **Then** it enters FAILED with structured terminal_reason and failure_class fields
 
+### Story 3.4: Keep generated API contracts in sync
+As a human software engineer, I want generated OpenAPI artifacts to stay synchronized with the controller and worker source contracts, so that client generation and integration tests never drift from the live API shape.
+
+**Acceptance Criteria:**
+
+**Given** controller, worker, or frontend API surfaces change
+**When** the repository hook flow runs
+**Then** `controller_openapi.json`, `worker_openapi.json`, and `frontend/openapi.json` regenerate from source contracts and stay in sync with the live API shape
+
+**Given** the generated schema or client artifacts are stale or invalid
+**When** integration verification runs
+**Then** the drift is treated as a failure and the change cannot pass as clean success
+
 ## Epic 4: Run planner, reviewer, coder, and refusal workflows
 Users can move benchmark and engineering work through the correct handoff gates with the right files, manifests, and submission controls.
 
@@ -376,7 +358,7 @@ As a human software engineer, I want my `Planner`, `Coder`, and `Reviewer` LLM a
 **Then** the operation is denied and reviewer writes remain limited to the stage-specific YAML pair
 
 ### Story 4.2: Author and submit engineering planner handoffs
-As a human engineer, I want my `Engineering Planner` LLM agent to create the required handoff files and submit them through the planner gate, so that the next stage receives a validated plan.
+As a human software engineer, I want my `Engineering Planner` LLM agent to create the required handoff files and submit them through the planner gate, so that the next stage receives a validated plan.
 
 **Acceptance Criteria:**
 
@@ -389,7 +371,7 @@ As a human engineer, I want my `Engineering Planner` LLM agent to create the req
 **Then** handoff fails closed and no success-like state is emitted
 
 ### Story 4.3: Review engineering plans and refusal evidence
-As a human engineer, I want my `Engineering Plan Reviewer` LLM agent to accept or refuse a plan with stage-specific YAML outputs, so that routing is deterministic and explainable.
+As a human software engineer, I want my `Engineering Plan Reviewer` LLM agent to accept or refuse a plan with stage-specific YAML outputs, so that routing is deterministic and explainable.
 
 **Acceptance Criteria:**
 
@@ -406,7 +388,7 @@ As a human engineer, I want my `Engineering Plan Reviewer` LLM agent to accept o
 **Then** the refusal is rejected and cannot route
 
 ### Story 4.4: Refuse infeasible engineering plans
-As a human engineer, I want my `Engineering Coder` LLM agent to implement approved plans or refuse infeasible ones with evidence, so that only viable plans proceed to simulation.
+As a human software engineer, I want my `Engineering Coder` LLM agent to implement approved plans or refuse infeasible ones with evidence, so that only viable plans proceed to simulation.
 
 **Acceptance Criteria:**
 
@@ -422,30 +404,43 @@ As a human engineer, I want my `Engineering Coder` LLM agent to implement approv
 **When** the reviewer confirms or rejects it
 **Then** routing follows the reviewer decision deterministically
 
+### Story 4.5: Review validated engineering executions
+As an `Engineering Execution Reviewer`, I want to inspect the latest validated implementation and simulation evidence, so that only the current revision can pass final review.
+
+**Acceptance Criteria:**
+
+**Given** the latest revision has valid validation and simulation artifacts
+**When** execution review starts
+**Then** `.manifests/engineering_execution_review_manifest.json` is present and tied to the latest revision
+
+**Given** the implementation is stale, over-actuated, or missing evidence
+**When** execution review runs
+**Then** the reviewer rejects it and persists the stage-specific decision/comments YAML pair
+
 ## Epic 5: Design manufacturable CAD solutions with validated materials and COTS
 Users can build priced, manufacturable mechanical solutions from real materials, joints, workbenches, and catalog parts.
 
 ### Story 5.1: Search COTS parts with reproducible metadata
-As a human engineer, I want my `Benchmark Planner` or `Engineering Planner` LLM agent to search the COTS catalog and carry selected part metadata into planning artifacts, so that component choices are real and reproducible.
+As a human software engineer, I want my `Benchmark Planner` or `Engineering Planner` LLM agent to search the COTS catalog and carry selected part metadata into planning artifacts, so that component choices are real and reproducible.
 
 **Acceptance Criteria:**
 
 **Given** a catalog query is issued
 **When** COTS search runs
-**Then** returned candidates include part identity, manufacturer, specs, price, and source or a no-match rationale, and the search does not mutate workspace state beyond allowed journal logging
+**Then** returned candidates include part identity, manufacturer, specs, price, source, and reproducibility metadata or a no-match rationale, and the search does not mutate workspace state beyond allowed journal logging
 
 **Given** a COTS part is selected
 **When** the plan is saved
 **Then** the part ID and catalog metadata are persisted into the plan and cost artifacts
 
 ### Story 5.2: Price manufacturable parts by workbench and material
-As a human engineer, I want my `Engineering Planner` LLM agent to use the selected manufacturing method, material, and drill operations for pricing and manufacturability checks, so that budget estimates match build reality.
+As a human software engineer, I want my `Engineering Planner` LLM agent to use the selected manufacturing method, material, and drill operations for pricing and manufacturability checks, so that budget estimates match build reality.
 
 **Acceptance Criteria:**
 
 **Given** a part uses a supported method and material
 **When** `validate_and_price` runs
-**Then** it returns cost and weight data or rejects the part if the combination is invalid
+**Then** it returns cost and weight data for supported workbench methods (`CNC`, `injection molding`, or `3D printing`) or rejects the part if the combination is invalid
 
 **Given** environment drilling is declared
 **When** pricing runs
@@ -456,7 +451,7 @@ As a human engineer, I want my `Engineering Planner` LLM agent to use the select
 **Then** they remain under the benchmark/customer caps
 
 ### Story 5.3: Map joints and fasteners to simulator constraints
-As a human engineer, I want my `Engineering Coder` LLM agent to map build123d joints and fasteners to simulator constraints, so that the solution is physically realizable instead of symbolic only.
+As a human software engineer, I want my `Engineering Coder` LLM agent to map build123d joints and fasteners to simulator constraints, so that the solution is physically realizable instead of symbolic only.
 
 **Acceptance Criteria:**
 
@@ -524,7 +519,7 @@ As a human engineer user, I want benchmark and engineering workspaces to share t
 
 **Given** either flow is opened
 **When** the workspace renders
-**Then** session history, chat, and right-side artifacts appear in the same shell layout
+**Then** session history, chat, and right-side artifacts appear in the same shell layout and are accessed through the controller-proxied asset path
 
 **Given** the panes are resized
 **When** the browser viewport changes
@@ -598,7 +593,7 @@ As a human engineer user, I want plan approval buttons, theme toggles, and feedb
 Users can author benchmark problems, validate geometry and randomization, and certify solved benchmark packages for engineering intake.
 
 ### Story 8.1: Author and submit benchmark planner handoffs
-As a human mechanical engineer, I want the benchmark flow to output validated designs using proven scientific simulation methods, so that I can trust the designs it hands me for review.
+As a Benchmark Planner, I want to produce the required benchmark handoff package, so that the benchmark can be reviewed and implemented from a valid, versioned contract.
 
 **Acceptance Criteria:**
 
@@ -611,20 +606,24 @@ As a human mechanical engineer, I want the benchmark flow to output validated de
 **Then** `.manifests/benchmark_plan_review_manifest.json` is created and the benchmark plan reviewer is unblocked
 
 ### Story 8.2: Review benchmark geometry and moving fixture behavior
-As a human mechanical engineer, I want to inspect the benchmark setup and the simulation evidence used to validate my design, so that I can understand how the system reached its result.
+As a Benchmark Plan Reviewer, I want to inspect the benchmark setup and latest validation evidence, so that I can reject ambiguous or unsafe benchmark contracts before implementation.
 
 **Acceptance Criteria:**
 
-**Given** benchmark-owned fixtures and objective zones exist
+**Given** benchmark-owned fixtures, objective zones, and a latest-revision `.manifests/benchmark_plan_review_manifest.json` exist
 **When** the reviewer checks the handoff
-**Then** intersections, missing motion-visible facts, or unjustified DOFs are rejected
+**Then** intersections, missing motion-visible facts, or unjustified DOFs are rejected and the stage-specific decision/comments YAML pair is written
+
+**Given** benchmark-owned fixtures, motion metadata, or benchmark-owned electronics are present
+**When** the reviewer inspects the plan
+**Then** the benchmark-owned inputs remain read-only and are not treated as engineer-owned outputs
 
 **Given** render images exist for the current revision
 **When** review runs
-**Then** the reviewer inspects the latest images with the dedicated media tool before approval
+**Then** the reviewer inspects the latest images with `inspect_media(...)` before approval
 
 ### Story 8.3: Implement benchmarks and generate preview artifacts
-As a human mechanical engineer, I want to see how my product behaves in the simulation that represents the real environment, so that I can judge whether the design will work before fabrication.
+As a Benchmark Coder, I want to implement the approved benchmark and generate preview artifacts, so that the benchmark is ready for deterministic review and downstream engineering intake.
 
 **Acceptance Criteria:**
 
@@ -641,7 +640,7 @@ As a human mechanical engineer, I want to see how my product behaves in the simu
 **Then** the validation preview uses MuJoCo by default and does not mutate the simulation backend choice
 
 ### Story 8.4: Review benchmark execution and hand off to engineering
-As a human mechanical engineer, I want the benchmark reviewer to certify the latest implementation against current simulation evidence, so that downstream engineering always starts from a verified target.
+As a Benchmark Reviewer, I want to certify the latest implementation against current simulation evidence, so that downstream engineering always starts from a verified target.
 
 **Acceptance Criteria:**
 
@@ -663,7 +662,7 @@ As a human engineer, I want my `Engineering Coder` LLM agent to run circuit vali
 
 **Given** a circuit has a short, open node, or overcurrent condition
 **When** validation runs
-**Then** the design is rejected before simulation
+**Then** the design is rejected before simulation with the appropriate explicit failure code (`FAILED_SHORT_CIRCUIT`, `FAILED_OPEN_CIRCUIT`, `FAILED_OVERCURRENT_SUPPLY`, or `FAILED_OVERCURRENT_WIRE`)
 
 **Given** a circuit is valid
 **When** validation completes
@@ -693,7 +692,7 @@ As a human engineer, I want my `Engineering Coder` LLM agent to respect clearanc
 
 **Given** tension exceeds the rated threshold
 **When** the simulation runs
-**Then** the wire tears, power is removed from the affected path, and the failure is reported
+**Then** the wire tears, power is removed from the affected path, and the failure is reported as `FAILED_WIRE_TORN`
 
 ## Epic 10: Solve powered electromechanical mechanisms
 Users can plan and optimize powered mechanisms with electrical planning, specialist review, and unified implementation.
@@ -705,7 +704,7 @@ As a human engineer, I want my `Electronics Planner` LLM agent to define power s
 
 **Given** a powered mechanism is required
 **When** the electronics planner writes the handoff
-**Then** the plan includes power supply availability, wiring constraints, and explicit electrical requirements
+**Then** the plan includes power supply availability, wiring constraints, and explicit electrical requirements in `assembly_definition.yaml.electronics`
 
 **Given** `submit_plan()` runs for electronics planning
 **When** the handoff is accepted
@@ -721,7 +720,7 @@ As a human engineer, I want my `Engineering Coder` LLM agent to implement mechan
 **Then** one coder revision contains both mechanical and electrical changes
 
 **Given** electronics-specific issues are found
-**When** the specialist reviewer checks the revision
+**When** the `Electronics Reviewer` checks the revision
 **Then** routing returns to the same coder rather than a separate implementation pass
 
 **Given** the unified revision passes validation, simulation, and specialist review
@@ -741,17 +740,25 @@ As a human engineer, I want my `Engineering Coder` LLM agent to support the appr
 **When** the runtime validates it
 **Then** the configuration fails closed before simulation proceeds
 
+**Given** the actuator is commanded beyond its force range or sustained overload limit
+**When** the simulation runs
+**Then** the failure is classified as `motor_overload` instead of being silently clamped away
+
 ## Epic 11: Model fluids and fluid-electronics coupling
 Users can define fluid tasks, run them on Genesis, and treat fluid exposure to electronics as a hard failure mode.
 
 ### Story 11.1: Author fluid benchmarks with backend selection
-As a human mechanical engineer, I want my `Benchmark Planner` LLM agent to define fluid tasks and backend expectations explicitly, so that Genesis-backed fluid runs are planned and reviewed consistently.
+As a Benchmark Planner, I want to define fluid tasks and backend expectations explicitly, so that Genesis-backed fluid runs are planned and reviewed consistently.
 
 **Acceptance Criteria:**
 
 **Given** a fluid benchmark is authored
 **When** the benchmark definition is saved
 **Then** it includes the fluid objects, objectives, and the backend choice needed for the run
+
+**Given** preview and final simulation use different backends
+**When** the benchmark is reviewed
+**Then** MuJoCo preview and Genesis validation remain separate contracts instead of being conflated
 
 **Given** the benchmark uses a non-fluid backend
 **When** the run is validated
@@ -764,11 +771,11 @@ As a human engineer, I want my `Engineering Coder` LLM agent to score fluid cont
 
 **Given** a fluid containment objective exists
 **When** the simulation completes
-**Then** the result reports pass/fail based on the configured threshold fraction of particles in the zone
+**Then** the result reports pass/fail based on the configured threshold fraction of particles in the zone and uses `FLUID_OBJECTIVE_FAILED` when it misses
 
 **Given** a flow-rate objective exists
 **When** the simulation completes
-**Then** the measured rate is compared to the target and failures are reported explicitly
+**Then** the measured rate is compared to the target and failures are reported explicitly as `FLUID_OBJECTIVE_FAILED` instead of being treated as a generic simulation miss
 
 ### Story 11.3: Treat fluid contact with powered electronics as a failure
 As a human engineer, I want my `Engineering Execution Reviewer` LLM agent to fail the run when fluid contacts powered electrical components, so that electromechanical designs remain realistic and safe.
@@ -797,7 +804,7 @@ As a human engineer, I want my `Engineering Coder` LLM agent to validate FEM-ena
 
 **Given** a deformable geometry is valid
 **When** meshing runs
-**Then** a tetrahedralized mesh is produced or repair fails closed with an explicit meshing error
+**Then** a tetrahedralized mesh is produced or repair fails closed with an explicit meshing error or `FAILED_ASSET_GENERATION`
 
 ### Story 12.2: Report stress summaries and breakage
 As a human engineer, I want my `Engineering Execution Reviewer` LLM agent to expose stress outputs and breakage reasons in the simulation result, so that structural failures are explainable.
@@ -810,7 +817,7 @@ As a human engineer, I want my `Engineering Execution Reviewer` LLM agent to exp
 
 **Given** a part exceeds ultimate stress
 **When** the simulation runs
-**Then** the run aborts or flags breakage with the part label, stress value, and location
+**Then** the run aborts or flags `PART_BREAKAGE` with the part label, stress value, and location
 
 ### Story 12.3: Surface deformable evidence for review
 As a human engineer, I want my `Engineering Execution Reviewer` LLM agent to make deformable results and stress objectives visible in the evidence chain, so that the final decision reflects actual structural behavior.
@@ -823,7 +830,7 @@ As a human engineer, I want my `Engineering Execution Reviewer` LLM agent to mak
 
 **Given** render or heatmap evidence exists for the current revision
 **When** review runs
-**Then** the reviewer inspects the evidence through the dedicated media tool before approval
+**Then** the reviewer inspects the evidence through `inspect_media(...)` before approval
 
 ## Epic 13: Generate, clean, and recycle dataset-ready artifacts
 Researchers and companies can produce training- and RL-ready data from completed runs and filter polluted or underrepresented data.
@@ -835,18 +842,18 @@ As a researcher or company building LLMs for mechanical and electronics engineer
 
 **Given** a benchmark or engineer run completes
 **When** artifacts are archived
-**Then** inputs, outputs, traces, renders, journals, and revision metadata are captured
+**Then** inputs, outputs, traces, renders, `journal.md`, review evidence, and revision metadata are captured
 
 **Given** the row is replayed later
 **When** I inspect the stored metadata
-**Then** the run can be restored without guessing missing files
+**Then** the run can be restored without guessing missing files, including refusal artifacts when they exist
 
 ### Story 13.2: Exclude polluted and invalid runs
 As a human dataset cleaner, I want to exclude integration tests, failed runs, and known-corrupted time windows, so that training data stays high quality.
 
 **Acceptance Criteria:**
 
-**Given** a run is an integration test or falls in a known-corrupted time range
+**Given** a run is an integration test or falls before `2026-03-03 00:00` Europe/Dublin, or otherwise lands in a known-corrupted time range
 **When** dataset generation runs
 **Then** the row is excluded
 
@@ -866,3 +873,7 @@ As a researcher or company building engineering-capable LLMs, I want the generat
 **Given** a row is created
 **When** metadata is stored
 **Then** it records the originating seed, generation kind, and parent lineage information
+
+**Given** the exact same starter artifact recurs across rows
+**When** the bundle is materialized
+**Then** shared boilerplate is reused from `shared/agent_templates/common/` instead of being duplicated in the row bundle
