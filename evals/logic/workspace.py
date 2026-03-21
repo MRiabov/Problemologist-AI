@@ -20,7 +20,7 @@ from controller.agent.node_entry_validation import (
 )
 from controller.clients.worker import WorkerClient
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
-from shared.agent_templates import load_agent_template_files
+from shared.agent_templates import load_common_template_files
 from shared.enums import AgentName, EvalMode
 
 
@@ -55,7 +55,7 @@ async def seed_eval_workspace(
 ) -> None:
     artifact_dir = resolve_seed_artifact_dir(item, root=root)
     inline_files = item.seed_files or {}
-    template_files = load_agent_template_files(agent_name)
+    template_files = load_common_template_files()
     if artifact_dir is None and not inline_files and not template_files:
         return
 

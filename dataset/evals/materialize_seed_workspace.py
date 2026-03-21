@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from evals.logic.models import EvalDatasetItem  # noqa: E402
-from shared.agent_templates import load_agent_template_files  # noqa: E402
+from shared.agent_templates import load_common_template_files  # noqa: E402
 from shared.enums import AgentName  # noqa: E402
 
 DATASET_ROOTS = (
@@ -206,9 +206,9 @@ def _write_inline_files(dst_root: Path, seed_files: dict[str, str] | None) -> li
     return copied
 
 
-def _write_template_files(dst_root: Path, agent_name: AgentName) -> list[str]:
+def _write_template_files(dst_root: Path) -> list[str]:
     copied: list[str] = []
-    for rel_path, content in load_agent_template_files(agent_name).items():
+    for rel_path, content in load_common_template_files().items():
         dst_path = dst_root / rel_path
         dst_path.parent.mkdir(parents=True, exist_ok=True)
         dst_path.write_text(content, encoding="utf-8")
@@ -334,7 +334,7 @@ def main() -> None:
     workspace_dir = _ensure_destination(args.output_dir, agent=agent, task_id=row.id)
 
     copied_paths: list[str] = []
-    copied_paths.extend(_write_template_files(workspace_dir, agent))
+    copied_paths.extend(_write_template_files(workspace_dir))
     artifact_dir = _resolve_seed_artifact_dir(row)
     if artifact_dir is not None:
         if not artifact_dir.exists():
