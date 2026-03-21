@@ -221,9 +221,10 @@ The preferred execution path for the agent is to run the submission script itsel
 
 `validate_costing_and_price`. Will:
 
-1. Validate pricing YAML file,
-2. Output a price in the terminal and warn if the file,
-3. Autopopulate some fields to prevent forcing LLMs into calculating or inserting them (e.g., will populate max_unit_cost fields in the Engineering Planner.)
+1. Validate the pricing YAML file.
+2. Deterministically compute and normalize cost/weight totals to cent precision from the declared parts and manufacturing inputs.
+3. Overwrite the workspace file with the normalized numeric totals so the file on disk is the exit-time source of truth, not the LLM's draft.
+4. Reject handoff if a later node-entry equality check would not reproduce the same totals exactly.
 <!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
 
 `submit_plan()`. Will:
@@ -240,7 +241,8 @@ The preferred execution path for the agent is to run the submission script itsel
    - derive `constraints.max_unit_cost` and `constraints.max_weight_g` as `1.5x` those estimate fields,
    - reject planner handoff if those estimate fields are missing, non-numeric, or non-positive.
 7. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
-8. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
+8. For planner handoffs with machine-readable pricing totals, the persisted file must exactly match the script-normalized values at node entry; any cent-level drift is a hard failure even when the YAML remains schema-valid.
+9. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
 Structured-output validation contract for planner/reviewer YAML artifacts:
 

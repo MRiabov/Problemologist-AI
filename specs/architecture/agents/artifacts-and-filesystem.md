@@ -446,6 +446,8 @@ Files are linted and don't pass execution/submission if they have red errors. Re
 To prevent unusual bugs in agent state management on entry (e.g., missing plan when entering coder), we add an extra layer of security before node entry - in every node we have a function that validates the input. If it fails, the loops back to the previous graph node. 
 Notably, during integration tests this simply fail fast as this led to infinite loops.
 
+Planner handoffs that include machine-readable costing totals are part of this node-entry contract. The entry validator must compare the persisted totals against the deterministic script-normalized values and fail closed on any cent-level drift, even when the YAML still parses and the file structure is otherwise valid.
+
 ## Starting folder structure for various agents
 
 We define the file structure as follows, individual agents adapt to individual needs:

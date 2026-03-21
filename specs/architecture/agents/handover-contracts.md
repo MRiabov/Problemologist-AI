@@ -429,10 +429,10 @@ Expected flow:
     - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
     - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
 3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
-    - The script validates schema consistency and computes assembly totals.
-    - The script auto-populates the unit cost and weight to the benchmark_definition.yaml file (unless the file is corrupted).
-4. If totals exceed `max_unit_cost` (or other numeric constraints), planner must re-plan before handoff.
-5. Planner writes planner-owned constraints in `benchmark_definition.yaml` using validated assembly totals, under benchmark/customer caps.
+    - The script is the canonical calculator for `assembly_definition.yaml`: it validates schema consistency, computes assembly totals to cent precision, and writes normalized numeric totals back into the workspace file.
+    - The planner does not hand-author the final aggregate cost/weight values; those values come from the script output.
+4. If totals exceed `max_unit_cost` (or other numeric constraints), or if node-entry revalidation does not reproduce the same cent-precision totals exactly, planner must re-plan before handoff.
+5. Planner may restate the validated totals in prose, but the written YAML totals remain the source of truth and must match the script output exactly on node entry.
 6. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
 7. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
 
@@ -461,6 +461,7 @@ Minimum per-COTS-part fields:
 - `part_id`, `manufacturer`, `unit_cost_usd`, `source`
 
 Note: I will restate: any field that can be autopopulated is autopopulated. E.g. here the mandatory fields are only `part_id`, `manufacturer`, `source`, the `price` can be pulled from DB (errors are not triggered during validation too, however if it mismatches, the fields must be overwritten and the right price used.)
+Final cost and weight totals are never LLM-authored; they are derived by script, rounded to cents, persisted, and rejected on node entry if the persisted values drift from the deterministic calculation.
 
 Required assembly fields:
 
