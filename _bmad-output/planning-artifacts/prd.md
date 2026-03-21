@@ -425,6 +425,12 @@ Security, accessibility, and broad scalability remain out of scope for Phase 1 b
 - Planning and review requests shall return an initial response within 2 seconds at the 95th percentile while heavy evaluation is pending.
 - Repeated validation of the same unchanged revision shall produce 0 new heavy evaluations and shall return the previously persisted result or a no-op status.
 
+### Local CLI Agent Flexibility
+- The system shall support an optional local, headless CLI agent path for development and eval-debug runs, so benchmark work can be executed from the workspace through a command-line agent instead of the default controller-backed path.
+- The supported local agent implementations shall be pluggable and may include Codex CLI, Claude Code CLI, Gemini CLI, OpenHands, or equivalent CLI coding agents, provided they can operate within the workspace contract and produce the required artifacts.
+- The local CLI path shall be optional and non-exclusive: it shall coexist with the default controller-backed runtime and external provider-based execution, and it shall not require an additional model-provider hop from the Problemologist runtime for every debugging loop, even if the selected CLI agent proxies to upstream model APIs internally.
+- The system shall fail closed when the selected CLI agent is unavailable, misconfigured, or cannot satisfy the workspace, prompt, or artifact-validation contracts, rather than silently switching to another agent or provider.
+
 ### Reliability and Fail-Closed Behavior
 - Any request with missing artifacts, invalid schemas, stale manifests, unsupported mechanisms, invalid circuits, or missing review evidence shall end in terminal failure with no success state.
 - Partial output, inferred success, and silent fallback shall never be classified as success.
