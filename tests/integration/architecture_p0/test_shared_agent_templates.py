@@ -12,15 +12,15 @@ def test_common_agent_templates_match_worker_light_starters():
     assert set(templates) == {"journal.md", "script.py", "todo.md"}
 
     worker_light_root = Path("worker_light/agent_files")
-    assert templates["script.py"] == (
-        worker_light_root / "script.py"
-    ).read_text(encoding="utf-8")
-    assert templates["todo.md"] == (
-        worker_light_root / "todo.md"
-    ).read_text(encoding="utf-8")
-    assert templates["journal.md"] == (
-        worker_light_root / "journal.md"
-    ).read_text(encoding="utf-8")
+    assert templates["script.py"] == (worker_light_root / "script.py").read_text(
+        encoding="utf-8"
+    )
+    assert templates["todo.md"] == (worker_light_root / "todo.md").read_text(
+        encoding="utf-8"
+    )
+    assert templates["journal.md"] == (worker_light_root / "journal.md").read_text(
+        encoding="utf-8"
+    )
     assert load_template_text("common/script.py") == templates["script.py"]
 
 

@@ -4,7 +4,11 @@ import uuid
 
 import httpx
 import pytest
+import yaml
 
+from controller.agent.node_entry_validation import (
+    validate_seeded_workspace_handoff_artifacts,
+)
 from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
@@ -12,8 +16,21 @@ from controller.api.schemas import (
     EpisodeCreateResponse,
     EpisodeResponse,
 )
+from controller.clients.worker import WorkerClient
 from shared.enums import AgentName, EntryFailureDisposition, EpisodeStatus, TraceType
-from shared.models.schemas import EntryValidationContext
+from shared.models.schemas import (
+    AssemblyConstraints,
+    AssemblyDefinition,
+    BenchmarkDefinition,
+    BoundingBox,
+    Constraints,
+    CostTotals,
+    EntryValidationContext,
+    MovedObject,
+    ObjectivesSection,
+)
+
+WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
@@ -75,6 +92,109 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
         and trace.name == node_name
         and "Starting task phase" in (trace.content or "")
     ]
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
+    """
+    INT-184: Seeded planner entry must reject copied benchmark caps that diverge
+    from benchmark_definition.yaml.
+    """
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        benchmark_definition = BenchmarkDefinition(
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(
+                    min=(10.0, 10.0, 10.0),
+                    max=(20.0, 20.0, 20.0),
+                ),
+                forbid_zones=[],
+                build_zone=BoundingBox(
+                    min=(-50.0, -50.0, 0.0),
+                    max=(50.0, 50.0, 100.0),
+                ),
+            ),
+            benchmark_parts=[
+                {
+                    "part_id": "environment_fixture",
+                    "label": "environment_fixture",
+                    "metadata": {
+                        "fixed": True,
+                        "material_id": "aluminum_6061",
+                    },
+                }
+            ],
+            simulation_bounds=BoundingBox(
+                min=(-100.0, -100.0, 0.0),
+                max=(100.0, 100.0, 100.0),
+            ),
+            moved_object=MovedObject(
+                label="ball",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0.0, 0.0, 50.0),
+                runtime_jitter=(0.0, 0.0, 0.0),
+            ),
+            constraints=Constraints(max_unit_cost=54.0, max_weight_g=950.0),
+        )
+        assembly_definition = AssemblyDefinition(
+            version="1.0",
+            constraints=AssemblyConstraints(
+                benchmark_max_unit_cost_usd=95.0,
+                benchmark_max_weight_g=1800.0,
+                planner_target_max_unit_cost_usd=90.0,
+                planner_target_max_weight_g=1700.0,
+            ),
+            manufactured_parts=[],
+            cots_parts=[],
+            final_assembly=[],
+            totals=CostTotals(
+                estimated_unit_cost_usd=0.0,
+                estimated_weight_g=0.0,
+                estimate_confidence="high",
+            ),
+        )
+
+        await worker.upload_file(
+            "benchmark_definition.yaml",
+            yaml.safe_dump(
+                benchmark_definition.model_dump(mode="json", by_alias=True),
+                sort_keys=False,
+            ).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+        await worker.upload_file(
+            "assembly_definition.yaml",
+            yaml.safe_dump(
+                assembly_definition.model_dump(mode="json", by_alias=True),
+                sort_keys=False,
+            ).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected mismatched benchmark caps to fail validation."
+    assert any(error.artifact_path == "assembly_definition.yaml" for error in errors), (
+        errors
+    )
+    assert any(
+        "benchmark_max_unit_cost_usd" in error.message
+        and "benchmark_definition.constraints.max_unit_cost" in error.message
+        for error in errors
+    ), errors
+    assert any(
+        "benchmark_max_weight_g" in error.message
+        and "benchmark_definition.constraints.max_weight_g" in error.message
+        for error in errors
+    ), errors
 
 
 @pytest.mark.integration_p0
