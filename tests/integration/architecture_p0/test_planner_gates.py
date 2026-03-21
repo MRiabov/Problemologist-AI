@@ -14,6 +14,7 @@ from controller.api.schemas import (
     AgentRunResponse,
     BenchmarkGenerateRequest,
     BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeResponse,
 )
 from shared.enums import AgentName, EpisodeStatus, TraceType
@@ -320,6 +321,42 @@ async def _wait_for_benchmark_asset(
     return matched_paths
 
 
+async def _generate_ready_benchmark_session(
+    client: httpx.AsyncClient, *, prompt: str
+) -> str:
+    req = BenchmarkGenerateRequest(prompt=prompt, backend=SimulatorBackendType.GENESIS)
+    resp = await client.post(
+        f"{CONTROLLER_URL}/benchmark/generate", json=req.model_dump(mode="json")
+    )
+    assert resp.status_code in {200, 202}, resp.text
+    run_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+    benchmark_session_id = str(run_resp.session_id)
+
+    confirmed = False
+    for _ in range(150):
+        status_resp = await client.get(
+            f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}"
+        )
+        if status_resp.status_code == 200:
+            sess_data = EpisodeResponse.model_validate(status_resp.json())
+            if sess_data.status == EpisodeStatus.PLANNED and not confirmed:
+                await client.post(
+                    f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}/confirm",
+                    json=ConfirmRequest(comment="Proceed").model_dump(),
+                )
+                confirmed = True
+            elif sess_data.status == EpisodeStatus.COMPLETED:
+                return benchmark_session_id
+            elif sess_data.status == EpisodeStatus.FAILED:
+                pytest.fail(
+                    "Benchmark generation failed during setup "
+                    f"(session_id={benchmark_session_id})."
+                )
+        await asyncio.sleep(2)
+
+    pytest.fail("Benchmark generation failed or timed out during setup.")
+
+
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(
     regexes=[
@@ -416,11 +453,15 @@ async def test_int_005_mandatory_artifacts_gate(
 async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
     """INT-005: Engineer planner must emit explicit submit_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
+        benchmark_session_id = await _generate_ready_benchmark_session(
+            client, prompt="INT-005 benchmark setup for engineer planner trace test."
+        )
         session_id = f"INT-005-{uuid.uuid4().hex[:8]}"
         req = AgentRunRequest(
             task="INT-005 engineer planner submission trace contract.",
             session_id=session_id,
             agent_name=AgentName.ENGINEER_PLANNER,
+            metadata_vars={"benchmark_id": benchmark_session_id},
         )
         resp = await client.post(
             f"{CONTROLLER_URL}/api/agent/run", json=req.model_dump(mode="json")
@@ -452,11 +493,16 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
 async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
     """INT-113: Electronics planner must emit explicit submit_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
+        benchmark_session_id = await _generate_ready_benchmark_session(
+            client,
+            prompt="INT-113 benchmark setup for electronics planner trace test.",
+        )
         session_id = f"INT-113-{uuid.uuid4().hex[:8]}"
         req = AgentRunRequest(
             task="INT-113 electronics planner submission trace contract.",
             session_id=session_id,
             agent_name=AgentName.ELECTRONICS_PLANNER,
+            metadata_vars={"benchmark_id": benchmark_session_id},
         )
         resp = await client.post(
             f"{CONTROLLER_URL}/api/agent/run", json=req.model_dump(mode="json")
