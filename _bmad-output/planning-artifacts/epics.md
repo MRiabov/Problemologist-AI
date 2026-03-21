@@ -2,6 +2,8 @@
 stepsCompleted:
   - step-01-validate-prerequisites
   - step-02-design-epics
+  - step-03-create-stories
+  - step-04-final-validation
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/architecture.md
@@ -392,8 +394,6 @@ As a human engineer, I want to review a colleague's solution under runtime jitte
 **Given** the solution is robust across the required jitter cases
 **When** I review it
 **Then** I can approve it for the next workflow stage
-
-<!-- Remaining epic sections will be appended sequentially during story generation. -->
 
 ## Epic 3: Cost, Weight, and Manufacturability
 Human operators can validate solutions against cost, weight, and manufacturability constraints using real manufacturing and COTS data, and the system can prefer simpler valid designs over more complex ones when multiple candidates satisfy the same benchmark.
