@@ -239,7 +239,7 @@ Users can reason about FEM-enabled materials, stress summaries, and breakage out
 **Relevant additional requirements:** `physics.fem_enabled`, stress objectives, breakage handling, stress summaries, stress heatmaps
 
 ### Epic 13: Generate, clean, and recycle dataset-ready artifacts
-Users can produce training and evaluation data from completed runs and filter polluted or underrepresented data.
+Researchers and companies can produce training- and RL-ready data from completed runs and filter polluted or underrepresented data.
 **FRs covered:** FR37
 
 ## Epic 1: Provide agent runtime and persistence
@@ -259,7 +259,7 @@ As a human engineer, I want my controller-managed LLM agent to use a separate wo
 **Then** previously persisted artifacts and trace history are still available
 
 ### Story 1.2: Route heavy work off the controller
-As a human engineer, I want my `Engineering` or `Benchmark` LLM agent to run validation and simulation through the heavy-worker path, so that long-running work is isolated and durable.
+As a human software engineer, I want my `Engineering` or `Benchmark` LLM agent to run validation and simulation through the heavy-worker path, so that long-running work is isolated and durable, but my controller and light worker servers remain responsive.
 
 **Acceptance Criteria:**
 
@@ -598,7 +598,7 @@ As a human engineer user, I want plan approval buttons, theme toggles, and feedb
 Users can author benchmark problems, validate geometry and randomization, and certify solved benchmark packages for engineering intake.
 
 ### Story 8.1: Author and submit benchmark planner handoffs
-As a human benchmark designer, I want my `Benchmark Planner` LLM agent to author the benchmark plan, todo, definition, and assembly draft, so that a benchmark can be handed to review with explicit costs and motion facts.
+As a human mechanical engineer, I want the benchmark flow to output validated designs using proven scientific simulation methods, so that I can trust the designs it hands me for review.
 
 **Acceptance Criteria:**
 
@@ -611,7 +611,7 @@ As a human benchmark designer, I want my `Benchmark Planner` LLM agent to author
 **Then** `.manifests/benchmark_plan_review_manifest.json` is created and the benchmark plan reviewer is unblocked
 
 ### Story 8.2: Review benchmark geometry and moving fixture behavior
-As a human benchmark designer, I want my `Benchmark Plan Reviewer` LLM agent to validate geometry, randomization, and moving fixture behavior, so that only solvable benchmark contracts proceed.
+As a human mechanical engineer, I want to inspect the benchmark setup and the simulation evidence used to validate my design, so that I can understand how the system reached its result.
 
 **Acceptance Criteria:**
 
@@ -624,7 +624,7 @@ As a human benchmark designer, I want my `Benchmark Plan Reviewer` LLM agent to 
 **Then** the reviewer inspects the latest images with the dedicated media tool before approval
 
 ### Story 8.3: Implement benchmarks and generate preview artifacts
-As a human benchmark designer, I want my `Benchmark Coder` LLM agent to implement the approved benchmark and generate static preview artifacts, so that the downstream `Engineering` LLM agents receive a valid, inspectable environment.
+As a human mechanical engineer, I want to see how my product behaves in the simulation that represents the real environment, so that I can judge whether the design will work before fabrication.
 
 **Acceptance Criteria:**
 
@@ -641,7 +641,7 @@ As a human benchmark designer, I want my `Benchmark Coder` LLM agent to implemen
 **Then** the validation preview uses MuJoCo by default and does not mutate the simulation backend choice
 
 ### Story 8.4: Review benchmark execution and hand off to engineering
-As a human benchmark designer, I want my `Benchmark Reviewer` LLM agent to validate the implemented benchmark against latest-revision evidence, so that the downstream `Engineering` LLM agents receive a solved, verified target.
+As a human mechanical engineer, I want the benchmark reviewer to certify the latest implementation against current simulation evidence, so that downstream engineering always starts from a verified target.
 
 **Acceptance Criteria:**
 
@@ -745,7 +745,7 @@ As a human engineer, I want my `Engineering Coder` LLM agent to support the appr
 Users can define fluid tasks, run them on Genesis, and treat fluid exposure to electronics as a hard failure mode.
 
 ### Story 11.1: Author fluid benchmarks with backend selection
-As a human benchmark designer, I want my `Benchmark Planner` LLM agent to define fluid tasks and backend expectations explicitly, so that Genesis-backed fluid runs are planned and reviewed consistently.
+As a human mechanical engineer, I want my `Benchmark Planner` LLM agent to define fluid tasks and backend expectations explicitly, so that Genesis-backed fluid runs are planned and reviewed consistently.
 
 **Acceptance Criteria:**
 
@@ -826,10 +826,10 @@ As a human engineer, I want my `Engineering Execution Reviewer` LLM agent to mak
 **Then** the reviewer inspects the evidence through the dedicated media tool before approval
 
 ## Epic 13: Generate, clean, and recycle dataset-ready artifacts
-Users can produce training and evaluation data from completed runs and filter polluted or underrepresented data.
+Researchers and companies can produce training- and RL-ready data from completed runs and filter polluted or underrepresented data.
 
 ### Story 13.1: Persist dataset-ready artifact bundles
-As a human dataset pipeline operator, I want completed runs to persist all relevant artifacts and metadata, so that training rows can be reconstructed later.
+As a researcher or company building LLMs for mechanical and electronics engineering, I want the dataset produced by this software to be directly usable for training, so that I do not need a custom conversion pipeline.
 
 **Acceptance Criteria:**
 
@@ -855,7 +855,7 @@ As a human dataset cleaner, I want to exclude integration tests, failed runs, an
 **Then** it is not promoted into the complete-pass dataset
 
 ### Story 13.3: Prioritize underrepresented seeds
-As a human dataset generator, I want to bias toward underrepresented seeds and track lineage, so that the corpus becomes balanced and reproducible.
+As a researcher or company building engineering-capable LLMs, I want the generator to prioritize underrepresented seeds and preserve lineage, so that I can use this software to create RL environments or augment my training data without losing provenance.
 
 **Acceptance Criteria:**
 

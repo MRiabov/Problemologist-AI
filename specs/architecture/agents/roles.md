@@ -39,6 +39,7 @@ The benchmarks are consisting of CAD models which are converted into XML.
   - MJCF is verified for correctness by XML schema and by backend-parity coverage in dedicated simulation tests.
   - The fast validation-preview path uses MuJoCo for static handoff renders by default; it is not itself a Genesis-runtime proof path.
 - MJCF is created programmatically, not by a LLM.
+- Authored top-level part labels must be unique and must not be `environment` or start with `zone_`; those names are reserved for the scene root and simulator-generated objective bodies and collide with MJCF mesh/body naming if reused.
 <!-- I will need to experiment, but I don't think the LLM should be able to edit it.  ->
 
 ## Benchmarks

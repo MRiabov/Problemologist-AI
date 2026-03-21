@@ -9,6 +9,10 @@ stepsCompleted:
   - step-05-domain
   - step-06-innovation
   - step-07-project-type
+  - step-08-scoping
+  - step-09-functional
+  - step-10-nonfunctional
+  - step-11-polish
 inputDocuments:
   - specs/desired_architecture.md
   - specs/architecture/primary-system-objectives.md
@@ -64,9 +68,9 @@ workflowType: 'prd'
 **Date:** 2026-03-20
 
 ## Executive Summary
-Problemologist-AI is an open-source engineering platform for solving real engineering problems end to end, with scope very clearly bounded by the human engineer. It starts with mechanical engineering, extends into electromechanical systems, and can optionally cover fluids. The primary users are hardware engineers, product teams, and builders who need verified designs; the secondary users are LLM researchers and companies that need high-signal engineering benchmarks, solution traces, and training data. The platform addresses two gaps at once: current LLMs are not yet reliable enough for unconstrained engineering autonomy, and the field lacks open, high-quality datasets that reflect real design, validation, and review workflows.
+Problemologist-AI is an open-source engineering platform for solving real engineering problems end to end. A human engineer defines the benchmark as the solution verification setup, and the system returns a verified design solution to that benchmark. Scope remains bounded by the human engineer. The platform starts with mechanical engineering, extends into electromechanical systems, and can optionally cover fluids. The primary users are hardware engineers, product teams, and builders who need verified designs; the secondary users are LLM researchers and companies that need high-signal engineering benchmarks, solution traces, and training data. The platform addresses two gaps at once: current LLMs are not yet reliable enough to solve engineering work without strict verification, and the field lacks open, high-quality datasets that reflect real design, validation, and review workflows.
 
-Problemologist-AI combines solution generation with an evidence-preserving dataset loop. The solver workflow takes a bounded problem statement, decomposes it, generates candidate concepts, validates them against physics, manufacturability, cost, weight, and review constraints, and iterates until the artifact is acceptable. In parallel, the system preserves the benchmarks, reasoning traces, solved examples, reviewer feedback, and optimization notes needed to train and evaluate future engineering-capable models. The result is both a practical engineering tool and a reusable research infrastructure.
+Problemologist-AI combines solution generation with an evidence-preserving dataset loop. The solution workflow takes a benchmark, generates candidate concepts, validates them against physics, manufacturability, cost, weight, and review constraints, and iterates until the artifact is acceptable. In parallel, the system preserves the benchmarks, reasoning traces, solved examples, reviewer feedback, and optimization notes needed to train and evaluate future engineering-capable models. The result is both a practical engineering tool and a reusable research infrastructure.
 
 ### What Makes This Special
 Problemologist-AI does not treat dataset generation as a side effect. It treats solving and data production as a single closed loop. The product is differentiated by the fact that every engineering attempt can become reusable training signal: the benchmark, the solution, the failure modes, the review comments, and the optimized but unused alternatives remain available as open-source artifacts.
@@ -87,6 +91,7 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 - A human engineer can define a bounded mechanical or electromechanical problem, review the plan, and receive a verified design package without manual artifact repair.
 - The user can tell why a candidate solution passed or failed from the trace, review, and simulation evidence alone.
 - The workflow reduces manual iteration needed to reach a reviewable solution.
+- The user can correct a live run by steering the agent with selected CAD or code context instead of restarting the episode.
 
 ### Business Success
 - The platform reliably solves bounded engineering problems that are useful in real workflows, starting with mechanical tasks and extending to electromechanical tasks.
@@ -110,23 +115,72 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 
 ## Product Scope
 
-### MVP - Minimum Viable Product
-- Bounded mechanical problem solving.
-- Benchmark generation, planning, review gates, simulation validation, and trace persistence.
-- Open-source export of benchmarks, solved examples, and execution traces.
-- Secondary inspection UI for reviewing outputs and evidence.
-- Debuggability and observability are Phase 1 requirements: runtime behavior must align with real application features and documentation, feedback loops must be fast, fallback paths must be explicit and logged, terminal reasons must be deterministic, and logs/traces must make failures reproducible.
+### MVP Strategy & Philosophy
+Phase 1 should launch as a problem-solving MVP with debugging-first instrumentation. The first useful outcome is a verified episode that solves a bounded mechanical task, produces a dataset row, and can be diagnosed when it fails. Phase 1 should optimize for correctness, replayability, and triage speed rather than platform breadth.
 
-### Growth Features (Post-MVP)
-- Electromechanical planning and validation.
-- Jitter-randomization robustness.
-- Better dataset packaging, metrics, and export paths.
-- Broader benchmark coverage and richer review tooling.
+### Resource Requirements
+A lean core team is sufficient for Phase 1 if the team has one owner for the agentic/environment loop and one owner for infra/CAD/simulation. Explicit capacity must be reserved for observability, failure triage, and replayable debugging, because the environment is expensive to debug without those controls.
 
-### Vision (Future)
-- Fluids and broader multiphysics.
-- Better generalization across benchmark families.
-- A reusable open-source infrastructure layer for engineering benchmark creation, solution generation, and model training.
+### MVP Feature Set (Phase 1)
+**Core User Journeys Supported:**
+- Mechanical engineer receives a verified design they can trust.
+- Mechanical engineer inspects validation and simulation.
+- Researcher or company exports solved episodes for training or evaluation.
+- Dataset operator or curator keeps the corpus usable.
+- Developer or maintainer can reproduce and diagnose failures quickly.
+
+**Must-Have Capabilities:**
+- Session and episode isolation with explicit lineage.
+- Sequential role-specific agents with handoff artifacts.
+- Bounded mechanical benchmark generation.
+- Bounded mechanical solving end to end.
+- Plan/review/validate/simulate loop.
+- Render and media inspection.
+- Interactive steerability: users can interrupt a live run and send corrective prompts with structured CAD/code context. A selected CAD entity means a face, a part/body, or a subassembly from the active model. The CAD viewer supports switching between face, part/body, and subassembly selection modes, and the code viewer supports selected code ranges.
+- Manufacturability and cost checks.
+- Fail-closed terminal states.
+- Dataset persistence and export of complete episodes.
+- Open-source artifact bundles.
+- Batch seed variation for repeatable data generation.
+- Structured traces, logs, and failure classification for every episode.
+- Replayable failed runs with enough context to reproduce the issue.
+- Deterministic terminal reasons and error codes.
+- Debuggability aligned to documented, real application behavior, not hidden fallback paths.
+
+### Debuggability Requirements (Phase 1)
+- Runtime behavior must align with real application features and documentation.
+- Feedback loops must surface actionable state and failure reasons early enough to support iterative debugging.
+- Fallback paths must be explicit, logged, and visible in the failure reason.
+- Logs and traces must make failures reproducible without reconstruction.
+- Deterministic terminal reasons must distinguish success, refusal, invalid input, missing artifact, unsupported behavior, and simulation failure.
+- Failed episodes must remain replayable from persisted artifacts and traces.
+
+### Post-MVP Features
+**Phase 2 Growth:**
+- Electromechanical tasks with powered mechanisms and circuit validation.
+- Robustness and jitter-heavy evaluation.
+- Richer dataset packaging and consumer tooling.
+- Improved analytics and inspection UX.
+- Optional collaboration features if they become necessary.
+
+**Phase 3 Expansion:**
+- Fluids, deformables, and broader multiphysics.
+- Broader benchmark families and more agent roles.
+- Open-source framework polish.
+- External integrations and ecosystem features.
+- Platform hardening if multi-user needs emerge later.
+
+### Non-Goals
+- Auth and multitenancy are out of scope for Phase 1.
+- Generic platform features that do not improve verified episode quality are out of scope.
+- Broad collaboration workflows are out of scope until the environment loop is stable.
+
+### Risk Mitigation Strategy
+**Technical Risks:** keep the first release to a narrow mechanical task class, keep the agent chain short and sequential, fail closed on invalid artifacts, keep preview simulation separate from proof simulation, and use debuggability as a first-order constraint.
+
+**Market Risks:** make the MVP useful to a single human engineer first, ensure every solved episode becomes a dataset row, and prove training-data value with concrete exports and reproducibility.
+
+**Resource Risks:** if bandwidth gets tight, cut collaboration and platform polish before cutting the environment loop, validation gates, dataset persistence, or debug tooling.
 
 ## User Journeys
 
@@ -147,16 +201,21 @@ This journey reveals requirements for inspectable validation setup, simulation p
 ### Journey 3: Researcher or Company Reuses the Dataset
 A researcher or company building engineering-capable LLMs wants the data this software produces to be directly useful for training and evaluation. They are not looking for a one-off design result. They want complete, structured episodes with traces, decisions, solutions, and lineage metadata that can flow into a training or RL pipeline.
 
-They export solved episodes, filter by benchmark family or seed coverage, and check that the schema is stable enough to automate ingestion. If any episode is missing artifacts or has polluted lineage, the data is not useful to them.
+They export solved episodes, filter by benchmark family or seed coverage, and check that the schema is stable enough to automate ingestion. If any episode is missing artifacts or has invalid lineage, the data is not useful to them.
 
 This journey reveals requirements for dataset export, schema stability, lineage metadata, reproducibility, and RL-ready packaging.
 
 ### Journey 4: Dataset Operator or Curator Keeps the Corpus Usable
-A human dataset operator or curator watches the generated corpus over time. They review coverage across problem families, remove polluted or incomplete data, and prioritize underrepresented seeds so the dataset stays balanced and useful.
+A human dataset operator or curator watches the generated corpus over time. They review coverage across problem families, remove invalid or incomplete data, and prioritize underrepresented seeds so the dataset stays balanced and useful.
 
 Their work is not about solving engineering tasks. It is about keeping the open-source corpus trustworthy and training-ready. They need lineaged evidence, quality checks, and cleanup controls strong enough to separate a genuinely useful episode from a superficially successful but unusable one.
 
 This journey reveals requirements for dataset cleaning, coverage management, seed prioritization, failure classification, and operational observability.
+
+### Journey 5: Human Engineer Steers a Live Run
+A human engineer notices a wrong local choice in a live run. They select the relevant CAD entity, such as a face, a part/body, or a subassembly, or they select a code range, attach it to a corrective prompt, and the next agent turn uses that context to produce a more targeted edit without restarting the episode.
+
+This journey reveals requirements for live steering, selection-mode switching, and auditable prompt context.
 
 ### Journey Requirements Summary
 - The primary human user is a mechanical engineer, not a benchmark designer persona.
@@ -188,15 +247,16 @@ This journey reveals requirements for dataset cleaning, coverage management, see
 - Benchmark-owned fixtures and benchmark-owned electronics are read-only context unless the benchmark explicitly declares engineer interaction through its verification setup.
 - Moving benchmarks require dynamic evidence for approval; static validation preview is context, not proof of motion behavior.
 - Benchmark-owned fixtures may be drilled when the benchmark verification setup explicitly allows it, and those drilling operations must be priced; this is the mechanism for attaching or constraining parts to an environment, such as fixing a machine to the floor or wall.
-- Fluids, deformables, and stress-aware tasks require Genesis for final validation, while MuJoCo remains the fast preview path.
+- Fluids, deformables, and stress-aware tasks require Genesis for final validation, while MuJoCo remains the preview path.
 - Benchmark-owned fixtures, electronics, and motion context are read-only environment inputs, not engineer-owned outputs.
 
 ### Integration Requirements
-- Controller-first orchestration remains the product path for planning, validation, review, and retrieval.
-- Heavy validation and simulation stay behind durable workflows.
+- Workflow orchestration remains coherent across planning, validation, review, and retrieval.
+- Heavy validation and simulation expose persisted status and results without losing episode context.
 - Observability must preserve session, episode, simulation, review, and seed lineage.
-- The frontend must expose validation evidence, simulation playback, and benchmark setup inspection.
-- Dataset generation must support reproducible export, seed prioritization, and filtering of polluted or incomplete episodes.
+- The UI must expose validation evidence, simulation playback, and benchmark setup inspection.
+- The UI must expose removable context cards for selected faces, parts/bodies, subassemblies, and code ranges, and steering actions must be reflected in persisted traces.
+- Dataset generation must support reproducible export, seed prioritization, and filtering of invalid or incomplete episodes.
 
 ### Risk Mitigations
 - Fail closed on missing manifests, invalid schemas, stale evidence, unsupported components, or invalid circuits.
@@ -277,7 +337,7 @@ Problemologist-AI is a simulation-backed RL environment for engineering tasks an
 
 #### Workflow roles
 - Planner, coder, and reviewer roles are policy layers acting inside the environment.
-- The environment must preserve a clear distinction between benchmark authoring episodes and engineering solving episodes.
+- The environment must preserve a clear distinction between benchmark-definition episodes and engineering solving episodes.
 - The React UI is an inspection surface for environment state and evidence, not the source of truth for workflow state.
 
 ### Implementation Considerations
@@ -291,3 +351,98 @@ Problemologist-AI is a simulation-backed RL environment for engineering tasks an
 - This is not a SaaS backend first and not a generic API product.
 - It is a simulation-backed RL environment for engineering tasks and benchmark generation.
 - The primary deliverable is a verified episode and its reusable dataset artifacts.
+
+## Functional Requirements
+
+A benchmark is the solution verification setup for a bounded engineering problem. The system uses the benchmark to verify whether a design solution works.
+
+### Benchmark Definition and Verification
+- FR1: Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem.
+- FR2: Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization.
+- FR3: The system can represent benchmark-owned fixtures and benchmark-owned electronics as read-only context unless interaction is explicitly allowed.
+- FR4: The system can represent allowed attachment and drilling points in the benchmark setup.
+- FR5: The system can validate that a benchmark is solvable and reject ambiguous, impossible, or incomplete setups.
+- FR6: The system can pass benchmark setup artifacts into the solution workflow.
+
+### Solution Delivery
+- FR7: Human engineers can receive verified design solutions to a benchmark.
+- FR8: Human engineers can revise a failed solution and try again against the same benchmark.
+- FR9: The system can support benchmark-definition and solution workflows as separate but connected episode types.
+- FR10: The system can preserve handoff artifacts between benchmark setup and solution work.
+- FR11: The system can support reasoned accept/reject decisions for benchmark and solution outputs.
+
+### Simulation and Physics
+- FR12: Human engineers can choose rigid-body preview simulation or higher-fidelity FEM when needed.
+- FR13: The system can require circuit validity before electromechanical simulation.
+- FR14: The system can support fluids, deformables, and stress-aware validation when selected.
+- FR15: The system can preserve simulation and render evidence for later inspection.
+
+### Manufacturability and Costing
+- FR16: Users can configure the prices used for costing.
+- FR17: The system can evaluate whether a solution is manufacturable at the requested production volume.
+- FR18: The system can evaluate setup cost and variable cost separately.
+- FR19: The system can evaluate weight, size, and form-factor constraints together.
+- FR20: The system can compare manufacturing options across quantities and choose the appropriate one.
+- FR21: The system can include COTS parts in cost and manufacturability evaluation.
+
+### Solution Quality
+- FR22: The system can identify unnecessary or unjustified degrees of freedom in a solution.
+- FR23: The system can prefer the valid candidate with fewer unnecessary degrees of freedom, actuators, and parts when multiple solutions satisfy the benchmark.
+- FR24: The system can flag over-actuated solutions and solutions with unnecessary degrees of freedom during review.
+
+### Data, Replay, and Debugging
+- FR25: The system can persist complete episode traces, artifacts, and lineage.
+- FR26: The system can export solved episodes and benchmarks as training-ready dataset rows.
+- FR27: Researchers and companies can use completed episodes for training or RL.
+- FR28: Dataset operators can exclude episodes that fail schema validity, completeness, or lineage integrity checks.
+- FR29: Dataset operators can manage coverage by seed and problem family.
+- FR30: The system can generate repeatable episode variants from different seeds.
+- FR31: The system can expose logs, traces, and terminal reasons for each episode.
+- FR32: Maintainers can reproduce and diagnose failed episodes from persisted artifacts and traces.
+- FR33: The system can surface explicit fallback behavior and failure classification.
+- FR34: The system can compare executed runtime paths against the documented supported feature set and flag mismatches as validation failures.
+- FR35: The system can keep failed episodes replayable from persisted artifacts and traces.
+
+### Steerability and Prompt Control
+- FR36: The system can accept corrective steering prompts during an active run with attached structured CAD or code context.
+- FR37: The system can let users switch CAD selection mode between faces, parts/bodies, and subassemblies, and preserve the selected entity in the prompt payload.
+- FR38: The system can preserve steering context, selection metadata, and resulting edits in traces and replay artifacts.
+
+## Non-Functional Requirements
+
+Security, accessibility, and broad scalability remain out of scope for Phase 1 because auth/multitenancy is out of scope and the product is a controlled engineering environment.
+
+### Performance and Compute Efficiency
+- The benchmark-verification and solution-revision loop shall complete in under 15 minutes at the 95th percentile for the standard Phase 1 benchmark suite.
+- Static preview artifacts shall be available for 100% of benchmarks that produce render evidence before final proof artifacts are accepted.
+- Benchmarks that do not declare a physics mode shall not trigger heavy physics, FEM, or fluid evaluation.
+- Planning and review requests shall return an initial response within 2 seconds at the 95th percentile while heavy evaluation is pending.
+- Repeated validation of the same unchanged revision shall produce 0 new heavy evaluations and shall return the previously persisted result or a no-op status.
+
+### Reliability and Fail-Closed Behavior
+- Any request with missing artifacts, invalid schemas, stale manifests, unsupported mechanisms, invalid circuits, or missing review evidence shall end in terminal failure with no success state.
+- Partial output, inferred success, and silent fallback shall never be classified as success.
+- Configuration mismatches, capacity limits, and retry exhaustion shall return deterministic terminal reasons and a retriable/non-retriable classification.
+- 100% of terminal episodes shall include a concrete terminal reason and failure classification.
+
+### Observability, Replayability, and Debuggability
+- 100% of completed episodes shall be reconstructable from persisted traces, logs, artifacts, and lineage IDs without rerunning the solver.
+- Every user session, episode, simulation run, review, COTS query, and seed record shall have joinable identifiers in persisted records and exports.
+- Every tool call, review decision, media inspection action, and error event shall emit a machine-readable record and remain available for the debugging retention window.
+- Every failed episode shall include a replay bundle that reproduces the failure state in replay mode.
+- Reasoning and tool-call traces shall be retained for the full episode lifetime and remain accessible in replay views.
+- When render evidence exists, the review record shall identify the exact latest-revision media artifact that was inspected.
+
+### Data Integrity and Reproducibility
+- Episode lineage and seed lineage shall persist across benchmark generation and engineering execution for 100% of exported episodes.
+- Every dataset export shall include the source episode ID, revision hash, and artifact hash.
+- Training dataset exports shall exclude integration-test runs and known-corrupted episodes.
+- Handoff artifacts shall validate against the same schema at creation, storage, review, and export time; any schema drift shall reject the episode.
+- Backups shall restore persisted run metadata and artifact references with 100% integrity in periodic restore tests.
+
+### Integration and Boundary Integrity
+- Untrusted generated code shall not mutate persistent workflow state directly; all state changes shall be mediated by validated artifacts and recorded actions.
+- Concurrent heavy evaluation requests for the same episode shall either start, return a deterministic busy status, or fail with a terminal reason within the request timeout.
+- Benchmark-owned artifacts shall remain read-only during engineering runs, and engineer-owned outputs shall remain separate from benchmark context.
+- 100% of accepted solutions shall include a final proof artifact that is distinct from any preview artifact.
+- Validation, review, and export artifacts shall round-trip through storage and retrieval without loss of required fields or schema drift.

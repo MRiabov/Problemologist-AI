@@ -188,6 +188,7 @@ Note - used by default by
     - Input object with environment
     - Goal objective with forbid objective
     - Input objective with goal or forbid objectives.
+    - Top-level authored part labels must be unique and must not be `environment` or start with `zone_`, because the runtime reserves those names for the scene root and generated objective bodies.
     
     Validated under all environment randomization.
     - The validation tool also generates the standard 24-view static preview package.

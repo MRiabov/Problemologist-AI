@@ -120,6 +120,7 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
    - generates static preview artifacts,
    - uses MuJoCo for that static preview by default,
    - does not add an extra Genesis load/render/build gate solely for parity checking.
+   - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
 2. `/benchmark/simulate`
    - runs the selected physics backend,
    - remains the runtime path for Genesis-specific behavior when Genesis is selected.
@@ -332,7 +333,7 @@ Drilling benchmark-owned fixtures has non-zero cost. For MVP that cost is static
 
 #### Allowed components in simulation
 
-The simulation would have only a set number of components that both benchmark designer and engineer can use. The following list is acceptable:
+The simulation would have only a set number of components that both the benchmark planner and engineer can use. The following list is acceptable:
 
 1. 3d CAD parts:
     - Environment (unmodifiable, or modifiable with minor changes, e.g. drilling);

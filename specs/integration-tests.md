@@ -64,12 +64,15 @@ The integration suite is designed for high-velocity local execution and CI parit
 # Run with high-fidelity simulation (disable smoke mode)
 ./scripts/run_integration_tests.sh --no-smoke
 
+# Opt in to Genesis/full-fidelity simulation
+./scripts/run_integration_tests.sh --full-sim
+
 # Run specific test file
 ./scripts/run_integration_tests.sh tests/integration/test_full_workflow.py
 ```
 
-The integration and eval entrypoints default to full-fidelity simulation. Use
-`--no-full-sim` only when you explicitly need the faster MuJoCo path.
+The integration and eval entrypoints default to MuJoCo. Use `--full-sim` only
+when you explicitly need Genesis/full-fidelity behavior.
 
 ### Simulation Backend Matrix Execution Contract
 
@@ -181,7 +184,7 @@ Priorities:
 | INT-021 | Runtime randomization robustness check | One admitted heavy-worker job executes one backend run with batched parallel jittered scenes (`num_scenes`) and aggregates pass/fail statistics correctly. |
 | INT-022 | Motor overload + forcerange behavior | Force clamping behaves correctly; sustained overload produces `motor_overload` failure reason. |
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
-| INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges. |
+| INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges, plus duplicate top-level labels and reserved `environment` / `zone_` namespace collisions before MJCF generation. |
 | INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through MuJoCo by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; MuJoCo-backed preview renders persist RGB images plus sibling `_depth.png` and `_segmentation.png` files in `renders/` by default; `renders/render_manifest.json` persists per-image metadata and segmentation legend entries with semantic labels plus unique instance identifiers; RGB preview output reflects configured material colors for differing `material_id` values; when `benchmark_definition.yaml` contains `goal_zone`, `forbid_zones`, and `build_zone`, the preview RGB images visibly include green/red/gray objective boxes; `config/agents_config.yaml render.{rgb,depth,segmentation}` can disable any one of those artifact types independently; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
 | INT-026 | Mandatory event families emitted | Tool calls, simulation request/result, manufacturability checks, lint failures, plan submissions, and review decisions are emitted in real runs. |
