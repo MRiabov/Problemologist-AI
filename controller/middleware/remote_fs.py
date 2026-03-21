@@ -1,6 +1,7 @@
 import asyncio
 import base64
 from contextlib import suppress
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Literal
 
@@ -78,6 +79,11 @@ _IMAGE_MEDIA_TYPES = {
 _VIDEO_MEDIA_TYPES = {
     ".mp4": "video/mp4",
 }
+
+
+def _bundle_workflow_id(prefix: str, session_id: str, bundle: bytes) -> str:
+    """Derive a deterministic workflow id from the exact workspace bundle."""
+    return f"{prefix}-{session_id}-{sha256(bundle).hexdigest()}"
 
 
 # Global policy instance (cached)
@@ -579,7 +585,7 @@ class RemoteFilesystemMiddleware:
         if self.temporal_client:
             # Bundle from light worker
             bundle = await self.client.bundle_session()
-            workflow_id = f"sim-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            workflow_id = _bundle_workflow_id("sim", self.client.session_id, bundle)
             res = await self._execute_or_use_existing_workflow(
                 HeavySimulationWorkflow.run,
                 workflow_id,
@@ -638,7 +644,7 @@ class RemoteFilesystemMiddleware:
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            workflow_id = f"val-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            workflow_id = _bundle_workflow_id("val", self.client.session_id, bundle)
             res = await self._execute_or_use_existing_workflow(
                 HeavyValidationWorkflow.run,
                 workflow_id,
@@ -689,7 +695,7 @@ class RemoteFilesystemMiddleware:
 
         if self.temporal_client:
             bundle = await self.client.bundle_session()
-            workflow_id = f"sub-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+            workflow_id = _bundle_workflow_id("sub", self.client.session_id, bundle)
             res = await self._execute_or_use_existing_workflow(
                 HeavySubmitWorkflow.run,
                 workflow_id,

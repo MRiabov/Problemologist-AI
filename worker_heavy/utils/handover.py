@@ -208,8 +208,13 @@ def submit_for_review(
         raise ValueError(
             "Prior validation failed. Fix validation errors before submission."
         )
-    if validation_results_path.stat().st_mtime < script_mtime:
-        logger.error("prior_validation_stale_for_script", session_id=session_id)
+    if validation_record.script_sha256 != script_sha256:
+        logger.error(
+            "prior_validation_stale_for_script",
+            session_id=session_id,
+            validation_script_sha256=validation_record.script_sha256,
+            current_script_sha256=script_sha256,
+        )
         raise ValueError(
             "Prior validation is stale for current script revision. Re-run validate."
         )

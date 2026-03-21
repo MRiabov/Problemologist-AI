@@ -94,7 +94,7 @@ def map_simulation_failure_reason(res_dict: dict[str, Any]) -> SimulationFailure
         except ValueError:
             pass
 
-    raw_reason = str(res_dict.get("failure_reason", "")).upper()
+    raw_reason = str(res_dict.get("failure_reason") or "").upper()
     if "TIMEOUT" in raw_reason:
         return SimulationFailureMode.TIMEOUT
     if "OUT_OF_BOUNDS" in raw_reason:
@@ -142,7 +142,7 @@ async def record_simulation_result(episode_id: str, res: Any):
 
     # Detect instability
     if not res_dict.get("success", True):
-        raw_reason = res_dict.get("failure_reason", "").lower()
+        raw_reason = str(res_dict.get("failure_reason") or "").lower()
         if any(
             word in raw_reason
             for word in ["nan", "penetration", "instability", "joint violation"]

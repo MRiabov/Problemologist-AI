@@ -29,6 +29,7 @@ class ExecutionReviewerSignature(dspy.Signature):
     """
     Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
     You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
+    You also receive read-only benchmark_assembly_definition.yaml context when present.
     When done, call `submit_review` with your final ReviewResult.
     """
 
@@ -36,6 +37,7 @@ class ExecutionReviewerSignature(dspy.Signature):
     plan = dspy.InputField()
     todo = dspy.InputField()
     assembly_definition = dspy.InputField()
+    benchmark_assembly_definition = dspy.InputField()
     plan_refusal = dspy.InputField(default="")
     objectives = dspy.InputField()
     journal = dspy.InputField()
@@ -104,62 +106,68 @@ class ExecutionReviewerNode(BaseNode):
             input_data=state.task or state.journal,
         )
         try:
+            assembly_definition = "# No assembly_definition.yaml found."
+            benchmark_assembly_definition = (
+                "# No benchmark_assembly_definition.yaml found."
+            )
             with suppress(Exception):
                 if await self.ctx.worker_client.exists("assembly_definition.yaml"):
                     assembly_definition = await self.ctx.worker_client.read_file(
                         "assembly_definition.yaml"
                     )
-                    plan_markdown = state.plan or ""
-                    if await self.ctx.worker_client.exists("plan.md"):
-                        plan_markdown = await self.ctx.worker_client.read_file(
-                            "plan.md"
-                        )
-                    findings = collect_excessive_dof_findings(assembly_definition)
-                    unjustified = [
-                        finding
-                        for finding in findings
-                        if not has_accepted_dof_justification(
-                            plan_markdown, part_id=finding.part_id
-                        )
-                    ]
-                    if unjustified:
-                        for finding in unjustified:
-                            payload = {
-                                "reviewer_stage": "engineering_execution_reviewer",
-                                "part_id": finding.part_id,
-                                "proposed_dofs": finding.dofs,
-                                "dof_count": finding.dof_count,
-                                "expected_minimal_dofs": 3,
-                                "dof_count_gt_3": True,
+            benchmark_assembly_definition = await self._read_optional_workspace_file(
+                "benchmark_assembly_definition.yaml",
+                "# No benchmark_assembly_definition.yaml found.",
+            )
+            plan_markdown = state.plan or ""
+            if await self.ctx.worker_client.exists("plan.md"):
+                plan_markdown = await self.ctx.worker_client.read_file("plan.md")
+            findings = collect_excessive_dof_findings(assembly_definition)
+            unjustified = [
+                finding
+                for finding in findings
+                if not has_accepted_dof_justification(
+                    plan_markdown, part_id=finding.part_id
+                )
+            ]
+            if unjustified:
+                for finding in unjustified:
+                    payload = {
+                        "reviewer_stage": "engineering_execution_reviewer",
+                        "part_id": finding.part_id,
+                        "proposed_dofs": finding.dofs,
+                        "dof_count": finding.dof_count,
+                        "expected_minimal_dofs": 3,
+                        "dof_count_gt_3": True,
+                    }
+                    await record_worker_events(
+                        episode_id=state.episode_id,
+                        events=[
+                            {
+                                "event_type": "excessive_dof_detected",
+                                "data": payload,
+                                **payload,
                             }
-                            await record_worker_events(
-                                episode_id=state.episode_id,
-                                events=[
-                                    {
-                                        "event_type": "excessive_dof_detected",
-                                        "data": payload,
-                                        **payload,
-                                    }
-                                ],
-                            )
-                        summary = ", ".join(
-                            f"{item.part_id}({item.dof_count})" for item in unjustified
-                        )
-                        feedback = (
-                            "Execution reviewer flagged over-actuated deviation: "
-                            f"{summary}. Add explicit DOF_JUSTIFICATION markers in plan.md."
-                        )
-                        node_output_data = feedback
-                        return state.model_copy(
-                            update={
-                                "status": AgentStatus.FAILED,
-                                "feedback": feedback,
-                                "journal": (
-                                    state.journal + f"\n[Execution Reviewer] {feedback}"
-                                ),
-                                "turn_count": state.turn_count + 1,
-                            }
-                        )
+                        ],
+                    )
+                summary = ", ".join(
+                    f"{item.part_id}({item.dof_count})" for item in unjustified
+                )
+                feedback = (
+                    "Execution reviewer flagged over-actuated deviation: "
+                    f"{summary}. Add explicit DOF_JUSTIFICATION markers in plan.md."
+                )
+                node_output_data = feedback
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.FAILED,
+                        "feedback": feedback,
+                        "journal": (
+                            state.journal + f"\n[Execution Reviewer] {feedback}"
+                        ),
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
 
             submit_err = await self._ensure_submit_for_review_succeeded()
             if submit_err:
@@ -214,6 +222,7 @@ class ExecutionReviewerNode(BaseNode):
                 "plan": state.plan,
                 "todo": state.todo,
                 "assembly_definition": assembly_definition,
+                "benchmark_assembly_definition": benchmark_assembly_definition,
                 "plan_refusal": plan_refusal,
                 "objectives": objectives,
                 "journal": state.journal + simulation_journal,

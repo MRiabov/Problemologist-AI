@@ -33,6 +33,9 @@ _moved_object_contract = _load_moved_object()
 _moved_object = _build_moved_object(_moved_object_contract)
 
 # Add authored benchmark fixtures to this children list.
+# Every top-level child you add here must have a unique label, and that label
+# must not be `environment` or start with `zone_` because the simulator
+# reserves those names for the scene root and generated objective bodies.
 result = Compound(children=[_moved_object])
 result.label = "benchmark_environment"
 result.metadata = CompoundMetadata()

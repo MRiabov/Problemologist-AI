@@ -259,6 +259,52 @@ def _validate_top_level_location_contract(component: Compound) -> str | None:
     )
 
 
+def _validate_unique_top_level_labels(component: Compound) -> str | None:
+    """Reject repeated or reserved top-level labels before MJCF generation."""
+    children = getattr(component, "children", None) or [component]
+    label_counts: dict[str, int] = {}
+    label_order: list[str] = []
+    reserved_prefix = "zone_"
+    reserved_exact_labels = {"environment"}
+
+    for child in children:
+        label = getattr(child, "label", None)
+        if label is None:
+            continue
+        normalized = str(label).strip()
+        if not normalized:
+            continue
+        if normalized in reserved_exact_labels:
+            return (
+                "Top-level part labels may not be `environment` because that "
+                "name is reserved for the benchmark scene/root environment. "
+                f"Offending label: {normalized}"
+            )
+        if normalized.startswith(reserved_prefix):
+            return (
+                "Top-level part labels may not start with `zone_` because that "
+                "namespace is reserved for simulator-generated objective bodies. "
+                f"Offending label: {normalized}"
+            )
+        if normalized not in label_counts:
+            label_order.append(normalized)
+            label_counts[normalized] = 0
+        label_counts[normalized] += 1
+
+    offenders = [label for label in label_order if label_counts[label] > 1]
+    if not offenders:
+        return None
+
+    details = ", ".join(f"{label} x{label_counts[label]}" for label in offenders[:5])
+    if len(offenders) > 5:
+        details = f"{details}, ..."
+    return (
+        "Duplicate top-level part labels are not allowed because MJCF mesh and "
+        "body names are derived from labels. Offending labels: "
+        f"{details}"
+    )
+
+
 def load_simulation_result(path: Path) -> SimulationResult | None:
     if not path.exists():
         return None
@@ -743,6 +789,18 @@ def simulate(
         backend=backend,
         session_id=session_id,
     )
+    label_contract_error = _validate_unique_top_level_labels(component)
+    if label_contract_error:
+        return SimulationResult(
+            success=False,
+            summary=label_contract_error,
+            failure=SimulationFailure(
+                reason=FailureReason.VALIDATION_FAILED,
+                detail=label_contract_error,
+            ),
+            confidence="high",
+        )
+
     working_dir = output_dir or Path(os.getenv("RENDERS_DIR", "./renders")).parent
     logger.info(
         "DEBUG_simulate",
@@ -1123,6 +1181,10 @@ def validate(
         smoke_test_mode=smoke_test_mode,
         particle_budget=particle_budget,
     )
+    label_contract_error = _validate_unique_top_level_labels(component)
+    if label_contract_error:
+        return False, label_contract_error
+
     objectives_model: BenchmarkDefinition | None = None
     solids = component.solids()
     if len(solids) > 1:
@@ -1130,9 +1192,11 @@ def validate(
             for j in range(i + 1, len(solids)):
                 intersection = solids[i].intersect(solids[j])
                 if intersection and intersection.volume > 0.1:
+                    label_i = getattr(solids[i], "label", None) or f"solid_{i}"
+                    label_j = getattr(solids[j], "label", None) or f"solid_{j}"
                     msg = (
-                        f"Geometric intersection detected "
-                        f"(volume: {intersection.volume:.2f})"
+                        f"Geometric intersection detected between {label_i} and "
+                        f"{label_j} (volume: {intersection.volume:.2f})"
                     )
                     return (False, msg)
 

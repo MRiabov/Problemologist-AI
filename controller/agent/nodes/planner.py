@@ -21,12 +21,14 @@ class PlannerSignature(dspy.Signature):
     """
     Planner node: Analyzes the task and creates plan.md and todo.md using tools.
     You must use the provided tools to create 'plan.md' and 'todo.md' directly.
+    You also receive read-only benchmark_assembly_definition.yaml context when present.
     Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide a summary of your plan.
     """
 
     task = dspy.InputField()
     objectives = dspy.InputField()
+    benchmark_assembly_definition = dspy.InputField()
     skills = dspy.InputField()
     steer_context = dspy.InputField()
     feedback = dspy.InputField()
@@ -54,10 +56,15 @@ class PlannerNode(BaseNode):
                 objectives = await self.ctx.worker_client.read_file(
                     "benchmark_definition.yaml"
                 )
+        benchmark_assembly_definition = await self._read_optional_workspace_file(
+            "benchmark_assembly_definition.yaml",
+            "# No benchmark_assembly_definition.yaml found.",
+        )
 
         inputs = {
             "task": state.task,
             "objectives": objectives,
+            "benchmark_assembly_definition": benchmark_assembly_definition,
             "skills": skills_context,
             "steer_context": steer_context,
             "feedback": (

@@ -81,6 +81,11 @@ async def validate_reviewer_handover(
         return f"validation_results.json invalid: {e}"
     if not val_record.success or not manifest.validation_success:
         return "validation gate failed for latest revision."
+    if val_record.script_sha256 != manifest.script_sha256:
+        return (
+            "validation results do not match review manifest script revision; "
+            "re-run validate, simulate, and submit_for_review(compound)."
+        )
 
     if not await worker_client.exists("simulation_result.json"):
         return "simulation_result.json missing."

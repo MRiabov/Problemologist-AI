@@ -21,12 +21,14 @@ class ElectronicsPlannerSignature(dspy.Signature):
     """
     Electronics Planner node: Designs the electrical system and power budget.
     You must use the provided tools to update 'plan.md' and 'todo.md' with electronics tasks.
+    You also receive read-only benchmark_assembly_definition.yaml context when present.
     Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide a summary of your electrical plan.
     """
 
     task = dspy.InputField()
     objectives = dspy.InputField()
+    benchmark_assembly_definition = dspy.InputField()
     skills = dspy.InputField()
     mechanical_plan = dspy.InputField()
     feedback = dspy.InputField()
@@ -50,10 +52,15 @@ class ElectronicsPlannerNode(BaseNode):
                 objectives = await self.ctx.worker_client.read_file(
                     "benchmark_definition.yaml"
                 )
+        benchmark_assembly_definition = await self._read_optional_workspace_file(
+            "benchmark_assembly_definition.yaml",
+            "# No benchmark_assembly_definition.yaml found.",
+        )
 
         inputs = {
             "task": state.task,
             "objectives": objectives,
+            "benchmark_assembly_definition": benchmark_assembly_definition,
             "skills": skills_context,
             "mechanical_plan": state.plan,
             "feedback": (

@@ -364,6 +364,7 @@ class BenchmarkPlannerNode(BaseNode):
             + "- If `submit_plan()` returns validation errors, fix the files and call `submit_plan()` again.\n"
             + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
             + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
+            + "- In authored benchmark scripts, every top-level part label must be unique and must not be `environment` or start with `zone_` because the simulator reserves those names for the scene root and generated objective bodies.\n"
             + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric `constraints` and `totals` fields (do not delete template sections).\n"
             + "- Prefer schema-safe minimal assembly for planner handoff: use empty `manufactured_parts`, `cots_parts`, and `final_assembly` unless you can provide fully valid entries (e.g., `stock_bbox_mm` must be an object with `x/y/z`, and final assembly parts use `name/config`).\n"
             + "- Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.\n"

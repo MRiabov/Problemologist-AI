@@ -46,6 +46,9 @@ benchmark_parts:
       fixed: true
       material_id: "aluminum_6061"
   # Every benchmark part must have a unique `part_id` and a unique `label`.
+  # Authored top-level build123d part labels must also be unique and must not
+  # use the reserved `environment` label or the reserved `zone_` namespace,
+  # which are owned by the scene root and simulator-generated objective bodies.
 
 # Hard simulation boundaries - objects leaving this volume = failure
 simulation_bounds:

@@ -20,6 +20,7 @@ class CoderSignature(dspy.Signature):
     """
     Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
     You must use the provided tools to implement the current step in 'script.py'.
+    You also receive read-only benchmark_assembly_definition.yaml context when present.
     When done, use SUBMIT to provide a summary of your work.
     """
 
@@ -29,6 +30,7 @@ class CoderSignature(dspy.Signature):
     todo = dspy.InputField()
     assembly_definition = dspy.InputField()
     objectives = dspy.InputField()
+    benchmark_assembly_definition = dspy.InputField()
     steer_context = dspy.InputField(default="")
     feedback = dspy.InputField(desc="Feedback from previous review steps", default="")
     journal = dspy.OutputField(
@@ -73,6 +75,10 @@ class CoderNode(BaseNode):
                 assembly_definition = await self.ctx.worker_client.read_file(
                     "assembly_definition.yaml"
                 )
+        benchmark_assembly_definition = await self._read_optional_workspace_file(
+            "benchmark_assembly_definition.yaml",
+            "# No benchmark_assembly_definition.yaml found.",
+        )
 
         inputs = {
             "task": state.task,
@@ -81,6 +87,7 @@ class CoderNode(BaseNode):
             "todo": todo,
             "assembly_definition": assembly_definition,
             "objectives": objectives,
+            "benchmark_assembly_definition": benchmark_assembly_definition,
             "steer_context": steer_context,
             "feedback": state.feedback,
         }

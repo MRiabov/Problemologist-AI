@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import time
 from contextlib import asynccontextmanager
 
@@ -78,11 +79,18 @@ async def validate_script(
         if isinstance(result, BenchmarkToolResponse):
             await middleware.client._sync_handover_artifacts_to_light(result)
             return result
+        if not await middleware.client.exists(payload.script_path):
+            raise FileNotFoundError(
+                f"script missing while materializing validation record: {payload.script_path}"
+            )
+        script_content = await middleware.client.read_file(payload.script_path)
+        script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
         validation_record = ValidationResultRecord(
             success=result.success,
             message=result.message,
             timestamp=time.time(),
             script_path=payload.script_path,
+            script_sha256=script_sha256,
         )
         response = BenchmarkToolResponse(
             success=result.success,

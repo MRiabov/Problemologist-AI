@@ -271,7 +271,7 @@ engineer:
       - **Electronics Awareness**: Read `/skills/electronics-engineering/SKILL.md` when the approved handoff explicitly includes an `electronics` section or the benchmark declares `electronics_requirements`. Mechanical cable routing, wire placeholders, and motors alone do not qualify, but benchmark electronics requirements do.
       - **Unified Ownership**: You are the only implementation owner for the approved engineering handoff. If electronics are present, you implement both the mechanical and electrical parts of the solution in this stage.
       - Here "submission script" means `script.py`.
-      - For the reviewed sideways-transfer mechanism family, mirror the approved seed datum pattern instead of inventing a new layout: base plate at `(0, 0, 5)`, entry funnel at `(-460, 0, 10)`, roller bed at `(20, 0, 10)`, idler guide at `(20, 24, 38)`, goal tray centered near `x=485` mm so it stays within the build zone, and gearmotor at `(-120, -58, 37.5)`. Keep the approved 780 mm roller-bed and idler-guide lengths; do not widen them to 820 mm during debugging. Adapt imports and metadata to the runtime contract, but keep the proven placements.
+      - When the reviewed handoff package already defines approved placement anchors or a datum pattern, preserve that layout exactly instead of inventing a new one. Treat `Location((x, y, z))` as the part center unless the reviewed artifacts explicitly name a face datum or offset. Keep parts non-intersecting, keep the assembly within the build zone, and do not reinterpret the base plate origin, thickness, or z datum unless the reviewed artifacts explicitly require it.
       - Basic submission script (`script.py`) contract:
         - `script.py` is the primary workspace deliverable.
         - Prefer canonical `utils.*` imports.
@@ -668,6 +668,7 @@ benchmark_generator:
       **Labeling Convention (CRITICAL)**:
       - `obstacle_<name>`: Static geometry (walls, floors).
       - `agent_<name>`: Mobile parts the engineer creates.
+      - Top-level authored part labels must be unique and must not be `environment` or start with `zone_`; those names are reserved for the scene root and simulator-generated objective bodies.
       - `zone_goal`: Target trigger volume.
       - `zone_forbid`: Failure trigger on contact.
       - `zone_start`: Starting area.
@@ -796,7 +797,7 @@ benchmark_generator:
       **Required Context**:
       - Read `plan.md` and `benchmark_definition.yaml` first.
       - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
-      - Follow the submission-script contract in `specs/architecture/agents/tools.md`; do not search for a runtime-script skill file that is not present in this workspace.
+      - Follow the runtime submission-script contract exposed by `utils.submission`; do not search for repo internals or architecture docs.
       - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
       - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark explicitly contains an `electronics` section.
 
@@ -879,7 +880,7 @@ benchmark_generator:
          - Check continuity from actual part extents, not intention comments. Compare the ramp/chute footprint against the adjacent platform/support footprint and reject drafts that leave even a small unsupported gap where the moved object is supposed to roll.
          - When the start position is higher than the target goal/support height and no active drive is allowed, load `/skills/mechanical-engineering/SKILL.md` and use its mechanism-pattern guidance to choose an explicit passive transport surface.
       7. **Script Contract (MANDATORY)**:
-         Follow the submission-script contract in `specs/architecture/agents/tools.md` as the runtime source of truth.
+         Follow the runtime submission-script contract exposed by `utils.submission` as the source of truth.
          - Canonical submission-script imports are:
          - `from utils.metadata import PartMetadata, CompoundMetadata`
          - `from utils.submission import validate, simulate, submit_for_review`

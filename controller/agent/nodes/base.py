@@ -174,6 +174,13 @@ class BaseNode:
     ) -> VisualInspectionPolicy:
         return self.ctx.fs.policy.get_visual_inspection_policy(node_type)
 
+    async def _read_optional_workspace_file(self, path: str, missing_text: str) -> str:
+        """Read a workspace file if present, otherwise return a placeholder."""
+        with suppress(Exception):
+            if await self.ctx.worker_client.exists(path):
+                return await self.ctx.worker_client.read_file(path)
+        return missing_text
+
     async def _next_review_round(self, review_slug: str) -> int:
         pattern = re.compile(rf"^{re.escape(review_slug)}-decision-round-(\d+)\.yaml$")
         max_round = 0
