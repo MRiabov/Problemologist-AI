@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -454,6 +455,7 @@ def build_codex_env(*, agent_name: AgentName, task_id: str) -> dict[str, str]:
             f"{venv_bin}{os.pathsep}{current_path}" if current_path else str(venv_bin)
         )
         env.setdefault("VIRTUAL_ENV", str(ROOT / ".venv"))
+        env.setdefault("PYTHON_BIN", sys.executable)
 
     env.setdefault("CONTROLLER_URL", "http://localhost:18000")
     env.setdefault("WORKER_LIGHT_URL", "http://localhost:18001")

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -11,6 +10,7 @@ import pytest
 import yaml
 
 from evals.logic.codex_workspace import (
+    build_codex_env,
     materialize_seed_workspace,
     verify_planner_workspace,
 )
@@ -145,11 +145,7 @@ async def test_codex_materialized_planner_workspace_submits(
 
     shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
 
-    env = dict(os.environ)
-    env["PYTHONPATH"] = (
-        f"{ROOT}{os.pathsep}{env['PYTHONPATH']}" if env.get("PYTHONPATH") else str(ROOT)
-    )
-    env["AGENT_NAME"] = agent_name.value
+    env = build_codex_env(agent_name=agent_name, task_id=item.id)
     env["SESSION_ID"] = f"INT-CODEX-{agent_name.value}-{row_id}"
 
     completed = subprocess.run(

@@ -254,7 +254,6 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ENGINEER_PLAN_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_PLAN_REVIEWER,
             required_state_fields=["episode_id"],
-            required_artifacts=list(ENGINEER_PLANNER_HANDOFF_ARTIFACTS),
             custom_check=ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_CODER: NodeEntryContract(
@@ -265,16 +264,11 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
         AgentName.ELECTRONICS_REVIEWER: NodeEntryContract(
             node=AgentName.ELECTRONICS_REVIEWER,
             required_state_fields=["episode_id"],
-            required_artifacts=[
-                "script.py",
-                *ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
-            ],
             custom_check=ELECTRONICS_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_EXECUTION_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_EXECUTION_REVIEWER,
             required_state_fields=["episode_id"],
-            required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
             custom_check=ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
         ),
         AgentName.COTS_SEARCH: NodeEntryContract(

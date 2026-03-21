@@ -493,11 +493,17 @@ async def execute_code(
     )
     from worker_light.config import settings
 
+    # Executed scripts should validate directly against the session workspace
+    # rather than re-entering the controller script-tools proxy. The proxy path
+    # is for control-plane orchestration, while runtime execution needs the
+    # lightweight heavy-worker fallback to observe the exact workspace files
+    # written in this session.
     result = await run_command_async(
         command=request.code,
         env={
             "SESSION_ID": x_session_id,
             "WORKER_HEAVY_URL": settings.worker_heavy_url,
+            "CONTROLLER_URL": "",
         },
         config=config,
         session_id=x_session_id,
