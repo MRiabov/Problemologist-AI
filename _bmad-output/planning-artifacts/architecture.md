@@ -4,6 +4,10 @@ stepsCompleted:
   - 2
   - 3
   - 4
+  - 5
+  - 6
+  - 7
+  - 8
 inputDocuments:
   - specs/desired_architecture.md
   - specs/architecture/primary-system-objectives.md
@@ -34,6 +38,9 @@ workflowType: 'architecture'
 project_name: 'Problemologist-AI'
 user_name: 'Max'
 date: '2026-03-21'
+lastStep: 8
+status: 'complete'
+completedAt: '2026-03-21'
 ---
 
 # Architecture Decision Document
@@ -78,7 +85,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - COTS search is read-only and must resolve to concrete catalog identities without mutating workspace state.
 - Benchmark-owned fixtures, benchmark-owned electronics, and benchmark-owned motion context are read-only task inputs.
 - Engineer-owned manufactured parts live in the solution artifact set and are validated/priced separately.
-- The docs corpus is in transition: `specs/` is currently the brownfield truth set, but the architecture should define a migration path rather than hard-coding permanent precedence over `docs/`.
+- The docs corpus is in transition: `specs/` and `docs/` both contain brownfield context, so the architecture should acknowledge the migration path rather than assuming a permanent winner.
 
 ### Supporting Runtime and Verification Contracts
 
@@ -90,6 +97,14 @@ The following are architecture-adjacent contracts that support the core system b
 - Structured logs should be consistent across agents, services, and eval helpers, with service-scoped, episode-scoped, and test-scoped attribution.
 - Integration-test helper conventions in `specs/integration-tests.md` are part of the supported verification contract, because the repository is validated through those helpers and HTTP-only boundaries.
 - OpenAPI schema generation on git hooks is part of the API-contract enforcement path and should keep generated schema/client artifacts in sync with controller behavior.
+
+### System Boundaries Summary
+
+- Core runtime: `controller/`, `worker_light/`, `worker_heavy/`, Temporal, PostgreSQL, MinIO/S3, and Langfuse.
+- Shared contracts: `shared/`, `config/`, and the schema/model layers that define boundary payloads and policy.
+- Evidence surfaces: `frontend/` renders persisted traces and artifacts; `website/` is separate and does not participate in runtime.
+- Supporting tools: `scripts/`, `dataset/evals/`, `tests/`, OpenAPI hooks, structured logs, and local CLI debug/eval loops.
+- Deferred surfaces: auth platform, websocket transport, and any frontend rewrite beyond preserving the current dashboard contract.
 
 ### Cross-Cutting Concerns Identified
 
@@ -104,7 +119,16 @@ The following are architecture-adjacent contracts that support the core system b
 - The frontend is a secondary evidence surface for human interpretation; deterministic evaluation and replay belong in backend/eval tooling such as `dataset/evals/run_evals.py`, not in the UI.
 - Debugging and verification infrastructure must be reproducible locally through CLI-driven eval/debug loops and structured logs.
 - API contract generation and frontend client regeneration are part of the supporting contract surface, not an optional maintenance step.
-- Deterministic validation is a cross-cutting application rule: if a value can be validated from schema, enums, numeric constraints, derivable arithmetic, or other source fields, it must be validated at boundary entry and boundary exit.
+- Deterministic validation is a cross-cutting application rule; see the decision record below for the canonical contract.
+
+### Episode Lifecycle
+
+1. A benchmark seed or user task enters the controller with immutable task context.
+2. The planner writes stage artifacts and manifests.
+3. `worker_light` executes workspace changes and emits traces, logs, and `events.jsonl`.
+4. `worker_heavy` validates, simulates, renders, and computes deterministic outputs.
+5. Reviewers inspect persisted artifacts and media, then write the terminal review decision.
+6. The controller ingests events into Postgres and archives artifacts for replay, evaluation, and dataset materialization.
 
 ### Failure Modes and Preventive Controls
 
@@ -184,45 +208,17 @@ The following are architecture-adjacent contracts that support the core system b
 
 Backend-first agentic platform with a secondary React dashboard.
 
-The repository is already brownfield and already has the frontend surface, so starter evaluation is a no-op for the current codebase.
+### Starter Assessment
 
-### Starter Options Considered
-
-- No repo-wide starter reset is needed because the frontend already exists and is documented/implemented.
-- If a future isolated UI scaffold is needed, `create-vite` with `react-ts` remains the best-fit maintained starter for this dashboard shape.
+The repository is brownfield and already has the frontend surface, so starter selection is informational rather than prescriptive.
 
 ### Selected Starter: None
 
 **Rationale for Selection:**
-The current repository state already includes the frontend and the backend architecture is custom. Re-scaffolding would not add value and would risk churn without changing the actual system shape.
+The current backend and frontend shape are custom and already established. Re-scaffolding would add churn without changing the architecture.
 
-**Initialization Command:**
-
-```bash
-N/A for the current brownfield repo state
-```
-
-**Architectural Decisions Provided by Starter:**
-
-**Language & Runtime:**
-None for the current repo state.
-
-**Styling Solution:**
-None for the current repo state.
-
-**Build Tooling:**
-None for the current repo state.
-
-**Testing Framework:**
-None for the current repo state.
-
-**Code Organization:**
-None for the current repo state.
-
-**Development Experience:**
-None for the current repo state.
-
-**Note:** If a future isolated frontend scaffold is created, use `npm create vite@latest my-dashboard -- --template react-ts` as the baseline, but do not re-create the existing brownfield frontend.
+**Future Baseline:**
+If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather than rebuilding the existing brownfield frontend.
 
 ## Core Architectural Decisions
 
@@ -305,6 +301,29 @@ None for the current repo state.
 - REST endpoints, structured events, and Temporal workflow state together define the observable runtime contract.
 - The frontend depends on persisted backend traces and artifacts, not synthesized UI-only state.
 
+### Deterministic Validation Decision Record
+
+**Problem Statement:**
+- Flaky schemas and unexpected derived-field drift must not reach runtime, persistence, or replay surfaces.
+
+**Options Considered:**
+- Boundary-only validation: rejected, because invalid derived values can still circulate internally after admission.
+- Entry-only validation: rejected, because it misses corruption introduced during execution, serialization, or handoff.
+- Entry + exit + persistence validation: chosen, because it closes the loop on deterministic data.
+
+**Decision:**
+- Any value derivable from schema, enums, numeric constraints, arithmetic, referential integrity, or other source fields is computed by deterministic code, not authored by the LLM.
+- Derived values are recomputed and equality-checked on node entry and node exit.
+- Unknown fields, malformed numbers, invalid enums, stale generated artifacts, and mismatched derived values hard-fail.
+- Any mismatch is a bug, not tolerated variance.
+- Validation is split by field class: machine-verifiable values are checked deterministically, schema-only values are checked for declared shape and bounds, and freeform or externally sourced values are validated only to the extent the schema and policy allow.
+- Numeric validation uses canonical representations, not ambiguous binary-float comparison. Monetary and cost fields should be compared in exact minor units or an equivalent deterministic decimal form.
+- Validation failures must emit stable machine-readable diagnostics including field path, derivation source, and expected versus actual values.
+
+**Rationale:**
+- The platform depends on reproducible evals, trace replay, and trustworthy episode state.
+- Extra helper and schema work is cheaper than chasing silent corruption.
+
 ## Implementation Patterns & Consistency Rules
 
 ### Pattern Categories Defined
@@ -377,11 +396,8 @@ None for the current repo state.
 
 ### Deterministic Validation Rule
 
-- Any field that can be determined from schema, enum membership, numeric constraints, source-field arithmetic, or referential integrity is validated deterministically instead of being trusted from LLM output
-- Derived values are recomputed at node entry and node exit, then compared to the authored or persisted value
-- If the deterministic result and the persisted value disagree, the node hard-fails
-- Unknown fields, invalid enums, malformed numbers, stale generated artifacts, and inconsistent derived values all fail closed
-- This rule applies everywhere the application crosses a boundary: controller APIs, worker tools, shared models, eval materialization, generated clients, review artifacts, and filesystem handoffs
+- See the `Deterministic Validation Decision Record` above for the canonical contract.
+- Operationally, the same rule is enforced at boundary entry, boundary exit, and before persistence across controller APIs, worker tools, shared models, eval materialization, generated clients, review artifacts, and filesystem handoffs.
 
 ### Communication Patterns
 
@@ -404,7 +420,7 @@ None for the current repo state.
 - Agent nodes are role-scoped state machines, not general-purpose chatbots
 - Planner, coder, and reviewer stages have fixed handoff contracts and fixed artifact ownership
 - Node entry and exit validation are fail-closed; a node only runs when required artifacts and manifests are present and schema-valid
-- Any field derivable from other fields is recomputed and equality-checked at both node entry and node exit
+- Any field derivable from other fields is recomputed and equality-checked at both node entry and node exit per the deterministic-validation decision record
 - Costing, price, weight, derived caps, reviewer manifests, and other computed fields are never LLM-authored when a deterministic helper can generate them
 - If a derived value differs from its deterministic source calculation, the node hard-fails and routes back
 - Terminal actions are explicit: `submit_plan`, `submit_review`, and `finish`; no silent success
@@ -420,7 +436,7 @@ None for the current repo state.
 
 **Error Handling Patterns:**
 - Fail closed on missing artifacts, stale manifests, schema mismatches, and missing evidence
-- Recompute derivable values on entry, normalize them on exit, and persist only the deterministic result
+- Recompute derivable values on entry, normalize them on exit, and persist only the deterministic result per the deterministic-validation decision record
 - No silent fallback from one backend or adapter to another inside a run
 - Terminal reasons and failure classes must be explicit
 - Durable retries belong to controller/Temporal orchestration, not ad hoc local loops
@@ -458,3 +474,211 @@ None for the current repo state.
 - freeform dict handoffs across agent nodes
 - making `website/` influence runtime contracts
 - silent fallback between adapters or backends
+
+## Project Structure & Boundaries
+
+### Complete Project Directory Structure
+
+```text
+.
+├── AGENTS.md
+├── README.md
+├── pyproject.toml
+├── uv.lock
+├── alembic.ini
+├── docker-compose.yml
+├── docker-compose.test.yaml
+├── .env
+├── .env.example
+├── .gitignore
+├── .dockerignore
+├── .pre-commit-config.yaml
+├── .python-version
+├── controller_openapi.json
+├── worker_openapi.json
+├── events.jsonl
+├── main.py
+├── controller/
+│   ├── api/
+│   ├── agent/
+│   ├── graph/
+│   ├── activities/
+│   ├── workflows/
+│   ├── observability/
+│   ├── persistence/
+│   ├── clients/
+│   ├── middleware/
+│   ├── tools/
+│   ├── utils/
+│   ├── config/
+│   ├── evals/
+│   └── temporal_worker.py
+├── worker_light/
+│   ├── app.py
+│   ├── api/
+│   ├── runtime/
+│   ├── tools/
+│   ├── utils/
+│   └── agent_files/
+├── worker_heavy/
+│   ├── app.py
+│   ├── api/
+│   ├── activities/
+│   ├── runtime/
+│   ├── simulation/
+│   ├── utils/
+│   └── workbenches/
+├── shared/
+│   ├── agent_templates/
+│   ├── agents/
+│   ├── backend/
+│   ├── cli/
+│   ├── config/
+│   ├── cots/
+│   ├── models/
+│   ├── observability/
+│   ├── ops/
+│   ├── simulation/
+│   ├── utils/
+│   └── workers/
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── designs/
+│   ├── verification/
+│   ├── dist/
+│   └── openapi.json
+├── website/
+├── config/
+├── dataset/
+│   ├── data/
+│   └── evals/
+├── scripts/
+├── tests/
+│   ├── integration/
+│   ├── e2e/
+│   ├── controller/
+│   ├── worker_light/
+│   ├── worker_heavy/
+│   ├── electronics/
+│   └── assets/
+├── docs/
+├── specs/
+├── skills/
+├── assets/
+├── agent_runtime_utils/
+├── evals/
+├── logs/
+├── renders/
+├── test_output/
+├── code-reviews/
+└── .worktrees/
+```
+
+### Architectural Boundaries
+
+**API Boundaries:**
+- `controller/api/` is the public controller surface and owns the REST entrypoints for the runtime.
+- `worker_light/api/` and `worker_heavy/api/` expose worker-local operational routes only; they do not own the system contract.
+- `controller_openapi.json`, `worker_openapi.json`, and `frontend/openapi.json` are generated contract artifacts and must track source APIs exactly.
+- REST plus structured events is the current communication model; websockets remain deferred.
+
+**Component Boundaries:**
+- `controller/agent/` and `controller/graph/` own LangGraph state, node validation, handoff routing, and steerability.
+- `worker_light/` owns workspace execution, filesystem edits, lightweight inspection, and git/tool effects.
+- `worker_heavy/` owns validation, simulation, rendering, manufacturability, and physics-backed checks.
+- `shared/` owns cross-service schemas, enums, observability contracts, simulation types, COTS helpers, and reusable templates.
+- `frontend/` is a secondary evidence surface that renders persisted backend state only.
+- `website/` is separated from the runtime and remains outside agent workflows.
+
+**Service Boundaries:**
+- `controller/workflows/` and `controller/temporal_worker.py` own durable orchestration.
+- `worker_heavy/temporal_worker.py` owns heavy simulation execution when Temporal dispatches it.
+- `controller/observability/` and `shared/observability/` own trace ingest, persistence, replay support, and event normalization.
+- `controller/evals/` and `dataset/evals/` own reproducibility and deterministic eval materialization.
+- `scripts/` owns bootstrap, maintenance, and integration-test orchestration.
+
+**Data Boundaries:**
+- PostgreSQL is the canonical structured store and is accessed through controller persistence and migrations.
+- MinIO/S3 holds render bundles, videos, simulation artifacts, and other large binaries.
+- `events.jsonl` is worker-side batch transport; the controller ingests and normalizes it into relational rows at episode end.
+- Worker session filesystems are isolated and hold runtime-only workspace state.
+- Generated artifacts are committed or materialized through the contract path; they are not hand-authored ad hoc.
+
+### Requirements to Structure Mapping
+
+**Benchmark Generation and Planning**
+- `controller/agent/benchmark_handover_validation.py`
+- `controller/agent/graph.py`
+- `controller/graph/agent.py`
+- `controller/graph/steerability_node.py`
+- `controller/workflows/execution.py`
+- `shared/workers/benchmark_definition_template.py`
+- `shared/workers/schema.py`
+- `tests/e2e/test_benchmark_generation.py`
+- `tests/integration/`
+
+**Engineer Execution and Review**
+- `controller/agent/node_entry_validation.py`
+- `controller/agent/review_handover.py`
+- `controller/workflows/heavy.py`
+- `worker_light/runtime/executor.py`
+- `worker_light/utils/filesystem.py`
+- `worker_light/utils/git.py`
+- `worker_heavy/simulation/`
+- `worker_heavy/workbenches/`
+- `worker_heavy/utils/validation.py`
+- `tests/worker_light/`
+- `tests/worker_heavy/`
+- `tests/integration/test_full_workflow.py`
+
+**Observability, Replay, and Debugging**
+- `controller/observability/`
+- `shared/observability/`
+- `shared/models/observability.py`
+- `shared/observability/events.py`
+- `shared/observability/persistence.py`
+- `dataset/evals/run_evals.py`
+- `dataset/evals/materialize_seed_workspace.py`
+- `events.jsonl`
+- `logs/`
+- `tests/integration/`
+
+**Simulation and Manufacturability**
+- `worker_heavy/simulation/`
+- `worker_heavy/utils/cad.py`
+- `worker_heavy/utils/dfm.py`
+- `worker_heavy/utils/constraints.py`
+- `worker_heavy/utils/preview.py`
+- `worker_heavy/workbenches/`
+- `tests/worker_heavy/test_physics_backends.py`
+- `tests/worker_heavy/test_genesis_interaction.py`
+- `tests/worker_heavy/test_simulation_builder_electronics.py`
+
+**Frontend and Website**
+- `frontend/src/`
+- `frontend/public/`
+- `frontend/designs/`
+- `frontend/verification/`
+- `frontend/openapi.json`
+- `website/`
+
+**Local Development and Tooling**
+- `docker-compose.yml`
+- `docker-compose.test.yaml`
+- `scripts/env_up.sh`
+- `scripts/env_down.sh`
+- `scripts/run_integration_tests.sh`
+- `config/agents_config.yaml`
+- `config/prompts.yaml`
+- `config/manufacturing_config.yaml`
+- `config/reward_config.yaml`
+- `config/lint_config.yaml`
+- `config/generator_config.yaml`
+- `.pre-commit-config.yaml`
+
+### Generated and Runtime Surfaces
+
+- `logs/`, `renders/`, `test_output/`, `code-reviews/`, and `.worktrees/` are runtime or scratch surfaces, not source roots.
+- `controller_openapi.json`, `worker_openapi.json`, `frontend/openapi.json`, and `events.jsonl` are generated or derived artifacts that must stay in sync with source contracts.
+- Hidden tool directories such as `.agents/`, `.codex/`, `.claude/`, `.gemini/`, `.kittify/`, `.jules/`, and `.vscode/` are local environment metadata and do not define the product architecture.
