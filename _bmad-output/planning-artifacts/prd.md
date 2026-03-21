@@ -91,7 +91,7 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 - A human engineer can define a bounded mechanical or electromechanical problem, review the plan, and receive a verified design package without manual artifact repair.
 - The user can tell why a candidate solution passed or failed from the trace, review, and simulation evidence alone.
 - The workflow reduces manual iteration needed to reach a reviewable solution.
-- The user can correct a live run by steering the agent with selected CAD or code context instead of restarting the episode.
+- The user can watch an active agent's output and reasoning in real time, and can correct a live run by steering the agent with selected CAD or code context instead of restarting the episode.
 
 ### Business Success
 - The platform reliably solves bounded engineering problems that are useful in real workflows, starting with mechanical tasks and extending to electromechanical tasks.
@@ -106,6 +106,9 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 
 ### Measurable Outcomes
 - Fast evals: markdown validity reaches 95% on the first prompt, code validity reaches 90% on average tool calls, build123d code validity reaches 95%, and output YAML validity reaches 95%.
+- AI benchmark generation: on a 10-attempt sample for a benchmark family, at least 8 AI-generated benchmark attempts are usable without human correction.
+- AI solution generation: on a 10-attempt sample for a solution family, at least 8 AI-generated solution attempts are usable without human correction.
+- Review quality: AI-generated benchmark and solution reviews explain the acceptance or rejection reason clearly enough for a human to follow, and unclear reviews can be rejected as insufficiently explainable.
 - Benchmark generation: benchmark planner passes reviewer scrutiny in 80% of cases; benchmark coder reaches 95% physical validity after 30 turns and three reviewer submissions.
 - Engineering solving: the engineer reaches the goal within 30 tool calls and three simulation attempts, with first/second/third submission pass rates of 70%, 85%, and 95%.
 - Scope gate: Phase 2 electromechanical work and Phase 3 fluids work do not begin until the core solver reaches at least 80% success on a mechanics-only eval dataset of at least 10 demo problems, with the suite weighted toward gravity-driven rigid-body problems, on repeated evaluation runs.
@@ -139,7 +142,7 @@ A lean core team is sufficient for Phase 1 if the team has one owner for the age
 - Bounded mechanical solving end to end.
 - Plan/review/validate/simulate loop.
 - Render and media inspection.
-- Interactive steerability: users can interrupt a live run and send corrective prompts with structured CAD/code context. A selected CAD entity means a face, a part/body, or a subassembly from the active model. The CAD viewer supports switching between face, part/body, and subassembly selection modes, and the code viewer supports selected code ranges.
+- Live agent output and reasoning traces: users can inspect the agent's output in real time so they can catch logical errors early.
 - Manufacturability and cost checks.
 - Fail-closed terminal states.
 - Dataset persistence and export of complete episodes.
@@ -166,7 +169,7 @@ Phase 1 is limited to pure rigid-body mechanics. Electromechanical and fluids wo
 - Electromechanical tasks with powered mechanisms and circuit validation.
 - Robustness and jitter-heavy evaluation.
 - Richer dataset packaging and consumer tooling.
-- Frontend / Inspection Surface: browser-based inspection of traces, artifacts, CAD, simulation, code, and electronics evidence; live steering context; feedback submission; and session resume after reload.
+- Frontend / Inspection Surface: browser-based inspection of traces, artifacts, CAD, simulation, code, and electronics evidence; live steering context; interrupt/stop controls; feedback submission; and session resume after reload.
 - Optional collaboration features if they become necessary.
 
 **Phase 3 Expansion (post-gate only):**
@@ -219,7 +222,7 @@ Their work is not about solving engineering tasks. It is about keeping the open-
 This journey reveals requirements for dataset cleaning, coverage management, seed prioritization, failure classification, and operational observability.
 
 ### Journey 5: Human Engineer Steers a Live Run
-A human engineer notices a wrong local choice in a live run. They select the relevant CAD entity, such as a face, a part/body, or a subassembly, or they select a code range, attach it to a corrective prompt, and the next agent turn uses that context to produce a more targeted edit without restarting the episode.
+A human engineer notices a wrong local choice in a live run. They select the relevant CAD entity, such as a face, a part/body, or a subassembly, or they select a code range, attach it to a corrective prompt, and the next agent turn uses that context to produce a more targeted edit without restarting the episode. While the agent is working, they can see its output and reasoning in real time and stop execution when it goes off track.
 
 This journey reveals requirements for live steering, selection-mode switching, and auditable prompt context.
 
@@ -260,7 +263,7 @@ This journey reveals requirements for live steering, selection-mode switching, a
 - Workflow orchestration remains coherent across planning, validation, review, and retrieval.
 - Heavy validation and simulation expose persisted status and results without losing episode context.
 - Observability must preserve session, episode, simulation, review, and seed lineage.
-- The UI must expose validation evidence, simulation playback, and benchmark setup inspection.
+- The UI must expose validation evidence, simulation playback, benchmark setup inspection, and live agent output and reasoning traces.
 - The UI must expose removable context cards for selected faces, parts/bodies, subassemblies, and code ranges, and steering actions must be reflected in persisted traces.
 - Dataset generation must support reproducible export, seed prioritization, and filtering of invalid or incomplete episodes.
 
@@ -451,6 +454,10 @@ Security, accessibility, and broad scalability remain out of scope for Phase 1 b
 - Training dataset exports shall exclude integration-test runs and known-corrupted episodes.
 - Handoff artifacts shall validate against the same schema at creation, storage, review, and export time; any schema drift shall reject the episode.
 - Backups shall restore persisted run metadata and artifact references with 100% integrity in periodic restore tests.
+
+### Explainability and UI Responsiveness
+- While a run is active, the UI shall stream the agent's output and reasoning traces in real time when available, and any interrupt or stop action shall be persisted as an explicit episode event.
+- AI-generated benchmark and solution reviews shall include a human-readable rationale and explicit accept/reject reason code; if the rationale is missing or unclear, the review shall be marked insufficiently explainable rather than accepted.
 
 ### Integration and Boundary Integrity
 - Untrusted generated code shall not mutate persistent workflow state directly; all state changes shall be mediated by validated artifacts and recorded actions.
