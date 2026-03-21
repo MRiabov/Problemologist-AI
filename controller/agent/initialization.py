@@ -1,18 +1,12 @@
 import asyncio
-from pathlib import Path
 
 from structlog import get_logger
 
 from controller.clients.backend import RemoteFilesystemBackend
+from shared.agent_templates import load_agent_template_files
 from shared.enums import AgentName
 
 logger = get_logger(__name__)
-
-# Use relative path from this file to find shared assets
-# controller/agent/initialization.py -> ../../shared/assets/template_repos
-SHARED_ASSETS_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "shared/assets/template_repos"
-)
 
 
 def _normalize_remote_path(path: str) -> str:
@@ -31,24 +25,18 @@ def _extract_entry_path(entry: object) -> str | None:
 
 async def _write_template(
     backend: RemoteFilesystemBackend,
-    template_path: Path,
+    template_name: str,
+    template_content: str,
     target_path: str,
 ) -> None:
-    """Reads a local template and writes it to the remote worker."""
-    if not template_path.exists():
-        logger.warning(
-            "template_not_found", path=str(template_path), target=target_path
-        )
-        return
-
+    """Write a local template payload to the remote worker."""
     try:
-        content = template_path.read_text(encoding="utf-8")
-        await backend.awrite(target_path, content)
-        logger.info("wrote_template", path=str(template_path), target=target_path)
+        await backend.awrite(target_path, template_content)
+        logger.info("wrote_template", path=template_name, target=target_path)
     except Exception as e:
         logger.error(
             "failed_to_write_template",
-            path=str(template_path),
+            path=template_name,
             target=target_path,
             error=str(e),
             session_id=backend.client.session_id,
@@ -79,51 +67,14 @@ async def initialize_agent_files(
     except Exception as e:
         logger.warning("failed_to_list_existing_files", error=str(e))
 
-    # Define agent-specific file mappings
-    # Format: local_template_subpath -> remote_path
-    file_mappings = {}
-
-    # Engineer Agents
-    if agent_name == AgentName.ENGINEER_PLANNER:
-        file_mappings = {
-            "engineer/plan.md": "plan.md",
-            "engineer/todo.md": "todo.md",
-            "engineer/assembly_definition.yaml": "assembly_definition.yaml",
-            "shared/journal.md": "journal.md",
-        }
-    elif agent_name == AgentName.ENGINEER_CODER:
-        file_mappings = {
-            "engineer/todo.md": "todo.md",
-            "shared/journal.md": "journal.md",
-        }
-
-    # Benchmark Agents
-    elif agent_name in [AgentName.BENCHMARK_PLANNER, AgentName.BENCHMARK_CODER]:
-        file_mappings = {
-            "benchmark_generator/plan.md": "plan.md",
-            "benchmark_generator/todo.md": "todo.md",
-            "benchmark_generator/benchmark_definition.yaml": "benchmark_definition.yaml",
-            "benchmark_generator/benchmark_assembly_definition.yaml": "benchmark_assembly_definition.yaml",
-            "shared/journal.md": "journal.md",
-        }
-
-    # Support Agents
-    elif agent_name == AgentName.SKILL_AGENT:
-        file_mappings = {
-            "shared/journal.md": "journal.md",
-        }
-    elif agent_name == AgentName.COTS_SEARCH:
-        file_mappings = {}
-
     tasks = []
 
-    for template_subpath, remote_name in file_mappings.items():
+    template_files = load_agent_template_files(agent_name)
+    for remote_name, content in template_files.items():
         if not overwrite and _normalize_remote_path(remote_name) in existing_files:
             logger.info("skipping_existing_file", path=remote_name)
             continue
-
-        template_path = SHARED_ASSETS_PATH / template_subpath
-        tasks.append(_write_template(backend, template_path, remote_name))
+        tasks.append(_write_template(backend, remote_name, content, remote_name))
 
     if tasks:
         await asyncio.gather(*tasks)

@@ -7,6 +7,8 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
+from shared.agent_templates import load_template_text
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INTEGRATION_SCENARIO_ID_PATTERN = re.compile(r"^INT-\d{3}$")
 INTEGRATION_MOCK_RESPONSES_DIR = REPO_ROOT / "tests" / "integration" / "mock_responses"
@@ -66,31 +68,39 @@ def _expand_content_file_refs(value: Any, *, base_dir: Path) -> Any:
     expanded = {
         key: _expand_content_file_refs(item, base_dir=base_dir)
         for key, item in value.items()
-        if key != "content_file"
+        if key not in {"content_file", "template_file"}
     }
     content_file = value.get("content_file")
-    if content_file is None:
+    template_file = value.get("template_file")
+    if content_file is not None and template_file is not None:
+        raise ValueError(
+            "Scenario entry may not define both 'content_file' and 'template_file'."
+        )
+
+    if content_file is None and template_file is None:
         return expanded
 
     if "content" in expanded:
-        raise ValueError(
-            "Scenario entry may not define both 'content' and 'content_file'."
-        )
+        raise ValueError("Scenario entry may not define both 'content' and a file ref.")
 
-    content_path = (base_dir / str(content_file)).resolve()
-    try:
-        content_path.relative_to(base_dir.resolve())
-    except ValueError as exc:
-        raise ValueError(
-            f"content_file path escapes scenario directory: {content_file}"
-        ) from exc
+    if content_file is not None:
+        content_path = (base_dir / str(content_file)).resolve()
+        try:
+            content_path.relative_to(base_dir.resolve())
+        except ValueError as exc:
+            raise ValueError(
+                f"content_file path escapes scenario directory: {content_file}"
+            ) from exc
 
-    if not content_path.is_file():
-        raise FileNotFoundError(
-            f"content_file not found for scenario fixture: {content_path}"
-        )
+        if not content_path.is_file():
+            raise FileNotFoundError(
+                f"content_file not found for scenario fixture: {content_path}"
+            )
 
-    expanded["content"] = content_path.read_text(encoding="utf-8")
+        expanded["content"] = content_path.read_text(encoding="utf-8")
+    else:
+        expanded["content"] = load_template_text(str(template_file))
+
     return expanded
 
 

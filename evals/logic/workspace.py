@@ -20,6 +20,7 @@ from controller.agent.node_entry_validation import (
 )
 from controller.clients.worker import WorkerClient
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
+from shared.agent_templates import load_agent_template_files
 from shared.enums import AgentName, EvalMode
 
 
@@ -54,12 +55,22 @@ async def seed_eval_workspace(
 ) -> None:
     artifact_dir = resolve_seed_artifact_dir(item, root=root)
     inline_files = item.seed_files or {}
-    if artifact_dir is None and not inline_files:
+    template_files = load_agent_template_files(agent_name)
+    if artifact_dir is None and not inline_files and not template_files:
         return
 
     worker = WorkerClient(base_url=worker_light_url, session_id=session_id)
     seeded_paths: list[str] = []
     try:
+        for rel_path, content in template_files.items():
+            await worker.write_file(
+                rel_path,
+                content,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
+            seeded_paths.append(rel_path)
+
         if artifact_dir is not None:
             if not artifact_dir.exists():
                 raise FileNotFoundError(
