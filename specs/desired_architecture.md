@@ -23,6 +23,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 - [Agent handovers and contracts](./architecture/agents/handover-contracts.md): file-level handoff contracts and refusal/review routing.
 - [Agentic framework, artifacts, and filesystem](./architecture/agents/artifacts-and-filesystem.md): DSPy/LangGraph runtime, trace requirements, and path-permission policy.
 - [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, and reviewer/planner submission gates.
+- [Debug Codex agent mode](./architecture/agent/debug-codex-agent.md): local Codex-backed eval/debug backend, workspace contract, prompt contract, and filesystem rules.
 
 ### Runtime and infrastructure
 

@@ -96,6 +96,21 @@ Rules:
 4. Any implementation that accepts only raw Python source for `execute_command(...)` is a runtime bug or temporary drift, not the intended architecture contract.
 5. If we want a raw-Python helper in the future, it should be a separate tool with a separate name and spec, not an overload of `execute_command(...)`.
 
+### Shell-script bridge for missing tools
+
+When the architecture needs a command-like capability but does not expose it as a native tool call, the repo exposes that capability as a checked-in `.sh` script instead.
+
+The shell script is the canonical command surface for that capability.
+It preserves the same runtime intent as a direct tool call, but it keeps the contract visible in the repository and callable from the workspace shell.
+
+Input handling follows a simple split:
+
+1. Short inputs use handles, IDs, or other compact scalar tokens.
+2. Larger inputs use file references, typically a YAML or JSON file already materialized in the workspace.
+3. YAML submission payloads are passed by path, not inlined as long command arguments.
+4. The script validates the referenced file content itself and returns deterministic exit status plus machine-readable stdout/stderr when needed.
+5. This bridge is preferred over inventing pseudo-tools in prompt text when the runtime does not have a direct callable tool for the capability.
+
 `read_file` is a text-only contract. It must not be overloaded to return image bytes, base64 blobs, or multimodal payloads for binary assets. Agents must use `inspect_media(...)` for visual evidence. If a binary/media path is passed to `read_file`, runtime should fail closed with a deterministic error telling the agent to use `inspect_media(...)` instead.
 
 The rest (submitting the work, testing for design validity, etc) is called via and calling python functions in the code. (as described below)
