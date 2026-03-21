@@ -346,7 +346,7 @@ engineer:
          - Treat planner-selected `cots_parts` and `final_assembly` part IDs as locked inputs by default. Do NOT reopen procurement research for parts that are already specified there.
       2. Read `benchmark_definition.yaml` for exact coordinates and runtime randomization.
          - Note: `max_unit_cost` and `max_weight` are set by the Planner in `benchmark_definition.yaml` and should match the `assembly_definition.yaml` targets.
-         - If `benchmark_assembly_definition.yaml` exists, treat it as read-only benchmark context describing benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction.
+         - Treat `benchmark_assembly_definition.yaml` as required read-only benchmark context describing benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction. Fail closed if it is missing.
          - Read `benchmark_parts[].metadata.attachment_policy` before planning any fastener attachment to benchmark-owned fixtures.
          - If `attachment_policy` is absent, treat the benchmark part as non-attachable.
          - If `attachment_policy.drill_policy` is absent, treat drilling into that benchmark part as forbidden.

@@ -222,7 +222,7 @@ The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
    - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and runtime-derived benchmark/customer caps `max_unit_cost`/`max_weight_g`).
-   - Read `benchmark_assembly_definition.yaml` as read-only benchmark context when it is present. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but do not treat it as an engineer-owned costing artifact.
+   - Read `benchmark_assembly_definition.yaml` as required read-only benchmark context. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but fail closed if the file is missing and do not treat it as an engineer-owned costing artifact.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 

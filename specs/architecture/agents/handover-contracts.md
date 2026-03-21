@@ -116,7 +116,7 @@ The plan will have the following bullet points. The plan will be validated for c
 The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 2. A `todo.md` TODO list from the planner.
 3. A draft of `benchmark_definition.yaml` with rough values filled in.
-4. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; handed to engineering as read-only benchmark context). This file must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a minimal fixture declaration.
+4. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; required engineer-stage handoff artifact). This file must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a minimal fixture declaration.
 5. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
@@ -169,9 +169,9 @@ The engineer will also receive YAML files with:
     Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is also handed to engineering as read-only benchmark context.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required engineer-stage handoff artifact copied into the engineer session.
 
-Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. The benchmark file is observation and interaction context, not an engineer-owned planning artifact.
+Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the benchmark file remains observation and interaction context rather than an engineer-owned planning artifact.
 
 If the benchmark includes moving benchmark-owned fixtures, the engineer intake still needs motion-visible facts. Those facts may live in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The minimum contract for each moving benchmark fixture is:
 
