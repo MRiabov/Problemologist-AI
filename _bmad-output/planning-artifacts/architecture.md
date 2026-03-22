@@ -34,12 +34,12 @@ inputDocuments:
   - docs/index.md
   - docs/architecture.md
   - docs/project-overview.md
-workflowType: 'architecture'
-project_name: 'Problemologist-AI'
-user_name: 'Max'
+workflowType: architecture
+project_name: Problemologist-AI
+user_name: Max
 date: '2026-03-21'
 lastStep: 8
-status: 'complete'
+status: complete
 completedAt: '2026-03-21'
 ---
 
@@ -91,7 +91,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 The following are architecture-adjacent contracts that support the core system but do not define the domain shape by themselves:
 
-- Local debugging can use `codex` CLI or other coding CLIs so seeded eval workspaces can be reproduced without defaulting to paid remote provider calls.
+- Local debugging can use CLI-backed agent runtimes such as `codex`, Claude Code, Gemini CLI, OpenHands, or equivalent so seeded eval workspaces can be reproduced without defaulting to paid remote provider calls, and the runtime backend choice remains separate from `AgentName`.
 - `dataset/evals/run_evals.py` and `dataset/evals/materialize_seed_workspace.py` belong to the reproducibility and debugging path for evals.
 - Worker-side `events.jsonl` is the batch transport artifact for episode observability; the controller ingests it and normalizes it into Postgres rows at episode end. `events.jsonl` is therefore replay/input transport, while Postgres remains the canonical queryable source of truth. Ingestion should be idempotent and fail closed on truncation, duplication, or schema mismatch.
 - Structured logs should be consistent across agents, services, and eval helpers, with service-scoped, episode-scoped, and test-scoped attribution.
@@ -124,83 +124,97 @@ The following are architecture-adjacent contracts that support the core system b
 ### Episode Lifecycle
 
 1. A benchmark seed or user task enters the controller with immutable task context.
-2. The planner writes stage artifacts and manifests.
-3. `worker_light` executes workspace changes and emits traces, logs, and `events.jsonl`.
-4. `worker_heavy` validates, simulates, renders, and computes deterministic outputs.
-5. Reviewers inspect persisted artifacts and media, then write the terminal review decision.
-6. The controller ingests events into Postgres and archives artifacts for replay, evaluation, and dataset materialization.
+1. The planner writes stage artifacts and manifests.
+1. `worker_light` executes workspace changes and emits traces, logs, and `events.jsonl`.
+1. `worker_heavy` validates, simulates, renders, and computes deterministic outputs.
+1. Reviewers inspect persisted artifacts and media, then write the terminal review decision.
+1. The controller ingests events into Postgres and archives artifacts for replay, evaluation, and dataset materialization.
 
 ### Failure Modes and Preventive Controls
 
 1. **Source-of-truth drift between `specs/` and `docs/`**
+
    - Failure: architecture decisions get updated in one place but not the other, so agents follow stale guidance.
    - Cause: the repo is in a migration state, so both doc sets remain visible and usable.
    - Prevention: define an explicit migration contract and retirement path for docs ownership; do not rely on implicit precedence rules.
 
-2. **Planner handoff succeeds without all required artifacts**
+1. **Planner handoff succeeds without all required artifacts**
+
    - Failure: planner nodes reach a success-like state even though `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `assembly_definition.yaml` are missing or stale.
    - Cause: permissive gating or fallback logic in submission flow.
    - Prevention: keep planner submission fail-closed, require manifest generation, and make missing/invalid artifacts hard errors.
 
-3. **Reviewers approve stale or mismatched revisions**
+1. **Reviewers approve stale or mismatched revisions**
+
    - Failure: reviewer output is based on an older manifest or an artifact set from a different revision.
    - Cause: manifest freshness is not enforced strictly enough.
    - Prevention: tie reviewer entry to latest-revision stage-specific manifests and reject stale or cross-session lookups.
 
-4. **Visual inspection is skipped even when render evidence exists**
+1. **Visual inspection is skipped even when render evidence exists**
+
    - Failure: a reviewer approves based on text artifacts only while render images are present.
    - Cause: media inspection is treated as optional or UI-only.
    - Prevention: enforce config-driven `inspect_media(...)` requirements for required roles whenever images exist, and persist inspection evidence in traces.
 
-5. **Validation preview is mistaken for full physics proof**
+1. **Validation preview is mistaken for full physics proof**
+
    - Failure: a model passes MuJoCo validation preview, but the backend-specific simulation behavior was never actually established.
    - Cause: preview and simulation responsibilities are conflated.
    - Prevention: keep validation preview explicitly separate from Genesis simulation proof and verify backend parity in dedicated simulation tests.
 
-6. **Episode identity gets conflated with session identity**
+1. **Episode identity gets conflated with session identity**
+
    - Failure: trace joins and dataset exports blur one user session into one workflow run.
    - Cause: the system treats `session_id` and `episode_id` as interchangeable.
    - Prevention: propagate both IDs independently, plus `simulation_run_id` and `review_id`, so observability remains reconstructable.
 
-7. **Engineering execution leaks benchmark-owned context into solution ownership**
+1. **Engineering execution leaks benchmark-owned context into solution ownership**
+
    - Failure: engineer-owned pricing, manufacturability, or geometry changes accidentally mutate benchmark-owned fixtures.
    - Cause: ownership boundaries are present in spec but not strongly enforced in runtime contracts.
    - Prevention: make benchmark fixtures read-only task context and validate immutability across handoff.
 
-8. **Hidden degradation is reported as success**
+1. **Hidden degradation is reported as success**
+
    - Failure: fallback paths or degraded behavior look like normal success to the caller.
    - Cause: runtime returns success without explicit degradation metadata.
    - Prevention: make any fallback or degraded path explicit in events and result payloads, and fail closed when degradation is not declared.
 
-9. **Heavy-worker failures cascade into broader service outages**
+1. **Heavy-worker failures cascade into broader service outages**
+
    - Failure: one simulation crash takes down the service or poisons subsequent jobs.
    - Cause: crash containment and admission control are too loose.
    - Prevention: preserve single-flight admission, isolate heavy execution, and require deterministic retry/fail-closed behavior.
 
-10. **Dataset lineage becomes unusable for training**
-    - Failure: artifacts are persisted without reliable seed, variant, or episode linkage.
-    - Cause: persistence is treated as storage rather than training-data provenance.
-    - Prevention: treat lineage, review evidence, and run metadata as core product outputs, not optional logs.
+1. **Dataset lineage becomes unusable for training**
 
-11. **Debugging requires expensive remote provider calls or opaque workflows**
-    - Failure: engineers cannot reproduce failures cheaply with local tooling.
-    - Cause: CLI-based debugging and eval materialization are not first-class architecture concerns.
-    - Prevention: make `codex` CLI-based eval reproduction and workspace materialization supported paths.
+   - Failure: artifacts are persisted without reliable seed, variant, or episode linkage.
+   - Cause: persistence is treated as storage rather than training-data provenance.
+   - Prevention: treat lineage, review evidence, and run metadata as core product outputs, not optional logs.
 
-12. **Logs are too sparse to explain agent or service failures**
-    - Failure: debugging requires guessing across multiple subsystems instead of reading one structured trail.
-    - Cause: logs are unstructured or lack episode/service/test attribution.
-    - Prevention: keep structured logs consistent across agents, services, and eval helpers.
+1. **Debugging requires expensive remote provider calls or opaque workflows**
 
-13. **Integration-test helpers drift from runtime behavior**
-    - Failure: tests become brittle or misleading because helper conventions differ from actual runtime contracts.
-    - Cause: the test harness is treated as external to architecture.
-    - Prevention: treat integration-test helper structure and HTTP-only boundaries as part of the supported architecture.
+   - Failure: engineers cannot reproduce failures cheaply with local tooling or the runtime forces one agent/provider shape onto every workflow.
+   - Cause: execution backend choice and model-provider choice are coupled to role-specific code instead of being first-class runtime abstractions.
+   - Prevention: make CLI-backed eval reproduction and workspace materialization supported paths, and keep role, backend, and model selection separate.
 
-14. **OpenAPI/client artifacts drift from live API behavior**
-    - Failure: generated schema or frontend client files no longer match controller behavior.
-    - Cause: schema regeneration is skipped, bypassed, or done manually outside the hook contract.
-    - Prevention: keep OpenAPI generation and client regeneration hook-driven and part of the normal change flow.
+1. **Logs are too sparse to explain agent or service failures**
+
+   - Failure: debugging requires guessing across multiple subsystems instead of reading one structured trail.
+   - Cause: logs are unstructured or lack episode/service/test attribution.
+   - Prevention: keep structured logs consistent across agents, services, and eval helpers.
+
+1. **Integration-test helpers drift from runtime behavior**
+
+   - Failure: tests become brittle or misleading because helper conventions differ from actual runtime contracts.
+   - Cause: the test harness is treated as external to architecture.
+   - Prevention: treat integration-test helper structure and HTTP-only boundaries as part of the supported architecture.
+
+1. **OpenAPI/client artifacts drift from live API behavior**
+
+   - Failure: generated schema or frontend client files no longer match controller behavior.
+   - Cause: schema regeneration is skipped, bypassed, or done manually outside the hook contract.
+   - Prevention: keep OpenAPI generation and client regeneration hook-driven and part of the normal change flow.
 
 ## Starter Template Evaluation
 
@@ -230,6 +244,86 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Controller/worker/Temporal boundaries remain the orchestration backbone, with `worker-light` handling workspace execution and `worker-heavy` handling validation/simulation.
 - The API contract stays REST-first with explicit event emission for replay, observability, and deterministic evaluation.
 - Observability must remain fail-closed and reconstructable, including `events.jsonl` batch transport, controller ingest, and normalized Postgres persistence.
+- Execution backend selection and model-provider selection are orthogonal to `AgentName`; role semantics stay in the workspace and prompt contract, while transport and model access stay in runtime adapters.
+
+### Agent Runtime and Model Abstractions
+
+#### Problem Statement
+
+- The runtime needs to support both API-queried models and CLI-backed models without hardcoding one transport into the workflow graph.
+- The current application roles in `AgentName` describe what the agent is doing, but they do not describe how the agent is executed.
+- Local CLI backends should not look like engineer-only special cases; they should be runtime adapters that can serve any role whose workspace contract they can satisfy.
+
+#### Decision
+
+- `AgentName` remains the role/workflow contract.
+- Execution backend becomes a separate contract that decides how an agent is run.
+- Model access becomes a separate contract that decides how a backend obtains model responses.
+- Role code may assemble role-specific prompts and workspaces, but it does not own transport, provider routing, or session trace normalization.
+- The default production path remains controller-backed unless configuration or workflow policy selects a CLI-backed backend explicitly.
+
+#### Abstraction Stack
+
+1. Role contract: prompt shape, workspace files, required artifacts, review gates, and terminal criteria.
+1. Runtime backend contract: process launch or API session, trace capture, workspace diffing, run-local session identity, and failure normalization.
+1. Model provider contract: provider-specific call mechanics, rate limits, streaming, tool calling, multimodal support, and cost accounting.
+
+#### Runtime Backend Contract
+
+- A runtime backend receives role metadata, task metadata, a prompt or conversation payload, a selected model spec, and capability requirements.
+- A runtime backend returns a normalized run result that includes backend kind, provider name when relevant, model name when relevant, session id, trace references, artifact references, and a failure classification.
+- The backend owns transport concerns: API requests for controller-backed runs, local process launch for CLI-backed runs, and any local session discovery or import needed to reconstruct traces.
+- The backend does not own role semantics, file ownership rules, or deterministic validation rules.
+- The backend fails closed if the requested capabilities are not supported.
+- The backend never silently switches to a different provider or a different execution family.
+
+#### Local CLI Backend Contract
+
+- A local CLI backend works from a materialized workspace and a prompt contract.
+- The backend may use a launcher helper, but the launcher helper must remain generic and must not require `AGENT_NAME` as a process-start dependency.
+- The backend may still pass role metadata into the workspace materializer or prompt assembler, because those layers define the file contract and the task text.
+- The backend must persist or import local session history when the CLI produces it.
+- The backend must normalize local transcript, tool, and workspace-change artifacts into the same replay surface used by the rest of the system.
+- The backend must support any role only insofar as the workspace contract, prompts, and artifact rules are satisfied.
+- Examples of CLI-backed runtime families include Codex, Claude Code, Gemini CLI, OpenHands, and equivalent local process agents.
+
+#### API-Backed Model Contract
+
+- An API-backed runtime continues to call remote providers directly or through an approved proxy.
+- The runtime must surface the same normalized trace and result shape as CLI-backed runs, even if the source trace was streamed through a different transport.
+- The runtime must preserve provider identity, model identity, and any token or cost attribution needed for observability.
+- The runtime must not hide provider fallbacks or swap to a different provider without an explicit policy decision.
+
+#### Model Abstraction
+
+- `ModelSpec` should be a first-class object, not an implicit string embedded in prompt code.
+- `ModelSpec` should at minimum carry provider name, model id, context limit, tool-calling support, multimodal support, streaming support, and a rough cost or latency class.
+- `ModelProvider` should own the actual invocation path for a model, whether that means a remote API call or a local CLI wrapper around a model API.
+- `ModelResolutionPolicy` should choose a model by capability and policy, not by scattered `if provider == ...` branching inside agent code.
+- Role code may request a minimum capability set, but it should not embed provider-specific transport details.
+
+#### Selection Policy
+
+- Backend selection answers how the workflow is executed.
+- Model selection answers which provider/model combination satisfies the requested capability set.
+- Role selection answers what workflow contract applies.
+- The three decisions should remain separate in config and in code.
+- Explicit configuration may choose a backend per environment, per workflow family, or per run.
+- The system fails closed when the selected backend or model cannot satisfy the required capability set.
+
+#### Observability And Replay
+
+- Each run should persist backend kind, provider, model, session id, trace path, artifact references, and any capability metadata needed for debugging.
+- API traces and CLI session JSONL are different source formats, but they should normalize into the same debugging and replay surface.
+- The normalized trace should show what was said, what was called, and what artifact changed, regardless of backend family.
+
+#### Migration Strategy
+
+- Keep the controller path stable and wrap it behind the new runtime backend contract.
+- Port Codex into the same contract as the first CLI backend.
+- Add further CLI backends by implementing the same backend interface, not by growing role-specific branches in the runner.
+- Introduce model-provider abstractions only where the current code needs them, but keep the interface explicit from the start so the controller path and CLI path can converge on the same run result shape.
+- Delay deeper refactors of role-specific prompt code until the backend and provider contracts exist in tests and persisted metadata.
 
 **Important Decisions (Shape Architecture):**
 
@@ -288,10 +382,10 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 **Implementation Sequence:**
 
 1. Keep the relational schema and artifact storage boundaries stable.
-2. Preserve the REST + events contract and OpenAPI generation flow.
-3. Wire deployment/runtime assumptions to the Railway + Docker Compose + Temporal stack.
-4. Leave frontend architecture unchanged except for hosting/deployment compatibility.
-5. Revisit auth and websocket transport only if later product scope requires them.
+1. Preserve the REST + events contract and OpenAPI generation flow.
+1. Wire deployment/runtime assumptions to the Railway + Docker Compose + Temporal stack.
+1. Leave frontend architecture unchanged except for hosting/deployment compatibility.
+1. Revisit auth, websocket transport, and any deeper runtime-provider routing only if later product scope requires them.
 
 **Cross-Component Dependencies:**
 
@@ -304,14 +398,17 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Deterministic Validation Decision Record
 
 **Problem Statement:**
+
 - Flaky schemas and unexpected derived-field drift must not reach runtime, persistence, or replay surfaces.
 
 **Options Considered:**
+
 - Boundary-only validation: rejected, because invalid derived values can still circulate internally after admission.
 - Entry-only validation: rejected, because it misses corruption introduced during execution, serialization, or handoff.
 - Entry + exit + persistence validation: chosen, because it closes the loop on deterministic data.
 
 **Decision:**
+
 - Any value derivable from schema, enums, numeric constraints, arithmetic, referential integrity, or other source fields is computed by deterministic code, not authored by the LLM.
 - Derived values are recomputed and equality-checked on node entry and node exit.
 - Unknown fields, malformed numbers, invalid enums, stale generated artifacts, and mismatched derived values hard-fail.
@@ -321,6 +418,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Validation failures must emit stable machine-readable diagnostics including field path, derivation source, and expected versus actual values.
 
 **Rationale:**
+
 - The platform depends on reproducible evals, trace replay, and trustworthy episode state.
 - Extra helper and schema work is cheaper than chasing silent corruption.
 
@@ -333,6 +431,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Naming Patterns
 
 **Database Naming Conventions:**
+
 - Tables use plural `snake_case` names, for example `episodes`, `episode_traces`, `review_decisions`
 - Columns use `snake_case`
 - Primary and foreign key fields end in `_id`, for example `episode_id`, `user_session_id`
@@ -340,12 +439,14 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Timestamp fields use `*_at` in UTC, for example `created_at`, `updated_at`, `completed_at`
 
 **API Naming Conventions:**
+
 - Controller routes use plural resources, for example `/episodes/{episode_id}`
 - Path and query parameters use `snake_case`
 - Event names use `snake_case`
 - OpenAPI-generated client contracts keep backend field names as-is at the boundary
 
 **Code Naming Conventions:**
+
 - Python backend code uses `snake_case` for modules, functions, and variables
 - Python classes and Pydantic models use `PascalCase`
 - Frontend React components use `PascalCase` file names, while local variables and functions use `camelCase`
@@ -354,6 +455,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Structure Patterns
 
 **Project Organization:**
+
 - `controller/` owns HTTP APIs, orchestration, persistence, and policy enforcement
 - `controller/agent/` owns LangGraph node logic, node-entry validation, handoff routing, and episode state management
 - `controller/observability/` owns DB/Langfuse persistence, event plumbing, and trace reconstruction support
@@ -371,6 +473,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `tests/` and `dataset/evals/` stay integration/eval-first, not unit-test-first
 
 **File Structure Patterns:**
+
 - Shared reusable starter files live in `shared/agent_templates/common/`
 - Worker-local mirrored starter content lives in `worker_light/agent_files/`
 - Generated frontend API client files live under `frontend/src/api/generated/`
@@ -382,6 +485,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Format Patterns
 
 **API and Data Formats:**
+
 - Boundary payloads use strict typed Pydantic models
 - Unknown fields are rejected unless a schema explicitly allows an open-ended map
 - JSON/YAML field names stay `snake_case`
@@ -390,6 +494,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Reviewer outputs are strict-schema YAML pairs with stage-specific filenames
 
 **Agent I/O Formats:**
+
 - Agent inputs are role-scoped artifacts plus tool responses, not freeform nested dicts
 - Agent outputs are explicit files, tool calls, persisted traces, or strict review artifacts
 - Planner submission and reviewer output are terminal format contracts, not advisory text
@@ -402,12 +507,14 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Communication Patterns
 
 **Event System Patterns:**
+
 - Event names use `snake_case`
 - Long-running or important operations emit start and end records
 - `events.jsonl` is the worker-side batch transport format from worker to controller, not the canonical query store
 - Controller normalizes worker events into Postgres and Langfuse for replay, evaluation, and debugging
 
 **State and Trace Patterns:**
+
 - Backend state is authoritative
 - The frontend renders persisted traces, assets, and metadata only
 - No synthetic reasoning rows, guessed tool rows, or UI-only placeholders
@@ -417,6 +524,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Agentic Infrastructure Patterns
 
 **Agent Runtime Patterns:**
+
 - Agent nodes are role-scoped state machines, not general-purpose chatbots
 - Planner, coder, and reviewer stages have fixed handoff contracts and fixed artifact ownership
 - Node entry and exit validation are fail-closed; a node only runs when required artifacts and manifests are present and schema-valid
@@ -435,6 +543,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Process Patterns
 
 **Error Handling Patterns:**
+
 - Fail closed on missing artifacts, stale manifests, schema mismatches, and missing evidence
 - Recompute derivable values on entry, normalize them on exit, and persist only the deterministic result per the deterministic-validation decision record
 - No silent fallback from one backend or adapter to another inside a run
@@ -442,6 +551,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Durable retries belong to controller/Temporal orchestration, not ad hoc local loops
 
 **Loading State Patterns:**
+
 - Loading states reflect actual backend episode state, not speculative UI state
 - Streaming updates should arrive incrementally as traces and events are persisted
 - If evidence is required but missing, show a blocked or telemetry-missing state rather than a success-like state
@@ -449,6 +559,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Enforcement Guidelines
 
 **All AI Agents MUST:**
+
 - Use the shared schema and naming conventions consistently
 - Preserve `episode_id` and `user_session_id` in cross-service records
 - Treat controller-first persisted traces as the only source of truth for the UI
@@ -456,6 +567,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Never author a value that can be deterministically derived, validated, or normalized by runtime helpers when the helper contract already exists
 
 **Pattern Enforcement:**
+
 - Verify patterns through integration tests and schema validation
 - Record violations in review artifacts, logs, or trace events
 - Update patterns only when a real implementation conflict appears
@@ -463,12 +575,14 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Pattern Examples
 
 **Good Examples:**
+
 - `shared/models/schemas.py` defines a boundary model reused by controller and workers
 - `frontend` reads `/api/episodes/{episode_id}` and renders persisted trace rows
 - `website/` is updated independently of controller/worker runtime
 - `events.jsonl` is produced by a worker and normalized by the controller
 
 **Anti-Patterns:**
+
 - frontend-synthesized reasoning rows
 - duplicate schema definitions in controller and workers
 - freeform dict handoffs across agent nodes
@@ -578,12 +692,14 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Architectural Boundaries
 
 **API Boundaries:**
+
 - `controller/api/` is the public controller surface and owns the REST entrypoints for the runtime.
 - `worker_light/api/` and `worker_heavy/api/` expose worker-local operational routes only; they do not own the system contract.
 - `controller_openapi.json`, `worker_openapi.json`, and `frontend/openapi.json` are generated contract artifacts and must track source APIs exactly.
 - REST plus structured events is the current communication model; websockets remain deferred.
 
 **Component Boundaries:**
+
 - `controller/agent/` and `controller/graph/` own LangGraph state, node validation, handoff routing, and steerability.
 - `worker_light/` owns workspace execution, filesystem edits, lightweight inspection, and git/tool effects.
 - `worker_heavy/` owns validation, simulation, rendering, manufacturability, and physics-backed checks.
@@ -592,6 +708,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `website/` is separated from the runtime and remains outside agent workflows.
 
 **Service Boundaries:**
+
 - `controller/workflows/` and `controller/temporal_worker.py` own durable orchestration.
 - `worker_heavy/temporal_worker.py` owns heavy simulation execution when Temporal dispatches it.
 - `controller/observability/` and `shared/observability/` own trace ingest, persistence, replay support, and event normalization.
@@ -599,6 +716,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `scripts/` owns bootstrap, maintenance, and integration-test orchestration.
 
 **Data Boundaries:**
+
 - PostgreSQL is the canonical structured store and is accessed through controller persistence and migrations.
 - MinIO/S3 holds render bundles, videos, simulation artifacts, and other large binaries.
 - `events.jsonl` is worker-side batch transport; the controller ingests and normalizes it into relational rows at episode end.
@@ -608,6 +726,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 ### Requirements to Structure Mapping
 
 **Benchmark Generation and Planning**
+
 - `controller/agent/benchmark_handover_validation.py`
 - `controller/agent/graph.py`
 - `controller/graph/agent.py`
@@ -619,6 +738,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `tests/integration/`
 
 **Engineer Execution and Review**
+
 - `controller/agent/node_entry_validation.py`
 - `controller/agent/review_handover.py`
 - `controller/workflows/heavy.py`
@@ -633,6 +753,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `tests/integration/test_full_workflow.py`
 
 **Observability, Replay, and Debugging**
+
 - `controller/observability/`
 - `shared/observability/`
 - `shared/models/observability.py`
@@ -645,6 +766,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `tests/integration/`
 
 **Simulation and Manufacturability**
+
 - `worker_heavy/simulation/`
 - `worker_heavy/utils/cad.py`
 - `worker_heavy/utils/dfm.py`
@@ -656,6 +778,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `tests/worker_heavy/test_simulation_builder_electronics.py`
 
 **Frontend and Website**
+
 - `frontend/src/`
 - `frontend/public/`
 - `frontend/designs/`
@@ -664,6 +787,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - `website/`
 
 **Local Development and Tooling**
+
 - `docker-compose.yml`
 - `docker-compose.test.yaml`
 - `scripts/env_up.sh`

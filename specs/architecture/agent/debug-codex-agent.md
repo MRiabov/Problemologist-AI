@@ -6,6 +6,7 @@
 - It is an application mode, not a new benchmark graph and not a replacement for the controller-backed runtime.
 - It covers prompt generation, workspace materialization, submission contracts, filesystem rules, and failure behavior.
 - It applies to the same seeded eval rows that run through `dataset/evals/run_evals.py` and the shared runner in `evals/logic/runner.py`.
+- The generalized runtime/backend/model abstraction lives in [\_bmad-output/planning-artifacts/architecture.md](/home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/planning-artifacts/architecture.md); this document stays focused on the Codex-specific implementation details and workspace contract.
 
 ## Purpose
 
@@ -131,6 +132,7 @@ The submission contract is:
 
 1. The helper validates the required planner files for the active agent role.
 1. Benchmark planner submissions canonicalize benchmark constraints before validation.
+1. The helper infers the planner variant from the workspace files and does not require `AGENT_NAME`; the Codex launch environment stays generic.
 1. A successful submission writes the stage manifest to `.manifests/`.
 1. The helper returns structured `PlannerSubmissionResult` JSON on stdout.
 1. Success requires `ok=true` and `status=submitted`.
