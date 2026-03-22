@@ -67,6 +67,9 @@ dev = [
     "spec-kitty-cli>=0.15.3",
     "moto[s3]>=5.1.21",
     "pytest-reverse>=1.9.0",
+    "mdformat>=1.0.0",
+    "mdformat-gfm>=1.0.0",
+    "mdformat-frontmatter>=2.0.10",
 ]
 
 [tool.ruff]
