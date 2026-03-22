@@ -26,6 +26,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     WriteFileRequest,
 )
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 from tests.integration.contracts import BackupWorkflowResponse
 
 # Adjust URL to your controller if different
@@ -131,6 +132,7 @@ async def test_render_artifact_generation_int_039():
         prompt = "Create a simple cube and simulate it."
         # We use /agent/run for a standard agent flow
         session_id = f"INT-039-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
@@ -256,6 +258,7 @@ async def test_asset_persistence_linkage_int_040():
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         # Trigger a run
         session_id = f"INT-040-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         resp = await client.post(
             "/agent/run",
             json={
@@ -313,6 +316,7 @@ async def test_mjcf_joint_mapping_int_037():
         The 'panel' should be attached to the 'frame' with a RevoluteJoint.
         Then simulate."""
 
+        await seed_benchmark_assembly_definition(client, session_id)
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
@@ -377,6 +381,7 @@ async def test_controller_function_family_int_038():
             "Create a part that oscillates sinusoidally using the dynamic controller."
         )
         session_id = f"INT-038-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         resp = await client.post(
             "/agent/run", json={"task": prompt, "session_id": session_id}
         )
@@ -436,6 +441,7 @@ async def test_async_callbacks_int_042():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-042-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         resp = await client.post(
             "/agent/run",
             json={"task": "Just say hello and finish.", "session_id": session_id},

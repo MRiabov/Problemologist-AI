@@ -8,6 +8,7 @@ from httpx import AsyncClient
 
 from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus, ReviewDecision
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
@@ -24,6 +25,7 @@ async def test_reviewer_evidence_completeness():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-040-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         run_request = AgentRunRequest(
             task="INT-034 reviewer evidence completeness",
             session_id=session_id,
@@ -170,6 +172,7 @@ async def test_reviewer_approval_requires_media_inspection():
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
         session_id = f"INT-039-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         run_request = AgentRunRequest(
             task="INT-034 reviewer media gate",
             session_id=session_id,

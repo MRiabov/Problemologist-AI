@@ -32,6 +32,7 @@ from shared.workers.schema import (
     WriteFileRequest,
 )
 from tests.integration.backend_utils import selected_backend
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 from tests.integration.contracts import HealthResponse
 
 # Constants
@@ -98,6 +99,8 @@ async def test_int_002_controller_worker_execution_boundary():
     task = "Build a simple box of 10x10x10mm."
 
     async with httpx.AsyncClient(timeout=300.0) as client:
+        await seed_benchmark_assembly_definition(client, session_id)
+
         # Trigger agent run
         req = AgentRunRequest(task=task, session_id=session_id)
         resp = await client.post(

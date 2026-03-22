@@ -272,7 +272,8 @@ This journey reveals requirements for live steering, selection-mode switching, a
 
 ### Technical Constraints
 
-- The primary domain is bounded mechanical engineering; electromechanical support is required when power, wiring, motors, or circuits are part of the task.
+- The primary domain is bounded mechanical engineering; benchmark-owned fixtures belong to the validation setup, not engineer-owned solution hardware, and may be less physically complete than engineer-authored parts when the benchmark contract explicitly allows it.
+- Electromechanical support is required when power, wiring, motors, or circuits are part of the task.
 - Fluids and deformables are optional extensions and must use the correct backend and evidence path when enabled.
 - Supported workbenches are finite and explicit: `CNC`, `injection molding`, and `3D printing`.
 - Supported mechanisms and capabilities must stay explicit and finite; unsupported behaviors should fail closed.
@@ -416,6 +417,7 @@ A benchmark is the solution verification setup for a bounded engineering problem
 - FR2: Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization.
 - FR3: The system can represent benchmark-owned fixtures and benchmark-owned electronics as read-only context unless interaction is explicitly allowed.
 - FR4: The system can represent allowed attachment and drilling points in the benchmark setup.
+- Benchmark-owned fixtures, moving parts, and electronics are read-only validation context; they may be fixed, partially constrained, or implicitly powered when the benchmark contract declares that behavior, and they are not counted in engineer manufacturability or cost validation.
 - FR5: The system can validate that a benchmark is solvable and reject ambiguous, impossible, or incomplete setups.
 - FR6: The system can pass benchmark setup artifacts into the solution workflow.
 

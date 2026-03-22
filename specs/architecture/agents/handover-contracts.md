@@ -144,9 +144,7 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 The Engineer agent(s) (for whom the first point of access is Engineering Planner) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
-The benchmark-owned environment, benchmark input objects, and benchmark objective markers are read-only task fixtures. They are validated for geometry correctness, placement, randomization, and benchmark solvability, but they are not validated for manufacturability or priced as manufactured outputs. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
-
-Benchmark-owned moving fixtures and benchmark-owned electronics are also read-only task fixtures. Their COTS identifiers and runtime metadata must be valid, but their cost and weight never flow into the engineer's final solution price or manufacturability totals.
+The benchmark-owned environment, benchmark input objects, benchmark objective markers, benchmark-owned moving fixtures, and benchmark-owned electronics are read-only task fixtures. They are validation setup, not engineer-owned deliverables: they are validated for geometry correctness, placement, randomization, benchmark solvability, and valid COTS identifiers/runtime metadata, but they are not validated for manufacturability or priced as manufactured outputs. They may be fixed, partially constrained, or implicitly powered when the benchmark contract explicitly says so. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 

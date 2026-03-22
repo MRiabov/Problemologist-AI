@@ -7,6 +7,7 @@ import pytest
 
 from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import AgentName, EpisodeStatus
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
@@ -14,6 +15,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 async def _run_and_wait(
     client: httpx.AsyncClient, *, agent_name: AgentName, session_id: str, task: str
 ) -> EpisodeResponse:
+    await seed_benchmark_assembly_definition(client, session_id)
     req = AgentRunRequest(task=task, session_id=session_id, agent_name=agent_name)
     run_resp = await client.post(
         f"{CONTROLLER_URL}/api/agent/run",

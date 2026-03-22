@@ -28,6 +28,7 @@ from shared.workers.schema import (
     BenchmarkToolResponse,
     WriteFileRequest,
 )
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -193,6 +194,7 @@ async def test_int_027_seed_variant_tracking():
         seed = 42
 
         # 1. Start an episode with seed and variant_id in metadata_vars
+        await seed_benchmark_assembly_definition(client, session_id)
         payload = AgentRunRequest(
             task="Test seed and variant tracking",
             session_id=session_id,
@@ -312,6 +314,7 @@ async def test_int_030_interrupt_propagation():
     """INT-030: Verify user interrupt cancels worker jobs."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"INT-030-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         payload = AgentRunRequest(
             task="Perform a very complex multi-step reasoning task.",
             session_id=session_id,

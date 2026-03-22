@@ -117,6 +117,7 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 - Planner and reviewer handoffs are strict-schema artifacts with stage-specific manifests, no silent fallback, and fail-closed routing on stale, missing, or invalid artifacts.
 - Planner-owned derived values such as cost caps are deterministic outputs of validator tooling, not freeform authoring.
 - Benchmark-owned fixtures and motion context are read-only unless the benchmark explicitly declares engineer interaction.
+- Benchmark-owned fixtures are validation setup, not engineer-owned solution hardware; they may be fixed, partially constrained, or implicitly powered when the benchmark contract says so, and they are excluded from engineer manufacturability and pricing gates.
 - Benchmark setup must preserve distinct benchmark-owned vs engineer-owned artifact boundaries and hash-based immutability across handoff.
 - `/benchmark/validate` uses MuJoCo for static preview by default; Genesis parity is validated through dedicated simulation paths, not preview reruns.
 - Static preview must persist RGB, depth, segmentation, and render manifests when enabled.

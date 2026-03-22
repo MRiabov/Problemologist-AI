@@ -1,12 +1,18 @@
 # Test Framework
 
-This repository uses `pytest` as the primary test runner, with `pytest-playwright`
-providing the browser automation layer for the frontend and e2e suite.
+This repository is backend-first. Most verification happens through
+`./scripts/run_integration_tests.sh` and the HTTP/system integration suites
+under `tests/integration/`. Browser automation is a narrow optional layer for
+the small set of live UI flows that need a real browser, implemented with
+`pytest-playwright`.
 
-The browser tests live under:
+Integration test additions, removals, renames, and scope changes must keep
+their `INT-xxx` mapping in `specs/integration-tests.md`.
 
-- `tests/e2e/`
+Optional browser tests live under:
+
 - `tests/integration/frontend/`
+- `tests/e2e/`
 - shared support code in `tests/support/`
 
 ## Setup
@@ -17,22 +23,33 @@ The canonical integration entrypoint is:
 ./scripts/run_integration_tests.sh
 ```
 
-That script starts the compose stack, prepares the frontend build, and then runs
-pytest with the repo's integration filters.
+That script starts the compose stack, runs migrations, starts backend services,
+and then runs pytest with the repo's integration filters. It only builds and
+serves the frontend when the browser slice is selected.
 
-For browser-only coverage, use:
+Integration session IDs use the `INT-{number}-{uuid8}` pattern. Keep that
+shape in any test-authored artifacts or assertions that need to correlate a
+run with logs or persisted records.
+
+For backend-first integration work, use the marker-driven runner directly:
+
+```bash
+./scripts/run_integration_tests.sh -m integration_p0
+```
+
+For the optional browser slice, use:
 
 ```bash
 ./scripts/run_integration_tests.sh -m integration_frontend
 ```
 
-The same selection is available through the convenience target:
+The same optional slice is available through the convenience target:
 
 ```bash
 make test-frontend
 ```
 
-For just the sample e2e folder, use:
+For just the `tests/e2e/` browser-smoke folder, use:
 
 ```bash
 make test-e2e
@@ -73,6 +90,9 @@ The default values are documented in `.env.example`.
 - Keep assertions on observable UI state and backend responses.
 - Avoid arbitrary sleeps. Poll for a concrete DOM or API condition instead.
 - Use the shared browser helpers for navigation and status polling.
+- Keep the test traffic at the browser, API, or storage boundary. Do not
+  invoke controller or worker internals directly when the test is meant to be
+  integration coverage.
 
 ## Notes
 
@@ -80,4 +100,4 @@ The default values are documented in `.env.example`.
 - The repo does not use a separate Node `playwright test` runner; Playwright is
   integrated through `pytest-playwright`.
 - The browser tests are designed to run against the real compose stack, not
-  mocked controller or worker internals.
+  controller or worker internals.

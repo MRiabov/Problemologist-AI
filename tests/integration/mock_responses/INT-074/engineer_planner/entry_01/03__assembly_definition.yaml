@@ -1,7 +1,7 @@
 version: '1.0'
 constraints:
-  benchmark_max_unit_cost_usd: 500
-  benchmark_max_weight_g: 5000
+  benchmark_max_unit_cost_usd: 250
+  benchmark_max_weight_g: 2500
   planner_target_max_unit_cost_usd: 250
   planner_target_max_weight_g: 2500
 totals:

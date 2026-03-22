@@ -14,6 +14,7 @@ from controller.api.schemas import (
 from shared.enums import EpisodeStatus
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -26,9 +27,11 @@ async def test_int_045_skills_sync_lifecycle():
     async with httpx.AsyncClient(timeout=30.0) as client:
         # 1. Trigger Agent Run
         task = "Write a script that uses a skill"
+        session_id = f"INT-045-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
         request = AgentRunRequest(
             task=task,
-            session_id=f"INT-045-{uuid.uuid4().hex[:8]}",
+            session_id=session_id,
         )
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",

@@ -8,14 +8,14 @@ This is a secondary UI reference for the React frontend in `frontend/src/`. Use 
 
 ## Top-Level UI Surfaces
 
-| Surface | Key Files | Responsibility |
-| --- | --- | --- |
-| App bootstrap | `frontend/src/main.tsx`, `frontend/src/App.tsx` | Wires providers, router, and the API base URL |
-| Shell layout | `frontend/src/components/layout/AppLayout.tsx`, `frontend/src/components/layout/Sidebar.tsx` | Provides the fixed app shell, navigation, history, and feedback entry points |
-| Engineer workspace | `frontend/src/pages/EngineerWorkspace.tsx` | Main solving view for agent runs |
-| Benchmark pipeline | `frontend/src/pages/BenchmarkGeneration.tsx` | Benchmark generation and review view |
-| Settings | `frontend/src/pages/Settings.tsx` | Theme and workspace preferences |
-| Shared workspace shell | `frontend/src/components/workspace/UnifiedGeneratorView.tsx` | Common split-panel layout used by both workspace pages |
+| Surface                | Key Files                                                                                    | Responsibility                                                               |
+| ---------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| App bootstrap          | `frontend/src/main.tsx`, `frontend/src/App.tsx`                                              | Wires providers, router, and the API base URL                                |
+| Shell layout           | `frontend/src/components/layout/AppLayout.tsx`, `frontend/src/components/layout/Sidebar.tsx` | Provides the fixed app shell, navigation, history, and feedback entry points |
+| Engineer workspace     | `frontend/src/pages/EngineerWorkspace.tsx`                                                   | Main solving view for agent runs                                             |
+| Benchmark pipeline     | `frontend/src/pages/BenchmarkGeneration.tsx`                                                 | Benchmark generation and review view                                         |
+| Settings               | `frontend/src/pages/Settings.tsx`                                                            | Theme and workspace preferences                                              |
+| Shared workspace shell | `frontend/src/components/workspace/UnifiedGeneratorView.tsx`                                 | Common split-panel layout used by both workspace pages                       |
 
 ## App Shell And Routing
 
@@ -109,13 +109,13 @@ This is a secondary UI reference for the React frontend in `frontend/src/`. Use 
 
 ## State And Data Flow
 
-| Area | Key Files | Notes |
-| --- | --- | --- |
-| Episode state | `frontend/src/context/EpisodeContext.tsx` | Owns selected episode, episode polling, creation flows, continuation, steerability, and context selection |
-| Connection state | `frontend/src/context/ConnectionContext.tsx` | Tracks backend connectivity and mock mode |
-| Theme state | `frontend/src/context/ThemeContext.tsx` | Handles light/dark theme switching |
-| UI preferences | `frontend/src/context/UISettingsContext.tsx` | Stores reasoning visibility and related workspace preferences |
-| API client | `frontend/src/api/client.ts`, `frontend/src/api/generated/` | Wraps the generated controller client and the manual helpers used by the UI |
+| Area             | Key Files                                                   | Notes                                                                                                     |
+| ---------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Episode state    | `frontend/src/context/EpisodeContext.tsx`                   | Owns selected episode, episode polling, creation flows, continuation, steerability, and context selection |
+| Connection state | `frontend/src/context/ConnectionContext.tsx`                | Tracks backend connectivity and integration-test mode                                                     |
+| Theme state      | `frontend/src/context/ThemeContext.tsx`                     | Handles light/dark theme switching                                                                        |
+| UI preferences   | `frontend/src/context/UISettingsContext.tsx`                | Stores reasoning visibility and related workspace preferences                                             |
+| API client       | `frontend/src/api/client.ts`, `frontend/src/api/generated/` | Wraps the generated controller client and the manual helpers used by the UI                               |
 
 ## Shared UI Primitives
 
@@ -135,12 +135,12 @@ These primitives are used throughout the shell and workspace layouts, so visual 
 
 ## Testing Anchors
 
-| Area | Test Files |
-| --- | --- |
-| App shell and workspaces | `frontend/src/pages/__tests__/EngineerWorkspace.test.tsx`, `frontend/src/pages/__tests__/BenchmarkGeneration.test.tsx` |
-| Chat and reasoning | `frontend/src/components/Chat/__tests__/ChatInput.test.tsx`, `frontend/src/components/workspace/__tests__/ChatWindow.test.tsx`, `frontend/src/components/workspace/__tests__/ThoughtBlock.test.tsx` |
-| Feedback and actions | `frontend/src/components/workspace/__tests__/FeedbackSystem.test.tsx`, `frontend/src/components/workspace/__tests__/ActionCard.test.tsx` |
-| API client behavior | `frontend/src/api/__tests__/client.test.ts` |
+| Area                     | Test Files                                                                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App shell and workspaces | `frontend/src/pages/__tests__/EngineerWorkspace.test.tsx`, `frontend/src/pages/__tests__/BenchmarkGeneration.test.tsx`                                                                              |
+| Chat and reasoning       | `frontend/src/components/Chat/__tests__/ChatInput.test.tsx`, `frontend/src/components/workspace/__tests__/ChatWindow.test.tsx`, `frontend/src/components/workspace/__tests__/ThoughtBlock.test.tsx` |
+| Feedback and actions     | `frontend/src/components/workspace/__tests__/FeedbackSystem.test.tsx`, `frontend/src/components/workspace/__tests__/ActionCard.test.tsx`                                                            |
+| API client behavior      | `frontend/src/api/__tests__/client.test.ts`                                                                                                                                                         |
 
 ## Practical Notes
 

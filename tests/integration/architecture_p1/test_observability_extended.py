@@ -9,6 +9,7 @@ from temporalio.client import Client
 
 from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import EpisodeStatus, TraceType
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 from tests.integration.contracts import BackupWorkflowResponse
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
@@ -80,10 +81,9 @@ async def test_int_058_cross_system_correlation():
     """INT-058: Verify cross-system correlation IDs."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         task = "Test cross-system correlation"
-        request = AgentRunRequest(
-            task=task,
-            session_id=f"INT-058-{uuid.uuid4().hex[:8]}",
-        )
+        session_id = f"INT-058-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(client, session_id)
+        request = AgentRunRequest(task=task, session_id=session_id)
         resp = await client.post(
             f"{CONTROLLER_URL}/agent/run",
             json=request.model_dump(),

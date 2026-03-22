@@ -48,9 +48,9 @@ The benchmarks are consisting of CAD models which are converted into XML.
 
 The environments are made with static objects, dynamic objects, and motors. <!-- note - not sure if I handle dynamic objects atm. If I do, how are they specified in CAD? -->
 
-Benchmark-owned motors and electronics are treated as fixture behavior, not as engineer-owned electrical design. They still require strict COTS identification when they come from the catalog, but benchmark fixtures do not become part of engineer pricing or manufacturability targets.
+Benchmark-owned motors and electronics are treated as fixture behavior, not as engineer-owned electrical design. They are validation context, so they do not become part of engineer pricing or manufacturability targets. Strict COTS identification still applies when they come from the catalog.
 
-For benchmark-owned powered fixtures, we do not require benchmark-side wiring realism in MVP. Benchmark fixtures may be implicitly powered when the benchmark contract says so.
+For benchmark-owned powered fixtures, we do not require benchmark-side wiring realism in MVP. Benchmark fixtures may be implicitly powered when the benchmark contract says so, and they may be fixed or partially constrained if that is what the benchmark needs.
 
 Problems with motors and moving parts are verified more consistently because they are more prone to error.
 
@@ -151,7 +151,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 1. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
 1. Validate non-ambiguity and completeness of planner handoff artifacts.
 1. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
-1. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion.
+1. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion. Benchmark fixtures are validation context, not manufactured solution parts, so the reviewer checks reviewability and solvability rather than engineer manufacturability.
 1. Reject impossible or excessively underconstrained benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unstable/unreviewable joint setups.
 1. Reject excessive or unjustified benchmark-side DOFs in `benchmark_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
 1. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
