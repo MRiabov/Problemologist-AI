@@ -331,6 +331,14 @@ def validate_environment_drilling_contract(
             )
             continue
 
+        if not target.metadata.allows_engineer_interaction:
+            errors.append(
+                "environment_drill_operations: benchmark part "
+                f"'{operation.target_part_id}' must declare "
+                "allows_engineer_interaction: true before engineer-facing drilling"
+            )
+            continue
+
         attachment_policy = target.metadata.attachment_policy
         drill_policy = (
             attachment_policy.drill_policy if attachment_policy is not None else None
@@ -449,6 +457,14 @@ def validate_environment_attachment_contract(
 
             benchmark_ref = benchmark_refs[0]
             target = benchmark_parts[benchmark_ref]
+            if not target.metadata.allows_engineer_interaction:
+                errors.append(
+                    "final_assembly.joints: benchmark part "
+                    f"'{benchmark_ref}' must declare "
+                    "allows_engineer_interaction: true before engineer-facing "
+                    "attachments"
+                )
+                continue
             attachment_policy = target.metadata.attachment_policy
             if (
                 attachment_policy is None

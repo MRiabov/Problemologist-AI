@@ -438,6 +438,7 @@ class BenchmarkPartMetadata(StrictContractModel):
     """Benchmark-owned metadata for environment and fixture parts."""
 
     fixed: bool = False
+    allows_engineer_interaction: bool = False
     material_id: str | None = None
     cots_id: str | None = None
     attachment_policy: BenchmarkPartAttachmentPolicy | None = None

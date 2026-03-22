@@ -17,6 +17,7 @@ benchmark_parts:
     label: "environment_fixture"
     metadata:
       fixed: true
+      allows_engineer_interaction: false
       material_id: "aluminum_6061"
 
 simulation_bounds:

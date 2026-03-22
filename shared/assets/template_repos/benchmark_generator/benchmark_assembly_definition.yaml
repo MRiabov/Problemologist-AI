@@ -29,7 +29,8 @@ environment_drill_operations:
 final_assembly:
   # Declare benchmark-owned parts, subassemblies, and motion metadata here.
   # Use this file for benchmark-owned DOFs, fixture electronics, and any
-  # benchmark-owned component that sets allows_engineer_interaction: true.
+  # benchmark-owned component that explicitly sets allows_engineer_interaction:
+  # true in benchmark_definition.yaml.
   # This artifact is copied into downstream engineer sessions as read-only
   # benchmark-owned context.
   []
