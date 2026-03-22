@@ -57,7 +57,7 @@ development_status:
   3-2-evaluate-manufacturability-at-the-requested-quantity: ready-for-dev
   3-3-evaluate-weight-size-form-factor-and-cots: ready-for-dev
   3-4-prefer-the-simpler-valid-solution: ready-for-dev
-  3-5-represent-allowed-attachment-and-drilling-points: backlog
+  3-5-represent-allowed-attachment-and-drilling-points: ready-for-dev
   epic-3-retrospective: optional
 
   epic-4: backlog
