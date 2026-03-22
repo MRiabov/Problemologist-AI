@@ -642,6 +642,29 @@ def _parse_task_id_filters(raw_task_id_filters: list[str] | None) -> set[str]:
     return selected_ids
 
 
+def _resolve_runner_backend(
+    *,
+    runner_backend_arg: str | None,
+    call_paid_api: bool | None,
+    env_runner_backend: str | None,
+) -> EvalRunnerBackend:
+    """Resolve the eval runner backend from CLI flags and environment."""
+
+    if runner_backend_arg is not None:
+        return EvalRunnerBackend(runner_backend_arg)
+
+    if call_paid_api is True:
+        return EvalRunnerBackend.CONTROLLER
+
+    if call_paid_api is False:
+        return EvalRunnerBackend.CODEX
+
+    if env_runner_backend:
+        return EvalRunnerBackend(env_runner_backend)
+
+    return EvalRunnerBackend.CODEX
+
+
 def _format_tool_args(trace: dict[str, Any]) -> str:
     parsed = _parse_trace_json_content(trace.get("content"))
     if parsed is None:
@@ -2806,13 +2829,23 @@ async def main():
         "--skip-env-up", action="store_true", help="Skip running scripts/env_up.sh"
     )
     parser.add_argument(
+        "--call-paid-api",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Use the paid controller/OpenRouter/Gemini path instead of local "
+            "Codex execution. The default path is Codex; --runner-backend "
+            "still provides an explicit override."
+        ),
+    )
+    parser.add_argument(
         "--runner-backend",
         type=str,
-        default=os.getenv(EVAL_RUNNER_BACKEND_ENV, EvalRunnerBackend.CONTROLLER.value),
+        default=None,
         choices=[backend.value for backend in EvalRunnerBackend],
         help=(
-            "Execution backend for eval runs. controller uses the existing "
-            "HTTP orchestration path; codex launches local Codex workspaces."
+            "Explicit execution backend override. Codex is the default when "
+            "neither --call-paid-api nor EVAL_RUNNER_BACKEND is set."
         ),
     )
     parser.add_argument(
@@ -2834,7 +2867,14 @@ async def main():
     else:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
 
-    runner_backend = EvalRunnerBackend(args.runner_backend)
+    try:
+        runner_backend = _resolve_runner_backend(
+            runner_backend_arg=args.runner_backend,
+            call_paid_api=args.call_paid_api,
+            env_runner_backend=os.getenv(EVAL_RUNNER_BACKEND_ENV),
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if runner_backend == EvalRunnerBackend.CODEX and (
         args.run_judge or args.run_reviewers_with_judge
@@ -2913,7 +2953,13 @@ async def main():
         backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "GENESIS"),
         full_sim=args.full_sim,
     )
-    logger.info("eval_runner_backend_selected", backend=runner_backend.value)
+    logger.info(
+        "eval_runner_backend_selected",
+        backend=runner_backend.value,
+        call_paid_api=args.call_paid_api,
+        explicit_runner_backend=args.runner_backend,
+        env_runner_backend=os.getenv(EVAL_RUNNER_BACKEND_ENV),
+    )
 
     _emit_startup_log_pointers(
         current_link=current_link,

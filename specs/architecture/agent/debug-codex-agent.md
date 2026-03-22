@@ -11,7 +11,7 @@
 ## Purpose
 
 The debug Codex mode exists to reduce the cost of repeated eval iteration.
-The controller-backed path remains the default production path, but local Codex execution removes the need to loop through openrouter for every debugging cycle.
+Local Codex execution is the default eval-debug path, while the controller-backed paid-provider path remains available when a run must call OpenRouter or Gemini.
 
 This mode preserves the same workspace contract as the rest of the application:
 
@@ -25,10 +25,11 @@ This mode preserves the same workspace contract as the rest of the application:
 
 The runner exposes the backend as an explicit mode:
 
-1. `controller` uses the existing HTTP orchestration path.
 1. `codex` launches a local Codex workspace and runs the task there.
-1. `controller` remains the default backend.
-1. The backend can be selected through `--runner-backend` or `EVAL_RUNNER_BACKEND`.
+1. `controller` uses the existing HTTP orchestration path and paid model providers.
+1. `codex` is the default backend.
+1. The backend can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
+1. `--call-paid-api` flips the runner to the paid-provider/controller path; `--runner-backend` remains the explicit override.
 
 The debug Codex mode is implemented in the shared runner, so the `dataset/evals/run_evals.py` wrapper inherits the same behavior without a second code path.
 
@@ -151,7 +152,7 @@ The runner behavior for Codex mode is:
 1. Fail closed if the local Codex CLI is missing or the workspace verification fails.
 
 The runner does not require controller/worker orchestration for the agent loop in Codex mode.
-The controller-backed preflight and health checks remain part of the default backend only.
+The controller-backed preflight and health checks remain part of the paid-provider/controller path only.
 
 The shared runner implementation is in [evals/logic/runner.py](../../../evals/logic/runner.py).
 
@@ -182,7 +183,7 @@ The accepted Codex-mode behavior is defined by integration coverage, not by unit
 
 The current validation contract is:
 
-1. `run_evals --help` exposes the codex backend flag.
+1. `run_evals --help` exposes the codex default and the paid-provider `--call-paid-api` handle.
 1. Materialized planner workspaces contain the relative-path prompt contract.
 1. Materialized planner workspaces do not contain `/workspace` in the prompt text.
 1. Planner submission succeeds from the local workspace helper.

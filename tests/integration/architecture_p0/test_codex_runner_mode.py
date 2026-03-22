@@ -51,6 +51,7 @@ def test_run_evals_help_exposes_codex_backend():
 
     assert completed.returncode == 0, completed.stderr
     assert "--runner-backend" in completed.stdout
+    assert "--call-paid-api" in completed.stdout
     assert "codex" in completed.stdout
 
 
