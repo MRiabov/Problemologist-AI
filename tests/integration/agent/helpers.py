@@ -51,22 +51,41 @@ def read_log_segment(path: Path, start_offset: int) -> str:
         return f.read().decode("utf-8", errors="ignore")
 
 
-def _benchmark_assembly_definition_content() -> str:
+def _benchmark_assembly_definition_content(
+    *,
+    benchmark_max_unit_cost_usd: float = 200.0,
+    benchmark_max_weight_g: float = 1000.0,
+    planner_target_max_unit_cost_usd: float | None = None,
+    planner_target_max_weight_g: float | None = None,
+    estimated_unit_cost_usd: float = 0.0,
+    estimated_weight_g: float = 0.0,
+    estimate_confidence: str = "medium",
+) -> str:
+    planner_target_max_unit_cost_usd = (
+        benchmark_max_unit_cost_usd
+        if planner_target_max_unit_cost_usd is None
+        else planner_target_max_unit_cost_usd
+    )
+    planner_target_max_weight_g = (
+        benchmark_max_weight_g
+        if planner_target_max_weight_g is None
+        else planner_target_max_weight_g
+    )
     assembly = AssemblyDefinition(
         version="1.0",
         constraints=AssemblyConstraints(
-            benchmark_max_unit_cost_usd=200.0,
-            benchmark_max_weight_g=1000.0,
-            planner_target_max_unit_cost_usd=200.0,
-            planner_target_max_weight_g=500.0,
+            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g=benchmark_max_weight_g,
+            planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
+            planner_target_max_weight_g=planner_target_max_weight_g,
         ),
         manufactured_parts=[],
         cots_parts=[],
         final_assembly=[],
         totals=CostTotals(
-            estimated_unit_cost_usd=0.0,
-            estimated_weight_g=0.0,
-            estimate_confidence="medium",
+            estimated_unit_cost_usd=estimated_unit_cost_usd,
+            estimated_weight_g=estimated_weight_g,
+            estimate_confidence=estimate_confidence,
         ),
     )
     return yaml.safe_dump(
@@ -142,13 +161,29 @@ async def _seed_workspace_file(
 async def seed_benchmark_assembly_definition(
     client: httpx.AsyncClient,
     session_id: str,
+    *,
+    benchmark_max_unit_cost_usd: float = 200.0,
+    benchmark_max_weight_g: float = 1000.0,
+    planner_target_max_unit_cost_usd: float | None = None,
+    planner_target_max_weight_g: float | None = None,
+    estimated_unit_cost_usd: float = 0.0,
+    estimated_weight_g: float = 0.0,
+    estimate_confidence: str = "medium",
 ) -> None:
     """Seed a minimal benchmark handoff file for engineer planner startup."""
     await _seed_workspace_file(
         client,
         session_id=session_id,
         path="benchmark_assembly_definition.yaml",
-        content=_benchmark_assembly_definition_content(),
+        content=_benchmark_assembly_definition_content(
+            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
+            benchmark_max_weight_g=benchmark_max_weight_g,
+            planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
+            planner_target_max_weight_g=planner_target_max_weight_g,
+            estimated_unit_cost_usd=estimated_unit_cost_usd,
+            estimated_weight_g=estimated_weight_g,
+            estimate_confidence=estimate_confidence,
+        ),
     )
 
 

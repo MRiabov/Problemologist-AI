@@ -15,7 +15,14 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 async def _run_and_wait(
     client: httpx.AsyncClient, *, agent_name: AgentName, session_id: str, task: str
 ) -> EpisodeResponse:
-    await seed_benchmark_assembly_definition(client, session_id)
+    await seed_benchmark_assembly_definition(
+        client,
+        session_id,
+        benchmark_max_unit_cost_usd=250.0,
+        benchmark_max_weight_g=2500.0,
+        planner_target_max_unit_cost_usd=250.0,
+        planner_target_max_weight_g=2500.0,
+    )
     req = AgentRunRequest(task=task, session_id=session_id, agent_name=agent_name)
     run_resp = await client.post(
         f"{CONTROLLER_URL}/api/agent/run",
