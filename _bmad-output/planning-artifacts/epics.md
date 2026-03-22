@@ -79,7 +79,7 @@ FR32: Maintainers can reproduce and diagnose failed episodes from persisted arti
 FR33: The system can surface explicit fallback behavior and failure classification.
 FR34: The system can compare executed runtime paths against the documented supported feature set and flag mismatches as validation failures.
 FR35: The system can keep failed episodes replayable from persisted artifacts and traces.
-FR36: The system can accept corrective steering prompts during an active run with attached structured CAD or code context.
+FR36: The system can accept corrective steering prompts during an active run with attached structured CAD, code, file, or media context.
 FR37: The system can let users switch CAD selection mode between faces, parts/bodies, and subassemblies, and preserve the selected entity in the prompt payload.
 FR38: The system can preserve steering context, selection metadata, and resulting edits in traces and replay artifacts.
 
@@ -129,8 +129,10 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 - Steering is a late-stage cross-cutting capability over the agents, not a first-milestone feature, and belongs after the gravity baseline is defined.
 - Supported workbenches and mechanisms are finite and explicit; unsupported mechanisms fail closed.
 - The frontend is an evidence surface for session history, chat/trace inspection, CAD viewer, code viewer, simulation playback, and feedback, not the source of truth.
-- Live steering must preserve selection metadata for faces, parts, bodies, subassemblies, and code ranges in traces and prompt payloads.
+- Advanced FEM, fluids, and electronics visualization in the UI is deferred until after the MVP; the MVP UI only needs simple workflow control, inspection, and review actions.
+- Live steering must preserve selection metadata for faces, parts, bodies, subassemblies, code ranges, file references, and media references in traces and prompt payloads.
 - Codex debug mode uses workspace-relative paths, a local submission helper, and the same fail-closed workspace contract as runtime.
+- Local CLI agent flexibility is an optional, non-exclusive development and eval-debug path; supported CLI backends may supply benchmark and engineering decisions only when they satisfy the same workspace, prompt, artifact, and fail-closed validation contracts as the controller-backed runtime.
 - OpenAPI generation, strict schemas, and integration tests remain part of the repository contract and must stay in sync with controller behavior.
 - No silent fallback or degraded-success paths: any fallback must be explicit, traceable, and machine-readable.
 
@@ -141,10 +143,10 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 
 ### FR Coverage Map
 
-FR1: Epic 1 - Human operators can define benchmark goals, zones, interactions, and randomization and get a fail-closed result
-FR2: Epic 1 - Benchmark-owned fixtures and electronics remain read-only unless interaction is explicit
-FR3: Epic 1 - Allowed attachment and drilling points are declared in the benchmark setup
-FR4: Epic 1 - The benchmark setup preserves read-only benchmark context boundaries
+FR1: Epic 1 - Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem
+FR2: Epic 1 - Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization
+FR3: Epic 1 - Benchmark-owned fixtures and electronics remain read-only unless interaction is explicit
+FR4: Epic 3 - Allowed attachment and drilling points are declared in the benchmark setup
 FR5: Epic 1 - Benchmark solvability is validated and ambiguous or impossible setups are rejected
 FR6: Epic 1 - Benchmark setup artifacts are passed into the solution workflow
 FR7: Epic 2 - Human engineers can receive verified design solutions to a benchmark
@@ -176,34 +178,34 @@ FR32: Epic 4 - Failed episodes can be reproduced and diagnosed from persisted ar
 FR33: Epic 4 - Explicit fallback behavior and failure classification are surfaced
 FR34: Epic 4 - Runtime paths can be compared against the documented supported feature set and mismatches flagged
 FR35: Epic 4 - Failed episodes remain replayable from persisted artifacts and traces
-FR36: Epic 20 - Corrective steering prompts can be attached with CAD or code context
+FR36: Epic 20 - Corrective steering prompts can be attached with CAD, code, file, or media context
 FR37: Epic 20 - CAD selection mode can switch between faces, parts/bodies, and subassemblies while preserving selection
 FR38: Epic 20 - Steering context, selection metadata, and resulting edits are preserved in traces and replay artifacts
 
 ## Epic List
 
-The first five epics are platform foundations. The remaining epics are capability-family epics. Gravity is the baseline benchmark family, and steering is intentionally late-stage.
+The first five epics are platform foundations. The remaining epics are capability-family epics. The baseline family is simple rigid-body simulation with gravity enabled, using MuJoCo-style simulators or equivalents, and steering is intentionally late-stage.
 
 ### Epic 1: Benchmark Creation & Validation
-Human operators can author benchmark packages, and the system rejects invalid benchmark definitions with explicit, deterministic reasons before acceptance. The baseline gravity-capable simulation contract is included here as a validation dependency, not as a separate epic.
+Human operators can author benchmark packages, and the system rejects invalid benchmark definitions with explicit, deterministic reasons before acceptance. The baseline simple rigid-body simulation contract with gravity enabled is included here as a validation dependency, not as a separate epic.
 
 ### Epic 2: Human Solution Workflow
 Human engineers can take an approved benchmark, run candidate solutions against it, inspect pass/fail evidence, and iterate after failure without rebuilding the benchmark.
 
 ### Epic 3: Cost, Weight, and Manufacturability
-Human operators can validate solutions against cost, weight, and manufacturability constraints using real manufacturing and COTS data.
+Human operators can validate solutions against cost, weight, manufacturability, and allowed attachment/drilling constraints using real manufacturing and COTS data.
 
 ### Epic 4: Dataset Export & Replay
 Researchers and companies can export completed runs as inspectable, reproducible dataset rows with traces, artifacts, lineage, and replayable failures.
 
 ### Epic 5: UI, Visualization, and Demo
-Human operators can inspect runs, visualize CAD and simulation evidence, resume sessions, and present the system through a browser UI.
+Human operators can inspect runs, visualize CAD and simulation evidence, create benchmark drafts, accept or reject simple plan artifacts, resume sessions, and present the system through a browser UI. This is the simple workflow and evidence surface, not the advanced steerability surface.
 
 ### Epic 6: Gravity: Benchmarks
-Benchmark generator agents can reliably ship valid gravity-only benchmarks that human engineers can work against.
+Benchmark generator agents can reliably ship valid simple rigid-body benchmarks with gravity enabled that human engineers can work against.
 
 ### Epic 7: Gravity: Engineering
-Engineering agents can solve gravity-only benchmarks with verified solutions.
+Engineering agents can solve simple rigid-body benchmarks with verified solutions.
 
 ### Epic 8: Actuators: Simulation
 Upgrade simulation fidelity for powered motion, actuators, and motion limits.
@@ -242,13 +244,13 @@ Benchmark generator agents can ship electromechanical benchmark sets with valid 
 Engineering agents can solve electromechanical benchmarks with verified circuit, wiring, and motion behavior.
 
 ### Epic 20: Steering & Control
-Human operators can steer the active benchmark generator and engineering agents with selected CAD/code context and targeted corrections.
+Human operators can steer the active benchmark generator and engineering agents with selected CAD/code context and targeted corrections. This is the active control surface, not the read-only evidence surface.
 
 ### Epic 21: Market Fit & Hardening
 Define the target market and harden the product for that market.
 
 ## Epic 1: Benchmark Creation & Validation
-Human operators can author benchmark packages, and the system rejects invalid benchmark definitions with explicit, deterministic reasons before acceptance. The baseline gravity-capable simulation contract is included here as a validation dependency, not as a separate epic.
+Human operators can author benchmark packages, and the system rejects invalid benchmark definitions with explicit, deterministic reasons before acceptance. The baseline simple rigid-body simulation contract with gravity enabled is included here as a validation dependency, not as a separate epic.
 
 ### Story 1.1: Benchmark Geometry and Objectives
 As a human operator, I want to define benchmark goals, forbid zones, build zones, and runtime randomization so that the benchmark has a clear, bounded, solvable contract.
@@ -336,7 +338,7 @@ As a human engineer, I want to start solution work from an approved benchmark so
 **When** solution work starts
 **Then** the benchmark package and environment version are carried forward unchanged into the solution workspace
 
-**Given** a gravity-only benchmark
+**Given** a simple rigid-body benchmark
 **When** solution work starts
 **Then** the solution is evaluated in physically correct rigid-body simulation and the outcome follows physical reality
 
@@ -396,7 +398,7 @@ As a human engineer, I want to review a colleague's solution under runtime jitte
 **Then** I can approve it for the next workflow stage
 
 ## Epic 3: Cost, Weight, and Manufacturability
-Human operators can validate solutions against cost, weight, and manufacturability constraints using real manufacturing and COTS data, and the system can prefer simpler valid designs over more complex ones when multiple candidates satisfy the same benchmark.
+Human operators can validate solutions against cost, weight, manufacturability, and allowed attachment/drilling constraints using real manufacturing and COTS data, and the system can prefer simpler valid designs over more complex ones when multiple candidates satisfy the same benchmark.
 
 ### Story 3.1: Configure Real Cost Inputs
 As a human operator, I want to configure the prices used for costing from real manufacturing and catalog data so that the system evaluates designs with defensible price assumptions instead of invented numbers.
@@ -461,6 +463,23 @@ As a human operator, I want the system to identify unnecessary or unjustified de
 **Given** a solution whose movement is justified by the benchmark objective
 **When** I review it
 **Then** the system does not flag it as over-actuated merely because it moves
+
+### Story 3.5: Represent Allowed Attachment and Drilling Points
+As a human operator, I want the system to represent allowed attachment and drilling points in the benchmark setup so that CAD and manufacturability review can validate how the design may be connected or modified.
+
+**Acceptance Criteria:**
+
+**Given** a benchmark with declared attachment or drilling points
+**When** the benchmark package is reviewed
+**Then** those points are persisted, visible, and tied to the latest revision
+
+**Given** missing, conflicting, or unsupported attachment or drilling points
+**When** validation runs
+**Then** the system rejects or flags the benchmark with an explicit reason
+
+**Given** a CAD revision changes attachment or drilling constraints
+**When** the benchmark is reopened
+**Then** the latest revision reflects the updated attachment and drilling rules in the review artifacts
 
 ## Epic 4: Dataset Export & Replay
 Researchers and companies can export completed runs as inspectable, reproducible dataset rows with traces, artifacts, lineage, immutable run bundles, and replayable failures. Invalid or corrupted episodes are excluded at export time.
@@ -570,10 +589,6 @@ As a human operator, I want to visualize CAD models, render evidence, and simula
 **When** I open the run
 **Then** I can play, pause, and scrub the evidence over time
 
-**Given** circuit or electronics evidence exists
-**When** I inspect the run
-**Then** the UI shows the relevant circuit view or wiring evidence
-
 **Given** latest-revision media exists
 **When** I inspect the run
 **Then** the UI binds the view to the latest revision rather than stale prior media
@@ -629,17 +644,34 @@ As a human operator, I want to see the agent's output and reasoning in real time
 **When** I inspect the run
 **Then** the UI shows an explicit missing-trace state instead of pretending success
 
-## Epic 6: Gravity: Benchmarks
-Benchmark generator agents can reliably produce valid gravity-only benchmarks that human engineers can work against, and the benchmark family stays within rigid-body mechanics and gravity.
-
-### Story 6.1: Generate Gravity-Only Benchmarks
-As a human operator, I want benchmark generator agents to produce gravity-only benchmark candidates so that the benchmark family stays within rigid-body mechanics and gravity.
+### Story 5.6: Create Benchmarks and Review Simple Plans
+As a human operator, I want to create benchmark drafts and accept or reject simple plan artifacts in the UI so that I can handle lightweight workflow steps without leaving the browser.
 
 **Acceptance Criteria:**
 
-**Given** a gravity benchmark seed or prompt
+**Given** a benchmark draft prompt or form input
+**When** I submit it
+**Then** a benchmark draft is created and persisted
+
+**Given** a planner handoff artifact
+**When** I review it
+**Then** I can accept or reject it with an explicit reason
+
+**Given** a simple workflow action
+**When** I complete it in the UI
+**Then** the result is recorded in the episode trace
+
+## Epic 6: Gravity: Benchmarks
+Benchmark generator agents can reliably produce valid simple rigid-body benchmarks with gravity enabled that human engineers can work against, and the benchmark family stays within rigid-body mechanics and gravity.
+
+### Story 6.1: Generate Simple Rigid-Body Benchmarks
+As a human operator, I want benchmark generator agents to produce simple rigid-body benchmark candidates so that the benchmark family stays within rigid-body mechanics with gravity enabled.
+
+**Acceptance Criteria:**
+
+**Given** a simple rigid-body benchmark seed or prompt
 **When** generation runs
-**Then** the candidate remains within the rigid-body, gravity-only scope and does not introduce actuators, FEM, fluids, or electronics
+**Then** the candidate remains within the simple rigid-body, gravity-enabled scope and does not introduce actuators, FEM, fluids, or electronics
 
 **Given** an unsupported mechanism or modality
 **When** generation runs
@@ -649,85 +681,85 @@ As a human operator, I want benchmark generator agents to produce gravity-only b
 **When** it is reviewed
 **Then** its objective, zones, and motion assumptions are explicit enough for a human engineer to work against it
 
-### Story 6.2: Produce a Representative Gravity Validation Set
-As a human operator, I want a sufficiently broad gravity-only validation set so that engineers can work against meaningful variations rather than a single toy case.
+### Story 6.2: Produce a Representative Simple Rigid-Body Validation Set
+As a human operator, I want a sufficiently broad simple rigid-body validation set so that engineers can work against meaningful variations rather than a single toy case.
 
 **Acceptance Criteria:**
 
-**Given** the gravity benchmark family
+**Given** the simple rigid-body benchmark family
 **When** seeds are generated
 **Then** the set includes multiple variants across object shape, placement, size, and objective arrangement
 
 **Given** the validation set
 **When** I inspect it
-**Then** it is broad enough to exercise the benchmark generator against repeatable gravity-only cases
+**Then** it is broad enough to exercise the benchmark generator against repeatable simple rigid-body cases
 
 **Given** a family member is duplicated too closely
 **When** the set is curated
 **Then** the duplicate is excluded or marked as redundant
 
-### Story 6.3: Refine Gravity Benchmark Quality
-As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated gravity benchmarks remain solvable, unambiguous, and suitable for engineering intake.
+### Story 6.3: Refine Simple Rigid-Body Benchmark Quality
+As a human operator, I want benchmark generator output to improve based on reviewer feedback so that generated simple rigid-body benchmarks remain solvable, unambiguous, and suitable for engineering intake.
 
 **Acceptance Criteria:**
 
-**Given** reviewer feedback on a gravity benchmark
+**Given** reviewer feedback on a simple rigid-body benchmark
 **When** the benchmark is regenerated
 **Then** the next revision preserves the solvable contract and resolves the flagged issue
 
-**Given** a technically valid but poor gravity benchmark
+**Given** a technically valid but poor simple rigid-body benchmark
 **When** review runs
 **Then** it can be rejected as unsuitable for engineering intake
 
-**Given** repeated gravity benchmark generations
+**Given** repeated simple rigid-body benchmark generations
 **When** I inspect the run set
 **Then** rejected examples are preserved for debugging and dataset analysis
 
-### Story 6.4: Reliable Gravity Benchmark Output and Reviews
-As a human operator, I want gravity benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+### Story 6.4: Reliable Simple Rigid-Body Benchmark Output and Reviews
+As a human operator, I want simple rigid-body benchmark output and benchmark reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
 
 **Acceptance Criteria:**
 
-**Given** 10 gravity benchmark generation attempts
+**Given** 10 simple rigid-body benchmark generation attempts
 **When** I review the outputs
 **Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
 
-**Given** an AI-generated gravity benchmark review
+**Given** an AI-generated simple rigid-body benchmark review
 **When** I inspect it
 **Then** the review explains the problem or acceptance reason clearly enough for a human to follow
 
-**Given** a gravity benchmark review is unclear
+**Given** a simple rigid-body benchmark review is unclear
 **When** I read it
 **Then** I can reject it as insufficiently explainable
 
 ## Epic 7: Gravity: Engineering
-Engineering agents can solve gravity-only benchmarks with verified solutions that behave correctly in rigid-body simulation under gravity.
+Engineering agents can solve simple rigid-body benchmarks with verified solutions that behave correctly in rigid-body simulation with gravity enabled.
 
-### Story 7.1: Solve Gravity-Only Benchmarks
-As a human operator, I want engineering agents to solve gravity-only benchmarks so that the system can produce a working solution for a rigid-body problem under gravity.
+### Story 7.1: Solve Simple Rigid-Body Benchmarks
+As a human operator, I want engineering agents to solve simple rigid-body benchmarks so that the system can produce a working solution for a rigid-body problem with gravity enabled.
 
 **Acceptance Criteria:**
 
-**Given** an approved gravity benchmark
+**Given** an approved simple rigid-body benchmark
 **When** engineering runs
 **Then** the agent produces a candidate solution against the same benchmark contract
 
-**Given** a gravity-only solution attempt
+**Given** a simple rigid-body solution attempt
 **When** it is evaluated
-**Then** the result is judged in physically correct rigid-body simulation under gravity
+**Then** the result is judged in physically correct simple rigid-body simulation with gravity enabled
 
 **Given** the candidate solution fails
 **When** the run terminates
 **Then** the failure reason is explicit and the agent can continue from the same benchmark
 
-### Story 7.2: Verify Physics-Correct Gravity Solutions
-As a human operator, I want gravity solutions to be verified against physical reality so that a passing solution is not only syntactically valid but physically plausible.
+### Story 7.2: Verify Physics-Correct Simple Rigid-Body Solutions
+As a human operator, I want simple rigid-body solutions to be verified against physical reality so that a passing solution is not only syntactically valid but physically plausible.
 
 **Acceptance Criteria:**
 
-**Given** a passing gravity solution
+**Given** a passing simple rigid-body solution
 **When** the solution is reviewed
-**Then** it respects rigid-body mechanics, gravity, and the benchmark-defined zones and objectives
+**Then** it respects rigid-body mechanics with gravity enabled, and the benchmark-defined zones and objectives
 
 **Given** a solution that only works due to simulation artifacts or unstable behavior
 **When** it is checked
@@ -735,14 +767,14 @@ As a human operator, I want gravity solutions to be verified against physical re
 
 **Given** a solution that passes under the required conditions
 **When** validation completes
-**Then** the solution is accepted as a verified gravity-only result
+**Then** the solution is accepted as a verified simple rigid-body result
 
-### Story 7.3: Persist Final Proof for Gravity Solutions
-As a human operator, I want the final gravity solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
+### Story 7.3: Persist Final Proof for Simple Rigid-Body Solutions
+As a human operator, I want the final simple rigid-body solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
 
 **Acceptance Criteria:**
 
-**Given** an accepted gravity solution
+**Given** an accepted simple rigid-body solution
 **When** it is finalized
 **Then** the final proof artifact is distinct from any preview artifact and is persisted with the episode
 
@@ -750,24 +782,24 @@ As a human operator, I want the final gravity solution proof and evidence persis
 **When** I inspect the episode later
 **Then** I can review the exact render, simulation, and terminal metadata used to accept the run
 
-**Given** the gravity solution is revisited later
+**Given** the simple rigid-body solution is revisited later
 **When** the bundle is reloaded
 **Then** the persisted artifacts are sufficient to reproduce the accepted result without rerunning the solver
 
-### Story 7.4: Reliable Gravity Solution Output and Reviews
-As a human operator, I want gravity solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
+### Story 7.4: Reliable Simple Rigid-Body Solution Output and Reviews
+As a human operator, I want simple rigid-body solution output and solution reviews to be reliably good and explainable so that I can trust the AI without manually correcting most attempts.
 
 **Acceptance Criteria:**
 
-**Given** 10 gravity solution attempts
+**Given** 10 simple rigid-body solution attempts
 **When** I review the outputs
 **Then** at least 8 of the solutions are valid without me correcting the solution
 
-**Given** an AI-generated gravity solution review
+**Given** an AI-generated simple rigid-body solution review
 **When** I inspect it
 **Then** the review explains the pass or fail decision clearly enough for a human to follow
 
-**Given** a gravity solution review is unclear
+**Given** a simple rigid-body solution review is unclear
 **When** I read it
 **Then** I can reject it as insufficiently explainable
 
@@ -1521,9 +1553,9 @@ As a human operator, I want electromechanical solutions to be verified under loa
 **When** it is checked
 **Then** it is rejected as flaky or physically implausible
 
-**Given** a fluid benchmark with electronics or a benchmark with benchmark-owned powered fixtures
+**Given** a solution with a short circuit, open circuit, overcurrent, or invalid wire route
 **When** the solution is evaluated
-**Then** fluid contact with electrical components is treated as a hard failure
+**Then** it is rejected as electrically unsafe or physically implausible
 
 ### Story 19.3: Persist Final Proof for Electromechanical Solutions
 As a human operator, I want the final electromechanical solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
@@ -1560,14 +1592,14 @@ As a human operator, I want electromechanical solution output and solution revie
 **Then** I can reject it as insufficiently explainable
 
 ## Epic 20: Steering & Control
-Human operators can steer the active benchmark generator and engineering agents with selected CAD or code context and targeted corrections, and the selected context is preserved in traces and prompt payloads.
+Human operators can steer the active benchmark generator and engineering agents with selected CAD, code, file, or media context and targeted corrections, and the selected context is preserved in traces and prompt payloads. This is the advanced steerability surface, and it comes later because the agents have to be tuned to consume the richer context, not because the frontend interaction is fundamentally harder.
 
-### Story 20.1: Attach CAD and Code Context to Steering Prompts
-As a human operator, I want to attach selected CAD parts, faces, subassemblies, or code lines to a steering prompt so that I can direct an agent with precise context.
+### Story 20.1: Attach Structured Context to Steering Prompts
+As a human operator, I want to attach selected CAD parts, faces, subassemblies, code lines, file references, or media references to a steering prompt so that I can direct an agent with precise context.
 
 **Acceptance Criteria:**
 
-**Given** a selected CAD entity or code span
+**Given** a selected CAD entity, code span, file reference, or media reference
 **When** I attach it to a steering prompt
 **Then** the selected context is preserved in the prompt payload and trace metadata
 
@@ -1579,7 +1611,24 @@ As a human operator, I want to attach selected CAD parts, faces, subassemblies, 
 **When** I submit the steering prompt
 **Then** the system rejects it with an explicit failure reason
 
-### Story 20.2: Apply Corrective Steering During Active Runs
+### Story 20.2: Switch CAD Selection Mode
+As a human operator, I want to switch CAD selection mode between faces, parts/bodies, and subassemblies so that I can select the exact geometry needed for steering.
+
+**Acceptance Criteria:**
+
+**Given** a CAD model with selectable faces, parts/bodies, and subassemblies
+**When** I switch selection mode
+**Then** the UI lets me select that entity type distinctly
+
+**Given** a selected CAD entity
+**When** I attach it to a steering prompt
+**Then** the selected entity and selection mode are preserved in the prompt payload and trace metadata
+
+**Given** an unsupported or stale selection mode
+**When** I switch modes
+**Then** the system rejects it with an explicit failure reason
+
+### Story 20.3: Apply Corrective Steering During Active Runs
 As a human operator, I want to send corrective steering during an active run so that I can refine the agent's direction when I notice an incorrect assumption early.
 
 **Acceptance Criteria:**
@@ -1596,7 +1645,7 @@ As a human operator, I want to send corrective steering during an active run so 
 **When** the run continues
 **Then** the resulting edits remain linked to the steering action in the trace
 
-### Story 20.3: Preserve Steering Provenance
+### Story 20.4: Preserve Steering Provenance
 As a maintainer, I want steering context and resulting edits preserved so that I can debug the effect of steering and replay it later if needed.
 
 **Acceptance Criteria:**
