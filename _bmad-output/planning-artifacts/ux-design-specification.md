@@ -3,7 +3,7 @@
 This document defines the secondary React dashboard for Problemologist-AI.
 The dashboard is the operator surface for inspecting benchmark and engineering episodes, steering active runs, reviewing generated artifacts, and recording feedback.
 
-The frontend is controller-first. It reads episode state, traces, assets, and feedback state from the controller APIs and session websocket updates. It does not own simulation, CAD execution, worker filesystem access, or trace synthesis.
+The frontend is controller-first. It reads episode state, traces, assets, and feedback state from the controller APIs and controller-backed polling and event updates. WebSockets are deferred to a later phase. It does not own simulation, CAD execution, worker filesystem access, or trace synthesis.
 
 This spec aligns with the system architecture index in `./desired_architecture.md`, the agent trace and filesystem contracts in `./architecture/agents/artifacts-and-filesystem.md`, the observability contract in `./architecture/observability.md`, and the living UI component inventory in `../docs/component-inventory.md`.
 
@@ -96,7 +96,7 @@ The sidebar status markers are explicit:
 ## 7. Chat And Trace Timeline
 
 `ChatWindow` is the center of the operational experience.
-It renders the selected episode task, the streamed trace timeline, the composer, the context cards, and the plan-confirmation controls.
+It renders the selected episode task, the trace timeline, the composer, the context cards, and the plan-confirmation controls.
 
 ### Trace Rendering Rules
 
@@ -118,7 +118,7 @@ If a reasoning-required run has no reasoning traces, the UI shows a visible tele
 - The latest assistant output exposes trace feedback controls.
 - The sidebar also exposes quick feedback shortcuts for the latest episode trace.
 
-### Streaming State
+### Active Run State
 
 While an episode is running:
 
@@ -351,7 +351,7 @@ The palette should avoid purple-led defaults and avoid decorative gradients that
 Motion should be functional:
 
 - reveal state changes,
-- emphasize live streaming,
+- emphasize live updates,
 - support collapsible reasoning and context,
 - avoid ornamental animation loops that do not carry meaning.
 
@@ -378,7 +378,7 @@ Accessibility requirements:
 
 ## 15. Data And Contract Boundaries
 
-The frontend consumes generated OpenAPI clients and controller-backed websocket updates.
+The frontend consumes generated OpenAPI clients and controller-backed polling and event updates.
 It must stay aligned with the backend episode model and trace model rather than inventing client-side parallel state.
 
 Contract boundaries:
@@ -386,6 +386,7 @@ Contract boundaries:
 - episode identity comes from the controller,
 - trace ordering comes from persisted backend data,
 - assets resolve through controller episode asset endpoints,
+- WebSockets are deferred to a later phase; the MVP transport contract uses controller APIs plus polling/event refreshes,
 - selected episode state may be restored from local storage,
 - panel sizes may be restored from local storage,
 - reasoning visibility may be restored from local storage or UI settings,
@@ -411,7 +412,7 @@ The frontend spec is satisfied when the dashboard can:
 
 - switch between engineer and benchmark episodes from the sidebar,
 - create new sessions from the current route,
-- show live trace streaming and a stop control while an episode runs,
+- show live trace updates and a stop control while an episode runs,
 - expose plan confirmation and request-change controls when a plan is ready,
 - render reasoning, tool activity, errors, and compaction events from persisted traces,
 - surface a telemetry-missing warning when reasoning is required but absent,
