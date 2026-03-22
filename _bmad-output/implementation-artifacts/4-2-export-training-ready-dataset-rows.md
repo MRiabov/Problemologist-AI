@@ -13,6 +13,7 @@ As a dataset operator, I want completed benchmark and solution episodes exported
 1. Given an exported benchmark or solution row, when I inspect the persisted export metadata later, then I can recover the source benchmark, the solution, the review artifacts, and the joinable session and episode identifiers without needing live worker state.
 1. Given persisted benchmark-owned or engineer-owned assets exist, when export builds the row, then it reads the stored assets and metadata from the episode and benchmark persistence surfaces, not from live workspace files or the UI-normalized list projection.
 1. Given render or manifest artifacts exist, when export runs, then it preserves the exact latest-revision media and manifest paths rather than substituting stale prior-revision references or text-only placeholders.
+1. Given a completed exported row, when I open the archive contents, then I see the persisted artifact families for that episode type, including plans, TODOs, journals, implementation files, review YAMLs, and render manifests, rather than a partial UI projection.
 
 ## Tasks / Subtasks
 
@@ -20,6 +21,7 @@ As a dataset operator, I want completed benchmark and solution episodes exported
   - [ ] Add strict Pydantic models for dataset-row metadata, artifact references, and export response payloads.
   - [ ] Carry `episode_type`, `benchmark_id`, `seed_id`, `seed_dataset`, `seed_match_method`, `generation_kind`, `parent_seed_id`, `is_integration_test`, `integration_test_id`, and joinable trace IDs (`simulation_run_id`, `cots_query_id`, `review_id`) plus source IDs and revision/artifact hashes from the persisted episode metadata.
   - [ ] Reuse the existing `EpisodeMetadata`, `TraceMetadata`, and asset reference patterns instead of inventing a second provenance model.
+  - [ ] Add a typed persistence model and migration for dataset-row archive metadata and object-storage pointers rather than storing the row payload in a second relational blob.
 - [ ] Implement export materialization from persisted benchmark and episode records. (AC: 1, 2, 3, 4, 5)
   - [ ] Add a dedicated controller export route/service in `controller/api/routes/datasets.py` and register it in `controller/api/main.py`.
   - [ ] Read raw persisted assets, traces, benchmark assets, and review manifests from DB and object storage.
@@ -30,6 +32,7 @@ As a dataset operator, I want completed benchmark and solution episodes exported
   - [ ] Ensure benchmark rows retain benchmark-owned bundle references and reviewer manifests.
   - [ ] Ensure solution rows retain solution-owned bundle references, validation/simulation proof, and reviewer manifests.
   - [ ] Reject stale or cross-revision artifacts rather than silently falling back to older files.
+  - [ ] Preserve the exact latest-revision media and manifest paths in the exported archive.
 - [ ] Add integration coverage for export, exclusion, and round-trip inspectability. (AC: 1-5)
   - [ ] Seed the export path with the smallest real completed benchmark and solution episodes available, reusing the live completion flows from `test_handover.py` and `test_engineering_loop.py` instead of mocking episode state.
   - [ ] Add a dedicated `tests/integration/architecture_p1/test_dataset_export.py` slice, or extend `test_observability_extended.py` only if the new route intentionally lives there.
@@ -46,6 +49,9 @@ As a dataset operator, I want completed benchmark and solution episodes exported
   - Do not use `list_episodes()` or any UI-normalized plan/journal projection as the source of truth. Export must read raw persisted artifacts and metadata from the DB/object-storage surfaces.
   - Story 4.4 owns seed coverage prioritization and corrupted/integration-test row filtering. This story should enforce only the hard validity and lineage gates.
   - If benchmark export needs proof that a row is the latest revision, use the persisted benchmark asset record and reviewer manifest, not live worker filesystem reads.
+  - Prefer `EpisodeType`, `GenerationKind`, `SeedMatchMethod`, `EpisodeMetadata`, and `TraceMetadata` over ad hoc dicts when carrying provenance through models.
+  - Do not use the `_normalize_plan_markdown()` read-model convenience in `controller/api/routes/episodes.py` as export source material.
+  - Preserve the persisted artifact families already present on the episode, including plans, TODOs, journals, implementation files, review YAMLs, and render manifests, rather than reconstructing them from the UI or list endpoints.
 - Source tree components to touch:
   - `controller/api/schemas.py`
   - `controller/api/main.py`
@@ -60,6 +66,7 @@ As a dataset operator, I want completed benchmark and solution episodes exported
   - `tests/integration/architecture_p1/test_engineering_loop.py`
   - `tests/integration/architecture_p1/test_reviewer_evidence.py`
   - `tests/integration/architecture_p1/test_observability_extended.py`
+  - `tests/integration/evals_p2/test_evals_p2.py`
 - Testing standards summary:
   - Use integration tests only. Drive the export over HTTP against the live controller and persist to real DB/S3-backed artifacts.
   - Assert on returned payloads, DB row metadata, object storage objects, and episode asset/trace records.
@@ -89,19 +96,21 @@ As a dataset operator, I want completed benchmark and solution episodes exported
 - [Source: specs/architecture/simulation-and-dod.md, latest-revision validation preview and reproducibility contract]
 - [Source: specs/architecture/observability.md, joinable IDs, lineage, terminal reasons, and dataset-export observability requirements]
 - [Source: specs/dataset-generation.md, S3 archive generation and metadata-only DB storage contract]
-- [Source: controller/api/schemas.py, `EpisodeResponse`, `EpisodeListItem`, and candidate export response models]
+- [Source: controller/api/schemas.py, `EpisodeResponse`, `EpisodeListItem`, `AssetResponse`, and response model patterns]
 - [Source: controller/api/main.py, controller router registration pattern]
-- [Source: controller/api/routes/episodes.py, persisted episode/assets read model and UI-normalized list fallback to avoid for export]
+- [Source: controller/api/routes/episodes.py, persisted episode/assets read model and `_normalize_plan_markdown()` fallback to avoid for export]
 - [Source: controller/api/routes/benchmark.py, benchmark session read model and benchmark asset source surface]
 - [Source: controller/persistence/models.py, episode, trace, asset, and benchmark asset persistence models]
 - [Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, and lineage-bearing schema fields]
+- [Source: shared/enums.py, `EpisodeType`, `GenerationKind`, and `SeedMatchMethod` provenance enums]
 - [Source: shared/workers/schema.py, review-manifest and validation-record schema patterns]
 - [Source: shared/observability/schemas.py, persisted event model patterns and lineage fields]
 - [Source: tests/integration/architecture_p1/test_handover.py, benchmark bundle persistence assertions]
 - [Source: tests/integration/architecture_p1/test_engineering_loop.py, solution bundle persistence assertions]
 - [Source: tests/integration/architecture_p1/test_reviewer_evidence.py, latest-revision review manifest and media linkage assertions]
 - [Source: tests/integration/architecture_p1/test_observability_extended.py, cross-system persistence/correlation patterns]
-- [Source: specs/integration-tests.md, INT-031, INT-032, INT-034, INT-049, INT-050, INT-058, INT-064, and INT-073]
+- [Source: tests/integration/evals_p2/test_evals_p2.py, dataset-readiness completeness checks]
+- [Source: specs/integration-tests.md, INT-050, INT-055, INT-058, and INT-073]
 
 ## Dev Agent Record
 
