@@ -356,7 +356,7 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
     """INT-186: Infra tool failures retry up to 3 attempts then fail closed.
 
     Exception note: this test intentionally uses a deterministic mock LLM/tool script
-    scenario (see `tests/integration/mock_responses.yaml`) because the contract under
+    scenario (see `tests/integration/mock_responses/`) because the contract under
     test is a devops regression path (infra transport failure + retry exhaustion), not
     product logic. This is a scoped exception for INT-186 only.
     """

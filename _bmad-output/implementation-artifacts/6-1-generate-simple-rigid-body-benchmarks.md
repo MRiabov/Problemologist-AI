@@ -54,7 +54,6 @@ As a human operator, I want benchmark generator agents to produce simple rigid-b
   - `tests/integration/architecture_p0/test_int_008_objectives_validation.py`
   - `tests/integration/architecture_p1/test_benchmark_workflow.py`
   - `tests/integration/mock_responses/INT-114.yaml`
-  - `tests/integration/mock_responses.yaml`
 - Testing standards summary:
   - Use integration tests only; do not add unit-only coverage for this story.
   - Assert against HTTP responses, persisted artifacts, reviewer manifests, and emitted events.
@@ -78,7 +77,7 @@ As a human operator, I want benchmark generator agents to produce simple rigid-b
 - [Source: specs/architecture/agents/roles.md, benchmark plan reviewer responsibilities and output expectations]
 - [Source: specs/architecture/agents/handover-contracts.md, benchmark handoff contract and manifest naming]
 - [Source: specs/architecture/agents/artifacts-and-filesystem.md, benchmark planner read/write surfaces and planner submission gate]
-- [Source: specs/architecture/agents/tools.md, benchmark planner tools and `submit_plan()` canonicalization]
+- \[Source: specs/architecture/agents/tools.md, benchmark planner tools and `submit_plan()` canonicalization\]
 - [Source: specs/architecture/distributed-execution.md, worker boundaries and benchmark validation path]
 - [Source: specs/architecture/CAD-and-other-infra.md, benchmark-owned fixture metadata and read-only context boundaries]
 - [Source: specs/architecture/evals-and-gates.md, benchmark-generator eval targets and fail-closed policies]
@@ -111,4 +110,3 @@ TBD
 - Ultimate context engine analysis completed - comprehensive developer guide created.
 
 ### File List
-

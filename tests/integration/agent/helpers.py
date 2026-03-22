@@ -4,11 +4,13 @@ import os
 import re
 import time
 import uuid
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
 import yaml
 
+from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from shared.enums import AgentName
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
 from shared.models.simulation import SimulationResult
@@ -73,11 +75,13 @@ def _benchmark_assembly_definition_content() -> str:
     )
 
 
+@lru_cache(maxsize=1)
+def _integration_mock_scenarios() -> dict[str, dict[str, object]]:
+    return load_integration_mock_scenarios()
+
+
 def _fixture_script_content(int_id: str) -> str:
-    responses_path = Path("tests/integration/mock_responses.yaml")
-    responses = yaml.safe_load(responses_path.read_text(encoding="utf-8")) or {}
-    scenarios = responses.get("scenarios") or {}
-    scenario = scenarios.get(int_id)
+    scenario = _integration_mock_scenarios().get(int_id)
     if not scenario:
         fallback_path = (
             Path("tests/integration/mock_responses")

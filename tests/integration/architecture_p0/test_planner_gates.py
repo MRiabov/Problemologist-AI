@@ -53,6 +53,7 @@ def _default_benchmark_parts():
             "label": "environment_fixture",
             "metadata": {
                 "fixed": True,
+                "allows_engineer_interaction": True,
                 "material_id": "aluminum_6061",
             },
         }
@@ -1019,6 +1020,7 @@ async def test_int_018_submit_handoff_rejects_forbidden_environment_drilling(
                 "label": "environment_fixture",
                 "metadata": {
                     "fixed": True,
+                    "allows_engineer_interaction": True,
                     "material_id": "aluminum_6061",
                     "attachment_policy": {
                         "attachment_methods": ["fastener"],
@@ -1123,6 +1125,7 @@ async def test_int_010_submit_handoff_rejects_missing_benchmark_drilling_cost(
                 "label": "environment_fixture",
                 "metadata": {
                     "fixed": True,
+                    "allows_engineer_interaction": True,
                     "material_id": "aluminum_6061",
                     "attachment_policy": {
                         "attachment_methods": ["fastener"],
@@ -1313,7 +1316,10 @@ def build():
         submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
         assert not submit_data.success
         assert "attachment contract" in submit_data.message.lower()
-        assert "does not permit fastener attachment" in submit_data.message.lower()
+        assert (
+            "must declare allows_engineer_interaction: true"
+            in submit_data.message.lower()
+        )
 
 
 @pytest.mark.integration_p0
@@ -1545,6 +1551,7 @@ async def test_int_019_single_part_benchmark_submit_succeeds_without_cost_gate(
                 "label": "environment_fixture",
                 "metadata": {
                     "fixed": True,
+                    "allows_engineer_interaction": True,
                     "material_id": "aluminum_6061",
                     "attachment_policy": {
                         "attachment_methods": ["fastener"],
@@ -1668,6 +1675,7 @@ async def test_int_010_submit_handoff_accepts_cheaper_workspace_drilling_overrid
                 "label": "environment_fixture",
                 "metadata": {
                     "fixed": True,
+                    "allows_engineer_interaction": True,
                     "material_id": "aluminum_6061",
                     "attachment_policy": {
                         "attachment_methods": ["fastener"],

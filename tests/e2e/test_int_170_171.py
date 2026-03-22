@@ -1,22 +1,23 @@
-import time
-
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests.support.fixtures.factories.prompts import feedback_comment
+from tests.support.helpers.playwright import open_frontend
+
 
 @pytest.mark.integration_frontend
-def test_int_171_layout_persistence(page: Page):
+def test_int_171_layout_persistence(page: Page, frontend_url: str):
     """
     INT-171: 3-column layout + resize persistence
     """
     page.set_viewport_size({"width": 1280, "height": 720})
-    page.goto("http://localhost:15173", timeout=60000)
+    open_frontend(page, frontend_url)
     # Clear localStorage to ensure a clean state for the test
     page.evaluate("localStorage.clear()")
     page.reload()
 
     # Wait for app to load
-    page.wait_for_selector('[data-testid="app-layout"]', timeout=30000)
+    expect(page.get_by_test_id("app-layout")).to_be_visible(timeout=30000)
 
     # Check default sidebar width (should be 320px)
     sidebar = page.locator("#sidebar-panel")
@@ -29,8 +30,8 @@ def test_int_171_layout_persistence(page: Page):
         "localStorage.setItem('resizable-layout:app-sidebar', JSON.stringify([30, 70]))"
     )
 
-    # Reload and verify persistence (in a real app this would restore,
-    # but here we just check if we can read it back or if it affects the UI if implemented)
+    # Reload and verify persistence. In a real app this would restore, but here
+    # we just check whether the value can be read back or affects the UI.
     page.reload()
     page.wait_for_selector('[data-testid="app-layout"]', timeout=30000)
 
@@ -39,25 +40,21 @@ def test_int_171_layout_persistence(page: Page):
 
 
 @pytest.mark.integration_frontend
-def test_int_170_feedback_system(page: Page):
+def test_int_170_feedback_system(page: Page, frontend_url: str):
     """
     INT-170: Post-run feedback UX + API persistence
     """
     page.set_viewport_size({"width": 1280, "height": 720})
-    page.goto("http://localhost:15173", timeout=60000)
+    open_frontend(page, frontend_url)
     page.evaluate("localStorage.clear()")
     page.reload()
 
-    # 1. Start a session
-    page.wait_for_selector('button:has-text("CREATE NEW")', timeout=30000)
-
-    # WP10: Inject CSS to hide connection error overlay during tests to avoid interception
+    # WP10: Hide the connection error overlay so it does not intercept clicks.
     page.add_style_tag(
         content='[data-testid="connection-error"] { display: none !important; }'
     )
 
-    # WP10: Ensure connection is stable
-    time.sleep(5)
+    expect(page.get_by_role("button", name="CREATE NEW")).to_be_visible(timeout=30000)
 
     page.get_by_role("button", name="CREATE NEW").click(force=True)
 
@@ -68,8 +65,7 @@ def test_int_170_feedback_system(page: Page):
     send_button = page.get_by_label("Send Message")
     send_button.click(force=True)
 
-    # 2. Wait for generation to complete (indicator: status changes to COMPLETED in sidebar)
-    # Use wait_for_function for faster polling and deterministic check
+    # 2. Wait for generation to complete. Poll the DOM instead of sleeping.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="episode-status"]');
@@ -93,7 +89,7 @@ def test_int_170_feedback_system(page: Page):
     # 5. Fill feedback and submit
     page.get_by_role("button", name="Doesn't follow instructions").click()
     page.get_by_placeholder("What was satisfying about this response?").fill(
-        "Great job!"
+        feedback_comment("Great job!")
     )
 
     submit_button = page.get_by_role("button", name="Send Feedback")
@@ -104,12 +100,5 @@ def test_int_170_feedback_system(page: Page):
     page.on("request", lambda req: requests.append(req.url))
 
     submit_button.click()
-
-    # 6. Verify success state
-    time.sleep(5)
-
-    print("\nDEBUG: All Requests fired:")
-    for r in requests:
-        print(f"  {r}")
 
     expect(page.get_by_test_id("feedback-success")).to_be_visible(timeout=30000)
