@@ -1,5 +1,5 @@
 # generated: 2026-03-22T06:26:07+00:00
-# last_updated: 2026-03-22T06:44:38+00:00
+# last_updated: 2026-03-22T07:59:52+00:00
 # project: Problemologist-AI
 # project_key: NOKEY
 # tracking_system: file-system
@@ -30,7 +30,7 @@
 # - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
 
 generated: 2026-03-22T06:26:07+00:00
-last_updated: 2026-03-22T06:44:38+00:00
+last_updated: 2026-03-22T07:59:52+00:00
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -39,8 +39,8 @@ story_location: "/home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-o
 development_status:
   epic-1: in-progress
   1-1-benchmark-geometry-and-objectives: ready-for-dev
-  1-2-benchmark-owned-fixtures-and-interaction-rules: backlog
-  1-3-solvability-validation-and-fail-closed-rejection: backlog
+  1-2-benchmark-owned-fixtures-and-interaction-rules: ready-for-dev
+  1-3-solvability-validation-and-fail-closed-rejection: ready-for-dev
   1-4-handoff-artifacts-versioning-and-reproducibility: backlog
   1-5-review-colleague-benchmarks-for-solvability: backlog
   epic-1-retrospective: optional
