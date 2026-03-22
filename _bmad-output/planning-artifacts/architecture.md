@@ -91,7 +91,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 
 The following are architecture-adjacent contracts that support the core system but do not define the domain shape by themselves:
 
-- Local debugging can use CLI-backed agent runtimes such as `codex`, Claude Code, Gemini CLI, OpenHands, or equivalent so seeded eval workspaces can be reproduced without defaulting to paid remote provider calls, and the runtime backend choice remains separate from `AgentName`.
+- Local debugging can use CLI-backed agent runtimes such as `codex`, Claude Code, Gemini CLI, OpenHands, or equivalent. These paths let seeded eval workspaces be reproduced without defaulting to paid remote provider calls.
 - `dataset/evals/run_evals.py` and `dataset/evals/materialize_seed_workspace.py` belong to the reproducibility and debugging path for evals.
 - Worker-side `events.jsonl` is the batch transport artifact for episode observability; the controller ingests it and normalizes it into Postgres rows at episode end. `events.jsonl` is therefore replay/input transport, while Postgres remains the canonical queryable source of truth. Ingestion should be idempotent and fail closed on truncation, duplication, or schema mismatch.
 - Structured logs should be consistent across agents, services, and eval helpers, with service-scoped, episode-scoped, and test-scoped attribution.
@@ -244,14 +244,14 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 - Controller/worker/Temporal boundaries remain the orchestration backbone, with `worker-light` handling workspace execution and `worker-heavy` handling validation/simulation.
 - The API contract stays REST-first with explicit event emission for replay, observability, and deterministic evaluation.
 - Observability must remain fail-closed and reconstructable, including `events.jsonl` batch transport, controller ingest, and normalized Postgres persistence.
-- Execution backend selection and model-provider selection are orthogonal to `AgentName`; role semantics stay in the workspace and prompt contract, while transport and model access stay in runtime adapters.
+- Execution backend selection and model-provider selection are orthogonal to `AgentName`; role semantics stay in the workspace and prompt contract, while transport stays in runtime adapters and model access stays in model-provider adapters.
 
 ### Agent Runtime and Model Abstractions
 
 #### Problem Statement
 
-- The runtime needs to support both API-queried models and CLI-backed models without hardcoding one transport into the workflow graph.
-- The current application roles in `AgentName` describe what the agent is doing, but they do not describe how the agent is executed.
+- The runtime needs to support both API-backed execution and CLI-backed execution without hardcoding one transport into the workflow graph.
+- The roles in `AgentName` describe workflow behavior, but they do not describe how the agent is executed.
 - Local CLI backends should not look like engineer-only special cases; they should be runtime adapters that can serve any role whose workspace contract they can satisfy.
 
 #### Decision
@@ -270,7 +270,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 
 #### Runtime Backend Contract
 
-- A runtime backend receives role metadata, task metadata, a prompt or conversation payload, a selected model spec, and capability requirements.
+- A runtime backend receives role metadata, task metadata, a prompt or conversation payload, a selected `ModelSpec`, and capability requirements.
 - A runtime backend returns a normalized run result that includes backend kind, provider name when relevant, model name when relevant, session id, trace references, artifact references, and a failure classification.
 - The backend owns transport concerns: API requests for controller-backed runs, local process launch for CLI-backed runs, and any local session discovery or import needed to reconstruct traces.
 - The backend does not own role semantics, file ownership rules, or deterministic validation rules.
@@ -280,7 +280,7 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 #### Local CLI Backend Contract
 
 - A local CLI backend works from a materialized workspace and a prompt contract.
-- The backend may use a launcher helper, but the launcher helper must remain generic and must not require `AGENT_NAME` as a process-start dependency.
+- The backend may use a launcher helper, but the launcher helper must remain generic and must not require `AGENT_NAME` at process start.
 - The backend may still pass role metadata into the workspace materializer or prompt assembler, because those layers define the file contract and the task text.
 - The backend must persist or import local session history when the CLI produces it.
 - The backend must normalize local transcript, tool, and workspace-change artifacts into the same replay surface used by the rest of the system.
@@ -289,16 +289,16 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 
 #### API-Backed Model Contract
 
-- An API-backed runtime continues to call remote providers directly or through an approved proxy.
-- The runtime must surface the same normalized trace and result shape as CLI-backed runs, even if the source trace was streamed through a different transport.
-- The runtime must preserve provider identity, model identity, and any token or cost attribution needed for observability.
-- The runtime must not hide provider fallbacks or swap to a different provider without an explicit policy decision.
+- An API-backed backend continues to call remote providers directly or through an approved proxy.
+- The backend must surface the same normalized trace and result shape as CLI-backed runs, even if the source trace was streamed through a different transport.
+- The backend must preserve provider identity, model identity, and any token or cost attribution needed for observability.
+- The backend must not hide provider fallbacks or swap to a different provider without an explicit policy decision.
 
 #### Model Abstraction
 
 - `ModelSpec` should be a first-class object, not an implicit string embedded in prompt code.
 - `ModelSpec` should at minimum carry provider name, model id, context limit, tool-calling support, multimodal support, streaming support, and a rough cost or latency class.
-- `ModelProvider` should own the actual invocation path for a model, whether that means a remote API call or a local CLI wrapper around a model API.
+- `ModelProvider` should own the provider-specific invocation path and response normalization for a model family.
 - `ModelResolutionPolicy` should choose a model by capability and policy, not by scattered `if provider == ...` branching inside agent code.
 - Role code may request a minimum capability set, but it should not embed provider-specific transport details.
 
