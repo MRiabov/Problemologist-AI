@@ -29,7 +29,7 @@ class ExecutionReviewerSignature(dspy.Signature):
     """
     Engineer Execution Reviewer node: Evaluates the implementation based on simulation and workbench reports.
     You must use the provided tools to read 'simulation_result.json' and 'workbench_report.md'.
-    You also receive required read-only benchmark_assembly_definition.yaml handoff context.
+    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
     When done, call `submit_review` with your final ReviewResult.
     """
 

@@ -14,10 +14,10 @@ We use DSPy.ReAct as the primary agent runtime (reasoning + tool use) and LangGr
 Adapter choice is an explicit runtime contract:
 
 1. Preferred/default adapter is `dspy.ChatAdapter`.
-2. We prefer `ChatAdapter` over `JSONAdapter` for ReAct-style agent nodes because it is the baseline behavior in our dependency/runtime and is the most stable path for mixed reasoning + tool-call trajectories.
-3. `JSONAdapter` is exception-only and must be justified by a node-specific structured-output requirement that cannot be met by normal typed parsing/validation after model output.
-4. Do not silently swap adapters per request. Adapter overrides must be explicit in code/config and visible in observability metadata.
-5. Fail-closed rule: if adapter selection is invalid/unsupported for a node, the node must fail with a deterministic runtime error instead of falling back silently.
+1. We prefer `ChatAdapter` over `JSONAdapter` for ReAct-style agent nodes because it is the baseline behavior in our dependency/runtime and is the most stable path for mixed reasoning + tool-call trajectories.
+1. `JSONAdapter` is exception-only and must be justified by a node-specific structured-output requirement that cannot be met by normal typed parsing/validation after model output.
+1. Do not silently swap adapters per request. Adapter overrides must be explicit in code/config and visible in observability metadata.
+1. Fail-closed rule: if adapter selection is invalid/unsupported for a node, the node must fail with a deterministic runtime error instead of falling back silently.
 
 ## Implementation
 
@@ -48,18 +48,19 @@ We trace all workflows with LangFuse.
 ### Actual implementation
 
 <!--This is because models implementing this produced something else.-->
+
 The pipeline is the simplest, proper way to call LLMs:
 DSPy (LiteLLM) calls an endpoint, we get either reasoning, tool call, or both. We send it to frontend and to observability (and log it). that's all the intended logic.
 
 Reasoning and tool observability are strict runtime contracts:
 
 1. LM outputs are emitted as trace records incrementally during execution (streaming), not only at node end or episode end.
-2. Tool call traces are emitted at call start with exact arguments, and updated with observation/error at call end.
-3. Reasoning visibility in frontend is backed only by persisted backend traces for the same `episode_id`; frontend must not synthesize placeholder reasoning rows.
-4. We do not fabricate reasoning traces from synthetic defaults or inferred placeholders. If no reasoning payload is produced by the LM/runtime, the run is marked as missing required telemetry.
-5. For debugging/benchmark dataset modes, reasoning telemetry is fail-closed: a planner/execution stage that requires reasoning traces and produces none must not transition to success-like statuses.
-6. `trace_type` values such as `LLM_END` are observability event labels, not workflow termination signals. Episode termination is controlled only by workflow outcomes (success/failure/timeout/cancel).
-7. Reasoning traces should carry optional metadata `reasoning_step_index` and `reasoning_source` for deterministic ordering/provenance in frontend and evaluations.
+1. Tool call traces are emitted at call start with exact arguments, and updated with observation/error at call end.
+1. Reasoning visibility in frontend is backed only by persisted backend traces for the same `episode_id`; frontend must not synthesize placeholder reasoning rows.
+1. We do not fabricate reasoning traces from synthetic defaults or inferred placeholders. If no reasoning payload is produced by the LM/runtime, the run is marked as missing required telemetry.
+1. For debugging/benchmark dataset modes, reasoning telemetry is fail-closed: a planner/execution stage that requires reasoning traces and produces none must not transition to success-like statuses.
+1. `trace_type` values such as `LLM_END` are observability event labels, not workflow termination signals. Episode termination is controlled only by workflow outcomes (success/failure/timeout/cancel).
+1. Reasoning traces should carry optional metadata `reasoning_step_index` and `reasoning_source` for deterministic ordering/provenance in frontend and evaluations.
 
 #### Extracting reasoning
 
@@ -77,6 +78,7 @@ resp = completion(
   
 print(resp.choices[0].message.reasoning_content)  
 ```
+
 ## Filesystem
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
@@ -122,7 +124,7 @@ Row-specific seed artifacts still live in their row-local seed directories. The 
     - `reviews/engineering-execution-review-comments-round-*.yaml`
 - Benchmark Planner:
   - read: `skills/**`, `utils/**`, benchmark prompt/context inputs, `plan.md` (if materialized from shared templates), `todo.md` (if materialized from shared templates), `journal.md` (if materialized from shared templates)
-  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `benchmark_assembly_definition.yaml` (benchmark-local draft, handed to engineering as read-only context)
+  - write: `plan.md`, `todo.md`, `journal.md`, `benchmark_definition.yaml` (benchmark-owned), `benchmark_assembly_definition.yaml` (benchmark-owned draft, handed to engineering as read-only context)
 - Benchmark Plan Reviewer:
   - read: `skills/**`, `utils/**`, `plan.md`, `todo.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, `renders/**`, `journal.md`
   - write:
@@ -149,6 +151,7 @@ Row-specific seed artifacts still live in their row-local seed directories. The 
   - write: `skills/**` (subject to safety limits), `journal.md`, git commit metadata
 
 System-only metadata:
+
 - `.manifests/**` is reserved for deterministic handover/state metadata written by backend utilities.
 - Reviewer-stage manifest filenames are explicit and role-scoped:
   - `.manifests/benchmark_plan_review_manifest.json`
@@ -172,7 +175,7 @@ System-only metadata:
 Locking rule:
 
 - Before planner submission: planner may edit planner-owned files above.
-- After planner submission accepted: benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer; engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer. Only replanning can mutate planner-owned files.
+- After planner submission accepted: benchmark-side `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml` become read-only for benchmark Coder/Reviewer; the same `benchmark_assembly_definition.yaml` is also available in engineer intake as read-only context, while engineer-side `assembly_definition.yaml` becomes read-only for engineering Coder/Reviewer. Only replanning can mutate planner-owned files.
 - `benchmark_definition.yaml.benchmark_parts` is benchmark-owned fixture metadata. Coder/Reviewer must treat it as immutable task context, not as solution metadata.
 
 Template files are intentional source artifacts, not ad hoc runtime defaults or symlinks. The reusable common starters are versioned in `shared/agent_templates/common/`, copied into workspaces, and then validated as part of the normal workspace bootstrap and eval/integration materialization path. Note that `skills/` are pulled from git repo (as specified in other parts of the doc).
@@ -186,9 +189,9 @@ For submission scripts, direct top-level execution is canonical. The agent shoul
 Skill-repository boundary is explicit:
 
 1. `skills/` is the canonical runtime skill repository mounted into agent workspaces as `/skills`.
-2. `.codex/skills/` is a Codex-only overlay for local debugging/editorial workflows and is not part of the runtime agent skill contract.
-3. `suggested_skills/` is a writable sidecar output area for proposed/new skills, not the canonical skill mount that normal agents should read from.
-4. Runtime agents should not be taught to treat `.codex/skills/`, `suggested_skills/`, or any other agent-specific skill store as interchangeable with `/skills`.
+1. `.codex/skills/` is a Codex-only overlay for local debugging/editorial workflows and is not part of the runtime agent skill contract.
+1. `suggested_skills/` is a writable sidecar output area for proposed/new skills, not the canonical skill mount that normal agents should read from.
+1. Runtime agents should not be taught to treat `.codex/skills/`, `suggested_skills/`, or any other agent-specific skill store as interchangeable with `/skills`.
 
 <!-- Note: the filesystem is not in repo root, but in docker containers. -->
 
@@ -207,29 +210,29 @@ The policy uses gitignore-style glob patterns (`*`, `**`, path prefixes) for fil
 Rules:
 
 1. Every read/write/edit/upload/download operation is checked against this policy in `FilesystemMiddleware`.
-2. `deny` takes precedence over `allow`.
-3. If a path is not matched by `allow`, access is denied by default.
-4. Agent-specific rules override `defaults` (defaults are fallback only).
-5. Tool availability can be broad, but path permissions are enforced per role by this file.
-6. Reviewer roles (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
-7. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
-8. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
-9. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
-10. The preferred workspace path contract is workspace-relative paths such as `plan.md`, `script.py`, `todo.md`, and `journal.md`. Agent prompts and new code must treat these relative paths as canonical.
-11. `/workspace` path aliasing is a compatibility fallback, not a normative contract. It exists because some earlier runtime/tooling behavior accidentally taught agents to address the session root as `/workspace`, and we are temporarily preserving that alias to avoid immediate refactoring cost.
-12. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
-13. `config/agents_config.yaml` is also the source of truth for per-role visual-inspection policy, not only path permissions.
-14. Visual-inspection policy is structured as `visual_inspection: {required, min_images, reminder_interval}` under each role.
-15. Current required-visual roles are: `benchmark_plan_reviewer`, `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
-16. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
-17. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
-18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
-19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
-20. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
-21. Those flags control whether MuJoCo-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
-22. `shared/agent_templates/common/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
-23. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
-24. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/common/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
+1. `deny` takes precedence over `allow`.
+1. If a path is not matched by `allow`, access is denied by default.
+1. Agent-specific rules override `defaults` (defaults are fallback only).
+1. Tool availability can be broad, but path permissions are enforced per role by this file.
+1. Reviewer roles (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
+1. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
+1. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
+1. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
+1. The preferred workspace path contract is workspace-relative paths such as `plan.md`, `script.py`, `todo.md`, and `journal.md`. Agent prompts and new code must treat these relative paths as canonical.
+1. `/workspace` path aliasing is a compatibility fallback, not a normative contract. It exists because some earlier runtime/tooling behavior accidentally taught agents to address the session root as `/workspace`, and we are temporarily preserving that alias to avoid immediate refactoring cost.
+1. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
+1. `config/agents_config.yaml` is also the source of truth for per-role visual-inspection policy, not only path permissions.
+1. Visual-inspection policy is structured as `visual_inspection: {required, min_images, reminder_interval}` under each role.
+1. Current required-visual roles are: `benchmark_plan_reviewer`, `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
+1. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
+1. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
+1. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
+1. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
+1. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
+1. Those flags control whether MuJoCo-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
+1. `shared/agent_templates/common/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
+1. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
+1. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/common/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
@@ -389,9 +392,9 @@ We assert that files (especially "control" files like `benchmark_definition.yaml
 Control-file ownership split:
 
 1. `benchmark_definition.yaml` owns benchmark/task definition and benchmark fixture metadata (`benchmark_parts`).
-2. `benchmark_assembly_definition.yaml` owns benchmark-local fixture structure, motion metadata, and benchmark-side implementation details. Engineering may read it as immutable benchmark context.
-3. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
-4. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
+1. `benchmark_assembly_definition.yaml` owns benchmark-owned fixture structure, motion metadata, and benchmark-side implementation details. Engineering may read it as immutable benchmark context copied from the benchmark session.
+1. `assembly_definition.yaml` owns engineer-planned solution structure, costing inputs, and motion metadata.
+1. We do not duplicate engineer solution metadata into `benchmark_definition.yaml`.
 
 Essentially, the goal is a clear separation of concerns: planner files are edited by the planner, review files are edited by reviewer nodes, coder edits coder files; skill subagents modify only skill files, etc.
 
@@ -443,7 +446,7 @@ Files are linted and don't pass execution/submission if they have red errors. Re
 
 ## Automatic validation on node entry
 
-To prevent unusual bugs in agent state management on entry (e.g., missing plan when entering coder), we add an extra layer of security before node entry - in every node we have a function that validates the input. If it fails, the loops back to the previous graph node. 
+To prevent unusual bugs in agent state management on entry (e.g., missing plan when entering coder), we add an extra layer of security before node entry - in every node we have a function that validates the input. If it fails, the loops back to the previous graph node.
 Notably, during integration tests this simply fail fast as this led to infinite loops.
 
 Planner handoffs that include machine-readable costing totals are part of this node-entry contract. The entry validator must compare the persisted totals against the deterministic script-normalized values and fail closed on any cent-level drift, even when the YAML still parses and the file structure is otherwise valid.
@@ -469,40 +472,42 @@ We define the file structure as follows, individual agents adapt to individual n
 
 <!-- The agent can create more than one .py file. -->
 ```
+
 <!-- Important note: some of these are always fetched from the s3 and are only "fake" for the agent. The "fake" is done by FilesystemMiddleware. -->
+
 ### Benchmark generator
 
 #### Benchmark Generator - planner
 
 1. Planning skills
-2. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template as above)
-3. Sample benchmark_definition.yaml (validated)
+1. A markdown plan template detailing learning objective and, in particular, **geometry** containing (auto-validated, refuses submission if doesn't match template as above)
+1. Sample benchmark_definition.yaml (validated)
 
 #### Benchmark Generator - Benchmark Coder
 
 1. Build123d and implementation skills (read-only)
-2. A template for creating benchmark generator files (read-write) (e.g. `output.py`)
-3. A TODO list (read-write, validated automatically via a on-edit hook (watchdog, or maybe an implicit trigger via ))
-4. A plan from the planner (read-only)
-5. A journal (read-write)
+1. A template for creating benchmark generator files (read-write) (e.g. `output.py`)
+1. A TODO list (read-write, validated automatically via a on-edit hook (watchdog, or maybe an implicit trigger via ))
+1. A plan from the planner (read-only)
+1. A journal (read-write)
 
 Utils (read-only):
 
 1. Refuse plan (a script that sends a request to the endpoint) (shouldn't happen, realistically.)
-2. Utils necessary for functioning (as described in other parts of the document)
+1. Utils necessary for functioning (as described in other parts of the document)
 
 ### Engineer
 
 1. Skills (read-only)
-2. A template for an engineer files solutions (read-write)
-3. A TODO list from the planner (read-write)
-4. A plan from the planner (read-only)
-5. A Journal (read-write)
+1. A template for an engineer files solutions (read-write)
+1. A TODO list from the planner (read-write)
+1. A plan from the planner (read-only)
+1. A Journal (read-write)
 
 Utils (read-only):
 
 1. Refuse plan (a script that sends a request to the endpoint)
-2. Utils necessary for functioning (as described in other parts of the document)
+1. Utils necessary for functioning (as described in other parts of the document)
 
 ### Planner - benchmark generator
 
@@ -521,6 +526,7 @@ The important part of managing agents are their artifacts.
 An agents must know what it is capable to work with. Have a "capabilies.md" document that shows
 
 <!-- Issue found: I tried giving the planner a standard prompt - to move a ball of a diameter 500mm sideways. It created a plan which used Neosprene drive belts, conveyors, aluminum frames - none of which we have. -->
+
 <!-- I didn't have a good LLM to write the propmt. Currently relied on "tricking" the model with a "manufacturing-capability-like" document that shows what it can use.-->
 
 ## Journal
@@ -530,14 +536,14 @@ The Journal is the agent's **Episodic Memory**. It is a structured log (a constr
 **Purpose:**
 
 1. To help the agent remember what it did: what it tried and what didn't work:
-  a. Intent,
-  b. Result,
-  c. Reflection,
-  d. Next step.
-2. To help maintain context amongst task solving retries, and with user conversations.
-3. (implicitly, a non-functional requirement) to help debug the agent.
-4. (implicitly, a non-functional requirement) to help train the agent
-5. (implicitly, a non-functional requirement) to help create skills for the agent.
+   a. Intent,
+   b. Result,
+   c. Reflection,
+   d. Next step.
+1. To help maintain context amongst task solving retries, and with user conversations.
+1. (implicitly, a non-functional requirement) to help debug the agent.
+1. (implicitly, a non-functional requirement) to help train the agent
+1. (implicitly, a non-functional requirement) to help create skills for the agent.
 
 (note: we should not optimize the journal architecture for the non-functional requirements.)
 
@@ -558,9 +564,9 @@ If a Coder refuses a planner handoff, refusal is only valid with a structured `p
 Rules:
 
 1. `plan_refusal.md` is optional and only created when refusing.
-2. The YAML frontmatter contains `reasons` as an array and allows multiple reasons.
-3. Reasons are agent-specific and validated by role.
-4. The markdown body below frontmatter explains the concrete evidence and what was attempted.
+1. The YAML frontmatter contains `reasons` as an array and allows multiple reasons.
+1. Reasons are agent-specific and validated by role.
+1. The markdown body below frontmatter explains the concrete evidence and what was attempted.
 
 Base frontmatter shape:
 
@@ -589,7 +595,7 @@ Reviews are stored in `/reviews/` as YAML artifact pairs.
 Each reviewer round writes:
 
 1. one decision YAML, which is the routing source of truth,
-2. one comments YAML, which carries the reviewer checklist and requested fixes.
+1. one comments YAML, which carries the reviewer checklist and requested fixes.
 
 The decision YAML uses `decision` enums such as `APPROVED`, `REJECTED`, `REJECT_PLAN`, `REJECT_CODE`, `CONFIRM_PLAN_REFUSAL`, `REJECT_PLAN_REFUSAL`.
 
@@ -639,13 +645,13 @@ The agents will be able to create and update their skills to improve the future 
 
 - If the agent fails too much, after resolving a solution, they will persist it to the skill.
 
-We use the `SKILL.md` format as by Anthropic. I refer to ".agent/skill-creator/SKILL.md` for more information about skills.
+We use the `SKILL.md` format as by Anthropic. I refer to ".agent/skill-creator/SKILL.md\` for more information about skills.
 
 We know that agents can not use `build123d` very well despite it being one of the central part of their work in this repo. This is part of a mitigation.
 
 ## `build123d` skill and access to documentation
 
-The agents will have an access to build123d documentation through the skill (as per the SKILL.md standard, in `/references/ folder.)
+The agents will have an access to build123d documentation through the skill (as per the SKILL.md standard, in \`/references/ folder.)
 
 ## Different agents have different skills
 
@@ -669,16 +675,16 @@ The containers will likely have an endpoint to update the skills without restart
 Skill Agent has a journal of:
 
 1. Issues faced and what they resolved to (or weren't resolved)
-2. Commonly faced problems (happened more than twice) and solutions to them
+1. Commonly faced problems (happened more than twice) and solutions to them
 
 If the patterns emerge in the journal; or the solution is obvious enough, the learner writes it into the skill.
 
 #### Structure of the journal
 
 1. Observed struggles (tool calls failed over 4 times)
-2. Found solutions to struggles (happened once)
-    - The skill builder agent may make mistakes, so, observe the patterns at least twice.
-3. Skills to add in the end (happened twice).
+1. Found solutions to struggles (happened once)
+   - The skill builder agent may make mistakes, so, observe the patterns at least twice.
+1. Skills to add in the end (happened twice).
 
 Importantly! the agent **must** write an ID of observation and link it to a journal entry. This way, they can:
 
@@ -702,14 +708,15 @@ This also applies to refactors. If the agent has taken an approach, spent 5 tool
 In both cases, if the agent found the solution
 
 The agent will go through all notes in the session and read through ones that are relevant. They will then link the found and solved issues.
+
 <!-- Note: maybe add a "hypothesis" - an agent would be perform better if we X? -->
 
 #### Example
 
 1. Observation: Multiple agents have an issue with struggling to group parts together into a `Compound` - they had more than four unsuccessful tool calls trying to do it (struggle).
-2. The learner agent records the issue (async)
-3. The main model finally finds that `Compound` syntax requires `Compound(children=[Part|Compound, ...])` syntax (with `children` upfront)
-4. The learner agent records the found solution and the skill.
+1. The learner agent records the issue (async)
+1. The main model finally finds that `Compound` syntax requires `Compound(children=[Part|Compound, ...])` syntax (with `children` upfront)
+1. The learner agent records the found solution and the skill.
 
 ## Worker skills are persisted and are separate from the repository-level skills
 
@@ -748,7 +755,7 @@ The agent (engineer, reviewer, or another "summarizer") will write the video sum
 
 ### Compressing the video
 
-Future work will need to address the issue of the video being too expensive. Instead, a "T*" agent could be implemented - a small model that picks the most important shortcuts from the video and feeds it to the agent. This will significantly reduce the pollution of the engineer's agent's attention.
+Future work will need to address the issue of the video being too expensive. Instead, a "T\*" agent could be implemented - a small model that picks the most important shortcuts from the video and feeds it to the agent. This will significantly reduce the pollution of the engineer's agent's attention.
 
 ## Feedback from cost and manufacturability constraints
 

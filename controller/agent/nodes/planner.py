@@ -21,7 +21,7 @@ class PlannerSignature(dspy.Signature):
     """
     Planner node: Analyzes the task and creates plan.md and todo.md using tools.
     You must use the provided tools to create 'plan.md' and 'todo.md' directly.
-    You also receive required read-only benchmark_assembly_definition.yaml handoff context.
+    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
     Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide a summary of your plan.
     """

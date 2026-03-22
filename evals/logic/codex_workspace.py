@@ -319,7 +319,7 @@ def build_codex_prompt(
             role_lines = [
                 "You are an Engineering Planner.",
                 "Write and refine `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.",
-                "Treat `benchmark_assembly_definition.yaml` as read-only benchmark context if it is present.",
+                "Treat `benchmark_assembly_definition.yaml` as benchmark-owned read-only handoff context copied into this workspace if it is present.",
                 "When the files are ready, run `bash scripts/submit_plan.sh` and keep iterating until it reports `ok=true` and `status=submitted`.",
                 "Do not leave template placeholders in the submitted files.",
             ]

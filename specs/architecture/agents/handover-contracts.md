@@ -41,10 +41,10 @@ There is no shared/canonical reviewer manifest file.
 Required manifest filenames:
 
 1. Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
-2. Benchmark Reviewer: `.manifests/benchmark_review_manifest.json`
-3. Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
-4. Engineering Execution Reviewer: `.manifests/engineering_execution_review_manifest.json`
-5. Electronics Reviewer: `.manifests/electronics_review_manifest.json`
+1. Benchmark Reviewer: `.manifests/benchmark_review_manifest.json`
+1. Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
+1. Engineering Execution Reviewer: `.manifests/engineering_execution_review_manifest.json`
+1. Electronics Reviewer: `.manifests/electronics_review_manifest.json`
 
 Validation rule:
 
@@ -61,16 +61,16 @@ Required reviewer file pairs:
 1. Benchmark Plan Reviewer:
    - `reviews/benchmark-plan-review-decision-round-<n>.yaml`
    - `reviews/benchmark-plan-review-comments-round-<n>.yaml`
-2. Benchmark Reviewer:
+1. Benchmark Reviewer:
    - `reviews/benchmark-execution-review-decision-round-<n>.yaml`
    - `reviews/benchmark-execution-review-comments-round-<n>.yaml`
-3. Engineering Plan Reviewer:
+1. Engineering Plan Reviewer:
    - `reviews/engineering-plan-review-decision-round-<n>.yaml`
    - `reviews/engineering-plan-review-comments-round-<n>.yaml`
-4. Engineering Execution Reviewer:
+1. Engineering Execution Reviewer:
    - `reviews/engineering-execution-review-decision-round-<n>.yaml`
    - `reviews/engineering-execution-review-comments-round-<n>.yaml`
-5. Electronics Reviewer:
+1. Electronics Reviewer:
    - `reviews/electronics-review-decision-round-<n>.yaml`
    - `reviews/electronics-review-comments-round-<n>.yaml`
 
@@ -87,10 +87,10 @@ All planner/reviewer machine-readable outputs are strict-schema artifacts by def
 Rules:
 
 1. Unknown/extra fields are rejected at validation time for handoff artifacts and reviewer artifacts.
-2. This rule applies recursively to nested objects inside those artifacts, not only to top-level keys.
-3. Unknown/extra fields must fail closed (handoff/review is invalid and routing does not progress on that output).
-4. Open-ended key/value sections are exception-only and must be explicitly modeled as open-ended in schema (for example, a dedicated metadata map). They are never implicitly accepted by parser defaults.
-5. If a schema intentionally allows extras for a specific field/model, that exception must be explicit in code and documented in architecture/runtime notes.
+1. This rule applies recursively to nested objects inside those artifacts, not only to top-level keys.
+1. Unknown/extra fields must fail closed (handoff/review is invalid and routing does not progress on that output).
+1. Open-ended key/value sections are exception-only and must be explicitly modeled as open-ended in schema (for example, a dedicated metadata map). They are never implicitly accepted by parser defaults.
+1. If a schema intentionally allows extras for a specific field/model, that exception must be explicit in code and documented in architecture/runtime notes.
 
 ## Benchmark Planner and Benchmark Plan Reviewer
 
@@ -99,25 +99,26 @@ The Benchmark Generator Planner will submit multiple files to the CAD implementi
 The plan will have the following bullet points. The plan will be validated for consistency, and will not be accepted until the markdown passes strict formatting criteria, and will ensure that the bullet points are there:
 
 1. `plan.md`:
-    - Learning objective (summary of what the agents needs to or will learn as a result of this challenge);
-    - The geometry of the environment:
-        - coordinates of all major shapes in the environment + randomization.
-        - Geometry and coordinates of all moving parts:
-            - motors
-            - non-fixed parts.
-    - Input objective:
-        - Shape of the input (can be anything; the ball is the easiest, any more complex shape is more difficult to solve (however it's more interesting too))
-            - how shape is randomized (shape of the input should be held more or less constant throughout the run). This is a bullet point list.
-        - Central position and position randomization margins (e.g. x:50, y:80, z:20, x_variation: 20, y_variation: 20, z_variation: 10)
-    - Where the input objective is located (coordinates + randomization),
-    - Objectives location:
-        - A "forbid" objectives as a set of approximate AABB coordinates,
-        - A "goal" objective as a single AABB coordinate
-The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
-2. A `todo.md` TODO list from the planner.
-3. A draft of `benchmark_definition.yaml` with rough values filled in.
-4. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; required engineer-stage handoff artifact). This file must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a minimal fixture declaration.
-5. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
+   - Learning objective (summary of what the agents needs to or will learn as a result of this challenge);
+   - The geometry of the environment:
+     - coordinates of all major shapes in the environment + randomization.
+     - Geometry and coordinates of all moving parts:
+       - motors
+       - non-fixed parts.
+   - Input objective:
+     - Shape of the input (can be anything; the ball is the easiest, any more complex shape is more difficult to solve (however it's more interesting too))
+       - how shape is randomized (shape of the input should be held more or less constant throughout the run). This is a bullet point list.
+     - Central position and position randomization margins (e.g. x:50, y:80, z:20, x_variation: 20, y_variation: 20, z_variation: 10)
+   - Where the input objective is located (coordinates + randomization),
+   - Objectives location:
+     - A "forbid" objectives as a set of approximate AABB coordinates,
+     - A "goal" objective as a single AABB coordinate
+       The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
+1. A `todo.md` TODO list from the planner.
+1. A draft of `benchmark_definition.yaml` with rough values filled in.
+1. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts`. This is benchmark-owned read-only handoff context for downstream engineer stages and must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a minimal fixture declaration.
+1. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
+
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other. `moved_object.material_id` is mandatory and must reference a known material from `manufacturing_config.yaml`; empty strings or invented material IDs are invalid planner handoff.
@@ -125,13 +126,13 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 `Benchmark Plan Reviewer` gate requirements:
 
-- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-local `benchmark_assembly_definition.yaml`.
+- Source of truth contract: benchmark planner handoff artifacts are `plan.md`, `todo.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
 - Reviewer-stage manifest: `.manifests/benchmark_plan_review_manifest.json`.
 - Entry guard behavior:
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Reject when planner artifacts mention benchmark objects, moving parts, joints, or zones that are not declared consistently across the planner handoff package.
   - Reject when `moved_object.material_id` is missing, empty, or not known to `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
-  - Reject when benchmark-local DOF/control metadata introduces unsupported or unjustified benchmark-side motion.
+  - Reject when benchmark-owned DOF/control metadata introduces unsupported or unjustified benchmark-side motion.
   - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis, motion limits or operating envelope, and whether the engineer may rely on the motion.
   - Reject when benchmark-side motion is impossible, unstable, or clearly over- or underconstrained for the intended puzzle.
 - Review-stage behavior:
@@ -154,67 +155,66 @@ These renders are not only passive assets in storage. Reviewer and other vision-
 The source of truth for which roles must perform visual inspection is `config/agents_config.yaml` under each role's `visual_inspection` policy. Current required roles in engineering/benchmark handoff flow are:
 
 1. `benchmark_plan_reviewer`
-2. `benchmark_reviewer`
-3. `engineer_planner`
-4. `engineer_coder`
-5. `engineer_plan_reviewer`
-6. `engineer_execution_reviewer`
+1. `benchmark_reviewer`
+1. `engineer_planner`
+1. `engineer_coder`
+1. `engineer_plan_reviewer`
+1. `engineer_execution_reviewer`
 
 The requirement is conditional on actual render-image availability for the current node/revision. If no render images exist yet in `renders/`, the role is not considered in violation merely because the policy is enabled.
 
 The engineer will also receive YAML files with:
-    1. Exact positions (boundaries) of objectives.
-    2. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
-    3. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
-    Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
+1\. Exact positions (boundaries) of objectives.
+2\. "Runtime" randomization, i.e. the randomization of the starting positions this environment will use. Note that it's different from the "static" randomization which is stronger.
+3\. Maximum prices and weight. Prices should be estimated by the planner to be relatively challenging but feasible by the planner (feasible but challenging related to *our* pricing sheet, as defined in planner.md). I suggest initially giving 50% safety margin in pricing and weight.
+Note that the maximum price and weight are also set by the planner later internally. However, the planner sets their own constraints *under* the maximum price. Here the "maximum prices and weight" are a "customer-specified price and weight" (the "customer" being the benchmark generator), and the planner price and weight are their own price and weight.
     <!-- (in future work) Later on, we will challenge the agent to optimize its previous result. It would have to beat its own solution, by, say, 15%.  -->
 
-The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required engineer-stage handoff artifact copied into the engineer session.
+The positions of objectives (including a build zone) and runtime randomization are in `benchmark_definition.yaml`. The Benchmark Planner's `benchmark_assembly_definition.yaml` is a required benchmark-owned handoff artifact copied into the engineer session as read-only context.
 
-Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the benchmark file remains observation and interaction context rather than an engineer-owned planning artifact.
+Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and design against it, but must not modify benchmark-owned fixtures or benchmark motion definitions. Missing `benchmark_assembly_definition.yaml` is a handoff failure, not an optional omission, and the file remains benchmark-owned read-only context rather than an engineer-owned planning artifact.
 
 If the benchmark includes moving benchmark-owned fixtures, the engineer intake still needs motion-visible facts. Those facts may live in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The minimum contract for each moving benchmark fixture is:
 
 1. stable fixture identity,
-2. motion kind (`fixed`, `passive`, `motorized_revolute`, `motorized_prismatic`, or other explicitly supported type),
-3. motion axis or path reference,
-4. motion bounds, period, or controller-visible operating range,
-5. whether the motion is always-on, conditional, or externally triggered,
-6. whether the engineer may assume that the motion is available during solution execution.
+1. motion kind (`fixed`, `passive`, `motorized_revolute`, `motorized_prismatic`, or other explicitly supported type),
+1. motion axis or path reference,
+1. motion bounds, period, or controller-visible operating range,
+1. whether the motion is always-on, conditional, or externally triggered,
+1. whether the engineer may assume that the motion is available during solution execution.
 
 If a benchmark-owned fixture is meant to be interactable by engineering, the relevant component must declare `allows_engineer_interaction: true`. Supported examples include:
 
 1. plugging into a benchmark-owned PSU or power connector,
-2. toggling a benchmark-owned switch or relay input,
-3. inserting a part into a benchmark-owned slot, socket, rail, or guide,
-4. mechanically actuating a benchmark-owned control feature such as a lever, latch, or trigger.
+1. toggling a benchmark-owned switch or relay input,
+1. inserting a part into a benchmark-owned slot, socket, rail, or guide,
+1. mechanically actuating a benchmark-owned control feature such as a lever, latch, or trigger.
 
 That flag is a permission, not transfer of ownership. The engineer may interact with the intended benchmark-owned surface, but may not redefine benchmark-owned components.
 
-#### Renders 
+#### Renders
 
 These 24-view handoff renders are static preview/context artifacts. The default generation policy is:
 
 1. benchmark validation generates them through the fast validation-preview path,
-2. that preview path uses MuJoCo by default,
-3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis rendering is very, very heavy (12x slower than MuJoCo, as per research in @specs/architecture/auxillary/simulation-optimization-attempts.md - 5s vs 70s - very significant.)), 
-4. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
+1. that preview path uses MuJoCo by default,
+1. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis rendering is very, very heavy (12x slower than MuJoCo, as per research in @specs/architecture/auxillary/simulation-optimization-attempts.md - 5s vs 70s - very significant.)),
+1. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
 
 Reviewer evidence contract for renders:
 
 1. If render assets exist for the latest revision, review stages that claim visual inspection must call the media-inspection tool on those assets.
-2. The review decision must be attributable to the exact latest-revision render assets, not stale prior-run images.
-3. Text summaries such as `simulation_result.json` complement but do not replace visual inspection where the review contract says images must be checked.
-4. The required number of distinct images inspected is config-driven (`visual_inspection.min_images`); current production policy is `1`, but this must remain adjustable without code changes.
-5. Runtime reminder messages may be injected during long-running tool loops when required visual inspection has not yet been satisfied; these reminders are deterministic policy enforcement, not free-form prompt advice.
+1. The review decision must be attributable to the exact latest-revision render assets, not stale prior-run images.
+1. Text summaries such as `simulation_result.json` complement but do not replace visual inspection where the review contract says images must be checked.
+1. The required number of distinct images inspected is config-driven (`visual_inspection.min_images`); current production policy is `1`, but this must remain adjustable without code changes.
+1. Runtime reminder messages may be injected during long-running tool loops when required visual inspection has not yet been satisfied; these reminders are deterministic policy enforcement, not free-form prompt advice.
 
 For moving benchmarks, dynamic evidence is a separate requirement:
 
 1. static preview images remain required context artifacts,
-2. they are not sufficient evidence for benchmark-owned motion or powered fixture behavior,
-3. benchmark approval for moving benchmarks requires latest-revision simulation evidence, normally video,
-4. the `Benchmark Reviewer` must inspect that dynamic evidence before approval when it exists.
-
+1. they are not sufficient evidence for benchmark-owned motion or powered fixture behavior,
+1. benchmark approval for moving benchmarks requires latest-revision simulation evidence, normally video,
+1. the `Benchmark Reviewer` must inspect that dynamic evidence before approval when it exists.
 
 ### A benchmark is reused multiple times
 
@@ -229,20 +229,20 @@ For now, nothing. I'll filter it out via SQL or similar later and make a "price 
 Engineering handoff includes two review gates:
 
 1. Planner gate (`Engineering Plan Reviewer`): validates planner artifacts before coder entry.
-2. Execution gate (`Engineering Execution Reviewer`): validates latest implementation handoff after validation/simulation success.
+1. Execution gate (`Engineering Execution Reviewer`): validates latest implementation handoff after validation/simulation success.
 
 For explicit-electronics tasks, there is also a specialist review gate between coding and execution review:
 
 1. `Electronics Reviewer` validates the electromechanical implementation against the benchmark electrical requirements and planner-owned electrical handoff.
-2. `Electronics Reviewer` does not own a separate implementation pass. It reviews the unified `Engineering Coder` output.
-3. If electrical issues require implementation changes, routing returns to `Engineering Coder`, not to a separate electrical implementer node.
+1. `Electronics Reviewer` does not own a separate implementation pass. It reviews the unified `Engineering Coder` output.
+1. If electrical issues require implementation changes, routing returns to `Engineering Coder`, not to a separate electrical implementer node.
 
 Engineer sends four files to the coder agent who has to implement the plan:
 
 1. A `plan.md` file The plan.md is a structured document (much like the benchmark generator plan) outlining:
-2. A stripped down `benchmark_definition.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
-3. A `todo.md` TODO-list.
-4. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
+1. A stripped down `benchmark_definition.yaml` file, except the max price, weight are set by the planner now - and they are under the max weight set by the user/benchmark generator.
+1. A `todo.md` TODO-list.
+1. A `assembly_definition.yaml` file with per-part pricing inputs, `final_assembly` structure, and assembly totals produced by `validate_costing_and_price.py`.
 
 Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 
@@ -401,7 +401,7 @@ randomization:
 `benchmark_definition.yaml` ownership rules:
 
 1. It owns benchmark/task geometry, randomization, benchmark/customer caps, benchmark planner estimates, and benchmark-owned fixture metadata.
-2. `benchmark_parts[].metadata` is benchmark-side metadata only. It describes read-only benchmark fixtures such as `fixed`, `material_id`, and attachment policy.
+1. `benchmark_parts[].metadata` is benchmark-side metadata only. It describes read-only benchmark fixtures such as `fixed`, `material_id`, and attachment policy.
    - The Benchmark Planner defines which benchmark-owned parts are drillable or non-drillable through `attachment_policy`.
    - `attachment_policy.attachment_methods` is the allowlist of permitted engineer-to-fixture attachment methods.
    - Use `attachment_methods: ["none"]` to mark a fixture as explicitly non-attachable.
@@ -412,9 +412,9 @@ randomization:
    - Drillability is whole-part in MVP. The Benchmark Planner and Benchmark Coder declare whether the part is drillable and the allowed numeric limits, but do not narrow drilling down to a sub-zone or exact coordinates on the part.
    - The engineer decides where to place the drilled holes on an allowed benchmark part, subject to the declared min/max hole size, max depth, and max hole-count limits.
    - `attachment_policy.notes` is reviewer-facing guidance only and must not be treated as a machine-enforced fallback.
-3. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
-4. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
-5. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives `max_unit_cost` and `max_weight_g` from those estimates during `submit_plan()`.
+1. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
+1. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
+1. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives `max_unit_cost` and `max_weight_g` from those estimates during `submit_plan()`.
 
 <!-- Note: we are using metric units and degrees. -->
 
@@ -425,16 +425,16 @@ To reduce cost guessing, the Engineering Planner outputs a machine-readable esti
 Expected flow:
 
 1. Planner drafts entries for all planned manufactured parts and COTS components.
-2. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
-    - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
-    - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
-3. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
-    - The script is the canonical calculator for `assembly_definition.yaml`: it validates schema consistency, computes assembly totals to cent precision, and writes normalized numeric totals back into the workspace file.
-    - The planner does not hand-author the final aggregate cost/weight values; those values come from the script output.
-4. If totals exceed `max_unit_cost` (or other numeric constraints), or if node-entry revalidation does not reproduce the same cent-precision totals exactly, planner must re-plan before handoff.
-5. Planner may restate the validated totals in prose, but the written YAML totals remain the source of truth and must match the script output exactly on node entry.
-6. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
-7. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
+1. Planner defines `final_assembly` (subassemblies, part membership, joints, and per-part motion metadata like `dofs`/`control`); under the hood we:
+   - Calculate as much as possible to prevent the planner from needing to think (e.g.: cooling time in injection molding is autocalculated from wall thickness, 3d print time is autocalculated from volume, setup time is autocalculated etc.)
+   - Estimate part reuse - if the part/subassembly is reused, unit costs go down as per manufacturing rules (making 2 equal parts is cheaper than making 1 due to economics of scale).
+1. Planner runs `skills/manufacturing-knowledge/scripts/validate_and_price.py`.
+   - The script is the canonical calculator for `assembly_definition.yaml`: it validates schema consistency, computes assembly totals to cent precision, and writes normalized numeric totals back into the workspace file.
+   - The planner does not hand-author the final aggregate cost/weight values; those values come from the script output.
+1. If totals exceed `max_unit_cost` (or other numeric constraints), or if node-entry revalidation does not reproduce the same cent-precision totals exactly, planner must re-plan before handoff.
+1. Planner may restate the validated totals in prose, but the written YAML totals remain the source of truth and must match the script output exactly on node entry.
+1. If the solution requires drilling into benchmark-owned fixtures, planner must declare each intended drilled fastener hole under `environment_drill_operations`; undeclared drilling is invalid handoff.
+1. Each declared benchmark drilling operation contributes non-zero static drilling cost. For now that cost is defined centrally in `manufacturing_config.yaml` and must be included in planner pricing totals.
 
 Minimum motion metadata fields inside `final_assembly.parts` entries:
 
@@ -453,8 +453,10 @@ Minimum per-manufactured-part fields:
 - method-specific costing inputs:
   - CNC: `stock_bbox_mm`, `stock_volume_mm3`, `removed_volume_mm3`
   - Injection molding / 3D print: required process-specific volume/thickness/time fields per validator contract
+
 <!-- - `estimated_unit_cost_usd` - auto-calculated. The planner does not need to calculate each. However, it may be populated automatically by the script if it runs successfully? Again, the goal is to offload agent work and guessing (for performance reasons). -->
-- `pricing_notes <!-- User review - maybe. Maybe for "confidence" scores or similar. -->
+
+- \`pricing_notes <!-- User review - maybe. Maybe for "confidence" scores or similar. -->
 
 Minimum per-COTS-part fields:
 
@@ -556,14 +558,15 @@ The Execution Reviewer (`Engineering Execution Reviewer`) is a post-validation/p
 
 1. Entry is blocked unless latest-revision reviewer handoff artifacts are valid (`script.py`, `validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json`).
    - Source of truth contracts: `REVIEWER_HANDOFF_ARTIFACTS` + execution-review custom handover check in node-entry validation (using reviewer-scoped manifest filenames from this document).
-2. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to its stage-specific YAML review pair in `reviews/`.
-3. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.
-4. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.
-5. Optional code-quality review is secondary and should only block for concrete correctness/safety risks.
+1. The Execution Reviewer has read-only access to implementation and evidence files, plus write/edit only to its stage-specific YAML review pair in `reviews/`.
+1. Primary review is robustness and realism: this node runs only after validation + simulation success paths have completed (including minor runtime-randomization pass criteria), then verifies the result is not flaky and is likely repeatable.
+1. Verify execution follows the approved plan or clearly justified deltas, including planned DOF limits.
+1. Optional code-quality review is secondary and should only block for concrete correctness/safety risks.
 
 The goal is to persist reviews into stage-specific YAML artifacts that agents can reference in later rounds, without routing free-form review text through in-memory-only state.
 
 Notably the Engineer will at this point already have passed the manufacturability constraint, cost constraint, and others.
+
 <!-- and others - I need to ideate/remember what else it should review for.  -->
 
 The review artifact pair is strictly typed.
@@ -610,14 +613,14 @@ Checklist values are typed as `pass | fail | not_applicable`.
 Checklist keys are reviewer-stage-specific:
 
 1. Plan reviewers use planning keys such as `cross_artifact_consistency`, `feasible_mechanism`, `budget_realism`, and `dof_minimality`.
-2. Execution reviewers use implementation keys such as `latest_revision_verified`, `simulation_success`, `plan_fidelity`, `robustness`, and `dynamic_evidence_checked`.
-3. The checklist keys are canonical and schema-owned. They replace ad hoc issue identifiers for current reviewer evals.
+1. Execution reviewers use implementation keys such as `latest_revision_verified`, `simulation_success`, `plan_fidelity`, `robustness`, and `dynamic_evidence_checked`.
+1. The checklist keys are canonical and schema-owned. They replace ad hoc issue identifiers for current reviewer evals.
 
 ## Clarification - definition of constraints in planning
 
 1. Constraints are set first at the application level; e.g. the timeout of simulation is always 30 seconds
-2. Then the Benchmark Planner/Benchmark Coder set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
-3. Engineering Planner can set an even lower constraint to force Engineering Coder to think on how to achieve a certain goal cost-effectively. Engineering Coder won't pass the cost metric until it is done.
+1. Then the Benchmark Planner/Benchmark Coder set a more realistic constraint for them (e.g., they set a max cost, max weight for the simulation, similarly to how a "customer" would do it for an engineering company)
+1. Engineering Planner can set an even lower constraint to force Engineering Coder to think on how to achieve a certain goal cost-effectively. Engineering Coder won't pass the cost metric until it is done.
 
 ## Clarification: agents outputs will *never* be parsed via text heuristics.
 
@@ -628,13 +631,14 @@ If the agent is to record structured output or an enum, it'll record it in the t
 ## Agents hard fail cases
 
 The agents will fail on the following cases:
+
 1. Timeout (configurable per agent, mostly 300s)
-2. Max turns reached (for example, 150 turns (realistic with modern LLMs))
-3. Exceeded some credits usage (e.g. 400k tokens input and output).
-4. LLM loop-detection guard triggered:
-    - If the same normalized failure fingerprint repeats for `N` consecutive retries, fail the stage.
-    - Fingerprint is based on exception class/message plus latest LM output preview (or empty preview).
-    - This guard is local to the node runtime and does not depend on DB episode counters, so local/CLI runs also terminate deterministically.
+1. Max turns reached (for example, 150 turns (realistic with modern LLMs))
+1. Exceeded some credits usage (e.g. 400k tokens input and output).
+1. LLM loop-detection guard triggered:
+   - If the same normalized failure fingerprint repeats for `N` consecutive retries, fail the stage.
+   - Fingerprint is based on exception class/message plus latest LM output preview (or empty preview).
+   - This guard is local to the node runtime and does not depend on DB episode counters, so local/CLI runs also terminate deterministically.
 
 The user is able to have the agent continue for another number of turns.
 
@@ -645,10 +649,10 @@ All settings are configurable per-agent in @config/agents_config.yaml and should
 Clarification: LM generation retries and system tool-call retries are separate policies.
 
 1. LM generation may continue until LM hard-fail limits are reached (turn budget, token budget, timeout, loop-detection guard).
-2. Agent-failed tool errors are surfaced to the LM as observations; the LM may continue trying within LM hard-fail limits.
-3. System-failed tool execution retries are capped at 3 attempts via Temporal for the same tool request in the same stage.
-4. System-failed retries do not consume LM tool-call budget, but do consume episode wall-clock time.
-5. Repeated identical failures still fail closed via loop-detection and hard-fail guards; no infinite spin is allowed.
+1. Agent-failed tool errors are surfaced to the LM as observations; the LM may continue trying within LM hard-fail limits.
+1. System-failed tool execution retries are capped at 3 attempts via Temporal for the same tool request in the same stage.
+1. System-failed retries do not consume LM tool-call budget, but do consume episode wall-clock time.
+1. Repeated identical failures still fail closed via loop-detection and hard-fail guards; no infinite spin is allowed.
 
 ## Steerability
 
@@ -669,8 +673,8 @@ If multiple features are selected, showcase one view.
 The agent will also receive selection metadata (grouped per feature type):
 
 - With faces:
-    1. Which face number this is in particular (notably, the agent should not try to use the exact face number in the code, rather, they will select it using proper methodology).
-    2. Where the face is located (center) and its normal.
+  1. Which face number this is in particular (notably, the agent should not try to use the exact face number in the code, rather, they will select it using proper methodology).
+  1. Where the face is located (center) and its normal.
 - With edges:
   - Edge center and edge direction (if arc, specify that it is an arc)
 - With vertices:
@@ -722,7 +726,7 @@ Because we have a bill of materials/part tree, it should be very straightforward
 ## Steerability - Other
 
 1. Ideally, agents would have standard per-user memory sets.
-2. The model should then, in 90% of cases at least, view the actual lines where the part, or direct code mention or whatever is defined; meaning that it doesn't ignore the user's output.
+1. The model should then, in 90% of cases at least, view the actual lines where the part, or direct code mention or whatever is defined; meaning that it doesn't ignore the user's output.
 
 <!-- per-org, per-project memory is a TODO later.-->
 

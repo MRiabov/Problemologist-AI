@@ -23,7 +23,7 @@ class PlanReviewerSignature(dspy.Signature):
     """
     Engineer Plan Reviewer node: Evaluates the proposed mechanical and electrical plans.
     You must use the provided tools to read 'plan.md', 'todo.md', and 'assembly_definition.yaml'.
-    You also receive required read-only benchmark_assembly_definition.yaml handoff context.
+    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
     Ensure the plan is physically feasible, within budget, and complete.
     When done, call `submit_review` with your final ReviewResult.
     """

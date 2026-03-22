@@ -1,4 +1,5 @@
 # Agent roles
+
 <!--FIXME: in this document, incorrect heading levels due to automatic adjustment a while ago.-->
 
 ## Scope summary
@@ -17,13 +18,13 @@ The agent is to generate problems for an engineer to solve. This is important, a
 ## Agent subagents
 
 1. Planner - compose a description of how the benchmark behaves, what the learning goal is, and design such a challenge (such a puzzle) that would teach the agent something; e.g., how gravity works, friction, dynamic objects, motors, etc.
-2. A Benchmark Plan Reviewer that reviews the planner handoff before implementation starts.
-3. A Benchmark Coder that implements the benchmark from the approved plan
-4. A reviewer that reviews the implemented environment for
-    - Feasibility of solution
-    - Lack of violation of environment constraints (no significant, etc.)
-    - Proper randomization.
-    - No excessive or unjustified benchmark-side degrees of freedom.
+1. A Benchmark Plan Reviewer that reviews the planner handoff before implementation starts.
+1. A Benchmark Coder that implements the benchmark from the approved plan
+1. A reviewer that reviews the implemented environment for
+   - Feasibility of solution
+   - Lack of violation of environment constraints (no significant, etc.)
+   - Proper randomization.
+   - No excessive or unjustified benchmark-side degrees of freedom.
 
 ## Output requirements
 
@@ -40,6 +41,7 @@ The benchmarks are consisting of CAD models which are converted into XML.
   - The fast validation-preview path uses MuJoCo for static handoff renders by default; it is not itself a Genesis-runtime proof path.
 - MJCF is created programmatically, not by a LLM.
 - Authored top-level part labels must be unique and must not be `environment` or start with `zone_`; those names are reserved for the scene root and simulator-generated objective bodies and collide with MJCF mesh/body naming if reused.
+
 <!-- I will need to experiment, but I don't think the LLM should be able to edit it.  ->
 
 ## Benchmarks
@@ -98,7 +100,7 @@ Problems with motors and moving parts are verified more consistently because the
 8. **Planner artifacts**
    - Write `todo.md` implementation checklist.
    - Write draft `benchmark_definition.yaml` matching this geometry/constraint data.
-   - Write draft `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-local; required engineer-stage handoff artifact).
+   - Write draft `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts` (benchmark-owned handoff artifact copied into engineer intake as read-only context).
    - Call `submit_plan()` to explicitly submit the planner handoff; completion is accepted only when `submit_plan()` returns `ok=true`.
 ```
 
@@ -144,26 +146,26 @@ The benchmark loop has two reviewer stages with different responsibilities.
 
 `Benchmark Plan Reviewer` responsibilities:
 
-1. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-local `benchmark_assembly_definition.yaml`.
-2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`.
-3. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
-4. Validate non-ambiguity and completeness of planner handoff artifacts.
-5. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
-6. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion.
-7. Reject impossible or excessively underconstrained benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unstable/unreviewable joint setups.
-8. Reject excessive or unjustified benchmark-side DOFs in benchmark-local `benchmark_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
-9. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
-10. This stage is review-only. `Benchmark Plan Reviewer` inspects planner artifacts and evidence but does not rewrite planner-owned files, and when render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+1. Reject plans that mention benchmark objects, moving parts, joints, or objective markers that are not declared consistently across `plan.md`, `benchmark_definition.yaml`, and benchmark-owned `benchmark_assembly_definition.yaml`.
+1. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml`.
+1. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
+1. Validate non-ambiguity and completeness of planner handoff artifacts.
+1. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
+1. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion.
+1. Reject impossible or excessively underconstrained benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unstable/unreviewable joint setups.
+1. Reject excessive or unjustified benchmark-side DOFs in `benchmark_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
+1. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
+1. This stage is review-only. `Benchmark Plan Reviewer` inspects planner artifacts and evidence but does not rewrite planner-owned files, and when render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Benchmark Reviewer` responsibilities:
 
 1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations.
-2. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
-3. Verify the benchmark remains solvable, properly randomized, and free of unintended excessive DOFs or overly underconstrained moving fixtures after implementation.
-4. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on static validation preview alone.
-5. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
-6. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
-7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+1. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
+1. Verify the benchmark remains solvable, properly randomized, and free of unintended excessive DOFs or overly underconstrained moving fixtures after implementation.
+1. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on static validation preview alone.
+1. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
+1. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
+1. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 Benchmark-side reviewer manifest naming:
 
@@ -204,11 +206,11 @@ Again, the execution runs in isolated containers to prevent accidental harmful c
 Engineer has explicit node roles:
 
 1. `Engineering Planner` (mechanical plan author)
-2. `Electronics Planner` (electrical planning companion stage)
-3. `Engineering Plan Reviewer` (plan-quality reviewer before coding)
-4. `Engineering Coder` (unified mechanical + electrical implementation owner)
-5. `Electronics Reviewer` (electrical/electromechanical specialist review when required)
-6. `Engineering Execution Reviewer` (final Execution Reviewer after validated/simulated implementation handoff)
+1. `Electronics Planner` (electrical planning companion stage)
+1. `Engineering Plan Reviewer` (plan-quality reviewer before coding)
+1. `Engineering Coder` (unified mechanical + electrical implementation owner)
+1. `Electronics Reviewer` (electrical/electromechanical specialist review when required)
+1. `Engineering Execution Reviewer` (final Execution Reviewer after validated/simulated implementation handoff)
 
 The architect will create and persist a TODO list. The engineer must implement. The agent will have easy access to the TODO list.
 
@@ -221,72 +223,74 @@ The architect will create and persist a TODO list. The engineer must implement. 
 The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
+
    - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and runtime-derived benchmark/customer caps `max_unit_cost`/`max_weight_g`).
-   - Read `benchmark_assembly_definition.yaml` as required read-only benchmark context. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but fail closed if the file is missing and do not treat it as an engineer-owned costing artifact.
+   - Read `benchmark_assembly_definition.yaml` as required benchmark-owned read-only handoff context copied into the engineer workspace. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but fail closed if the file is missing and do not treat it as an engineer-owned costing artifact.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
 
-2. **Plan the mechanism and budgets**
+1. **Plan the mechanism and budgets**
+
    - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
    - Set planner-owned `max_unit_cost` and `max_weight_g` **under** benchmark/customer caps.
    - Minimize motion complexity: use the smallest DOF set needed to satisfy the objective; avoid unnecessary moving axes.
    - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS Search subagent and carry part IDs + catalog prices into the plan.
 
-3. **Calculate the costs per part**:
+1. **Calculate the costs per part**:
 
-  We want to estimate a rough, but detailed prices and architecture of the solution.
+We want to estimate a rough, but detailed prices and architecture of the solution.
 
-  Create a file like `assembly_definition.yaml` containing:
+Create a file like `assembly_definition.yaml` containing:
 
-  For each part:
-      1. A name of the part
-      2. a description of the part,
-      3. costing information each part in the simulation, e.g. for CNC, blank size, and final volume of the part (and calculate how much to be removed). The inputs are auto-validated, per manufacturing method
+For each part:
+1\. A name of the part
+2\. a description of the part,
+3\. costing information each part in the simulation, e.g. for CNC, blank size, and final volume of the part (and calculate how much to be removed). The inputs are auto-validated, per manufacturing method
 
-  Then: create an assembly structure, like:
+Then: create an assembly structure, like:
 
-  ```yaml
-  final_assembly:
-    - subassembly_1: 
-        parts:
-          - part_1:
-              dofs: ["dof_2", "dof_1"]
-          - part_2:
-              dofs: []
-          - motor_a:
-              dofs: ["rotate_z"]
-              control:
-                mode: sinusoidal
-                speed: 1.0
-        joints: 
-        - joint_1: 
-            parts:
+```yaml
+final_assembly:
+  - subassembly_1: 
+      parts:
+        - part_1:
+            dofs: ["dof_2", "dof_1"]
+        - part_2:
+            dofs: []
+        - motor_a:
+            dofs: ["rotate_z"]
+            control:
+              mode: sinusoidal
+              speed: 1.0
+      joints: 
+      - joint_1: 
+          parts:
+            - part_1
+            - part_2
+          type: fastener_joint 
+  - subassembly_2:
+      parts:
+        - part_4:
+            dofs: []
+        - part_1: # part 1 is inserted twice. Hence it'll be estimated as necessary to manufacture it twice, hence unit costs will drop (as per manufacturing method config)
+            dofs: ["dof_2", "dof_1"]
+      joints:
+        - joint_2:
+            parts:  #note: maybe we want to inline it.
+              - part_4
               - part_1
-              - part_2
-            type: fastener_joint 
-    - subassembly_2:
-        parts:
-          - part_4:
-              dofs: []
-          - part_1: # part 1 is inserted twice. Hence it'll be estimated as necessary to manufacture it twice, hence unit costs will drop (as per manufacturing method config)
-              dofs: ["dof_2", "dof_1"]
-        joints:
-          - joint_2:
-              parts:  #note: maybe we want to inline it.
-                - part_4
-                - part_1
-              type: fastener_joint
-    - part_5 
-  ```
+            type: fastener_joint
+  - part_5 
+```
 
-  Then: Run a script like `validate_costing_and_price.py` that would automatically validate the YAML file for consistency and output pricing. The model can thus use a stricter constraint.
+Then: Run a script like `validate_costing_and_price.py` that would automatically validate the YAML file for consistency and output pricing. The model can thus use a stricter constraint.
 
-  Notably, if the plan is higher than the max_unit_cost, it can't proceed and needs to adapt the plan.
+Notably, if the plan is higher than the max_unit_cost, it can't proceed and needs to adapt the plan.
 
 1. **Write required planner artifacts**
 
 - Create `plan.md` using the strict engineering structure:
-     `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
+  `## 1. Solution Overview`, `## 2. Parts List`, `## 3. Assembly Strategy`, `## 4. Cost & Weight Budget`, `## 5. Risk Assessment`.
 - In `plan.md`, include manufacturing method/material choices, assembly strategy (including rigid-connection fastener strategy), and risk mitigations.
 - Create `todo.md` as an implementation checklist for the Engineering Coder (initially `- [ ]` items).
 - Create `assembly_definition.yaml` with per-part costing fields (method-specific) and a `final_assembly` structure for reuse/quantity accounting.
@@ -301,17 +305,17 @@ Implementation is not split into a mechanical coder followed by a separate elect
 The architecture rule is:
 
 1. `Engineering Planner` owns the mechanical planning pass.
-2. `Electronics Planner` adds electrical requirements, component choices, and wiring intent when the benchmark declares explicit electronics.
-3. `Engineering Plan Reviewer` approves or rejects the combined planner handoff.
-4. `Engineering Coder` then implements the whole approved solution in one workspace revision, including geometry, controller behavior, electronics definitions, and any wire-routing logic required by the approved plan.
-5. `Electronics Reviewer` validates the electromechanical implementation when electronics are present.
+1. `Electronics Planner` adds electrical requirements, component choices, and wiring intent when the benchmark declares explicit electronics.
+1. `Engineering Plan Reviewer` approves or rejects the combined planner handoff.
+1. `Engineering Coder` then implements the whole approved solution in one workspace revision, including geometry, controller behavior, electronics definitions, and any wire-routing logic required by the approved plan.
+1. `Electronics Reviewer` validates the electromechanical implementation when electronics are present.
 
 We choose this because electromechanical implementation is often co-dependent:
 
 1. wire-routing constraints can require geometry changes,
-2. PSU or connector packaging can require mounting changes,
-3. moving-part clearance can require both wiring and mechanical edits,
-4. a late serialized electrical-only coding stage creates unnecessary handoff loops and stale assumptions.
+1. PSU or connector packaging can require mounting changes,
+1. moving-part clearance can require both wiring and mechanical edits,
+1. a late serialized electrical-only coding stage creates unnecessary handoff loops and stale assumptions.
 
 The implementation split is therefore planner-specialized but coder-unified.
 
@@ -322,29 +326,29 @@ The engineering loop has two reviewer stages with different responsibilities.
 `Engineering Plan Reviewer` responsibilities:
 
 1. Reject plans that propose unsupported components/mechanisms outside the current allowed system/tooling/contracts.
-2. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
-3. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
-4. Validate non-ambiguity and completeness of planner handoff artifacts.
-5. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
-6. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
-7. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
-8. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
-9. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+1. Validate plan consistency across `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`.
+1. Validate feasibility (physics realism, build-zone fit, and planner budgets under benchmark caps).
+1. Validate non-ambiguity and completeness of planner handoff artifacts.
+1. Re-run pricing/weight validation (`skills/manufacturing-knowledge/scripts/validate_and_price.py` or equivalent tool-wrapped validator) against the planner handoff and reject mismatches/failures.
+1. Reject plans with excessive DOFs; each non-empty `final_assembly.parts[*].dofs` entry must be necessary for the mechanism and justified in planner artifacts.
+1. Deterministic DOF suspicion rule: any part with `len(dofs) > 3` is treated as suspicious over-actuation and is rejected unless explicit mechanism-level justification is present and reviewer accepts that evidence.
+1. Future work (non-blocking for now): recommend cost/weight optimizations and flag unrealistic or overdesigned targets.
+1. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 `Engineering Execution Reviewer` responsibilities:
 
 1. Verify implementation follows the approved plan (or has justified, reviewable deviations).
-2. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
-3. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
-4. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
-5. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
-6. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+1. Verify robustness and non-flakiness of the successful solution, using simulation evidence across runtime randomization.
+1. Execute only after successful validation/simulation handoff artifacts are present (`validation_results.json`, `simulation_result.json`, `.manifests/engineering_execution_review_manifest.json` for latest revision). This stage is post-success auditing, not initial simulation pass/fail gating.
+1. Flag execution-time evidence of over-actuated designs (unnecessary moving parts/axes) as a robustness risk, even when single-run success exists.
+1. Optional code-quality review is secondary and non-blocking unless it reveals concrete safety/correctness risk.
+1. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
 Engineer-side visual-inspection policy:
 
 1. `Engineering Planner`, `Engineering Coder`, `Engineering Plan Reviewer`, and `Engineering Execution Reviewer` are all policy-configured visual-inspection roles.
-2. The requirement is conditional on render-image availability in `renders/`.
-3. The current policy minimum is one distinct image per required node, but the architecture treats this as config-owned rather than hardcoded.
+1. The requirement is conditional on render-image availability in `renders/`.
+1. The current policy minimum is one distinct image per required node, but the architecture treats this as config-owned rather than hardcoded.
 
 Reviewer manifest naming in engineering:
 
@@ -359,6 +363,7 @@ Reviewer persistence naming in engineering:
 - Execution reviewer writes:
   - `reviews/engineering-execution-review-decision-round-<n>.yaml`
   - `reviews/engineering-execution-review-comments-round-<n>.yaml`
+
 <!-- 
 4. **Pre-handover validation gate**
    - Ensure markdown/YAML structure is valid (plan sections + list/table requirements, TODO checkbox format).
@@ -378,12 +383,12 @@ Reviewer persistence naming in engineering:
 The Engineer agent will verify its work by:
 
 1. Checking the manufacturability of its solution, on
-    1. Individual part scale (this part can be machined)
-    2. Assembly scale - this assembly has no interference of parts and has valid part constraints.
-2. Checking the cost of its solution; against the part count and unit cost as specified by the user.
-3. Checking the weight of its solution.
-4. Simulating - did the model achieve the goal as per the benchmark?
-5. The Execution Reviewer assesses whether the successful simulation is stable and non-flaky for realistic repeated runs.
+   1. Individual part scale (this part can be machined)
+   1. Assembly scale - this assembly has no interference of parts and has valid part constraints.
+1. Checking the cost of its solution; against the part count and unit cost as specified by the user.
+1. Checking the weight of its solution.
+1. Simulating - did the model achieve the goal as per the benchmark?
+1. The Execution Reviewer assesses whether the successful simulation is stable and non-flaky for realistic repeated runs.
 
 ## COTS Search subagent
 
@@ -400,7 +405,7 @@ Purpose: a lightweight subagent that performs catalog lookups and returns verifi
 ### Inputs (from planner/engineer/Benchmark Planner/Benchmark Coder)
 
 - One request string from `invoke_cots_search_subagent(...)`.
-- That request string may contain part intent (e.g., "M3 fasteners", "servo motor 3-5 kg*cm", "bearing 608") plus constraints such as quantity tier, max_unit_cost, size/torque/voltage limits, material, and mounting/shaft constraints.
+- That request string may contain part intent (e.g., "M3 fasteners", "servo motor 3-5 kg\*cm", "bearing 608") plus constraints such as quantity tier, max_unit_cost, size/torque/voltage limits, material, and mounting/shaft constraints.
 
 ### Tools
 
@@ -423,8 +428,8 @@ Notably the Benchmark Planner will need it too since they are also responsible f
 ### Reasons for invocation
 
 1. Planners in benchmark and engineering invoke to check exact prices for subcomponents (both make price decisions)
-2. Engineers invoke them because they need to use them and check prices for components (they are constrained by the price)
-3. Reviewers may search for a better component *(suggestion: reviewers may want to read the search queries of invoking agents to decide if the part found was sufficiently good or not. If the query is good enough—can just skip!)*
+1. Engineers invoke them because they need to use them and check prices for components (they are constrained by the price)
+1. Reviewers may search for a better component *(suggestion: reviewers may want to read the search queries of invoking agents to decide if the part found was sufficiently good or not. If the query is good enough—can just skip!)*
 
 ## COTS catalog database (spec 006)
 

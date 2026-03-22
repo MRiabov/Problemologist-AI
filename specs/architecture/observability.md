@@ -10,12 +10,12 @@
 To track all agent movements and to persist data, we encode the following:
 
 1. The agent pass/fail reasons
-2. Error messages from script execution, linting,
-3. All agent thoughts.
-4. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
-5. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
-6. Feedback from the user.
-7. All detailed metadata as required by "Evaluation" database, and more. All bits of data on what called when should be extracted.
+1. Error messages from script execution, linting,
+1. All agent thoughts.
+1. A mechanism to reconstruct those - e.g. we record the entire conversation and tool-calling structure, so how can we read it? How can we show it to users that use this prompt? How can we use it for debugging? basically, some order matters. Or, maybe just dump the conversation in/out to schema, that could also work.
+1. Renders (visuals) of what the agent sees (optionally; if it doesn't take too much space; it may very well be more economical to reconstruct at runtime using scripts. So record what comes into the agent, all parameters, code, setup, etc, and rebuild at runtime.)
+1. Feedback from the user.
+1. All detailed metadata as required by "Evaluation" database, and more. All bits of data on what called when should be extracted.
 
 These will be later used for querying, preproc and model training.
 
@@ -33,11 +33,11 @@ Per-call LM usage is forwarded to Langfuse observations (`input_tokens`, `output
 Use explicit IDs and link all observability data to them:
 
 1. `user_session_id`: one user conversation/session.
-2. `episode_id`: one agent workflow execution attempt within a user session.
-3. `simulation_run_id`: one simulation invocation within an episode.
-4. `cots_query_id`: one COTS query invocation within an episode.
-5. `review_id`: one reviewer decision artifact.
-6. `trace_id`: one observability trace record (with optional `langfuse_trace_id` linkage).
+1. `episode_id`: one agent workflow execution attempt within a user session.
+1. `simulation_run_id`: one simulation invocation within an episode.
+1. `cots_query_id`: one COTS query invocation within an episode.
+1. `review_id`: one reviewer decision artifact.
+1. `trace_id`: one observability trace record (with optional `langfuse_trace_id` linkage).
 
 Current implementation note (explicit bug):
 
@@ -52,9 +52,10 @@ Backend logging supports a machine-readable sidecar stream for error-level event
 Contract:
 
 1. When `EXTRA_ERROR_JSON_LOG` is configured, services append JSON Lines records for `error`/`exception`/`critical` events.
-2. Each record includes `service` and must include at least one run-correlating identifier: `session_id` or `episode_id` (preferably both where available).
-3. This stream is used by integration/runtime triage tooling for deterministic early-stop/fail-fast behavior on non-allowlisted backend errors.
-4. Failure to write the sidecar stream must never block primary application logging.
+1. Each record includes `service` and must include at least one run-correlating identifier: `session_id` or `episode_id` (preferably both where available).
+1. This stream is used by integration/runtime triage tooling for deterministic early-stop/fail-fast behavior on non-allowlisted backend errors.
+1. Failure to write the sidecar stream must never block primary application logging.
+
 <!--Note: this is mostly integration test logic.-->
 
 ### All collected events
@@ -62,55 +63,88 @@ Contract:
 We track the following structured domain events to compute the evaluation metrics defined in the [Agent Evaluations](#agent-evaluations) section:
 
 1. Component usage,
-2. Tool invocation,
-    - separate events for each tool call - easier to track later.
-3. Manufacturability and price check (engineer)
-    - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
-4. Scene validation (Benchmark Coder)
-5. Render request (engineer)
-6. Render request (benchmark)
-7. Simulation request (engineer)
-8. Simulation result (engineer)
-    - Failure/pass reason -
-        - Success: hit green zone
-        - Failure in [failures](#failure):
-            - Timeout,
-            - Out of bounds
-            - Forbid zone hit
-            - Part breakage
-    - Simulation time elapsed
-    - Computing time
 
-9. COTS search (engineer/planner?)
-10. Plan submission (benchmark)
-11. Plan submission (Engineer)
-12. Price/weight failure escalation request (Engineering Coder)
-13. Price/weight failure escalation decision (reviewer)
-14. Lint failure - code
-15. Lint failure - Markdown/YAML
-16. Logic/constraint failure - YAML
-17. Skill edit (skill editing agent)
-18. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
-19. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
-20. Submission attempt without creating all necessary files.
-    - if planner tried submitting the result without either of `plan.md`, `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, OR they were left equal to their templates (don't allow submission), and note an event.
-21. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review decision filepath, persisted review comments filepath, and evidence used (images viewed count, video viewed, files checked).
-22. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
-23. Forbidden joint creation/adding logic.
-24. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
-25. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
-26. Plan-reviewer deterministic validator execution (`plan_review_validation_run`) with reviewer stage, input artifact revision, validator status, and mismatch reasons when rejected.
-27. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
-28. Validation preview backend selection (`validation_preview_backend_selected`) with requested physics backend, actual preview backend, and render purpose (`validation_static_preview`).
-29. Validation preview render completion (`validation_preview_render_complete`) with preview backend, image count, elapsed render time, and artifact paths.
-30. Media inspection event (`media_inspection`) for every agent media-view action, with node/reviewer stage, requested path, resolved artifact path, media kind (`image`, `video_frames`), attached image/frame count, and attach result (`attached`, `missing`, `unsupported_format`, `failed`).
-31. LLM media attachment event (`llm_media_attached`) whenever a model request includes media parts, with node name, provider/model, attachment count, media kinds, and source artifact paths.
+1. Tool invocation,
+
+   - separate events for each tool call - easier to track later.
+
+1. Manufacturability and price check (engineer)
+
+   - store all metadata too - verified which part, for which manufacturing method, result(pass/fail; weight price, etc.)
+
+1. Scene validation (Benchmark Coder)
+
+1. Render request (engineer)
+
+1. Render request (benchmark)
+
+1. Simulation request (engineer)
+
+1. Simulation result (engineer)
+
+   - Failure/pass reason -
+     - Success: hit green zone
+     - Failure in [failures](#failure):
+       - Timeout,
+       - Out of bounds
+       - Forbid zone hit
+       - Part breakage
+   - Simulation time elapsed
+   - Computing time
+
+1. COTS search (engineer/planner?)
+
+1. Plan submission (benchmark)
+
+1. Plan submission (Engineer)
+
+1. Price/weight failure escalation request (Engineering Coder)
+
+1. Price/weight failure escalation decision (reviewer)
+
+1. Lint failure - code
+
+1. Lint failure - Markdown/YAML
+
+1. Logic/constraint failure - YAML
+
+1. Skill edit (skill editing agent)
+
+1. Skill file read (any agent) (note: track reading of skills or even particular files or even lines may link to success rates.)
+
+1. Instability in the simulation (if an agent produced an instable solution, or a NaN somehow and we didn't catch it)
+
+1. Submission attempt without creating all necessary files.
+
+   - if planner tried submitting the result without `plan.md`, `benchmark_definition.yaml`, or benchmark-owned `benchmark_assembly_definition.yaml`, or if they were left equal to their templates (don't allow submission), and note an event.
+
+1. Submission from reviewers - Review decision events for every reviewer stage (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) with decision, reason category, reviewer manifest filename, persisted review decision filepath, persisted review comments filepath, and evidence used (images viewed count, video viewed, files checked).
+
+1. Plan refusal events with explicit refusal reasons (array), `agent_role`, and proof-of-impossibility evidence from `plan_refusal.md`
+
+1. Forbidden joint creation/adding logic.
+
+1. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
+
+1. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
+
+1. Plan-reviewer deterministic validator execution (`plan_review_validation_run`) with reviewer stage, input artifact revision, validator status, and mismatch reasons when rejected.
+
+1. Reviewer manifest gate failures (`reviewer_manifest_gate_failed`) with reviewer stage, manifest filename, failure class (`missing`, `stale`, `invalid_schema`, `revision_mismatch`), and blocked node id.
+
+1. Validation preview backend selection (`validation_preview_backend_selected`) with requested physics backend, actual preview backend, and render purpose (`validation_static_preview`).
+
+1. Validation preview render completion (`validation_preview_render_complete`) with preview backend, image count, elapsed render time, and artifact paths.
+
+1. Media inspection event (`media_inspection`) for every agent media-view action, with node/reviewer stage, requested path, resolved artifact path, media kind (`image`, `video_frames`), attached image/frame count, and attach result (`attached`, `missing`, `unsupported_format`, `failed`).
+
+1. LLM media attachment event (`llm_media_attached`) whenever a model request includes media parts, with node name, provider/model, attachment count, media kinds, and source artifact paths.
 
 Visual-inspection-policy enforcement must also be reconstructable from traces even if we do not persist dedicated reminder events:
 
 1. When a role is subject to config-driven visual inspection (`config/agents_config.yaml`), the trace should make it possible to determine whether images existed, whether `inspect_media(...)` was called, and whether the configured minimum image count was satisfied.
-2. Runtime-injected reminder messages and fail-closed completion/approval refusals for missing visual inspection should therefore remain visible in persisted conversation/tool traces (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops).
-3. `media_inspection` and `llm_media_attached` are the primary structured observability events for this path; reminder text may remain trace-visible rather than becoming a separate domain event unless later metrics require it.
+1. Runtime-injected reminder messages and fail-closed completion/approval refusals for missing visual inspection should therefore remain visible in persisted conversation/tool traces (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops).
+1. `media_inspection` and `llm_media_attached` are the primary structured observability events for this path; reminder text may remain trace-visible rather than becoming a separate domain event unless later metrics require it.
 
 <!-- 20. Metric for "Jamming Rate"
     - Definition: Object velocity = 0 for > X seconds while Actuator Force > 0.
@@ -143,26 +177,28 @@ Integration/test tagging is part of the same metadata contract:
 We define (a growing list of) (aggregate) metrics:
 
 <!-- All below are LLM suggested, but are good. -->
+
 1. Benchmark solvability rate: % of generated benchmarks solvable within constraints by the engineer (or baseline solver).
-2. Benchmark diversity coverage: distribution across physics principles (gravity, friction, motors), object types, DOF counts, moving parts, and environment templates.
-3. Robustness across seeds: success rate across runtime jitter seeds and static variants.
-4. Plan adherence rate: how often CAD output matches plan (geometry, constraints, objectives).
-5. Price/weight estimation error: planner estimated vs actual validated cost/weight, by agent and benchmark type.
-6. Time-to-solution metrics: median time/tool-calls to first valid benchmark and first valid solution.
-7. Reasoning trace capture rate: % of runs with stored traces; trace sufficiency score (presence of required sections).
-8. Journal quality score: % of entries with intent/result/reflection/next-step; frequency per run; correlation with success.
-9. Optimization capture rate: % of runs where notable optimization is logged (objective #5).
-10. Skill effectiveness: performance delta before/after a new skill version.
-11. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
-12. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
-13. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
-14. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
-15. Validation preview latency by backend and purpose: median/static-preview time split by `validation_static_preview` backend versus selected simulation backend.
-16. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
-17. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
+1. Benchmark diversity coverage: distribution across physics principles (gravity, friction, motors), object types, DOF counts, moving parts, and environment templates.
+1. Robustness across seeds: success rate across runtime jitter seeds and static variants.
+1. Plan adherence rate: how often CAD output matches plan (geometry, constraints, objectives).
+1. Price/weight estimation error: planner estimated vs actual validated cost/weight, by agent and benchmark type.
+1. Time-to-solution metrics: median time/tool-calls to first valid benchmark and first valid solution.
+1. Reasoning trace capture rate: % of runs with stored traces; trace sufficiency score (presence of required sections).
+1. Journal quality score: % of entries with intent/result/reflection/next-step; frequency per run; correlation with success.
+1. Optimization capture rate: % of runs where notable optimization is logged (objective #5).
+1. Skill effectiveness: performance delta before/after a new skill version.
+1. Reviewer precision/recall: false accept/reject rate based on downstream outcomes.
+1. Simulation stability rate: % of solutions with no instabilities, NaNs, penetrations, or joint violations.
+1. Dataset readiness score: % of runs meeting training-dataset criteria (complete artifacts + verified solution + valid reasoning trace).
+1. Cost/weight delta heuristic: if cheaper/lighter alternative was computed (simulated) but final solution is worse, log event.
+1. Validation preview latency by backend and purpose: median/static-preview time split by `validation_static_preview` backend versus selected simulation backend.
+1. Visual-evidence usage rate: % of review attempts with available renders that actually called the media-inspection tool and attached media to the model.
+1. Visual-policy compliance rate by role: % of runs where roles configured with `visual_inspection.required=true` satisfied their current `min_images` requirement when render images were available.
 
 <!-- 1. Infrastructure/framework stability:
     - % of sessions completed successfully to their expected end and not failing under timeouts, container crashes, etc.LLM-suggested. -->
+
 <!-- 2. Denser reward signal - track normalized distance to target, something like `Score = 1.0 - (min_distance_achieved / initial_distance)`. Ideally (not mandatory, probably skip for now), also measure a performance of simulation simply without any changes (what if we do nothing - how good is the result?)
     - it's a metric that was more used in RL, but it's infromative... sometimes. LLM-suggested. -->
 
@@ -175,7 +211,7 @@ We define (a growing list of) (aggregate) metrics:
 It is desirable to understand why the simulation/model has failing, so I propose to introduce a more detailed tracking system:
 
 1. `EpisodeStatus` stores the coarse lifecycle state (`RUNNING`, `PLANNED`, `WAITING_USER`, `COMPLETED`, `FAILED`, `CANCELLED`).
-2. `EpisodeMetadata` stores detailed execution details:
+1. `EpisodeMetadata` stores detailed execution details:
    - `episode_phase` stores the current workflow phase (`BENCHMARK_PLANNING`, `BENCHMARK_PLAN_REVIEWING`, `BENCHMARK_CODING`, `BENCHMARK_REVIEWING`, `ENGINEERING_PLANNING`, `ENGINEERING_PLAN_REVIEWING`, `ENGINEERING_CODING`, `ENGINEERING_EXECUTION_REVIEWING`).
    - `terminal_reason` stores the concrete terminal cause (`APPROVED`, `REJECTED_BY_REVIEW`, `TIMEOUT`, `OUT_OF_TURN_BUDGET`, `OUT_OF_TOKEN_BUDGET`, `SYSTEM_TOOL_RETRY_EXHAUSTED`, etc.).
    - `failure_class` stores ownership classification (`AGENT_QUALITY_FAILURE`, `AGENT_SEMANTIC_FAILURE`, `APPLICATION_LOGIC_FAILURE`, `INFRA_DEVOPS_FAILURE`).
@@ -194,13 +230,14 @@ The system enforces fail-closed behavior for terminal states.
 ### Bulk uploading events
 
 <!-- This part was LLM-suggested, but is OK -->
+
 We decided on persisting a local `events.jsonl` file with all events for deeper observability instead of sending individual events or a sqlite DB. This would allow sending all the events in one go instead of dozens of small requests. For 100 events per a 3-5 minute session (if that), it is acceptable. In fact, it wins a bit of performance: opening DB a hundred connections is slower than opening one and batch uploading it.
 
 ## Best practice: Give LLMs a way to complain
 
 We have a "sidecar" model that checks where the agent was confused and updates skills.
 
-We can reuse the same approach for debugging.  A LLM that explicitly checks where the model got confused and sends a tool call if something was really wrong. The developer gets that into a DB/observability DB. **The developer can use the LLM output to debug.**
+We can reuse the same approach for debugging. A LLM that explicitly checks where the model got confused and sends a tool call if something was really wrong. The developer gets that into a DB/observability DB. **The developer can use the LLM output to debug.**
 (ideally, we would also heap those and send them to Google Jules which will fix bugs/propose functionality/ etc.
 
 <https://jules.google/docs/api/reference/>)
@@ -210,6 +247,7 @@ Create another sidecar model running async (maybe batch) that would read reasoni
 ## Backups
 
 In prod we will backup the database(s) daily.
+
 <!-- Notably, the file could be quite big, as we persist sqlite text. Max compression it before backing up. -->
 
 One way to do it is by sending a `cron` job daily. Thus, implement an endpoint which will accept a cron call, and will back up the SQLite folder to the s3. Again, this is in production.
@@ -219,9 +257,9 @@ One way to do it is by sending a `cron` job daily. Thus, implement an endpoint w
 I want to track successful/failed reasoning via user thumbs up/down during:
 
 1. Benchmark generation planning
-2. Benchmark Generation implementation; specifically voting on individual file outputs and voting on the output "as a whole". Ideally, the users would also be able to input their feedbacks on individual subassembly parts, as defined by the assembly view in the frontend, by selecting them and pressing thumbs up/down and inserting a comment.
-3. Implementation Planning
-4. Implementation Generation.
+1. Benchmark Generation implementation; specifically voting on individual file outputs and voting on the output "as a whole". Ideally, the users would also be able to input their feedbacks on individual subassembly parts, as defined by the assembly view in the frontend, by selecting them and pressing thumbs up/down and inserting a comment.
+1. Implementation Planning
+1. Implementation Generation.
 
 We are using LangFuse and it has those capabilities natively.
 

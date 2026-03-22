@@ -2,6 +2,7 @@ import asyncio
 import uuid
 
 import pytest
+import yaml
 from httpx import AsyncClient
 
 from controller.api.schemas import (
@@ -11,6 +12,7 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import EpisodePhase, EpisodeStatus, TerminalReason
+from shared.models.schemas import BenchmarkDefinition
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
 
@@ -110,6 +112,37 @@ async def test_benchmark_planner_cad_reviewer_path():
         assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
             f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
+        benchmark_definition_paths = [
+            p for p in artifact_paths if p.endswith("benchmark_definition.yaml")
+        ]
+        benchmark_definition_resp = await client.get(
+            f"/episodes/{session_id}/assets/{benchmark_definition_paths[0]}"
+        )
+        assert benchmark_definition_resp.status_code == 200, (
+            benchmark_definition_resp.text
+        )
+        benchmark_definition = BenchmarkDefinition.model_validate(
+            yaml.safe_load(benchmark_definition_resp.text)
+        )
+        assert benchmark_definition.benchmark_parts, (
+            "benchmark_definition.yaml must persist at least one benchmark_parts entry."
+        )
+        assert len(
+            {part.part_id for part in benchmark_definition.benchmark_parts}
+        ) == len(benchmark_definition.benchmark_parts), (
+            "benchmark_definition.yaml must preserve unique benchmark_parts.part_id "
+            "values."
+        )
+        assert len(
+            {part.label for part in benchmark_definition.benchmark_parts}
+        ) == len(benchmark_definition.benchmark_parts), (
+            "benchmark_definition.yaml must preserve unique benchmark_parts.label "
+            "values."
+        )
+        assert benchmark_definition.moved_object.material_id
+        assert benchmark_definition.randomization.runtime_jitter_enabled is True
+        assert "randomization:" in benchmark_definition_resp.text
+        assert "runtime_jitter:" in benchmark_definition_resp.text
         assert any(
             p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
         ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
@@ -163,7 +196,8 @@ async def test_benchmark_planner_cad_reviewer_path():
             p.endswith("engineering_execution_review_manifest.json")
             for p in artifact_paths
         ), (
-            "Benchmark workflow must not emit engineering_execution_review_manifest.json. "
+            "Benchmark workflow must not emit "
+            "'engineering_execution_review_manifest.json'. "
             f"Artifacts: {artifact_paths}"
         )
         assert any(
