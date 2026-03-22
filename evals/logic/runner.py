@@ -36,6 +36,12 @@ from controller.agent.reward import (
     load_reward_config,
 )
 from controller.clients.worker import WorkerClient
+from evals.logic.codex_session_trace import (
+    capture_latest_codex_session_artifacts as _capture_latest_codex_session_artifacts,
+)
+from evals.logic.codex_session_trace import (
+    snapshot_workspace_state as _snapshot_workspace_state,
+)
 from evals.logic.codex_workspace import (
     launch_codex_exec as _launch_codex_exec,
 )
@@ -1912,6 +1918,7 @@ async def _run_codex_eval(
     failure_reason = ""
     launch_return_code: int | None = None
     verification_result = None
+    codex_trace_artifacts = None
 
     try:
         materialized = _materialize_codex_workspace(
@@ -1924,6 +1931,9 @@ async def _run_codex_eval(
             workspace_dir=str(materialized.workspace_dir),
             prompt_path=str(materialized.prompt_path),
             copied_paths=materialized.copied_paths,
+        )
+        baseline_snapshot = _snapshot_workspace_state(
+            workspace_dir=materialized.workspace_dir,
         )
         _write_eval_session_metadata(
             eval_log_key=eval_log_key,
@@ -1941,6 +1951,7 @@ async def _run_codex_eval(
             },
         )
 
+        launch_started_at_ns = time.time_ns()
         launch_return_code = await asyncio.to_thread(
             _launch_codex_exec,
             materialized.workspace_dir,
@@ -1951,6 +1962,40 @@ async def _run_codex_eval(
         )
         if launch_return_code != 0:
             failure_reason = f"codex exited with code {launch_return_code}"
+
+        if SESSION_LOG_ROOT is not None:
+            try:
+                codex_trace_artifacts = await asyncio.to_thread(
+                    _capture_latest_codex_session_artifacts,
+                    workspace_dir=materialized.workspace_dir,
+                    artifact_root=SESSION_LOG_ROOT / eval_log_key / "codex",
+                    baseline_snapshot=baseline_snapshot,
+                    launched_after_ns=launch_started_at_ns,
+                )
+            except Exception as exc:
+                codex_trace_artifacts = None
+                log.warning(
+                    "codex_session_trace_import_failed",
+                    session_id=session_id,
+                    error=str(exc),
+                )
+
+        if codex_trace_artifacts is None:
+            log.warning(
+                "codex_session_trace_missing",
+                session_id=session_id,
+                workspace_dir=str(materialized.workspace_dir),
+            )
+        else:
+            log.info(
+                "codex_session_trace_imported",
+                session_id=session_id,
+                source_session_id=codex_trace_artifacts.session_id,
+                transcript_path=str(codex_trace_artifacts.transcript_path),
+                workspace_diff_path=str(codex_trace_artifacts.workspace_diff_path),
+                reasoning_count=codex_trace_artifacts.transcript_stats.reasoning_count,
+                tool_call_count=codex_trace_artifacts.transcript_stats.tool_call_count,
+            )
 
         verification_result = await _verify_codex_workspace_for_agent(
             workspace_dir=materialized.workspace_dir,
@@ -2008,6 +2053,41 @@ async def _run_codex_eval(
             ),
             "verification_details": (
                 verification_result.details if verification_result is not None else {}
+            ),
+            "codex_session_trace": (
+                {
+                    "session_id": codex_trace_artifacts.session_id,
+                    "session_file": str(codex_trace_artifacts.session_file)
+                    if codex_trace_artifacts.session_file is not None
+                    else None,
+                    "artifact_dir": str(codex_trace_artifacts.artifact_dir)
+                    if codex_trace_artifacts.artifact_dir is not None
+                    else None,
+                    "raw_trace_path": str(codex_trace_artifacts.raw_trace_path)
+                    if codex_trace_artifacts.raw_trace_path is not None
+                    else None,
+                    "transcript_path": str(codex_trace_artifacts.transcript_path)
+                    if codex_trace_artifacts.transcript_path is not None
+                    else None,
+                    "summary_path": str(codex_trace_artifacts.summary_path)
+                    if codex_trace_artifacts.summary_path is not None
+                    else None,
+                    "workspace_diff_path": str(
+                        codex_trace_artifacts.workspace_diff_path
+                    )
+                    if codex_trace_artifacts.workspace_diff_path is not None
+                    else None,
+                    "transcript_stats": (
+                        codex_trace_artifacts.transcript_stats.model_dump(mode="json")
+                    ),
+                    "workspace_changed_paths": (
+                        codex_trace_artifacts.workspace_diff.changed_paths
+                        if codex_trace_artifacts.workspace_diff is not None
+                        else []
+                    ),
+                }
+                if codex_trace_artifacts is not None
+                else None
             ),
             "failure_reason": failure_reason or None,
         },
