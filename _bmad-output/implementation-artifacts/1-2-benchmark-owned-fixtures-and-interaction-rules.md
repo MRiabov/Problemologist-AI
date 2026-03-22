@@ -1,6 +1,6 @@
 # Story 1.2: Benchmark-Owned Fixtures and Interaction Rules
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -27,8 +27,8 @@ As a human operator, I want to declare benchmark-owned fixtures with explicit in
 - [x] Extend integration coverage in `tests/integration/architecture_p0/test_int_008_objectives_validation.py`, `tests/integration/architecture_p0/test_planner_gates.py`, and `tests/integration/architecture_p1/test_benchmark_workflow.py`.
   - [x] Prove that default benchmark fixtures remain read-only.
   - [x] Prove that an explicit interactable fixture round-trips through the benchmark handoff artifacts.
-  - [ ] Prove that missing or invalid interaction metadata fails closed before the engineer consumes the benchmark package.
-- [ ] Run the integration slices that cover benchmark-definition validation and benchmark workflow before marking the story complete.
+  - [x] Prove that missing or invalid interaction metadata fails closed before the engineer consumes the benchmark package.
+- [x] Run the integration slices that cover benchmark-definition validation and benchmark workflow before marking the story complete.
 
 ## Dev Notes
 
@@ -88,18 +88,22 @@ GPT-5
 - Enforced explicit opt-in for benchmark-side drilling and attachment checks in `worker_heavy/utils/file_validation.py`.
 - Updated benchmark generator seed templates to surface the new permission field in benchmark-owned fixture examples.
 - Added integration coverage for default read-only behavior and explicit interaction round-trip in benchmark handoff flows.
-- Integration verification is in progress; the round-trip slice still needed fixture tuning during validation.
+- 2026-03-22T17:44:34+00:00: Ran the focused integration slice covering INT-008 permission round-trip and fail-closed paths, INT-018/INT-023 planner gates, and the benchmark workflow; all 5 tests passed.
 
 ### Completion Notes List
 
 - Benchmark-owned fixtures now carry an explicit permission flag that defaults to read-only.
 - The benchmark handoff gate now rejects engineer-facing attachment/drilling unless the benchmark fixture opts in.
 - Template artifacts now show the contract explicitly for benchmark seed generation.
+- Focused integration verification passed for the explicit-interaction round-trip and fail-closed missing-permission paths.
 
 ### File List
 
+- `_bmad-output/implementation-artifacts/1-2-benchmark-owned-fixtures-and-interaction-rules.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 - `shared/models/schemas.py`
 - `worker_heavy/utils/file_validation.py`
+- `worker_heavy/utils/handover.py`
 - `shared/assets/template_repos/benchmark_generator/benchmark_definition.yaml`
 - `shared/assets/template_repos/benchmark_generator/benchmark_assembly_definition.yaml`
 - `tests/integration/architecture_p0/test_int_008_objectives_validation.py`
