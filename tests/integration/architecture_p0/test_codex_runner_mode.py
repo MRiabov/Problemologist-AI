@@ -145,8 +145,10 @@ async def test_codex_materialized_planner_workspace_submits(
 
     shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
 
-    env = build_codex_env(agent_name=agent_name, task_id=item.id)
-    env["SESSION_ID"] = f"INT-CODEX-{agent_name.value}-{row_id}"
+    env = build_codex_env(
+        task_id=item.id, session_id=f"INT-CODEX-{agent_name.value}-{row_id}"
+    )
+    assert "AGENT_NAME" not in env
 
     completed = subprocess.run(
         ["bash", "scripts/submit_plan.sh"],

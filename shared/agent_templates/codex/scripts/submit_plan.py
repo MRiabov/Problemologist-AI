@@ -14,15 +14,30 @@ from worker_heavy.utils.file_validation import validate_node_output
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 
-def _agent_name() -> AgentName:
+def _planner_agent(workspace: Path | None = None) -> AgentName | None:
     raw = os.getenv("AGENT_NAME", "").strip()
-    try:
-        return AgentName(raw)
-    except ValueError as exc:
-        raise SystemExit(
-            "AGENT_NAME must be one of: benchmark_planner, engineer_planner, "
-            "electronics_planner"
-        ) from exc
+    if raw:
+        try:
+            return AgentName(raw)
+        except ValueError:
+            return None
+
+    # The Codex launcher does not need a role-specific env var here.
+    # Infer the planner variant from the workspace file layout instead.
+    workspace = Path.cwd() if workspace is None else Path(workspace)
+    benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
+    engineering_handoff = workspace / "assembly_definition.yaml"
+
+    has_benchmark_handoff = benchmark_handoff.exists()
+    has_engineering_handoff = engineering_handoff.exists()
+
+    if has_benchmark_handoff and not has_engineering_handoff:
+        return AgentName.BENCHMARK_PLANNER
+    if has_engineering_handoff and not has_benchmark_handoff:
+        return AgentName.ENGINEER_PLANNER
+    if has_benchmark_handoff and has_engineering_handoff:
+        return None
+    return None
 
 
 def _session_id() -> str:
@@ -87,8 +102,20 @@ def _manufacturing_config(workspace: Path):
 
 def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
     workspace = Path.cwd() if workspace is None else Path(workspace)
-    agent_name = _agent_name()
+    agent_name = _planner_agent(workspace)
     session_id = _session_id()
+
+    if agent_name is None:
+        return PlannerSubmissionResult(
+            ok=False,
+            status="rejected",
+            errors=[
+                "Unable to infer planner agent from workspace: expected "
+                "benchmark_assembly_definition.yaml or "
+                "assembly_definition.yaml"
+            ],
+            node_type=AgentName.ENGINEER_PLANNER,
+        )
 
     required_files = _required_files(agent_name)
     try:
@@ -174,7 +201,7 @@ def main() -> int:
             ok=False,
             status="rejected",
             errors=[f"submit_plan execution failed: {exc}"],
-            node_type=_agent_name(),
+            node_type=_planner_agent() or AgentName.ENGINEER_PLANNER,
         )
         print(result.model_dump_json(indent=2))
         return 1

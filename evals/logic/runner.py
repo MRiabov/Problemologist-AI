@@ -1956,8 +1956,8 @@ async def _run_codex_eval(
             _launch_codex_exec,
             materialized.workspace_dir,
             materialized.prompt_text,
-            agent_name=agent_name,
             task_id=task_id,
+            session_id=session_id,
             yolo=True,
         )
         if launch_return_code != 0:

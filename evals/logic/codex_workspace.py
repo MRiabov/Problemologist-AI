@@ -441,8 +441,8 @@ def materialize_seed_workspace(
     )
 
 
-def build_codex_env(*, agent_name: AgentName, task_id: str) -> dict[str, str]:
-    """Prepare a Codex subprocess environment for a local workspace run."""
+def build_codex_env(*, task_id: str, session_id: str | None = None) -> dict[str, str]:
+    """Prepare a generic Codex subprocess environment for a local workspace run."""
 
     env = dict(os.environ)
     py_path = env.get("PYTHONPATH")
@@ -459,10 +459,7 @@ def build_codex_env(*, agent_name: AgentName, task_id: str) -> dict[str, str]:
 
     env.setdefault("CONTROLLER_URL", "http://localhost:18000")
     env.setdefault("WORKER_LIGHT_URL", "http://localhost:18001")
-    env.setdefault("AGENT_NAME", agent_name.value)
-    env.setdefault(
-        "SESSION_ID", f"local-codex-{agent_name.value}-{task_id}-{os.getpid()}"
-    )
+    env.setdefault("SESSION_ID", session_id or f"local-codex-{task_id}-{os.getpid()}")
     env.setdefault("IS_HEAVY_WORKER", "1")
     env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
     return env
@@ -472,8 +469,8 @@ def launch_codex_exec(
     workspace_dir: Path,
     prompt_text: str,
     *,
-    agent_name: AgentName,
     task_id: str,
+    session_id: str | None = None,
     yolo: bool = True,
 ) -> int:
     """Launch `codex exec` in a workspace and stream output to the terminal."""
@@ -497,7 +494,7 @@ def launch_codex_exec(
         cmd,
         input=prompt_text,
         text=True,
-        env=build_codex_env(agent_name=agent_name, task_id=task_id),
+        env=build_codex_env(task_id=task_id, session_id=session_id),
         check=False,
     )
     return completed.returncode
@@ -507,8 +504,8 @@ def open_codex_ui(
     workspace_dir: Path,
     prompt_text: str,
     *,
-    agent_name: AgentName,
     task_id: str,
+    session_id: str | None = None,
     yolo: bool = True,
 ) -> int:
     """Open the interactive Codex UI with a workspace prompt."""
@@ -532,7 +529,7 @@ def open_codex_ui(
     print("launching: " + " ".join(cmd))
     completed = subprocess.run(
         cmd,
-        env=build_codex_env(agent_name=agent_name, task_id=task_id),
+        env=build_codex_env(task_id=task_id, session_id=session_id),
         check=False,
     )
     return completed.returncode
