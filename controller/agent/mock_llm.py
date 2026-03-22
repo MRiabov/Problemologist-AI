@@ -1,15 +1,13 @@
 import json
 import re
 from contextlib import suppress
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import dspy
 import structlog
-import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
+from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from shared.enums import AgentName
 
 logger = structlog.get_logger(__name__)
@@ -31,49 +29,8 @@ REVIEWER_AGENTS = {
 }
 
 
-class TranscriptStepSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    thought: str | None = None
-    tool_name: str | None = None
-    tool_args: dict[str, Any] | None = None
-    expected_observation: str | None = None
-    finished: bool | None = None
-    summary: str | None = None
-    journal: str | None = None
-    review: dict[str, Any] | None = None
-    plan: dict[str, Any] | None = None
-
-    @model_validator(mode="after")
-    def validate_step(self) -> "TranscriptStepSpec":
-        has_tool = self.tool_name is not None
-        is_finished = bool(self.finished)
-        if has_tool and is_finished:
-            raise ValueError(
-                "Transcript step cannot define both tool_name and finished."
-            )
-        if not has_tool and not is_finished:
-            raise ValueError(
-                "Transcript step must define either tool_name or finished."
-            )
-        return self
-
-
-class TranscriptNodeSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    node: str
-    steps: list[TranscriptStepSpec]
-
-
-class TranscriptScenarioSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    transcript: list[TranscriptNodeSpec]
-
-
 class MockDSPyLM(dspy.LM):
-    """Mock DSPy LM using YAML scenarios keyed by session_id prefixes."""
+    """Mock DSPy LM using per-test integration scenario files keyed by session_id."""
 
     node_type: AgentName | None
     _transcript_states: dict[str, int]  # session_id -> entry_idx
@@ -89,41 +46,11 @@ class MockDSPyLM(dspy.LM):
         self.session_id = session_id or "default-session"
         self.node_type = self._normalize_agent_name(node_type)
         self.provider = "openai"
-        self.responses_path = Path("tests/integration/mock_responses.yaml")
-        self.scenarios = self._load_scenarios()
+        self.scenarios = load_integration_mock_scenarios()
         self._call_counts = {}  # Tracks calls per node key to detect loops
         self._tool_progress = {}  # Tracks completed tool steps from trajectory text
         # Tracks repeated LM invocations without tool-observation progress.
         self._stall_counts = {}
-
-    def _load_scenarios(self) -> dict:
-        if not self.responses_path.exists():
-            logger.warning(
-                "mock_responses_yaml_not_found", path=str(self.responses_path)
-            )
-            return {}
-        try:
-            with self.responses_path.open("r") as f:
-                data = yaml.safe_load(f)
-                scenarios = data.get("scenarios", {})
-                for scenario_id, scenario in scenarios.items():
-                    transcript = scenario.get("transcript")
-                    if transcript is None:
-                        continue
-                    try:
-                        TranscriptScenarioSpec.model_validate(
-                            {"transcript": transcript}
-                        )
-                    except ValidationError as exc:
-                        msg = (
-                            f"Invalid transcript schema in mock_responses.yaml "
-                            f"scenario '{scenario_id}': {exc}"
-                        )
-                        raise ValueError(msg) from exc
-                return scenarios
-        except Exception as e:
-            logger.warning("mock_responses_yaml_load_failed", error=str(e))
-            return {}
 
     def __call__(
         self,
@@ -148,7 +75,7 @@ class MockDSPyLM(dspy.LM):
 
         if scenario_id not in self.scenarios:
             raise ValueError(
-                f"MockDSPyLM: Scenario '{scenario_id}' not found in mock_responses.yaml "
+                f"MockDSPyLM: Scenario '{scenario_id}' not found in integration mock scenarios "
                 f"for session_id='{self.session_id}'. "
                 f"Available scenarios: {list(self.scenarios.keys())}"
             )
@@ -748,7 +675,7 @@ class MockDSPyLM(dspy.LM):
         scenario_id = self._get_scenario_id()
         if scenario_id not in self.scenarios:
             raise ValueError(
-                f"MockDSPyLM: Scenario '{scenario_id}' not found in mock_responses.yaml "
+                f"MockDSPyLM: Scenario '{scenario_id}' not found in integration mock scenarios "
                 f"for session_id='{self.session_id}'. "
                 f"Available scenarios: {list(self.scenarios.keys())}"
             )

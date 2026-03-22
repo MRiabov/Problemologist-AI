@@ -12,9 +12,6 @@ from shared.agent_templates import load_template_text
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INTEGRATION_SCENARIO_ID_PATTERN = re.compile(r"^INT-\d{3}$")
 INTEGRATION_MOCK_RESPONSES_DIR = REPO_ROOT / "tests" / "integration" / "mock_responses"
-LEGACY_INTEGRATION_MOCK_RESPONSES_PATH = (
-    REPO_ROOT / "tests" / "integration" / "mock_responses.yaml"
-)
 
 
 class TranscriptStepSpec(BaseModel):
@@ -126,17 +123,6 @@ def _validate_scenarios(
     return scenarios
 
 
-def _load_legacy_yaml(path: Path) -> dict[str, dict[str, Any]]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    scenarios = data.get("scenarios")
-    if not isinstance(scenarios, dict):
-        raise ValueError(
-            f"Invalid legacy integration mock responses file at {path}: "
-            "expected top-level 'scenarios' mapping."
-        )
-    return _validate_scenarios(scenarios)
-
-
 def _load_from_directory(root: Path) -> dict[str, dict[str, Any]]:
     if not root.exists():
         raise FileNotFoundError(
@@ -182,13 +168,13 @@ def _load_from_directory(root: Path) -> dict[str, dict[str, Any]]:
 def load_integration_mock_scenarios(
     root: Path | None = None,
 ) -> dict[str, dict[str, Any]]:
-    source = root
-    if source is None:
-        if INTEGRATION_MOCK_RESPONSES_DIR.exists():
-            source = INTEGRATION_MOCK_RESPONSES_DIR
-        else:
-            source = LEGACY_INTEGRATION_MOCK_RESPONSES_PATH
-
-    if source.is_dir():
-        return _load_from_directory(source)
-    return _load_legacy_yaml(source)
+    source = INTEGRATION_MOCK_RESPONSES_DIR if root is None else root
+    if not source.exists():
+        raise FileNotFoundError(
+            f"Integration mock responses directory not found: {source}"
+        )
+    if not source.is_dir():
+        raise ValueError(
+            f"Integration mock responses path must be a directory: {source}"
+        )
+    return _load_from_directory(source)
