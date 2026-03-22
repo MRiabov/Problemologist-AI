@@ -1,0 +1,88 @@
+---
+# TEA Academy Progress Tracking
+user: Max
+role: Dev
+experience_level: Experienced
+learning_goals: "Understand TEA methodology and workflows; understand what TEA can do for me."
+pain_points: null
+
+started_date: 2026-03-22
+last_session_date: 2026-03-22
+
+sessions:
+  - id: session-01-quickstart
+    name: "Quick Start"
+    duration: "30 min"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 67
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-01-notes.md
+
+  - id: session-02-concepts
+    name: "Core Concepts"
+    duration: "45 min"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 100
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-02-notes.md
+
+  - id: session-03-architecture
+    name: "Architecture & Patterns"
+    duration: "60 min"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 100
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-03-notes.md
+
+  - id: session-04-test-design
+    name: "Test Design"
+    duration: "60 min"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 100
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-04-notes.md
+
+  - id: session-05-atdd-automate
+    name: "ATDD & Automate"
+    duration: "60 min"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 67
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-05-notes.md
+
+  - id: session-06-quality-trace
+    name: "Quality & Trace"
+    duration: "45 min"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 100
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-06-notes.md
+
+  - id: session-07-advanced
+    name: "Advanced Patterns"
+    duration: "ongoing"
+    status: completed
+    started_date: 2026-03-22
+    completed_date: 2026-03-22
+    score: 100
+    notes_artifact: _bmad-output/test-artifacts/tea-academy/Max/session-07-notes.md
+
+sessions_completed: 7
+total_sessions: 7
+completion_percentage: 100
+next_recommended: completion
+
+stepsCompleted: ['step-01-init', 'step-02-assess', 'step-04-session-01', 'step-04-session-02', 'step-04-session-03', 'step-04-session-04', 'step-04-session-05', 'step-04-session-06', 'step-04-session-07', 'step-05-completion']
+lastStep: 'step-05-completion'
+lastContinued: 2026-03-22
+
+certificate_generated: true
+certificate_path: _bmad-output/test-artifacts/tea-academy/Max/tea-completion-certificate.md
+completion_date: 2026-03-22
+---
