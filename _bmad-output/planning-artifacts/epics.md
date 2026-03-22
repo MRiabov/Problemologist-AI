@@ -116,7 +116,7 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 - Controller/worker/Temporal split remains mandatory; generated code executes off the controller in isolated worker processes.
 - Planner and reviewer handoffs are strict-schema artifacts with stage-specific manifests, no silent fallback, and fail-closed routing on stale, missing, or invalid artifacts.
 - Planner-owned derived values such as cost caps are deterministic outputs of validator tooling, not freeform authoring.
-- Benchmark-owned fixtures, electronics, and motion context are read-only unless the benchmark explicitly declares engineer interaction.
+- Benchmark-owned fixtures and motion context are read-only unless the benchmark explicitly declares engineer interaction.
 - Benchmark setup must preserve distinct benchmark-owned vs engineer-owned artifact boundaries and hash-based immutability across handoff.
 - `/benchmark/validate` uses MuJoCo for static preview by default; Genesis parity is validated through dedicated simulation paths, not preview reruns.
 - Static preview must persist RGB, depth, segmentation, and render manifests when enabled.
@@ -145,7 +145,7 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 
 FR1: Epic 1 - Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem
 FR2: Epic 1 - Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization
-FR3: Epic 1 - Benchmark-owned fixtures and electronics remain read-only unless interaction is explicit
+FR3: Epic 1 - Benchmark-owned fixtures remain read-only unless interaction is explicit
 FR4: Epic 3 - Allowed attachment and drilling points are declared in the benchmark setup
 FR5: Epic 1 - Benchmark solvability is validated and ambiguous or impossible setups are rejected
 FR6: Epic 1 - Benchmark setup artifacts are passed into the solution workflow
@@ -267,11 +267,11 @@ As a human operator, I want to define benchmark goals, forbid zones, build zones
 **Then** those ranges are persisted and visible in the benchmark package
 
 ### Story 1.2: Benchmark-Owned Fixtures and Interaction Rules
-As a human operator, I want to declare benchmark-owned fixtures and electronics with explicit interaction permissions so that benchmark context stays read-only for an engineer solving the benchmark unless interaction is explicitly allowed.
+As a human operator, I want to declare benchmark-owned fixtures with explicit interaction permissions so that benchmark context stays read-only for an engineer solving the benchmark unless interaction is explicitly allowed.
 
 **Acceptance Criteria:**
 
-**Given** benchmark-owned fixtures or electronics
+**Given** benchmark-owned fixtures
 **When** they are declared
 **Then** they remain read-only for the engineer by default
 
@@ -531,7 +531,7 @@ As a maintainer, I want failed episodes to remain replayable from persisted arti
 **When** I inspect it
 **Then** the terminal reason, failure classification, and explicit fallback or unsupported-feature mismatch are present
 
-**Given** missing artifacts, stale manifests, unsupported mechanisms, invalid circuits, or missing review evidence
+**Given** missing artifacts, stale manifests, unsupported mechanisms, or missing review evidence
 **When** replay runs
 **Then** it fails closed with a concrete reason rather than a success state
 
@@ -553,7 +553,7 @@ As a dataset operator, I want to manage coverage by seed and problem family so t
 **Then** the dataset retains the seed lineage needed to reproduce the variation
 
 ## Epic 5: UI, Visualization, and Demo
-Human operators can inspect session history, review traces and artifacts, visualize CAD, simulation, and circuit evidence, watch agent output in real time, interrupt active runs, and present completed runs through a browser UI.
+Human operators can inspect session history, review traces and artifacts, visualize CAD and simulation evidence, watch agent output in real time, interrupt active runs, and present completed runs through a browser UI.
 
 ### Story 5.1: Inspect Session History and Run Timeline
 As a human operator, I want a session history and run timeline so that I can inspect the progress and outcome of benchmark and solution runs in one place.
@@ -671,7 +671,7 @@ As a human operator, I want benchmark generator agents to produce simple rigid-b
 
 **Given** a simple rigid-body benchmark seed or prompt
 **When** generation runs
-**Then** the candidate remains within the simple rigid-body, gravity-enabled scope and does not introduce actuators, FEM, fluids, or electronics
+**Then** the candidate remains within the simple rigid-body, gravity-enabled scope and does not introduce actuators, FEM, or fluids
 
 **Given** an unsupported mechanism or modality
 **When** generation runs
@@ -1228,7 +1228,7 @@ As a human operator, I want fluid-solid interaction and failure to be enforced s
 **When** simulation runs
 **Then** the run fails with an explicit containment or spill reason
 
-**Given** fluid contact with a protected component or electronics
+**Given** fluid contact with a protected component
 **When** simulation runs
 **Then** the run records the appropriate hard failure instead of passing silently
 
@@ -1357,9 +1357,9 @@ As a human operator, I want fluid solutions to be verified under load and runtim
 **When** it is checked
 **Then** it is rejected as flaky or physically implausible
 
-**Given** a fluid benchmark that includes electronics or powered fixtures
+**Given** a fluid benchmark that includes a protected component
 **When** the solution is evaluated
-**Then** fluid contact with electrical components is treated as a hard failure
+**Then** fluid contact with the protected component is treated as a hard failure
 
 ### Story 16.3: Persist Final Proof for Fluid Solutions
 As a human operator, I want the final fluid solution proof and evidence persisted so that the solution can be inspected, exported, and reproduced later.
