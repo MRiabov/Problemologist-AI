@@ -31,8 +31,8 @@ from shared.workers.schema import (
     VerificationRequest,
     WriteFileRequest,
 )
-from tests.integration.backend_utils import selected_backend
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from tests.integration.backend_utils import selected_backend
 from tests.integration.contracts import HealthResponse
 
 # Constants
