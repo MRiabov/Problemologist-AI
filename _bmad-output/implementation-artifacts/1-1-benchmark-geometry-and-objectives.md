@@ -1,6 +1,6 @@
 # Story 1.1: Benchmark Geometry and Objectives
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,13 +17,13 @@ As a human operator, I want to define benchmark goals, forbid zones, build zones
 
 ## Tasks / Subtasks
 
-- [ ] Verify the benchmark geometry contract in `shared/models/schemas.py` still matches the story shape: `ObjectivesSection`, `MovedObject`, `Constraints`, and `RandomizationMeta`.
-- [ ] Confirm `worker_heavy/utils/file_validation.py` rejects template placeholders, invalid materials, and malformed `benchmark_definition.yaml` payloads for this geometry story.
-- [ ] Confirm `worker_heavy/utils/validation.py::_validate_benchmark_definition_consistency` enforces AABB objective rules, build-zone containment, and randomization-envelope containment.
-- [ ] Keep the benchmark planner prompt contract in `config/prompts.yaml` aligned with this story's exact geometry and randomization requirements.
-- [ ] Preserve a minimal but valid `benchmark_parts` fixture entry in the benchmark package so the schema passes while the story remains focused on geometry and objectives.
-- [ ] Add or refresh integration coverage for objective geometry validation, randomization persistence, and benchmark workflow success/failure behavior.
-- [ ] Run the integration tests that cover benchmark-definition validation and the benchmark generation workflow before marking the story done.
+- [x] Verify the benchmark geometry contract in `shared/models/schemas.py` still matches the story shape: `ObjectivesSection`, `MovedObject`, `Constraints`, and `RandomizationMeta`.
+- [x] Confirm `worker_heavy/utils/file_validation.py` rejects template placeholders, invalid materials, and malformed `benchmark_definition.yaml` payloads for this geometry story.
+- [x] Confirm `worker_heavy/utils/validation.py::_validate_benchmark_definition_consistency` enforces AABB objective rules, build-zone containment, and randomization-envelope containment.
+- [x] Keep the benchmark planner prompt contract in `config/prompts.yaml` aligned with this story's exact geometry and randomization requirements.
+- [x] Preserve a minimal but valid `benchmark_parts` fixture entry in the benchmark package so the schema passes while the story remains focused on geometry and objectives.
+- [x] Add or refresh integration coverage for objective geometry validation, randomization persistence, and benchmark workflow success/failure behavior.
+- [x] Run the integration tests that cover benchmark-definition validation and the benchmark generation workflow before marking the story done.
 
 ## Dev Notes
 
@@ -75,6 +75,20 @@ TBD
 
 ### Debug Log References
 
+- `2026-03-22T08:02:04Z`: Ran the focused integration slice covering `test_int_008_objectives_validation.py`, the benchmark planner gate subset, and `test_benchmark_workflow.py`.
+- `2026-03-22T08:05:39Z`: Ran `tests/integration/architecture_p0/test_int_008_objectives_validation.py` directly; all objective-validation tests passed.
+- `2026-03-22T08:04:13Z`: Reran the benchmark workflow slice after adding the benchmark-definition persistence assertions; it passed.
+- `2026-03-22T08:06:41Z`: Ran `uv run ruff check tests/integration/architecture_p1/test_benchmark_workflow.py`; the modified file is lint-clean.
+
 ### Completion Notes List
 
+- The shared schema and worker validation layers already matched the story contract, so no production code changes were needed for the benchmark geometry/objective rules themselves.
+- Refreshed `tests/integration/architecture_p1/test_benchmark_workflow.py` so the workflow test now reads back `benchmark_definition.yaml` and asserts persisted `benchmark_parts`, unique `part_id`/`label` values, `moved_object.material_id`, and serialized randomization fields.
+- Confirmed the geometry failure paths remain fail-closed through the existing INT-008 coverage for overlapping zones, template placeholders, legacy attachment methods, missing `benchmark_parts`, and missing reviewer stage.
+- Verified the benchmark generation workflow still completes and emits the expected review manifests and artifact bundle.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/1-1-benchmark-geometry-and-objectives.md`
+- `tests/integration/architecture_p1/test_benchmark_workflow.py`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`

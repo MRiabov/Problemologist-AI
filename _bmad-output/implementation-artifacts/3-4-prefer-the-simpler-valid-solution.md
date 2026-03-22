@@ -1,0 +1,93 @@
+# Story 3.4: Prefer the Simpler Valid Solution
+
+Status: ready-for-dev
+
+## Story
+
+As a human operator, I want the system to identify unnecessary or unjustified degrees of freedom and prefer the valid candidate with the fewest moving parts, actuators, and DOFs so that the simplest workable solution is favored over an over-actuated one.
+
+## Acceptance Criteria
+
+1. Given two or more valid candidate solutions for the same benchmark, when the engineering planner compares them, then it prefers the candidate with fewer unnecessary degrees of freedom, actuators, and parts.
+1. Given a solution with unjustified extra movement, when the plan reviewer or execution reviewer inspects it, then the reviewer can reject or flag it as over-actuated or unnecessarily complex with an explicit reason.
+1. Given a solution whose motion is required by the benchmark objective or explicitly justified in the plan, when the reviewer evaluates it, then the system does not flag it as over-actuated merely because it moves.
+1. Given a part with `len(dofs) > 3`, when the plan reviewer or execution reviewer evaluates the handoff, then the run fails closed unless an accepted `DOF_JUSTIFICATION_ACCEPTED` or `DOF_JUSTIFICATION:<part_id>` marker is present.
+1. Given a reviewer decision, when the episode trace is persisted, then the event and checklist payload use the canonical DOF keys so downstream evals can distinguish minimality from justified deviation.
+
+## Tasks / Subtasks
+
+- [ ] Keep `controller/agent/nodes/dof_guard.py` as the canonical deterministic over-actuation helper.
+  - [ ] Preserve the existing `len(dofs) > 3` threshold and the accepted justification markers (`DOF_JUSTIFICATION_ACCEPTED` and `DOF_JUSTIFICATION:<part_id>`).
+  - [ ] Do not introduce a second DOF-scoring heuristic or silently change the threshold without a spec update.
+- [ ] Tighten the engineer planner prompt so the preference is explicit.
+  - [ ] Update `config/prompts.yaml` so the planner is told to minimize motion complexity and choose the smallest DOF set, fewest actuators, and fewest parts necessary for a valid mechanism.
+  - [ ] Keep the existing warning/review split: `validate_and_price()` may warn on unusual motion complexity, but the reviewer gates remain the hard rejection path.
+- [ ] Keep reviewer gating and telemetry aligned.
+  - [ ] Ensure `controller/agent/nodes/plan_reviewer.py` and `controller/agent/nodes/execution_reviewer.py` continue to emit `excessive_dof_detected` events with stage-specific `reviewer_stage` payloads.
+  - [ ] Keep reviewer checklist keys aligned with the canonical contract in `specs/architecture/agents/artifacts-and-filesystem.md` and `config/reward_config.yaml` (`dof_minimality` for plan review, `dof_deviation_justified` for execution review).
+  - [ ] Make sure the review comments/YAML surface the reason clearly enough for downstream evals to distinguish justified motion from over-actuation.
+- [ ] Keep benchmark-owned motion separate from engineer-owned motion.
+  - [ ] Apply this story's simpler-valid-solution rule to `assembly_definition.yaml` only.
+  - [ ] Do not classify benchmark-owned fixture motion in `benchmark_assembly_definition.yaml` as engineer over-actuation; that file stays governed by the benchmark motion contract.
+- [ ] Extend integration coverage for the acceptance cases.
+  - [ ] Refresh `tests/integration/architecture_p0/test_int_074.py` so it proves both the unjustified rejection path and the justified-motion path.
+  - [ ] Extend `tests/integration/architecture_p1/test_reviewer_evidence.py` or `tests/integration/architecture_p1/test_engineering_loop.py` to assert the checklist payload and persisted review artifact reflect the canonical DOF keys.
+  - [ ] Keep the assertions HTTP-, trace-, and artifact-based; do not add unit-only coverage.
+- [ ] Run the DOF review regression slices before closing the story.
+  - [ ] At minimum cover `INT-074`, `INT-075`, and the reviewer-evidence slice that checks persisted checklist/event data.
+
+## Dev Notes
+
+- Epic 3, Story 3.4 is the source of truth for the human-facing requirement.
+- The hard gate already lives in `controller/agent/nodes/dof_guard.py`, `controller/agent/nodes/plan_reviewer.py`, and `controller/agent/nodes/execution_reviewer.py`; treat that helper as canonical and keep the reviewer nodes thin.
+- `worker_heavy/utils/dfm.py::validate_and_price()` currently warns on compounds with `>=4` DOFs. That warning should stay warning-only; do not move the hard rejection there unless the architecture changes.
+- The canonical DOF markers are already part of the live contract: `DOF_JUSTIFICATION_ACCEPTED` and `DOF_JUSTIFICATION:<part_id>`.
+- `ReviewResult` / `ReviewDecisionEvent` already carry checklist payloads. Keep `dof_minimality` and `dof_deviation_justified` stable so reward shaping and evals continue to line up.
+- `config/prompts.yaml` currently has a single reviewer-scrutiny warning for `>=4` DOFs. This story should strengthen the planner instruction, not invent a different scoring system.
+- `config/reward_config.yaml` already includes `benchmark_dof_minimality`, `dof_minimality`, and `dof_deviation_justified`; any wording or checklist updates should remain consistent with those keys.
+- The relevant seeded over-actuation cases are already present in `tests/integration/mock_responses/INT-074.yaml` and `tests/integration/mock_responses/INT-075.yaml`.
+
+### Project Structure Notes
+
+- Keep the over-actuation rule in the shared guard + reviewer nodes. Do not create a parallel motion-complexity subsystem or infer over-actuation from freeform prose alone.
+- Preserve the explicit warning/rejection split: planner validation may warn, reviewers enforce.
+- Apply the simpler-valid-solution rule only to engineer-owned solution assemblies. Benchmark-owned fixtures and benchmark motion stay governed by the benchmark-side contract.
+- Keep the event names and checklist keys stable because downstream traces, reviewer evidence checks, and reward config already depend on them.
+
+### References
+
+- [Source: \_bmad-output/planning-artifacts/epics.md, Story 3.4: Prefer the Simpler Valid Solution]
+- [Source: \_bmad-output/planning-artifacts/prd.md, FR22-FR24 and review-quality success criteria]
+- [Source: specs/architecture/agents/roles.md, Engineering Planner motion-complexity guidance and reviewer responsibilities]
+- \[Source: specs/architecture/agents/handover-contracts.md, deterministic DOF suspicion threshold and `DOF_JUSTIFICATION` markers\]
+- [Source: specs/architecture/agents/artifacts-and-filesystem.md, plan-review and execution-review checklist examples]
+- [Source: specs/architecture/evals-and-gates.md, INT-074 and INT-075 expectations for DOF rejection and over-actuation flags]
+- [Source: specs/architecture/simulation-and-dod.md, benchmark-owned fixture read-only boundary and benchmark motion contract]
+- [Source: specs/architecture/observability.md, checklist/event observability and metric collection]
+- [Source: config/prompts.yaml, planner DOF warning line]
+- \[Source: config/reward_config.yaml, `benchmark_dof_minimality`, `dof_minimality`, and `dof_deviation_justified`\]
+- [Source: controller/agent/nodes/dof_guard.py, canonical deterministic DOF helper]
+- [Source: controller/agent/nodes/plan_reviewer.py, excessive DOF review event emission and rejection path]
+- [Source: controller/agent/nodes/execution_reviewer.py, over-actuation deviation flagging and review persistence]
+- \[Source: worker_heavy/utils/dfm.py, DOF warning in `validate_and_price()`\]
+- [Source: tests/integration/architecture_p0/test_int_074.py, seeded plan/execution DOF regression coverage]
+- [Source: tests/integration/architecture_p1/test_reviewer_evidence.py, persisted review checklist/event evidence]
+- [Source: tests/integration/mock_responses/INT-074.yaml, over-actuated plan seed]
+- [Source: tests/integration/mock_responses/INT-075.yaml, over-actuated execution seed]
+
+## Dev Agent Record
+
+### Agent Model Used
+
+TBD
+
+### Debug Log References
+
+### Completion Notes List
+
+- Comprehensive story context assembled from epic, PRD, architecture, reviewer gate code, reward config, and seeded DOF regression coverage.
+
+### File List
+
+- \_bmad-output/implementation-artifacts/3-4-prefer-the-simpler-valid-solution.md
+- \_bmad-output/implementation-artifacts/sprint-status.yaml
