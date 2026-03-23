@@ -40,6 +40,12 @@ BACKEND_ERROR_LOG_FILES = {
     "temporal_worker": Path("logs/integration_tests/temporal_worker_errors.log"),
 }
 
+INTEGRATION_WORKFLOW_HINT = (
+    "If this is a startup timeout or health-check failure, the run is likely "
+    "not going through ./scripts/run_integration_tests.sh. Follow the "
+    "integration-tests-workflow and use the runner instead of plain pytest."
+)
+
 
 def _is_integration_test(request: pytest.FixtureRequest) -> bool:
     return (
@@ -86,7 +92,8 @@ def _wait_for_service_health_stable(
 
     pytest.exit(
         f"{service_url}/health did not become stable "
-        f"({consecutive_successes} consecutive successes required)",
+        f"({consecutive_successes} consecutive successes required). "
+        f"{INTEGRATION_WORKFLOW_HINT}",
         returncode=1,
     )
 

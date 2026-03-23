@@ -27,6 +27,7 @@ from shared.workers.schema import (
     ReadFileRequest,
     WriteFileRequest,
 )
+from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
@@ -171,6 +172,40 @@ def _set_render_modalities(
         yaml.safe_dump(data, sort_keys=False), encoding="utf-8"
     )
     return original
+
+
+async def _write_benchmark_submit_inputs(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+) -> None:
+    plan_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="plan.md",
+            content=(
+                "## Learning Objective\n"
+                "- Move a sphere into the goal zone.\n"
+                "## Geometry\n"
+                "- Simple box environment around origin.\n"
+                "## Objectives\n"
+                "- Reach goal while avoiding forbid zone.\n"
+            ),
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers=headers,
+    )
+    assert plan_resp.status_code == 200, plan_resp.text
+
+    todo_resp = await client.post(
+        f"{WORKER_LIGHT_URL}/fs/write",
+        json=WriteFileRequest(
+            path="todo.md",
+            content="- [x] Test benchmark\n",
+            overwrite=True,
+        ).model_dump(mode="json"),
+        headers=headers,
+    )
+    assert todo_resp.status_code == 200, todo_resp.text
 
 
 @pytest.mark.integration_p0
@@ -574,3 +609,82 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
         assert max(aluminum_mean) - min(aluminum_mean) < 25, aluminum_mean.tolist()
         assert silicone_mean[0] > silicone_mean[1] + 40, silicone_mean.tolist()
         assert silicone_mean[0] > silicone_mean[2] + 40, silicone_mean.tolist()
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle():
+    """INT-188: stale render manifests do not satisfy benchmark submission."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+        headers = {"X-Session-ID": session_id}
+
+        await seed_benchmark_assembly_definition(client, session_id)
+        await _write_benchmark_submit_inputs(client, headers)
+        await _write_standard_validation_inputs(
+            client, headers, material_id="aluminum_6061"
+        )
+
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success, validate_data.message
+
+        simulate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert simulate_resp.status_code == 200, simulate_resp.text
+        simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+        assert simulate_data.success, simulate_data.message
+
+        manifest_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read",
+            json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                mode="json"
+            ),
+            headers=headers,
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest_payload = json.loads(manifest_resp.json()["content"])
+        assert manifest_payload["artifacts"], manifest_payload
+
+        stale_manifest_payload = {
+            "version": manifest_payload.get("version", "1.0"),
+            "artifacts": {},
+        }
+        stale_write_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="renders/render_manifest.json",
+                content=json.dumps(stale_manifest_payload, indent=2),
+                overwrite=True,
+                bypass_agent_permissions=True,
+            ).model_dump(mode="json"),
+            headers={**headers, "X-System-FS-Bypass": "1"},
+        )
+        assert stale_write_resp.status_code == 200, stale_write_resp.text
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                reviewer_stage="benchmark_reviewer",
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not submit_data.success, submit_data
+        assert submit_data.message is not None
+        assert "render manifest" in submit_data.message.lower() or "out of sync" in (
+            submit_data.message.lower()
+        )

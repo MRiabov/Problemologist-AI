@@ -57,22 +57,25 @@ async def test_engineering_full_loop():
         confirmed = False
         for _ in range(max_retries):
             status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
-            if status_resp.status_code == 200:
-                sess_data = EpisodeResponse.model_validate(status_resp.json())
-                status = sess_data.status
-                if status == EpisodeStatus.PLANNED and not confirmed:
-                    await client.post(
-                        f"/benchmark/{benchmark_session_id}/confirm",
-                        json=ConfirmRequest(comment="Proceed").model_dump(),
-                    )
-                    confirmed = True
-                elif status == EpisodeStatus.COMPLETED:
-                    break
-                elif status == EpisodeStatus.FAILED:
-                    pytest.fail(
-                        "Benchmark generation failed during setup "
-                        f"(session_id={benchmark_session_id})."
-                    )
+            if status_resp.status_code == 404:
+                await asyncio.sleep(1)
+                continue
+            assert status_resp.status_code == 200, status_resp.text
+            sess_data = EpisodeResponse.model_validate(status_resp.json())
+            status = sess_data.status
+            if status == EpisodeStatus.PLANNED and not confirmed:
+                await client.post(
+                    f"/benchmark/{benchmark_session_id}/confirm",
+                    json=ConfirmRequest(comment="Proceed").model_dump(),
+                )
+                confirmed = True
+            elif status == EpisodeStatus.COMPLETED:
+                break
+            elif status == EpisodeStatus.FAILED:
+                pytest.fail(
+                    "Benchmark generation failed during setup "
+                    f"(session_id={benchmark_session_id})."
+                )
             await asyncio.sleep(2)
         else:
             pytest.fail("Benchmark generation failed or timed out during setup.")
@@ -121,7 +124,38 @@ async def test_engineering_full_loop():
             f"Failed to fetch episode assets for {episode_id}: {episode_assets_resp.text}"
         )
         episode_data = EpisodeResponse.model_validate(episode_assets_resp.json())
+        assert episode_data.metadata_vars is not None
+        assert episode_data.metadata_vars.benchmark_id == str(benchmark_session_id)
+        assert episode_data.metadata_vars.worker_session_id == engineer_session_id
+        assert episode_data.metadata_vars.episode_type == "engineer"
+        assert episode_data.metadata_vars.detailed_status in {
+            EpisodeStatus.COMPLETED.value,
+            EpisodeStatus.FAILED.value,
+        }
+        assert episode_data.metadata_vars.terminal_reason is not None
+        if episode_data.status == EpisodeStatus.FAILED:
+            assert episode_data.metadata_vars.failure_class is not None
+        else:
+            assert episode_data.metadata_vars.failure_class is None
         artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
+
+        benchmark_episode_resp = await client.get(
+            f"/episodes/{benchmark_session_id}"
+        )
+        assert benchmark_episode_resp.status_code == 200, benchmark_episode_resp.text
+        benchmark_episode_data = EpisodeResponse.model_validate(
+            benchmark_episode_resp.json()
+        )
+        benchmark_artifact_paths = [
+            a.s3_path for a in (benchmark_episode_data.assets or [])
+        ]
+
+        async def _read_episode_asset_text(
+            episode_ref: str, asset_path: str
+        ) -> str:
+            resp = await client.get(f"/episodes/{episode_ref}/assets/{asset_path}")
+            assert resp.status_code == 200, resp.text
+            return resp.text
 
         # Check for Planner artifacts
         assert any("plan.md" in p for p in artifact_paths), (
@@ -133,6 +167,109 @@ async def test_engineering_full_loop():
         assert any("assembly_definition.yaml" in p for p in artifact_paths), (
             f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
         )
+        assert any(
+            p.endswith("benchmark_definition.yaml") for p in artifact_paths
+        ), f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
+        assert any(
+            p.endswith("benchmark_assembly_definition.yaml")
+            for p in artifact_paths
+        ), (
+            "benchmark_assembly_definition.yaml missing. "
+            f"Artifacts: {artifact_paths}"
+        )
+
+        source_benchmark_definition_path = next(
+            p
+            for p in benchmark_artifact_paths
+            if p.endswith("benchmark_definition.yaml")
+        )
+        source_benchmark_assembly_path = next(
+            p
+            for p in benchmark_artifact_paths
+            if p.endswith("benchmark_assembly_definition.yaml")
+        )
+        source_benchmark_review_manifest_path = next(
+            p
+            for p in benchmark_artifact_paths
+            if p.endswith("benchmark_review_manifest.json")
+        )
+        source_benchmark_plan_manifest_path = next(
+            p
+            for p in benchmark_artifact_paths
+            if p.endswith("benchmark_plan_review_manifest.json")
+        )
+        source_render_manifest_path = next(
+            p
+            for p in benchmark_artifact_paths
+            if p.endswith("renders/render_manifest.json")
+        )
+        engineer_benchmark_definition_path = next(
+            p for p in artifact_paths if p.endswith("benchmark_definition.yaml")
+        )
+        engineer_benchmark_assembly_path = next(
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_assembly_definition.yaml")
+        )
+        engineer_benchmark_review_manifest_path = next(
+            p for p in artifact_paths if p.endswith("benchmark_review_manifest.json")
+        )
+        engineer_benchmark_plan_manifest_path = next(
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_plan_review_manifest.json")
+        )
+        engineer_render_manifest_path = next(
+            p
+            for p in artifact_paths
+            if p.endswith("renders/render_manifest.json")
+        )
+
+        source_benchmark_definition_text = await _read_episode_asset_text(
+            str(benchmark_session_id), source_benchmark_definition_path
+        )
+        engineer_benchmark_definition_text = await _read_episode_asset_text(
+            episode_id, engineer_benchmark_definition_path
+        )
+        assert engineer_benchmark_definition_text == source_benchmark_definition_text
+
+        source_benchmark_assembly_text = await _read_episode_asset_text(
+            str(benchmark_session_id), source_benchmark_assembly_path
+        )
+        engineer_benchmark_assembly_text = await _read_episode_asset_text(
+            episode_id, engineer_benchmark_assembly_path
+        )
+        assert engineer_benchmark_assembly_text == source_benchmark_assembly_text
+
+        source_benchmark_review_manifest_text = await _read_episode_asset_text(
+            str(benchmark_session_id), source_benchmark_review_manifest_path
+        )
+        engineer_benchmark_review_manifest_text = await _read_episode_asset_text(
+            episode_id, engineer_benchmark_review_manifest_path
+        )
+        assert (
+            engineer_benchmark_review_manifest_text
+            == source_benchmark_review_manifest_text
+        )
+
+        source_benchmark_plan_manifest_text = await _read_episode_asset_text(
+            str(benchmark_session_id), source_benchmark_plan_manifest_path
+        )
+        engineer_benchmark_plan_manifest_text = await _read_episode_asset_text(
+            episode_id, engineer_benchmark_plan_manifest_path
+        )
+        assert (
+            engineer_benchmark_plan_manifest_text
+            == source_benchmark_plan_manifest_text
+        )
+
+        source_render_manifest_text = await _read_episode_asset_text(
+            str(benchmark_session_id), source_render_manifest_path
+        )
+        engineer_render_manifest_text = await _read_episode_asset_text(
+            episode_id, engineer_render_manifest_path
+        )
+        assert engineer_render_manifest_text == source_render_manifest_text
 
         # Check for Reviewer artifacts
         # Reviews are usually in reviews/ folder
@@ -166,3 +303,174 @@ async def test_engineering_full_loop():
         assert manifest.validation_success is True
         assert manifest.simulation_success is True
         assert manifest.goal_reached is True
+        assert all(render_path in artifact_paths for render_path in manifest.renders)
+
+
+async def _wait_for_episode_terminal(
+    client: AsyncClient,
+    episode_id: str,
+    *,
+    timeout_seconds: int = 240,
+) -> EpisodeResponse:
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+    last_status = None
+
+    while asyncio.get_running_loop().time() < deadline:
+        response = await client.get(f"/episodes/{episode_id}")
+        assert response.status_code == 200, response.text
+        episode = EpisodeResponse.model_validate(response.json())
+        last_status = episode.status
+        if episode.status in {
+            EpisodeStatus.COMPLETED,
+            EpisodeStatus.FAILED,
+            EpisodeStatus.CANCELLED,
+        }:
+            return episode
+        await asyncio.sleep(1.0)
+
+    pytest.fail(f"Episode {episode_id} did not reach a terminal state (last={last_status})")
+
+
+async def _reject_episode(client: AsyncClient, episode_id: str) -> EpisodeResponse:
+    review_content = """---
+decision: rejected
+comments: ["Retry lineage test rejection"]
+evidence:
+  files_checked: ["plan.md"]
+---
+Rejecting the episode for deterministic retry coverage.
+"""
+    response = await client.post(
+        f"/episodes/{episode_id}/review",
+        json={"review_content": review_content},
+    )
+    assert response.status_code == 200, response.text
+    status_response = await client.get(f"/episodes/{episode_id}")
+    assert status_response.status_code == 200, status_response.text
+    episode = EpisodeResponse.model_validate(status_response.json())
+    assert episode.status == EpisodeStatus.FAILED
+    return episode
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_engineering_retry_reuses_same_benchmark_linkage():
+    """
+    INT-205: Retry against the same benchmark must create a distinct engineer
+    episode that preserves benchmark linkage and lineage metadata.
+    """
+
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        benchmark_request = BenchmarkGenerateRequest(
+            prompt="Create a simple benchmark setup for retry lineage testing.",
+            backend=SimulatorBackendType.GENESIS,
+        )
+        benchmark_resp = await client.post(
+            "/benchmark/generate", json=benchmark_request.model_dump()
+        )
+        assert benchmark_resp.status_code in (200, 202), benchmark_resp.text
+        benchmark_session_id = BenchmarkGenerateResponse.model_validate(
+            benchmark_resp.json()
+        ).session_id
+
+        benchmark_confirmed = False
+        benchmark_episode = None
+        for _ in range(150):
+            status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
+            if status_resp.status_code == 404:
+                await asyncio.sleep(1.0)
+                continue
+            assert status_resp.status_code == 200, status_resp.text
+            benchmark_episode = EpisodeResponse.model_validate(status_resp.json())
+            if benchmark_episode.status == EpisodeStatus.PLANNED and not benchmark_confirmed:
+                await client.post(
+                    f"/benchmark/{benchmark_session_id}/confirm",
+                    json=ConfirmRequest(comment="Proceed").model_dump(),
+                )
+                benchmark_confirmed = True
+            elif benchmark_episode.status == EpisodeStatus.COMPLETED:
+                break
+            elif benchmark_episode.status == EpisodeStatus.FAILED:
+                pytest.fail(
+                    "Benchmark generation failed during retry setup "
+                    f"(session_id={benchmark_session_id})."
+                )
+            await asyncio.sleep(2)
+        else:
+            pytest.fail("Benchmark generation failed or timed out during retry setup.")
+
+        original_task = "Create an engineer handoff for retry lineage testing."
+        first_session_id = f"INT-205-{uuid.uuid4().hex[:8]}"
+        first_run = AgentRunRequest(
+            task=original_task,
+            session_id=first_session_id,
+            metadata_vars={"benchmark_id": str(benchmark_session_id)},
+        )
+        first_resp = await client.post("/agent/run", json=first_run.model_dump())
+        assert first_resp.status_code in (200, 202), first_resp.text
+        first_episode_id = str(
+            AgentRunResponse.model_validate(first_resp.json()).episode_id
+        )
+
+        first_episode = await _wait_for_episode_terminal(client, first_episode_id)
+        assert first_episode.metadata_vars is not None
+        assert first_episode.metadata_vars.benchmark_id == str(benchmark_session_id)
+        assert first_episode.metadata_vars.episode_type == "engineer"
+        first_episode = await _reject_episode(client, first_episode_id)
+
+        retry_metadata = {
+            "benchmark_id": str(benchmark_session_id),
+            "prior_episode_id": first_episode_id,
+            "is_reused": True,
+        }
+        second_session_id = f"INT-205-{uuid.uuid4().hex[:8]}"
+        second_run = AgentRunRequest(
+            task=original_task,
+            session_id=second_session_id,
+            metadata_vars=retry_metadata,
+        )
+        second_resp = await client.post("/agent/run", json=second_run.model_dump())
+        assert second_resp.status_code in (200, 202), second_resp.text
+        second_episode_id = str(
+            AgentRunResponse.model_validate(second_resp.json()).episode_id
+        )
+
+        second_episode = await _wait_for_episode_terminal(client, second_episode_id)
+        assert second_episode.metadata_vars is not None
+        assert second_episode.metadata_vars.benchmark_id == str(benchmark_session_id)
+        assert second_episode.metadata_vars.prior_episode_id == first_episode_id
+        assert second_episode.metadata_vars.is_reused is True
+        assert second_episode.metadata_vars.episode_type == "engineer"
+        second_episode = await _reject_episode(client, second_episode_id)
+
+        assert second_episode.id != first_episode.id
+
+        async def _read_asset_text(episode_ref: str, asset_path: str) -> str:
+            asset_resp = await client.get(
+                f"/episodes/{episode_ref}/assets/{asset_path}"
+            )
+            assert asset_resp.status_code == 200, asset_resp.text
+            return asset_resp.text
+
+        benchmark_definition_path = "benchmark_definition.yaml"
+        benchmark_assembly_path = "benchmark_assembly_definition.yaml"
+        first_benchmark_definition = await _read_asset_text(
+            first_episode_id, benchmark_definition_path
+        )
+        second_benchmark_definition = await _read_asset_text(
+            second_episode_id, benchmark_definition_path
+        )
+        assert second_benchmark_definition == first_benchmark_definition
+
+        first_benchmark_assembly = await _read_asset_text(
+            first_episode_id, benchmark_assembly_path
+        )
+        second_benchmark_assembly = await _read_asset_text(
+            second_episode_id, benchmark_assembly_path
+        )
+        assert second_benchmark_assembly == first_benchmark_assembly
+
+        assert benchmark_episode is not None
+        assert benchmark_episode.metadata_vars is not None
+        assert benchmark_episode.metadata_vars.episode_type == "benchmark"
+        assert benchmark_episode.status == EpisodeStatus.COMPLETED

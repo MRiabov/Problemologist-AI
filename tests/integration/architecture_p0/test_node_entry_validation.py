@@ -13,6 +13,9 @@ from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
     BenchmarkConfirmResponse,
+    BenchmarkGenerateRequest,
+    BenchmarkGenerateResponse,
+    ConfirmRequest,
     EpisodeCreateResponse,
     EpisodeResponse,
 )
@@ -29,6 +32,8 @@ from shared.models.schemas import (
     MovedObject,
     ObjectivesSection,
 )
+from shared.simulation.schemas import SimulatorBackendType
+from shared.workers.schema import ReviewManifest
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
@@ -312,6 +317,118 @@ async def test_int_184_engineer_planner_requires_benchmark_assembly_definition()
             for error in entry.errors
         )
         assert not _node_start_traces(episode, AgentName.ENGINEER_PLANNER.value)
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "approved_benchmark_bundle_validation_failed",
+        "benchmark handoff failed",
+        "benchmark_review_manifest.json",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
+    """
+    INT-184: Engineer planner entry must fail closed when the approved benchmark
+    bundle is revision-mismatched before the run starts.
+    """
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        benchmark_request = BenchmarkGenerateRequest(
+            prompt="Create a benchmark about stacking blocks.",
+            backend=SimulatorBackendType.GENESIS,
+        )
+        benchmark_resp = await client.post(
+            f"{CONTROLLER_URL}/api/benchmark/generate",
+            json=benchmark_request.model_dump(mode="json"),
+        )
+        assert benchmark_resp.status_code in [200, 202], benchmark_resp.text
+        benchmark_run = BenchmarkGenerateResponse.model_validate(
+            benchmark_resp.json()
+        )
+        benchmark_session_id = str(benchmark_run.session_id)
+
+        benchmark_episode = await _poll_benchmark_session(
+            client,
+            benchmark_session_id,
+            terminal_statuses={EpisodeStatus.PLANNED, EpisodeStatus.COMPLETED},
+        )
+        if benchmark_episode.status == EpisodeStatus.PLANNED:
+            confirm_resp = await client.post(
+                f"{CONTROLLER_URL}/api/benchmark/{benchmark_session_id}/confirm",
+                json=ConfirmRequest(comment="Approve benchmark").model_dump(
+                    mode="json"
+                ),
+            )
+            assert confirm_resp.status_code in [200, 202], confirm_resp.text
+            benchmark_episode = await _poll_benchmark_session(
+                client,
+                benchmark_session_id,
+                terminal_statuses={EpisodeStatus.COMPLETED},
+            )
+
+        assert benchmark_episode.status == EpisodeStatus.COMPLETED
+
+        benchmark_worker = WorkerClient(
+            base_url=WORKER_LIGHT_URL,
+            session_id=benchmark_session_id,
+        )
+        try:
+            manifest_path = ".manifests/benchmark_review_manifest.json"
+            manifest_raw = await benchmark_worker.read_file(
+                manifest_path, bypass_agent_permissions=True
+            )
+            manifest = ReviewManifest.model_validate_json(manifest_raw)
+            tampered_manifest = manifest.model_copy(
+                update={"revision": "0000000000000000000000000000000000000000"}
+            )
+            await benchmark_worker.write_file(
+                manifest_path,
+                tampered_manifest.model_dump_json(indent=2),
+                overwrite=True,
+                bypass_agent_permissions=True,
+            )
+        finally:
+            await benchmark_worker.aclose()
+
+        engineer_session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+        req = AgentRunRequest(
+            task="INT-184 engineer planner stale benchmark bundle rejection.",
+            session_id=engineer_session_id,
+            agent_name=AgentName.ENGINEER_PLANNER,
+            start_node=AgentName.ENGINEER_PLANNER,
+            metadata_vars={"benchmark_id": benchmark_session_id},
+        )
+        run_resp = await client.post(
+            f"{CONTROLLER_URL}/api/agent/run",
+            json=req.model_dump(mode="json"),
+        )
+        assert run_resp.status_code == 202, run_resp.text
+        run = AgentRunResponse.model_validate(run_resp.json())
+
+        episode = await _poll_engineer_episode(
+            client,
+            str(run.episode_id),
+            terminal_statuses={EpisodeStatus.FAILED, EpisodeStatus.COMPLETED},
+        )
+        assert episode.status == EpisodeStatus.FAILED
+        assert episode.metadata_vars is not None
+        assert episode.metadata_vars.benchmark_id == benchmark_session_id
+        assert (
+            episode.metadata_vars.terminal_reason
+            == "HANDOFF_INVARIANT_VIOLATION"
+        )
+        assert episode.metadata_vars.failure_class == "AGENT_SEMANTIC_FAILURE"
+        assert any(
+            "approved benchmark bundle validation failed" in log.lower()
+            or "benchmark handoff failed" in log.lower()
+            for log in (episode.metadata_vars.validation_logs or [])
+        )
+        assert not _node_start_traces(episode, AgentName.ENGINEER_PLANNER.value)
+        assert any(
+            trace.name == "benchmark_handoff_validation_failed"
+            for trace in (episode.traces or [])
+        )
 
 
 @pytest.mark.integration_p0

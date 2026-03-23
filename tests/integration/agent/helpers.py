@@ -11,6 +11,7 @@ import httpx
 import yaml
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
+from shared.git_utils import repo_revision
 from shared.enums import AgentName
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
 from shared.models.simulation import SimulationResult
@@ -158,6 +159,12 @@ async def _seed_workspace_file(
     assert resp.status_code == 200, resp.text
 
 
+def repo_git_revision() -> str:
+    revision = repo_revision(Path(__file__).resolve().parents[3])
+    assert revision, "repository git revision could not be determined."
+    return revision
+
+
 async def seed_benchmark_assembly_definition(
     client: httpx.AsyncClient,
     session_id: str,
@@ -197,6 +204,7 @@ async def seed_execution_reviewer_handover(
     script_content = _fixture_script_content(int_id)
     script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     seed_ts = time.time()
+    revision = repo_git_revision()
 
     validation_record = ValidationResultRecord(
         success=True,
@@ -223,6 +231,7 @@ async def seed_execution_reviewer_handover(
         simulation_summary="Goal achieved in green zone.",
         simulation_timestamp=seed_ts,
         goal_reached=True,
+        revision=revision,
         renders=[],
         mjcf_path="renders/scene.xml",
         cad_path="renders/model.step",

@@ -18,15 +18,18 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import AgentName, EpisodeStatus, TraceType
+from shared.enums import ReviewDecision
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
+    AssemblyPartConfig,
     BenchmarkDefinition,
     BoundingBox,
     Constraints,
     CostTotals,
     MovedObject,
     ObjectivesSection,
+    PartConfig,
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
@@ -105,7 +108,7 @@ def valid_objectives():
         objectives=ObjectivesSection(
             goal_zone=BoundingBox(min=(10.0, 10.0, 10.0), max=(20.0, 20.0, 20.0)),
             forbid_zones=[],
-            build_zone=BoundingBox(min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 100.0)),
+            build_zone=BoundingBox(min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 90.0)),
         ),
         benchmark_parts=_default_benchmark_parts(),
         simulation_bounds=BoundingBox(
@@ -594,6 +597,95 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
         )
 
 
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_before_approval():
+    """INT-204: Benchmark plan reviewer must inspect latest-revision renders before approval."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        req = BenchmarkGenerateRequest(
+            prompt="INT-204 benchmark plan reviewer render evidence approval.",
+            backend=SimulatorBackendType.GENESIS,
+        )
+        resp = await client.post(
+            f"{CONTROLLER_URL}/benchmark/generate", json=req.model_dump(mode="json")
+        )
+        assert resp.status_code in {200, 202}, resp.text
+        run_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        session_id = str(run_resp.session_id)
+        episode_id = str(run_resp.episode_id)
+
+        status: EpisodeStatus | None = None
+        latest_episode: EpisodeResponse | None = None
+        artifact_paths: list[str] = []
+        plan_review_decision_paths: list[str] = []
+        plan_review_comment_paths: list[str] = []
+        for _ in range(120):
+            ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
+            if ep_resp.status_code != 200:
+                await asyncio.sleep(1)
+                continue
+            latest_episode = EpisodeResponse.model_validate(ep_resp.json())
+            status = latest_episode.status
+            artifact_paths = [a.s3_path for a in (latest_episode.assets or [])]
+            plan_review_decision_paths = [
+                path
+                for path in artifact_paths
+                if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+            ]
+            plan_review_comment_paths = [
+                path
+                for path in artifact_paths
+                if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+            ]
+            if status == EpisodeStatus.PLANNED and plan_review_decision_paths and plan_review_comment_paths:
+                break
+            await asyncio.sleep(1)
+
+        assert latest_episode is not None
+        assert status == EpisodeStatus.PLANNED, (
+            f"Expected benchmark plan reviewer approval to reach PLANNED, got {status}."
+        )
+
+        episode_resp = await client.get(f"{CONTROLLER_URL}/episodes/{episode_id}")
+        assert episode_resp.status_code == 200, episode_resp.text
+        episode_data = EpisodeResponse.model_validate(episode_resp.json())
+        traces = episode_data.traces or []
+
+        inspect_media_traces = [
+            trace
+            for trace in traces
+            if trace.trace_type.value == "TOOL_START" and trace.name == "inspect_media"
+        ]
+        assert len(inspect_media_traces) >= 2, (
+            "Benchmark plan reviewer must inspect the latest revision render bundle."
+        )
+
+        review_traces = [trace for trace in traces if trace.name == "review_decision"]
+        assert review_traces, "review_decision event missing for benchmark plan review."
+        latest_review_trace = max(review_traces, key=lambda trace: trace.id)
+        assert latest_review_trace.metadata_vars is not None
+        assert latest_review_trace.metadata_vars.decision == ReviewDecision.APPROVED
+        assert any(
+            trace.id < latest_review_trace.id for trace in inspect_media_traces
+        ), "inspect_media must occur before the final benchmark plan review decision."
+
+        assert plan_review_decision_paths, (
+            f"benchmark plan review decision file missing. Artifacts: {artifact_paths}"
+        )
+        assert plan_review_comment_paths, (
+            f"benchmark plan review comments file missing. Artifacts: {artifact_paths}"
+        )
+
+        comments_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode_id}/assets/{plan_review_comment_paths[0]}"
+        )
+        assert comments_resp.status_code == 200, comments_resp.text
+        comments = yaml.safe_load(comments_resp.text)
+        assert comments["summary"].startswith("APPROVED:"), comments
+        assert comments["checklist"]["render_count"] == 2
+        assert comments["checklist"]["visual_inspection_satisfied"] is True
+        assert comments["checklist"]["latest_revision_verified"] is True
+        assert "review_manifest_revision" in comments["checklist"]
 @pytest.mark.integration_p0
 # INT-006 intentionally exercises invalid plan structure paths; both the
 # high-level gate and section-level reason signatures are expected.
@@ -1931,3 +2023,164 @@ def build():
         )
         ok_data = BenchmarkToolResponse.model_validate(ok_resp.json())
         assert ok_data.success, ok_data.message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(regexes=["simulation_failed"])
+@pytest.mark.asyncio
+async def test_int_018_benchmark_submit_accepts_yaml_motion_without_literal_tokens():
+    """
+    INT-018: benchmark submit must accept semantically valid motion facts from
+    YAML even when plan.md/todo.md do not repeat the exact motion spellings.
+    """
+    session_id = f"INT-018-YAML-MOTION-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    plan_md = """## Learning Objective
+Validate a benchmark handoff using structured motion facts from YAML and
+equivalent natural-language motion descriptions.
+
+## Geometry
+- A small bridge-like scene with one laterally shifting benchmark fixture.
+- The fixture uses a steady side-to-side trim at roughly 1.5 mm/s, bounded to
+  a narrow correction window, with its motion details carried in the benchmark
+  YAML artifacts.
+
+## Objectives
+- Place the target object in the goal zone while avoiding the forbid zone.
+"""
+    todo_md = """# TODO
+
+- [x] Write the benchmark fixture YAML
+- [x] Keep prose descriptive instead of literal
+- [x] Document the constant drive and correction window in plain language
+"""
+
+    objectives = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(10.0, 10.0, 0.0), max=(20.0, 20.0, 20.0)),
+            forbid_zones=[],
+            build_zone=BoundingBox(min=(-50.0, -50.0, 0.0), max=(50.0, 50.0, 90.0)),
+        ),
+        benchmark_parts=[
+            {
+                "part_id": "bridge_gate",
+                "label": "bridge_gate",
+                "metadata": {
+                    "material_id": "aluminum_6061",
+                    "fixed": False,
+                },
+            }
+        ],
+        simulation_bounds=BoundingBox(
+            min=(-100.0, -100.0, 0.0), max=(100.0, 100.0, 100.0)
+        ),
+        moved_object=MovedObject(
+            label="ball",
+            shape="sphere",
+            material_id="aluminum_6061",
+            start_position=(0.0, 0.0, 50.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1.0),
+    )
+    assembly_definition = AssemblyDefinition(
+        version="1.0",
+        constraints=AssemblyConstraints(
+            benchmark_max_unit_cost_usd=50.0,
+            benchmark_max_weight_g=1000.0,
+            planner_target_max_unit_cost_usd=45.0,
+            planner_target_max_weight_g=900.0,
+        ),
+        final_assembly=[
+            PartConfig(
+                name="bridge_gate",
+                config=AssemblyPartConfig(
+                    dofs=["slide_y"],
+                    control=None,
+                ),
+            )
+        ],
+        totals=CostTotals(
+            estimated_unit_cost_usd=0.0,
+            estimated_weight_g=0.0,
+            estimate_confidence="high",
+        ),
+    )
+
+    goal_script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+def build():
+    p = Box(1, 1, 1).translate((15, 15, 15))
+    p.label = "ball"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC, material_id="aluminum-6061"
+    )
+    return p
+"""
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await setup_workspace(
+            client,
+            headers,
+            {
+                "plan.md": plan_md,
+                "todo.md": todo_md,
+                "benchmark_definition.yaml": objectives,
+                "benchmark_assembly_definition.yaml": assembly_definition,
+                "script.py": goal_script,
+            },
+        )
+
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                backend=SimulatorBackendType.MUJOCO,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success, validate_data.message
+
+        simulate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                backend=SimulatorBackendType.MUJOCO,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert simulate_resp.status_code == 200, simulate_resp.text
+        simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+        assert simulate_data.success, simulate_data.message
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert submit_data.success, submit_data.message
+        assert submit_data.artifacts is not None, submit_data
+        assert submit_data.artifacts.render_paths, submit_data.artifacts
+        assert all(
+            not path.endswith(".yaml") for path in submit_data.artifacts.render_paths
+        ), submit_data.artifacts.render_paths
+        assert not any(
+            path.endswith("benchmark_definition.yaml")
+            or path.endswith("benchmark_assembly_definition.yaml")
+            for path in submit_data.artifacts.render_paths
+        ), submit_data.artifacts.render_paths
+        assert not any(
+            path.endswith("benchmark_definition.yaml")
+            or path.endswith("benchmark_assembly_definition.yaml")
+            for path in submit_data.artifacts.render_blobs_base64
+        ), submit_data.artifacts.render_blobs_base64

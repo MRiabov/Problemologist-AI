@@ -1,7 +1,7 @@
 transcript:
 - node: engineer_planner
   steps:
-  - thought: Create deterministic planner artifacts for full engineering-loop coverage.
+  - thought: Create deterministic planner artifacts for full engineering-loop coverage while leaving benchmark_definition.yaml unchanged.
     tool_name: write_file
     tool_args:
       path: plan.md
@@ -20,12 +20,11 @@ transcript:
       overwrite: true
       content_file: INT-033/engineer_planner/entry_01/03__assembly_definition.yaml
     expected_observation: success
-  - tool_name: write_file
+  - thought: Inspect the benchmark render before submission.
+    tool_name: inspect_media
     tool_args:
-      path: benchmark_definition.yaml
-      overwrite: true
-      content_file: INT-033/engineer_planner/entry_01/04__benchmark_definition.yaml
-    expected_observation: success
+      path: renders/render_e45_a45.png
+    expected_observation: attached_to_model
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true
@@ -39,6 +38,11 @@ transcript:
     summary: INT-033 electronics planner submission complete.
 - node: engineer_plan_reviewer
   steps:
+  - thought: Inspect the benchmark render before approving the planner handoff.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/render_e45_a45.png
+    expected_observation: attached_to_model
   - finished: true
     review:
       decision: APPROVED
@@ -59,6 +63,11 @@ transcript:
     thought: Implementation complete.
 - node: engineer_execution_reviewer
   steps:
+  - thought: Inspect the available render evidence before approving execution.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/render_e45_a45.png
+    expected_observation: attached_to_model
   - finished: true
     review:
       decision: APPROVED
