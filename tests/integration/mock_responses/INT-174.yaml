@@ -1,7 +1,75 @@
 transcript:
-- node: engineer_planner
+- node: benchmark_planner
   steps:
   - thought: Planning for INT-174.
+    tool_name: write_file
+    tool_args:
+      path: plan.md
+      overwrite: true
+      content_file: INT-174/benchmark_planner/entry_01/01__plan.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: todo.md
+      overwrite: true
+      content_file: INT-174/benchmark_planner/entry_01/02__todo.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-174/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-174/benchmark_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: submit_plan
+    expected_observation: submitted
+  - finished: true
+    summary: Plan for a simple benchmark generated.
+    plan:
+      theme: multi-part
+      difficulty_score: 0.2
+- node: benchmark_plan_reviewer
+  steps:
+  - finished: true
+    review:
+      decision: APPROVED
+      reason: Planner artifacts are coherent and ready for coding.
+      required_fixes: []
+- node: benchmark_coder
+  steps:
+  - thought: Creating two-part benchmark geometry.
+    tool_name: write_file
+    tool_args:
+      path: script.py
+      overwrite: true
+      content_file: INT-174/benchmark_coder/entry_01/01__script.py
+    expected_observation: success
+  - tool_name: execute_command
+    tool_args:
+      command: python script.py
+    expected_observation: 'True'
+  - finished: true
+    journal: Created two-part benchmark geometry.
+- node: benchmark_reviewer
+  steps:
+  - thought: Inspect the generated benchmark preview before approval.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/preview.png
+    expected_observation: attached_to_model
+  - finished: true
+    review:
+      decision: APPROVED
+      reason: The design satisfies all requirements.
+      required_fixes: []
+- node: engineer_planner
+  steps:
+  - thought: Planning follow-up CAD inspection support for INT-174.
     tool_name: write_file
     tool_args:
       path: plan.md
@@ -27,32 +95,18 @@ transcript:
       content_file: INT-174/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
   - finished: true
-    summary: Plan for two parts generated.
+    summary: Follow-up engineer plan generated.
     plan:
-      theme: multi-part
+      theme: proxy-cad
       difficulty_score: 0.2
 - node: engineer_coder
   steps:
-  - thought: Creating two parts GLB.
-    tool_name: execute_command
-    tool_args:
-      command: from build123d import *; import trimesh; import os; os.makedirs('assets',
-        exist_ok=True); b1 = Box(10,10,10); b1.label = 'part1'; b2 = Box(5,5,5).translate((20,0,0));
-        b2.label = 'part2'; c = b1 + b2; export_stl(c, 'assets/box.stl'); trimesh.load('assets/box.stl').export('assets/box.glb',
-        file_type='glb')
-    expected_observation: success
-  - tool_name: write_file
+  - thought: Creating follow-up GLB for proxy verification.
+    tool_name: write_file
     tool_args:
       path: script.py
       overwrite: true
       content_file: INT-174/engineer_coder/entry_01/02__script.py
     expected_observation: success
   - finished: true
-    journal: Created two parts GLB.
-- node: engineer_reviewer
-  steps:
-  - finished: true
-    review:
-      decision: APPROVED
-      reason: The design satisfies all requirements.
-      required_fixes: []
+    journal: Created follow-up proxy CAD GLB.

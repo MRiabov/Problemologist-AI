@@ -43,12 +43,35 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     send_button.click()
 
     # 5. Wait for the "Confirm & Start" button and click it
-    try:
-        page.wait_for_selector('[data-testid="chat-confirm-button"]', timeout=30000)
-        page.get_by_test_id("chat-confirm-button").click(force=True)
-    except Exception:
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return data.episodeStatus === 'PLANNED';
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
+    )
+
+    confirm_controls = [
+        page.get_by_test_id("chat-confirm-button"),
+        page.locator("[data-testid='file-explorer-confirm-button']"),
+    ]
+    confirm_clicked = False
+    for confirm_control in confirm_controls:
+        try:
+            expect(confirm_control).to_be_visible(timeout=30000)
+            confirm_control.click(force=True)
+            confirm_clicked = True
+            break
+        except Exception:
+            continue
+
+    if not confirm_clicked:
         print(
-            "\nConfirm button didn't appear or already gone, checking if assets appeared directly"
+            "\nConfirm button didn't appear in chat or explorer, checking if assets appeared directly"
         )
 
     # Wait for the overlay to disappear or status to become COMPLETED
