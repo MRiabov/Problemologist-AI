@@ -273,12 +273,16 @@ def validate_and_price(
 
     # Check for excessive DOFs (per architecture spec Item 8)
     dof_count = _count_dofs(part)
-    dof_warning = dof_count >= 4
-    if dof_warning:
+    dof_warning = (
+        f"Compound has {dof_count} DOFs - unusual in engineering"
+        if dof_count >= 4
+        else None
+    )
+    if dof_warning is not None:
         logger.warning(
             "dof_warning",
             dof_count=dof_count,
-            message=f"Compound has {dof_count} DOFs - unusual in engineering",
+            message=dof_warning,
         )
 
     # Dispatch to appropriate workbench
