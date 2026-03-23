@@ -122,6 +122,7 @@ async def initialize_agent_files(
     tasks = []
 
     template_files = load_common_template_files()
+    template_files.pop("manufacturing_config.yaml", None)
     template_files.update(_role_template_files(agent_name))
     for remote_name, content in template_files.items():
         if not overwrite and _normalize_remote_path(remote_name) in existing_files:
@@ -134,6 +135,8 @@ async def initialize_agent_files(
 
     if tasks:
         await asyncio.gather(*tasks)
+
+    await seed_manufacturing_config(backend, overwrite=overwrite, existing_files=existing_files)
 
     # Skills are mounted read-only at /skills on worker side; initialization must not
     # attempt to write there through normal agent permissions.
@@ -153,3 +156,47 @@ async def initialize_agent_files(
         file_count=len(tasks),
         skills_available=available_skills,
     )
+
+
+async def seed_manufacturing_config(
+    backend: RemoteFilesystemBackend,
+    *,
+    overwrite: bool = False,
+    existing_files: set[str] | None = None,
+) -> bool:
+    """
+    Seed the workspace manufacturing config as a system write.
+
+    Planner workspaces need a real pricing source but should not be granted
+    normal edit permission over that file.
+    """
+    template_files = load_common_template_files()
+    manufacturing_config_content = template_files.get("manufacturing_config.yaml")
+    if manufacturing_config_content is None:
+        return False
+
+    config_path = _normalize_remote_path("manufacturing_config.yaml")
+    if existing_files is None:
+        existing_files = set()
+        try:
+            info = await backend.als_info(".")
+            existing_files = {
+                normalized
+                for item in info
+                if (path := _extract_entry_path(item))
+                and (normalized := _normalize_remote_path(path))
+            }
+        except Exception:
+            existing_files = set()
+
+    if not overwrite and config_path in existing_files:
+        return False
+
+    worker_client = getattr(backend.client, "client", backend.client)
+    await worker_client.write_file(
+        "manufacturing_config.yaml",
+        manufacturing_config_content,
+        overwrite=True,
+        bypass_agent_permissions=True,
+    )
+    return True

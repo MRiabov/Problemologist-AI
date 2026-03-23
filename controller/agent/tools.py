@@ -354,7 +354,7 @@ def get_engineer_planner_tools(
             validate_exact_planner_cost_contract,
             validate_node_output,
         )
-        from worker_heavy.workbenches.config import load_config, load_merged_config
+        from worker_heavy.utils.dfm import load_planner_manufacturing_config
 
         # Engineer planner and electronics planner share the same planner artifacts.
         required_files = [
@@ -385,18 +385,38 @@ def get_engineer_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        custom_config_text = None
-        if await fs.client.exists(
+        if not await fs.client.exists(
             "manufacturing_config.yaml", bypass_agent_permissions=True
         ):
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "manufacturing_config.yaml missing; planner handoff requires a "
+                    "workspace pricing source"
+                ],
+                node_type=planner_node_type,
+            )
+            return result.model_dump(mode="json")
+
+        try:
             custom_config_text = await fs.client.read_file(
                 "manufacturing_config.yaml", bypass_agent_permissions=True
             )
-        manufacturing_config = (
-            load_merged_config(override_data=yaml.safe_load(custom_config_text) or {})
-            if custom_config_text is not None
-            else load_config()
-        )
+            manufacturing_config = load_planner_manufacturing_config(
+                override_data=yaml.safe_load(custom_config_text) or {}
+            )
+        except Exception as exc:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "manufacturing_config.yaml invalid for planner handoff: "
+                    f"{exc}"
+                ],
+                node_type=planner_node_type,
+            )
+            return result.model_dump(mode="json")
 
         pricing_result = await run_validate_and_price_script(fs)
         if not pricing_result["ok"]:

@@ -1,5 +1,7 @@
 import structlog
 from build123d import Compound, Part
+from pathlib import Path
+from typing import Any
 
 from shared.models.schemas import AssemblyDefinition, BoundingBox
 from shared.workers.workbench_models import (
@@ -9,10 +11,23 @@ from shared.workers.workbench_models import (
     WorkbenchResult,
 )
 from worker_heavy.workbenches.cnc import analyze_cnc
+from worker_heavy.workbenches.config import load_required_merged_config
 from worker_heavy.workbenches.injection_molding import analyze_im
 from worker_heavy.workbenches.print_3d import analyze_3dp
 
 logger = structlog.get_logger()
+
+
+def load_planner_manufacturing_config(
+    config_path: str | Path | None = None,
+    override_data: dict[str, Any] | None = None,
+) -> ManufacturingConfig:
+    """Load the planner's merged manufacturing config with fail-closed semantics."""
+    return load_required_merged_config(
+        config_path=config_path,
+        override_data=override_data,
+        source_name="manufacturing_config.yaml",
+    )
 
 
 def _part_reports_for_analysis(part: Part | Compound) -> list[Part | Compound]:

@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).parents[3]))
 from shared.enums import ManufacturingMethod
 from shared.models.schemas import AssemblyDefinition
 from worker_heavy.utils.dfm import calculate_declared_assembly_cost
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.utils.dfm import load_planner_manufacturing_config
 
 logger = structlog.get_logger(__name__)
 
@@ -65,7 +65,7 @@ def main():
         estimation = AssemblyDefinition(**data)
 
         config_path = Path("manufacturing_config.yaml")
-        config = load_config(str(config_path) if config_path.exists() else None)
+        config = load_planner_manufacturing_config(config_path=config_path)
         data["totals"]["estimated_unit_cost_usd"] = calculate_declared_assembly_cost(
             estimation, config
         )
@@ -82,6 +82,9 @@ def main():
 
     except ValidationError as e:
         print(f"Validation Error: {e}")
+        sys.exit(1)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error: manufacturing_config.yaml invalid: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         print(f"Unexpected Error: {e}")

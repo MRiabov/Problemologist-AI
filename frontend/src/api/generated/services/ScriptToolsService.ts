@@ -57,6 +57,30 @@ export class ScriptToolsService {
         });
     }
     /**
+     * Verify Script
+     * @param xSessionId
+     * @param requestBody
+     * @returns BenchmarkToolResponse Successful Response
+     * @throws ApiError
+     */
+    public static verifyScriptApiScriptToolsVerifyPost(
+        xSessionId: string,
+        requestBody: ScriptToolRequest,
+    ): CancelablePromise<BenchmarkToolResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/script-tools/verify',
+            headers: {
+                'x-session-id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * Submit Script
      * @param xSessionId
      * @param requestBody
@@ -118,6 +142,30 @@ export class ScriptToolsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/script-tools/simulate',
+            headers: {
+                'x-session-id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Verify Script
+     * @param xSessionId
+     * @param requestBody
+     * @returns BenchmarkToolResponse Successful Response
+     * @throws ApiError
+     */
+    public static verifyScriptScriptToolsVerifyPost(
+        xSessionId: string,
+        requestBody: ScriptToolRequest,
+    ): CancelablePromise<BenchmarkToolResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/script-tools/verify',
             headers: {
                 'x-session-id': xSessionId,
             },

@@ -109,6 +109,7 @@ agents:
             "todo.md",
             "journal.md",
             "assembly_definition.yaml",
+            "benchmark_definition.yaml",
           ]
         deny:
           [

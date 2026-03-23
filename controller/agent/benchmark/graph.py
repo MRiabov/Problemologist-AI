@@ -29,7 +29,10 @@ from controller.agent.execution_limits import (
     mark_episode_execution_window_start,
     persist_episode_turn_count,
 )
-from controller.agent.initialization import initialize_agent_files
+from controller.agent.initialization import (
+    initialize_agent_files,
+    seed_manufacturing_config,
+)
 from controller.agent.node_entry_validation import (
     BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
@@ -1604,6 +1607,7 @@ async def run_generation_session(
                 agent_name=AgentName.BENCHMARK_PLANNER,
                 overwrite=True,
             )
+            await seed_manufacturing_config(backend, overwrite=True)
         finally:
             await worker_client.aclose()
     except Exception as e:

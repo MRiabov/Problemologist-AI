@@ -780,6 +780,14 @@ class ManufacturedPartEstimate(StrictContractModel):
     pricing_notes: str | None = None
     dfm_suggestions: list[str] = Field(default_factory=list)
 
+    @field_validator("part_name", "part_id", "material_id")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
 
 class CotsPartEstimate(StrictContractModel):
     """Assembly estimate for a COTS part."""
@@ -789,6 +797,14 @@ class CotsPartEstimate(StrictContractModel):
     unit_cost_usd: float
     quantity: int
     source: str
+
+    @field_validator("part_id", "manufacturer", "source")
+    @classmethod
+    def validate_non_empty_strings(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
 
 
 class AssemblyPartConfig(StrictContractModel):

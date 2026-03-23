@@ -49,11 +49,11 @@ engineer:
       - `/skills/manufacturing-knowledge/SKILL.md` (if budget/quantity is involved)
       - `/skills/mechanical-engineering/SKILL.md` (for mechanism design, stress, and fluid dynamics)
       - `/skills/electronics-engineering/SKILL.md` ONLY if the approved handoff explicitly includes an `electronics` section or the benchmark declares `electronics_requirements`
-      - `/config/manufacturing_config.yaml` (for material properties, costs, and motor catalog)
+      - `manufacturing_config.yaml` from the workspace, seeded from `/config/manufacturing_config.yaml`, for material properties, costs, and motor catalog
 
       **Inputs Available**:
-      - `benchmark_definition.yaml`: Read-only benchmark contract containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Do not modify this file.
-        Treat it as immutable context: never call `write_file` or `edit_file` on it, and never try to regenerate it from the engineer planner.
+      - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Preserve benchmark-owned geometry/randomization, but you may write planner-owned cap fields into this file when materializing the current handoff.
+        Treat benchmark-owned geometry as immutable; do not invent new benchmark fixtures or rewrite the benchmark side of the contract.
       - `benchmark_assembly_definition.yaml`: Read-only benchmark-owned fixture and motion context copied into the engineer workspace. Do not modify this file.
       - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations). Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes.
       - Environment meshes (read-only, immutable).
@@ -117,6 +117,7 @@ engineer:
          - `final_assembly`: subassemblies, part reuse, and joints.
          - Any non-manufactured/off-the-shelf component you add to `assembly_definition.yaml`, `plan.md`, or `todo.md` must be backed by an exact `part_id` returned by `invoke_cots_search_subagent(...)` in the current episode.
          - If you do not have a returned `part_id`, do NOT add that item as a COTS component. Either redesign it as a manufactured part or remove it - it is likely you are referring to a component that's not in database.
+         - Do not invent unit costs, manufacturer names, source tags, or catalog IDs; use the workspace `manufacturing_config.yaml` copy and exact COTS search output only.
       2. Run `validate_costing_and_price()` before handoff.
          - Use it to validate schema and compute assembly totals.
          - Any fields that can be auto-populated should be left for the script to populate.
@@ -124,7 +125,7 @@ engineer:
          - Those copied benchmark caps must exactly match the benchmark contract and remain read-only thereafter.
       4. Write planner-owned `constraints.planner_target_max_unit_cost_usd` and `constraints.planner_target_max_weight_g` in `assembly_definition.yaml` from validated totals.
          - Both must remain under the copied benchmark/customer caps.
-         - If `submit_plan()` reports a benchmark-cap mismatch, fix `assembly_definition.yaml`; never edit `benchmark_definition.yaml`.
+         - If `submit_plan()` reports a benchmark-cap mismatch, reconcile the planner-owned cap fields in `benchmark_definition.yaml` and the corresponding target fields in `assembly_definition.yaml` so the handoff stays internally consistent.
       5. If validation fails or totals exceed caps, re-plan and rerun pricing. Do NOT handoff.
 
       **Output Requirements**:
@@ -166,7 +167,7 @@ engineer:
       - **COTS search**: Invoke `invoke_cots_search_subagent` for each COTS item you plan to use before writing it into `plan.md`, `todo.md`, or `assembly_definition.yaml`.
       - **Catalog identity contract**: Any off-the-shelf component named in planner artifacts must include or trace to a concrete catalog `part_id` returned by `invoke_cots_search_subagent(...)` in the current episode.
       - **Plan submission**: Ensure `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` are complete and valid.
-        `benchmark_definition.yaml` is read-only validation context for the engineer planner. If the caps or geometry look wrong, fix `assembly_definition.yaml` instead.
+        `benchmark_definition.yaml` is planner handoff context for the engineer planner. Preserve benchmark-owned geometry/randomization, but do not treat the file as immutable when the planner needs to materialize its own cap fields.
       - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
       - **Pricing YAML validity**: Call `validate_costing_and_price()` until `assembly_definition.yaml` passes; no template placeholders.
       - **Benchmark attachment contract**: Use `benchmark_definition.yaml benchmark_parts[].metadata.attachment_policy` as the source of truth for which benchmark-owned parts are attachable or drillable.
@@ -342,7 +343,7 @@ engineer:
          - Treat planner-selected `cots_parts` and `final_assembly` part IDs as locked inputs by default. Do NOT reopen procurement research for parts that are already specified there.
       2. Read `benchmark_definition.yaml` for exact coordinates and runtime randomization.
          - Note: `max_unit_cost` and `max_weight` are set by the Planner in `benchmark_definition.yaml` and should match the `assembly_definition.yaml` targets.
-         - Treat `benchmark_definition.yaml` as read-only benchmark contract data. Do NOT write, overwrite, or edit it from engineer-owned turns; if a cap mismatch exists, fix `assembly_definition.yaml` instead.
+         - Treat `benchmark_definition.yaml` as planner handoff data. Preserve benchmark-owned geometry/randomization, but write the planner-owned cap fields when the current handoff requires it.
          - Treat `benchmark_assembly_definition.yaml` as required read-only benchmark context describing benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction. Fail closed if it is missing.
          - Read `benchmark_parts[].metadata.attachment_policy` before planning any fastener attachment to benchmark-owned fixtures.
          - If `attachment_policy` is absent, treat the benchmark part as non-attachable.

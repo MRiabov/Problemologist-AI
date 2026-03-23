@@ -21,7 +21,10 @@ class ElectronicsPlannerSignature(dspy.Signature):
     """
     Electronics Planner node: Designs the electrical system and power budget.
     You must use the provided tools to update 'plan.md' and 'todo.md' with electronics tasks.
-    You also receive benchmark-owned read-only benchmark_definition.yaml and benchmark_assembly_definition.yaml handoff context copied into this workspace.
+    You also receive benchmark_definition.yaml and benchmark_assembly_definition.yaml handoff context copied into this workspace.
+    benchmark_definition.yaml is part of the planner handoff and may be updated to
+    preserve benchmark-owned geometry/randomization while materializing the planner's
+    own cap fields. benchmark_assembly_definition.yaml remains benchmark-owned context.
     Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide a summary of your electrical plan.
     """

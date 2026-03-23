@@ -5,7 +5,7 @@ from build123d import Compound, Part
 
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 from worker_heavy.utils.dfm import validate_and_price
-from worker_heavy.workbenches.config import load_config
+from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -20,8 +20,13 @@ def analyze_component(
     Analyzes a component for manufacturability and cost.
     Used by the heavy worker benchmark/analyze endpoint.
     """
-    # Load default manufacturing config
-    config = load_config()
+    # Prefer a workspace override when present so analyze uses the same merged
+    # pricing source as planner validation and handoff submission.
+    custom_config_path = output_dir / "manufacturing_config.yaml"
+    if custom_config_path.exists():
+        config = load_merged_config(custom_config_path)
+    else:
+        config = load_config()
 
     if method is None:
         # Heuristic: try to get manufacturing method from component metadata

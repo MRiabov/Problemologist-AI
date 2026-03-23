@@ -4,14 +4,12 @@ import hashlib
 import os
 from pathlib import Path
 
-import yaml
-
 from controller.agent.benchmark.tools import _canonicalize_benchmark_constraints
 from shared.enums import AgentName
 from shared.models.schemas import PlannerSubmissionResult
 from shared.workers.schema import PlanReviewManifest
 from worker_heavy.utils.file_validation import validate_node_output
-from worker_heavy.workbenches.config import load_config, load_merged_config
+from worker_heavy.utils.dfm import load_planner_manufacturing_config
 
 
 def _planner_agent(workspace: Path | None = None) -> AgentName | None:
@@ -94,10 +92,7 @@ def _read_workspace_files(workspace: Path, paths: tuple[str, ...]) -> dict[str, 
 
 def _manufacturing_config(workspace: Path):
     config_path = workspace / "manufacturing_config.yaml"
-    if config_path.exists():
-        override_data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-        return load_merged_config(override_data=override_data)
-    return load_config()
+    return load_planner_manufacturing_config(config_path=config_path)
 
 
 def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:

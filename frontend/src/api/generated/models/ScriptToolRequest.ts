@@ -10,5 +10,9 @@ export type ScriptToolRequest = {
     backend?: SimulatorBackendType;
     smoke_test_mode?: (boolean | null);
     reviewer_stage?: ('benchmark_reviewer' | 'engineering_execution_reviewer' | 'electronics_reviewer' | null);
+    jitter_range?: (any[] | null);
+    num_scenes?: (number | null);
+    duration?: (number | null);
+    seed?: (number | null);
 };
 
