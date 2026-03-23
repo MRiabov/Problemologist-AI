@@ -139,3 +139,4 @@ GPT-5.4
 
 - 2026-03-23: Confirmed the live-browser simulation timeline regression passes with the current implementation.
 - 2026-03-23: Completed INT-174 benchmark and follow-up continuation verification after fixing session-id propagation and mock transcript coverage.
+- 2026-03-23: Confirmed the reviewer-blocking regressions now pass with `tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py` and `tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip` plus `test_dataset_export_invalid_lineage_fails_closed`.
