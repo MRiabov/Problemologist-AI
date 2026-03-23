@@ -17,6 +17,8 @@ from shared.workers.schema import (
     HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
+    RenderArtifactMetadata,
+    RenderManifest,
     SimulationArtifacts,
 )
 from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
@@ -83,6 +85,7 @@ def _collect_submission_artifacts(root: Path) -> SimulationArtifacts:
     render_blobs_base64: dict[str, str] = {}
     renders_dir = root / "renders"
     if renders_dir.exists():
+        render_image_paths: list[str] = []
         for render_path in sorted(renders_dir.iterdir()):
             if not render_path.is_file():
                 continue
@@ -93,6 +96,27 @@ def _collect_submission_artifacts(root: Path) -> SimulationArtifacts:
             render_blobs_base64[rel_path] = base64.b64encode(
                 render_path.read_bytes()
             ).decode("ascii")
+            if render_path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+                render_image_paths.append(rel_path)
+        render_manifest_path = renders_dir / "render_manifest.json"
+        if render_manifest_path.exists():
+            render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
+                base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
+            )
+        elif render_image_paths:
+            synthesized_manifest = RenderManifest(
+                artifacts={
+                    f"/{path.lstrip('/')}": RenderArtifactMetadata(
+                        modality="rgb"
+                    )
+                    for path in sorted(dict.fromkeys(render_image_paths))
+                }
+            )
+            render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
+                base64.b64encode(
+                    synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
+                ).decode("ascii")
+            )
     artifacts.render_blobs_base64 = render_blobs_base64
     return artifacts
 
@@ -214,16 +238,25 @@ async def submit_for_review_activity(
             session_root=root,
         )
 
-        success = await asyncio.to_thread(
-            submit_for_review,
-            component,
-            cwd=root,
-            session_id=session_id,
-            reviewer_stage=reviewer_stage,
-        )
+        failure_message: str | None = None
+        try:
+            success = await asyncio.to_thread(
+                submit_for_review,
+                component,
+                cwd=root,
+                session_id=session_id,
+                reviewer_stage=reviewer_stage,
+            )
+        except ValueError as exc:
+            success = False
+            failure_message = str(exc)
 
         return BenchmarkToolResponse(
             success=success,
-            message="Handover complete" if success else "Handover failed",
+            message=(
+                "Handover complete"
+                if success
+                else (failure_message or "Handover failed")
+            ),
             artifacts=_collect_submission_artifacts(root),
         )

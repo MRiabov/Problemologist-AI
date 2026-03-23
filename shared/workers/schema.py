@@ -312,6 +312,7 @@ class ValidationResultRecord(BaseModel):
     timestamp: float
     script_path: StrictStr | None = None
     script_sha256: StrictStr | None = None
+    verification_result: MultiRunResult | None = None
 
 
 class ReviewManifest(BaseModel):
@@ -332,9 +333,9 @@ class ReviewManifest(BaseModel):
     goal_reached: bool
     renders: list[StrictStr] = Field(default_factory=list)
     mjcf_path: StrictStr | None = None
-    cad_path: StrictStr
-    objectives_path: StrictStr
-    assembly_definition_path: StrictStr
+    cad_path: StrictStr | None = None
+    objectives_path: StrictStr | None = None
+    assembly_definition_path: StrictStr | None = None
 
 
 class PlanReviewManifest(BaseModel):

@@ -16,6 +16,7 @@ from opentelemetry import trace
 from sqlalchemy import select
 
 from controller.agent.benchmark_handover_validation import (
+    extract_benchmark_refusal_reason,
     validate_benchmark_planner_handoff_artifacts,
 )
 from controller.agent.config import settings as agent_settings
@@ -32,6 +33,7 @@ from controller.agent.initialization import initialize_agent_files
 from controller.agent.node_entry_validation import (
     BENCHMARK_CODER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
+    BENCHMARK_PLAN_REVIEW_MANIFEST,
     BENCHMARK_REVIEW_MANIFEST,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
@@ -50,6 +52,8 @@ from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode, Trace
+from controller.utils import infer_integration_test_id
+from controller.agent.review_handover import collect_plan_reviewer_handover_evidence
 from shared.enums import (
     AgentName,
     EpisodePhase,
@@ -171,7 +175,7 @@ async def _get_latest_planner_submission_result(
 
 
 async def _read_session_markdown(
-    session_id: uuid.UUID, relative_path: str
+    session_id: str | uuid.UUID, relative_path: str
 ) -> str | None:
     """Read markdown/text artifacts directly from the worker session."""
     try:
@@ -204,6 +208,11 @@ def _map_hard_fail_metadata(
         return TerminalReason.OUT_OF_TURN_BUDGET, FailureClass.AGENT_QUALITY_FAILURE
     if hard_fail_code == "credits_exceeded":
         return TerminalReason.OUT_OF_TOKEN_BUDGET, FailureClass.AGENT_QUALITY_FAILURE
+    if hard_fail_code == "benchmark_handoff_validation":
+        return (
+            TerminalReason.HANDOFF_INVARIANT_VIOLATION,
+            FailureClass.AGENT_SEMANTIC_FAILURE,
+        )
     return TerminalReason.INTERNAL_ERROR, FailureClass.APPLICATION_LOGIC_FAILURE
 
 
@@ -225,6 +234,23 @@ def _normalize_failure_text(text: str | None) -> str:
     return normalized[:220]
 
 
+def _effective_benchmark_worker_session_id(
+    state: BenchmarkGeneratorState | None = None,
+    *,
+    session_id: str | None = None,
+    prompt: str | None = None,
+) -> str:
+    if state is not None:
+        worker_session_id = (state.worker_session_id or "").strip()
+        if worker_session_id:
+            return worker_session_id
+        session_id = str(state.session.session_id)
+        prompt = state.session.prompt
+
+    inferred = infer_integration_test_id(prompt, session_id)
+    return inferred or (session_id or "").strip()
+
+
 def _normalized_failure_items(text: str | None) -> list[str]:
     """Return deterministic, de-duplicated normalized fragments."""
     raw = (text or "").strip()
@@ -233,6 +259,46 @@ def _normalized_failure_items(text: str | None) -> list[str]:
     fragments = [_normalize_failure_text(fragment) for fragment in raw.split(";")]
     deduped = sorted({fragment for fragment in fragments if fragment})
     return deduped
+
+
+def _has_benchmark_refusal(*texts: str | None) -> bool:
+    return any(
+        extract_benchmark_refusal_reason(text) is not None
+        for text in texts
+        if text is not None
+    )
+
+
+def _has_benchmark_terminal_handoff_error(*texts: str | None) -> bool:
+    terminal_tokens = (
+        "AMBIGUOUS_TASK",
+        "CONTRADICTORY_CONSTRAINTS",
+        "INVALID_OBJECTIVES",
+        "UNSOLVABLE_SCENARIO",
+    )
+    for text in texts:
+        if not text:
+            continue
+        upper = text.upper()
+        if any(token in upper for token in terminal_tokens):
+            return True
+    return _has_benchmark_refusal(*texts)
+
+
+def _entry_validation_has_benchmark_refusal(
+    state: BenchmarkGeneratorState,
+) -> bool:
+    texts: list[str | None] = [
+        state.entry_validation_reason_code,
+        state.review_feedback,
+    ]
+    for error in state.entry_validation_errors or []:
+        if isinstance(error, dict):
+            texts.append(str(error.get("code") or "") or None)
+            texts.append(str(error.get("message") or "") or None)
+        else:
+            texts.append(str(error))
+    return _has_benchmark_refusal(*texts)
 
 
 def _build_failure_fingerprint(
@@ -316,6 +382,12 @@ def _classify_repeated_failure(
     fingerprint: str,
 ) -> tuple[TerminalReason, FailureClass, str]:
     lowered = fingerprint.lower()
+    if extract_benchmark_refusal_reason(fingerprint) is not None:
+        return (
+            TerminalReason.HANDOFF_INVARIANT_VIOLATION,
+            FailureClass.AGENT_SEMANTIC_FAILURE,
+            "benchmark_refusal",
+        )
     if any(
         token in lowered
         for token in (
@@ -396,7 +468,7 @@ async def _persist_entry_validation_rejection_trace(
 async def _artifact_exists_for_benchmark_state(
     state: BenchmarkGeneratorState, artifact_path: str
 ) -> bool:
-    session_id = str(state.session.session_id).strip()
+    session_id = _effective_benchmark_worker_session_id(state)
     if not session_id:
         return False
 
@@ -426,7 +498,7 @@ async def _custom_benchmark_reviewer_handover_check(
     *, state: BenchmarkGeneratorState
 ) -> list[NodeEntryValidationError]:
     return await reviewer_handover_custom_check_from_session_id(
-        session_id=str(state.session.session_id),
+        session_id=_effective_benchmark_worker_session_id(state),
         reviewer_label="Benchmark",
         manifest_path=BENCHMARK_REVIEW_MANIFEST,
         expected_stage="benchmark_reviewer",
@@ -513,7 +585,30 @@ def _guarded_node(target_node: AgentName, node_callable):
             state.entry_validation_reroute_target = None
             state.entry_validation_errors = []
             state.entry_validation_trace_emitted = False
-            return await node_callable(state)
+            result = await node_callable(state)
+            if (
+                target_node == AgentName.BENCHMARK_PLANNER
+                and isinstance(result, BenchmarkGeneratorState)
+            ):
+                planner_errors = await _validate_planner_handoff(
+                    session_id=result.session.session_id,
+                    plan=result.plan,
+                    custom_objectives=result.session.custom_objectives,
+                    worker_session_id=result.worker_session_id,
+                )
+                if planner_errors:
+                    logger.error(
+                        "planner_handoff_validation_failed",
+                        session_id=str(result.session.session_id),
+                        errors=planner_errors,
+                    )
+                    result.session.validation_logs.extend(planner_errors)
+                    result.review_feedback = (
+                        "Planner handoff blocked: " + "; ".join(planner_errors)
+                    )
+                    result.session.status = SessionStatus.FAILED
+                    result.hard_fail_code = "benchmark_handoff_validation"
+            return result
 
         feedback, journal_line = _build_entry_rejection_feedback(
             target_node=target_node,
@@ -615,6 +710,8 @@ async def _validate_planner_handoff(
     session_id: uuid.UUID,
     plan: Any | None,
     custom_objectives: CustomObjectives | None = None,
+    *,
+    worker_session_id: str | None = None,
 ) -> list[str]:
     """
     Validate benchmark planner output before allowing PLANNED state.
@@ -630,10 +727,14 @@ async def _validate_planner_handoff(
     )
     from controller.config.settings import settings as global_settings
 
+    effective_worker_session_id = (
+        worker_session_id
+        or _effective_benchmark_worker_session_id(session_id=str(session_id))
+    )
     client = WorkerClient(
         base_url=global_settings.worker_light_url,
         heavy_url=global_settings.worker_heavy_url,
-        session_id=str(session_id),
+        session_id=effective_worker_session_id,
     )
     try:
         return await validate_benchmark_planner_handoff_artifacts(
@@ -728,11 +829,18 @@ def define_graph():
 
     async def planner_router(
         state: BenchmarkGeneratorState,
-    ) -> Literal[AgentName.BENCHMARK_PLANNER, AgentName.BENCHMARK_PLAN_REVIEWER]:
+    ) -> Literal[
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.BENCHMARK_PLAN_REVIEWER,
+        END,
+    ]:
+        if state.session.status == SessionStatus.FAILED:
+            return END
         planner_errors = await _validate_planner_handoff(
             session_id=state.session.session_id,
             plan=state.plan,
             custom_objectives=state.session.custom_objectives,
+            worker_session_id=state.worker_session_id,
         )
         if planner_errors:
             logger.error(
@@ -747,6 +855,44 @@ def define_graph():
             state.session.validation_logs.extend(planner_errors)
             return AgentName.BENCHMARK_PLANNER
 
+        try:
+            from controller.config.settings import settings as global_settings
+
+            client = WorkerClient(
+                base_url=global_settings.worker_light_url,
+                heavy_url=global_settings.worker_heavy_url,
+                session_id=_effective_benchmark_worker_session_id(state),
+                agent_role=AgentName.BENCHMARK_PLAN_REVIEWER,
+            )
+            try:
+                evidence, evidence_error = (
+                    await collect_plan_reviewer_handover_evidence(
+                        client,
+                        manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+                        expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+                        episode_id=state.episode_id,
+                    )
+                )
+            finally:
+                await client.aclose()
+        except Exception as exc:
+            evidence = None
+            evidence_error = str(exc)
+
+        if evidence is not None:
+            state.session.validation_logs.append(
+                "benchmark_plan_reviewer evidence: "
+                f"revision={evidence.review_manifest_revision or 'unknown'} "
+                f"renders={evidence.render_count} "
+                f"refusal_reason="
+                f"{evidence.refusal_reason.value if evidence.refusal_reason else 'none'}"
+            )
+        elif evidence_error:
+            state.session.validation_logs.append(
+                "benchmark_plan_reviewer evidence unavailable: "
+                f"{evidence_error}"
+            )
+
         state.review_decision = None
         state.review_feedback = None
         return AgentName.BENCHMARK_PLAN_REVIEWER
@@ -757,6 +903,7 @@ def define_graph():
         {
             AgentName.BENCHMARK_PLANNER: AgentName.BENCHMARK_PLANNER,
             AgentName.BENCHMARK_PLAN_REVIEWER: AgentName.BENCHMARK_PLAN_REVIEWER,
+            END: END,
         },
     )
 
@@ -771,7 +918,10 @@ def define_graph():
         if decision == ReviewDecision.APPROVED:
             state.session.status = SessionStatus.PLANNED
             return END
-        if decision in {ReviewDecision.REJECTED, ReviewDecision.REJECT_PLAN}:
+        if decision == ReviewDecision.REJECT_PLAN:
+            state.session.status = SessionStatus.REJECTED
+            return END
+        if decision == ReviewDecision.REJECTED:
             state.session.status = SessionStatus.REJECTED
             return AgentName.BENCHMARK_PLANNER
 
@@ -1063,7 +1213,11 @@ async def _execute_graph_streaming(
                     )
                 else:
                     new_status = SessionStatus.REJECTED
-                    failure_class = FailureClass.AGENT_QUALITY_FAILURE
+                    failure_class = (
+                        FailureClass.AGENT_SEMANTIC_FAILURE
+                        if _entry_validation_has_benchmark_refusal(final_state)
+                        else FailureClass.AGENT_QUALITY_FAILURE
+                    )
             elif normalized_node_name == AgentName.BENCHMARK_PLANNER:
                 # Handle both object and dict types for the plan
                 logger.info(
@@ -1075,6 +1229,7 @@ async def _execute_graph_streaming(
                     session_id=session_id,
                     plan=final_state.plan,
                     custom_objectives=final_state.session.custom_objectives,
+                    worker_session_id=final_state.worker_session_id,
                 )
                 if planner_errors:
                     logger.error(
@@ -1087,15 +1242,6 @@ async def _execute_graph_streaming(
                         "Planner handoff blocked: " + "; ".join(planner_errors)
                     )
                     new_status = SessionStatus.REJECTED
-                    # Not necessarily terminal if it retries, but if it was the last turn
-                    # evaluate_agent_hard_fail would have caught it.
-                    # Mapping to failure class for visibility even if not terminal.
-                    if any(
-                        "structural" in e or "submission" in e for e in planner_errors
-                    ):
-                        failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
-                    else:
-                        failure_class = FailureClass.AGENT_QUALITY_FAILURE
                 else:
                     new_status = SessionStatus.PLANNING
             elif normalized_node_name == AgentName.BENCHMARK_PLAN_REVIEWER:
@@ -1285,6 +1431,7 @@ async def _execute_graph_streaming(
                         if final_state.entry_validation_rejected
                         else None
                     ),
+                    worker_session_id=final_state.worker_session_id,
                 )
             except Exception as e:
                 logger.error(
@@ -1296,7 +1443,11 @@ async def _execute_graph_streaming(
             if should_stop:
                 logger.info("pausing_for_user_confirmation", session_id=session_id)
                 # Persist assets so they are visible in UI during pause
-                await _persist_session_assets(final_state, session_id)
+                await _persist_session_assets(
+                    final_state,
+                    session_id,
+                    final_state.worker_session_id,
+                )
                 return final_state
 
     # Report automated score to Langfuse
@@ -1373,6 +1524,10 @@ async def run_generation_session(
     from shared.enums import EpisodeType, SeedMatchMethod
     from shared.models.schemas import EpisodeMetadata
 
+    worker_session_id = infer_integration_test_id(prompt, str(session_id))
+    if not worker_session_id:
+        worker_session_id = str(session_id)
+
     session_factory = get_sessionmaker()
     async with session_factory() as db:
         metadata = EpisodeMetadata(
@@ -1394,6 +1549,7 @@ async def run_generation_session(
             task=prompt,
             session_id=str(session_id),
         )
+        metadata.worker_session_id = worker_session_id
         episode = Episode(
             id=session_id,
             task=prompt,
@@ -1414,6 +1570,7 @@ async def run_generation_session(
 
     initial_state = BenchmarkGeneratorState(
         session=session,
+        worker_session_id=worker_session_id,
         episode_id=str(session_id),
         current_script="",
         simulation_result=None,
@@ -1432,16 +1589,20 @@ async def run_generation_session(
 
         worker_client = WorkerClient(
             base_url=global_settings.worker_light_url,
-            session_id=str(session_id),
+            session_id=worker_session_id,
             heavy_url=global_settings.worker_heavy_url,
         )
         try:
             middleware = RemoteFilesystemMiddleware(
-                worker_client, agent_role=AgentName.BENCHMARK_PLANNER
+                worker_client,
+                agent_role=AgentName.BENCHMARK_PLANNER,
+                episode_id=str(session_id),
             )
             backend = RemoteFilesystemBackend(middleware)
             await initialize_agent_files(
-                backend, agent_name=AgentName.BENCHMARK_PLANNER
+                backend,
+                agent_name=AgentName.BENCHMARK_PLANNER,
+                overwrite=True,
             )
         finally:
             await worker_client.aclose()
@@ -1498,7 +1659,9 @@ async def run_generation_session(
             asyncio.create_task(_auto_continue_planned_session(session_id))
 
     # 4. Final Asset Persistence
-    await _persist_session_assets(final_state, session_id)
+    await _persist_session_assets(
+        final_state, session_id, final_state.worker_session_id
+    )
 
     # 5. Final status update only after assets are synced.
     await _finalize_episode_terminal_status(session_id, final_state.session.status)
@@ -1512,7 +1675,9 @@ async def run_generation_session(
 
 
 async def _persist_session_assets(
-    final_state: BenchmarkGeneratorState, session_id: uuid.UUID
+    final_state: BenchmarkGeneratorState,
+    session_id: uuid.UUID,
+    worker_session_id: str | None = None,
 ):
     """
     Helper to persist assets.
@@ -1549,10 +1714,15 @@ async def _persist_session_assets(
             logger.warning("final_asset_persistence_failed", error=str(e))
 
     # 2. Real-time file sync (Asset table + Broadcast)
-    # Allow this during PLANNED (pause) or ACCEPTED (completion)
+    # Allow this during PLANNED (pause), REJECTED (review decision persisted),
+    # or ACCEPTED (completion). Rejected benchmark plan reviews still need the
+    # latest revision render bundle and stage-specific review YAML surfaced as
+    # episode assets for later inspection.
     if final_state.session.status not in (
         SessionStatus.ACCEPTED,
         SessionStatus.PLANNED,
+        SessionStatus.REJECTED,
+        SessionStatus.FAILED,
     ):
         return
 
@@ -1564,10 +1734,15 @@ async def _persist_session_assets(
         from controller.config.settings import settings as global_settings
 
         worker_light_url = global_settings.worker_light_url
+        effective_worker_session_id = (
+            worker_session_id
+            or final_state.worker_session_id
+            or str(session_id)
+        )
         async with httpx.AsyncClient() as http_client:
             client = WorkerClient(
                 base_url=worker_light_url,
-                session_id=str(session_id),
+                session_id=effective_worker_session_id,
                 http_client=http_client,
                 heavy_url=global_settings.worker_heavy_url,
             )
@@ -1704,6 +1879,37 @@ async def _persist_session_assets(
 
             await sync_workspace_review_dir()
 
+            # Validation and simulation results can live under workspace/ in
+            # benchmark-reviewer rejection paths. Surface them explicitly so the
+            # episode asset list remains complete even when they are not copied to
+            # the session root.
+            for workspace_rel_path in (
+                "workspace/validation_results.json",
+                "workspace/simulation_result.json",
+            ):
+                try:
+                    if not await asyncio.wait_for(
+                        client.exists(
+                            workspace_rel_path, bypass_agent_permissions=True
+                        ),
+                        timeout=5.0,
+                    ):
+                        continue
+                    workspace_content = await asyncio.wait_for(
+                        client.read_file(
+                            workspace_rel_path, bypass_agent_permissions=True
+                        ),
+                        timeout=2.0,
+                    )
+                    await asyncio.wait_for(
+                        broadcast_file_update(
+                            str(session_id), workspace_rel_path, workspace_content
+                        ),
+                        timeout=2.0,
+                    )
+                except Exception:
+                    continue
+
             # .manifests is system-owned metadata and may be denied via role policy
             # through the routed backend. Read it directly through WorkerClient so
             # reviewer manifests are still surfaced as episode assets.
@@ -1800,6 +2006,7 @@ async def _update_episode_persistence(
     terminal_reason: TerminalReason | None = None,
     failure_class: FailureClass | None = None,
     entry_validation_metadata: dict[str, Any] | None = None,
+    worker_session_id: str | None = None,
 ):
     """Updates the Episode in DB for real-time monitoring."""
     from controller.persistence.models import Episode
@@ -1860,8 +2067,17 @@ async def _update_episode_persistence(
             metadata.plan = plan.model_dump() if hasattr(plan, "model_dump") else plan
             episode.metadata_vars = metadata.model_dump()
             # Prefer real persisted session files when available.
-            plan_md = await _read_session_markdown(session_id, "plan.md")
-            journal_md = await _read_session_markdown(session_id, "journal.md")
+            effective_worker_session_id = (
+                worker_session_id
+                or str(metadata.additional_info.get("worker_session_id") or "")
+                or str(session_id)
+            )
+            plan_md = await _read_session_markdown(
+                effective_worker_session_id, "plan.md"
+            )
+            journal_md = await _read_session_markdown(
+                effective_worker_session_id, "journal.md"
+            )
 
             if plan_md:
                 episode.plan = plan_md
@@ -1979,6 +2195,11 @@ async def continue_generation_session(
                 restored_plan = RandomizationStrategy.model_validate(metadata.plan)
 
         # Reconstruct session with status 'EXECUTING' so define_graph routes to 'coder'
+        worker_session_id = (
+            metadata.worker_session_id
+            or str((metadata.additional_info or {}).get("worker_session_id") or "")
+            or str(session_id)
+        )
         session = GenerationSession(
             session_id=session_id,
             prompt=prompt,
@@ -1995,6 +2216,7 @@ async def continue_generation_session(
 
     initial_state = BenchmarkGeneratorState(
         session=session,
+        worker_session_id=worker_session_id,
         episode_id=str(session_id),
         current_script="",
         simulation_result=None,
@@ -2014,7 +2236,9 @@ async def continue_generation_session(
             app, initial_state, session_id, prompt
         )
 
-        await _persist_session_assets(final_state, session_id)
+        await _persist_session_assets(
+            final_state, session_id, final_state.worker_session_id
+        )
         await _finalize_episode_terminal_status(session_id, final_state.session.status)
 
         return final_state

@@ -1,15 +1,111 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from controller.clients.worker import WorkerClient
-from shared.enums import AgentName
-from shared.models.schemas import PlannerSubmissionResult
+from shared.enums import AgentName, BenchmarkRefusalReason
+from pydantic import BaseModel, Field
+from shared.models.schemas import (
+    AssemblyDefinition,
+    BenchmarkDefinition,
+    PlannerSubmissionResult,
+)
 from shared.simulation.schemas import CustomObjectives, RandomizationStrategy
 from worker_heavy.utils.file_validation import (
+    validate_assembly_definition_yaml,
+    validate_benchmark_assembly_motion_contract,
     validate_benchmark_definition_yaml,
     validate_node_output,
 )
+
+
+class BenchmarkPlanReviewerEvidence(BaseModel):
+    """Structured evidence for benchmark plan solvability review."""
+
+    session_id: str | None = None
+    review_manifest_path: str | None = None
+    review_manifest_revision: str | None = None
+    review_manifest_script_sha256: str | None = None
+    render_paths: list[str] = Field(default_factory=list)
+    render_count: int = 0
+    deterministic_errors: list[str] = Field(default_factory=list)
+    refusal_reason: BenchmarkRefusalReason | None = None
+    solvability_summary: str = ""
+    latest_revision_verified: bool = False
+
+    def to_prompt_text(self) -> str:
+        """Render the evidence as compact JSON for prompt injection."""
+        return self.model_dump_json(indent=2, exclude_none=True)
+
+
+def extract_benchmark_refusal_reason(
+    text: str | None,
+) -> BenchmarkRefusalReason | None:
+    """Return the first benchmark refusal token present in a text blob."""
+    normalized = (text or "").upper()
+    for reason in BenchmarkRefusalReason:
+        if reason.value in normalized:
+            return reason
+    return None
+
+
+def _validate_benchmark_motion_visibility(
+    *,
+    artifacts: dict[str, str],
+    session_id: str | None = None,
+) -> list[str]:
+    """Validate benchmark motion facts from structured planner artifacts."""
+    plan_text = artifacts.get("plan.md")
+    todo_text = artifacts.get("todo.md")
+    benchmark_definition_text = artifacts.get("benchmark_definition.yaml")
+    benchmark_assembly_definition_text = artifacts.get(
+        "benchmark_assembly_definition.yaml"
+    )
+    if (
+        not benchmark_definition_text
+        or not benchmark_assembly_definition_text
+        or not plan_text
+        or not todo_text
+    ):
+        return []
+
+    is_valid, benchmark_definition_or_errors = validate_benchmark_definition_yaml(
+        benchmark_definition_text,
+        session_id=session_id,
+    )
+    if not is_valid:
+        return [
+            f"planner_semantic: {message}"
+            for message in benchmark_definition_or_errors
+        ]
+    benchmark_definition = benchmark_definition_or_errors
+    if not isinstance(benchmark_definition, BenchmarkDefinition):
+        return [
+            "planner_semantic: benchmark_definition.yaml did not parse as BenchmarkDefinition"
+        ]
+
+    is_valid, assembly_definition_or_errors = validate_assembly_definition_yaml(
+        benchmark_assembly_definition_text,
+        session_id=session_id,
+    )
+    if not is_valid:
+        return [
+            f"planner_semantic: {message}"
+            for message in assembly_definition_or_errors
+        ]
+    assembly_definition = assembly_definition_or_errors
+    if not isinstance(assembly_definition, AssemblyDefinition):
+        return [
+            "planner_semantic: benchmark_assembly_definition.yaml did not parse as AssemblyDefinition"
+        ]
+
+    return validate_benchmark_assembly_motion_contract(
+        benchmark_definition=benchmark_definition,
+        assembly_definition=assembly_definition,
+        plan_text=plan_text,
+        todo_text=todo_text,
+    )
 
 
 def validate_benchmark_planner_handoff_payload(
@@ -32,6 +128,12 @@ def validate_benchmark_planner_handoff_payload(
         )
         if not is_valid:
             errors.extend([f"planner_structural: {msg}" for msg in structural_errors])
+
+    motion_errors = _validate_benchmark_motion_visibility(
+        artifacts=artifacts,
+        session_id=session_id,
+    )
+    errors.extend([f"planner_semantic: {message}" for message in motion_errors])
 
     objectives_text = artifacts.get("benchmark_definition.yaml")
     if objectives_text:
@@ -179,3 +281,63 @@ def extract_custom_objectives_from_state(state: Any) -> CustomObjectives | None:
         return CustomObjectives.model_validate(raw)
     except Exception:
         return None
+
+
+def _is_static_preview_render(path: str) -> bool:
+    suffix = Path(path).suffix.lower()
+    return suffix in {".png", ".jpg", ".jpeg"}
+
+
+def build_benchmark_plan_reviewer_evidence(
+    *,
+    artifacts: dict[str, str],
+    session_id: str | None = None,
+    render_paths: list[str] | None = None,
+    review_manifest_path: str | None = None,
+    review_manifest_revision: str | None = None,
+    review_manifest_script_sha256: str | None = None,
+    latest_revision_verified: bool = False,
+) -> BenchmarkPlanReviewerEvidence:
+    """Summarize benchmark plan review evidence using deterministic validators."""
+    validation_errors = validate_benchmark_planner_handoff_payload(
+        artifacts=artifacts,
+        session_id=session_id,
+        require_submission=False,
+        require_structured_plan=False,
+    )
+    normalized_render_paths = sorted(
+        {
+            path.strip()
+            for path in (render_paths or [])
+            if path and _is_static_preview_render(path)
+        }
+    )
+    joined_errors = "; ".join(validation_errors)
+    refusal_reason = extract_benchmark_refusal_reason(joined_errors)
+    if validation_errors:
+        solvability_summary = (
+            "deterministic solvability checks failed: " + "; ".join(validation_errors)
+        )
+    elif normalized_render_paths:
+        solvability_summary = (
+            "deterministic solvability checks passed; inspect the latest revision "
+            "render evidence before approving or rejecting."
+        )
+    else:
+        solvability_summary = (
+            "deterministic solvability checks passed and no render images were "
+            "recorded for the latest revision."
+        )
+
+    return BenchmarkPlanReviewerEvidence(
+        session_id=session_id,
+        review_manifest_path=review_manifest_path,
+        review_manifest_revision=review_manifest_revision,
+        review_manifest_script_sha256=review_manifest_script_sha256,
+        render_paths=normalized_render_paths,
+        render_count=len(normalized_render_paths),
+        deterministic_errors=list(dict.fromkeys(validation_errors)),
+        refusal_reason=refusal_reason,
+        solvability_summary=solvability_summary,
+        latest_revision_verified=latest_revision_verified,
+    )

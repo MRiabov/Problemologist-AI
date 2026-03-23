@@ -89,7 +89,9 @@ class SharedNodeContext:
             )
 
         if not fs:
-            fs = RemoteFilesystemMiddleware(worker_client, agent_role=agent_role)
+            fs = RemoteFilesystemMiddleware(
+                worker_client, agent_role=agent_role, episode_id=eid
+            )
 
         request_config = settings.resolve_dspy_lm_request_config(settings.llm_model)
         if settings.is_integration_test:
@@ -158,7 +160,9 @@ class BaseNode:
             and isinstance(result, MediaInspectionResult)
             and result.media_kind == "image"
         ):
-            self._inspected_media_paths.append(result.path)
+            self._inspected_media_paths.append(
+                self._normalize_inspected_media_path(result.path)
+            )
 
     def _used_tool(self, tool_name: str) -> bool:
         return self._tool_usage_counts.get(tool_name, 0) > 0
@@ -231,9 +235,14 @@ class BaseNode:
             sort_keys=False,
             allow_unicode=False,
         )
+        summary = (
+            f"{review.decision.value}: {reason}"
+            if reason
+            else f"{review.decision.value}: (no reason provided)"
+        )
         comments_content = yaml.safe_dump(
             {
-                "summary": reason or "(no reason provided)",
+                "summary": summary,
                 "comments": comments,
                 "required_fixes": [
                     fix.strip()
@@ -355,6 +364,13 @@ class BaseNode:
     @staticmethod
     def _is_image_media_path(path: str) -> bool:
         return path.lower().endswith((".png", ".jpg", ".jpeg"))
+
+    @staticmethod
+    def _normalize_inspected_media_path(path: str) -> str:
+        normalized = Path(path).as_posix()
+        if not normalized.startswith("/"):
+            normalized = f"/{normalized}"
+        return normalized
 
     async def _list_render_media_paths(self) -> list[str]:
         with suppress(Exception):

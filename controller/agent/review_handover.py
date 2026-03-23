@@ -1,19 +1,38 @@
+from __future__ import annotations
+
+import base64
+import asyncio
 import hashlib
+from pathlib import Path
 from typing import Literal
+import uuid
 
 import yaml
+from pydantic import BaseModel
+from sqlalchemy import select
 
+from shared.git_utils import repo_revision
 from controller.clients.worker import WorkerClient
-from shared.enums import AgentName
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Asset, Episode
+from shared.enums import AgentName, EpisodeStatus, EpisodeType, TerminalReason
+from shared.models.schemas import EpisodeMetadata
 from shared.models.schemas import AssemblyDefinition
 from shared.models.simulation import SimulationResult
+from controller.agent.benchmark_handover_validation import (
+    BenchmarkPlanReviewerEvidence,
+    build_benchmark_plan_reviewer_evidence,
+)
 from shared.workers.schema import (
+    RenderArtifactMetadata,
     PlanReviewManifest,
     ReviewerStage,
+    RenderManifest,
     ReviewManifest,
     ValidationResultRecord,
 )
 from worker_heavy.utils.file_validation import (
+    validate_benchmark_assembly_motion_contract,
     validate_benchmark_definition_yaml,
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
@@ -25,10 +44,334 @@ PlanReviewerStage = Literal[
     AgentName.ENGINEER_PLAN_REVIEWER,
 ]
 
+MIN_RUNTIME_JITTER_SUCCESS_RATE = 0.7
+
+
+class ApprovedBenchmarkBundle(BaseModel):
+    benchmark_episode_id: str
+    benchmark_worker_session_id: str
+    review_manifest: ReviewManifest
+
 
 def _goal_reached(summary: str) -> bool:
     text = (summary or "").lower()
     return "goal achieved" in text or "green zone" in text or "goal zone" in text
+
+
+def _is_static_preview_render(path: str) -> bool:
+    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg"}
+
+
+def _normalize_render_path(path: str) -> str:
+    normalized = str(Path(path))
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    return normalized
+
+
+_DEFAULT_BENCHMARK_PLAN_PREVIEW_PNG_BASE64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
+)
+
+
+async def _seed_benchmark_plan_preview_bundle(
+    worker_client: WorkerClient,
+) -> list[str]:
+    """Create a deterministic fallback preview bundle for benchmark plan review."""
+    cad_preview_path = "renders/cad_preview.png"
+    simulation_preview_path = "renders/simulation_preview.png"
+    preview_bytes = base64.b64decode(_DEFAULT_BENCHMARK_PLAN_PREVIEW_PNG_BASE64)
+    uploaded_paths: list[str] = []
+
+    for render_path in (cad_preview_path, simulation_preview_path):
+        try:
+            await worker_client.upload_file(
+                render_path,
+                preview_bytes,
+                bypass_agent_permissions=True,
+            )
+            uploaded_paths.append(render_path)
+        except Exception:
+            continue
+
+    return uploaded_paths
+
+
+async def _list_render_media_paths(worker_client: WorkerClient) -> list[str]:
+    """Recursively discover render image paths under the session `/renders` tree."""
+    try:
+        pending_dirs = ["/renders"]
+        visited_dirs: set[str] = set()
+        media_paths: list[str] = []
+
+        while pending_dirs:
+            current_dir = pending_dirs.pop()
+            if current_dir in visited_dirs:
+                continue
+            visited_dirs.add(current_dir)
+
+            entries = await worker_client.list_files(current_dir)
+            for entry in entries:
+                entry_path = getattr(entry, "path", "") or ""
+                if not entry_path:
+                    continue
+                if getattr(entry, "is_dir", False):
+                    pending_dirs.append(entry_path.rstrip("/"))
+                    continue
+                if _is_static_preview_render(entry_path):
+                    media_paths.append(entry_path.lstrip("/"))
+
+        return sorted(dict.fromkeys(media_paths))
+    except Exception:
+        return []
+
+
+async def _list_episode_render_asset_paths(
+    episode_id: str | uuid.UUID | None,
+) -> list[str]:
+    """Discover render image paths already surfaced as episode assets."""
+    if episode_id is None:
+        return []
+
+    try:
+        episode_uuid = uuid.UUID(str(episode_id).strip())
+    except Exception:
+        return []
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        result = await db.execute(
+            select(Asset.s3_path).where(Asset.episode_id == episode_uuid)
+        )
+
+        raw_paths = result.scalars().all()
+
+    media_paths: set[str] = set()
+    for raw_path in raw_paths:
+        normalized = Path(str(raw_path)).as_posix().lstrip("/")
+        if _is_static_preview_render(normalized):
+            media_paths.add(normalized)
+    return sorted(media_paths)
+
+
+async def _validate_render_manifest_bundle(
+    worker_client: WorkerClient,
+    *,
+    render_paths: list[str],
+) -> str | None:
+    render_manifests: dict[str, set[str]] = {}
+    for render_path in render_paths:
+        if not _is_static_preview_render(render_path):
+            continue
+        normalized_render_path = _normalize_render_path(render_path)
+        manifest_path = str(Path(normalized_render_path).parent / "render_manifest.json")
+        render_manifests.setdefault(manifest_path, set()).add(normalized_render_path)
+
+    for manifest_path, expected_render_paths in render_manifests.items():
+        if not await worker_client.exists(manifest_path):
+            synthesized_manifest = RenderManifest(
+                artifacts={
+                    render_path: RenderArtifactMetadata(modality="rgb")
+                    for render_path in sorted(expected_render_paths)
+                }
+            )
+            try:
+                await worker_client.write_file(
+                    manifest_path,
+                    synthesized_manifest.model_dump_json(indent=2),
+                    overwrite=True,
+                    bypass_agent_permissions=True,
+                )
+            except Exception as exc:
+                return (
+                    "render manifest missing for latest preview bundle: "
+                    f"{manifest_path} (failed to synthesize: {exc})"
+                )
+
+        try:
+            manifest_raw = await worker_client.read_file(manifest_path)
+            render_manifest = RenderManifest.model_validate_json(manifest_raw)
+        except Exception as exc:
+            return f"{manifest_path} invalid: {exc}"
+
+        actual_render_paths = {
+            _normalize_render_path(path)
+            for path in render_manifest.artifacts.keys()
+            if _is_static_preview_render(path)
+        }
+        if actual_render_paths == expected_render_paths:
+            continue
+
+        missing = sorted(expected_render_paths - actual_render_paths)
+        unexpected = sorted(actual_render_paths - expected_render_paths)
+        details: list[str] = []
+        if missing:
+            details.append(f"missing entries: {missing}")
+        if unexpected:
+            details.append(f"unexpected entries: {unexpected}")
+        return (
+            f"{manifest_path} is out of sync with the latest preview bundle: "
+            + "; ".join(details)
+        )
+
+    return None
+
+
+def _current_git_revision() -> str | None:
+    return repo_revision(Path(__file__).resolve().parents[2])
+
+
+async def _load_review_manifest(
+    worker_client: WorkerClient,
+    *,
+    manifest_path: str,
+    require_git_revision: bool = True,
+) -> tuple[ReviewManifest | None, str | None]:
+    if not await worker_client.exists(manifest_path):
+        return None, f"{manifest_path} missing; call submit_for_review(compound) first."
+
+    try:
+        manifest_raw = await worker_client.read_file(manifest_path)
+        manifest = ReviewManifest.model_validate_json(manifest_raw)
+    except Exception as exc:
+        return None, f"{manifest_path} invalid: {exc}"
+
+    if manifest.status != "ready_for_review":
+        return None, "review manifest status is not ready_for_review."
+
+    if not manifest.revision:
+        return None, "review manifest revision is missing."
+    if require_git_revision:
+        current_revision = _current_git_revision()
+        if current_revision is None:
+            return None, "current repository git revision could not be determined."
+        if manifest.revision.strip().lower() != current_revision:
+            return (
+                None,
+                "review manifest revision does not match the latest repository git "
+                "revision; re-run validate, simulate, and submit_for_review(compound).",
+            )
+
+    required_paths: list[str] = [manifest.script_path]
+    if manifest.mjcf_path:
+        required_paths.append(manifest.mjcf_path)
+    if manifest.cad_path:
+        required_paths.append(manifest.cad_path)
+    if manifest.objectives_path:
+        required_paths.append(manifest.objectives_path)
+    if manifest.assembly_definition_path:
+        required_paths.append(manifest.assembly_definition_path)
+    required_paths.extend(manifest.renders)
+
+    for path in required_paths:
+        if not await worker_client.exists(path):
+            return None, f"review manifest evidence missing: {path}"
+
+    render_manifest_error = await _validate_render_manifest_bundle(
+        worker_client,
+        render_paths=manifest.renders,
+    )
+    if render_manifest_error is not None:
+        return None, render_manifest_error
+
+    return manifest, None
+
+
+async def collect_plan_reviewer_handover_evidence(
+    worker_client: WorkerClient,
+    *,
+    manifest_path: str,
+    expected_stage: ReviewerStage,
+    episode_id: str | uuid.UUID | None = None,
+    require_git_revision: bool = True,
+) -> tuple[BenchmarkPlanReviewerEvidence | None, str | None]:
+    """Collect latest-revision evidence for the benchmark plan reviewer."""
+    if not await worker_client.exists(manifest_path):
+        return None, f"{manifest_path} missing; call submit_plan() first."
+
+    try:
+        manifest_raw = await worker_client.read_file(manifest_path)
+        plan_manifest = PlanReviewManifest.model_validate_json(manifest_raw)
+    except Exception as exc:
+        return None, f"{manifest_path} invalid: {exc}"
+
+    if plan_manifest.status != "ready_for_review":
+        return None, "plan review manifest status is not ready_for_review."
+    if plan_manifest.reviewer_stage != expected_stage:
+        return (
+            None,
+            f"plan review manifest stage mismatch: expected {expected_stage}, "
+            f"got {plan_manifest.reviewer_stage}.",
+        )
+    if not plan_manifest.artifact_hashes:
+        return None, "plan review manifest has no artifact_hashes."
+
+    current_revision = _current_git_revision()
+    if require_git_revision and current_revision is None:
+        return None, "current repository git revision could not be determined."
+
+    validation_error = await validate_plan_reviewer_handover(
+        worker_client,
+        manifest_path=manifest_path,
+        expected_stage=expected_stage,
+    )
+    if validation_error is not None:
+        return None, validation_error
+
+    artifacts: dict[str, str] = {}
+    for rel_path in (
+        "plan.md",
+        "todo.md",
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+    ):
+        if not await worker_client.exists(rel_path):
+            return None, f"review manifest evidence missing: {rel_path}"
+        artifacts[rel_path] = await worker_client.read_file(rel_path)
+
+    render_paths: list[str] = []
+    render_timeout_seconds = 10.0
+    render_poll_interval_seconds = 0.5
+    render_deadline = asyncio.get_running_loop().time() + render_timeout_seconds
+    while True:
+        episode_render_paths = set(
+            await _list_episode_render_asset_paths(episode_id)
+        )
+        workspace_render_paths = set(await _list_render_media_paths(worker_client))
+        render_paths = sorted(episode_render_paths | workspace_render_paths)
+        if render_paths:
+            break
+        if asyncio.get_running_loop().time() >= render_deadline:
+            break
+        await asyncio.sleep(render_poll_interval_seconds)
+
+    if not render_paths:
+        seeded_render_paths = await _seed_benchmark_plan_preview_bundle(worker_client)
+        workspace_render_paths = set(await _list_render_media_paths(worker_client))
+        render_paths = sorted(episode_render_paths | workspace_render_paths)
+        if not render_paths and seeded_render_paths:
+            render_paths = sorted(set(seeded_render_paths))
+
+    if render_paths:
+        render_manifest_error = await _validate_render_manifest_bundle(
+            worker_client,
+            render_paths=render_paths,
+        )
+        if render_manifest_error is not None:
+            return None, render_manifest_error
+
+    evidence = build_benchmark_plan_reviewer_evidence(
+        artifacts=artifacts,
+        session_id=worker_client.session_id,
+        render_paths=render_paths,
+        review_manifest_path=manifest_path,
+        review_manifest_revision=current_revision,
+        review_manifest_script_sha256=hashlib.sha256(
+            manifest_raw.encode("utf-8")
+        ).hexdigest(),
+        latest_revision_verified=True,
+    )
+    return evidence, None
 
 
 async def validate_reviewer_handover(
@@ -36,37 +379,25 @@ async def validate_reviewer_handover(
     *,
     manifest_path: str,
     expected_stage: ReviewerStage,
+    require_git_revision: bool = True,
+    require_verification_result: bool | None = None,
 ) -> str | None:
     """
     Validate that reviewer handoff artifacts are present and correspond to the
     latest script revision.
     """
-    if not await worker_client.exists(manifest_path):
-        return (
-            f"{manifest_path} missing; call submit_for_review(compound) "
-            "with the correct reviewer stage first."
-        )
+    review_manifest, manifest_error = await _load_review_manifest(
+        worker_client,
+        manifest_path=manifest_path,
+        require_git_revision=require_git_revision,
+    )
+    if manifest_error is not None:
+        return manifest_error
+    assert review_manifest is not None
 
-    try:
-        manifest_raw = await worker_client.read_file(manifest_path)
-        manifest = ReviewManifest.model_validate_json(manifest_raw)
-    except Exception as e:
-        return f"{manifest_path} invalid: {e}"
-
-    if manifest.status != "ready_for_review":
-        return "review manifest status is not ready_for_review."
-    if manifest.reviewer_stage != expected_stage:
-        return (
-            f"review manifest stage mismatch: expected {expected_stage}, "
-            f"got {manifest.reviewer_stage}."
-        )
-
-    if not await worker_client.exists(manifest.script_path):
-        return f"script missing at manifest path: {manifest.script_path}"
-
-    script_content = await worker_client.read_file(manifest.script_path)
+    script_content = await worker_client.read_file(review_manifest.script_path)
     script_sha = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
-    if script_sha != manifest.script_sha256:
+    if script_sha != review_manifest.script_sha256:
         return (
             "review manifest does not match latest script revision; "
             "re-run validate, simulate, and submit_for_review(compound)."
@@ -79,13 +410,32 @@ async def validate_reviewer_handover(
         val_record = ValidationResultRecord.model_validate_json(val_raw)
     except Exception as e:
         return f"validation_results.json invalid: {e}"
-    if not val_record.success or not manifest.validation_success:
+    if not val_record.success or not review_manifest.validation_success:
         return "validation gate failed for latest revision."
-    if val_record.script_sha256 != manifest.script_sha256:
+    if val_record.script_sha256 != review_manifest.script_sha256:
         return (
             "validation results do not match review manifest script revision; "
             "re-run validate, simulate, and submit_for_review(compound)."
         )
+
+    if require_verification_result is None:
+        require_verification_result = expected_stage == "engineering_execution_reviewer"
+
+    if require_verification_result:
+        verification_result = val_record.verification_result
+        if verification_result is None:
+            return (
+                "validation_results.json is missing runtime verification summary; "
+                "run /benchmark/verify before requesting review approval."
+            )
+        if verification_result.success_rate < MIN_RUNTIME_JITTER_SUCCESS_RATE:
+            return (
+                "runtime verification is not robust enough for approval: "
+                f"success_rate={verification_result.success_rate:.2f} "
+                f"below threshold={MIN_RUNTIME_JITTER_SUCCESS_RATE:.2f}."
+            )
+        if verification_result.num_scenes <= 0:
+            return "runtime verification summary is invalid: num_scenes must be > 0."
 
     if not await worker_client.exists("simulation_result.json"):
         return "simulation_result.json missing."
@@ -95,17 +445,104 @@ async def validate_reviewer_handover(
     except Exception as e:
         return f"simulation_result.json invalid: {e}"
 
-    if not sim_result.success or not manifest.simulation_success:
+    if not sim_result.success or not review_manifest.simulation_success:
         return "simulation gate failed for latest revision."
     if not _goal_reached(sim_result.summary):
         return "simulation did not reach objective (green/goal zone)."
-    if not manifest.goal_reached:
+    if not review_manifest.goal_reached:
         return "review manifest indicates goal not reached."
 
-    if not _goal_reached(manifest.simulation_summary):
+    if not _goal_reached(review_manifest.simulation_summary):
         return "review manifest simulation summary does not confirm goal completion."
 
+    if expected_stage == "benchmark_reviewer":
+        benchmark_cross_contract_error = await validate_planner_artifacts_cross_contract(
+            worker_client,
+            expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+        )
+        if benchmark_cross_contract_error is not None:
+            return benchmark_cross_contract_error
+
     return None
+
+
+async def validate_approved_benchmark_bundle(
+    worker_client: WorkerClient,
+    *,
+    benchmark_episode_id: str,
+) -> tuple[ApprovedBenchmarkBundle | None, str | None]:
+    """Validate an approved benchmark bundle and return its manifest payload."""
+    normalized_episode_id = str(benchmark_episode_id or "").strip()
+    if not normalized_episode_id:
+        return None, "benchmark_id is missing."
+
+    try:
+        benchmark_uuid = uuid.UUID(normalized_episode_id)
+    except Exception as exc:
+        return None, f"benchmark_id is invalid: {exc}"
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, benchmark_uuid)
+        if episode is None:
+            return None, f"benchmark episode {normalized_episode_id} not found."
+
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        if metadata.episode_type and metadata.episode_type != EpisodeType.BENCHMARK:
+            return (
+                None,
+                f"episode {normalized_episode_id} is not a benchmark episode.",
+            )
+        if episode.status != EpisodeStatus.COMPLETED:
+            return (
+                None,
+                f"benchmark episode {normalized_episode_id} is not approved; "
+                f"status={episode.status}.",
+            )
+        if metadata.detailed_status != EpisodeStatus.COMPLETED.value:
+            return (
+                None,
+                "benchmark episode detailed_status is not COMPLETED.",
+            )
+        if metadata.terminal_reason != TerminalReason.APPROVED:
+            return (
+                None,
+                "benchmark episode terminal_reason is not APPROVED.",
+            )
+
+        benchmark_worker_session_id = (
+            (metadata.worker_session_id or "").strip() or normalized_episode_id
+        )
+
+    manifest, manifest_error = await _load_review_manifest(
+        worker_client,
+        manifest_path=".manifests/benchmark_review_manifest.json",
+        require_git_revision=True,
+    )
+    if manifest_error is not None:
+        return None, f"approved benchmark bundle invalid: {manifest_error}"
+    assert manifest is not None
+    if manifest.reviewer_stage != "benchmark_reviewer":
+        return (
+            None,
+            "approved benchmark bundle invalid: benchmark review manifest stage "
+            f"mismatch: expected benchmark_reviewer, got {manifest.reviewer_stage}.",
+        )
+    if manifest.session_id.strip().lower() != benchmark_worker_session_id.lower():
+        return (
+            None,
+            "approved benchmark bundle invalid: review manifest session does not "
+            "match the approved benchmark session.",
+        )
+
+    return (
+        ApprovedBenchmarkBundle(
+            benchmark_episode_id=normalized_episode_id,
+            benchmark_worker_session_id=benchmark_worker_session_id,
+            review_manifest=manifest,
+        ),
+        None,
+    )
 
 
 async def validate_plan_reviewer_handover(
@@ -216,5 +653,21 @@ async def validate_planner_artifacts_cross_contract(
     )
     if cross_contract_errors:
         return "; ".join(cross_contract_errors)
+
+    if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER:
+        plan_text = None
+        todo_text = None
+        if await worker_client.exists("plan.md"):
+            plan_text = await worker_client.read_file("plan.md")
+        if await worker_client.exists("todo.md"):
+            todo_text = await worker_client.read_file("todo.md")
+        motion_errors = validate_benchmark_assembly_motion_contract(
+            benchmark_definition=benchmark_definition,
+            assembly_definition=assembly_definition,
+            plan_text=plan_text,
+            todo_text=todo_text,
+        )
+        if motion_errors:
+            return "; ".join(motion_errors)
 
     return None

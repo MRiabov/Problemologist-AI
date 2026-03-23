@@ -6,6 +6,7 @@ import re
 import time
 from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import dspy
@@ -43,8 +44,14 @@ from shared.simulation.schemas import (
 from shared.type_checking import type_check
 from shared.workers.schema import SimulationArtifacts, ValidationResultRecord
 
+from ..benchmark_handover_validation import (
+    BenchmarkPlanReviewerEvidence,
+)
 from ..nodes.cots_search import COTSSearchNode
-from ..review_handover import validate_reviewer_handover
+from ..review_handover import (
+    collect_plan_reviewer_handover_evidence,
+    validate_reviewer_handover,
+)
 from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
@@ -53,6 +60,13 @@ _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 BENCHMARK_DEFINITION_FILE = "benchmark_definition.yaml"
 SCRIPT_FILE = "script.py"
+
+
+def _benchmark_worker_session_id(state: BenchmarkGeneratorState) -> str:
+    worker_session_id = (state.worker_session_id or "").strip()
+    if worker_session_id:
+        return worker_session_id
+    return str(state.session.session_id)
 
 
 def extract_python_code(text: str) -> str:
@@ -82,6 +96,11 @@ class BenchmarkPlannerSignature(dspy.Signature):
     """
     Planner node for benchmark generation.
     Use tools to produce planner artifacts and call `submit_plan()` before `finish`.
+    Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be
+    spelled out in `plan.md` and `todo.md` with one explicit DOF axis,
+    reviewer-visible motion bounds/limits, and controller facts. Unsupported or
+    impossible benchmark setups must be rejected instead of brute-forcing
+    `submit_plan()`.
     Emit one tool step at a time (no multi-step batched transcripts).
     """
 
@@ -366,6 +385,9 @@ class BenchmarkPlannerNode(BaseNode):
             + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
             + "- In authored benchmark scripts, every top-level part label must be unique and must not be `environment` or start with `zone_` because the simulator reserves those names for the scene root and generated objective bodies.\n"
             + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric `constraints` and `totals` fields (do not delete template sections).\n"
+            + "- Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be explicit in both `plan.md` and `todo.md`; one moving fixture may expose at most one DOF axis, and the handoff must state reviewer-visible motion bounds/limits plus controller facts.\n"
+            + "- Hidden, unsupported, or over-actuated benchmark motion is a rejection condition, even if the scene still looks passive at a glance.\n"
+            + "- If the motion contract is impossible to explain explicitly, stop and revise the handoff instead of brute-forcing `submit_plan()`.\n"
             + "- Prefer schema-safe minimal assembly for planner handoff: use empty `manufactured_parts`, `cots_parts`, and `final_assembly` unless you can provide fully valid entries (e.g., `stock_bbox_mm` must be an object with `x/y/z`, and final assembly parts use `name/config`).\n"
             + "- Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.\n"
             + "- Do not use `cots_search` to price benchmark-owned fixtures or other benchmark context objects. Reserve pricing lookups for likely engineer-side solution parts, and if catalog search fails, stop retrying and use one heuristic estimate instead.\n"
@@ -988,13 +1010,12 @@ class BenchmarkPlannerNode(BaseNode):
 
 @type_check
 async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
         worker_light_url=worker_light_url,
-        session_id=session_id,
+        session_id=_benchmark_worker_session_id(state),
         episode_id=state.episode_id,
         agent_role=AgentName.BENCHMARK_PLANNER,
     )
@@ -1005,8 +1026,15 @@ async def planner_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorStat
 class BenchmarkPlanReviewerSignature(dspy.Signature):
     """
     Review the benchmark planning handoff before coding begins.
-    Inspect plan.md, todo.md, benchmark_definition.yaml, and benchmark_assembly_definition.yaml.
-    Reject plans that reference nonexistent objects or inconsistent planner artifacts.
+    Inspect plan.md, todo.md, benchmark_definition.yaml, benchmark_assembly_definition.yaml,
+    and the latest-revision solvability evidence before deciding.
+    Reject plans that reference nonexistent objects, hide benchmark-side motion,
+    rely on impossible or unsupported geometry, leave the goal obstructed or
+    unreachable, omit reviewer-visible motion bounds/controller facts, or
+    over-actuate a moving fixture beyond one explicit DOF axis.
+    When render images exist for the current revision, use inspect_media(path)
+    on the current revision's render paths during this review attempt; file
+    listing alone is not visual inspection.
     When done, use SUBMIT to provide the final review result.
     """
 
@@ -1015,6 +1043,7 @@ class BenchmarkPlanReviewerSignature(dspy.Signature):
     todo_md = dspy.InputField()
     benchmark_definition_yaml = dspy.InputField()
     benchmark_assembly_definition_yaml = dspy.InputField()
+    solvability_evidence = dspy.InputField()
     journal = dspy.InputField()
     review_feedback = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
@@ -1024,27 +1053,124 @@ class BenchmarkPlanReviewerSignature(dspy.Signature):
 class BenchmarkPlanReviewerNode(BaseNode):
     """Review benchmark planner artifacts before execution begins."""
 
-    async def _enforce_render_inspection_gate(
-        self, review: ReviewResult
-    ) -> ReviewResult:
-        if review.decision != ReviewDecision.APPROVED:
-            return review
-        if not await self._workspace_has_render_media():
-            return review
-        if self._used_tool("inspect_media"):
-            return review
-        fixes = list(review.required_fixes or [])
-        fixes.append(
-            "Inspect at least one render via inspect_media(path) before approving."
+    @staticmethod
+    def _normalize_render_path(path: str) -> str:
+        normalized = Path(path).as_posix()
+        if not normalized.startswith("/"):
+            normalized = f"/{normalized}"
+        return normalized
+
+    def _normalize_render_paths(self, render_paths: list[str]) -> list[str]:
+        return sorted(
+            dict.fromkeys(
+                self._normalize_render_path(path)
+                for path in render_paths
+                if path and path.strip()
+            )
         )
+
+    def _augment_review_checklist(
+        self,
+        review: ReviewResult,
+        evidence: BenchmarkPlanReviewerEvidence,
+        *,
+        inspected_render_paths: list[str],
+    ) -> ReviewResult:
+        policy = self._get_visual_inspection_policy(AgentName.BENCHMARK_PLAN_REVIEWER)
+        checklist = dict(review.checklist or {})
+        normalized_render_paths = self._normalize_render_paths(evidence.render_paths)
+        normalized_inspected_render_paths = self._normalize_render_paths(
+            inspected_render_paths
+        )
+        checklist.update(
+            {
+                "latest_revision_verified": bool(evidence.latest_revision_verified),
+                "review_manifest_revision": evidence.review_manifest_revision or "",
+                "review_manifest_script_sha256": (
+                    evidence.review_manifest_script_sha256 or ""
+                ),
+                "render_count": float(len(normalized_render_paths)),
+                "render_paths": ", ".join(normalized_render_paths),
+                "inspected_render_count": float(len(normalized_inspected_render_paths)),
+                "visual_inspection_min_images": float(policy.min_images),
+                "visual_inspection_satisfied": bool(
+                    len(normalized_inspected_render_paths) >= policy.min_images
+                ),
+                "deterministic_error_count": float(
+                    len(evidence.deterministic_errors)
+                ),
+                "deterministic_refusal_reason": (
+                    evidence.refusal_reason.value
+                    if evidence.refusal_reason is not None
+                    else "none"
+                ),
+            }
+        )
+        if evidence.solvability_summary:
+            checklist.setdefault("solvability_summary", evidence.solvability_summary)
+        return review.model_copy(update={"checklist": checklist})
+
+    async def _enforce_render_inspection_gate(
+        self,
+        review: ReviewResult,
+        evidence: BenchmarkPlanReviewerEvidence,
+    ) -> ReviewResult:
+        policy = self._get_visual_inspection_policy(AgentName.BENCHMARK_PLAN_REVIEWER)
+        if not policy.required:
+            return review
+
+        render_paths = self._normalize_render_paths(evidence.render_paths)
+        if not render_paths:
+            return review
+
+        inspected_render_paths = [
+            path
+            for path in render_paths
+            if path in set(self._inspected_media_paths)
+        ]
+        if len(set(inspected_render_paths)) >= policy.min_images:
+            return review
+
+        fixes = list(review.required_fixes or [])
+        render_examples = ", ".join(render_paths[: min(3, len(render_paths))])
+        fixes.append(
+            "Inspect at least "
+            f"{policy.min_images} current-revision render image(s) via "
+            f"inspect_media(path) before deciding. Latest revision render paths: "
+            f"{render_examples}."
+        )
+        checklist = dict(review.checklist or {})
+        checklist.update(
+            {
+                "latest_revision_verified": bool(evidence.latest_revision_verified),
+                "review_manifest_revision": evidence.review_manifest_revision or "",
+                "render_count": float(len(render_paths)),
+                "render_paths": ", ".join(render_paths),
+                "inspected_render_count": float(len(inspected_render_paths)),
+                "visual_inspection_min_images": float(policy.min_images),
+                "visual_inspection_satisfied": False,
+                "deterministic_error_count": float(
+                    len(evidence.deterministic_errors)
+                ),
+                "deterministic_refusal_reason": (
+                    evidence.refusal_reason.value
+                    if evidence.refusal_reason is not None
+                    else "none"
+                ),
+            }
+        )
+        if evidence.solvability_summary:
+            checklist.setdefault("solvability_summary", evidence.solvability_summary)
         return review.model_copy(
             update={
                 "decision": ReviewDecision.REJECT_PLAN,
                 "reason": (
-                    "Plan approval blocked: renders exist but the reviewer did not use "
-                    "inspect_media(path) to inspect visual evidence."
+                    "Plan review blocked: current-revision render evidence exists, "
+                    "but the reviewer did not inspect it with inspect_media(path) "
+                    "during this review attempt."
                 ),
                 "required_fixes": fixes,
+                "checklist": checklist,
             }
         )
 
@@ -1077,12 +1203,30 @@ class BenchmarkPlanReviewerNode(BaseNode):
                     )
                 )
 
+        evidence, evidence_error = await collect_plan_reviewer_handover_evidence(
+            self.ctx.worker_client,
+            manifest_path=".manifests/benchmark_plan_review_manifest.json",
+            expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+            episode_id=state.episode_id,
+        )
+        if evidence_error is not None:
+            state.review_decision = None
+            state.review_feedback = (
+                "Plan reviewer output invalid: failed to collect latest-revision "
+                f"solvability evidence: {evidence_error}"
+            )
+            state.journal += f"\n[Plan Reviewer] Failed: {evidence_error}"
+            return state
+        assert evidence is not None
+        solvability_evidence = evidence
+
         inputs = {
             "prompt": state.session.prompt,
             "plan_md": plan_md,
             "todo_md": todo_md,
             "benchmark_definition_yaml": benchmark_definition_yaml,
             "benchmark_assembly_definition_yaml": benchmark_assembly_definition_yaml,
+            "solvability_evidence": solvability_evidence.to_prompt_text(),
             "journal": state.journal,
             "review_feedback": state.review_feedback or "No feedback provided.",
         }
@@ -1131,7 +1275,25 @@ class BenchmarkPlanReviewerNode(BaseNode):
 
         try:
             review = ReviewResult.model_validate(prediction.review)
-            review = await self._enforce_render_inspection_gate(review)
+            normalized_inspected_media_paths = {
+                self._normalize_inspected_media_path(path)
+                for path in self._inspected_media_paths
+            }
+            inspected_render_paths = [
+                path
+                for path in solvability_evidence.render_paths
+                if self._normalize_render_path(path)
+                in normalized_inspected_media_paths
+            ]
+            review = self._augment_review_checklist(
+                review,
+                solvability_evidence,
+                inspected_render_paths=inspected_render_paths,
+            )
+            review = await self._enforce_render_inspection_gate(
+                review,
+                solvability_evidence,
+            )
             (
                 review_decision_path,
                 review_comments_path,
@@ -1152,6 +1314,12 @@ class BenchmarkPlanReviewerNode(BaseNode):
         if review.required_fixes:
             state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
         state.journal += (
+            "\n[Plan Reviewer Evidence] "
+            f"revision={solvability_evidence.review_manifest_revision or 'unknown'} "
+            f"renders={solvability_evidence.render_count} "
+            f"deterministic_errors={len(solvability_evidence.deterministic_errors)}"
+        )
+        state.journal += (
             f"\n[Plan Reviewer] {state.review_feedback}\n"
             f"Decision file: {review_decision_path}\n"
             f"Comments file: {review_comments_path}\n"
@@ -1165,6 +1333,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
                     reason=state.review_feedback,
                     evidence_stats={
                         "is_plan_review": True,
+                        "num_renders": solvability_evidence.render_count,
                         "review_decision_path": review_decision_path,
                         "review_comments_path": review_comments_path,
                     },
@@ -1180,13 +1349,12 @@ class BenchmarkPlanReviewerNode(BaseNode):
 
 @type_check
 async def plan_reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
         worker_light_url=worker_light_url,
-        session_id=session_id,
+        session_id=_benchmark_worker_session_id(state),
         episode_id=state.episode_id,
         agent_role=AgentName.BENCHMARK_PLAN_REVIEWER,
     )
@@ -1495,12 +1663,15 @@ class BenchmarkCoderNode(BaseNode):
                             self.ctx.worker_client,
                             manifest_path=".manifests/benchmark_review_manifest.json",
                             expected_stage="benchmark_reviewer",
+                            require_git_revision=True,
                         )
                         if handoff_err is None:
                             logger.info(
                                 "reusing_existing_benchmark_handover",
                                 session_id=session_id,
                             )
+                            state.session.status = SessionStatus.PLANNED
+                            state.review_feedback = None
                             return state
 
                         # Control-plane handoff submit is executed only after
@@ -1509,6 +1680,15 @@ class BenchmarkCoderNode(BaseNode):
                         submit_res = await self.ctx.worker_client.submit(
                             script_path=SCRIPT_FILE,
                             reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+                        )
+                        logger.info(
+                            "benchmark_coder_submit_result",
+                            session_id=session_id,
+                            success=getattr(submit_res, "success", None),
+                            message=getattr(submit_res, "message", None),
+                        )
+                        await self.ctx.worker_client._sync_handover_artifacts_to_light(
+                            submit_res
                         )
                         if not submit_res.success:
                             state.session.status = SessionStatus.REJECTED
@@ -1520,6 +1700,9 @@ class BenchmarkCoderNode(BaseNode):
                                 "reviewer_submission: "
                                 f"{submit_res.message or 'submit_for_review failed.'}"
                             )
+                        else:
+                            state.session.status = SessionStatus.PLANNED
+                            state.review_feedback = None
             except Exception as e:
                 # Cancellation during orchestration shutdown should not be recorded
                 # as a backend error-log regression.
@@ -1538,13 +1721,12 @@ class BenchmarkCoderNode(BaseNode):
 
 @type_check
 async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
         worker_light_url=worker_light_url,
-        session_id=session_id,
+        session_id=_benchmark_worker_session_id(state),
         episode_id=state.episode_id,
         agent_role=AgentName.BENCHMARK_CODER,
     )
@@ -1554,13 +1736,12 @@ async def coder_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
 
 @type_check
 async def cots_search_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
         worker_light_url=worker_light_url,
-        session_id=session_id,
+        session_id=_benchmark_worker_session_id(state),
         episode_id=state.episode_id,
         agent_role=AgentName.COTS_SEARCH,
     )
@@ -1659,13 +1840,12 @@ class BenchmarkSummarizerNode(BaseNode):
 
 @type_check
 async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
         worker_light_url=worker_light_url,
-        session_id=session_id,
+        session_id=_benchmark_worker_session_id(state),
         episode_id=state.episode_id,
         agent_role=AgentName.JOURNALLING_AGENT,
     )
@@ -1676,6 +1856,9 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
 class BenchmarkReviewerSignature(dspy.Signature):
     """
     Agentic review of the generated benchmark.
+    Reject hidden benchmark-side motion, unsupported motion, over-actuated
+    fixtures, missing bounds/controller facts, or any final scene that does not
+    clearly match the planner's explicit motion contract.
     You must use the provided tools to inspect the workspace.
     When done, use SUBMIT to provide the final review result.
     """
@@ -1851,6 +2034,7 @@ class BenchmarkReviewerNode(BaseNode):
             self.ctx.worker_client,
             manifest_path=".manifests/benchmark_review_manifest.json",
             expected_stage="benchmark_reviewer",
+            require_git_revision=True,
         )
         if handoff_err:
             return f"Benchmark reviewer blocked: {handoff_err}"
@@ -1859,13 +2043,12 @@ class BenchmarkReviewerNode(BaseNode):
 
 @type_check
 async def reviewer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorState:
-    session_id = str(state.session.session_id)
     from controller.config.settings import settings as global_settings
 
     worker_light_url = global_settings.worker_light_url
     ctx = SharedNodeContext.create(
         worker_light_url=worker_light_url,
-        session_id=session_id,
+        session_id=_benchmark_worker_session_id(state),
         episode_id=state.episode_id,
         agent_role=AgentName.BENCHMARK_REVIEWER,
     )

@@ -1,13 +1,19 @@
 import os
-import subprocess
 from hashlib import sha256
 from pathlib import Path
 
 import structlog
 from build123d import Compound, export_step
 
+from shared.git_utils import repo_revision
 from shared.models.simulation import SimulationResult
-from shared.workers.schema import ReviewerStage, ReviewManifest, ValidationResultRecord
+from shared.workers.schema import (
+    RenderArtifactMetadata,
+    RenderManifest,
+    ReviewerStage,
+    ReviewManifest,
+    ValidationResultRecord,
+)
 from worker_heavy.utils.dfm import validate_and_price_assembly
 from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
@@ -27,19 +33,87 @@ def _goal_reached(summary: str) -> bool:
     return "goal achieved" in s or "green zone" in s or "goal zone" in s
 
 
-def _latest_git_revision(cwd: Path) -> str | None:
-    try:
-        return (
-            subprocess.check_output(
-                ["git", "-C", str(cwd), "rev-parse", "HEAD"],
-                text=True,
-                stderr=subprocess.DEVNULL,
-            )
-            .strip()
-            .lower()
+def _is_static_preview_render(path: str) -> bool:
+    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg"}
+
+
+def _normalize_render_path(path: str) -> str:
+    normalized = str(Path(path))
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    return normalized
+
+
+def _validate_render_manifest_bundle(
+    *, renders_dir: Path, render_paths: list[str]
+) -> None:
+    expected_render_paths = {
+        _normalize_render_path(path)
+        for path in render_paths
+        if _is_static_preview_render(path)
+    }
+    if not expected_render_paths:
+        return
+
+    manifest_path = renders_dir / "render_manifest.json"
+    if not manifest_path.exists():
+        missing_render_files = sorted(
+            path
+            for path in expected_render_paths
+            if not (renders_dir.parent / path.lstrip("/")).exists()
         )
-    except Exception:
-        return None
+        if missing_render_files:
+            raise ValueError(
+                "latest preview bundle is missing render files: "
+                f"{missing_render_files}"
+            )
+
+        synthesized_manifest = RenderManifest(
+            artifacts={
+                path: RenderArtifactMetadata(modality="rgb")
+                for path in sorted(expected_render_paths)
+            }
+        )
+        manifest_path.write_text(
+            synthesized_manifest.model_dump_json(indent=2),
+            encoding="utf-8",
+        )
+        logger.info(
+            "render_manifest_synthesized_for_submit",
+            renders_dir=str(renders_dir),
+            render_count=len(expected_render_paths),
+        )
+
+    try:
+        render_manifest = RenderManifest.model_validate_json(
+            manifest_path.read_text(encoding="utf-8")
+        )
+    except Exception as exc:
+        raise ValueError(f"renders/render_manifest.json is invalid: {exc}") from exc
+
+    actual_render_paths = {
+        _normalize_render_path(path)
+        for path in render_manifest.artifacts.keys()
+        if _is_static_preview_render(path)
+    }
+    if actual_render_paths == expected_render_paths:
+        return
+
+    missing = sorted(expected_render_paths - actual_render_paths)
+    unexpected = sorted(actual_render_paths - expected_render_paths)
+    details: list[str] = []
+    if missing:
+        details.append(f"missing entries: {missing}")
+    if unexpected:
+        details.append(f"unexpected entries: {unexpected}")
+    raise ValueError(
+        "renders/render_manifest.json is out of sync with the latest preview bundle: "
+        + "; ".join(details)
+    )
+
+
+def _latest_git_revision(cwd: Path) -> str | None:
+    return repo_revision(cwd) or repo_revision(Path(__file__).resolve().parents[2])
 
 
 def _resolve_submission_assembly_definition(
@@ -94,7 +168,7 @@ def submit_for_review(
             plan_content, plan_type=plan_type, session_id=session_id
         )
         if not is_valid:
-            logger.error(
+            logger.warning(
                 "plan_md_invalid",
                 plan_type=plan_type,
                 violations=errors,
@@ -102,7 +176,7 @@ def submit_for_review(
             )
             raise ValueError(f"plan.md invalid: {errors}")
     else:
-        logger.error("plan_md_missing", session_id=session_id)
+        logger.warning("plan_md_missing", session_id=session_id)
         raise ValueError("plan.md is missing (required for submission)")
 
     # todo.md
@@ -113,14 +187,14 @@ def submit_for_review(
         todo_content = todo_path.read_text(encoding="utf-8")
         todo_result = validate_todo_md(todo_content, require_completion=True)
         if not todo_result.is_valid:
-            logger.error(
+            logger.warning(
                 "todo_md_invalid",
                 violations=todo_result.violations,
                 session_id=session_id,
             )
             raise ValueError(f"todo.md invalid: {todo_result.violations}")
     else:
-        logger.error("todo_md_missing", session_id=session_id)
+        logger.warning("todo_md_missing", session_id=session_id)
         raise ValueError("todo.md is missing (required for submission)")
 
     # benchmark_definition.yaml
@@ -133,7 +207,7 @@ def submit_for_review(
             objectives_content, session_id=session_id
         )
         if not is_valid:
-            logger.error(
+            logger.warning(
                 "benchmark_definition_yaml_invalid",
                 errors=result,
                 session_id=session_id,
@@ -147,10 +221,10 @@ def submit_for_review(
             objectives_path, session_id=session_id
         )
         if not is_immutable:
-            logger.error("benchmark_definition_yaml_modified", session_id=session_id)
+            logger.warning("benchmark_definition_yaml_modified", session_id=session_id)
             raise ValueError(f"benchmark_definition.yaml violation: {error_msg}")
     else:
-        logger.error("benchmark_definition_yaml_missing", session_id=session_id)
+        logger.warning("benchmark_definition_yaml_missing", session_id=session_id)
         raise ValueError(
             "benchmark_definition.yaml is missing (required for submission)"
         )
@@ -174,14 +248,14 @@ def submit_for_review(
             ),
         )
         if not is_valid:
-            logger.error(
+            logger.warning(
                 f"{cost_path.stem}_yaml_invalid",
                 errors=estimation,
                 session_id=session_id,
             )
             raise ValueError(f"{assembly_definition_name} invalid: {estimation}")
     else:
-        logger.error(f"{cost_path.stem}_yaml_missing", session_id=session_id)
+        logger.warning(f"{cost_path.stem}_yaml_missing", session_id=session_id)
         raise ValueError(
             f"{assembly_definition_name} is missing (required for submission)"
         )
@@ -189,14 +263,14 @@ def submit_for_review(
     # 2. Verify prior validation (INT-018) for current script revision
     script_path = cwd / "script.py"
     if not script_path.exists():
-        logger.error("script_missing_for_handover", session_id=session_id)
+        logger.warning("script_missing_for_handover", session_id=session_id)
         raise ValueError("script.py is missing (required for submission)")
     script_mtime = script_path.stat().st_mtime
     script_sha256 = _sha256_file(script_path)
 
     validation_results_path = cwd / "validation_results.json"
     if not validation_results_path.exists():
-        logger.error("prior_validation_missing", session_id=session_id)
+        logger.warning("prior_validation_missing", session_id=session_id)
         raise ValueError(
             "Prior validation missing. Call /benchmark/validate before submission."
         )
@@ -204,12 +278,12 @@ def submit_for_review(
         validation_results_path.read_text(encoding="utf-8")
     )
     if not validation_record.success:
-        logger.error("prior_validation_failed", session_id=session_id)
+        logger.warning("prior_validation_failed", session_id=session_id)
         raise ValueError(
             "Prior validation failed. Fix validation errors before submission."
         )
     if validation_record.script_sha256 != script_sha256:
-        logger.error(
+        logger.warning(
             "prior_validation_stale_for_script",
             session_id=session_id,
             validation_script_sha256=validation_record.script_sha256,
@@ -222,13 +296,13 @@ def submit_for_review(
     # 2b. Verify prior simulation for current script revision and objective success.
     simulation_results_path = cwd / "simulation_result.json"
     if not simulation_results_path.exists():
-        logger.error("prior_simulation_missing", session_id=session_id)
+        logger.warning("prior_simulation_missing", session_id=session_id)
         raise ValueError("Prior simulation missing. Call /benchmark/simulate first.")
     simulation_result = SimulationResult.model_validate_json(
         simulation_results_path.read_text(encoding="utf-8")
     )
     if not simulation_result.success:
-        logger.error(
+        logger.warning(
             "prior_simulation_failed",
             summary=simulation_result.summary,
             session_id=session_id,
@@ -237,7 +311,7 @@ def submit_for_review(
             "Prior simulation failed. Submission requires a successful simulation."
         )
     if not _goal_reached(simulation_result.summary):
-        logger.error(
+        logger.warning(
             "goal_not_reached_in_simulation",
             summary=simulation_result.summary,
             session_id=session_id,
@@ -246,7 +320,7 @@ def submit_for_review(
             "Simulation did not report goal completion (green/goal zone reached)."
         )
     if simulation_results_path.stat().st_mtime < script_mtime:
-        logger.error("prior_simulation_stale_for_script", session_id=session_id)
+        logger.warning("prior_simulation_stale_for_script", session_id=session_id)
         raise ValueError(
             "Prior simulation is stale for current script revision. Re-run simulate."
         )
@@ -276,7 +350,7 @@ def submit_for_review(
         assembly_definition=estimation,
     )
     if attachment_errors:
-        logger.error(
+        logger.warning(
             "environment_attachment_contract_invalid",
             errors=attachment_errors,
             session_id=session_id,
@@ -289,7 +363,7 @@ def submit_for_review(
         manufacturing_config=dfm_config,
     )
     if cost_errors:
-        logger.error(
+        logger.warning(
             "planner_cost_contract_invalid",
             errors=cost_errors,
             session_id=session_id,
@@ -335,7 +409,7 @@ def submit_for_review(
                     f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit "
                     f"${constraints.max_unit_cost:.2f}"
                 )
-                logger.error(
+                logger.warning(
                     "submission_cost_limit_exceeded",
                     cost=validation_result.unit_cost,
                     limit=constraints.max_unit_cost,
@@ -346,7 +420,7 @@ def submit_for_review(
             weight_g = validation_result.weight_g
             if constraints.max_weight_g and weight_g > constraints.max_weight_g:
                 msg = f"Weight {weight_g:.1f}g exceeds limit {constraints.max_weight_g:.1f}g"
-                logger.error(
+                logger.warning(
                     "submission_weight_limit_exceeded",
                     weight=weight_g,
                     limit=constraints.max_weight_g,
@@ -370,17 +444,33 @@ def submit_for_review(
             import shutil
 
             shutil.copy(src_path, dest_path)
-        render_paths.append(str(Path("renders") / src_path.name))
+        render_paths.append(
+            _normalize_render_path(str(Path("renders") / src_path.name))
+        )
+    _validate_render_manifest_bundle(renders_dir=renders_dir, render_paths=render_paths)
     logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 
     cad_path = renders_dir / "model.step"
     export_step(component, str(cad_path))
+    if normalized_stage in {
+        "benchmark_reviewer",
+        "engineering_execution_reviewer",
+    }:
+        cad_path_value = None
+    else:
+        cad_path_value = str(cad_path) if cad_path.exists() else None
 
     import shutil
 
     shutil.copy(objectives_path, renders_dir / "benchmark_definition.yaml")
     rendered_assembly_definition_path = renders_dir / assembly_definition_name
     shutil.copy(cost_path, rendered_assembly_definition_path)
+
+    revision = _latest_git_revision(cwd)
+    if not revision:
+        raise ValueError(
+            "Unable to determine current repository git revision for review manifest."
+        )
 
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
@@ -395,7 +485,7 @@ def submit_for_review(
         reviewer_stage=normalized_stage,
         timestamp=os.getenv("TIMESTAMP"),
         session_id=session_id or os.getenv("SESSION_ID", "default"),
-        revision=_latest_git_revision(cwd),
+        revision=revision,
         script_path=str(script_path.relative_to(cwd)),
         script_sha256=script_sha256,
         validation_success=validation_record.success,
@@ -405,10 +495,29 @@ def submit_for_review(
         simulation_timestamp=simulation_results_path.stat().st_mtime,
         goal_reached=_goal_reached(simulation_result.summary),
         renders=render_paths,
-        mjcf_path=str(renders_dir / "scene.xml"),
-        cad_path=str(cad_path),
-        objectives_path=str(renders_dir / "benchmark_definition.yaml"),
-        assembly_definition_path=str(rendered_assembly_definition_path),
+        mjcf_path=(
+            None
+            if normalized_stage
+            in {"benchmark_reviewer", "engineering_execution_reviewer"}
+            else (
+                str(renders_dir / "scene.xml")
+                if (renders_dir / "scene.xml").exists()
+                else None
+            )
+        ),
+        cad_path=cad_path_value,
+        objectives_path=(
+            None
+            if normalized_stage
+            in {"benchmark_reviewer", "engineering_execution_reviewer"}
+            else str(renders_dir / "benchmark_definition.yaml")
+        ),
+        assembly_definition_path=(
+            None
+            if normalized_stage
+            in {"benchmark_reviewer", "engineering_execution_reviewer"}
+            else str(rendered_assembly_definition_path)
+        ),
     )
 
     manifest_json = manifest.model_dump_json(indent=2)
@@ -424,6 +533,7 @@ def submit_for_review(
         "handover_complete",
         manifest=str(manifest_path),
         synced_manifest=str(synced_manifest_path),
+        revision=revision,
         session_id=session_id,
     )
     return True

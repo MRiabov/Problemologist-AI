@@ -59,7 +59,7 @@ def _save_segmentation_render(segmentation_map: np.ndarray, output_path: Path) -
 
 def _workspace_render_path(output_path: Path, filename: str) -> str:
     prefix = output_path.name if output_path.name else "renders"
-    return str(Path(prefix) / filename)
+    return f"/{prefix}/{filename}"
 
 
 def _build_depth_metadata(

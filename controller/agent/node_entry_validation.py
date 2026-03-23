@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
+import uuid
 from typing import Any, Protocol
 
 import httpx
@@ -10,18 +11,24 @@ from pydantic import BaseModel, Field, model_validator
 
 from controller.agent.benchmark_handover_validation import (
     extract_custom_objectives_from_state,
+    extract_benchmark_refusal_reason,
     validate_benchmark_planner_handoff_artifacts,
 )
 from controller.agent.config import settings as agent_settings
 from controller.agent.render_validation import validate_render_images_non_black
 from controller.agent.review_handover import (
+    collect_plan_reviewer_handover_evidence,
+    validate_approved_benchmark_bundle,
     validate_plan_reviewer_handover,
     validate_planner_artifacts_cross_contract,
     validate_reviewer_handover,
 )
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Episode
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
+from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition, EpisodeMetadata
 from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import CustomObjectives
 from shared.workers.markdown_validator import validate_todo_md
@@ -32,6 +39,7 @@ from shared.workers.schema import (
     ValidationResultRecord,
 )
 from worker_heavy.utils.file_validation import (
+    validate_benchmark_assembly_motion_contract,
     validate_assembly_definition_yaml,
     validate_benchmark_definition_yaml,
     validate_plan_md_structure,
@@ -144,6 +152,7 @@ BENCHMARK_CODER_HANDOVER_CHECK = "benchmark_coder_handover"
 ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
 ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
 ELECTRONICS_REVIEWER_HANDOVER_CHECK = "electronics_reviewer_handover"
+ENGINEER_BENCHMARK_HANDOVER_CHECK = "engineer_benchmark_handover"
 _TRANSIENT_BUSY_BASE_DELAY_SECONDS = 1.0
 _TRANSIENT_BUSY_MAX_WAIT_SECONDS = 180.0
 
@@ -245,11 +254,13 @@ def build_engineer_node_contracts() -> dict[AgentName, NodeEntryContract]:
             node=AgentName.ENGINEER_PLANNER,
             required_state_fields=["task", "episode_id"],
             required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
+            custom_check=ENGINEER_BENCHMARK_HANDOVER_CHECK,
         ),
         AgentName.ELECTRONICS_PLANNER: NodeEntryContract(
             node=AgentName.ELECTRONICS_PLANNER,
             required_state_fields=["task", "episode_id"],
             required_artifacts=list(ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS),
+            custom_check=ENGINEER_BENCHMARK_HANDOVER_CHECK,
         ),
         AgentName.ENGINEER_PLAN_REVIEWER: NodeEntryContract(
             node=AgentName.ENGINEER_PLAN_REVIEWER,
@@ -322,6 +333,7 @@ async def reviewer_handover_custom_check_from_session_id(
             client,
             manifest_path=manifest_path,
             expected_stage=expected_stage,
+            require_git_revision=True,
         )
         if handover_error and reviewer_label.lower() in {"execution", "electronics"}:
             materialization_error = await _materialize_reviewer_handover(
@@ -337,6 +349,7 @@ async def reviewer_handover_custom_check_from_session_id(
                     client,
                     manifest_path=manifest_path,
                     expected_stage=expected_stage,
+                    require_git_revision=True,
                 )
             else:
                 handover_error = materialization_error
@@ -389,20 +402,17 @@ async def benchmark_coder_handover_custom_check_from_session_id(
     finally:
         await client.aclose()
 
-    return [
-        NodeEntryValidationError(
-            code=REASON_HANDOVER_INVALID,
-            message=f"Benchmark coder entry blocked: {error}",
-            source=EntryValidationSource.HANDOVER,
-            artifact_path=None,
-        )
-        for error in handoff_errors
-    ]
+    return _benchmark_validation_errors(
+        messages=handoff_errors,
+        message_prefix="Benchmark coder entry blocked: ",
+        artifact_path=None,
+    )
 
 
 async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
     *,
     session_id: str | None,
+    episode_id: str | None = None,
 ) -> list[NodeEntryValidationError]:
     normalized_session_id = (session_id or "").strip()
     if not normalized_session_id:
@@ -423,7 +433,14 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
         session_id=normalized_session_id,
         agent_role=AgentName.BENCHMARK_PLAN_REVIEWER,
     )
+    evidence = None
     try:
+        evidence, _ = await collect_plan_reviewer_handover_evidence(
+            client,
+            manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+            expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+            episode_id=episode_id,
+        )
         handover_error = await validate_plan_reviewer_handover(
             client,
             manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
@@ -437,14 +454,26 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
     if handover_error is None:
         return []
 
-    return [
-        NodeEntryValidationError(
-            code=REASON_REVIEWER_ENTRY_BLOCKED,
-            message=(f"Benchmark plan reviewer entry blocked: {handover_error}"),
-            source=EntryValidationSource.HANDOVER,
-            artifact_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
-        )
-    ]
+    if evidence is not None:
+        evidence_bits = [
+            f"revision={evidence.review_manifest_revision or 'unknown'}",
+            f"renders={evidence.render_count}",
+        ]
+        if evidence.refusal_reason is not None:
+            evidence_bits.append(f"refusal_reason={evidence.refusal_reason.value}")
+        if evidence.deterministic_errors:
+            evidence_bits.append(
+                "deterministic_errors="
+                + " | ".join(evidence.deterministic_errors[:3])
+            )
+        handover_error = f"{handover_error} | evidence: {'; '.join(evidence_bits)}"
+
+    return _benchmark_validation_errors(
+        messages=[handover_error],
+        message_prefix="Benchmark plan reviewer entry blocked: ",
+        artifact_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+        default_code=REASON_REVIEWER_ENTRY_BLOCKED,
+    )
 
 
 async def benchmark_plan_reviewer_handover_custom_check(
@@ -452,13 +481,19 @@ async def benchmark_plan_reviewer_handover_custom_check(
     contract: NodeEntryContract,  # noqa: ARG001
     state: BaseModel | Mapping[str, Any],
 ) -> list[NodeEntryValidationError]:
+    worker_session_id = _get_state_value(state, "worker_session_id")
     session = _get_state_value(state, "session")
     if isinstance(session, Mapping):
         session_id = session.get("session_id")
     else:
         session_id = getattr(session, "session_id", None)
     return await benchmark_plan_reviewer_handover_custom_check_from_session_id(
-        session_id=str(session_id) if session_id else None,
+        session_id=str(worker_session_id or session_id)
+        if worker_session_id or session_id
+        else None,
+        episode_id=str(_get_state_value(state, "episode_id"))
+        if _get_state_value(state, "episode_id")
+        else None,
     )
 
 
@@ -467,15 +502,113 @@ async def benchmark_coder_handover_custom_check(
     contract: NodeEntryContract,  # noqa: ARG001
     state: BaseModel | Mapping[str, Any],
 ) -> list[NodeEntryValidationError]:
+    worker_session_id = _get_state_value(state, "worker_session_id")
     session = _get_state_value(state, "session")
     if isinstance(session, Mapping):
         session_id = session.get("session_id")
     else:
         session_id = getattr(session, "session_id", None)
     return await benchmark_coder_handover_custom_check_from_session_id(
-        session_id=str(session_id) if session_id else None,
+        session_id=str(worker_session_id or session_id) if worker_session_id or session_id else None,
         custom_objectives=extract_custom_objectives_from_state(state),
     )
+
+
+async def engineer_benchmark_handover_custom_check(
+    *,
+    contract: NodeEntryContract,  # noqa: ARG001
+    state: BaseModel | Mapping[str, Any],
+) -> list[NodeEntryValidationError]:
+    worker_session_id = _get_state_value(state, "session_id") or _get_state_value(
+        state, "worker_session_id"
+    )
+    episode_id = _get_state_value(state, "episode_id")
+    if not worker_session_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_HANDOVER_INVALID,
+                message=(
+                    "Engineer benchmark handover check failed: missing session_id."
+                ),
+                source=EntryValidationSource.HANDOVER,
+                artifact_path="benchmark_definition.yaml",
+            )
+        ]
+    if not episode_id:
+        return [
+            NodeEntryValidationError(
+                code=REASON_STATE_INVALID,
+                message=(
+                    "Engineer benchmark handover check failed: missing episode_id."
+                ),
+                source=EntryValidationSource.STATE,
+            )
+        ]
+
+    try:
+        episode_uuid = uuid.UUID(str(episode_id).strip())
+    except Exception:
+        return [
+            NodeEntryValidationError(
+                code=REASON_STATE_INVALID,
+                message=(
+                    "Engineer benchmark handover check failed: invalid episode_id."
+                ),
+                source=EntryValidationSource.STATE,
+            )
+        ]
+
+    session_factory = get_sessionmaker()
+    async with session_factory() as db:
+        episode = await db.get(Episode, episode_uuid)
+        if episode is None:
+            return [
+                NodeEntryValidationError(
+                    code=REASON_HANDOVER_INVALID,
+                    message=(
+                        "Engineer benchmark handover check failed: episode not found."
+                    ),
+                    source=EntryValidationSource.HANDOVER,
+                    artifact_path="benchmark_definition.yaml",
+                )
+            ]
+        metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+        benchmark_episode_id = (metadata.benchmark_id or "").strip()
+
+    if not benchmark_episode_id:
+        return []
+
+    client = WorkerClient(
+        base_url=controller_settings.worker_light_url,
+        heavy_url=controller_settings.worker_heavy_url,
+        session_id=str(worker_session_id),
+        agent_role=AgentName.ENGINEER_PLANNER,
+    )
+    try:
+        bundle, bundle_error = await validate_approved_benchmark_bundle(
+            client,
+            benchmark_episode_id=benchmark_episode_id,
+        )
+    except Exception as exc:
+        bundle = None
+        bundle_error = f"approved benchmark bundle validation exception: {exc}"
+    finally:
+        await client.aclose()
+
+    if bundle_error is None and bundle is not None:
+        return []
+
+    return [
+        NodeEntryValidationError(
+            code=REASON_HANDOVER_INVALID,
+            message=(
+                "Engineer benchmark entry blocked: "
+                f"{bundle_error or 'approved benchmark bundle invalid.'}"
+            ),
+            source=EntryValidationSource.HANDOVER,
+            artifact_path="benchmark_definition.yaml",
+        )
+    ]
 
 
 async def plan_reviewer_handover_custom_check_from_session_id(
@@ -597,6 +730,19 @@ async def _materialize_reviewer_handover(
         )
 
     try:
+        verify_result = await _run_with_transient_busy_retry(
+            "verify",
+            lambda: client.verify("script.py"),
+        )
+    except Exception as exc:
+        return f"verify failed while materializing handover: {exc}"
+    if not verify_result.success:
+        return (
+            "verify failed while materializing handover: "
+            f"{verify_result.message or 'unknown verification failure'}"
+        )
+
+    try:
         submit_result = await _run_with_transient_busy_retry(
             "submit",
             lambda: client.submit(
@@ -625,13 +771,38 @@ def _seeded_schema_error(
     *,
     message: str,
     artifact_path: str | None = None,
+    default_code: str = REASON_HANDOVER_INVALID,
 ) -> NodeEntryValidationError:
+    reason = extract_benchmark_refusal_reason(message)
     return NodeEntryValidationError(
-        code=REASON_HANDOVER_INVALID,
+        code=reason.value if reason is not None else default_code,
         message=message,
         source=EntryValidationSource.HANDOVER,
         artifact_path=artifact_path,
     )
+
+
+def _benchmark_validation_errors(
+    *,
+    messages: Sequence[str],
+    message_prefix: str,
+    artifact_path: str | None = None,
+    default_code: str = REASON_HANDOVER_INVALID,
+) -> list[NodeEntryValidationError]:
+    refusal_errors: list[NodeEntryValidationError] = []
+    fallback_errors: list[NodeEntryValidationError] = []
+    for message in messages:
+        prefixed_message = f"{message_prefix}{message}"
+        error = _seeded_schema_error(
+            message=prefixed_message,
+            artifact_path=artifact_path,
+            default_code=default_code,
+        )
+        if error.code == default_code:
+            fallback_errors.append(error)
+        else:
+            refusal_errors.append(error)
+    return refusal_errors + fallback_errors
 
 
 async def validate_seeded_workspace_handoff_artifacts(
@@ -642,6 +813,7 @@ async def validate_seeded_workspace_handoff_artifacts(
     """Fail-closed schema + semantic checks for seeded/direct entry workspaces."""
     errors: list[NodeEntryValidationError] = []
     contents: dict[str, str] = {}
+    benchmark_definition_model: BenchmarkDefinition | None = None
 
     for rel_path in _SCHEMA_BACKED_HANDOFF_PATHS:
         if await worker_client.exists(rel_path):
@@ -698,6 +870,8 @@ async def validate_seeded_workspace_handoff_artifacts(
                     )
                     for message in benchmark_result
                 )
+            elif isinstance(benchmark_result, BenchmarkDefinition):
+                benchmark_definition_model = benchmark_result
             continue
 
         if rel_path in {
@@ -715,6 +889,23 @@ async def validate_seeded_workspace_handoff_artifacts(
                         artifact_path=rel_path,
                     )
                     for message in assembly_result
+                )
+            elif (
+                rel_path == "benchmark_assembly_definition.yaml"
+                and isinstance(assembly_result, AssemblyDefinition)
+            ):
+                motion_errors = validate_benchmark_assembly_motion_contract(
+                    benchmark_definition=benchmark_definition_model,
+                    assembly_definition=assembly_result,
+                    plan_text=contents.get("plan.md"),
+                    todo_text=contents.get("todo.md"),
+                )
+                errors.extend(
+                    _seeded_schema_error(
+                        message=f"{rel_path}: {message}",
+                        artifact_path=rel_path,
+                    )
+                    for message in motion_errors
                 )
             continue
 
@@ -944,6 +1135,7 @@ __all__ = [
     "BENCHMARK_PLAN_REVIEW_MANIFEST",
     "BENCHMARK_PREVIOUS_NODE_MAP",
     "BENCHMARK_REVIEWER_HANDOVER_CHECK",
+    "ENGINEER_BENCHMARK_HANDOVER_CHECK",
     "ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK",
     "ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS",
     "ENGINEER_PLANNER_HANDOFF_ARTIFACTS",
@@ -964,6 +1156,7 @@ __all__ = [
     "ValidationGraph",
     "benchmark_coder_handover_custom_check",
     "benchmark_coder_handover_custom_check_from_session_id",
+    "engineer_benchmark_handover_custom_check",
     "benchmark_plan_reviewer_handover_custom_check",
     "benchmark_plan_reviewer_handover_custom_check_from_session_id",
     "build_benchmark_node_contracts",

@@ -13,6 +13,7 @@ from .models import GenerationSession
 
 class BenchmarkGeneratorState(BaseModel):
     session: GenerationSession
+    worker_session_id: str | None = None
     episode_id: str = Field(
         default_factory=lambda: str(uuid.uuid4())
     )  # UUID string for database recording

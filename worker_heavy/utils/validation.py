@@ -9,6 +9,7 @@ import yaml
 from build123d import Compound
 
 from shared.enums import (
+    BenchmarkRefusalReason,
     ElectronicComponentType,
     FailureReason,
     MotorControlMode,
@@ -109,13 +110,67 @@ def _sanitize_stress_summaries(
     return safe
 
 
+def _benchmark_refusal_error(
+    reason: BenchmarkRefusalReason, message: str
+) -> str:
+    return f"{reason.value}: {message}"
+
+
 def _boxes_intersect(
     a_min: tuple[float, float, float],
     a_max: tuple[float, float, float],
     b_min: tuple[float, float, float],
     b_max: tuple[float, float, float],
-) -> bool:
+    ) -> bool:
     return all(a_min[i] <= b_max[i] and b_min[i] <= a_max[i] for i in range(3))
+
+
+def _validate_bounding_box_order(label: str, box: Any) -> str | None:
+    for axis, min_value, max_value in zip(("x", "y", "z"), box.min, box.max):
+        if min_value > max_value:
+            return _benchmark_refusal_error(
+                BenchmarkRefusalReason.INVALID_OBJECTIVES,
+                f"{label} has inverted bounds on axis {axis}: "
+                f"min {min_value} > max {max_value}",
+            )
+    return None
+
+
+def _validate_non_negative_range(
+    label: str, values: tuple[float, ...] | None
+) -> str | None:
+    if values is None:
+        return None
+
+    if any(value < 0 for value in values):
+        return _benchmark_refusal_error(
+            BenchmarkRefusalReason.INVALID_OBJECTIVES,
+            f"{label} must be non-negative; got {list(values)}",
+        )
+
+    if len(values) == 2 and values[0] > values[1]:
+        return _benchmark_refusal_error(
+            BenchmarkRefusalReason.INVALID_OBJECTIVES,
+            f"{label} minimum must be <= maximum; got {list(values)}",
+        )
+
+    return None
+
+
+def _validate_box_within(
+    inner_label: str,
+    inner_box: Any,
+    outer_label: str,
+    outer_box: Any,
+) -> str | None:
+    """Fail closed when one box is not fully contained in another."""
+    for i, axis in enumerate(("x", "y", "z")):
+        if inner_box.min[i] < outer_box.min[i] or inner_box.max[i] > outer_box.max[i]:
+            return _benchmark_refusal_error(
+                BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                f"{inner_label} exceeds {outer_label} on axis {axis}",
+            )
+    return None
 
 
 def _validate_benchmark_definition_consistency(
@@ -123,42 +178,96 @@ def _validate_benchmark_definition_consistency(
 ) -> str | None:
     """Fail closed on invalid objective relationships and jitter ranges."""
     goal = objectives.objectives.goal_zone
+    build_zone = objectives.objectives.build_zone
+    simulation_bounds = objectives.simulation_bounds
+
+    for label, box in (
+        ("goal_zone", goal),
+        ("build_zone", build_zone),
+        ("simulation_bounds", simulation_bounds),
+    ):
+        box_error = _validate_bounding_box_order(label, box)
+        if box_error is not None:
+            return box_error
+
+    build_zone_error = _validate_box_within(
+        "build_zone",
+        build_zone,
+        "simulation_bounds",
+        simulation_bounds,
+    )
+    if build_zone_error is not None:
+        return build_zone_error
+
     for zone in objectives.objectives.forbid_zones:
+        zone_error = _validate_bounding_box_order(f"forbid zone '{zone.name}'", zone)
+        if zone_error is not None:
+            return zone_error
+
         if _boxes_intersect(goal.min, goal.max, zone.min, zone.max):
             return (
-                "Objective zone intersection: goal_zone overlaps "
-                f"forbid zone '{zone.name}'"
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                    "goal_zone overlaps forbid zone "
+                    f"'{zone.name}'",
+                )
             )
+
+    if not _boxes_intersect(goal.min, goal.max, build_zone.min, build_zone.max):
+        return _benchmark_refusal_error(
+            BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+            "goal_zone does not overlap build_zone",
+        )
 
     jitter = objectives.moved_object.runtime_jitter
     start = objectives.moved_object.start_position
+    jitter_error = _validate_non_negative_range(
+        "moved_object.runtime_jitter", jitter
+    )
+    if jitter_error is not None:
+        return jitter_error
+
     radius_max = 0.0
-    if objectives.moved_object.static_randomization.radius:
-        radius_max = max(objectives.moved_object.static_randomization.radius)
+    radius_range = objectives.moved_object.static_randomization.radius
+    radius_error = _validate_non_negative_range(
+        "moved_object.static_randomization.radius", radius_range
+    )
+    if radius_error is not None:
+        return radius_error
+    if radius_range:
+        radius_max = max(radius_range)
 
     moved_min = (
-        start[0] - abs(jitter[0]) - radius_max,
-        start[1] - abs(jitter[1]) - radius_max,
-        start[2] - abs(jitter[2]) - radius_max,
+        start[0] - jitter[0] - radius_max,
+        start[1] - jitter[1] - radius_max,
+        start[2] - jitter[2] - radius_max,
     )
     moved_max = (
-        start[0] + abs(jitter[0]) + radius_max,
-        start[1] + abs(jitter[1]) + radius_max,
-        start[2] + abs(jitter[2]) + radius_max,
+        start[0] + jitter[0] + radius_max,
+        start[1] + jitter[1] + radius_max,
+        start[2] + jitter[2] + radius_max,
     )
 
-    build_zone = objectives.objectives.build_zone
     if not _boxes_intersect(moved_min, moved_max, build_zone.min, build_zone.max):
-        return "Moved object runtime range does not overlap build_zone"
+        return _benchmark_refusal_error(
+            BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+            "moved_object runtime envelope does not overlap build_zone",
+        )
     for i, axis in enumerate(("x", "y", "z")):
         if moved_min[i] < build_zone.min[i] or moved_max[i] > build_zone.max[i]:
-            return f"Moved object runtime range exceeds build_zone on axis {axis}"
+            return _benchmark_refusal_error(
+                BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                f"moved_object runtime envelope exceeds build_zone on axis {axis}",
+            )
 
     for zone in objectives.objectives.forbid_zones:
         if _boxes_intersect(moved_min, moved_max, zone.min, zone.max):
             return (
-                "Moved object runtime range intersects forbid zone "
-                f"'{zone.name}' across jitter/randomization"
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                    "moved_object runtime envelope intersects forbid zone "
+                    f"'{zone.name}' across jitter/randomization",
+                )
             )
 
     return None

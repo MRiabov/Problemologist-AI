@@ -12,6 +12,7 @@ from controller.agent.context_usage import (
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.agent.node_entry_validation import (
+    ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ELECTRONICS_REVIEW_MANIFEST,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
@@ -19,6 +20,7 @@ from controller.agent.node_entry_validation import (
     ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     NodeEntryValidationError,
     ValidationGraph,
+    engineer_benchmark_handover_custom_check,
     build_engineer_node_contracts,
     evaluate_node_entry_contract,
     integration_mode_enabled,
@@ -206,6 +208,12 @@ async def _normalize_engineer_reroute_target(
 
 async def _evaluate_engineer_node_entry(target_node: AgentName, state: AgentState):
     custom_checks = {
+        ENGINEER_BENCHMARK_HANDOVER_CHECK: (
+            lambda *, contract, state: engineer_benchmark_handover_custom_check(
+                contract=contract,
+                state=state,
+            )
+        ),
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
             lambda *, contract, state: (
                 plan_reviewer_handover_custom_check_from_session_id(

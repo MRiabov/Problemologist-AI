@@ -15,12 +15,13 @@ import re
 import subprocess
 import tokenize
 from pathlib import Path
+from typing import Any
 
 import structlog
 import yaml
 from pydantic import ValidationError
 
-from shared.enums import AgentName, BenchmarkAttachmentMethod
+from shared.enums import AgentName, BenchmarkAttachmentMethod, BenchmarkRefusalReason
 from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
@@ -74,8 +75,6 @@ TEMPLATE_PLACEHOLDERS = [
 _MISSING_FILE_ERROR_RE = re.compile(
     r"^Error:\s*File\s+'(?P<path>[^']+)'\s+not found\.?$", re.IGNORECASE
 )
-
-
 def _find_template_placeholders(filename: str, content: str) -> list[str]:
     """Return template placeholder markers, with Python-aware handling for ellipses."""
     found_placeholders = [
@@ -113,6 +112,37 @@ def _is_missing_file_error(content: str, *, expected_path: str | None = None) ->
     returned_path = match.group("path").strip().lstrip("/")
     normalized_expected = expected_path.strip().lstrip("/")
     return returned_path == normalized_expected
+
+
+def _benchmark_refusal_error(
+    reason: BenchmarkRefusalReason, message: str
+) -> str:
+    return f"{reason.value}: {message}"
+
+
+def _iter_benchmark_motion_configs(
+    assembly_definition: AssemblyDefinition,
+) -> list[tuple[str, list[str], Any]]:
+    motion_configs: list[tuple[str, list[str], Any]] = []
+    for item in assembly_definition.final_assembly:
+        if isinstance(item, SubassemblyEstimate):
+            for part_config in item.parts:
+                motion_configs.append(
+                    (
+                        part_config.name,
+                        list(part_config.config.dofs or []),
+                        part_config.config.control,
+                    )
+                )
+        elif isinstance(item, PartConfig):
+            motion_configs.append(
+                (
+                    item.name,
+                    list(item.config.dofs or []),
+                    item.config.control,
+                )
+            )
+    return motion_configs
 
 
 def validate_benchmark_definition_yaml(
@@ -503,6 +533,113 @@ def validate_environment_attachment_contract(
     return errors
 
 
+def validate_benchmark_assembly_motion_contract(
+    *,
+    benchmark_definition: BenchmarkDefinition | None,
+    assembly_definition: AssemblyDefinition,
+    plan_text: str | None = None,
+    todo_text: str | None = None,
+) -> list[str]:
+    """Validate benchmark-side moving fixtures from structured YAML only."""
+    errors: list[str] = []
+    benchmark_part_ids = (
+        {part.part_id for part in benchmark_definition.benchmark_parts}
+        if benchmark_definition is not None
+        else set()
+    )
+
+    for part_name, dofs, control in _iter_benchmark_motion_configs(
+        assembly_definition
+    ):
+        if benchmark_part_ids and part_name not in benchmark_part_ids:
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                    "benchmark_assembly_definition.yaml moving part "
+                    f"'{part_name}' is not declared in benchmark_definition.yaml",
+                )
+            )
+            continue
+
+        if not dofs:
+            if control is not None:
+                errors.append(
+                    _benchmark_refusal_error(
+                        BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                        "benchmark_assembly_definition.yaml part "
+                        f"'{part_name}' declares control metadata without any DOFs",
+                    )
+            )
+            continue
+
+        if len(dofs) != 1:
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                    "benchmark_assembly_definition.yaml part "
+                    f"'{part_name}' must expose exactly one DOF; got {dofs}",
+                )
+            )
+            continue
+
+        dof_token = dofs[0].strip()
+        if not dof_token:
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                    "benchmark_assembly_definition.yaml part "
+                    f"'{part_name}' has an empty DOF token",
+                )
+            )
+            continue
+
+        if dof_token.lower() not in {
+            "rotate_x",
+            "rotate_y",
+            "rotate_z",
+            "slide_x",
+            "slide_y",
+            "slide_z",
+        }:
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                    "benchmark_assembly_definition.yaml part "
+                    f"'{part_name}' uses unsupported benchmark motion token "
+                    f"'{dof_token}'",
+                )
+            )
+            continue
+
+        if control is None:
+            continue
+
+        control_speed = getattr(control, "speed", None)
+        try:
+            control_speed_value = float(control_speed)
+        except (TypeError, ValueError):
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                    "benchmark_assembly_definition.yaml part "
+                    f"'{part_name}' has an invalid controller speed value",
+                )
+            )
+            continue
+        if control_speed_value <= 0:
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                    "benchmark_assembly_definition.yaml part "
+                    f"'{part_name}' must use a positive controller speed; "
+                    f"got {control_speed_value:g}",
+                )
+            )
+            continue
+
+    return errors
+
+
 def validate_declared_planner_cost_contract(
     *,
     assembly_definition: AssemblyDefinition,
@@ -847,6 +984,17 @@ def validate_node_output(
                 errors.extend([f"{filename}: {e}" for e in asm_res])
             else:
                 assembly_definition_models[filename] = asm_res
+                if filename == "benchmark_assembly_definition.yaml":
+                    motion_errors = validate_benchmark_assembly_motion_contract(
+                        benchmark_definition=benchmark_definition_model,
+                        assembly_definition=asm_res,
+                        plan_text=files_content_map.get("plan.md"),
+                        todo_text=files_content_map.get("todo.md"),
+                    )
+                    if motion_errors:
+                        errors.extend(
+                            [f"{filename}: {e}" for e in motion_errors]
+                        )
         elif filename == "plan_refusal.md":
             is_valid, refusal_res = validate_plan_refusal(
                 content, session_id=session_id
