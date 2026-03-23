@@ -4,6 +4,7 @@ import inspect
 import json
 import re
 import time
+import uuid
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -1318,12 +1319,14 @@ class BenchmarkPlanReviewerNode(BaseNode):
             f"Comments file: {review_comments_path}\n"
             f"{journal_entry}"
         )
+        review_id = uuid.uuid4().hex
         await record_worker_events(
             episode_id=state.episode_id,
             events=[
                 ReviewDecisionEvent(
                     decision=review.decision,
                     reason=state.review_feedback,
+                    review_id=review_id,
                     evidence_stats={
                         "is_plan_review": True,
                         "num_renders": solvability_evidence.render_count,
@@ -1999,12 +2002,14 @@ class BenchmarkReviewerNode(BaseNode):
             )
             if review.required_fixes:
                 state.review_feedback += "\nFixes: " + ", ".join(review.required_fixes)
+            review_id = uuid.uuid4().hex
             await record_worker_events(
                 episode_id=state.episode_id,
                 events=[
                     ReviewDecisionEvent(
                         decision=review.decision,
                         reason=state.review_feedback,
+                        review_id=review_id,
                         evidence_stats={
                             "has_sim_report": True,
                             "review_decision_path": review_decision_path,

@@ -1,3 +1,4 @@
+import uuid
 from contextlib import suppress
 
 import dspy
@@ -172,12 +173,14 @@ class ElectronicsReviewerNode(BaseNode):
             )
 
         # Emit ReviewDecisionEvent
+        review_id = uuid.uuid4().hex
         await record_worker_events(
             episode_id=state.episode_id,
             events=[
                 ReviewDecisionEvent(
                     decision=decision,
                     reason=feedback,
+                    review_id=review_id,
                     evidence_stats={
                         "is_electronics_review": True,
                         "review_decision_path": review_decision_path,

@@ -525,6 +525,11 @@ async def _materialize_dataset_export(
     )
     cots_query_id = _trace_metadata_lookup(list(episode.traces), "cots_query_id")
     review_id = _trace_metadata_lookup(list(episode.traces), "review_id")
+    if not review_id:
+        raise HTTPException(
+            status_code=422,
+            detail="dataset export requires review_id lineage",
+        )
 
     lineage = DatasetRowLineage(
         episode_id=str(episode.id),

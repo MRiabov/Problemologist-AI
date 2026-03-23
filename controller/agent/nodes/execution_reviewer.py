@@ -1,4 +1,5 @@
 import json
+import uuid
 from contextlib import suppress
 from typing import Literal
 
@@ -337,12 +338,14 @@ class ExecutionReviewerNode(BaseNode):
                 )
 
             # Emit ReviewDecisionEvent for observability
+            review_id = uuid.uuid4().hex
             await record_worker_events(
                 episode_id=state.episode_id,
                 events=[
                     ReviewDecisionEvent(
                         decision=decision,
                         reason=feedback,
+                        review_id=review_id,
                         evidence_stats={
                             "has_sim_report": True,
                             "has_mfg_report": True,

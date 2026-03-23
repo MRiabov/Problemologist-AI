@@ -353,6 +353,7 @@ class ReviewDecisionEvent(BaseEvent):
     event_type: ObservabilityEventType = ObservabilityEventType.REVIEW_DECISION
     decision: ReviewDecision
     reason: str
+    review_id: str | None = None
     evidence_stats: ReviewEvidenceStats = Field(default_factory=ReviewEvidenceStats)
     checklist: dict[str, str | float | bool] = Field(default_factory=dict)
 
