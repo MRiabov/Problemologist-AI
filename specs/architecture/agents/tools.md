@@ -204,6 +204,7 @@ Note - used by default by
     - Goal objective with forbid objective
     - Input objective with goal or forbid objectives.
     - Top-level authored part labels must be unique and must not be `environment` or start with `zone_`, because the runtime reserves those names for the scene root and generated objective bodies.
+    - Benchmark-owned moving fixtures must declare their motion contract explicitly; validate rejects missing, contradictory, or unsupported motion metadata, but it does not apply the engineering minimum-DOF rule to benchmark fixtures.
     
     Validated under all environment randomization.
     - The validation tool also generates the standard 24-view static preview package.
@@ -256,8 +257,9 @@ The preferred execution path for the agent is to run the submission script itsel
    - derive `constraints.max_unit_cost` and `constraints.max_weight_g` as `1.5x` those estimate fields,
    - reject planner handoff if those estimate fields are missing, non-numeric, or non-positive.
 7. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
-8. For planner handoffs with machine-readable pricing totals, the persisted file must exactly match the script-normalized values at node entry; any cent-level drift is a hard failure even when the YAML remains schema-valid.
-9. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
+8. For `Benchmark Planner`, reject handoff when moving benchmark fixtures lack explicit motion metadata, when the motion contract is contradictory or unsupported, or when the fixture motion cannot be reconstructed from the benchmark handoff artifacts and evidence.
+9. For planner handoffs with machine-readable pricing totals, the persisted file must exactly match the script-normalized values at node entry; any cent-level drift is a hard failure even when the YAML remains schema-valid.
+10. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
 Structured-output validation contract for planner/reviewer YAML artifacts:
 

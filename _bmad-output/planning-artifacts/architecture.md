@@ -83,7 +83,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - build123d, MuJoCo, Genesis, and strict shared Pydantic contracts shape the CAD/simulation boundary.
 - OpenAPI schema generation is part of the repo contract and is automated through git hooks; API changes must regenerate committed schema/client artifacts rather than relying on manual sync.
 - COTS search is read-only and must resolve to concrete catalog identities without mutating workspace state.
-- Benchmark-owned fixtures, benchmark-owned electronics, and benchmark-owned motion context are read-only task inputs.
+- Benchmark-owned fixtures, benchmark-owned electronics, and benchmark-owned motion context are read-only task inputs, and benchmark motion is validated against an explicit contract rather than minimized.
 - Engineer-owned manufactured parts live in the solution artifact set and are validated/priced separately.
 - The docs corpus is in transition: `specs/` and `docs/` both contain brownfield context, so the architecture should acknowledge the migration path rather than assuming a permanent winner.
 

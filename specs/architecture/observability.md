@@ -74,6 +74,10 @@ We track the following structured domain events to compute the evaluation metric
 
 1. Scene validation (Benchmark Coder)
 
+1. Benchmark motion contract validation (Benchmark Planner / Benchmark Reviewer)
+
+   - store declared fixture motion topology, DOF profile, actuation mode, evidence linkage, and validation result
+
 1. Render request (engineer)
 
 1. Render request (benchmark)
@@ -124,7 +128,7 @@ We track the following structured domain events to compute the evaluation metric
 
 1. Forbidden joint creation/adding logic.
 
-1. Excessive/unjustified DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal `dofs`, `reviewer_stage`, `dof_count_gt_3`).
+1. Excessive/unjustified engineering DOF detection event from reviewer stages (`excessive_dof_detected`) with evidence payload (`part_id`, proposed `dofs`, `dof_count`, expected-minimal engineering `dofs`, `reviewer_stage`, `dof_count_gt_3`).
 
 1. `conversation_length_exceeded` event with compaction metadata (threshold and before/after conversation size).
 

@@ -1,6 +1,6 @@
 # Story 1.1: Benchmark Geometry and Objectives
 
-Status: review
+Status: done
 
 ## Story
 

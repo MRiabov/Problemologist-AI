@@ -1,23 +1,31 @@
 # Benchmark Scenario Plan
 
 ## Learning Objective
+
 <!-- Describe what the agent needs to learn or demonstrate. -->
+
 - **Goal**: [e.g., Test spatial reasoning, gravity manipulation, etc.]
 - **Key Concepts**: [e.g., Slopes, funnels, containment]
 
 ## Geometry
 
 ### Static Environment
+
 <!-- Fixed parts of the scene. Coordinates are relative to world origin (0,0,0). -->
+
 - **Ground/Base**: [Description and approximate dimensions/location]
 - **Walls/Obstacles**: [Description and approximate dimensions/location]
 
 ### Moving Parts (Active)
+
 <!-- Motors, actuators, or parts that move under their own power. -->
-- **Motor 1**: [Type, Location, Function]
+
+- **Motor 1**: [Type, Location, Function, explicit DOF axis, travel limit, controller facts]
 
 ### Input Object
+
 <!-- The object to be manipulated (e.g., the ball). -->
+
 - **Shape**: [e.g., Sphere, Cube, Custom]
 - **Dimensions**: [e.g., Radius=5mm]
 - **Spawn Position**: [X, Y, Z]
@@ -28,13 +36,17 @@
 ## Objectives
 
 ### Goal Zone
+
 <!-- Where the input object must end up. -->
+
 - **Type**: AABB (Axis-Aligned Bounding Box)
 - **Location**: [X, Y, Z]
 - **Dimensions**: [Width, Depth, Height]
 
 ### Forbid Zones
+
 <!-- Areas the input object or agent parts must NOT touch. -->
+
 - **Zone 1**: [Location and Dimensions]
 
 ## Constraints
@@ -43,6 +55,16 @@
 - **Material**: [e.g., PLA, Aluminum]
 
 ## Randomization Strategy
+
 <!-- Summary of how the scene varies between runs. -->
+
 - [Strategy 1]
 - [Strategy 2]
+
+## Motion Contract
+
+<!-- If any benchmark-owned part moves, state its axis, bounds, and controller facts explicitly. -->
+
+- [Moving part name + explicit DOF axis]
+- [Reviewer-visible travel limit / bounds]
+- [Controller facts such as mode and speed]

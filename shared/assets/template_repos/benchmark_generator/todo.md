@@ -16,6 +16,7 @@ Mark items [x] when complete.
 
 - [ ] Create Static Environment (Walls, Base)
 - [ ] Create Moving Parts (Motors, Sliders)
+- [ ] Record the explicit motion axis, travel limit, and controller facts for each moving fixture
 - [ ] Create Input Object (Projectile)
 - [ ] Define Objectives (Goal Zone, Forbid Zones)
 - [ ] Export to MJCF
@@ -30,4 +31,5 @@ Mark items [x] when complete.
 ## Phase 4: Submission
 
 - [ ] Final Review (Self-Correction)
+- [ ] Fail closed if motion cannot be explained with explicit bounds and controller facts
 - [ ] Submit for Engineer

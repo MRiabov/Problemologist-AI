@@ -136,7 +136,7 @@ Genesis-specific runtime behavior is therefore established by actual Genesis sim
 
 We operate in a real-world-like scenario, with rigid bodies, gravity, real-world materials, and standard properties like friction and restitution (bounciness).
 
-Benchmark-owned fixtures may be fixed, freely hanging, or partially constrained when they are part of the benchmark contract. That benchmark-side contract can be weaker than the engineer-solution contract, but it still must stay deterministic, reviewable, and compatible with the simulation evidence path. Engineer-authored objects remain physically realistic and must satisfy the normal constraint rules.
+Benchmark-owned fixtures may be fixed, partially constrained, motorized, or fully free when they are part of the benchmark contract. That benchmark-side contract can be weaker than the engineer-solution contract, but it still must stay deterministic, reviewable, and compatible with the simulation evidence path. Engineer-authored objects remain physically realistic and must satisfy the normal constraint rules.
 
 Benchmarked time of execution for Genesis, simulating one-two FEM parts - 20s on dev mode.
 
@@ -254,21 +254,23 @@ To support moving parts (hinges, sliders, motors), we force build123d Joints fro
 
 ##### Benchmark fixture motion exception
 
-Benchmark-owned moving fixtures are reviewed under a weaker realism contract than engineering solutions.
+Benchmark-owned moving fixtures are reviewed under an explicit-motion contract, not the engineering minimum-DOF rule.
 
 The rule is:
 
-1. benchmark fixtures may use less-complete physical support than engineer-authored mechanisms when the benchmark only needs stable, inspectable fixture behavior,
+1. benchmark fixtures may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly requires that behavior,
 1. benchmark fixtures may be implicitly powered in MVP and do not require full wiring realism,
 1. benchmark fixtures may use motors, bearings, and other COTS parts as read-only environment components when their identity is explicit, and they are not treated as manufacturable engineer outputs,
-1. benchmark fixtures still must not rely on teleporting geometry, free energy, contradictory joint definitions, or unstable unconstrained motion that makes the puzzle non-reviewable,
-1. benchmark reviewers must scrutinize underconstrained fixture motion rather than applying the engineering minimum-DOF rule literally,
-1. benchmark-side motion must stay deterministic enough that engineering can reason about the environment from the declared handoff artifacts and simulation evidence.
+1. benchmark handoff artifacts must explicitly document the fixture motion contract, including stable identity, motion kind/topology, axis/path or equivalent reference, bounds or operating envelope, trigger mode, and whether the engineer may rely on that motion,
+1. reviewers validate the declared motion against simulation evidence and reject missing, contradictory, unsupported, or non-deterministic motion; they do not apply the engineering minimum-DOF rule to benchmark fixtures,
+1. benchmark-side motion must stay deterministic enough that engineering can reason about the environment from the declared handoff artifacts and simulation evidence,
 1. benchmark fixtures are validation setup, not engineer-owned solution parts, so manufacturability checks do not apply to them.
+
+<!-- Future work: if benchmark input arrives as STEP, infer candidate constraint/motion metadata from the source geometry before materializing the explicit benchmark motion contract. -->
 
 This exception is benchmark-only. It does not relax engineering realism requirements.
 
-##### DOF minimality rule
+##### Engineering DOF minimality rule
 
 For engineering solutions, DOFs are constrained by intent, not by convenience.
 
@@ -277,12 +279,13 @@ For engineering solutions, DOFs are constrained by intent, not by convenience.
 1. Each non-empty DOF assignment must map to a physical mechanism (bearing/motor/slider or equivalent allowed component) and a reviewer-visible rationale in planning artifacts.
 1. Excessive or unjustified DOFs are treated as a review failure (plan stage and/or execution stage), even if a single simulation run passes.
 
-For benchmark-owned fixtures, the rule is narrower:
+For benchmark-owned fixtures, the rule is explicit-motion validation:
 
-1. we do not require the same minimum-DOF realism rule used for engineering solutions,
-1. benchmark-side DOFs must still be the minimum motion needed to express the intended puzzle,
-1. benchmark-side DOFs must not be so underconstrained that the puzzle outcome depends on accidental floppiness rather than intended fixture behavior,
-1. reviewers must reject benchmark fixtures whose motion cannot be defended from the declared mechanism and observed dynamic evidence.
+1. benchmark-side DOFs are not minimized for their own sake,
+1. a fully constrained rigid part has 0 DOF,
+1. a fully free rigid part has 6 DOF,
+1. reviewers validate the declared motion against the handoff artifacts and dynamic evidence,
+1. reviewers reject benchmark fixtures whose motion cannot be reconstructed from the declared contract or whose evidence contradicts the declaration.
 
 Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
 

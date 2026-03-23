@@ -7,6 +7,7 @@ objectives:
       min: [2.0, -3.0, 0.0]
       max: [4.0, 3.0, 4.0]
   build_zone:
+    # The goal zone must be reachable while staying inside this volume.
     min: [-12.0, -12.0, -2.0]
     max: [12.0, 12.0, 12.0]
   fluid_objectives: []
@@ -21,6 +22,7 @@ benchmark_parts:
       material_id: "aluminum_6061"
 
 simulation_bounds:
+  # Keep the build_zone entirely inside these simulation-wide bounds.
   min: [-30.0, -30.0, -10.0]
   max: [30.0, 30.0, 30.0]
 
@@ -30,7 +32,7 @@ moved_object:
   material_id: "abs"
   static_randomization:
     radius: [1.0, 2.0]
-  start_position: [0.0, 0.0, 0.0]
+  start_position: [-8.0, 0.0, 2.0]
   runtime_jitter: [0.5, 0.5, 0.5]
 
 constraints:

@@ -109,14 +109,12 @@ agents:
             "todo.md",
             "journal.md",
             "assembly_definition.yaml",
-            "benchmark_definition.yaml",
           ]
         deny:
           [
             "skills/**",
             "utils/**",
             "reviews/**",
-            "renders/**",
             "script.py",
             "**/*.py",
             ".manifests/**",
@@ -171,7 +169,6 @@ agents:
             "renders/**",
             "plan_refusal.md",
             "plan.md",
-            "benchmark_definition.yaml",
             "assembly_definition.yaml",
           ]
         deny: ["skills/**", "utils/**", "reviews/**/*.py", ".manifests/**"]
@@ -294,6 +291,7 @@ agents:
         "grep",
         "execute_command",
         "inspect_topology",
+        "verify",
         "invoke_cots_search_subagent",
       ]
     allowed_during_unit_eval:
@@ -380,13 +378,13 @@ agents:
             "journal.md",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
+            "renders/**",
           ]
         deny:
           [
             "skills/**",
             "utils/**",
             "reviews/**",
-            "renders/**",
             "script.py",
             "**/*.py",
             ".manifests/**",

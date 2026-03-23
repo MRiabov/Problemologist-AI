@@ -1,5 +1,5 @@
 # generated: 2026-03-22T06:26:07+00:00
-# last_updated: 2026-03-22T17:44:34+00:00
+# last_updated: 2026-03-23T08:33:32Z
 # project: Problemologist-AI
 # project_key: NOKEY
 # tracking_system: file-system
@@ -30,7 +30,7 @@
 # - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
 
 generated: 2026-03-22T06:26:07+00:00
-last_updated: 2026-03-22T17:44:34+00:00
+last_updated: 2026-03-23T08:33:32Z
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -38,17 +38,17 @@ story_location: "/home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-o
 
 development_status:
   epic-1: in-progress
-  1-1-benchmark-geometry-and-objectives: review
-  1-2-benchmark-owned-fixtures-and-interaction-rules: review
-  1-3-solvability-validation-and-fail-closed-rejection: ready-for-dev
-  1-4-handoff-artifacts-versioning-and-reproducibility: ready-for-dev
-  1-5-review-colleague-benchmarks-for-solvability: ready-for-dev
+  1-1-benchmark-geometry-and-objectives: done
+  1-2-benchmark-owned-fixtures-and-interaction-rules: done
+  1-3-solvability-validation-and-fail-closed-rejection: done
+  1-4-handoff-artifacts-versioning-and-reproducibility: done
+  1-5-review-colleague-benchmarks-for-solvability: done
   epic-1-retrospective: optional
 
   epic-2: in-progress
-  2-1-start-solution-episode-from-approved-benchmark: ready-for-dev
-  2-2-inspect-solution-evidence-and-terminal-outcome: ready-for-dev
-  2-3-revise-and-retry-against-the-same-benchmark: ready-for-dev
+  2-1-start-solution-episode-from-approved-benchmark: done
+  2-2-inspect-solution-evidence-and-terminal-outcome: done
+  2-3-revise-and-retry-against-the-same-benchmark: done
   2-4-review-peer-solutions-for-stability: ready-for-dev
   epic-2-retrospective: optional
 

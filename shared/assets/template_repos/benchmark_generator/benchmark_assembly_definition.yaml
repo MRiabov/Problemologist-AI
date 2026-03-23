@@ -31,6 +31,8 @@ final_assembly:
   # Use this file for benchmark-owned DOFs, fixture electronics, and any
   # benchmark-owned component that explicitly sets allows_engineer_interaction:
   # true in benchmark_definition.yaml.
+  # If a fixture moves, state the axis, controller facts, and travel limit in
+  # plan.md and todo.md as well.
   # This artifact is copied into downstream engineer sessions as read-only
   # benchmark-owned context.
   []

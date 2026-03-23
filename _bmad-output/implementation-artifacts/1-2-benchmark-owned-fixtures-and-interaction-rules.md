@@ -1,6 +1,6 @@
 # Story 1.2: Benchmark-Owned Fixtures and Interaction Rules
 
-Status: review
+Status: done
 
 ## Story
 
@@ -66,7 +66,7 @@ As a human operator, I want to declare benchmark-owned fixtures with explicit in
 - [Source: specs/architecture/agents/handover-contracts.md, benchmark-owned fixture read-only contract and explicit interaction-permission rules]
 - \[Source: specs/architecture/agents/roles.md, Engineering Planner intake must read `benchmark_assembly_definition.yaml` as read-only context\]
 - [Source: specs/architecture/CAD-and-other-infra.md, benchmark-owned fixture metadata, read-only benchmark context, and template/render contracts]
-- [Source: specs/architecture/simulation-and-dod.md, benchmark-only motion exception and benchmark-side DOF guidance]
+- [Source: specs/architecture/simulation-and-dod.md, benchmark-only motion exception and explicit motion contract]
 - \[Source: shared/models/schemas.py, `BenchmarkPartMetadata`, `BenchmarkPartAttachmentPolicy`, and `BenchmarkPartDrillPolicy`\]
 - \[Source: worker_heavy/utils/file_validation.py, `validate_environment_attachment_contract` and benchmark-definition validation\]
 - [Source: worker_heavy/utils/handover.py, benchmark handoff validation and stage-specific artifact checks]

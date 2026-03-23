@@ -1,6 +1,6 @@
 # Story 1.4: Handoff Artifacts, Versioning, and Reproducibility
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -15,19 +15,19 @@ As a human operator, I want validated benchmark artifacts and preview evidence p
 
 ## Tasks / Subtasks
 
-- [ ] Verify the benchmark review handoff persists and surfaces the latest-revision bundle end to end.
-  - [ ] Confirm `ReviewManifest.revision` is populated from the current workspace git revision, not from stale or inferred state.
-  - [ ] Keep the benchmark reviewer stage working only from the latest revision's `script.py`, `validation_results.json`, `simulation_result.json`, and `renders/*` bundle.
-- [ ] Ensure render evidence is persisted as a reproducible package.
-  - [ ] Keep `renders/render_manifest.json` synchronized with the preview image bundle and include it in episode asset discovery.
-  - [ ] Preserve the review manifest's `renders` list so each render path can be traced back to the current revision.
-- [ ] Keep the benchmark handoff replayable from stored artifacts alone.
-  - [ ] Make sure the benchmark handoff artifacts surfaced through the episode record include the versioning/hash data needed to reload the same revision later.
-  - [ ] Reject stale or cross-revision artifacts instead of falling back to older renders or manifests.
-- [ ] Extend integration coverage for latest-revision persistence and replayability.
-  - [ ] Add or refresh benchmark workflow/handoff assertions that verify the latest revision's manifest, render manifest, and render files are present in the episode assets.
-  - [ ] Add a stale-artifact regression test that proves older preview or manifest files do not satisfy the handoff.
-  - [ ] Assert the episode record exposes the manifest and asset paths needed to reconstruct the benchmark package later.
+- [x] Verify the benchmark review handoff persists and surfaces the latest-revision bundle end to end.
+  - [x] Confirm `ReviewManifest.revision` is populated from the current workspace git revision, not from stale or inferred state.
+  - [x] Keep the benchmark reviewer stage working only from the latest revision's `script.py`, `validation_results.json`, `simulation_result.json`, and `renders/*` bundle.
+- [x] Ensure render evidence is persisted as a reproducible package.
+  - [x] Keep `renders/render_manifest.json` synchronized with the preview image bundle and include it in episode asset discovery.
+  - [x] Preserve the review manifest's `renders` list so each render path can be traced back to the current revision.
+- [x] Keep the benchmark handoff replayable from stored artifacts alone.
+  - [x] Make sure the benchmark handoff artifacts surfaced through the episode record include the versioning/hash data needed to reload the same revision later.
+  - [x] Reject stale or cross-revision artifacts instead of falling back to older renders or manifests.
+- [x] Extend integration coverage for latest-revision persistence and replayability.
+  - [x] Add or refresh benchmark workflow/handoff assertions that verify the latest revision's manifest, render manifest, and render files are present in the episode assets.
+  - [x] Add a stale-artifact regression test that proves older preview or manifest files do not satisfy the handoff.
+  - [x] Assert the episode record exposes the manifest and asset paths needed to reconstruct the benchmark package later.
 
 ## Dev Notes
 
@@ -83,10 +83,38 @@ As a human operator, I want validated benchmark artifacts and preview evidence p
 
 ### Agent Model Used
 
-TBD
+GPT-5
 
 ### Debug Log References
 
+- `2026-03-23T00:57:57Z`: Focused rerun of `tests/integration/architecture_p1/test_benchmark_workflow.py::test_benchmark_planner_cad_reviewer_path` passed with the latest `ReviewManifest.revision` and `renders/render_manifest.json` persisted.
+- `2026-03-23T01:01:12Z`: First handover rerun failed on a test assertion bug, comparing a string manifest session ID to a UUID and referencing a nonexistent `EpisodeStatus.REJECTED` member.
+- `2026-03-23T01:02:52Z`: Final rerun of `tests/integration/architecture_p1/test_handover.py::test_benchmark_to_engineer_handoff` passed after normalizing the session ID and keeping confirm single-shot.
+
 ### Completion Notes List
 
+- Added a repo-root git revision helper and used it for latest-revision review manifests so the benchmark handoff is tied to the repository HEAD, not an empty session repo.
+- Validated `renders/render_manifest.json` against the static preview bundle and kept benchmark-reviewer manifest fields benchmark-stage appropriate.
+- Refreshed integration assertions so the benchmark workflow and handoff tests now check manifest revision, session linkage, and render-manifest traceability.
+- Reused the existing stale-manifest regression coverage in INT-188 rather than introducing a second stale-artifact path.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/1-4-handoff-artifacts-versioning-and-reproducibility.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `shared/git_utils.py`
+- `worker_heavy/utils/handover.py`
+- `controller/agent/review_handover.py`
+- `controller/api/tasks.py`
+- `controller/agent/node_entry_validation.py`
+- `tests/integration/agent/helpers.py`
+- `tests/integration/architecture_p1/test_benchmark_workflow.py`
+- `tests/integration/architecture_p1/test_handover.py`
+
+### Change Log
+
+- 2026-03-23: Enforced latest-revision review-manifest validation, synchronized render manifests with the preview bundle, scoped benchmark-reviewer manifests to benchmark-stage evidence, and refreshed integration coverage for reproducible handoff artifacts.
+
+### Status
+
+review

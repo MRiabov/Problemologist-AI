@@ -47,7 +47,7 @@ This document provides the complete epic and story breakdown for Problemologist-
 FR1: Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem.
 FR2: Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization.
 FR3: The system can represent benchmark-owned fixtures and benchmark-owned electronics as read-only context unless interaction is explicitly allowed.
-FR4: The system can represent allowed attachment and drilling points in the benchmark setup.
+FR4: The system can represent allowed attachment and drilling points and explicit benchmark fixture motion contracts in the benchmark setup.
 FR5: The system can validate that a benchmark is solvable and reject ambiguous, impossible, or incomplete setups.
 FR6: The system can pass benchmark setup artifacts into the solution workflow.
 FR7: Human engineers can receive verified design solutions to a benchmark.
@@ -116,8 +116,8 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 - Controller/worker/Temporal split remains mandatory; generated code executes off the controller in isolated worker processes.
 - Planner and reviewer handoffs are strict-schema artifacts with stage-specific manifests, no silent fallback, and fail-closed routing on stale, missing, or invalid artifacts.
 - Planner-owned derived values such as cost caps are deterministic outputs of validator tooling, not freeform authoring.
-- Benchmark-owned fixtures and motion context are read-only unless the benchmark explicitly declares engineer interaction.
-- Benchmark-owned fixtures are validation setup, not engineer-owned solution hardware; they may be fixed, partially constrained, or implicitly powered when the benchmark contract says so, and they are excluded from engineer manufacturability and pricing gates.
+- Benchmark-owned fixtures and motion context are read-only unless the benchmark explicitly declares engineer interaction. Benchmark-side motion may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly declares it.
+- Benchmark-owned fixtures are validation setup, not engineer-owned solution hardware; they may be fixed, partially constrained, motorized, or fully free when the benchmark contract says so, and they are excluded from engineer manufacturability and pricing gates.
 - Benchmark setup must preserve distinct benchmark-owned vs engineer-owned artifact boundaries and hash-based immutability across handoff.
 - `/benchmark/validate` uses MuJoCo for static preview by default; Genesis parity is validated through dedicated simulation paths, not preview reruns.
 - Static preview must persist RGB, depth, segmentation, and render manifests when enabled.
@@ -147,7 +147,7 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 FR1: Epic 1 - Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem
 FR2: Epic 1 - Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization
 FR3: Epic 1 - Benchmark-owned fixtures remain read-only unless interaction is explicit
-FR4: Epic 3 - Allowed attachment and drilling points are declared in the benchmark setup
+FR4: Epic 3 - Allowed attachment, drilling points, and explicit motion contracts are declared in the benchmark setup
 FR5: Epic 1 - Benchmark solvability is validated and ambiguous or impossible setups are rejected
 FR6: Epic 1 - Benchmark setup artifacts are passed into the solution workflow
 FR7: Epic 2 - Human engineers can receive verified design solutions to a benchmark

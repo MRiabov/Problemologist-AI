@@ -71,7 +71,7 @@ workflowType: prd
 
 Problemologist-AI is an open-source engineering platform for solving real engineering problems end to end. A human engineer defines the benchmark as the solution verification setup, and the system returns a verified design solution to that benchmark. Scope remains bounded by the human engineer. The platform starts with mechanical engineering, extends into electromechanical systems, and can optionally cover fluids. The primary users are hardware engineers, product teams, and builders who need verified designs; the secondary users are LLM researchers and companies that need high-signal engineering benchmarks, solution traces, and training data. The platform addresses two gaps at once: current LLMs are not yet reliable enough to solve engineering work without strict verification, and the field lacks open, high-quality datasets that reflect real design, validation, and review workflows. The workflow also preserves rendered CAD and simulation previews so humans can inspect what was actually built before accepting the result.
 
-Problemologist-AI combines solution generation with an evidence-preserving dataset loop. The solution workflow takes a benchmark, generates candidate concepts, validates them against physics, manufacturability, cost, weight, and review constraints, and iterates until the artifact is acceptable. In parallel, the system preserves the benchmarks, reasoning traces, solved examples, reviewer feedback, and optimization notes needed to train and evaluate future engineering-capable models. The result is both a practical engineering tool and a reusable research infrastructure.
+Problemologist-AI combines solution generation with an evidence-preserving dataset loop. The solution workflow takes a benchmark, generates candidate concepts, validates them against physics, manufacturability, cost, weight, and review constraints, and iterates until the artifact is acceptable. Benchmark-owned motion is authored explicitly by the benchmark designer and then validated against evidence; the system does not apply a minimum-DOF simplification rule to benchmark fixtures. In parallel, the system preserves the benchmarks, reasoning traces, solved examples, reviewer feedback, and optimization notes needed to train and evaluate future engineering-capable models. The result is both a practical engineering tool and a reusable research infrastructure.
 
 ### What Makes This Special
 
@@ -227,7 +227,7 @@ This journey reveals requirements for validated design output, traceable reasoni
 
 The same engineer does not trust a pass blindly. They want to inspect the validation setup, see how the benchmark was defined, view the rendered CAD model and simulation preview, and understand how the simulation behaved in the modeled environment.
 
-This is the trust-building moment. The engineer checks the objective zones, constraints, randomization, and the actual simulation behavior to decide whether the product's answer is defensible. If the run exposes a flaw, they tighten the brief and rerun. If it holds up, they can sign off on the design with confidence.
+This is the trust-building moment. The engineer checks the objective zones, declared motion contract, constraints, randomization, and the actual simulation behavior to decide whether the product's answer is defensible. If the run exposes a flaw, they tighten the brief and rerun. If it holds up, they can sign off on the design with confidence.
 
 This journey reveals requirements for inspectable validation setup, simulation preview or evidence, real-environment behavior, and a revision loop when the simulation exposes a problem.
 
@@ -256,7 +256,7 @@ This journey reveals requirements for live steering, selection-mode switching, a
 ### Journey Requirements Summary
 
 - The primary human user is a mechanical engineer, not a benchmark designer persona.
-- Benchmark setup is part of validation evidence, not a separate human role.
+- Benchmark setup is part of validation evidence, not a separate human role, and any benchmark fixture motion must be explicitly documented and validated.
 - The product must support trust through inspectable evidence, not just output generation.
 - Dataset consumers need structured, reproducible, training-ready exports.
 - Dataset operators need cleaning, coverage, and lineage controls.
@@ -272,7 +272,7 @@ This journey reveals requirements for live steering, selection-mode switching, a
 
 ### Technical Constraints
 
-- The primary domain is bounded mechanical engineering; benchmark-owned fixtures belong to the validation setup, not engineer-owned solution hardware, and may be less physically complete than engineer-authored parts when the benchmark contract explicitly allows it.
+- The primary domain is bounded mechanical engineering; benchmark-owned fixtures belong to the validation setup, not engineer-owned solution hardware, and may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly declares that behavior.
 - Electromechanical support is required when power, wiring, motors, or circuits are part of the task.
 - Fluids and deformables are optional extensions and must use the correct backend and evidence path when enabled.
 - Supported workbenches are finite and explicit: `CNC`, `injection molding`, and `3D printing`.
@@ -287,6 +287,7 @@ This journey reveals requirements for live steering, selection-mode switching, a
 - Benchmark-owned fixtures and benchmark-owned electronics are read-only context unless the benchmark explicitly declares engineer interaction through its verification setup.
 - Moving benchmarks require dynamic evidence for approval; static validation preview is context, not proof of motion behavior.
 - Benchmark-owned fixtures may be drilled when the benchmark verification setup explicitly allows it, and those drilling operations must be priced; this is the mechanism for attaching or constraining parts to an environment, such as fixing a machine to the floor or wall.
+- Benchmark motion is validated against the declared motion contract, not minimized for convenience.
 - Fluids, deformables, and stress-aware tasks require Genesis for final validation, while MuJoCo remains the preview path.
 - Benchmark-owned fixtures, electronics, and motion context are read-only environment inputs, not engineer-owned outputs.
 
@@ -416,8 +417,8 @@ A benchmark is the solution verification setup for a bounded engineering problem
 - FR1: Human engineers can define a benchmark as a solution verification setup for a bounded engineering problem.
 - FR2: Human engineers can set the benchmark goals, forbidden zones, build zone, allowed interactions, and randomization.
 - FR3: The system can represent benchmark-owned fixtures and benchmark-owned electronics as read-only context unless interaction is explicitly allowed.
-- FR4: The system can represent allowed attachment and drilling points in the benchmark setup.
-- Benchmark-owned fixtures, moving parts, and electronics are read-only validation context; they may be fixed, partially constrained, or implicitly powered when the benchmark contract declares that behavior, and they are not counted in engineer manufacturability or cost validation.
+- FR4: The system can represent allowed attachment and drilling points, plus explicit benchmark fixture motion contracts, in the benchmark setup.
+- Benchmark-owned fixtures, moving parts, and electronics are read-only validation context; they may be fixed, partially constrained, motorized, or fully free when the benchmark contract declares that behavior, and they are not counted in engineer manufacturability or cost validation.
 - FR5: The system can validate that a benchmark is solvable and reject ambiguous, impossible, or incomplete setups.
 - FR6: The system can pass benchmark setup artifacts into the solution workflow.
 

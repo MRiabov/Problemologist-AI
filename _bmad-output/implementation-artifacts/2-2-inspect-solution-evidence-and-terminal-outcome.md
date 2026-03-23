@@ -1,6 +1,6 @@
 # Story 2.2: Inspect Solution Evidence and Terminal Outcome
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -16,26 +16,26 @@ As a human engineer, I want to inspect rendered CAD previews, simulation preview
 
 ## Tasks / Subtasks
 
-- [ ] Update solution-run status rendering in `frontend/src/components/workspace/ChatWindow.tsx` so the failed-run banner shows structured terminal metadata from `selectedEpisode.metadata_vars` and uses `validation_logs` only as supplemental detail.
-  - [ ] Surface `terminal_reason`, `failure_class`, and `detailed_status` in a compact summary block.
-  - [ ] Keep the existing free-form failure text as fallback context only when the structured fields are absent.
-- [ ] Update `frontend/src/components/workspace/ArtifactView.tsx` so engineer episodes default to the latest solution evidence artifact instead of always preferring `plan.md`.
-  - [ ] Keep benchmark-generation sessions plan-first.
-  - [ ] For engineer runs, prefer `simulation_result.json` first, then `validation_results.json`, then raw render/video evidence, then fallback to plan/file browsing if no solution evidence exists.
-  - [ ] Keep raw file browsing available for `validation_results.json`, `simulation_result.json`, and render assets.
-- [ ] Add stable, testable terminal/evidence hooks in `frontend/src/components/workspace/UnifiedGeneratorView.tsx` and any supporting view component needed for the artifact pane.
-  - [ ] Extend the hidden debug payload with the episode terminal metadata used by the Playwright tests.
-  - [ ] Add a deterministic test hook for the selected solution evidence artifact so the UI does not need brittle DOM scraping.
-- [ ] Keep `frontend/src/components/visualization/DesignViewer.tsx` and `frontend/src/components/visualization/SimulationResults.tsx` aligned with the new default evidence selection so video, 3D preview, and summary data remain discoverable without extra clicks.
-  - [ ] Do not replace the existing video/3D/heatmap modes; only change what is selected first for engineer completion/failure states.
-- [ ] Extend `tests/integration/architecture_p1/test_engineering_loop.py` to assert the episode metadata exposes `terminal_reason`/`failure_class` after a real solve attempt and that the expected evidence assets are present.
-  - [ ] Keep asserting `validation_results.json`, `simulation_result.json`, and reviewer manifest presence as the evidence bundle.
-  - [ ] Assert the final metadata is explicit rather than inferred from status alone.
-- [ ] Add or extend a Playwright integration test under `tests/integration/frontend/p0/` to prove the finished engineer run opens the solution evidence and terminal summary by default.
-  - [ ] Assert the terminal summary is visible in the workspace.
-  - [ ] Assert the artifact pane lands on the solution-evidence file, not `plan.md`, for engineer runs.
-- [ ] If the failure path cannot be driven reliably from the live stack, add a deterministic `tests/integration/mock_responses/INT-2xx.yaml` scenario instead of weakening the assertion or using a fake unit test.
-- [ ] Keep the story fail-closed: do not infer a pass/fail explanation from status alone; always derive it from persisted metadata and the latest evidence assets.
+- [x] Update solution-run status rendering in `frontend/src/components/workspace/ChatWindow.tsx` so the failed-run banner shows structured terminal metadata from `selectedEpisode.metadata_vars` and uses `validation_logs` only as supplemental detail.
+  - [x] Surface `terminal_reason`, `failure_class`, and `detailed_status` in a compact summary block.
+  - [x] Keep the existing free-form failure text as fallback context only when the structured fields are absent.
+- [x] Update `frontend/src/components/workspace/ArtifactView.tsx` so engineer episodes default to the latest solution evidence artifact instead of always preferring `plan.md`.
+  - [x] Keep benchmark-generation sessions plan-first.
+  - [x] For engineer runs, prefer `simulation_result.json` first, then `validation_results.json`, then raw render/video evidence, then fallback to plan/file browsing if no solution evidence exists.
+  - [x] Keep raw file browsing available for `validation_results.json`, `simulation_result.json`, and render assets.
+- [x] Add stable, testable terminal/evidence hooks in `frontend/src/components/workspace/UnifiedGeneratorView.tsx` and any supporting view component needed for the artifact pane.
+  - [x] Extend the hidden debug payload with the episode terminal metadata used by the Playwright tests.
+  - [x] Add a deterministic test hook for the selected solution evidence artifact so the UI does not need brittle DOM scraping.
+- [x] Keep `frontend/src/components/visualization/DesignViewer.tsx` and `frontend/src/components/visualization/SimulationResults.tsx` aligned with the new default evidence selection so video, 3D preview, and summary data remain discoverable without extra clicks.
+  - [x] Do not replace the existing video/3D/heatmap modes; only change what is selected first for engineer completion/failure states.
+- [x] Extend `tests/integration/architecture_p1/test_engineering_loop.py` to assert the episode metadata exposes `terminal_reason`/`failure_class` after a real solve attempt and that the expected evidence assets are present.
+  - [x] Keep asserting `validation_results.json`, `simulation_result.json`, and reviewer manifest presence as the evidence bundle.
+  - [x] Assert the final metadata is explicit rather than inferred from status alone.
+- [x] Add or extend a Playwright integration test under `tests/integration/frontend/p0/` to prove the finished engineer run opens the solution evidence and terminal summary by default.
+  - [x] Assert the terminal summary is visible in the workspace.
+  - [x] Assert the artifact pane lands on the solution-evidence file, not `plan.md`, for engineer runs.
+- [x] If the failure path cannot be driven reliably from the live stack, add a deterministic `tests/integration/mock_responses/INT-2xx.yaml` scenario instead of weakening the assertion or using a fake unit test.
+- [x] Keep the story fail-closed: do not infer a pass/fail explanation from status alone; always derive it from persisted metadata and the latest evidence assets.
 
 ## Dev Notes
 
@@ -102,14 +102,35 @@ As a human engineer, I want to inspect rendered CAD previews, simulation preview
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- Frontend integration validation: `tests/integration/frontend/p0/test_solution_evidence.py::test_int_181_engineer_run_defaults_to_solution_evidence`
+- Backend integration validation: `tests/integration/architecture_p1/test_engineering_loop.py::test_engineering_full_loop`
+- Successful frontend run archived under `logs/integration_tests/runs/run_20260323_071305/`
+- Successful backend run archived under `logs/integration_tests/runs/run_20260323_071818/`
+
 ### Completion Notes List
 
-- Ultimate context engine analysis completed - comprehensive developer guide created.
+- Engineer episodes now persist explicit terminal metadata on completion/failure, including `detailed_status`, `terminal_reason`, and `failure_class`.
+- Artifact selection now defaults engineer runs to solution evidence first, with benchmark runs remaining plan-first.
+- Simulation evidence now renders a summary overview when only summary/render-path metadata is available, and the UI exposes stable test hooks for the selected artifact and terminal summary.
+- Verified with live integration tests covering both the frontend workspace and the backend engineering loop.
 
 ### File List
 
 - \_bmad-output/implementation-artifacts/2-2-inspect-solution-evidence-and-terminal-outcome.md
+- controller/api/tasks.py
+- frontend/src/components/workspace/artifactSelection.ts
+- frontend/src/components/workspace/ArtifactView.tsx
+- frontend/src/components/workspace/ChatWindow.tsx
+- frontend/src/components/workspace/UnifiedGeneratorView.tsx
+- frontend/src/components/visualization/DesignViewer.tsx
+- frontend/src/components/visualization/SimulationResults.tsx
+- tests/integration/architecture_p1/test_engineering_loop.py
+- tests/integration/frontend/p0/test_solution_evidence.py
+
+## Change Log
+
+- 2026-03-23: Implemented evidence-first solution inspection for engineer runs, surfaced explicit terminal metadata in the workspace, and added deterministic integration coverage for default evidence selection and terminal outcome rendering.

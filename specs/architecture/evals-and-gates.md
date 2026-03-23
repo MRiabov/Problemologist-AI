@@ -141,6 +141,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
      - Max cost
      - And other numerical parameters specified in benchmark_definition.yaml.
 1. The benchmark generator would be able to predict the price and weight the engineer will solve the solution in the range of 80-120% (with 20% error) of the final price in 80% of the cases, within 50-150% in 97% of cases (this is the standard price, not the "safe" price)
+1. Benchmark-side motion is judged on explicit contract and evidence, not on DOF minimization; fully free benchmark fixtures are valid when the handoff declares them and the evidence matches.
 
 ##### Medium evals - Benchmark Plan Reviewer
 
@@ -149,7 +150,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 1. Given a benchmark planner handoff package with renders available, the Benchmark Plan Reviewer inspects at least the config-driven minimum number of images through the dedicated media-inspection tool before approval. Current production policy is `min_images=1`.
 1. Reviewer efficacy: benchmark plan-review feedback should lead to a corrected planner handoff in at least 60% of failed first submissions.
 1. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects missing motion-visible handoff data in at least 90% of seeded cases.
-1. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects overly underconstrained or puzzle-breaking benchmark-side DOFs in at least 85% of seeded bad-motion cases.
+1. Given a benchmark planner handoff package with moving benchmark-owned fixtures, the Benchmark Plan Reviewer rejects missing, contradictory, or unsupported benchmark-side motion declarations in at least 85% of seeded bad-motion cases.
 1. The Benchmark Plan Reviewer writes a stage-canonical checklist in the reviewer comments YAML, and the checklist keys/values match the seeded ground truth in at least 95% of cases.
 
 ##### Medium evals - Benchmark Coder
@@ -169,7 +170,7 @@ Proposal: normalize the simulation to the center bottom of the build zone. So th
 1. Given a benchmark package with misleading text summaries but invalid visual geometry, the Benchmark Reviewer catches the issue in at least 70% of cases.
 1. Listing `renders/` without actual media inspection does not satisfy reviewer-evidence criteria.
 1. Given a moving benchmark with simulation video available, the Benchmark Reviewer inspects the latest dynamic evidence before approval in at least 95% of cases.
-1. Given a moving benchmark with overly underconstrained fixture motion, the Benchmark Reviewer rejects it in at least 80% of seeded cases.
+1. Given a moving benchmark whose declared fixture motion is missing, contradictory, or not reflected in simulation evidence, the Benchmark Reviewer rejects it in at least 80% of seeded cases.
 1. Given a moving benchmark whose declared fixture behavior does not match observed simulation behavior, the Benchmark Reviewer rejects it in at least 85% of seeded mismatch cases.
 1. The Benchmark Reviewer writes a stage-canonical checklist in the reviewer comments YAML, and the checklist keys/values match the seeded ground truth in at least 95% of cases.
 

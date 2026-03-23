@@ -116,7 +116,7 @@ The plan will have the following bullet points. The plan will be validated for c
        The agents' file must correspond to roughly the structure detailed above, with automatic checks in place.
 1. A `todo.md` TODO list from the planner.
 1. A draft of `benchmark_definition.yaml` with rough values filled in.
-1. A draft of `benchmark_assembly_definition.yaml` with per-part DOFs/control in `benchmark_assembly.parts`. This is benchmark-owned read-only handoff context for downstream engineer stages and must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a minimal fixture declaration.
+1. A draft of `benchmark_assembly_definition.yaml` with per-part motion contracts in `benchmark_assembly.parts` (`dofs`, `control`, and any explicit operating limits). This is benchmark-owned read-only handoff context for downstream engineer stages and must still be a schema-valid full `AssemblyDefinition` artifact, even when the benchmark planner uses a fully free or fully constrained fixture declaration.
 1. An explicit `submit_plan()` handoff action which persists `.manifests/benchmark_plan_review_manifest.json`.
 
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
@@ -132,9 +132,11 @@ If the user provides explicit benchmark objective overrides (for example `max_un
   - Reject when the manifest is missing, stale for the latest planner revision, or schema-invalid.
   - Reject when planner artifacts mention benchmark objects, moving parts, joints, or zones that are not declared consistently across the planner handoff package.
   - Reject when `moved_object.material_id` is missing, empty, or not known to `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
-  - Reject when benchmark-owned DOF/control metadata introduces unsupported or unjustified benchmark-side motion.
-  - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis, motion limits or operating envelope, and whether the engineer may rely on the motion.
-  - Reject when benchmark-side motion is impossible, unstable, or clearly over- or underconstrained for the intended puzzle.
+  - Reject when benchmark-owned DOF/control metadata is missing, contradictory, or unsupported by the declared fixture motion.
+  - Reject when moving benchmark fixtures are missing motion-visible handoff data needed by engineering intake, such as actuation mode, axis/path or equivalent reference, motion limits or operating envelope, and whether the engineer may rely on the motion.
+  - Reject when benchmark-side motion is impossible, unstable, non-deterministic, or cannot be reconstructed from the handoff artifacts and evidence.
+
+<!-- Future work: if benchmark input arrives as STEP, infer candidate motion constraints from the source geometry before explicit benchmark handoff materialization. -->
 - Review-stage behavior:
   - `Benchmark Plan Reviewer` is read-only with respect to planner-owned artifacts. It inspects, validates, and decides; it does not rewrite `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `benchmark_assembly_definition.yaml`.
 - Approval effect:
@@ -144,7 +146,7 @@ If the user provides explicit benchmark objective overrides (for example `max_un
 
 The Engineer agent(s) (for whom the first point of access is Engineering Planner) have access to meshes and a exact reconstruction of the environment as a starting point to their build123d scene, however they can not modify/move it from their build123d scene. In fact, we validate for the fact that the engineer wouldn't move it or changed it (validating for changing it via hashing) - in both MJCF and build123d.
 
-The benchmark-owned environment, benchmark input objects, benchmark objective markers, benchmark-owned moving fixtures, and benchmark-owned electronics are read-only task fixtures. They are validation setup, not engineer-owned deliverables: they are validated for geometry correctness, placement, randomization, benchmark solvability, and valid COTS identifiers/runtime metadata, but they are not validated for manufacturability or priced as manufactured outputs. They may be fixed, partially constrained, or implicitly powered when the benchmark contract explicitly says so. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
+The benchmark-owned environment, benchmark input objects, benchmark objective markers, benchmark-owned moving fixtures, and benchmark-owned electronics are read-only task fixtures. They are validation setup, not engineer-owned deliverables: they are validated for geometry correctness, placement, randomization, benchmark solvability, and valid COTS identifiers/runtime metadata, but they are not validated for manufacturability or priced as manufactured outputs. They may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly says so. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
 
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
@@ -175,8 +177,9 @@ Engineering may read `benchmark_assembly_definition.yaml`, reason about it, and 
 If the benchmark includes moving benchmark-owned fixtures, the engineer intake still needs motion-visible facts. Those facts may live in `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The minimum contract for each moving benchmark fixture is:
 
 1. stable fixture identity,
+1. motion topology / DOF profile (`fixed`, partially constrained, motorized, free-body, or other explicitly supported type),
 1. motion kind (`fixed`, `passive`, `motorized_revolute`, `motorized_prismatic`, or other explicitly supported type),
-1. motion axis or path reference,
+1. motion axis or path reference, when applicable,
 1. motion bounds, period, or controller-visible operating range,
 1. whether the motion is always-on, conditional, or externally triggered,
 1. whether the engineer may assume that the motion is available during solution execution.
@@ -256,7 +259,7 @@ Planner gate requirements (`Engineering Plan Reviewer` / coder entry contract):
 - Plan reviewer responsibilities:
   - Reject unsupported/invented system components or mechanisms.
   - Reject inconsistent, infeasible, ambiguous, or incomplete plans.
-  - Reject excessive DOFs; motion metadata must be minimal and mechanism-necessary, not convenience-driven.
+  - Reject missing, contradictory, or unsupported benchmark motion metadata; motion must be explicit and reconstructable from the handoff artifacts, not minimized for convenience.
   - Re-run `skills/manufacturing-knowledge/scripts/validate_and_price.py` (or equivalent wrapped validator tool) and reject on pricing/weight/schema mismatch.
   - Keep cost/weight target scrutiny as a mandatory realism check.
   - Optional future work: propose weight/cost optimization opportunities.

@@ -50,7 +50,7 @@ The environments are made with static objects, dynamic objects, and motors. <!--
 
 Benchmark-owned motors and electronics are treated as fixture behavior, not as engineer-owned electrical design. They are validation context, so they do not become part of engineer pricing or manufacturability targets. Strict COTS identification still applies when they come from the catalog.
 
-For benchmark-owned powered fixtures, we do not require benchmark-side wiring realism in MVP. Benchmark fixtures may be implicitly powered when the benchmark contract says so, and they may be fixed or partially constrained if that is what the benchmark needs.
+For benchmark-owned powered fixtures, we do not require benchmark-side wiring realism in MVP. Benchmark fixtures may be implicitly powered when the benchmark contract says so, and they may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly says so.
 
 Problems with motors and moving parts are verified more consistently because they are more prone to error.
 
@@ -151,9 +151,9 @@ The benchmark loop has two reviewer stages with different responsibilities.
 1. Validate feasibility of the planned benchmark geometry before implementation starts, including objective clearance, randomization sanity, and that the moved object/runtime jitter contract stays inside benchmark bounds.
 1. Validate non-ambiguity and completeness of planner handoff artifacts.
 1. Reject unsupported benchmark-side mechanisms or metadata outside current benchmark contracts/tooling.
-1. Reject benchmark-side actuation that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis, motion range or target state, and whether the engineer may rely on that motion. Benchmark fixtures are validation context, not manufactured solution parts, so the reviewer checks reviewability and solvability rather than engineer manufacturability.
-1. Reject impossible or excessively underconstrained benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unstable/unreviewable joint setups.
-1. Reject excessive or unjustified benchmark-side DOFs in `benchmark_assembly.parts[*].dofs`; benchmark plans should use the minimum motion required for the intended puzzle.
+1. Reject benchmark-side motion that is underspecified for engineering intake. If a benchmark fixture moves, the planner handoff must declare reviewer-visible motion facts such as actuator type, axis/path, motion range or target state, and whether the engineer may rely on that motion. Benchmark fixtures are validation context, not manufactured solution parts, so the reviewer checks reviewability and solvability rather than engineer manufacturability.
+1. Benchmark fixtures may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly declares that behavior; the reviewer validates the declared motion against evidence rather than minimizing DOFs.
+1. Reject impossible, contradictory, or unstable benchmark-side motion. Benchmark fixtures may be less physically constrained than engineering solutions, but they still must not rely on teleporting geometry, free-floating actuators, or unreviewable joint setups.
 1. Reject planner handoff when `moved_object.material_id` is missing, empty, or not a known material from `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact even if the planner only intends a minimal benchmark-side fixture declaration.
 1. This stage is review-only. `Benchmark Plan Reviewer` inspects planner artifacts and evidence but does not rewrite planner-owned files, and when render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
 
@@ -161,7 +161,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 
 1. Verify the implemented benchmark follows the approved plan or has justified, reviewable deviations.
 1. Verify the implemented environment is geometrically valid and simulation-valid for the latest revision.
-1. Verify the benchmark remains solvable, properly randomized, and free of unintended excessive DOFs or overly underconstrained moving fixtures after implementation.
+1. Verify the benchmark remains solvable, properly randomized, and consistent with the declared motion contract and observed simulation behavior after implementation.
 1. For benchmarks with powered fixtures or moving benchmark-owned parts, require dynamic simulation evidence for the latest revision rather than relying on static validation preview alone.
 1. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
 1. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
