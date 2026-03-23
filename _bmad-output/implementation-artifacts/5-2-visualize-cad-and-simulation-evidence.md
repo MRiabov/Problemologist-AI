@@ -99,6 +99,7 @@ GPT-5.4
 - `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip`
 - `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_solution_row_round_trip` (engineer solve path still failed in the benchmark setup stage; unrelated to the lineage fix)
 - `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_166.py::test_simulation_navigation_timeline --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
 
 ### Completion Notes List
 
@@ -110,6 +111,9 @@ GPT-5.4
 - Added fail-closed dataset export lineage validation for missing `review_id`, then emitted `review_id` from benchmark, plan, engineer execution, and electronics review decision traces so valid exports still pass.
 - Verified the lineage and policy changes with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip`.
 - Verified Story 5.2 end-to-end with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_166.py::test_simulation_navigation_timeline --maxfail=1` and observed the benchmark planner advance through `PLANNED` into execution successfully.
+- Fixed the episode follow-up continuation path to carry `session_id` into resumed agent graphs so node-entry validation can resolve the worker workspace.
+- Restored the INT-174 benchmark mock transcript to the benchmark graph and added the engineer follow-up transcript so the post-confirm viewer interaction completes without backend mock-LM errors.
+- Verified INT-174 with `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1` and confirmed the browser slice passes.
 
 ### File List
 
@@ -119,6 +123,7 @@ GPT-5.4
 - `controller/agent/nodes/plan_reviewer.py`
 - `controller/agent/nodes/execution_reviewer.py`
 - `controller/agent/nodes/electronics_reviewer.py`
+- `controller/api/tasks.py`
 - `shared/observability/schemas.py`
 - `tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py`
 - `frontend/src/components/workspace/artifactSelection.ts`
@@ -126,7 +131,11 @@ GPT-5.4
 - `frontend/src/components/visualization/DesignViewer.tsx`
 - `frontend/src/components/workspace/ArtifactView.tsx`
 - `tests/integration/frontend/p0/test_solution_evidence.py`
+- `tests/integration/frontend/p0/test_int_174.py`
+- `tests/integration/mock_responses/INT-174.yaml`
+- `tests/integration/mock_responses/INT-174/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml`
 
 ## Change Log
 
 - 2026-03-23: Confirmed the live-browser simulation timeline regression passes with the current implementation.
+- 2026-03-23: Completed INT-174 benchmark and follow-up continuation verification after fixing session-id propagation and mock transcript coverage.
