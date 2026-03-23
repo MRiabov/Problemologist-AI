@@ -7,6 +7,7 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useState, useCallback } from "react";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import RevisionLineageSummary from "../workspace/RevisionLineageSummary";
 
 const navigation = [
   { name: "Workspace", href: "/", icon: LayoutDashboard },
@@ -116,6 +117,13 @@ export default function Sidebar() {
                       onChange={(e) => setFilter(e.target.value)}
                     />
                 </div>
+            </div>
+            <div className="px-4 pb-3">
+                <RevisionLineageSummary
+                  episodes={episodes}
+                  selectedEpisode={selectedEpisode}
+                  onSelectEpisode={selectEpisode}
+                />
             </div>
             <ScrollArea className="flex-1">
                 <div className="p-2 space-y-1">

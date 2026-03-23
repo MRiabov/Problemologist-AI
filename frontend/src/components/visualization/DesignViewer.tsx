@@ -42,6 +42,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>((videoUrl && videoUrl !== 'null') ? 'video' : '3d');
   const [activeHeatmapIdx, setActiveHeatmapIdx] = useState(0);
+  const hasHeatmaps = heatmapUrls.length > 0;
 
   // WP11: Reset viewMode if video disappears or appears
   useEffect(() => {
@@ -53,13 +54,11 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
     }
   }, [videoUrl]);
 
-  const hasHeatmaps = heatmapUrls.length > 0;
-
   return (
     <div className="w-full h-full relative flex flex-col bg-slate-950 overflow-hidden" data-testid="design-viewer-root">
       {/* Debug Info for CI */}
       <div data-testid="viewer-debug-info" className="hidden">
-          {JSON.stringify({ viewMode, modelUrlsCount: modelUrls.length, hasVideo: !!videoUrl, videoUrl, modelUrls })}
+          {JSON.stringify({ viewMode, modelUrlsCount: modelUrls.length, hasVideo: !!videoUrl, hasHeatmaps, videoUrl, modelUrls })}
       </div>
       {/* View Mode Switcher */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 bg-background/40 backdrop-blur-md rounded-full border border-white/10 shadow-2xl">

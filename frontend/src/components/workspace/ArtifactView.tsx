@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { 
   VscCode
@@ -35,6 +35,14 @@ import { runSimulation } from "../../api/client";
 import { AssetType } from "../../api/generated/models/AssetType";
 import { TraceType } from "../../api/generated/models/TraceType";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import { EpisodeType } from "../../api/generated/models/EpisodeType";
+import {
+    getArtifactSelectionDescriptor,
+    getDefaultArtifactId,
+    getLatestSolutionEvidenceAsset,
+    isImageAsset,
+    isVideoAsset,
+} from "./artifactSelection";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -57,15 +65,35 @@ export default function ArtifactView({
   } = useEpisodes();
   const { theme } = useTheme();
   const [inlineContextLabel, setInlineContextLabel] = useState<string | null>(null);
+  const defaultArtifactSelectionRef = useRef<string | null>(null);
+  const selectedEpisodeIdRef = useRef<string | null>(null);
 
   const isPlanned =
     selectedEpisode?.status === EpisodeStatus.PLANNED ||
     selectedEpisode?.metadata_vars?.detailed_status === "PLANNED";
+  const episodeType = selectedEpisode?.metadata_vars?.episode_type ?? null;
+  const isBenchmarkEpisode =
+    episodeType === EpisodeType.BENCHMARK ||
+    window.location.pathname === "/benchmark";
   const showExecutionPlan =
     !!selectedEpisode &&
     (isPlanned || !!selectedEpisode.plan) &&
     selectedEpisode.status !== EpisodeStatus.COMPLETED &&
     selectedEpisode.status !== EpisodeStatus.FAILED;
+  const defaultArtifactId = useMemo(
+    () =>
+      getDefaultArtifactId({
+        episodeType,
+        isBenchmarkRoute: window.location.pathname === "/benchmark",
+        plan,
+        assets,
+      }),
+    [assets, episodeType, plan, window.location.pathname]
+  );
+  const latestSolutionEvidenceAsset = useMemo(
+    () => getLatestSolutionEvidenceAsset(assets),
+    [assets]
+  );
 
   const getAssetUrl = (assetPath: string | undefined) => {
     if (!assetPath || !selectedEpisode) return null;
@@ -116,22 +144,38 @@ export default function ArtifactView({
     ];
   }, [plan, assets]);
 
-  // Automatically select first asset if none selected
+  // Automatically select the current episode's default artifact.
   useEffect(() => {
-    if (!activeArtifactId || activeArtifactId === 'none') {
-        if (plan) {
-            setActiveArtifactId('plan');
-        } else if (assets.length > 0) {
-            setActiveArtifactId(assets[0].id.toString());
-        }
+    if (!selectedEpisode?.id || !defaultArtifactId) {
+      return;
     }
-  }, [plan, assets, activeArtifactId, setActiveArtifactId]);
+
+    if (selectedEpisodeIdRef.current !== selectedEpisode.id) {
+      selectedEpisodeIdRef.current = selectedEpisode.id;
+      defaultArtifactSelectionRef.current = defaultArtifactId;
+      setActiveArtifactId(defaultArtifactId);
+      return;
+    }
+
+    if (
+      !activeArtifactId ||
+      activeArtifactId === "none" ||
+      activeArtifactId === defaultArtifactSelectionRef.current
+    ) {
+      defaultArtifactSelectionRef.current = defaultArtifactId;
+      setActiveArtifactId(defaultArtifactId);
+    }
+  }, [selectedEpisode?.id, defaultArtifactId, activeArtifactId, setActiveArtifactId]);
 
   const activeAsset = useMemo(() => {
     if (activeArtifactId === 'plan') return { name: 'plan.md', content: plan, asset_type: AssetType.MARKDOWN };
     const asset = assets.find(a => a.id.toString() === activeArtifactId);
     return asset ? { ...asset, name: asset.s3_path.split('/').pop() || asset.s3_path } : null;
   }, [activeArtifactId, assets, plan]);
+  const resolvedAsset = activeArtifactId === 'plan' ? null : (activeAsset as AssetResponse | null);
+  const activeArtifactName = activeAsset?.name ?? (activeArtifactId === 'plan' ? 'plan.md' : null);
+  const activeArtifactPath = activeArtifactId === 'plan' ? 'plan.md' : resolvedAsset?.s3_path ?? null;
+  const activeArtifactType = activeArtifactId === 'plan' ? AssetType.MARKDOWN : resolvedAsset?.asset_type ?? null;
 
   const renderContent = () => {
     if (!activeAsset) {
@@ -226,26 +270,101 @@ export default function ArtifactView({
         try {
             const data = JSON.parse(activeAsset.content);
             return (
-                <div className="bg-background min-h-full overflow-y-auto no-scrollbar">
-                    <SimulationResults 
-                        stressSummaries={data.stress_summaries} 
-                        fluidMetrics={data.fluid_metrics} 
-                    />
-                    <div className="p-6 border-t border-border/50">
-                        <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Simulation Data</h3>
-                        <SyntaxHighlighter
-                            language="json"
-                            style={theme === 'dark' ? vscDarkPlus : vs}
-                            customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
-                        >
-                            {activeAsset.content}
-                        </SyntaxHighlighter>
+                <div className="flex h-full flex-col">
+                    <div
+                        data-testid="artifact-active-file"
+                        data-artifact-id={activeArtifactId ?? ""}
+                        data-artifact-name={activeArtifactName ?? ""}
+                        data-artifact-path={activeArtifactPath ?? ""}
+                        data-artifact-type={activeArtifactType ?? ""}
+                        className="flex items-center justify-between px-4 py-2 border-b bg-muted/50"
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-medium text-muted-foreground truncate">
+                                {activeArtifactName}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">
+                                {activeArtifactType || "OTHER"}
+                            </Badge>
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[55%]">
+                            {activeArtifactPath}
+                        </div>
+                    </div>
+                    <div className="bg-background flex-1 overflow-y-auto no-scrollbar">
+                        <SimulationResults
+                            stressSummaries={data.stress_summaries}
+                            fluidMetrics={data.fluid_metrics}
+                            summary={data.summary}
+                            renderPaths={data.render_paths}
+                        />
+                        <div className="p-6 border-t border-border/50">
+                            <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Simulation Data</h3>
+                            <SyntaxHighlighter
+                                language="json"
+                                style={theme === 'dark' ? vscDarkPlus : vs}
+                                customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
+                            >
+                                {activeAsset.content}
+                            </SyntaxHighlighter>
+                        </div>
                     </div>
                 </div>
             );
         } catch (e) {
             console.error("Failed to parse simulation result", e);
         }
+    }
+
+    if (resolvedAsset && (isImageAsset(resolvedAsset) || isVideoAsset(resolvedAsset))) {
+        const assetUrl = getAssetUrl(resolvedAsset.s3_path);
+        return (
+            <div className="flex h-full flex-col">
+                <div
+                    data-testid="artifact-active-file"
+                    data-artifact-id={activeArtifactId ?? ""}
+                    data-artifact-name={activeArtifactName ?? ""}
+                    data-artifact-path={activeArtifactPath ?? ""}
+                    data-artifact-type={activeArtifactType ?? ""}
+                    className="flex items-center justify-between px-4 py-2 border-b bg-muted/50"
+                >
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs font-medium text-muted-foreground truncate">
+                            {activeArtifactName}
+                        </span>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1">
+                            {activeArtifactType || "OTHER"}
+                        </Badge>
+                    </div>
+                    <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[55%]">
+                        {activeArtifactPath}
+                    </div>
+                </div>
+                <div className="flex-1 overflow-auto bg-black/90 flex items-center justify-center p-4">
+                    {isVideoAsset(resolvedAsset) ? (
+                        <video
+                            data-testid="artifact-media-view"
+                            src={assetUrl ?? undefined}
+                            controls
+                            className="max-h-full max-w-full rounded-lg shadow-2xl border border-white/10"
+                        />
+                    ) : (
+                        <img
+                            data-testid="artifact-media-view"
+                            src={assetUrl ?? undefined}
+                            alt={activeArtifactName ?? activeAsset.name}
+                            className="max-h-full max-w-full object-contain rounded-lg shadow-2xl border border-white/10"
+                        />
+                    )}
+                </div>
+                <div
+                    data-testid="artifact-media-path"
+                    className="border-t border-border/50 bg-background px-4 py-2 text-[10px] font-mono text-muted-foreground break-all"
+                >
+                    {activeArtifactPath}
+                </div>
+            </div>
+        );
     }
 
     const language = detectLanguage(activeAsset.name, activeAsset.asset_type === AssetType.MJCF ? 'json' : (activeAsset.asset_type || 'text'));
@@ -275,7 +394,14 @@ export default function ArtifactView({
                     </div>
                 </div>
             )}
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/50">
+            <div
+                data-testid="artifact-active-file"
+                data-artifact-id={activeArtifactId ?? ""}
+                data-artifact-name={activeArtifactName ?? ""}
+                data-artifact-path={activeArtifactPath ?? ""}
+                data-artifact-type={activeArtifactType ?? ""}
+                className="flex items-center justify-between px-4 py-2 border-b bg-muted/50"
+            >
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-muted-foreground">{activeAsset.name}</span>
                     <Badge variant="outline" className="text-[10px] h-4 px-1">{language}</Badge>
@@ -377,6 +503,10 @@ export default function ArtifactView({
                     {fileTree[0].children.map((item: any) => (
                         <button
                             key={item.id}
+                            data-testid={`artifact-entry-${item.id}`}
+                            data-artifact-id={item.id}
+                            data-artifact-name={item.name}
+                            data-artifact-path={item.s3_path || item.name}
                             className={cn(
                                 "group flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all duration-200",
                                 activeArtifactId === item.id 
@@ -396,6 +526,21 @@ export default function ArtifactView({
 
         {/* Editor Area */}
         <div className="flex-1 min-w-0 bg-background/50">
+            <div data-testid="artifact-debug-info" className="hidden">
+                {JSON.stringify({
+                    episodeId: selectedEpisode?.id,
+                    episodeType,
+                    isBenchmarkEpisode,
+                    defaultArtifactId,
+                    activeArtifactId,
+                    activeArtifactName,
+                    activeArtifactPath,
+                    activeArtifactType,
+                    selectedSolutionEvidenceArtifact: getArtifactSelectionDescriptor(
+                        latestSolutionEvidenceAsset
+                    ),
+                })}
+            </div>
             {renderContent()}
         </div>
     </div>

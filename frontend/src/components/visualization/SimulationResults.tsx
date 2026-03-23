@@ -31,24 +31,68 @@ export interface FluidMetricResult {
 interface SimulationResultsProps {
   stressSummaries?: StressSummary[];
   fluidMetrics?: FluidMetricResult[];
+  summary?: string | null;
+  renderPaths?: string[];
   className?: string;
 }
 
 export const SimulationResults: React.FC<SimulationResultsProps> = ({
   stressSummaries = [],
   fluidMetrics = [],
+  summary = null,
+  renderPaths = [],
   className
 }) => {
-  if (stressSummaries.length === 0 && fluidMetrics.length === 0) {
+  const hasOverviewEvidence = !!summary || renderPaths.length > 0;
+
+  if (stressSummaries.length === 0 && fluidMetrics.length === 0 && !hasOverviewEvidence) {
     return (
-      <div className={cn("p-8 text-center text-muted-foreground italic", className)}>
+      <div data-testid="simulation-results-empty" className={cn("p-8 text-center text-muted-foreground italic", className)}>
         No simulation data available.
       </div>
     );
   }
 
   return (
-    <div className={cn("space-y-6 p-4", className)}>
+    <div data-testid="simulation-results-root" className={cn("space-y-6 p-4", className)}>
+      {summary && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Simulation Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p data-testid="simulation-results-summary" className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+              {summary}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {renderPaths.length > 0 && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+              <Activity className="h-4 w-4 text-blue-500" />
+              Render Evidence
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {renderPaths.map((renderPath, idx) => (
+              <div
+                key={`${renderPath}-${idx}`}
+                data-testid={`simulation-render-path-${idx}`}
+                className="rounded-md border border-border/40 bg-muted/20 px-3 py-2 text-[11px] font-mono break-all text-muted-foreground"
+              >
+                {renderPath}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stress Summaries */}
       {stressSummaries.length > 0 && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">

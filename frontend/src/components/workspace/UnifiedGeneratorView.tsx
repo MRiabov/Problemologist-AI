@@ -23,6 +23,12 @@ import { PathUtils } from '../../lib/pathUtils';
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 import { AssetType } from "../../api/generated/models/AssetType";
+import {
+  getArtifactSelectionDescriptor,
+  getDefaultArtifactId,
+  getLatestSolutionEvidenceAsset,
+} from "./artifactSelection";
+import { getEngineerRevisionLineage } from "./RevisionLineageSummary";
 
 interface UnifiedGeneratorViewProps {
   title: string;
@@ -53,6 +59,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   onDismissError
 }) => {
   const { 
+    episodes,
     selectedEpisode, 
     running,
     topologyNodes,
@@ -83,6 +90,40 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   // Only include GLB assets — GLTFLoader cannot parse STL/STEP and crashes with WebGL context loss
   const modelAssets = useMemo(() => selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === AssetType.GLB) || [], [selectedEpisode]);
   const modelUrls = useMemo(() => modelAssets.map(getAssetUrl).filter(Boolean) as string[], [modelAssets, getAssetUrl]);
+  const defaultSolutionEvidenceAsset = useMemo(
+    () => getLatestSolutionEvidenceAsset(selectedEpisode?.assets || []),
+    [selectedEpisode?.assets]
+  );
+  const defaultArtifactId = useMemo(
+    () =>
+      getDefaultArtifactId({
+        episodeType: selectedEpisode?.metadata_vars?.episode_type ?? null,
+        isBenchmarkRoute: window.location.pathname === '/benchmark',
+        plan: selectedEpisode?.plan ?? null,
+        assets: selectedEpisode?.assets || [],
+      }),
+    [selectedEpisode?.assets, selectedEpisode?.metadata_vars?.episode_type, selectedEpisode?.plan, window.location.pathname]
+  );
+  const terminalSummary = useMemo(() => {
+    const metadata = selectedEpisode?.metadata_vars ?? null;
+    if (!metadata) return null;
+    return {
+      detailedStatus: metadata.detailed_status ?? null,
+      terminalReason: metadata.terminal_reason ?? null,
+      failureClass: metadata.failure_class ?? null,
+      validationLogs: metadata.validation_logs ?? [],
+      episodeType: metadata.episode_type ?? null,
+    };
+  }, [selectedEpisode?.metadata_vars]);
+  const revisionLineage = useMemo(
+    () => getEngineerRevisionLineage(episodes, selectedEpisode),
+    [
+      episodes,
+      selectedEpisode?.id,
+      selectedEpisode?.metadata_vars?.benchmark_id,
+      selectedEpisode?.metadata_vars?.episode_type,
+    ],
+  );
 
   const circuitData = useMemo(() => {
     const assemblyAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.s3_path.endsWith('assembly_definition.yaml'));
@@ -219,6 +260,17 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                           videoAssetType: videoAsset?.asset_type,
                           episodeId: selectedEpisode?.id,
                           episodeStatus: selectedEpisode?.metadata_vars?.detailed_status || selectedEpisode?.status,
+                          benchmarkId: selectedEpisode?.metadata_vars?.benchmark_id ?? null,
+                          priorEpisodeId: selectedEpisode?.metadata_vars?.prior_episode_id ?? null,
+                          isReused: selectedEpisode?.metadata_vars?.is_reused ?? null,
+                          revisionCount: revisionLineage.length,
+                          revisionHook: selectedEpisode?.metadata_vars?.prior_episode_id
+                            ?? selectedEpisode?.metadata_vars?.benchmark_id
+                            ?? selectedEpisode?.id
+                            ?? null,
+                          terminalMetadata: terminalSummary,
+                          defaultArtifactId,
+                          defaultSolutionEvidenceArtifact: getArtifactSelectionDescriptor(defaultSolutionEvidenceAsset),
                           isRunning: running
                       })}
                   </div>

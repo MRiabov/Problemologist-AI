@@ -6,7 +6,8 @@ import {
   AlertCircle,
   Zap,
   Play,
-  Rocket
+  Rocket,
+  RotateCcw
 } from "lucide-react";
 import { runSimulation, type BenchmarkObjectives } from "../../api/client";
 import { ObjectivesForm } from "./ObjectivesForm";
@@ -20,6 +21,7 @@ import type { TopologyNode } from "../visualization/ModelBrowser";
 import { ChatInput } from "../Chat/ChatInput";
 import { TraceList } from "./TraceList";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import { EpisodeType } from "../../api/generated/models/EpisodeType";
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
@@ -124,6 +126,60 @@ export default function ChatWindow({
     }
     return { used, max, pct: (used / max) * 100 };
   }, [selectedEpisode?.metadata_vars]);
+  const isBenchmarkEpisode =
+    selectedEpisode?.metadata_vars?.episode_type === EpisodeType.BENCHMARK ||
+    isBenchmarkPath;
+  const isEngineerEpisode =
+    selectedEpisode?.metadata_vars?.episode_type === EpisodeType.ENGINEER ||
+    (!isBenchmarkEpisode && !!selectedEpisode);
+  const isFailedEngineerEpisode =
+    !!selectedEpisode &&
+    selectedEpisode.status === EpisodeStatus.FAILED &&
+    selectedEpisode.metadata_vars?.episode_type === EpisodeType.ENGINEER &&
+    !!selectedEpisode.metadata_vars?.benchmark_id;
+  const terminalMetadata = selectedEpisode?.metadata_vars ?? null;
+  const terminalDetailedStatus =
+    terminalMetadata?.detailed_status ?? selectedEpisode?.status ?? null;
+  const hasStructuredTerminalMetadata =
+    !!terminalMetadata?.detailed_status &&
+    !!terminalMetadata?.terminal_reason &&
+    (selectedEpisode?.status !== EpisodeStatus.FAILED ||
+      !!terminalMetadata?.failure_class);
+  const shouldShowFallbackLogs =
+    selectedEpisode?.status === EpisodeStatus.FAILED &&
+    !hasStructuredTerminalMetadata;
+  const terminalBannerClass =
+    selectedEpisode?.status === EpisodeStatus.FAILED
+      ? "mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm"
+      : "mt-6 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-sm";
+  const terminalIconClass =
+    selectedEpisode?.status === EpisodeStatus.FAILED
+      ? "text-red-500"
+      : "text-emerald-500";
+  const terminalHeading =
+    selectedEpisode?.status === EpisodeStatus.FAILED
+      ? "Terminal failure"
+      : "Terminal outcome";
+  const handleRetryFailedEpisode = useCallback(async () => {
+    if (!selectedEpisode || !isFailedEngineerEpisode) {
+      return;
+    }
+
+    const benchmarkId = selectedEpisode.metadata_vars?.benchmark_id?.trim();
+    if (!benchmarkId) {
+      return;
+    }
+
+    await startAgent(
+      selectedEpisode.task,
+      undefined,
+      {
+        benchmark_id: benchmarkId,
+        prior_episode_id: selectedEpisode.id,
+        is_reused: true,
+      },
+    );
+  }, [isFailedEngineerEpisode, selectedEpisode, startAgent]);
 
   // Stable handlers
   const handleShowFeedback = useCallback((traceId: number, score: number) => {
@@ -288,18 +344,117 @@ export default function ChatWindow({
                     </div>
                 )}
 
-                {/* Failure Message */}
-                {selectedEpisode?.status === EpisodeStatus.FAILED && (
-                    <div className="mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm">
-                        <div className="flex items-center gap-2 mb-2 text-red-500">
+                {isFailedEngineerEpisode && (
+                    <div
+                      data-testid="failure-summary-container"
+                      className="mt-6 p-4 rounded-xl border border-red-500/20 bg-red-500/10 shadow-sm"
+                    >
+                        <div className="flex items-center gap-2 mb-3 text-red-500">
                             <AlertCircle className="h-4 w-4" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Terminal failure</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest">
+                                Failed engineer episode
+                            </span>
                         </div>
-                        <div className="text-[11px] text-red-400 font-mono whitespace-pre-wrap">
-                            {selectedEpisode.validation_logs && selectedEpisode.validation_logs.length > 0 
-                                ? selectedEpisode.validation_logs.join('\n')
-                                : "The agent encountered an unrecoverable error during execution."}
+                        <div className="grid grid-cols-1 gap-2 text-[11px] font-mono text-red-400">
+                            <div>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Benchmark:</span>{' '}
+                                <span data-testid="failure-summary-benchmark-id">
+                                  {terminalMetadata?.benchmark_id ?? "unavailable"}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Parent episode:</span>{' '}
+                                <span data-testid="failure-summary-prior-episode-id">
+                                  {terminalMetadata?.prior_episode_id ?? "root"}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Reused:</span>{' '}
+                                <span data-testid="failure-summary-is-reused">
+                                  {terminalMetadata?.is_reused ? "true" : "false"}
+                                </span>
+                            </div>
                         </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-red-400">
+                            <span>
+                                Terminal reason:{" "}
+                                <span data-testid="failure-summary-terminal-reason">
+                                  {terminalMetadata?.terminal_reason ?? "unavailable"}
+                                </span>
+                            </span>
+                            <span>
+                                Failure class:{" "}
+                                <span data-testid="failure-summary-failure-class">
+                                  {terminalMetadata?.failure_class ?? "none"}
+                                </span>
+                            </span>
+                        </div>
+                        <div className="mt-4 flex items-center gap-2">
+                            <Button
+                              type="button"
+                              data-testid="retry-failed-episode-button"
+                              className="bg-red-500/90 hover:bg-red-500 text-white font-black text-[10px] uppercase tracking-widest h-9 shadow-lg shadow-red-500/20"
+                              onClick={() => void handleRetryFailedEpisode()}
+                            >
+                                <RotateCcw className="h-3 w-3 mr-2" />
+                                Revise & Retry
+                            </Button>
+                            <span className="text-[10px] text-red-400/80">
+                                Launches a fresh engineer episode against the same benchmark package.
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Terminal outcome summary */}
+                {selectedEpisode && isEngineerEpisode && (
+                    <div
+                      data-testid="terminal-summary-block"
+                      className={terminalBannerClass}
+                    >
+                        <div className={`flex items-center gap-2 mb-2 ${terminalIconClass}`}>
+                            {selectedEpisode.status === EpisodeStatus.FAILED ? (
+                                <AlertCircle className="h-4 w-4" />
+                            ) : (
+                                <Check className="h-4 w-4" />
+                            )}
+                            <span className="text-[9px] font-black uppercase tracking-widest">
+                                {terminalHeading}
+                            </span>
+                        </div>
+                        <div
+                          data-testid="terminal-summary-fields"
+                          className="grid grid-cols-1 gap-2 text-[11px] font-mono"
+                        >
+                            <div className={selectedEpisode.status === EpisodeStatus.FAILED ? "text-red-400" : "text-emerald-700 dark:text-emerald-300"}>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Detailed status:</span>{' '}
+                                <span data-testid="terminal-summary-detailed-status">
+                                  {terminalDetailedStatus ?? "unavailable"}
+                                </span>
+                            </div>
+                            <div className={selectedEpisode.status === EpisodeStatus.FAILED ? "text-red-400" : "text-emerald-700 dark:text-emerald-300"}>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Terminal reason:</span>{' '}
+                                <span data-testid="terminal-summary-terminal-reason">
+                                  {terminalMetadata?.terminal_reason ?? "unavailable"}
+                                </span>
+                            </div>
+                            <div className={selectedEpisode.status === EpisodeStatus.FAILED ? "text-red-400" : "text-emerald-700 dark:text-emerald-300"}>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Failure class:</span>{' '}
+                                <span data-testid="terminal-summary-failure-class">
+                                  {terminalMetadata?.failure_class ?? "none"}
+                                </span>
+                            </div>
+                        </div>
+                        {shouldShowFallbackLogs && (
+                            <div
+                              data-testid="terminal-summary-fallback"
+                              className="mt-3 text-[11px] text-red-400 font-mono whitespace-pre-wrap"
+                            >
+                                {selectedEpisode.validation_logs && selectedEpisode.validation_logs.length > 0
+                                  ? selectedEpisode.validation_logs.join('\n')
+                                  : "The agent encountered an unrecoverable error during execution."}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
