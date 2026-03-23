@@ -206,6 +206,69 @@ def _select_latest_assets(assets: list[Asset]) -> list[Asset]:
     return selected
 
 
+def _missing_required_artifacts(
+    *,
+    episode_type: EpisodeType,
+    selected_assets: list[Asset],
+) -> list[str]:
+    selected_paths = {_normalize_path(asset.s3_path) for asset in selected_assets}
+
+    def _has(prefix_or_path: str) -> bool:
+        if prefix_or_path.endswith("/"):
+            return any(path.startswith(prefix_or_path) for path in selected_paths)
+        return prefix_or_path in selected_paths
+
+    if episode_type == EpisodeType.BENCHMARK:
+        required = [
+            "plan.md",
+            "todo.md",
+            "journal.md",
+            "benchmark_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+            ".manifests/benchmark_plan_review_manifest.json",
+            ".manifests/benchmark_review_manifest.json",
+            "renders/render_manifest.json",
+        ]
+        review_prefixes = [
+            "reviews/benchmark-plan-review-decision-round-",
+            "reviews/benchmark-plan-review-comments-round-",
+            "reviews/benchmark-execution-review-decision-round-",
+            "reviews/benchmark-execution-review-comments-round-",
+        ]
+    else:
+        required = [
+            "plan.md",
+            "todo.md",
+            "journal.md",
+            "script.py",
+            "assembly_definition.yaml",
+            "benchmark_definition.yaml",
+            "benchmark_assembly_definition.yaml",
+            "validation_results.json",
+            "simulation_result.json",
+            ".manifests/benchmark_review_manifest.json",
+            ".manifests/benchmark_plan_review_manifest.json",
+            ".manifests/engineering_plan_review_manifest.json",
+            ".manifests/engineering_execution_review_manifest.json",
+            "renders/render_manifest.json",
+        ]
+        review_prefixes = [
+            "reviews/engineering-plan-review-decision-round-",
+            "reviews/engineering-plan-review-comments-round-",
+            "reviews/engineering-execution-review-decision-round-",
+            "reviews/engineering-execution-review-comments-round-",
+        ]
+
+    missing: list[str] = [path for path in required if not _has(path)]
+    for prefix in review_prefixes:
+        if not any(path.startswith(prefix) for path in selected_paths):
+            missing.append(prefix)
+    if any(path.startswith("renders/") and path.endswith((".png", ".jpg", ".jpeg")) for path in selected_paths):
+        if not _has("renders/render_manifest.json"):
+            missing.append("renders/render_manifest.json")
+    return missing
+
+
 def _benchmark_asset_manifest(
     benchmark_asset: BenchmarkAsset,
 ) -> DatasetRowBenchmarkAsset:
@@ -388,6 +451,16 @@ async def _materialize_dataset_export(
         raise HTTPException(
             status_code=422,
             detail="dataset export requires persisted artifacts",
+        )
+
+    missing_artifacts = _missing_required_artifacts(
+        episode_type=metadata.episode_type,
+        selected_assets=selected_assets,
+    )
+    if missing_artifacts:
+        raise HTTPException(
+            status_code=422,
+            detail=f"dataset export missing required artifact families: {sorted(missing_artifacts)}",
         )
 
     s3_client = _get_s3_client()

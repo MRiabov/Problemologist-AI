@@ -1644,6 +1644,123 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "submission_cost_limit_exceeded",
+        "requested quantity 1",
+        "Unit cost at requested quantity",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_010_handoff_rejects_low_quantity_that_only_passes_at_volume(
+    session_id, base_headers, valid_plan, valid_todo, valid_objectives
+):
+    """INT-010: the handoff gate must evaluate manufacturability at the requested quantity."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        objectives = valid_objectives.model_copy(deep=True)
+        objectives.constraints.target_quantity = 1
+        objectives.constraints.max_unit_cost = 40.0
+        objectives.constraints.max_weight_g = 1000.0
+
+        assembly_definition = {
+            "version": "1.0",
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 40.0,
+                "benchmark_max_weight_g": 1000.0,
+                "planner_target_max_unit_cost_usd": 35.0,
+                "planner_target_max_weight_g": 900.0,
+            },
+            "manufactured_parts": [
+                {
+                    "part_name": "qty_probe",
+                    "part_id": "qty_probe",
+                    "manufacturing_method": "CNC",
+                    "material_id": "aluminum_6061",
+                    "quantity": 1,
+                    "part_volume_mm3": 1000.0,
+                    "stock_bbox_mm": {"x": 10.0, "y": 10.0, "z": 10.0},
+                    "stock_volume_mm3": 1000.0,
+                    "removed_volume_mm3": 0.0,
+                    "estimated_unit_cost_usd": 35.0,
+                }
+            ],
+            "cots_parts": [],
+            "environment_drill_operations": [],
+            "final_assembly": [
+                {
+                    "name": "qty_probe",
+                    "config": {
+                        "dofs": [],
+                    },
+                }
+            ],
+            "totals": {
+                "estimated_unit_cost_usd": 35.0,
+                "estimated_weight_g": 2.7,
+                "estimate_confidence": "high",
+            },
+        }
+        script = """
+from build123d import Box, Location
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+
+def build():
+    part = Box(10, 10, 10)
+    part = part.move(Location((0, 0, 5)))
+    part.label = "qty_probe"
+    part.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC,
+        material_id="aluminum_6061",
+    )
+    return part
+"""
+
+        await setup_workspace(
+            client,
+            base_headers,
+            {
+                "plan.md": valid_plan,
+                "todo.md": valid_todo,
+                "benchmark_definition.yaml": objectives,
+                "assembly_definition.yaml": assembly_definition,
+                "script.py": script,
+            },
+        )
+
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "python "
+                    "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
+                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                ),
+                timeout=60,
+            ).model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code == 0, exec_data.stderr
+
+        submit_req = BenchmarkToolRequest(
+            script_path="script.py",
+            reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        )
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
+
+    assert submit_data.success is False
+    assert "Unit cost at requested quantity 1" in submit_data.message
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_019_single_part_benchmark_submit_succeeds_without_cost_gate(
     session_id,
