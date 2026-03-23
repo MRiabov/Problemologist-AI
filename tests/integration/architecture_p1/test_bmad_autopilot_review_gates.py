@@ -366,6 +366,141 @@ def test_int_autopilot_review_artifacts_are_workspace_scoped():
 
 
 @pytest.mark.integration_p2
+def test_int_autopilot_qa_fail_reroutes_story_back_to_dev():
+    """
+    INT-209: a failed QA pass must reroute the story back to development
+    instead of hard-blocking the run.
+    """
+    mod = _load_autopilot_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        env = _init_repo(root)
+        story_key, story_path, status_path = _write_story_workspace(
+            root, story_status="review"
+        )
+        _git(["add", "-A"], cwd=root, env=env)
+        _git(["commit", "-m", "seed qa reroute workspace"], cwd=root, env=env)
+
+        runner = object.__new__(mod.AutopilotRunner)
+        runner.project_root = root
+        runner.tmp_dir = root / ".autopilot" / "tmp"
+        runner.tmp_dir.mkdir(parents=True, exist_ok=True)
+        runner.sprint_status_file = status_path
+        runner.base_branch = "main"
+
+        runner.state_current_story = lambda: story_key
+        runner.load_sprint_status = lambda root=None: mod.SprintStatus.model_validate(
+            yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        )
+        runner.story_file_for_key = lambda sprint_status, key, root=None: story_path
+        runner.persist_review_artifact = lambda *args, **kwargs: None
+        runner.autopilot_checks = lambda *args, **kwargs: None
+        runner.play_sound = lambda *args, **kwargs: None
+        runner.log = lambda *args, **kwargs: None
+
+        transitions = []
+        runner.state_set_story = lambda phase, sk, sf=None: transitions.append(
+            (phase.value if hasattr(phase, "value") else phase, sk)
+        )
+        runner.state_set = lambda phase, epic=None: transitions.append(
+            ("state_set", phase.value if hasattr(phase, "value") else phase, epic)
+        )
+
+        def run_codex_session(
+            prompt, output_file, cwd=None, reasoning_effort=None, session_id=None
+        ):
+            output_file.write_text(
+                "---\nreview_status: fail\n---\nQA blockers remain\n",
+                encoding="utf-8",
+            )
+            return mod.CodexAttemptResult(
+                return_code=0,
+                thread_id="thread-qa-fail",
+                output_text=output_file.read_text(encoding="utf-8"),
+            )
+
+        runner.run_codex_session = run_codex_session
+
+        runner.phase_qa_automation_test_story()
+
+        sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        assert story_path.read_text(encoding="utf-8").strip() == "Status: in-progress"
+        assert sprint_status["development_status"][story_key] == "in-progress"
+        assert transitions[-1] == ("DEVELOP_STORIES", story_key)
+        assert not any(
+            item[0] == "state_set" and item[1] == "BLOCKED" for item in transitions
+        )
+
+
+@pytest.mark.integration_p2
+def test_int_autopilot_story_dev_validation_failure_reroutes_to_dev():
+    """
+    INT-210: a story-development validation failure must reroute back to
+    development instead of blocking the run.
+    """
+    mod = _load_autopilot_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        env = _init_repo(root)
+        story_key, story_path, status_path = _write_story_workspace(
+            root, story_status="ready-for-dev"
+        )
+        _git(["add", "-A"], cwd=root, env=env)
+        _git(["commit", "-m", "seed dev reroute workspace"], cwd=root, env=env)
+
+        runner = object.__new__(mod.AutopilotRunner)
+        runner.project_root = root
+        runner.tmp_dir = root / ".autopilot" / "tmp"
+        runner.tmp_dir.mkdir(parents=True, exist_ok=True)
+        runner.sprint_status_file = status_path
+        runner.base_branch = "main"
+
+        runner.state_current_story = lambda: story_key
+        runner.load_sprint_status = lambda root=None: mod.SprintStatus.model_validate(
+            yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        )
+        runner.story_file_for_key = lambda sprint_status, key, root=None: story_path
+        runner.build_story_dev_prompt = lambda *args, **kwargs: "prompt"
+        runner.autopilot_checks = lambda *args, **kwargs: None
+        runner.log = lambda *args, **kwargs: None
+
+        transitions = []
+        runner.state_set_story = lambda phase, sk, sf=None: transitions.append(
+            (phase.value if hasattr(phase, "value") else phase, sk)
+        )
+        runner.state_set = lambda phase, epic=None: transitions.append(
+            ("state_set", phase.value if hasattr(phase, "value") else phase, epic)
+        )
+
+        def run_codex_session_with_retry(*args, **kwargs):
+            return mod.CodexAttemptResult(
+                return_code=1,
+                thread_id="thread-dev-fail",
+                output_text="broken output",
+                validation_failure=mod.ValidationFailure(
+                    error_code="missing_frontmatter",
+                    field="frontmatter",
+                    message="missing YAML frontmatter",
+                    expected="YAML frontmatter only",
+                ),
+            )
+
+        runner.run_codex_session_with_retry = run_codex_session_with_retry
+
+        runner.phase_develop_story()
+
+        sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        assert story_path.read_text(encoding="utf-8").strip() == "Status: in-progress"
+        assert sprint_status["development_status"][story_key] == "in-progress"
+        assert transitions[-1] == ("DEVELOP_STORIES", story_key)
+        assert not any(
+            item[0] == "state_set" and item[1] == "BLOCKED" for item in transitions
+        )
+
+
+@pytest.mark.integration_p2
 def test_int_autopilot_retries_code_review_in_same_session():
     """
     The retry loop must continue the same Codex session instead of starting a
