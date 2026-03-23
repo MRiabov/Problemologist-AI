@@ -88,7 +88,10 @@ def _create_benchmark(client: httpx.Client, prompt: str) -> str:
             continue
         assert status_response.status_code == 200, status_response.text
         benchmark_episode = EpisodeResponse.model_validate(status_response.json())
-        if benchmark_episode.status == EpisodeStatus.PLANNED and not benchmark_confirmed:
+        if (
+            benchmark_episode.status == EpisodeStatus.PLANNED
+            and not benchmark_confirmed
+        ):
             client.post(
                 f"/benchmark/{benchmark_session_id}/confirm",
                 json=ConfirmRequest(comment="Proceed").model_dump(),
@@ -175,7 +178,9 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
     """
 
     marker = uuid.uuid4().hex[:8]
-    benchmark_prompt = f"Create a simple benchmark setup for retry lineage testing {marker}"
+    benchmark_prompt = (
+        f"Create a simple benchmark setup for retry lineage testing {marker}"
+    )
     engineer_task = f"Create an engineer handoff for retry lineage testing {marker}"
 
     benchmark_session_id, first_episode_id = _prepare_failed_engineer_run(
@@ -186,9 +191,9 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
     page.goto(FRONTEND_URL, timeout=60000)
     page.wait_for_load_state("networkidle")
 
-    engineer_row = page.get_by_test_id("sidebar-episode-item").filter(
-        has_text=engineer_task
-    ).first
+    engineer_row = (
+        page.get_by_test_id("sidebar-episode-item").filter(has_text=engineer_task).first
+    )
     expect(engineer_row).to_be_visible(timeout=60000)
     engineer_row.click()
 
@@ -214,9 +219,11 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
         timeout=15000
     )
 
-    benchmark_row = page.get_by_test_id("sidebar-episode-item").filter(
-        has_text=benchmark_prompt
-    ).first
+    benchmark_row = (
+        page.get_by_test_id("sidebar-episode-item")
+        .filter(has_text=benchmark_prompt)
+        .first
+    )
     expect(benchmark_row).to_be_visible(timeout=60000)
     benchmark_row.click()
     expect(page.get_by_test_id("retry-failed-episode-button")).to_have_count(0)
@@ -266,9 +273,9 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
     page.goto(FRONTEND_URL, timeout=60000)
     page.wait_for_load_state("networkidle")
 
-    engineer_row = page.get_by_test_id("sidebar-episode-item").filter(
-        has_text=engineer_task
-    ).first
+    engineer_row = (
+        page.get_by_test_id("sidebar-episode-item").filter(has_text=engineer_task).first
+    )
     expect(engineer_row).to_be_visible(timeout=60000)
     engineer_row.click()
 
@@ -293,9 +300,9 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
     expect(page.get_by_test_id("revision-summary-panel")).to_be_visible(timeout=15000)
     expect(page.get_by_test_id("revision-summary-item")).to_have_count(2)
 
-    retry_row = page.get_by_test_id("revision-summary-item").filter(
-        has_text="Revision 2"
-    ).first
+    retry_row = (
+        page.get_by_test_id("revision-summary-item").filter(has_text="Revision 2").first
+    )
     expect(retry_row).to_be_visible(timeout=15000)
     retry_row.click()
 

@@ -16,20 +16,20 @@ Local Codex execution is the default eval-debug path, while the controller-backe
 This mode preserves the same workspace contract as the rest of the application:
 
 1. Seeded files are materialized into a real workspace on disk.
-1. The agent reads a workspace-local prompt file.
-1. Planner roles submit through a local shell helper that invokes Python validation under the hood.
-1. Reviewer and coder roles persist the same stage-owned artifacts that the normal runtime expects.
-1. Verification fails closed if the workspace violates the contract.
+2. The agent reads a workspace-local prompt file.
+3. Planner roles submit through a local shell helper that invokes Python validation under the hood.
+4. Reviewer and coder roles persist the same stage-owned artifacts that the normal runtime expects.
+5. Verification fails closed if the workspace violates the contract.
 
 ## Backend selection
 
 The runner exposes the backend as an explicit mode:
 
 1. `codex` launches a local Codex workspace and runs the task there.
-1. `controller` uses the existing HTTP orchestration path and paid model providers.
-1. `codex` is the default backend.
-1. The backend can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
-1. `--call-paid-api` flips the runner to the paid-provider/controller path; `--runner-backend` remains the explicit override.
+2. `controller` uses the existing HTTP orchestration path and paid model providers.
+3. `codex` is the default backend.
+4. The backend can be selected through `--call-paid-api`, `--runner-backend`, or `EVAL_RUNNER_BACKEND`.
+5. `--call-paid-api` flips the runner to the paid-provider/controller path; `--runner-backend` remains the explicit override.
 
 The debug Codex mode is implemented in the shared runner, so the `dataset/evals/run_evals.py` wrapper inherits the same behavior without a second code path.
 
@@ -41,13 +41,13 @@ The materialized workspace is the source of truth for the session, not the repos
 The workspace contract is:
 
 1. The workspace root is the current directory for the Codex process.
-1. The initial prompt is written to `prompt.md` at the workspace root.
-1. Shared boilerplate starter files come from `shared/agent_templates/common/`.
-1. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
-1. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
-1. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
-1. Seed-row artifacts are copied into the workspace before prompt generation.
-1. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
+2. The initial prompt is written to `prompt.md` at the workspace root.
+3. Shared boilerplate starter files come from `shared/agent_templates/common/`.
+4. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
+5. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
+6. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
+7. Seed-row artifacts are copied into the workspace before prompt generation.
+8. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
 
 The workspace materializer in [dataset/evals/materialize_seed_workspace.py](../../../dataset/evals/materialize_seed_workspace.py) is the inspection helper for this same workspace contract.
 
@@ -59,12 +59,12 @@ It must describe the workspace in relative-path terms and must not teach the age
 The canonical prompt rules are:
 
 1. The prompt says `Workspace: current directory`.
-1. The prompt tells the agent to use workspace-relative paths only.
-1. The prompt does not mention `/workspace` as the workspace root.
-1. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
-1. Coder prompts instruct editing `script.py` and supporting `*.py` files.
-1. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`.
-1. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
+2. The prompt tells the agent to use workspace-relative paths only.
+3. The prompt does not mention `/workspace` as the workspace root.
+4. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
+5. Coder prompts instruct editing `script.py` and supporting `*.py` files.
+6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`.
+7. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 
 The prompt builder in [evals/logic/codex_workspace.py](../../../evals/logic/codex_workspace.py) is the canonical definition of that prompt text.
 
@@ -77,10 +77,10 @@ Planner roles are the only roles that use the local submission helper.
 Planner behavior is:
 
 1. Edit the planner-owned workspace files for the current stage.
-1. Keep the workspace relative-path contract intact.
-1. Run `bash scripts/submit_plan.sh` from the materialized workspace.
-1. Iterate until the helper reports `ok=true` and `status=submitted`.
-1. Treat `.manifests/` as system-owned output, not as editable planner input.
+2. Keep the workspace relative-path contract intact.
+3. Run `bash scripts/submit_plan.sh` from the materialized workspace.
+4. Iterate until the helper reports `ok=true` and `status=submitted`.
+5. Treat `.manifests/` as system-owned output, not as editable planner input.
 
 Benchmark planners write `benchmark_definition.yaml` and `benchmark_assembly_definition.yaml`. The latter is benchmark-owned handoff context that is copied into downstream engineer sessions as read-only input.
 Engineering and electronics planners write `assembly_definition.yaml` plus the shared planning artifacts.
@@ -98,9 +98,9 @@ The prompt tells them to work in `script.py` and supporting implementation files
 Coder workspaces keep the normal runtime artifact contract:
 
 1. `script.py` is the primary implementation entrypoint.
-1. Supporting `*.py` files may be added when needed.
-1. `todo.md` and `journal.md` remain writable progress artifacts.
-1. Review handoff artifacts are written only when the runtime contract requires them.
+2. Supporting `*.py` files may be added when needed.
+3. `todo.md` and `journal.md` remain writable progress artifacts.
+4. Review handoff artifacts are written only when the runtime contract requires them.
 
 ### Reviewer roles
 
@@ -115,11 +115,11 @@ Path handling is fail-closed.
 The filesystem rules are:
 
 1. Workspace-relative paths are canonical.
-1. `/workspace` is only a compatibility alias in runtime plumbing.
-1. Prompt text must not expand the alias into the canonical contract.
-1. Path traversal outside the workspace root is a deterministic error.
-1. The local Codex client and the shared filesystem backend both resolve paths by containment against the resolved workspace root.
-1. String-prefix checks are not sufficient and are not accepted as the path-safety rule.
+2. `/workspace` is only a compatibility alias in runtime plumbing.
+3. Prompt text must not expand the alias into the canonical contract.
+4. Path traversal outside the workspace root is a deterministic error.
+5. The local Codex client and the shared filesystem backend both resolve paths by containment against the resolved workspace root.
+6. String-prefix checks are not sufficient and are not accepted as the path-safety rule.
 
 The local containment checks live in [evals/logic/codex_workspace.py](../../../evals/logic/codex_workspace.py).
 The shared backend uses the same rule in [shared/workers/filesystem/backend.py](../../../shared/workers/filesystem/backend.py).
@@ -132,12 +132,12 @@ The agent does not call the controller to submit the handoff.
 The submission contract is:
 
 1. The helper validates the required planner files for the active agent role.
-1. Benchmark planner submissions canonicalize benchmark constraints before validation.
-1. The helper infers the planner variant from the workspace files and does not require `AGENT_NAME`, so the Codex launch environment stays generic.
-1. A successful submission writes the stage manifest to `.manifests/`.
-1. The helper returns structured `PlannerSubmissionResult` JSON on stdout.
-1. Success requires `ok=true` and `status=submitted`.
-1. Failure remains local to the workspace and does not masquerade as an accepted handoff.
+2. Benchmark planner submissions canonicalize benchmark constraints before validation.
+3. The helper infers the planner variant from the workspace files and does not require `AGENT_NAME`, so the Codex launch environment stays generic.
+4. A successful submission writes the stage manifest to `.manifests/`.
+5. The helper returns structured `PlannerSubmissionResult` JSON on stdout.
+6. Success requires `ok=true` and `status=submitted`.
+7. Failure remains local to the workspace and does not masquerade as an accepted handoff.
 
 The helper script is intentionally simple: it is a local shell/Python command, not a controller API.
 
@@ -146,10 +146,10 @@ The helper script is intentionally simple: it is a local shell/Python command, n
 The runner behavior for Codex mode is:
 
 1. Materialize the workspace for the selected eval row.
-1. Launch `codex exec` in that workspace with the prompt text.
-1. Verify the workspace locally after Codex exits.
-1. Persist session metadata including workspace path, launch return code, verification result, and failure reason.
-1. Fail closed if the local Codex CLI is missing or the workspace verification fails.
+2. Launch `codex exec` in that workspace with the prompt text.
+3. Verify the workspace locally after Codex exits.
+4. Persist session metadata including workspace path, launch return code, verification result, and failure reason.
+5. Fail closed if the local Codex CLI is missing or the workspace verification fails.
 
 The runner does not require controller/worker orchestration for the agent loop in Codex mode.
 The controller-backed preflight and health checks remain part of the paid-provider/controller path only.
@@ -163,17 +163,17 @@ That metadata is the debugging record for the run.
 
 The recorded fields include:
 
-1. `agent_name`
-1. `task_id`
-1. `session_id`
-1. `workspace_dir`
-1. `prompt_path`
-1. `runner_backend`
-1. `launch_return_code`
-1. `verification_name`
-1. `verification_errors`
-1. `verification_details`
-1. `failure_reason`
+01. `agent_name`
+02. `task_id`
+03. `session_id`
+04. `workspace_dir`
+05. `prompt_path`
+06. `runner_backend`
+07. `launch_return_code`
+08. `verification_name`
+09. `verification_errors`
+10. `verification_details`
+11. `failure_reason`
 
 The local materializer also prints the workspace and prompt paths for manual inspection.
 
@@ -184,11 +184,11 @@ The accepted Codex-mode behavior is defined by integration coverage, not by unit
 The current validation contract is:
 
 1. `run_evals --help` exposes the codex default and the paid-provider `--call-paid-api` handle.
-1. Materialized planner workspaces contain the relative-path prompt contract.
-1. Materialized planner workspaces do not contain `/workspace` in the prompt text.
-1. Planner submission succeeds from the local workspace helper.
-1. Path traversal outside the workspace root is rejected.
-1. The controller backend still executes tasks after its preflight step.
+2. Materialized planner workspaces contain the relative-path prompt contract.
+3. Materialized planner workspaces do not contain `/workspace` in the prompt text.
+4. Planner submission succeeds from the local workspace helper.
+5. Path traversal outside the workspace root is rejected.
+6. The controller backend still executes tasks after its preflight step.
 
 The integration test file that exercises this contract is [tests/integration/architecture_p0/test_codex_runner_mode.py](../../../tests/integration/architecture_p0/test_codex_runner_mode.py).
 

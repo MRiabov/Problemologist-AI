@@ -9,10 +9,10 @@ As a human engineer, I want to start solution work from an approved benchmark so
 ## Acceptance Criteria
 
 1. Given an approved benchmark revision, when solution work starts, then the new engineer episode is linked to that benchmark via `EpisodeMetadata.benchmark_id` and the engineer workspace contains the latest approved benchmark bundle unchanged, including `benchmark_definition.yaml`, `benchmark_assembly_definition.yaml`, the latest review manifests, validation or simulation evidence, and render assets from the same revision, including preview artifacts for the rendered CAD model and simulation preview.
-1. Given a simple rigid-body benchmark, when solution work starts, then the engineer run enters the engineering workflow and evaluates the solution in physically correct rigid-body simulation against the same approved benchmark contract.
-1. Given an unapproved, stale, or revision-mismatched benchmark bundle, when solution work starts, then the system fails closed before the engineer graph starts and records a deterministic handoff rejection reason.
-1. Given benchmark-owned files in the engineer workspace, when they are consumed by planner, coder, or reviewer nodes, then they remain read-only context and are not rewritten as engineer-owned artifacts.
-1. Given the benchmark episode is retried, when the engineer run is started again, then the benchmark linkage stays deterministic through the same benchmark episode ID and the copied assets still resolve to the latest approved benchmark bundle.
+2. Given a simple rigid-body benchmark, when solution work starts, then the engineer run enters the engineering workflow and evaluates the solution in physically correct rigid-body simulation against the same approved benchmark contract.
+3. Given an unapproved, stale, or revision-mismatched benchmark bundle, when solution work starts, then the system fails closed before the engineer graph starts and records a deterministic handoff rejection reason.
+4. Given benchmark-owned files in the engineer workspace, when they are consumed by planner, coder, or reviewer nodes, then they remain read-only context and are not rewritten as engineer-owned artifacts.
+5. Given the benchmark episode is retried, when the engineer run is started again, then the benchmark linkage stays deterministic through the same benchmark episode ID and the copied assets still resolve to the latest approved benchmark bundle.
 
 ## Tasks / Subtasks
 

@@ -5,12 +5,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between architectural peers
+
 - 📋 YOU ARE A FACILITATOR, not a content generator
+
 - 💬 FOCUS on understanding current state and getting user confirmation
+
 - 🚪 HANDLE workflow resumption smoothly and transparently
+
 - ⚠️ ABSOLUTELY NO TIME ESTIMATES - AI development speed has fundamentally changed
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -76,7 +83,7 @@ Show the user their current progress:
 [R] Resume from where we left off
 [C] Continue to next logical step
 [O] Overview of all remaining steps
-[X] Start over (will overwrite existing work)
+\[X\] Start over (will overwrite existing work)
 "
 
 ### 3. Handle User Choice
@@ -162,6 +169,7 @@ After user makes choice:
 After user selects their continuation option, load the appropriate step file based on their choice. The step file will handle the detailed work from that point forward.
 
 Valid step files to load:
+
 - `./step-02-context.md`
 - `./step-03-starter.md`
 - `./step-04-decisions.md`

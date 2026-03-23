@@ -9,9 +9,9 @@ As a human engineer, I want to revise a failed solution and try again against th
 ## Acceptance Criteria
 
 1. Given a failed engineer solution episode, when I request a revision or retry, then the new engineer episode preserves the original `benchmark_id`, records `prior_episode_id`, marks `is_reused`, and leaves the benchmark definition and environment version unchanged.
-1. Given a revised solution is submitted, when validation runs again, then the new attempt is evaluated against the same benchmark contract and the copied benchmark-owned assets resolve to the same benchmark package as the original episode.
-1. Given multiple revisions exist, when I inspect the workspace or episode history, then I can see the revision chain and compare the outcomes of each revision against the same benchmark package.
-1. Given the currently selected episode is not a failed engineer episode, when the workspace renders actions, then the revise/retry control is hidden or disabled so the system fails closed.
+2. Given a revised solution is submitted, when validation runs again, then the new attempt is evaluated against the same benchmark contract and the copied benchmark-owned assets resolve to the same benchmark package as the original episode.
+3. Given multiple revisions exist, when I inspect the workspace or episode history, then I can see the revision chain and compare the outcomes of each revision against the same benchmark package.
+4. Given the currently selected episode is not a failed engineer episode, when the workspace renders actions, then the revise/retry control is hidden or disabled so the system fails closed.
 
 ## Tasks / Subtasks
 

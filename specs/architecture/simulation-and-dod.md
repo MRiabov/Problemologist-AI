@@ -23,13 +23,13 @@ For architecture and optimization decisions, we treat simulation runtime cost as
    - module import and runtime setup.
    - Genesis runtime initialization.
    - process-local compiler and backend warmup.
-1. Scene-specific build cost.
+2. Scene-specific build cost.
    - scene creation,
    - mesh conversion,
    - geometry-specific build work,
    - collision and backend scene preparation,
    - object-family-specific compilation work when it occurs.
-1. Actual simulation execution cost.
+3. Actual simulation execution cost.
    - stepping the physics scene,
    - rendering or artifact creation if requested,
    - result extraction and validation logic.
@@ -61,10 +61,10 @@ The current optimization direction is now concrete enough to treat as an impleme
 The runtime direction is:
 
 1. Keep `worker-heavy` single-flight.
-1. Keep the process boundary between the FastAPI parent and the simulation runtime.
-1. Replace one-fresh-child-per-request execution in `simulation_runner.py` with one persistent dedicated child executor per worker instance for `simulate` and `validate`.
-1. Recreate that executor fail-closed after `BrokenProcessPool` or explicit shutdown.
-1. Add explicit child-side cleanup functions that clear backend or session state without killing the warm process.
+2. Keep the process boundary between the FastAPI parent and the simulation runtime.
+3. Replace one-fresh-child-per-request execution in `simulation_runner.py` with one persistent dedicated child executor per worker instance for `simulate` and `validate`.
+4. Recreate that executor fail-closed after `BrokenProcessPool` or explicit shutdown.
+5. Add explicit child-side cleanup functions that clear backend or session state without killing the warm process.
 
 The benchmark evidence makes one point explicit:
 
@@ -76,10 +76,10 @@ The benchmark evidence makes one point explicit:
 The persistent-child refactor therefore has to preserve the existing behavior contracts while changing only the child lifecycle:
 
 1. Public `/benchmark/*` request and response contracts stay unchanged.
-1. `/ready` and heavy-admission semantics stay unchanged.
-1. The current request fails closed if the child crashes.
-1. The next request recreates a fresh child.
-1. Child cleanup is explicit and observable rather than being an accidental side effect of process exit.
+2. `/ready` and heavy-admission semantics stay unchanged.
+3. The current request fails closed if the child crashes.
+4. The next request recreates a fresh child.
+5. Child cleanup is explicit and observable rather than being an accidental side effect of process exit.
 
 The detailed dated plan for this refactor is recorded in `auxillary/simulation-optimization-attempts.md`.
 
@@ -90,9 +90,9 @@ The persistent child keeps backend caches split by both session and backend type
 The cache rule is:
 
 1. A session may hold a warm MuJoCo backend and a warm Genesis backend at the same time.
-1. `/benchmark/validate` static preview reuse must not overwrite or alias the backend instance later used by `/benchmark/simulate`.
-1. Backend cache lookup is therefore keyed by `(session_id, backend_type)`, not by `session_id` alone.
-1. Session cleanup closes all cached backend instances for that session, not only the most recent one.
+2. `/benchmark/validate` static preview reuse must not overwrite or alias the backend instance later used by `/benchmark/simulate`.
+3. Backend cache lookup is therefore keyed by `(session_id, backend_type)`, not by `session_id` alone.
+4. Session cleanup closes all cached backend instances for that session, not only the most recent one.
 
 The reason is architectural rather than incidental:
 
@@ -109,9 +109,9 @@ We do not use one backend for every purpose.
 The backend contract is:
 
 1. `physics.backend` selects the physics simulation backend.
-1. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
-1. Static 24-view validation preview rendering uses MuJoCo by default.
-1. The static validation preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
+2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
+3. Static 24-view validation preview rendering uses MuJoCo by default.
+4. The static validation preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
 
@@ -121,7 +121,7 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
    - uses MuJoCo for that static preview by default,
    - does not add an extra Genesis load/render/build gate solely for parity checking.
    - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
-1. `/benchmark/simulate`
+2. `/benchmark/simulate`
    - runs the selected physics backend,
    - remains the runtime path for Genesis-specific behavior when Genesis is selected.
 
@@ -166,9 +166,9 @@ We use **build123d's native `RigidJoint` system** for mating parts. This avoids 
 **Helper function**: `fastener_hole(part, location, hole_id: str, size="M3", length=10.0, hole_type=HoleType.CounterBoreHole, add_fastener=False, fit="Normal")`
 
 1. Cuts a fastener hole at the specified `location`
-1. Creates a `RigidJoint` at the hole location with a parameter `rigid_joint.hole_id=hole_id`
-1. If `add_fastener=True`, inserts appropriate fastener from bd-warehouse catalog
-1. Returns the modified part
+2. Creates a `RigidJoint` at the hole location with a parameter `rigid_joint.hole_id=hole_id`
+3. If `add_fastener=True`, inserts appropriate fastener from bd-warehouse catalog
+4. Returns the modified part
 
 The type of Hole is determined by an enum - HoleType: `FlatHeadHole`, `CounterBoreHole`, `CounterSinkHole` for according types of holes.
 
@@ -223,8 +223,8 @@ arm.joints["arm_1"].connect_to(bracket.joints["mount_1"])
 **MJCF translation**:
 
 1. Walk assembly, find all `RigidJoint` pairs that are connected
-1. For each connected pair: emit `<weld body1="..." body2="..."/>` constraint
-1. Fastener geometry is included in physics only as a visual (cosmetic in CAD renders only) <!-- (I don't care about making that collision with head. Actually, it's rather simple - just put the fastener at its last position in CAD. But still.) -->
+2. For each connected pair: emit `<weld body1="..." body2="..."/>` constraint
+3. Fastener geometry is included in physics only as a visual (cosmetic in CAD renders only) <!-- (I don't care about making that collision with head. Actually, it's rather simple - just put the fastener at its last position in CAD. But still.) -->
 
 ##### Edge case: multiple holes
 
@@ -243,8 +243,8 @@ This avoids the need for global ID management or dict-based hole matching.
 Genesis (which has parity with MuJoCo) constraints will only ever be spawned from predefined components. Meaning, a "revolute constraint" will only ever be spawned if there is either a:
 
 1. Bearing (ideally),
-1. Motor,
-1. Through hole intentionally created for two parts.
+2. Motor,
+3. Through hole intentionally created for two parts.
 
 For each, the internal/external diameters must match, and there will be special commands on how to define these. In addition, the critic will be prompted to specifically scrutinize if the constraint is valid. In addition, parts will have to be close to each other physically - distance between both must be nearing \<1 mm or so.
 
@@ -259,12 +259,12 @@ Benchmark-owned moving fixtures are reviewed under an explicit-motion contract, 
 The rule is:
 
 1. benchmark fixtures may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly requires that behavior,
-1. benchmark fixtures may be implicitly powered in MVP and do not require full wiring realism,
-1. benchmark fixtures may use motors, bearings, and other COTS parts as read-only environment components when their identity is explicit, and they are not treated as manufacturable engineer outputs,
-1. benchmark handoff artifacts must explicitly document the fixture motion contract, including stable identity, motion kind/topology, axis/path or equivalent reference, bounds or operating envelope, trigger mode, and whether the engineer may rely on that motion,
-1. reviewers validate the declared motion against simulation evidence and reject missing, contradictory, unsupported, or non-deterministic motion; they do not apply the engineering minimum-DOF rule to benchmark fixtures,
-1. benchmark-side motion must stay deterministic enough that engineering can reason about the environment from the declared handoff artifacts and simulation evidence,
-1. benchmark fixtures are validation setup, not engineer-owned solution parts, so manufacturability checks do not apply to them.
+2. benchmark fixtures may be implicitly powered in MVP and do not require full wiring realism,
+3. benchmark fixtures may use motors, bearings, and other COTS parts as read-only environment components when their identity is explicit, and they are not treated as manufacturable engineer outputs,
+4. benchmark handoff artifacts must explicitly document the fixture motion contract, including stable identity, motion kind/topology, axis/path or equivalent reference, bounds or operating envelope, trigger mode, and whether the engineer may rely on that motion,
+5. reviewers validate the declared motion against simulation evidence and reject missing, contradictory, unsupported, or non-deterministic motion; they do not apply the engineering minimum-DOF rule to benchmark fixtures,
+6. benchmark-side motion must stay deterministic enough that engineering can reason about the environment from the declared handoff artifacts and simulation evidence,
+7. benchmark fixtures are validation setup, not engineer-owned solution parts, so manufacturability checks do not apply to them.
 
 <!-- Future work: if benchmark input arrives as STEP, infer candidate constraint/motion metadata from the source geometry before materializing the explicit benchmark motion contract. -->
 
@@ -275,17 +275,17 @@ This exception is benchmark-only. It does not relax engineering realism requirem
 For engineering solutions, DOFs are constrained by intent, not by convenience.
 
 1. Default state is static (`dofs: []`) for all parts.
-1. A part may receive non-empty `dofs` only when the mechanism requires real motion to satisfy the objective.
-1. Each non-empty DOF assignment must map to a physical mechanism (bearing/motor/slider or equivalent allowed component) and a reviewer-visible rationale in planning artifacts.
-1. Excessive or unjustified DOFs are treated as a review failure (plan stage and/or execution stage), even if a single simulation run passes.
+2. A part may receive non-empty `dofs` only when the mechanism requires real motion to satisfy the objective.
+3. Each non-empty DOF assignment must map to a physical mechanism (bearing/motor/slider or equivalent allowed component) and a reviewer-visible rationale in planning artifacts.
+4. Excessive or unjustified DOFs are treated as a review failure (plan stage and/or execution stage), even if a single simulation run passes.
 
 For benchmark-owned fixtures, the rule is explicit-motion validation:
 
 1. benchmark-side DOFs are not minimized for their own sake,
-1. a fully constrained rigid part has 0 DOF,
-1. a fully free rigid part has 6 DOF,
-1. reviewers validate the declared motion against the handoff artifacts and dynamic evidence,
-1. reviewers reject benchmark fixtures whose motion cannot be reconstructed from the declared contract or whose evidence contradicts the declaration.
+2. a fully constrained rigid part has 0 DOF,
+3. a fully free rigid part has 6 DOF,
+4. reviewers validate the declared motion against the handoff artifacts and dynamic evidence,
+5. reviewers reject benchmark fixtures whose motion cannot be reconstructed from the declared contract or whose evidence contradicts the declaration.
 
 Notably this will also be affected when we will (later) transfer to deformable body simulation and we'll need to find ways how to make simulation stronger:
 
@@ -294,11 +294,11 @@ Map of joints to Genesis (which has parity with MuJoCo) constraints and their us
 1. RigidJoint to `<weld>` constraint:
    - Used for fasteners and fixed connections.
    - Connects two bodies rigidly at the joint location.
-1. **RevoluteJoint** to `<joint type="hinge">`:
+2. **RevoluteJoint** to `<joint type="hinge">`:
    - Used for axles, pivots, and motors.
    - The joint axis in build123d becomes the hinge axis in Genesis.
    - If the joint is motorized, we add an `<actuator>` targeting this joint.
-1. **PrismaticJoint** -> `<joint type="slide">`:
+3. **PrismaticJoint** -> `<joint type="slide">`:
    - Used for linear sliders and rails.
    - The joint axis defines the slide direction.
    - Can be motorized with a `<position>` or `<motor>` actuator.
@@ -320,10 +320,10 @@ The Benchmark Planner creates explicit drillable or non-drillable constraints on
 The Engineering Planner will get a visual confirmation of drillable/non-drillable objects via a texture or a separate set of renders, and the machine-readable handoff path is:
 
 1. benchmark-side attachment and drill permissions live in `benchmark_definition.yaml`,
-1. the engineer may use that attachment policy, but does not need to use it if the benchmark can be solved another way,
-1. if a benchmark-owned part is declared in `benchmark_definition.yaml`, engineer-owned parts in `assembly_definition.yaml` may attach to it only through the permitted attachment policy,
-1. planner-declared intended drilled fastener holes live in `assembly_definition.yaml.environment_drill_operations`,
-1. planner handoff submission and reviewer entry both fail closed if those planned drill operations violate the benchmark-side drill policy.
+2. the engineer may use that attachment policy, but does not need to use it if the benchmark can be solved another way,
+3. if a benchmark-owned part is declared in `benchmark_definition.yaml`, engineer-owned parts in `assembly_definition.yaml` may attach to it only through the permitted attachment policy,
+4. planner-declared intended drilled fastener holes live in `assembly_definition.yaml.environment_drill_operations`,
+5. planner handoff submission and reviewer entry both fail closed if those planned drill operations violate the benchmark-side drill policy.
 
 ##### Specifics
 
@@ -346,8 +346,8 @@ The simulation would have only a set number of components that both the benchmar
      - Input objects (e.g. - a ball that needs to be delivered somewhere.)
    - Engineer parts:
      - 3d CAD parts representing real-life objects that engineers would normally create; bound by all physics.
-1. Motors (and simple scripts/functions that run the motors, e.g. in sinusoidal wave, or start/stop every few seconds). Accessible by both engineer and benchmark generator.
-1. Fasteners - Accessible by both engineer and benchmark generator, however likely environment doesn't really need them.
+2. Motors (and simple scripts/functions that run the motors, e.g. in sinusoidal wave, or start/stop every few seconds). Accessible by both engineer and benchmark generator.
+3. Fasteners - Accessible by both engineer and benchmark generator, however likely environment doesn't really need them.
 
 <!-- Future:
 Bearings.
@@ -389,9 +389,9 @@ We need to define how motors will behave, and we'll use a controller. For this, 
 #### Time-based functions (take in `t` as time)
 
 1. Constant - `constant(power:float) -> float` <!-- as far as I understand, a standard MuJoCo <motor> -->
-1. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
-1. "full-on, full-off" - a.k.a. a "square" function in signals - `square(time_on_time_off: list[tuple[float,float]], power:float) -> float` - takes in lists of time when to start and stop; and how much power it would output.
-1. "smooth on, smooth off"- a.k.a. a "trapezoidal function" in signals `trapezoidal(time_on_time_off: list[tuple[float,float]], power, ramp_up_time: float)`
+2. Sinusoidal - `sinusoidal(t: float, power:float) -> float`
+3. "full-on, full-off" - a.k.a. a "square" function in signals - `square(time_on_time_off: list[tuple[float,float]], power:float) -> float` - takes in lists of time when to start and stop; and how much power it would output.
+4. "smooth on, smooth off"- a.k.a. a "trapezoidal function" in signals `trapezoidal(time_on_time_off: list[tuple[float,float]], power, ramp_up_time: float)`
 
 Note: I'm not a pro in these functions - maybe they need renaming. but that's the idea.
 
@@ -475,7 +475,7 @@ If a motor is clamped at `forcerange` for more than **2 seconds continuous**, th
 This forces agents to:
 
 1. Pick appropriately-sized motors for the load
-1. Design mechanisms that don't exceed torque limits
+2. Design mechanisms that don't exceed torque limits
    """
    Note: AI-written, I'm not a pro in MuJoCo motors.
 
@@ -490,9 +490,9 @@ We want to support one primary use-case: moving an object from one position to a
 We define the "simulation objective" from four components:
 
 1. A "build zone" - where the agent can actually create parts (note: the agent is forbidden to construct outside of this zone),
-1. A "goal zone" - the area to which the goal object needs to move to,
-1. The moved object - the object which is spawned to be moved into the goal
-1. A "forbid" zone - an area none of the simulation objects the agent may not go into.
+2. A "goal zone" - the area to which the goal object needs to move to,
+3. The moved object - the object which is spawned to be moved into the goal
+4. A "forbid" zone - an area none of the simulation objects the agent may not go into.
 
 The objectives are always axis-aligned bounding boxes (AABB) for simplicity. The forbid or goal zone is triggered if the agent touches it even slightly.
 
@@ -540,13 +540,13 @@ The runtime randomization verifies robustness across multiple jittered initial s
 Execution contract:
 
 1. A verification request is one admitted heavy-worker job.
-1. That job performs one MuJoCo/Genesis scene build/load step for the requested design, or uses an equivalent compiled-scene cache hit.
-1. The job then spawns `num_scenes` parallel scene/environment instances from that compiled state.
-1. Each parallel scene receives its own runtime-jittered initial condition.
-1. The backend advances those jittered scenes as one batched simulation run and aggregates outcomes at the end.
-1. `num_scenes` means batch width inside one backend run. It does not mean serialized reruns of the whole simulation.
-1. Serial full-scene replay over jitter seeds is non-compliant where backend-supported scene batching/reuse is available.
-1. Parallel batched execution is mandatory for runtime-randomization verification when backend-supported reuse is available and the worker has enough RAM for the requested batch.
+2. That job performs one MuJoCo/Genesis scene build/load step for the requested design, or uses an equivalent compiled-scene cache hit.
+3. The job then spawns `num_scenes` parallel scene/environment instances from that compiled state.
+4. Each parallel scene receives its own runtime-jittered initial condition.
+5. The backend advances those jittered scenes as one batched simulation run and aggregates outcomes at the end.
+6. `num_scenes` means batch width inside one backend run. It does not mean serialized reruns of the whole simulation.
+7. Serial full-scene replay over jitter seeds is non-compliant where backend-supported scene batching/reuse is available.
+8. Parallel batched execution is mandatory for runtime-randomization verification when backend-supported reuse is available and the worker has enough RAM for the requested batch.
 
 ### Failure
 
@@ -556,13 +556,13 @@ Failure is achieved via either of:
 
    - How to define timeout of the simulation? that's a question. I suggest putting a hard cap of 30 seconds on all simulations and letting the Benchmark Planner decide how quickly a given goal should be achieved (with leeway); no more than 30 seconds though.
 
-1. Any of components going out of bounds of the workspace
+2. Any of components going out of bounds of the workspace
 
-1. Instability in simulation (e.g. NaNs, parts interference)
+3. Instability in simulation (e.g. NaNs, parts interference)
 
-1. Any part going into forbid zones.
+4. Any part going into forbid zones.
 
-1. Any part is broken:
+5. Any part is broken:
 
    - With "passive/static" parts: break upon stress which is higher than max stress - safety factor(note: not applicable for now as we are simulating rigid-body only).
    - Some parts have custom breaking logic - e.g. motors can be overloaded on shaft.
@@ -646,4 +646,4 @@ The materials are only ever chosen from the config.
 The agents will have *Workbenches* - a set of tools they can use to:
 
 1. Verify their manufacturability.
-1. Calculate costs of their parts (and verify against the user-inputted goals)
+2. Calculate costs of their parts (and verify against the user-inputted goals)

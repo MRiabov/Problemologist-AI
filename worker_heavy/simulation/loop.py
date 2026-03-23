@@ -29,7 +29,10 @@ from worker_heavy.simulation.factory import get_physics_backend
 from worker_heavy.simulation.media import MediaRecorder
 from worker_heavy.simulation.metrics import MetricCollector
 from worker_heavy.simulation.objectives import ObjectiveEvaluator
-from worker_heavy.utils.dfm import validate_and_price_assembly
+from worker_heavy.utils.dfm import (
+    resolve_requested_quantity,
+    validate_and_price_assembly,
+)
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
@@ -111,6 +114,9 @@ class SimulationLoop:
                 electronics.model_copy(deep=True) if electronics else None
             )
             self.objectives = objectives
+            self.requested_quantity = resolve_requested_quantity(
+                benchmark_definition=self.objectives
+            )
             self.is_powered_map = {}
             self.validation_report = None
             self.electronics_validation_error = None
@@ -162,6 +168,7 @@ class SimulationLoop:
                         part_labels=self.manufactured_part_labels,
                         fem_required=fem_required,
                         default_method=mfg_method,
+                        quantity=self.requested_quantity,
                     )
                 else:
                     self.validation_report = None

@@ -1,21 +1,21 @@
 ---
-work_package_id: "WPxx"
+work_package_id: WPxx
 subtasks:
-  - "Txxx"
-title: "Replace with work package title"
-phase: "Phase N - Replace with phase name"
-lane: "planned"  # DO NOT EDIT - use: spec-kitty agent tasks move-task <WPID> --to <lane>
-assignee: ""      # Optional friendly name when in doing/for_review
-agent: ""         # CLI agent identifier (claude, codex, etc.)
-shell_pid: ""     # PID captured when the task moved to the current lane
-review_status: "" # empty | has_feedback | acknowledged (populated by reviewers/implementers)
-reviewed_by: ""   # Agent ID of the reviewer (if reviewed)
+  - Txxx
+title: Replace with work package title
+phase: Phase N - Replace with phase name
+lane: planned    # DO NOT EDIT - use: spec-kitty agent tasks move-task <WPID> --to <lane>
+assignee: ''      # Optional friendly name when in doing/for_review
+agent: ''         # CLI agent identifier (claude, codex, etc.)
+shell_pid: ''     # PID captured when the task moved to the current lane
+review_status: '' # empty | has_feedback | acknowledged (populated by reviewers/implementers)
+reviewed_by: ''   # Agent ID of the reviewer (if reviewed)
 history:
-  - timestamp: "{{TIMESTAMP}}"
-    lane: "planned"
-    agent: "system"
-    shell_pid: ""
-    action: "Prompt generated via /spec-kitty.tasks"
+  - timestamp: '{{TIMESTAMP}}'
+    lane: planned
+    agent: system
+    shell_pid: ''
+    action: Prompt generated via /spec-kitty.tasks
 ---
 
 # Work Package Prompt: {{work_package_id}} – {{title}}
@@ -29,7 +29,7 @@ history:
 - **Mark as acknowledged**: When you understand the feedback and begin addressing it, update `review_status: acknowledged` in the frontmatter.
 - **Report progress**: As you address each feedback item, update the Activity Log explaining what you changed.
 
----
+______________________________________________________________________
 
 ## Review Feedback
 
@@ -37,13 +37,14 @@ history:
 
 *[This section is empty initially. Reviewers will populate it if the work is returned from review. If you see feedback here, treat each item as a must-do before completion.]*
 
----
+______________________________________________________________________
 
 ## Markdown Formatting
-Wrap HTML/XML tags in backticks: `` `<div>` ``, `` `<script>` ``
-Use language identifiers in code blocks: ````python`, ````bash`
 
----
+Wrap HTML/XML tags in backticks: `` `<div>` ``, `` `<script>` ``
+Use language identifiers in code blocks: `` python`,  ``bash\`
+
+______________________________________________________________________
 
 ## Objectives & Success Criteria
 
@@ -59,6 +60,7 @@ Use language identifiers in code blocks: ````python`, ````bash`
 ## Subtasks & Detailed Guidance
 
 ### Subtask TXXX – Replace with summary
+
 - **Purpose**: Explain why this subtask exists.
 - **Steps**: Detailed, actionable instructions.
 - **Files**: Canonical paths to update or create.
@@ -66,6 +68,7 @@ Use language identifiers in code blocks: ````python`, ````bash`
 - **Notes**: Edge cases, dependencies, or data requirements.
 
 ### Subtask TYYY – Replace with summary
+
 - Repeat the structure above for every included `Txxx` entry.
 
 ## Test Strategy (include only when tests are required)
@@ -91,6 +94,7 @@ Use language identifiers in code blocks: ````python`, ````bash`
 ### How to Add Activity Log Entries
 
 **When adding an entry**:
+
 1. Scroll to the bottom of this file (Activity Log section below "Valid lanes")
 2. **APPEND the new entry at the END** (do NOT prepend or insert in middle)
 3. Use exact format: `- YYYY-MM-DDTHH:MM:SSZ – agent_id – lane=<lane> – <action>`
@@ -99,11 +103,13 @@ Use language identifiers in code blocks: ````python`, ````bash`
 6. Agent ID should identify who made the change (claude-sonnet-4-5, codex, etc.)
 
 **Format**:
+
 ```
 - YYYY-MM-DDTHH:MM:SSZ – <agent_id> – lane=<lane> – <brief action description>
 ```
 
 **Example (correct chronological order)**:
+
 ```
 - 2026-01-12T10:00:00Z – system – lane=planned – Prompt created
 - 2026-01-12T10:30:00Z – claude – lane=doing – Started implementation
@@ -112,6 +118,7 @@ Use language identifiers in code blocks: ````python`, ````bash`
 ```
 
 **Common mistakes (DO NOT DO THIS)**:
+
 - ❌ Adding new entry at the top (breaks chronological order)
 - ❌ Using future timestamps (causes acceptance validation to fail)
 - ❌ Lane mismatch: frontmatter says `lane: "done"` but log entry says `lane=doing`
@@ -120,9 +127,10 @@ Use language identifiers in code blocks: ````python`, ````bash`
 **Why this matters**: The acceptance system reads the LAST activity log entry as the current state. If entries are out of order, acceptance will fail even when the work is complete.
 
 **Initial entry**:
+
 - {{TIMESTAMP}} – system – lane=planned – Prompt created.
 
----
+______________________________________________________________________
 
 ### Updating Lane Status
 

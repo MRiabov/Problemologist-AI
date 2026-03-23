@@ -1,4 +1,4 @@
-# Primary system objectives 
+# Primary system objectives
 
 ## Scope summary
 
@@ -10,13 +10,13 @@ We are to create a benchmark and a training dataset for evaluating LLM models on
 
 ### Outputs and end project goals
 
-1. Benchmarks and problems to solve
-2. Reasoning traces trying to create benchmarks,
-3. Reasoning traces trying to solve the problems with manufacturable and verified solutions
-4. Solutions to the problems, with end goals of CAD models and manufacturable, verified solutions,
-5. Notable optimization to the problems (found but not applied, by mistake or to save compute),
-6. Skills acquired during execution of the model (SKILL.md files and their assets - references and scripts)
-7. Journals and "scannable" summaries of the execution.
-8. An open-source framework for benchmarking, optimization of visual-language models to solve dynamic mechanical engineering problems
-9. **An open-source framework to solve mechanical engineering problems.**
+01. Benchmarks and problems to solve
+02. Reasoning traces trying to create benchmarks,
+03. Reasoning traces trying to solve the problems with manufacturable and verified solutions
+04. Solutions to the problems, with end goals of CAD models and manufacturable, verified solutions,
+05. Notable optimization to the problems (found but not applied, by mistake or to save compute),
+06. Skills acquired during execution of the model (SKILL.md files and their assets - references and scripts)
+07. Journals and "scannable" summaries of the execution.
+08. An open-source framework for benchmarking, optimization of visual-language models to solve dynamic mechanical engineering problems
+09. **An open-source framework to solve mechanical engineering problems.**
 10. (additionally) A large library of build123d code.

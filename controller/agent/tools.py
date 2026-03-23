@@ -12,9 +12,29 @@ from shared.cots.agent import (
     search_cots_catalog as base_search_cots_catalog,
 )
 from shared.enums import AgentName
+from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.observability.schemas import RunCommandToolEvent
 from shared.workers.schema import PlanReviewManifest
+
+
+def _derived_episode_id(session_id: str) -> str:
+    try:
+        return str(uuid.UUID(session_id))
+    except Exception:
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, session_id))
+
+
+def _workspace_environment_version(content: str) -> str | None:
+    try:
+        data = yaml.safe_load(content) or {}
+    except Exception:
+        return None
+    version = data.get("version")
+    if version is None:
+        return None
+    version_text = str(version).strip()
+    return version_text or None
 
 
 def _tool_name(tool: Callable) -> str:
@@ -339,6 +359,38 @@ def get_engineer_planner_tools(
         Returns:
             {"ok": bool, "stdout": str, "stderr": str, "exit_code": int, "timed_out": bool}
         """
+        from worker_heavy.utils.dfm import load_planner_manufacturing_config_from_text
+
+        if not await fs.client.exists(
+            "manufacturing_config.yaml", bypass_agent_permissions=True
+        ):
+            return {
+                "ok": False,
+                "stdout": "",
+                "stderr": (
+                    "manufacturing_config.yaml missing; planner handoff requires a "
+                    "workspace pricing source"
+                ),
+                "exit_code": 1,
+                "timed_out": False,
+            }
+
+        try:
+            manufacturing_config_text = await fs.client.read_file(
+                "manufacturing_config.yaml", bypass_agent_permissions=True
+            )
+            load_planner_manufacturing_config_from_text(manufacturing_config_text)
+        except Exception as exc:
+            return {
+                "ok": False,
+                "stdout": "",
+                "stderr": (
+                    f"manufacturing_config.yaml invalid for planner handoff: {exc}"
+                ),
+                "exit_code": 1,
+                "timed_out": False,
+            }
+
         return await run_validate_and_price_script(fs)
 
     async def submit_plan() -> dict:
@@ -348,13 +400,13 @@ def get_engineer_planner_tools(
         Returns:
             {"ok": bool, "status": "submitted"|"rejected", "errors": [...], "node_type": "..."}
         """
+        from worker_heavy.utils.dfm import load_planner_manufacturing_config_from_text
         from worker_heavy.utils.file_validation import (
             validate_benchmark_definition_yaml,
             validate_environment_attachment_contract,
             validate_exact_planner_cost_contract,
             validate_node_output,
         )
-        from worker_heavy.utils.dfm import load_planner_manufacturing_config
 
         # Engineer planner and electronics planner share the same planner artifacts.
         required_files = [
@@ -403,20 +455,21 @@ def get_engineer_planner_tools(
             custom_config_text = await fs.client.read_file(
                 "manufacturing_config.yaml", bypass_agent_permissions=True
             )
-            manufacturing_config = load_planner_manufacturing_config(
-                override_data=yaml.safe_load(custom_config_text) or {}
+            manufacturing_config = load_planner_manufacturing_config_from_text(
+                custom_config_text
             )
         except Exception as exc:
             result = PlannerSubmissionResult(
                 ok=False,
                 status="rejected",
                 errors=[
-                    "manufacturing_config.yaml invalid for planner handoff: "
-                    f"{exc}"
+                    f"manufacturing_config.yaml invalid for planner handoff: {exc}"
                 ],
                 node_type=planner_node_type,
             )
             return result.model_dump(mode="json")
+
+        artifacts["manufacturing_config.yaml"] = custom_config_text
 
         pricing_result = await run_validate_and_price_script(fs)
         if not pricing_result["ok"]:
@@ -489,6 +542,12 @@ def get_engineer_planner_tools(
                 reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER,
                 session_id=fs.client.session_id,
                 planner_node_type=planner_node_type,
+                episode_id=_derived_episode_id(fs.client.session_id),
+                worker_session_id=fs.client.session_id,
+                benchmark_revision=repo_revision(Path(__file__).resolve().parents[2]),
+                environment_version=_workspace_environment_version(
+                    artifacts["assembly_definition.yaml"]
+                ),
                 artifact_hashes=artifact_hashes,
             )
             await fs.client.write_file(

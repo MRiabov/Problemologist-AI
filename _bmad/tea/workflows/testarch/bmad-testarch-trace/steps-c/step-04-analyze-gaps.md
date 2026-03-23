@@ -1,9 +1,9 @@
 ---
-name: 'step-04-analyze-gaps'
-description: 'Complete Phase 1 with adaptive orchestration (agent-team, subagent, or sequential)'
-nextStepFile: './step-05-gate-decision.md'
+name: step-04-analyze-gaps
+description: Complete Phase 1 with adaptive orchestration (agent-team, subagent, or sequential)
+nextStepFile: ./step-05-gate-decision.md
 outputFile: '{test_artifacts}/traceability-report.md'
-tempOutputFile: '/tmp/tea-trace-coverage-matrix-{{timestamp}}.json'
+tempOutputFile: /tmp/tea-trace-coverage-matrix-{{timestamp}}.json
 ---
 
 # Step 4: Complete Phase 1 - Coverage Matrix Generation
@@ -12,7 +12,7 @@ tempOutputFile: '/tmp/tea-trace-coverage-matrix-{{timestamp}}.json'
 
 **Phase 1 Final Step:** Analyze coverage gaps (including endpoint/auth/error-path blind spots), generate recommendations, and output complete coverage matrix to temp file for Phase 2 (gate decision).
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -23,7 +23,7 @@ tempOutputFile: '/tmp/tea-trace-coverage-matrix-{{timestamp}}.json'
 - ✅ Apply fallback rules deterministically when requested mode is unsupported
 - ❌ Do NOT make gate decision (that's Phase 2 - Step 5)
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -37,7 +37,7 @@ tempOutputFile: '/tmp/tea-trace-coverage-matrix-{{timestamp}}.json'
 - Focus: gap analysis and matrix completion
 - Limits: do not make gate decision (Phase 2 responsibility)
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -135,7 +135,7 @@ const mediumGaps = uncoveredRequirements.filter((req) => req.priority === 'P2');
 const lowGaps = uncoveredRequirements.filter((req) => req.priority === 'P3');
 ```
 
----
+______________________________________________________________________
 
 ### 2. Coverage Heuristics Checks
 
@@ -155,7 +155,7 @@ const heuristicGapCounts = {
 
 Heuristics are advisory but must influence gap severity and recommendations, especially for P0/P1 criteria.
 
----
+______________________________________________________________________
 
 ### 3. Generate Recommendations
 
@@ -223,7 +223,7 @@ recommendations.push({
 });
 ```
 
----
+______________________________________________________________________
 
 ### 4. Calculate Coverage Statistics
 
@@ -251,7 +251,7 @@ const p2CoveragePercentage = safePct(p2Covered, p2Total);
 const p3CoveragePercentage = safePct(p3Covered, p3Total);
 ```
 
----
+______________________________________________________________________
 
 ### 5. Generate Complete Coverage Matrix
 
@@ -299,7 +299,7 @@ const coverageMatrix = {
 };
 ```
 
----
+______________________________________________________________________
 
 ### 6. Output Coverage Matrix to Temp File
 
@@ -312,7 +312,7 @@ fs.writeFileSync(outputPath, JSON.stringify(coverageMatrix, null, 2), 'utf8');
 console.log(`✅ Phase 1 Complete: Coverage matrix saved to ${outputPath}`);
 ```
 
----
+______________________________________________________________________
 
 ### 7. Display Phase 1 Summary
 
@@ -361,7 +361,7 @@ Section 5 remains the deterministic merge point after sections 1-4 are finished.
 
 If `resolvedMode` is `sequential`, execute sections 1→7 in order.
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -375,7 +375,7 @@ If `resolvedMode` is `sequential`, execute sections 1→7 in order.
 
 **Proceed to Phase 2 (Step 5: Gate Decision)**
 
----
+______________________________________________________________________
 
 ### 8. Save Progress
 
@@ -394,6 +394,7 @@ If `resolvedMode` is `sequential`, execute sections 1→7 in order.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-04-analyze-gaps'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04-analyze-gaps'`
   - Set `lastSaved: '{date}'`
@@ -401,7 +402,7 @@ If `resolvedMode` is `sequential`, execute sections 1→7 in order.
 
 Load next step: `{nextStepFile}`
 
----
+______________________________________________________________________
 
 ## 🚨 PHASE 1 SUCCESS METRICS
 

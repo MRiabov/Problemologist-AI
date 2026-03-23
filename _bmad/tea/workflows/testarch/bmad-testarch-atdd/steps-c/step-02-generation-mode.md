@@ -1,8 +1,8 @@
 ---
-name: 'step-02-generation-mode'
-description: 'Choose AI generation or recording mode'
+name: step-02-generation-mode
+description: Choose AI generation or recording mode
 outputFile: '{test_artifacts}/atdd-checklist-{story_id}.md'
-nextStepFile: './step-03-test-strategy.md'
+nextStepFile: ./step-03-test-strategy.md
 ---
 
 # Step 2: Generation Mode Selection
@@ -16,7 +16,7 @@ Choose the appropriate generation mode for ATDD tests.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -45,7 +45,7 @@ Use AI generation when:
 
 Proceed directly to test strategy if this applies.
 
----
+______________________________________________________________________
 
 ## 2. Optional Mode: Recording (Complex UI)
 
@@ -81,13 +81,13 @@ If `none`:
 
 - Skip recording mode entirely, use AI generation from documentation
 
----
+______________________________________________________________________
 
 ## 3. Confirm Mode
 
 State the chosen mode and why. Then proceed.
 
----
+______________________________________________________________________
 
 ## 4. Save Progress
 
@@ -106,6 +106,7 @@ State the chosen mode and why. Then proceed.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-02-generation-mode'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-generation-mode'`
   - Set `lastSaved: '{date}'`

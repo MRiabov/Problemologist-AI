@@ -83,10 +83,10 @@ ______________________________________________________________________
 **Recommended Actions:**
 
 1. Apply TEA principles to current project
-1. Run TEA workflows: Framework, Test Design, ATDD, Automate
-1. Share knowledge with team members
-1. Continue exploring knowledge fragments as needed
-1. Contribute to TEA methodology improvements
+2. Run TEA workflows: Framework, Test Design, ATDD, Automate
+3. Share knowledge with team members
+4. Continue exploring knowledge fragments as needed
+5. Contribute to TEA methodology improvements
 
 **TEA Resources:**
 

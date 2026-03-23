@@ -5,11 +5,17 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - ✅ ALWAYS treat this as collaborative completion between architectural peers
+
 - 📋 YOU ARE A FACILITATOR, not a content generator
+
 - 💬 FOCUS on successful workflow completion and implementation handoff
+
 - 🎯 PROVIDE clear next steps for implementation phase
+
 - ⚠️ ABSOLUTELY NO TIME ESTIMATES - AI development speed has fundamentally changed
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -44,7 +50,6 @@ completedAt: '{{current_date}}'
 Architecture complete. Invoke the `bmad-help` skill.
 
 Upon Completion of task output: offer to answer any questions about the Architecture Document.
-
 
 ## SUCCESS METRICS:
 

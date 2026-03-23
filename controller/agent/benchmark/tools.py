@@ -1,7 +1,9 @@
 import hashlib
 import json
 import re
+import uuid
 from collections.abc import Callable
+from pathlib import Path
 
 import yaml
 
@@ -13,10 +15,30 @@ from controller.agent.tools import (
 )
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.enums import AgentName
+from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.workers.schema import PlanReviewManifest
 
 BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER = 1.5
+
+
+def _derived_episode_id(session_id: str) -> str:
+    try:
+        return str(uuid.UUID(session_id))
+    except Exception:
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, session_id))
+
+
+def _workspace_environment_version(content: str) -> str | None:
+    try:
+        data = yaml.safe_load(content) or {}
+    except Exception:
+        return None
+    version = data.get("version")
+    if version is None:
+        return None
+    version_text = str(version).strip()
+    return version_text or None
 
 
 def _canonicalize_benchmark_constraints(
@@ -183,6 +205,7 @@ def get_benchmark_planner_tools(
         Returns:
             {"ok": bool, "status": "submitted"|"rejected", "errors": [...], "node_type": "..."}
         """
+        from worker_heavy.utils.dfm import load_planner_manufacturing_config_from_text
         from worker_heavy.utils.file_validation import validate_node_output
 
         required_files = [
@@ -213,6 +236,38 @@ def get_benchmark_planner_tools(
             )
             return result.model_dump(mode="json")
 
+        if not await fs.client.exists(
+            "manufacturing_config.yaml", bypass_agent_permissions=True
+        ):
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    "manufacturing_config.yaml missing; planner handoff requires a "
+                    "workspace pricing source"
+                ],
+                node_type=AgentName.BENCHMARK_PLANNER,
+            )
+            return result.model_dump(mode="json")
+
+        try:
+            manufacturing_config_text = await fs.client.read_file(
+                "manufacturing_config.yaml", bypass_agent_permissions=True
+            )
+            manufacturing_config = load_planner_manufacturing_config_from_text(
+                manufacturing_config_text
+            )
+        except Exception as exc:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=[
+                    f"manufacturing_config.yaml invalid for planner handoff: {exc}"
+                ],
+                node_type=AgentName.BENCHMARK_PLANNER,
+            )
+            return result.model_dump(mode="json")
+
         canonical_benchmark_definition, canonicalization_errors = (
             _canonicalize_benchmark_constraints(artifacts["benchmark_definition.yaml"])
         )
@@ -231,6 +286,7 @@ def get_benchmark_planner_tools(
             canonical_benchmark_definition,
             overwrite=True,
         )
+        artifacts["manufacturing_config.yaml"] = manufacturing_config_text
 
         pricing_result = await run_validate_and_price_script(fs)
         if not pricing_result["ok"]:
@@ -253,7 +309,11 @@ def get_benchmark_planner_tools(
             "benchmark_assembly_definition.yaml"
         )
 
-        is_valid, errors = validate_node_output(AgentName.BENCHMARK_PLANNER, artifacts)
+        is_valid, errors = validate_node_output(
+            AgentName.BENCHMARK_PLANNER,
+            artifacts,
+            manufacturing_config=manufacturing_config,
+        )
         if is_valid:
             artifact_hashes = {
                 rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -264,6 +324,12 @@ def get_benchmark_planner_tools(
                 reviewer_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
                 session_id=fs.client.session_id,
                 planner_node_type=AgentName.BENCHMARK_PLANNER,
+                episode_id=_derived_episode_id(fs.client.session_id),
+                worker_session_id=fs.client.session_id,
+                benchmark_revision=repo_revision(Path(__file__).resolve().parents[2]),
+                environment_version=_workspace_environment_version(
+                    artifacts["benchmark_assembly_definition.yaml"]
+                ),
                 artifact_hashes=artifact_hashes,
             )
             await fs.client.write_file(

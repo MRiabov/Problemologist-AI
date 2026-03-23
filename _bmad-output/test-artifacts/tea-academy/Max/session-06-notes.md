@@ -29,9 +29,9 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **Test Review:** quality audit across determinism, isolation, assertions, structure, and performance.
-1. **Trace Workflow:** map requirements to tests and make a release gate decision.
-1. **Gate Logic:** `GREEN`, `YELLOW`, and `RED` based on coverage gaps.
-1. **Quality Metrics:** P0/P1 coverage, flakiness rate, execution time, determinism.
+2. **Trace Workflow:** map requirements to tests and make a release gate decision.
+3. **Gate Logic:** `GREEN`, `YELLOW`, and `RED` based on coverage gaps.
+4. **Quality Metrics:** P0/P1 coverage, flakiness rate, execution time, determinism.
 
 ______________________________________________________________________
 
@@ -61,8 +61,8 @@ ______________________________________________________________________
 ### Questions & Answers
 
 1. What are the 5 dimensions in Test Review workflow? → `B` (correct)
-1. When should the Trace workflow gate decision be RED? → `B` (correct)
-1. Which metric matters most for quality? → `C` (correct)
+2. When should the Trace workflow gate decision be RED? → `B` (correct)
+3. Which metric matters most for quality? → `C` (correct)
 
 ______________________________________________________________________
 

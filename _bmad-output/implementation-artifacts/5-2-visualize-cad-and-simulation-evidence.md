@@ -1,6 +1,6 @@
 # Story 5.2: Visualize CAD and Simulation Evidence
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -9,25 +9,25 @@ As a human operator, I want to visualize CAD models, render evidence, and simula
 ## Acceptance Criteria
 
 1. Given a completed episode with CAD assets, when I open the viewer, then I can inspect the model and hide or isolate parts.
-1. Given simulation renders or video exist, when I open the run, then I can play, pause, and scrub the evidence over time.
-1. Given latest-revision media exists, when I inspect the run, then the UI binds the view to the latest revision rather than stale prior media.
-1. Given a run has no preview media yet, when I open the viewport, then I see an explicit empty or rebuild state rather than a blank or misleading viewer.
+2. Given simulation renders or video exist, when I open the run, then I can play, pause, and scrub the evidence over time.
+3. Given latest-revision media exists, when I inspect the run, then the UI binds the view to the latest revision rather than stale prior media.
+4. Given a run has no preview media yet, when I open the viewport, then I see an explicit empty or rebuild state rather than a blank or misleading viewer.
 
 ## Tasks / Subtasks
 
-- [ ] Bind episode assets in `UnifiedGeneratorView` to the latest media bundle and pass only the newest relevant render, video, and model assets into the viewport. (AC: 2, 3, 4)
-  - [ ] Prefer controller-sorted episode assets over filename heuristics.
-  - [ ] If latest-revision selection cannot be represented cleanly with the current payload, add the minimal typed field to `EpisodeResponse` / `AssetResponse` and regenerate the frontend client instead of parsing ad hoc JSON.
-- [ ] Tighten `DesignViewer` and `ModelViewer` so the viewport can inspect the model, toggle topology visibility, and preserve loaded-model state while video playback and scrubbing are active. (AC: 1, 2)
-  - [ ] Keep the existing topology browser, face / part / subassembly selection modes, and camera reset affordance.
-  - [ ] Keep the simulation/video mode selection explicit and user-controlled.
-  - [ ] Keep empty-state and rebuild affordances visible when model assets are absent.
-- [ ] Keep the simulation evidence surfaces in sync with the selected media bundle so the viewport, heatmaps, and related render evidence reflect the same latest revision. (AC: 2, 3)
-  - [ ] Reuse the existing `SimulationResults`, `CircuitSchematic`, and `WireView` renderers where they already fit.
-  - [ ] Avoid a second visualization subsystem or any text-only fallback that pretends to show media.
-- [ ] Add or extend live-browser integration coverage for topology inspection, hide/show behavior, simulation timeline playback, controller-proxied asset fetches, and latest-revision media binding. (AC: 1-4)
-  - [ ] Anchor the regression coverage on `INT-165`, `INT-166`, `INT-167`, and `INT-174`.
-  - [ ] Add a backend preview or media regression only if the frontend cannot verify latest-revision binding from persisted assets alone.
+- [x] Bind episode assets in `UnifiedGeneratorView` to the latest media bundle and pass only the newest relevant render, video, and model assets into the viewport. (AC: 2, 3, 4)
+  - [x] Prefer controller-sorted episode assets over filename heuristics.
+  - [x] Keep latest-media binding in the frontend resolver; no controller schema field was needed for this story.
+- [x] Tighten `DesignViewer` and `ModelViewer` so the viewport can inspect the model, toggle topology visibility, and preserve loaded-model state while video playback and scrubbing are active. (AC: 1, 2)
+  - [x] Keep the existing topology browser, face / part / subassembly selection modes, and camera reset affordance.
+  - [x] Keep the simulation/video mode selection explicit and user-controlled.
+  - [x] Keep empty-state and rebuild affordances visible when model assets are absent.
+- [x] Keep the simulation evidence surfaces in sync with the selected media bundle so the viewport, heatmaps, and related render evidence reflect the same latest revision. (AC: 2, 3)
+  - [x] Reuse the existing `SimulationResults`, `CircuitSchematic`, and `WireView` renderers where they already fit.
+  - [x] Avoid a second visualization subsystem or any text-only fallback that pretends to show media.
+- [x] Add or extend live-browser integration coverage for topology inspection, hide/show behavior, simulation timeline playback, controller-proxied asset fetches, and latest-revision media binding. (AC: 1-4)
+  - [x] Anchor the regression coverage on `INT-165`, `INT-166`, `INT-167`, and `INT-174`.
+  - [x] Add a backend preview or media regression only if the frontend cannot verify latest-revision binding from persisted assets alone.
 
 ## Dev Notes
 
@@ -69,14 +69,14 @@ As a human operator, I want to visualize CAD models, render evidence, and simula
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.2]
-- [Source: _bmad-output/planning-artifacts/prd.md, preview and simulation evidence requirements, plus Phase 1 UI scope]
-- [Source: _bmad-output/planning-artifacts/ux-design-specification.md, section 11 Preview And Visualization]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.2]
+- [Source: \_bmad-output/planning-artifacts/prd.md, preview and simulation evidence requirements, plus Phase 1 UI scope]
+- [Source: \_bmad-output/planning-artifacts/ux-design-specification.md, section 11 Preview And Visualization]
 - [Source: specs/frontend-specs.md, CAD and simulation viewer requirements]
 - [Source: docs/component-inventory.md, visualization component responsibilities]
 - [Source: docs/backend-reference.md, validation preview split and latest revision evidence contract]
 - [Source: controller/api/routes/episodes.py, episode asset ordering and controller-proxied asset fetch]
-- [Source: controller/api/schemas.py, `EpisodeResponse` and `AssetResponse` typing]
+- \[Source: controller/api/schemas.py, `EpisodeResponse` and `AssetResponse` typing\]
 - [Source: frontend/src/components/workspace/UnifiedGeneratorView.tsx, episode asset resolution and viewport composition]
 - [Source: frontend/src/components/visualization/DesignViewer.tsx, view-mode switching]
 - [Source: frontend/src/components/visualization/ModelViewer.tsx, topology browser and simulation controls]
@@ -90,10 +90,24 @@ As a human operator, I want to visualize CAD models, render evidence, and simula
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- `npm run build` in `frontend/`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py -k int_189_engineer_run_defaults_to_solution_evidence`
+
 ### Completion Notes List
 
+- Resolved latest-media selection in the frontend bundle resolver so the viewport uses the newest model, video, and heatmap assets from controller-sorted episode assets.
+- Kept the 3D viewer mounted across mode switches so video playback does not discard the loaded model or topology state.
+- Added stable `data-testid` hooks for the DesignViewer mode toggles and updated the live-browser regression to use them.
+- Verified the regression with the deterministic integration slice `tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence[chromium]`.
+
 ### File List
+
+- `frontend/src/components/workspace/artifactSelection.ts`
+- `frontend/src/components/workspace/UnifiedGeneratorView.tsx`
+- `frontend/src/components/visualization/DesignViewer.tsx`
+- `frontend/src/components/workspace/ArtifactView.tsx`
+- `tests/integration/frontend/p0/test_solution_evidence.py`

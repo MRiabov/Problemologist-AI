@@ -18,12 +18,12 @@ from shared.workers.schema import (
     HeavyValidationParams,
     HeavyValidationResponse,
     RenderArtifactMetadata,
-    RenderManifest,
     SimulationArtifacts,
 )
 from worker_heavy.runtime.simulation_runner import run_simulation_in_isolated_process
 from worker_heavy.utils.handover import submit_for_review
 from worker_heavy.utils.preview import preview_design
+from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.validation import validate
 
 logger = structlog.get_logger(__name__)
@@ -55,7 +55,9 @@ def _decode_bundle(bundle_base64: str) -> bytes:
     return base64.b64decode(bundle_base64)
 
 
-def _collect_submission_artifacts(root: Path) -> SimulationArtifacts:
+def _collect_submission_artifacts(
+    root: Path, *, session_id: str | None = None
+) -> SimulationArtifacts:
     artifacts = SimulationArtifacts()
 
     validation_result_path = root / "validation_results.json"
@@ -104,13 +106,14 @@ def _collect_submission_artifacts(root: Path) -> SimulationArtifacts:
                 base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
             )
         elif render_image_paths:
-            synthesized_manifest = RenderManifest(
-                artifacts={
-                    f"/{path.lstrip('/')}": RenderArtifactMetadata(
-                        modality="rgb"
-                    )
+            synthesized_manifest = build_render_manifest(
+                {
+                    f"/{path.lstrip('/')}": RenderArtifactMetadata(modality="rgb")
                     for path in sorted(dict.fromkeys(render_image_paths))
-                }
+                },
+                workspace_root=root,
+                episode_id=session_id,
+                worker_session_id=session_id,
             )
             render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
                 base64.b64encode(
@@ -258,5 +261,5 @@ async def submit_for_review_activity(
                 if success
                 else (failure_message or "Handover failed")
             ),
-            artifacts=_collect_submission_artifacts(root),
+            artifacts=_collect_submission_artifacts(root, session_id=session_id),
         )

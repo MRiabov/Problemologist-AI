@@ -1,4 +1,5 @@
 import os
+import uuid
 from hashlib import sha256
 from pathlib import Path
 
@@ -13,7 +14,10 @@ from shared.workers.schema import (
     ReviewManifest,
     ValidationResultRecord,
 )
-from worker_heavy.utils.dfm import validate_and_price_assembly
+from worker_heavy.utils.dfm import (
+    resolve_requested_quantity,
+    validate_and_price_assembly,
+)
 from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
@@ -41,6 +45,15 @@ def _normalize_render_path(path: str) -> str:
     if not normalized.startswith("/"):
         normalized = f"/{normalized}"
     return normalized
+
+
+def _derived_episode_id(session_id: str | None) -> str | None:
+    if not session_id:
+        return None
+    try:
+        return str(uuid.UUID(session_id))
+    except Exception:
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, session_id))
 
 
 def _validate_render_manifest_bundle(
@@ -76,25 +89,53 @@ def _validate_render_manifest_bundle(
     except Exception as exc:
         raise ValueError(f"renders/render_manifest.json is invalid: {exc}") from exc
 
+    details: list[str] = []
     actual_render_paths = {
         _normalize_render_path(path)
         for path in render_manifest.artifacts.keys()
         if _is_static_preview_render(path)
     }
     if actual_render_paths == expected_render_paths:
-        return
+        preview_paths = {
+            _normalize_render_path(path)
+            for path in render_manifest.preview_evidence_paths
+            if _is_static_preview_render(path)
+        }
+        if preview_paths == expected_render_paths:
+            return
+        details.append(
+            "preview evidence paths mismatch: "
+            f"manifest={sorted(preview_paths)} expected={sorted(expected_render_paths)}"
+        )
 
     missing = sorted(expected_render_paths - actual_render_paths)
     unexpected = sorted(actual_render_paths - expected_render_paths)
-    details: list[str] = []
     if missing:
         details.append(f"missing entries: {missing}")
     if unexpected:
         details.append(f"unexpected entries: {unexpected}")
-    raise ValueError(
-        "renders/render_manifest.json is out of sync with the latest preview bundle: "
-        + "; ".join(details)
-    )
+
+    if not render_manifest.revision:
+        details.append("manifest revision missing")
+    else:
+        current_revision = _latest_git_revision(renders_dir.parent)
+        if not current_revision:
+            raise ValueError(
+                "Unable to determine current repository git revision for latest "
+                "preview bundle validation."
+            )
+        if render_manifest.revision.strip().lower() != current_revision:
+            details.append(
+                "revision mismatch: "
+                f"manifest={render_manifest.revision.strip().lower()} "
+                f"latest={current_revision}"
+            )
+
+    if details:
+        raise ValueError(
+            "renders/render_manifest.json is out of sync with the latest preview "
+            "bundle: " + "; ".join(details)
+        )
 
 
 def _latest_git_revision(cwd: Path) -> str | None:
@@ -322,6 +363,9 @@ def submit_for_review(
             "benchmark_definition.yaml invalid: " + "; ".join(objectives_result)
         )
     objectives_model = objectives_result
+    requested_quantity = resolve_requested_quantity(
+        benchmark_definition=objectives_model
+    )
     attachment_errors = validate_environment_attachment_contract(
         benchmark_definition=objectives_model,
         assembly_definition=estimation,
@@ -365,6 +409,7 @@ def submit_for_review(
             part_labels=manufactured_labels or None,
             build_zone=build_zone,
             session_id=session_id,
+            quantity=requested_quantity,
             default_method=method,
         )
 
@@ -383,7 +428,8 @@ def submit_for_review(
                 and validation_result.unit_cost > constraints.max_unit_cost
             ):
                 msg = (
-                    f"Unit cost ${validation_result.unit_cost:.2f} exceeds limit "
+                    f"Unit cost at requested quantity {requested_quantity} "
+                    f"(${validation_result.unit_cost:.2f}) exceeds limit "
                     f"${constraints.max_unit_cost:.2f}"
                 )
                 logger.warning(
@@ -396,7 +442,11 @@ def submit_for_review(
 
             weight_g = validation_result.weight_g
             if constraints.max_weight_g and weight_g > constraints.max_weight_g:
-                msg = f"Weight {weight_g:.1f}g exceeds limit {constraints.max_weight_g:.1f}g"
+                msg = (
+                    f"Weight at requested quantity {requested_quantity} "
+                    f"({weight_g:.1f}g) exceeds limit "
+                    f"{constraints.max_weight_g:.1f}g"
+                )
                 logger.warning(
                     "submission_weight_limit_exceeded",
                     weight=weight_g,
@@ -448,6 +498,8 @@ def submit_for_review(
         raise ValueError(
             "Unable to determine current repository git revision for review manifest."
         )
+    resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
+    resolved_episode_id = _derived_episode_id(resolved_session_id)
 
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {
@@ -461,8 +513,22 @@ def submit_for_review(
         status="ready_for_review",
         reviewer_stage=normalized_stage,
         timestamp=os.getenv("TIMESTAMP"),
-        session_id=session_id or os.getenv("SESSION_ID", "default"),
+        session_id=resolved_session_id,
         revision=revision,
+        episode_id=resolved_episode_id,
+        worker_session_id=resolved_session_id,
+        benchmark_episode_id=(
+            resolved_episode_id if normalized_stage == "benchmark_reviewer" else None
+        ),
+        benchmark_worker_session_id=(
+            resolved_session_id if normalized_stage == "benchmark_reviewer" else None
+        ),
+        benchmark_revision=(
+            revision if normalized_stage == "benchmark_reviewer" else None
+        ),
+        solution_revision=revision,
+        environment_version=estimation.version,
+        preview_evidence_paths=render_paths,
         script_path=str(script_path.relative_to(cwd)),
         script_sha256=script_sha256,
         validation_success=validation_record.success,

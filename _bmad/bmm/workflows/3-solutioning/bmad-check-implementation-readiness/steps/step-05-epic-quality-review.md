@@ -219,7 +219,7 @@ After completing epic quality review:
 
 This step executes autonomously. Load ./step-06-final-assessment.md only after complete epic quality review is documented.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

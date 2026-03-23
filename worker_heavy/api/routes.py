@@ -33,10 +33,9 @@ from shared.workers.schema import (
     PreviewDesignRequest,
     PreviewDesignResponse,
     RenderArtifactMetadata,
-    RenderManifest,
     SimulationArtifacts,
-    VerificationRequest,
     ValidationResultRecord,
+    VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.runtime.simulation_runner import (
@@ -49,6 +48,7 @@ from worker_heavy.simulation.verification import verify_with_jitter
 from worker_heavy.utils import submit_for_review
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 from worker_heavy.utils.preview import preview_design
+from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.topology import analyze_component
 
 logger = structlog.get_logger(__name__)
@@ -438,13 +438,16 @@ async def api_simulate(
                         "ascii"
                     )
                 elif render_image_paths:
-                    synthesized_manifest = RenderManifest(
-                        artifacts={
+                    synthesized_manifest = build_render_manifest(
+                        {
                             f"/{path.lstrip('/')}": RenderArtifactMetadata(
                                 modality="rgb"
                             )
                             for path in sorted(dict.fromkeys(render_image_paths))
-                        }
+                        },
+                        workspace_root=root,
+                        episode_id=x_session_id,
+                        worker_session_id=x_session_id,
                     )
                     render_blobs_base64[
                         str(Path("renders") / "render_manifest.json")
@@ -813,17 +816,17 @@ async def api_submit(
                         render_blobs_base64[rel_path] = base64.b64encode(
                             render_path.read_bytes()
                         ).decode("ascii")
-                if (
-                    not render_manifest_path.exists()
-                    and render_image_paths
-                ):
-                    synthesized_manifest = RenderManifest(
-                        artifacts={
+                if not render_manifest_path.exists() and render_image_paths:
+                    synthesized_manifest = build_render_manifest(
+                        {
                             f"/{path.lstrip('/')}": RenderArtifactMetadata(
                                 modality="rgb"
                             )
                             for path in sorted(dict.fromkeys(render_image_paths))
-                        }
+                        },
+                        workspace_root=root,
+                        episode_id=x_session_id,
+                        worker_session_id=x_session_id,
                     )
                     render_blobs_base64[
                         str(Path("renders") / "render_manifest.json")

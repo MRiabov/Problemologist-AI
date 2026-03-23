@@ -1,5 +1,5 @@
 ---
-name: 'step-05-gate-decision'
+name: step-05-gate-decision
 description: 'Phase 2: Apply gate decision logic and generate outputs'
 outputFile: '{test_artifacts}/traceability-report.md'
 ---
@@ -10,7 +10,7 @@ outputFile: '{test_artifacts}/traceability-report.md'
 
 **Phase 2:** Read coverage matrix from Phase 1, apply deterministic gate decision logic, and generate traceability report.
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -20,7 +20,7 @@ outputFile: '{test_artifacts}/traceability-report.md'
 - ✅ Apply gate decision logic
 - ❌ Do NOT regenerate coverage matrix (use Phase 1 output)
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -34,7 +34,7 @@ outputFile: '{test_artifacts}/traceability-report.md'
 - Focus: gate decision logic only
 - Dependencies: Phase 1 complete (coverage matrix exists)
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -55,7 +55,7 @@ if (coverageMatrix.phase !== 'PHASE_1_COMPLETE') {
 }
 ```
 
----
+______________________________________________________________________
 
 ### 2. Apply Gate Decision Logic
 
@@ -113,7 +113,7 @@ if (manualWaiver) {
 }
 ```
 
----
+______________________________________________________________________
 
 ### 3. Generate Gate Report
 
@@ -146,7 +146,7 @@ const gateReport = {
 };
 ```
 
----
+______________________________________________________________________
 
 ### 4. Generate Traceability Report
 
@@ -184,7 +184,7 @@ const gateReport = {
 fs.writeFileSync('{outputFile}', reportContent, 'utf8');
 ```
 
----
+______________________________________________________________________
 
 ### 5. Display Gate Decision
 
@@ -219,7 +219,7 @@ fs.writeFileSync('{outputFile}', reportContent, 'utf8');
 {endif}
 ```
 
----
+______________________________________________________________________
 
 ### 6. Save Progress
 
@@ -233,7 +233,7 @@ Since step 4 (Generate Traceability Report) already wrote the report content to 
 
 Then append the gate decision summary (from section 5 above) to the end of the existing report content.
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -246,7 +246,7 @@ Then append the gate decision summary (from section 5 above) to the end of the e
 
 **Workflow terminates here.**
 
----
+______________________________________________________________________
 
 ## 🚨 PHASE 2 SUCCESS METRICS
 

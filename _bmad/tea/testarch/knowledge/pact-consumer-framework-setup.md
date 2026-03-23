@@ -48,7 +48,7 @@ scripts/
 - Shell scripts live in `scripts/` at project root, not nested inside test directories
 - CI workflow named `contract-test-consumer.yml` (not `pact-consumer.yml` or other variants)
 
----
+______________________________________________________________________
 
 ### Example 2: Vitest Configuration for Pact
 
@@ -76,7 +76,7 @@ export default defineConfig({
 - 30 second timeout accommodates Pact mock server startup and interaction verification
 - Use a dedicated config file (`vitest.config.pact.ts`), not the main vitest config
 
----
+______________________________________________________________________
 
 ### Example 3: Package.json Script Naming
 
@@ -104,7 +104,7 @@ Replace `<service-name>` with the consumer's pacticipant name (e.g., `my-fronten
 - `PACTICIPANT` is set per-script invocation, not globally
 - Do NOT use `npx pact-broker` — use `pact-broker` directly (installed as a dependency)
 
----
+______________________________________________________________________
 
 ### Example 4: Shell Scripts
 
@@ -205,7 +205,7 @@ fi
 - `record-deployment` has branch guard (only records on main/master)
 - Do NOT invent custom env vars like `PACT_CONSUMER_VERSION` or `PACT_BREAKING_CHANGE` in scripts — those are handled by `env-setup.sh` and the CI detect-breaking-change action respectively
 
----
+______________________________________________________________________
 
 ### Example 5: CI Workflow (`contract-test-consumer.yml`)
 
@@ -284,7 +284,7 @@ jobs:
 - **PR types include `edited`** — needed for breaking change checkbox detection in PR body
 - **`GITHUB_BRANCH`** uses `${{ github.head_ref || github.ref_name }}` — `head_ref` for PRs, `ref_name` for pushes
 
----
+______________________________________________________________________
 
 ### Example 6: Detect Breaking Change Composite Action
 
@@ -351,7 +351,7 @@ runs:
 - `outputs.is_breaking_change` available for consuming workflows
 - Uses a case-insensitive checkbox regex (`/\[\s*[xX]\s*\]\s*Pact breaking change/i`) to detect checked states robustly
 
----
+______________________________________________________________________
 
 ### Example 7: Consumer Test Using PactV4 Builder
 
@@ -477,7 +477,7 @@ describe('Movies API Consumer Contract', () => {
 | Environment variable | `process.env.API_URL = mockServer.url`       | Config-driven apps    |
 | Factory function     | `createApi({ baseUrl: mockServer.url })`     | Functional patterns   |
 
----
+______________________________________________________________________
 
 ### Example 8: Support Files
 
@@ -582,7 +582,7 @@ export const setJsonBody = (body: unknown) => setJsonContent({ body });
 - The shim exports `createProviderState`, `toJsonMap`, `setJsonContent`, `setJsonBody`, and helper input types
 - Keep shim types local (or sourced from public exports only); do not import from internal Pact paths like `@pact-foundation/pact/src/*`
 
----
+______________________________________________________________________
 
 ### Example 9: .gitignore Entries
 
@@ -594,7 +594,7 @@ export const setJsonBody = (body: unknown) => setJsonContent({ body });
 pact-logs/
 ```
 
----
+______________________________________________________________________
 
 ## Validation Checklist
 

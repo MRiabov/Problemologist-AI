@@ -35,6 +35,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 Before running any scripts or writing to disk you **must** conduct a structured discovery interview.
 
 - **Scope proportionality (CRITICAL)**: FIRST, gauge the inherent complexity of the request:
+
   - **Trivial/Test Features** (hello world, simple pages, proof-of-concept): Ask 1-2 questions maximum, then proceed. Examples: "a simple hello world page", "tic-tac-toe game", "basic contact form"
   - **Simple Features** (small UI additions, minor enhancements): Ask 2-3 questions covering purpose and basic constraints
   - **Complex Features** (new subsystems, integrations): Ask 3-5 questions covering goals, users, constraints, risks
@@ -43,6 +44,7 @@ Before running any scripts or writing to disk you **must** conduct a structured 
 - **User signals to reduce questioning**: If the user says "just testing", "quick prototype", "skip to next phase", "stop asking questions" - recognize this as a signal to minimize discovery and proceed with reasonable defaults.
 
 - **First response rule**:
+
   - For TRIVIAL features (hello world, simple test): Ask ONE clarifying question, then if the answer confirms it's simple, proceed directly to spec generation
   - For other features: Ask a single focused discovery question and end with `WAITING_FOR_DISCOVERY_INPUT`
 
@@ -64,28 +66,34 @@ After completing discovery and confirming the Intent Summary, determine the appr
 ### Available Missions
 
 - **software-dev**: For building software features, APIs, CLI tools, applications
+
   - Phases: research → design → implement → test → review
   - Best for: code changes, new features, bug fixes, refactoring
 
 - **research**: For investigations, literature reviews, technical analysis
+
   - Phases: question → methodology → gather → analyze → synthesize → publish
   - Best for: feasibility studies, market research, technology evaluation
 
 ### Mission Inference
 
 1. **Analyze the feature description** to identify the primary goal:
+
    - Building, coding, implementing, creating software → **software-dev**
    - Researching, investigating, analyzing, evaluating → **research**
 
 2. **Check for explicit mission requests** in the user's description:
+
    - If user mentions "research project", "investigation", "analysis" → use research
    - If user mentions "build", "implement", "create feature" → use software-dev
 
 3. **Confirm with user** (unless explicit):
+
    > "Based on your description, this sounds like a **[software-dev/research]** project.
    > I'll use the **[mission name]** mission. Does that work for you?"
 
 4. **Handle user response**:
+
    - If confirmed: proceed with selected mission
    - If user wants different mission: use their choice
 
@@ -125,6 +133,7 @@ Given that feature description, do this:
 - **Interactive Interview Mode (no arguments)**: Use the discovery interview to elicit all necessary context, synthesize the working feature description, and confirm it with the user before you generate any specification artifacts.
 
 1. **Check discovery status**:
+
    - If this is your first message or discovery questions remain unanswered, stay in the one-question loop, capture the user's response, update your internal table, and end with `WAITING_FOR_DISCOVERY_INPUT`. Do **not** surface the table; keep it internal. Do **not** call the creation command yet.
    - Only proceed once every discovery question has an explicit answer and the user has acknowledged the Intent Summary.
    - Empty invocation rule: stay in interview mode until you can restate the agreed-upon feature description. Do **not** call the creation command while the description is missing or provisional.
@@ -138,6 +147,7 @@ Given that feature description, do this:
    Where `<slug>` is a kebab-case version of the friendly title (e.g., "Checkout Upsell Flow" → "checkout-upsell-flow").
 
    The command returns JSON with:
+
    - `result`: "success" or error message
    - `feature`: Feature number and slug (e.g., "014-checkout-upsell-flow")
    - `feature_dir`: Absolute path to the feature directory inside the main repo
@@ -145,11 +155,13 @@ Given that feature description, do this:
    Parse these values for use in subsequent steps. All file paths are absolute.
 
    **IMPORTANT**: You must only ever run this command once. The JSON is provided in the terminal output - always refer to it to get the actual paths you're looking for.
+
 3. **Stay in the main repository**: No worktree is created during specify.
 
 4. The spec template is bundled with spec-kitty at `src/specify_cli/missions/software-dev/templates/spec-template.md`. The template defines required sections for software development features.
 
 5. Create meta.json in the feature directory with:
+
    ```json
    {
      "feature_number": "<number>",
@@ -164,99 +176,110 @@ Given that feature description, do this:
    ```
 
    **CRITICAL**: Always set these fields explicitly:
+
    - `target_branch`: Set to "main" by default (user can change to "2.x" for dual-branch features)
    - `vcs`: Set to "git" by default (enables VCS locking and prevents jj fallback)
 
 6. Generate the specification content by following this flow:
-    - Use the discovery answers as your authoritative source of truth (do **not** rely on raw `$ARGUMENTS`)
-    - For empty invocations, treat the synthesized interview summary as the canonical feature description
-    - Identify: actors, actions, data, constraints, motivations, success metrics
-    - For any remaining ambiguity:
-      * Ask the user a focused follow-up question immediately and halt work until they answer
-      * Only use `[NEEDS CLARIFICATION: …]` when the user explicitly defers the decision
-      * Record any interim assumption in the Assumptions section
-      * Prioritize clarifications by impact: scope > outcomes > risks/security > user experience > technical details
-    - Fill User Scenarios & Testing section (ERROR if no clear user flow can be determined)
-    - Generate Functional Requirements (each requirement must be testable)
-    - Define Success Criteria (measurable, technology-agnostic outcomes)
-    - Identify Key Entities (if data involved)
+
+   - Use the discovery answers as your authoritative source of truth (do **not** rely on raw `$ARGUMENTS`)
+   - For empty invocations, treat the synthesized interview summary as the canonical feature description
+   - Identify: actors, actions, data, constraints, motivations, success metrics
+   - For any remaining ambiguity:
+     - Ask the user a focused follow-up question immediately and halt work until they answer
+     - Only use `[NEEDS CLARIFICATION: …]` when the user explicitly defers the decision
+     - Record any interim assumption in the Assumptions section
+     - Prioritize clarifications by impact: scope > outcomes > risks/security > user experience > technical details
+   - Fill User Scenarios & Testing section (ERROR if no clear user flow can be determined)
+   - Generate Functional Requirements (each requirement must be testable)
+   - Define Success Criteria (measurable, technology-agnostic outcomes)
+   - Identify Key Entities (if data involved)
 
 7. Write the specification to `<feature_dir>/spec.md` using the template structure, replacing placeholders with concrete details derived from the feature description while preserving section order and headings.
 
 8. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
 
    a. **Create Spec Quality Checklist**: Generate a checklist file at `FEATURE_DIR/checklists/requirements.md` using the checklist template structure with these validation items:
-   
-      ```markdown
-      # Specification Quality Checklist: [FEATURE NAME]
-      
-      **Purpose**: Validate specification completeness and quality before proceeding to planning
-      **Created**: [DATE]
-      **Feature**: [Link to spec.md]
-      
-      ## Content Quality
-      
-      - [ ] No implementation details (languages, frameworks, APIs)
-      - [ ] Focused on user value and business needs
-      - [ ] Written for non-technical stakeholders
-      - [ ] All mandatory sections completed
-      
-      ## Requirement Completeness
-      
-      - [ ] No [NEEDS CLARIFICATION] markers remain
-      - [ ] Requirements are testable and unambiguous
-      - [ ] Success criteria are measurable
-      - [ ] Success criteria are technology-agnostic (no implementation details)
-      - [ ] All acceptance scenarios are defined
-      - [ ] Edge cases are identified
-      - [ ] Scope is clearly bounded
-      - [ ] Dependencies and assumptions identified
-      
-      ## Feature Readiness
-      
-      - [ ] All functional requirements have clear acceptance criteria
-      - [ ] User scenarios cover primary flows
-      - [ ] Feature meets measurable outcomes defined in Success Criteria
-      - [ ] No implementation details leak into specification
-      
-      ## Notes
-      
-      - Items marked incomplete require spec updates before `/spec-kitty.clarify` or `/spec-kitty.plan`
-      ```
-   
+
+   ```markdown
+   # Specification Quality Checklist: [FEATURE NAME]
+
+   **Purpose**: Validate specification completeness and quality before proceeding to planning
+   **Created**: [DATE]
+   **Feature**: [Link to spec.md]
+
+   ## Content Quality
+
+   - [ ] No implementation details (languages, frameworks, APIs)
+   - [ ] Focused on user value and business needs
+   - [ ] Written for non-technical stakeholders
+   - [ ] All mandatory sections completed
+
+   ## Requirement Completeness
+
+   - [ ] No [NEEDS CLARIFICATION] markers remain
+   - [ ] Requirements are testable and unambiguous
+   - [ ] Success criteria are measurable
+   - [ ] Success criteria are technology-agnostic (no implementation details)
+   - [ ] All acceptance scenarios are defined
+   - [ ] Edge cases are identified
+   - [ ] Scope is clearly bounded
+   - [ ] Dependencies and assumptions identified
+
+   ## Feature Readiness
+
+   - [ ] All functional requirements have clear acceptance criteria
+   - [ ] User scenarios cover primary flows
+   - [ ] Feature meets measurable outcomes defined in Success Criteria
+   - [ ] No implementation details leak into specification
+
+   ## Notes
+
+   - Items marked incomplete require spec updates before `/spec-kitty.clarify` or `/spec-kitty.plan`
+   ```
+
    b. **Run Validation Check**: Review the spec against each checklist item:
-      - For each item, determine if it passes or fails
-      - Document specific issues found (quote relevant spec sections)
-   
+
+   - For each item, determine if it passes or fails
+   - Document specific issues found (quote relevant spec sections)
+
    c. **Handle Validation Results**:
-      
-      - **If all items pass**: Mark checklist complete and proceed to step 6
-      
-      - **If items fail (excluding [NEEDS CLARIFICATION])**:
-        1. List the failing items and specific issues
-        2. Update the spec to address each issue
-        3. Re-run validation until all items pass (max 3 iterations)
-        4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user
-      
-      - **If [NEEDS CLARIFICATION] markers remain**:
-        1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
-        2. Re-confirm with the user whether each outstanding decision truly needs to stay unresolved. Do not assume away critical gaps.
-        3. For each clarification the user has explicitly deferred, present options using plain text—no tables:
-        
-           ```
-           Question [N]: [Topic]
-           Context: [Quote relevant spec section]
-           Need: [Specific question from NEEDS CLARIFICATION marker]
-           Options: (A) [First answer — implications] · (B) [Second answer — implications] · (C) [Third answer — implications] · (D) Custom (describe your own answer)
-           Reply with a letter or a custom answer.
-           ```
-        
-        4. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
-        5. Present all questions together before waiting for responses
-        6. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
-        7. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
-        9. Re-run validation after all clarifications are resolved
-   
+
+   - **If all items pass**: Mark checklist complete and proceed to step 6
+
+   - **If items fail (excluding [NEEDS CLARIFICATION])**:
+
+     1. List the failing items and specific issues
+     2. Update the spec to address each issue
+     3. Re-run validation until all items pass (max 3 iterations)
+     4. If still failing after 3 iterations, document remaining issues in checklist notes and warn user
+
+   - **If [NEEDS CLARIFICATION] markers remain**:
+
+     1. Extract all [NEEDS CLARIFICATION: ...] markers from the spec
+
+     2. Re-confirm with the user whether each outstanding decision truly needs to stay unresolved. Do not assume away critical gaps.
+
+     3. For each clarification the user has explicitly deferred, present options using plain text—no tables:
+
+        ```
+        Question [N]: [Topic]
+        Context: [Quote relevant spec section]
+        Need: [Specific question from NEEDS CLARIFICATION marker]
+        Options: (A) [First answer — implications] · (B) [Second answer — implications] · (C) [Third answer — implications] · (D) Custom (describe your own answer)
+        Reply with a letter or a custom answer.
+        ```
+
+     4. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
+
+     5. Present all questions together before waiting for responses
+
+     6. Wait for user to respond with their choices for all questions (e.g., "Q1: A, Q2: Custom - [details], Q3: B")
+
+     7. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
+
+     8. Re-run validation after all clarifications are resolved
+
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
 9. Report completion with feature directory, spec file path, checklist results, and readiness for the next phase (`/spec-kitty.clarify` or `/spec-kitty.plan`).
@@ -294,7 +317,7 @@ When creating this spec from a user prompt:
    - Feature scope and boundaries (include/exclude specific use cases)
    - User types and permissions (if multiple conflicting interpretations possible)
    - Security/compliance requirements (when legally/financially significant)
-   
+
 **Examples of reasonable defaults** (don't ask about these):
 
 - Data retention: Industry-standard practices for the domain

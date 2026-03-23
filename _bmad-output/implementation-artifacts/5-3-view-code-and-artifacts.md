@@ -56,15 +56,15 @@ As a human operator, I want to view code, plans, manifests, logs, and other file
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.3]
-- [Source: _bmad-output/planning-artifacts/prd.md, MVP UI scope, artifact inspection, and debuggability requirements]
-- [Source: _bmad-output/planning-artifacts/ux-design-specification.md, sections 7, 10, 11, and 17]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.3]
+- [Source: \_bmad-output/planning-artifacts/prd.md, MVP UI scope, artifact inspection, and debuggability requirements]
+- [Source: \_bmad-output/planning-artifacts/ux-design-specification.md, sections 7, 10, 11, and 17]
 - [Source: specs/frontend-specs.md, code viewer, CAD/simulation viewer, and shared workflow requirements]
 - [Source: specs/architecture/agents/artifacts-and-filesystem.md, controller-first artifact surface and path-permission policy]
 - [Source: specs/architecture/distributed-execution.md, controller-backed asset proxy contract]
 - [Source: specs/architecture/observability.md, episode/asset/traces linkage and validation-log observability]
-- [Source: controller/api/routes/episodes.py, `EpisodeResponse` assets/traces/validation_logs payload and asset proxy]
-- [Source: controller/agent/benchmark/graph.py, workspace asset sync for root files, reviews, and `.manifests/` artifacts]
+- \[Source: controller/api/routes/episodes.py, `EpisodeResponse` assets/traces/validation_logs payload and asset proxy\]
+- \[Source: controller/agent/benchmark/graph.py, workspace asset sync for root files, reviews, and `.manifests/` artifacts\]
 - [Source: frontend/src/components/workspace/ArtifactView.tsx, current file-tree and syntax-highlighter implementation]
 - [Source: frontend/src/components/workspace/ActionCard.tsx, tool-row artifact jumping]
 - [Source: frontend/src/components/workspace/HighlightedContent.tsx, inline path mention parsing]

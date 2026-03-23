@@ -145,7 +145,7 @@ READY FOR IMPLEMENTATION
 ### Recommended Next Steps
 
 1. Proceed to implementation.
-1. Keep Epic 21 as a separate sequencing note if you want the core implementation epic chain to stay capability-focused.
+2. Keep Epic 21 as a separate sequencing note if you want the core implementation epic chain to stay capability-focused.
 
 ### Final Note
 

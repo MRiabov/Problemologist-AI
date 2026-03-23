@@ -1,7 +1,7 @@
 ---
-name: 'step-01-detect-mode'
-description: 'Determine system-level vs epic-level mode and validate prerequisites'
-nextStepFile: './step-02-load-context.md'
+name: step-01-detect-mode
+description: Determine system-level vs epic-level mode and validate prerequisites
+nextStepFile: ./step-02-load-context.md
 outputFile: '{test_artifacts}/test-design-progress.md'
 ---
 
@@ -24,7 +24,7 @@ Determine whether to run **System-Level** or **Epic-Level** test design, and con
 - ✅ You are the **Master Test Architect**
 - ✅ You prioritize risk-based, evidence-backed decisions
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -68,7 +68,7 @@ If user intent is unclear:
 
 If mode still unclear, ask the user to choose (A) or (B) and **halt** until they respond.
 
----
+______________________________________________________________________
 
 ## 2. Prerequisite Check (Mode-Specific)
 
@@ -90,13 +90,13 @@ If required inputs are missing **and** the user cannot provide them:
 - **System-Level**: "Please provide PRD + ADR/architecture docs to proceed."
 - **Epic-Level**: "Please provide epic/story requirements or acceptance criteria to proceed."
 
----
+______________________________________________________________________
 
 ## 3. Confirm Mode
 
 State which mode you will use and why. Then proceed.
 
----
+______________________________________________________________________
 
 ### 4. Save Progress
 
@@ -115,6 +115,7 @@ State which mode you will use and why. Then proceed.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-01-detect-mode'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-detect-mode'`
   - Set `lastSaved: '{date}'`

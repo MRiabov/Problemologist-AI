@@ -22,11 +22,10 @@ import { DesignViewer } from '../visualization/DesignViewer';
 import { PathUtils } from '../../lib/pathUtils';
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
-import { AssetType } from "../../api/generated/models/AssetType";
 import {
   getArtifactSelectionDescriptor,
   getDefaultArtifactId,
-  getLatestSolutionEvidenceAsset,
+  getLatestMediaBundle,
 } from "./artifactSelection";
 import { getEngineerRevisionLineage } from "./RevisionLineageSummary";
 
@@ -86,13 +85,42 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     return path.startsWith('http') ? path : PathUtils.ensureLeadingSlash(path);
   }, [selectedEpisode?.id]);
 
-  const videoAsset = useMemo(() => selectedEpisode?.assets?.find((a: AssetResponse) => a.asset_type === AssetType.VIDEO), [selectedEpisode]);
-  // Only include GLB assets — GLTFLoader cannot parse STL/STEP and crashes with WebGL context loss
-  const modelAssets = useMemo(() => selectedEpisode?.assets?.filter((a: AssetResponse) => a.asset_type === AssetType.GLB) || [], [selectedEpisode]);
-  const modelUrls = useMemo(() => modelAssets.map(getAssetUrl).filter(Boolean) as string[], [modelAssets, getAssetUrl]);
-  const defaultSolutionEvidenceAsset = useMemo(
-    () => getLatestSolutionEvidenceAsset(selectedEpisode?.assets || []),
+  const latestMediaBundle = useMemo(
+    () => getLatestMediaBundle(selectedEpisode?.assets || []),
     [selectedEpisode?.assets]
+  );
+  const videoAsset = latestMediaBundle.videoAsset;
+  const modelAsset = latestMediaBundle.modelAsset;
+  const heatmapAsset = latestMediaBundle.heatmapAsset;
+  const defaultSolutionEvidenceAsset = latestMediaBundle.solutionEvidenceAsset;
+  const latestMediaBundleKey = useMemo(
+    () =>
+      [
+        videoAsset?.s3_path,
+        modelAsset?.s3_path,
+        heatmapAsset?.s3_path,
+        defaultSolutionEvidenceAsset?.s3_path,
+      ]
+        .filter(Boolean)
+        .join("|"),
+    [
+      defaultSolutionEvidenceAsset?.s3_path,
+      heatmapAsset?.s3_path,
+      modelAsset?.s3_path,
+      videoAsset?.s3_path,
+    ]
+  );
+  const modelUrls = useMemo(
+    () => (modelAsset ? [getAssetUrl(modelAsset)] : []).filter(Boolean) as string[],
+    [modelAsset, getAssetUrl]
+  );
+  const videoUrl = useMemo(
+    () => (videoAsset ? getAssetUrl(videoAsset) : null),
+    [videoAsset, getAssetUrl]
+  );
+  const heatmapUrls = useMemo(
+    () => (heatmapAsset ? [getAssetUrl(heatmapAsset)] : []).filter(Boolean) as string[],
+    [heatmapAsset, getAssetUrl]
   );
   const defaultArtifactId = useMemo(
     () =>
@@ -258,6 +286,10 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                           modelUrlsCount: modelUrls.length, 
                           hasVideoAsset: !!videoAsset, 
                           videoAssetType: videoAsset?.asset_type,
+                          videoAssetPath: videoAsset?.s3_path ?? null,
+                          modelAssetPath: modelAsset?.s3_path ?? null,
+                          heatmapAssetPath: heatmapAsset?.s3_path ?? null,
+                          solutionEvidenceAssetPath: defaultSolutionEvidenceAsset?.s3_path ?? null,
                           episodeId: selectedEpisode?.id,
                           episodeStatus: selectedEpisode?.metadata_vars?.detailed_status || selectedEpisode?.status,
                           benchmarkId: selectedEpisode?.metadata_vars?.benchmark_id ?? null,
@@ -277,12 +309,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
 
                   <DesignViewer 
                     modelUrls={modelUrls}
-                    videoUrl={videoAsset ? getAssetUrl(videoAsset) : null}
-                    heatmapUrls={selectedEpisode?.assets
-                      ?.filter((a: AssetResponse) => (a.s3_path && a.s3_path.includes('stress_')))
-                      .map(getAssetUrl)
-                      .filter(Boolean) as string[]
-                    }
+                    videoUrl={videoUrl}
+                    heatmapUrls={heatmapUrls}
+                    mediaBundleKey={latestMediaBundleKey}
                     circuitData={circuitData}
                     isConnected={isConnected}
                     resetTrigger={resetTrigger}

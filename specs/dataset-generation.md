@@ -9,18 +9,28 @@ I propose the dataset generation to be more or less aligned with how the user wo
 **The instructions below essentially restate the already known application flow**; however at each stage we need to persist inputs and outputs, all metadata, etc.
 
 1. The user inputs a benchmark they want generated (*the* seed dataset),
+
 <!-- Benchmark planner -->
+
 1. The benchmark planer generates the benchmark plan,
 2. The benchmark is evaluated for hard pass gates (all files present, and only they are present), then the plan/todos are LLM-reviewed if there is an LLM reviewer.
+
 <!--Benchmark coder-->
+
 1. The benchmark coder implements and gets hard pass/fail; then gets a review from reviewer
 
 - If both quality gates passed, persist the outputs into the benchmark coder and reviewer.
+
 <!--Benchmark reviewer-->
+
 1. (currently) Works based on simple LLM propmts; (later on) will be tuned with DSPy to run more serious evals.
+
 <!--Mech Engineer-->
+
 <!--Repeats basically the same process as benchmark generation planner-->
+
 <!--Electronics planner does the same-->
+
 <!--Git and skill nodes are out of scope for now.-->
 
 ### Inputs to the system

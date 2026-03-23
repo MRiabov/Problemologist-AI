@@ -4,8 +4,9 @@ from pathlib import Path
 
 import structlog
 
+from shared.workers.schema import RenderArtifactMetadata
+from worker_heavy.utils.rendering import build_render_manifest
 from worker_light.config import settings
-from shared.workers.schema import RenderArtifactMetadata, RenderManifest
 
 from .backend import (
     FileDownloadResponse,
@@ -130,7 +131,9 @@ class FilesystemRouter:
 
     def _sync_render_manifest(self, trigger_path: str) -> None:
         """Keep the render manifest aligned with the latest preview images."""
-        normalized = trigger_path if trigger_path.startswith("/") else f"/{trigger_path}"
+        normalized = (
+            trigger_path if trigger_path.startswith("/") else f"/{trigger_path}"
+        )
         path_obj = Path(normalized.lstrip("/"))
         if not path_obj.parts or path_obj.parts[0] != "renders":
             return
@@ -154,11 +157,12 @@ class FilesystemRouter:
         if not render_paths:
             return
 
-        manifest = RenderManifest(
-            artifacts={
+        manifest = build_render_manifest(
+            {
                 rel_path: RenderArtifactMetadata(modality="rgb")
                 for rel_path in sorted(dict.fromkeys(render_paths))
-            }
+            },
+            workspace_root=renders_dir.parent,
         )
         self.local_backend.write(
             "renders/render_manifest.json",

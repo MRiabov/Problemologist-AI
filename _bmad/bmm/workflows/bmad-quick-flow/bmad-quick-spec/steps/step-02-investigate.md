@@ -58,7 +58,6 @@ For each file/directory provided:
 - Identify standard project utilities or boilerplate that SHOULD be used.
 - Document this as "Confirmed Clean Slate" - establishing that no legacy constraints exist.
 
-
 c) **Document Technical Context**
 
 Capture and confirm with user:
@@ -127,7 +126,7 @@ Display: "**Select:** [A] Advanced Elicitation [P] Party Mode [C] Continue to Ge
 - ONLY proceed to next step when user selects 'C'
 - After A or P execution, return to this menu
 
----
+______________________________________________________________________
 
 ## REQUIRED OUTPUTS:
 

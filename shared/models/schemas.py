@@ -6,6 +6,7 @@ These models define the contracts for:
 - Review frontmatter: YAML frontmatter for reviewer decisions
 """
 
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -19,6 +20,7 @@ from pydantic import (
 
 from shared.enums import (
     AgentName,
+    AssetType,
     BenchmarkAttachmentMethod,
     BenchmarkRefusalReason,
     ElectricalRefusalReason,
@@ -648,6 +650,63 @@ class EntryValidationContext(BaseModel):
     reason_code: str | None = None
     reroute_target: AgentName | None = None
     errors: list[EntryValidationError] = Field(default_factory=list)
+
+
+class DatasetRowArtifactReference(StrictContractModel):
+    """Reference to a persisted artifact included in a dataset row archive."""
+
+    path: str
+    family: str
+    asset_type: AssetType | None = None
+    source_surface: str
+    sha256: str
+    size_bytes: int | None = None
+
+
+class DatasetRowBenchmarkAsset(StrictContractModel):
+    """Snapshot of the benchmark asset surface used to materialize a dataset row."""
+
+    benchmark_id: str
+    mjcf_url: str
+    build123d_url: str
+    preview_bundle_url: str
+    random_variants: list[str] = Field(default_factory=list)
+    difficulty_score: float | None = None
+    benchmark_metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DatasetRowLineage(StrictContractModel):
+    """Joinable lineage fields persisted with a dataset export row."""
+
+    episode_id: str
+    benchmark_id: str
+    user_session_id: str | None = None
+    worker_session_id: str | None = None
+    episode_type: EpisodeType
+    seed_id: str | None = None
+    seed_dataset: str | None = None
+    seed_match_method: SeedMatchMethod | None = None
+    generation_kind: GenerationKind | None = None
+    parent_seed_id: str | None = None
+    is_integration_test: bool | None = None
+    integration_test_id: str | None = None
+    simulation_run_id: str | None = None
+    cots_query_id: str | None = None
+    review_id: str | None = None
+    revision_hash: str
+    artifact_hash: str
+
+
+class DatasetRowArchiveManifest(StrictContractModel):
+    """Strict manifest persisted alongside a dataset-row archive."""
+
+    export_id: str
+    created_at: datetime
+    lineage: DatasetRowLineage
+    source_benchmark_asset: DatasetRowBenchmarkAsset | None = None
+    artifact_references: list[DatasetRowArtifactReference] = Field(default_factory=list)
+    artifact_families: list[str] = Field(default_factory=list)
+    validation_notes: list[str] = Field(default_factory=list)
 
 
 # =============================================================================

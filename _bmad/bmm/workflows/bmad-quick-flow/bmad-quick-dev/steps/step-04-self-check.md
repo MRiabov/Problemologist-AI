@@ -1,11 +1,12 @@
 ---
+null
 ---
 
 # Step 4: Self-Check
 
 **Goal:** Audit completed work against tasks, tests, AC, and patterns before external review.
 
----
+______________________________________________________________________
 
 ## AVAILABLE STATE
 
@@ -16,7 +17,7 @@ From previous steps:
 - `{tech_spec_path}` - Tech-spec file (if Mode A)
 - `{project_context}` - Project patterns (if exists)
 
----
+______________________________________________________________________
 
 ## SELF-CHECK AUDIT
 
@@ -53,7 +54,7 @@ Verify code quality:
 - [ ] Error handling consistent with codebase
 - [ ] No obvious code smells introduced
 
----
+______________________________________________________________________
 
 ## UPDATE TECH-SPEC (Mode A only)
 
@@ -64,7 +65,7 @@ If `{execution_mode}` is "tech-spec":
 3. Update status to "Implementation Complete"
 4. Save changes
 
----
+______________________________________________________________________
 
 ## IMPLEMENTATION SUMMARY
 
@@ -81,13 +82,13 @@ Present summary to transition to review:
 Proceeding to adversarial code review...
 ```
 
----
+______________________________________________________________________
 
 ## NEXT STEP
 
 Proceed immediately to `./step-05-adversarial-review.md`.
 
----
+______________________________________________________________________
 
 ## SUCCESS METRICS
 

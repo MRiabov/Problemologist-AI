@@ -63,7 +63,7 @@ As a human operator, I want to see the agent's output and reasoning in real time
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.5]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.5]
 - [Source: specs/frontend-specs.md, Reasoning trace contract, Context and compaction telemetry contract, Interrupting the worker, Collecting feedback from users]
 - [Source: specs/architecture/observability.md, Reasoning trace capture and missing-trace reconstruction]
 - [Source: specs/integration-tests.md, INT-158, INT-160, INT-161, INT-162, and INT-178]
@@ -73,7 +73,7 @@ As a human operator, I want to see the agent's output and reasoning in real time
 - [Source: frontend/src/components/workspace/TraceList.tsx, backend-backed reasoning and tool rendering]
 - [Source: frontend/src/components/workspace/ActionCard.tsx, tool activity labels and artifact jump behavior]
 - [Source: frontend/src/components/workspace/ThoughtBlock.tsx, expandable reasoning rows]
-- [Source: frontend/src/api/client.ts, `interruptEpisode(...)` and trace feedback client paths]
+- \[Source: frontend/src/api/client.ts, `interruptEpisode(...)` and trace feedback client paths\]
 - [Source: tests/integration/frontend/p0/test_frontend_p0.py, INT-162 interrupt UX baseline]
 - [Source: tests/integration/frontend/p1/test_int_160.py, INT-160 reasoning visibility]
 - [Source: tests/integration/frontend/p1/test_int_161.py, INT-161 live tool activity and reasoning]

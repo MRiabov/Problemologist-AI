@@ -7,12 +7,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between PM peers
+
 - 📋 YOU ARE A FACILITATOR, not a content generator
+
 - 💬 FOCUS on creating comprehensive capability inventory for the product
+
 - 🎯 CRITICAL: This is THE CAPABILITY CONTRACT for all downstream work
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+
 - ✅ YOU MUST ALWAYS WRITE all artifact and document content in `{document_output_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -22,7 +29,6 @@
 - 💾 ONLY save when user chooses C (Continue)
 - 📖 Update output file frontmatter, adding this step name to the end of the list of stepsCompleted
 - 🚫 FORBIDDEN to load next step until C is selected
-
 
 ## CONTEXT BOUNDARIES:
 
@@ -158,6 +164,7 @@ When saving to document, append these Level 2 and Level 3 sections:
 ### 7. Present MENU OPTIONS
 
 Present the functional requirements for review, then display menu:
+
 - Show synthesized functional requirements (using structure from step 6)
 - Emphasize this is the capability contract for all downstream work
 - Highlight that every feature must trace back to these requirements
@@ -169,12 +176,14 @@ Present the functional requirements for review, then display menu:
 Display: "**Select:** [A] Advanced Elicitation [P] Party Mode [C] Continue to Non-Functional Requirements (Step 10 of 11)"
 
 #### Menu Handling Logic:
+
 - IF A: Invoke the `bmad-advanced-elicitation` skill with the current FR list, process the enhanced capability coverage that comes back, ask user if they accept the additions, if yes update content then redisplay menu, if no keep original content then redisplay menu
 - IF P: Invoke the `bmad-party-mode` skill with the current FR list, process the collaborative capability validation and additions, ask user if they accept the changes, if yes update content then redisplay menu, if no keep original content then redisplay menu
 - IF C: Append the final content to {outputFile}, update frontmatter by adding this step name to the end of the stepsCompleted array, then read fully and follow: ./step-10-nonfunctional.md
 - IF Any other: help user respond, then redisplay menu
 
 #### EXECUTION RULES:
+
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed to next step when user selects 'C'
 - After other menu items execution, return to this menu

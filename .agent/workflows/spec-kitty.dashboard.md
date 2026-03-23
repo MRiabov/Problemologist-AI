@@ -2,7 +2,6 @@
 description: Open the Spec Kitty dashboard in your browser.
 ---
 
-
 ## Dashboard Access
 
 This command launches the Spec Kitty dashboard in your browser using the spec-kitty CLI.
@@ -10,6 +9,7 @@ This command launches the Spec Kitty dashboard in your browser using the spec-ki
 ## What to do
 
 Simply run the `spec-kitty dashboard` command to:
+
 - Start the dashboard if it's not already running
 - Open it in your default web browser
 - Display the dashboard URL

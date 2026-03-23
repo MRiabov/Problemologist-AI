@@ -25,13 +25,14 @@ git branch --show-current  # Should show "main"
 
 **Note**: Task generation in main is standard for all spec-kitty missions. Implementation happens in per-WP worktrees.
 
----
+______________________________________________________________________
 
 ## Outline
 
 1. **Setup**: Run `spec-kitty agent feature check-prerequisites --json --paths-only --include-tasks`
 
 2. **Load design documents**:
+
    - spec.md (documentation goals, selected Divio types)
    - plan.md (structure design, generator configs)
    - gap-analysis.md (if gap-filling mode)
@@ -42,6 +43,7 @@ git branch --show-current  # Should show "main"
    ### Subtask Patterns for Documentation
 
    **Structure Setup** (all modes):
+
    - T001: Create `docs/` directory structure
    - T002: Create index.md landing page
    - T003: [P] Configure Sphinx (if Python detected)
@@ -50,6 +52,7 @@ git branch --show-current  # Should show "main"
    - T006: Set up build script (Makefile or build.sh)
 
    **Tutorial Creation** (if tutorial selected):
+
    - T010: Write "Getting Started" tutorial
    - T011: Write "Basic Usage" tutorial
    - T012: [P] Write "Advanced Topics" tutorial
@@ -57,12 +60,14 @@ git branch --show-current  # Should show "main"
    - T014: Test tutorials with fresh user
 
    **How-To Creation** (if how-to selected):
+
    - T020: Write "How to Deploy" guide
    - T021: Write "How to Configure" guide
    - T022: Write "How to Troubleshoot" guide
    - T023: [P] Write additional task-specific guides
 
    **Reference Generation** (if reference selected):
+
    - T030: Generate Python API reference (Sphinx autodoc)
    - T031: Generate JavaScript API reference (JSDoc)
    - T032: Generate Rust API reference (cargo doc)
@@ -72,12 +77,14 @@ git branch --show-current  # Should show "main"
    - T036: Validate all public APIs documented
 
    **Explanation Creation** (if explanation selected):
+
    - T040: Write "Architecture Overview" explanation
    - T041: Write "Core Concepts" explanation
    - T042: Write "Design Decisions" explanation
    - T043: [P] Add diagrams illustrating concepts
 
    **Quality Validation** (all modes):
+
    - T050: Validate heading hierarchy
    - T051: Validate all images have alt text
    - T052: Check for broken internal links
@@ -92,6 +99,7 @@ git branch --show-current  # Should show "main"
    ### Work Package Patterns
 
    **For Initial Mode**:
+
    - WP01: Structure & Generator Setup (T001-T006)
    - WP02: Tutorial Documentation (T010-T014) - If tutorials selected
    - WP03: How-To Documentation (T020-T023) - If how-tos selected
@@ -100,12 +108,14 @@ git branch --show-current  # Should show "main"
    - WP06: Quality Validation (T050-T057)
 
    **For Gap-Filling Mode**:
+
    - WP01: High-Priority Gaps (tasks for critical missing docs from gap analysis)
    - WP02: Medium-Priority Gaps (tasks for important missing docs)
    - WP03: Generator Updates (regenerate outdated API docs)
    - WP04: Quality Validation (validate all docs, old and new)
 
    **For Feature-Specific Mode**:
+
    - WP01: Feature Documentation (tasks for documenting the feature across selected Divio types)
    - WP02: Integration (tasks for integrating feature docs with existing docs)
    - WP03: Quality Validation (validate feature-specific docs)
@@ -118,6 +128,7 @@ git branch --show-current  # Should show "main"
    - **P3 (polish)**: Quality validation, accessibility improvements
 
 5. **Write `tasks.md`**:
+
    - Use `templates/tasks-template.md` from documentation mission
    - Include work packages with subtasks
    - Mark parallel opportunities (`[P]`)
@@ -125,6 +136,7 @@ git branch --show-current  # Should show "main"
    - Identify MVP scope (typically WP01 + Reference generation)
 
 6. **Generate prompt files**:
+
    - Create flat `FEATURE_DIR/tasks/` directory (no subdirectories!)
    - For each work package:
      - Generate `WPxx-slug.md` using `templates/task-prompt-template.md`
@@ -135,17 +147,19 @@ git branch --show-current  # Should show "main"
      - Set `lane: "planned"` in frontmatter
 
 7. **Report**:
+
    - Path to tasks.md
    - Work package count and subtask tallies
    - Parallelization opportunities
    - MVP recommendation
    - Next command: `/spec-kitty.implement WP01` (or review tasks.md first)
 
----
+______________________________________________________________________
 
 ## Documentation-Specific Task Generation Rules
 
 **Generator Subtasks**:
+
 - Mark generators as `[P]` (parallel) - different languages can generate simultaneously
 - Include tool check subtasks (verify sphinx-build, npx, cargo available)
 - Include config generation subtasks (create conf.py, jsdoc.json)
@@ -153,26 +167,30 @@ git branch --show-current  # Should show "main"
 - Include integration subtasks (link generated docs into manual structure)
 
 **Content Authoring Subtasks**:
+
 - One subtask per document (don't bundle "write all tutorials" into one task)
 - Mark independent docs as `[P]` (parallel) - different docs can be written simultaneously
 - Include validation subtasks (test tutorials, verify how-tos solve problems)
 
 **Quality Validation Subtasks**:
+
 - Mark validation checks as `[P]` (parallel) - different checks can run simultaneously
 - Include automated checks (link checker, spell check, build)
 - Include manual checks (accessibility review, Divio compliance)
 
 **Work Package Scope**:
+
 - Each Divio type typically gets its own work package (WP for tutorials, WP for how-tos, etc.)
 - Exception: Small projects may combine types if only 1-2 docs per type
 - Generator setup is always separate (WP01 foundation)
 - Quality validation is always separate (final WP)
 
----
+______________________________________________________________________
 
 ## Key Guidelines
 
 **For Agents**:
+
 - Adapt work packages to iteration mode
 - For gap-filling, work packages target specific gaps from audit
 - Mark generator invocations as parallel (different languages)
@@ -182,6 +200,7 @@ git branch --show-current  # Should show "main"
 - If publish is in scope, add a release WP to produce `release.md`
 
 **For Users**:
+
 - Tasks.md shows the full work breakdown
 - Work packages are independently implementable
 - MVP often just structure + reference (API docs)

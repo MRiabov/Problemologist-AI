@@ -1,7 +1,7 @@
 ---
-name: 'step-03-configure-quality-gates'
-description: 'Configure burn-in, quality gates, and notifications'
-nextStepFile: './step-04-validate-and-summary.md'
+name: step-03-configure-quality-gates
+description: Configure burn-in, quality gates, and notifications
+nextStepFile: ./step-04-validate-and-summary.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 outputFile: '{test_artifacts}/ci-pipeline-progress.md'
 ---
@@ -17,7 +17,7 @@ Configure burn-in loops, quality thresholds, and notification hooks.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -71,7 +71,7 @@ When burn-in is extracted into a reusable workflow (`on: workflow_call`), all `$
     done
 ```
 
----
+______________________________________________________________________
 
 ## 2. Quality Gates
 
@@ -88,7 +88,7 @@ Define:
 - Treat consumer pact publishing failures as CI failures (contracts must stay up-to-date)
 - Provider verification must pass for all consumer pacts before merge
 
----
+______________________________________________________________________
 
 ## 3. Notifications
 
@@ -97,7 +97,7 @@ Configure:
 - Failure notifications (Slack/email)
 - Artifact links
 
----
+______________________________________________________________________
 
 ### 4. Save Progress
 
@@ -116,6 +116,7 @@ Configure:
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-03-configure-quality-gates'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03-configure-quality-gates'`
   - Set `lastSaved: '{date}'`

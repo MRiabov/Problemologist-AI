@@ -1,8 +1,8 @@
 ---
-name: 'step-04c-aggregate'
-description: 'Aggregate subagent outputs and complete ATDD test infrastructure'
+name: step-04c-aggregate
+description: Aggregate subagent outputs and complete ATDD test infrastructure
 outputFile: '{test_artifacts}/atdd-checklist-{story_id}.md'
-nextStepFile: './step-05-validate-and-complete.md'
+nextStepFile: ./step-05-validate-and-complete.md
 ---
 
 # Step 4C: Aggregate ATDD Test Generation Results
@@ -11,7 +11,7 @@ nextStepFile: './step-05-validate-and-complete.md'
 
 Read outputs from parallel subagents (API + E2E failing test generation), aggregate results, verify TDD red phase compliance, and create supporting infrastructure.
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -24,7 +24,7 @@ Read outputs from parallel subagents (API + E2E failing test generation), aggreg
 - ❌ Do NOT remove test.skip() (that's done after feature implementation)
 - ❌ Do NOT run tests yet (that's step 5 - verify they fail)
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -39,7 +39,7 @@ Read outputs from parallel subagents (API + E2E failing test generation), aggreg
 - Limits: do not execute future steps
 - Dependencies: Step 4A and 4B subagent outputs
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -67,7 +67,7 @@ const e2eTestsOutput = JSON.parse(fs.readFileSync(e2eTestsPath, 'utf8'));
 - Check `e2eTestsOutput.success === true`
 - If either failed, report error and stop (don't proceed)
 
----
+______________________________________________________________________
 
 ### 2. Verify TDD Red Phase Compliance
 
@@ -122,7 +122,7 @@ e2eTestsOutput.tests.forEach((test) => {
 - All tests marked as expected_to_fail
 ```
 
----
+______________________________________________________________________
 
 ### 3. Write All Test Files to Disk
 
@@ -144,7 +144,7 @@ e2eTestsOutput.tests.forEach((test) => {
 });
 ```
 
----
+______________________________________________________________________
 
 ### 4. Aggregate Fixture Needs
 
@@ -157,7 +157,7 @@ const allFixtureNeeds = [...apiTestsOutput.fixture_needs, ...e2eTestsOutput.fixt
 const uniqueFixtures = [...new Set(allFixtureNeeds)];
 ```
 
----
+______________________________________________________________________
 
 ### 5. Generate Fixture Infrastructure
 
@@ -176,7 +176,7 @@ export const testUserData = {
 
 Note: More complete fixtures will be needed when moving to green phase.
 
----
+______________________________________________________________________
 
 ### 6. Generate ATDD Checklist
 
@@ -223,7 +223,7 @@ UI components to implement:
 fs.writeFileSync(`{test_artifacts}/atdd-checklist-{story-id}.md`, checklistContent, 'utf8');
 ```
 
----
+______________________________________________________________________
 
 ### 7. Calculate Summary Statistics
 
@@ -270,7 +270,7 @@ const summary = {
 fs.writeFileSync('/tmp/tea-atdd-summary-{{timestamp}}.json', JSON.stringify(summary, null, 2), 'utf8');
 ```
 
----
+______________________________________________________________________
 
 ## OUTPUT SUMMARY
 
@@ -308,7 +308,7 @@ Display to user:
 ✅ Ready for validation (Step 5 - verify tests fail as expected)
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -321,7 +321,7 @@ Proceed to Step 5 when:
 - ✅ Summary statistics calculated and saved
 - ✅ Output displayed to user
 
----
+______________________________________________________________________
 
 ### 8. Save Progress
 
@@ -340,6 +340,7 @@ Proceed to Step 5 when:
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-04c-aggregate'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04c-aggregate'`
   - Set `lastSaved: '{date}'`
@@ -347,7 +348,7 @@ Proceed to Step 5 when:
 
 Load next step: `{nextStepFile}`
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
 

@@ -23,12 +23,14 @@ without paying fresh-child startup again.
 The script runs two families of scenes:
 
 1. Primitive scenes
+
    - `primitive_box_1`
    - `primitive_box_2_same`
    - `primitive_sphere_1_diff`
    - `primitive_box_3_after_sphere`
 
 2. Mesh scenes
+
    - `mesh_box_1`
    - `mesh_box_2_same`
    - `mesh_sphere_1_diff`

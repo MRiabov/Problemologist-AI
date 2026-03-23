@@ -13,12 +13,19 @@ from controller.api.schemas import (
     EpisodeResponse,
 )
 from shared.enums import EpisodeStatus
-from shared.workers.schema import AnalyzeRequest
+from shared.workers.schema import (
+    AnalyzeRequest,
+    DeleteFileRequest,
+    ExecuteRequest,
+    ExecuteResponse,
+    WriteFileRequest,
+)
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
 WORKER_HEAVY_URL = "http://127.0.0.1:18002"
+WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 
 
 @pytest.mark.integration_p1
@@ -177,7 +184,141 @@ def build():
         )
         assert resp.status_code == 200, resp.text
         result = WorkbenchResult.model_validate(resp.json())
-        assert result.is_manufacturable is False
-        assert any(
-            "Unknown material_id" in violation for violation in result.violations
+    assert result.is_manufacturable is False
+    assert any("Unknown material_id" in violation for violation in result.violations)
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_worker_analyze_quantity_changes_setup_amortization():
+    """Requested quantity must change the economics and remain traceable."""
+    script = """
+from build123d import Box, Location
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+
+def build():
+    part = Box(24, 24, 12)
+    part = part.move(Location((0, 0, 6)))
+    part.label = "qty_probe"
+    part.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC,
+        material_id="aluminum_6061",
+    )
+    return part
+"""
+
+    async with AsyncClient(base_url=WORKER_HEAVY_URL, timeout=300.0) as client:
+        headers = {"X-Session-ID": f"INT-036-{uuid.uuid4().hex[:8]}"}
+
+        low_qty_request = AnalyzeRequest(
+            script_path="script.py",
+            script_content=script,
+            method=ManufacturingMethod.CNC,
+            quantity=1,
         )
+        high_qty_request = AnalyzeRequest(
+            script_path="script.py",
+            script_content=script,
+            method=ManufacturingMethod.CNC,
+            quantity=3000,
+        )
+
+        low_resp = await client.post(
+            "/benchmark/analyze",
+            json=low_qty_request.model_dump(mode="json"),
+            headers=headers,
+        )
+        assert low_resp.status_code == 200, low_resp.text
+        low_result = WorkbenchResult.model_validate(low_resp.json())
+
+        high_resp = await client.post(
+            "/benchmark/analyze",
+            json=high_qty_request.model_dump(mode="json"),
+            headers=headers,
+        )
+        assert high_resp.status_code == 200, high_resp.text
+        high_result = WorkbenchResult.model_validate(high_resp.json())
+
+    assert low_result.metadata.cost_breakdown is not None
+    assert high_result.metadata.cost_breakdown is not None
+    assert low_result.metadata.cost_breakdown.quantity == 1
+    assert high_result.metadata.cost_breakdown.quantity == 3000
+    assert low_result.metadata.additional_info["quantity"] == 1
+    assert high_result.metadata.additional_info["quantity"] == 3000
+    assert low_result.metadata.cost_breakdown.setup_cost == pytest.approx(
+        high_result.metadata.cost_breakdown.setup_cost
+    )
+    assert low_result.metadata.cost_breakdown.variable_cost_per_unit == pytest.approx(
+        high_result.metadata.cost_breakdown.variable_cost_per_unit
+    )
+    assert low_result.unit_cost > high_result.unit_cost
+    assert (
+        low_result.metadata.cost_breakdown.total_cost
+        < high_result.metadata.cost_breakdown.total_cost
+    )
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_validate_and_price_rejects_missing_manufacturing_config():
+    """The pricing script must fail closed when the workspace config is missing."""
+    session_id = f"INT-035-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    assembly_definition = """
+version: "1.0"
+constraints:
+  benchmark_max_unit_cost_usd: 50.0
+  benchmark_max_weight_g: 1000.0
+  planner_target_max_unit_cost_usd: 45.0
+  planner_target_max_weight_g: 900.0
+manufactured_parts: []
+cots_parts: []
+environment_drill_operations: []
+final_assembly: []
+totals:
+  estimated_unit_cost_usd: 0.0
+  estimated_weight_g: 0.0
+  estimate_confidence: high
+"""
+
+    async with AsyncClient(base_url=WORKER_LIGHT_URL, timeout=300.0) as client:
+        write_resp = await client.post(
+            "/fs/write",
+            json=WriteFileRequest(
+                path="assembly_definition.yaml",
+                content=assembly_definition,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_resp.status_code == 200, write_resp.text
+
+        delete_resp = await client.post(
+            "/fs/delete",
+            json=DeleteFileRequest(
+                path="manufacturing_config.yaml",
+                bypass_agent_permissions=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert delete_resp.status_code == 200, delete_resp.text
+
+        exec_resp = await client.post(
+            "/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "python "
+                    "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
+                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                ),
+                timeout=60,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        exec_data = ExecuteResponse.model_validate(exec_resp.json())
+        assert exec_data.exit_code != 0
+        assert "manufacturing_config.yaml invalid" in exec_data.stderr

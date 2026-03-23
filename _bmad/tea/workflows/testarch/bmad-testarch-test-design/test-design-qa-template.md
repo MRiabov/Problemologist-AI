@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: 'testarch-test-design'
+workflowType: testarch-test-design
 inputDocuments: []
 ---
 
@@ -17,7 +17,7 @@ inputDocuments: []
 
 **Related:** See Architecture doc (test-design-architecture.md) for testability concerns and architectural blockers.
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -36,7 +36,7 @@ inputDocuments: []
 - P3 tests: ~{N} (exploratory, benchmarks)
 - **Total**: ~{N} tests (~{X}-{Y} weeks with 1 QA)
 
----
+______________________________________________________________________
 
 ## Not in Scope
 
@@ -48,7 +48,7 @@ inputDocuments: []
 
 **Note:** Items listed here have been reviewed and accepted as out-of-scope by QA, Dev, and PM.
 
----
+______________________________________________________________________
 
 ## Dependencies & Test Blockers
 
@@ -59,20 +59,24 @@ inputDocuments: []
 **Source:** See Architecture doc "Quick Guide" for detailed mitigation plans
 
 1. **{Dependency 1}** - {Team} - {Timeline}
+
    - {What QA needs}
    - {Why it blocks testing}
 
 2. **{Dependency 2}** - {Team} - {Timeline}
+
    - {What QA needs}
    - {Why it blocks testing}
 
 ### QA Infrastructure Setup (Pre-Implementation)
 
 1. **Test Data Factories** - QA
+
    - {Entity} factory with faker-based randomization
    - Auto-cleanup fixtures for parallel safety
 
 2. **Test Environments** - QA
+
    - Local: {Setup details}
    - CI/CD: {Setup details}
    - Staging: {Setup details}
@@ -100,7 +104,7 @@ test('example test @p0', async ({ apiRequest }) => {
 });
 ```
 
----
+______________________________________________________________________
 
 ## Risk Assessment
 
@@ -118,7 +122,7 @@ test('example test @p0', async ({ apiRequest }) => {
 | ------- | -------- | ------------------- | ------- | ---------------------------- |
 | {R-ID}  | {CAT}    | {Brief description} | {Score} | {How QA validates this risk} |
 
----
+______________________________________________________________________
 
 ## Entry Criteria
 
@@ -142,7 +146,7 @@ test('example test @p0', async ({ apiRequest }) => {
 - [ ] Performance baselines met (if applicable)
 - [ ] {Additional project-specific exit criteria}
 
----
+______________________________________________________________________
 
 ## Project Team (Optional)
 
@@ -155,7 +159,7 @@ test('example test @p0', async ({ apiRequest }) => {
 | {Name} | PM        | Requirements clarification, acceptance criteria, UAT sign-off |
 | {Name} | Architect | Testability review, NFR guidance, environment provisioning    |
 
----
+______________________________________________________________________
 
 ## Test Coverage Plan
 
@@ -172,7 +176,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 **Total P0:** ~{N} tests
 
----
+______________________________________________________________________
 
 ### P1 (High)
 
@@ -185,7 +189,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 **Total P1:** ~{N} tests
 
----
+______________________________________________________________________
 
 ### P2 (Medium)
 
@@ -197,7 +201,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 **Total P2:** ~{N} tests
 
----
+______________________________________________________________________
 
 ### P3 (Low)
 
@@ -209,7 +213,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 **Total P3:** ~{N} tests
 
----
+______________________________________________________________________
 
 ## Execution Strategy
 
@@ -252,7 +256,7 @@ test('example test @p0', async ({ apiRequest }) => {
 - Finance validation (cost alerts)
 - Documentation validation
 
----
+______________________________________________________________________
 
 ## QA Effort Estimate
 
@@ -276,7 +280,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 - See "Dependencies & Test Blockers" section for what QA needs from Backend, DevOps, Data Eng
 
----
+______________________________________________________________________
 
 ## Implementation Planning Handoff (Optional)
 
@@ -289,7 +293,7 @@ test('example test @p0', async ({ apiRequest }) => {
 | {Work item} | {QA/Dev/etc} | {Milestone or date}         | {Notes}            |
 | {Work item} | {QA/Dev/etc} | {Milestone or date}         | {Notes}            |
 
----
+______________________________________________________________________
 
 ## Tooling & Access
 
@@ -304,7 +308,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 - [ ] {Access to request}
 
----
+______________________________________________________________________
 
 ## Interworking & Regression
 
@@ -319,7 +323,7 @@ test('example test @p0', async ({ apiRequest }) => {
 - {Describe which existing test suites must pass before release}
 - {Note any cross-team coordination needed for regression validation}
 
----
+______________________________________________________________________
 
 ## Appendix A: Code Examples & Tagging
 
@@ -380,16 +384,16 @@ npx playwright test --grep @Security
 npx playwright test
 ```
 
----
+______________________________________________________________________
 
 ## Appendix B: Knowledge Base References
 
 - **Risk Governance**: `risk-governance.md` - Risk scoring methodology
 - **Test Priorities Matrix**: `test-priorities-matrix.md` - P0-P3 criteria
 - **Test Levels Framework**: `test-levels-framework.md` - E2E vs API vs Unit selection
-- **Test Quality**: `test-quality.md` - Definition of Done (no hard waits, <300 lines, <1.5 min)
+- **Test Quality**: `test-quality.md` - Definition of Done (no hard waits, \<300 lines, \<1.5 min)
 
----
+______________________________________________________________________
 
 **Generated by:** BMad TEA Agent
 **Workflow:** `_bmad/tea/testarch/bmad-testarch-test-design`

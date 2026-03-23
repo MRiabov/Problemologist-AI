@@ -186,6 +186,8 @@ def calculate_cnc_cost(
         unit_cost=total_cost / quantity if quantity > 0 else 0.0,
         material_cost_per_unit=round(material_cost_per_part, 2),
         setup_cost=round(setup_cost, 2),
+        variable_cost_per_unit=round(material_cost_per_part + run_cost_per_part, 2),
+        quantity=quantity,
         is_reused=is_reused,
         details={
             "stock_dims_mm": [round(d, 2) for d in stock_dims],
@@ -194,6 +196,10 @@ def calculate_cnc_cost(
             "removed_volume_cm3": round(removed_volume_cm3, 2),
             "machining_time_min": round(machining_time_min, 2),
             "run_cost_per_unit": round(run_cost_per_part, 2),
+            "variable_cost_per_unit": round(
+                material_cost_per_part + run_cost_per_part, 2
+            ),
+            "quantity": quantity,
         },
         pricing_explanation=(
             f"CNC cost (${total_cost:.2f}) for {quantity} units. "
@@ -255,6 +261,10 @@ def analyze_cnc(
         metadata=WorkbenchMetadata(
             cost_breakdown=cost_breakdown,
             undercut_count=len(undercuts),
+            additional_info={
+                "quantity": quantity,
+                "requested_quantity": quantity,
+            },
         ),
     )
 

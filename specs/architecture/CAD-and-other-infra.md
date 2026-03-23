@@ -6,7 +6,7 @@
 - Defines part metadata, rendering direction, schema strictness, and logging/tooling expectations that support CAD execution.
 - Use this file when changing CAD model contracts or shared infra assumptions that are not specific to distributed execution.
 
-## CAD 
+## CAD
 
 ### Part metadata
 
@@ -173,11 +173,10 @@ To further avoid any issues, we will use Beartype for type checking.
 We autogenerate python schemas, keeping in sync to the workers. We keep schemas defined in the Controller app; worker-light, worker-heavy, and frontend inherit them (for now). We have git hooks that implement the model.
 Trace schema contract includes optional reasoning metadata fields (`reasoning_step_index`, `reasoning_source`) and generated clients must preserve those fields.
 
-### Logging 
+### Logging
+
 We choose Structlog because it looks better and easier to trace; also theoretically works with OpenTelemetry out of the box.
 For utils used internally in an agent, a simple `logging` is acceptable too.
-
-
 
 <!--
 ## CAD and and design validation

@@ -374,15 +374,15 @@ Add a required artifact such as `benchmark_metadata.yaml`.
 
 It should carry release-level labels such as:
 
-1. `benchmark_id`
-2. `family_id`
-3. `release_id`
-4. Benchmark title and one-line summary
-5. Physics-principle labels
-6. Actuation labels
-7. Moving-part count
-8. DOF summary
-9. Environment template/category
+01. `benchmark_id`
+02. `family_id`
+03. `release_id`
+04. Benchmark title and one-line summary
+05. Physics-principle labels
+06. Actuation labels
+07. Moving-part count
+08. DOF summary
+09. Environment template/category
 10. Manufacturing regime and target quantity regime
 11. Difficulty tier
 12. Randomization regime
@@ -430,24 +430,24 @@ This may be one document with two schemas, or two linked manifests.
 
 The reproducibility contract should include:
 
-1. Controller commit and worker commit
-2. Worker image digests
-3. Backend versions
-   - MuJoCo
-   - Genesis
-   - build123d
-   - catalog snapshot versions
-4. Protocol version
-5. Capability manifest version
-6. Skill revision identifiers
-7. Prompt/config hashes
-8. Benchmark revision identifiers
-9. Artifact hashes and URIs
-   - CAD outputs
-   - MJCF
-   - renders
-   - validation results
-   - simulation results
+01. Controller commit and worker commit
+02. Worker image digests
+03. Backend versions
+    - MuJoCo
+    - Genesis
+    - build123d
+    - catalog snapshot versions
+04. Protocol version
+05. Capability manifest version
+06. Skill revision identifiers
+07. Prompt/config hashes
+08. Benchmark revision identifiers
+09. Artifact hashes and URIs
+    - CAD outputs
+    - MJCF
+    - renders
+    - validation results
+    - simulation results
 10. Seed values and seed-policy identifiers
 11. Final outcome and metric summary
 

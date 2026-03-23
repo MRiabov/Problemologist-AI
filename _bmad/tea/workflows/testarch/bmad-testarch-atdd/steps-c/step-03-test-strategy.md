@@ -1,8 +1,8 @@
 ---
-name: 'step-03-test-strategy'
-description: 'Map acceptance criteria to test levels and priorities'
+name: step-03-test-strategy
+description: Map acceptance criteria to test levels and priorities
 outputFile: '{test_artifacts}/atdd-checklist-{story_id}.md'
-nextStepFile: './step-04-generate-tests.md'
+nextStepFile: ./step-04-generate-tests.md
 ---
 
 # Step 3: Test Strategy
@@ -17,7 +17,7 @@ Translate acceptance criteria into a prioritized, level-appropriate test plan.
 - ✅ Speak in `{communication_language}`
 - 🚫 Avoid duplicate coverage across levels
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -41,7 +41,7 @@ Translate acceptance criteria into a prioritized, level-appropriate test plan.
 - Convert each acceptance criterion into test scenarios
 - Include negative and edge cases where risk is high
 
----
+______________________________________________________________________
 
 ## 2. Select Test Levels
 
@@ -60,19 +60,19 @@ Choose the best level per scenario based on `{detected_stack}`:
 - **API/Contract** for endpoint validation, request/response schemas, and Pact contracts
 - **No E2E** for pure backend projects (no browser-based testing needed)
 
----
+______________________________________________________________________
 
 ## 3. Prioritize Tests
 
 Assign P0–P3 priorities using risk and business impact.
 
----
+______________________________________________________________________
 
 ## 4. Confirm Red Phase Requirements
 
 Ensure all tests are designed to **fail before implementation** (TDD red phase).
 
----
+______________________________________________________________________
 
 ## 5. Save Progress
 
@@ -91,6 +91,7 @@ Ensure all tests are designed to **fail before implementation** (TDD red phase).
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-03-test-strategy'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03-test-strategy'`
   - Set `lastSaved: '{date}'`

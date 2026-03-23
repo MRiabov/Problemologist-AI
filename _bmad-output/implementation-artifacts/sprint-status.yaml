@@ -1,5 +1,5 @@
 # generated: 2026-03-22T06:26:07+00:00
-# last_updated: 2026-03-23T08:33:32Z
+# last_updated: 2026-03-23T17:22:32Z
 # project: Problemologist-AI
 # project_key: NOKEY
 # tracking_system: file-system
@@ -30,7 +30,7 @@
 # - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
 
 generated: 2026-03-22T06:26:07+00:00
-last_updated: 2026-03-23T08:33:32Z
+last_updated: 2026-03-23T17:22:32Z
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -69,7 +69,7 @@ development_status:
 
   epic-5: in-progress
   5-1-inspect-session-history-and-run-timeline: ready-for-dev
-  5-2-visualize-cad-and-simulation-evidence: ready-for-dev
+  5-2-visualize-cad-and-simulation-evidence: review
   5-3-view-code-and-artifacts: ready-for-dev
   5-4-collect-feedback-and-present-demos: ready-for-dev
   5-5-inspect-live-agent-output-and-interrupt-execution: ready-for-dev

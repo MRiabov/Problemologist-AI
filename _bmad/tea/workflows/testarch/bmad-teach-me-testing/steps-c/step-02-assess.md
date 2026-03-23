@@ -1,8 +1,8 @@
 ---
-name: 'step-02-assess'
-description: 'Gather learner role, experience level, learning goals, and pain points to customize teaching'
+name: step-02-assess
+description: Gather learner role, experience level, learning goals, and pain points to customize teaching
 
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
 ---
 
@@ -232,7 +232,7 @@ After the assessment summary, proceed directly to the session menu:
 
 - Load, read entire file, then execute {nextStepFile}
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

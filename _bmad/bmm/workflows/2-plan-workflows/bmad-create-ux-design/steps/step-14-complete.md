@@ -5,11 +5,17 @@
 - ✅ THIS IS A FINAL STEP - Workflow completion required
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - 🛑 NO content generation - this is a wrap-up step
+
 - 📋 FINALIZE document and update workflow status
+
 - 💬 FOCUS on completion, validation, and next steps
+
 - 🎯 UPDATE workflow status files with completion information
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -87,8 +93,6 @@ UX Design complete. Invoke the `bmad-help` skill.
 ### 5. Final Completion Confirmation
 
 Congratulate the user on the completion you both completed together of the UX.
-
-
 
 ## SUCCESS METRICS:
 

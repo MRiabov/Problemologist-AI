@@ -148,7 +148,7 @@ After coverage validation complete, immediately load next step.
 
 Epic coverage validation complete. Read fully and follow: `./step-04-ux-alignment.md`
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

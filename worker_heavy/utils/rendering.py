@@ -1,4 +1,5 @@
 import os
+import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -12,6 +13,7 @@ from build123d import Compound
 from PIL import Image
 
 from shared.agents.config import load_agents_config
+from shared.git_utils import repo_revision
 from shared.models.schemas import BenchmarkDefinition
 from shared.simulation.backends import (
     StressField,
@@ -28,6 +30,77 @@ from shared.workers.schema import (
 from worker_heavy.simulation.factory import get_simulation_builder
 
 logger = structlog.get_logger(__name__)
+
+
+def _derived_episode_id(session_id: str | None) -> str | None:
+    if not session_id:
+        return None
+    try:
+        return str(uuid.UUID(session_id))
+    except Exception:
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, session_id))
+
+
+def _workspace_environment_version(workspace_root: Path | None) -> str | None:
+    if workspace_root is None:
+        return None
+
+    for rel_path in (
+        "benchmark_assembly_definition.yaml",
+        "assembly_definition.yaml",
+    ):
+        definition_path = workspace_root / rel_path
+        if not definition_path.exists():
+            continue
+        try:
+            import yaml
+
+            from shared.models.schemas import AssemblyDefinition
+
+            definition = AssemblyDefinition.model_validate(
+                yaml.safe_load(definition_path.read_text(encoding="utf-8")) or {}
+            )
+            version = str(definition.version).strip()
+            return version or None
+        except Exception:
+            continue
+    return None
+
+
+def build_render_manifest(
+    artifacts: dict[str, RenderArtifactMetadata],
+    *,
+    workspace_root: Path | None = None,
+    episode_id: str | None = None,
+    worker_session_id: str | None = None,
+    revision: str | None = None,
+    environment_version: str | None = None,
+    preview_evidence_paths: list[str] | None = None,
+) -> RenderManifest:
+    resolved_revision = revision
+    if not resolved_revision and workspace_root is not None:
+        resolved_revision = repo_revision(workspace_root)
+        if resolved_revision is None:
+            resolved_revision = repo_revision(Path(__file__).resolve().parents[2])
+
+    if environment_version is None:
+        environment_version = _workspace_environment_version(workspace_root)
+
+    if preview_evidence_paths is None:
+        preview_evidence_paths = sorted(
+            path
+            for path in artifacts
+            if Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+        )
+
+    return RenderManifest(
+        episode_id=_derived_episode_id(episode_id),
+        worker_session_id=worker_session_id,
+        revision=resolved_revision,
+        environment_version=environment_version,
+        preview_evidence_paths=preview_evidence_paths,
+        artifacts=artifacts,
+    )
 
 
 def _save_rgb_render(frame: np.ndarray, output_path: Path) -> None:
@@ -93,6 +166,8 @@ def prerender_24_views(
     scene_path: str | Path | None = None,
     smoke_test_mode: bool | None = None,
     particle_budget: int | None = None,
+    revision: str | None = None,
+    environment_version: str | None = None,
 ) -> list[str]:
     """
     Generates 24 renders (8 angles x 3 elevation levels) of the component.
@@ -348,6 +423,15 @@ def prerender_24_views(
             # Only close if it's not a cached backend
             if not session_id:
                 backend.close()
+
+        manifest = build_render_manifest(
+            manifest.artifacts,
+            workspace_root=output_path.parent,
+            episode_id=session_id,
+            worker_session_id=session_id,
+            revision=revision,
+            environment_version=environment_version,
+        )
 
         manifest_path = output_path / "render_manifest.json"
         manifest_path.write_text(

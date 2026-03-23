@@ -181,7 +181,7 @@ describe('User API Contract', () => {
 - **Isolation**: No real backend needed, runs fast
 - **Pact generation**: Automatically creates JSON pact files
 
----
+______________________________________________________________________
 
 ### Example 2: Pact Provider Verification (Backend validates contracts)
 
@@ -328,7 +328,7 @@ jobs:
 - **can-i-deploy**: Safety check before production deployment
 - **Database isolation**: Reset between state handlers
 
----
+______________________________________________________________________
 
 ### Example 3: Contract CI Integration (Consumer & Provider Workflow)
 
@@ -456,7 +456,7 @@ jobs:
 - **Record deployment**: Track which version is in each environment
 - **Parallel dev**: Consumer and provider teams work independently
 
----
+______________________________________________________________________
 
 ### Example 4: Resilience Coverage (Testing Fallback Behavior)
 
@@ -695,7 +695,7 @@ export async function getUserById(
 - **Retry logic**: Exponential backoff tested
 - **Optional fields**: Consumer handles partial responses
 
----
+______________________________________________________________________
 
 ### Example 5: Pact Broker Housekeeping & Lifecycle Management
 
@@ -942,7 +942,7 @@ jobs:
 - **Retention policy**: Keep recent, production, and branch-latest pacts
 - **Webhook triggers**: Provider verification runs on consumer changes
 
----
+______________________________________________________________________
 
 ## Provider Scrutiny Protocol
 
@@ -1003,7 +1003,7 @@ When provider source code is not accessible (different repo, no access, closed s
 3. **Neither available**: Generate contracts from consumer-side types but use the TODO form of the mandatory comment: `// Provider endpoint: TODO — provider source not accessible, verify manually` and add a `provider_scrutiny: "pending"` field to the output JSON
 4. **Never silently guess**: If you cannot verify, document what you assumed and why
 
----
+______________________________________________________________________
 
 ## Contract Testing Checklist
 
@@ -1027,7 +1027,7 @@ Before implementing contract testing, verify:
 - Related fragments: `test-levels-framework.md`, `ci-burn-in.md`, `pact-consumer-framework-setup.md`
 - Tools: Pact.js, Pact Broker (Pactflow or self-hosted), Pact CLI
 
----
+______________________________________________________________________
 
 ## Pact.js Utils Accelerator
 

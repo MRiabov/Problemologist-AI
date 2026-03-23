@@ -9,10 +9,10 @@ As a human operator, I want to create benchmark drafts and accept or reject simp
 ## Acceptance Criteria
 
 1. Given I am in the benchmark workspace, when I submit a benchmark draft prompt and objective inputs, then the UI calls the controller-backed benchmark generation flow, persists the new benchmark episode, and keeps the benchmark route selected.
-1. Given a benchmark planner has produced a simple plan, when I review it, then I can approve it from either the chat card or the file explorer, optionally add a comment, and see that comment persisted in the episode trace/history.
-1. Given I choose to reject or request changes to a benchmark plan, when I do so from the UI, then the reason is recorded explicitly through the controller-backed comment/chat path and remains visible in the episode trace/history instead of being handled by local-only UI state.
-1. Given I edit benchmark objectives while drafting, when I update them, then the controller persists the values and the selected episode or creation mode remains stable across refresh and route changes.
-1. Given I switch between benchmark and engineer workspaces, then benchmark draft and plan-approval controls remain benchmark-only and do not leak into engineer runs.
+2. Given a benchmark planner has produced a simple plan, when I review it, then I can approve it from either the chat card or the file explorer, optionally add a comment, and see that comment persisted in the episode trace/history.
+3. Given I choose to reject or request changes to a benchmark plan, when I do so from the UI, then the reason is recorded explicitly through the controller-backed comment/chat path and remains visible in the episode trace/history instead of being handled by local-only UI state.
+4. Given I edit benchmark objectives while drafting, when I update them, then the controller persists the values and the selected episode or creation mode remains stable across refresh and route changes.
+5. Given I switch between benchmark and engineer workspaces, then benchmark draft and plan-approval controls remain benchmark-only and do not leak into engineer runs.
 
 ## Tasks / Subtasks
 
@@ -69,18 +69,18 @@ As a human operator, I want to create benchmark drafts and accept or reject simp
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.6]
-- [Source: _bmad-output/planning-artifacts/prd.md, Phase 1 UI and plan approval requirements]
-- [Source: _bmad-output/planning-artifacts/ux-design-specification.md, sections 6, 7, 8, and 9]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.6]
+- [Source: \_bmad-output/planning-artifacts/prd.md, Phase 1 UI and plan approval requirements]
+- [Source: \_bmad-output/planning-artifacts/ux-design-specification.md, sections 6, 7, 8, and 9]
 - [Source: specs/frontend-specs.md, benchmark generation workflow, plan approval, chat UI, and planning controls]
 - [Source: specs/architecture/agents/handover-contracts.md, benchmark planner handoff and approval contracts]
-- [Source: controller/api/routes/benchmark.py, `/generate`, `/objectives`, and `/confirm` endpoints]
+- \[Source: controller/api/routes/benchmark.py, `/generate`, `/objectives`, and `/confirm` endpoints\]
 - [Source: frontend/src/context/EpisodeContext.tsx, benchmark draft state and confirmation plumbing]
 - [Source: frontend/src/components/workspace/ChatWindow.tsx, benchmark approval card and objectives panel]
 - [Source: frontend/src/components/workspace/ArtifactView.tsx, file-explorer approval entry point]
 - [Source: frontend/src/components/workspace/ObjectivesForm.tsx, draft objective editor]
 - [Source: frontend/src/components/layout/Sidebar.tsx, route-aware benchmark creation and episode selection]
-- [Source: frontend/src/api/client.ts, `generateBenchmark`, `updateBenchmarkObjectives`, and `confirmBenchmark`]
+- \[Source: frontend/src/api/client.ts, `generateBenchmark`, `updateBenchmarkObjectives`, and `confirmBenchmark`\]
 - [Source: tests/integration/frontend/p0/test_frontend_p0.py, INT-158 and INT-159]
 - [Source: tests/integration/frontend/p0/test_int_172.py, control placement contract]
 - [Source: tests/integration/frontend/p1/test_int_178.py, restore continuity contract]

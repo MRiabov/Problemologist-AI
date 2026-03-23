@@ -35,8 +35,8 @@ from controller.agent.initialization import (
 )
 from controller.agent.node_entry_validation import (
     BENCHMARK_CODER_HANDOVER_CHECK,
-    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_PLAN_REVIEW_MANIFEST,
+    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_REVIEW_MANIFEST,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
@@ -48,6 +48,7 @@ from controller.agent.node_entry_validation import (
     integration_mode_enabled,
     reviewer_handover_custom_check_from_session_id,
 )
+from controller.agent.review_handover import collect_plan_reviewer_handover_evidence
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.clients.worker import WorkerClient
 from controller.graph.steerability_node import check_steering, steerability_node
@@ -56,7 +57,6 @@ from controller.observability.database import DatabaseCallbackHandler
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode, Trace
 from controller.utils import infer_integration_test_id
-from controller.agent.review_handover import collect_plan_reviewer_handover_evidence
 from shared.enums import (
     AgentName,
     EpisodePhase,
@@ -589,9 +589,8 @@ def _guarded_node(target_node: AgentName, node_callable):
             state.entry_validation_errors = []
             state.entry_validation_trace_emitted = False
             result = await node_callable(state)
-            if (
-                target_node == AgentName.BENCHMARK_PLANNER
-                and isinstance(result, BenchmarkGeneratorState)
+            if target_node == AgentName.BENCHMARK_PLANNER and isinstance(
+                result, BenchmarkGeneratorState
             ):
                 planner_errors = await _validate_planner_handoff(
                     session_id=result.session.session_id,
@@ -606,8 +605,8 @@ def _guarded_node(target_node: AgentName, node_callable):
                         errors=planner_errors,
                     )
                     result.session.validation_logs.extend(planner_errors)
-                    result.review_feedback = (
-                        "Planner handoff blocked: " + "; ".join(planner_errors)
+                    result.review_feedback = "Planner handoff blocked: " + "; ".join(
+                        planner_errors
                     )
                     result.session.status = SessionStatus.FAILED
                     result.hard_fail_code = "benchmark_handoff_validation"
@@ -868,13 +867,14 @@ def define_graph():
                 agent_role=AgentName.BENCHMARK_PLAN_REVIEWER,
             )
             try:
-                evidence, evidence_error = (
-                    await collect_plan_reviewer_handover_evidence(
-                        client,
-                        manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
-                        expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
-                        episode_id=state.episode_id,
-                    )
+                (
+                    evidence,
+                    evidence_error,
+                ) = await collect_plan_reviewer_handover_evidence(
+                    client,
+                    manifest_path=BENCHMARK_PLAN_REVIEW_MANIFEST,
+                    expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+                    episode_id=state.episode_id,
                 )
             finally:
                 await client.aclose()
@@ -892,8 +892,7 @@ def define_graph():
             )
         elif evidence_error:
             state.session.validation_logs.append(
-                "benchmark_plan_reviewer evidence unavailable: "
-                f"{evidence_error}"
+                f"benchmark_plan_reviewer evidence unavailable: {evidence_error}"
             )
 
         state.review_decision = None
@@ -1739,9 +1738,7 @@ async def _persist_session_assets(
 
         worker_light_url = global_settings.worker_light_url
         effective_worker_session_id = (
-            worker_session_id
-            or final_state.worker_session_id
-            or str(session_id)
+            worker_session_id or final_state.worker_session_id or str(session_id)
         )
         async with httpx.AsyncClient() as http_client:
             client = WorkerClient(

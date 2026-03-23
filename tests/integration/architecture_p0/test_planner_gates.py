@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -17,8 +18,7 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from shared.enums import AgentName, EpisodeStatus, TraceType
-from shared.enums import ReviewDecision
+from shared.enums import AgentName, EpisodeStatus, ReviewDecision, TraceType
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -38,6 +38,7 @@ from shared.workers.schema import (
     DeleteFileRequest,
     ExecuteRequest,
     ExecuteResponse,
+    PlanReviewManifest,
     ReadFileRequest,
     ReadFileResponse,
     WriteFileRequest,
@@ -491,6 +492,20 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
             f"Expected engineer planner to reach PLANNED after submit_plan, got {post_submit_status}."
         )
 
+        manifest_resp = await client.get(
+            f"/episodes/{episode_id}/assets/.manifests/engineering_plan_review_manifest.json"
+        )
+        assert manifest_resp.status_code == 200, manifest_resp.text
+        manifest = PlanReviewManifest.model_validate_json(manifest_resp.text)
+        assert "manufacturing_config.yaml" in manifest.artifact_hashes, manifest
+
+        config_resp = await client.get(
+            f"/episodes/{episode_id}/assets/manufacturing_config.yaml"
+        )
+        assert config_resp.status_code == 200, config_resp.text
+        expected_hash = hashlib.sha256(config_resp.text.encode("utf-8")).hexdigest()
+        assert manifest.artifact_hashes["manufacturing_config.yaml"] == expected_hash
+
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
@@ -637,7 +652,11 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
                 for path in artifact_paths
                 if path.endswith("benchmark-plan-review-comments-round-1.yaml")
             ]
-            if status == EpisodeStatus.PLANNED and plan_review_decision_paths and plan_review_comment_paths:
+            if (
+                status == EpisodeStatus.PLANNED
+                and plan_review_decision_paths
+                and plan_review_comment_paths
+            ):
                 break
             await asyncio.sleep(1)
 
@@ -686,6 +705,8 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
         assert comments["checklist"]["visual_inspection_satisfied"] is True
         assert comments["checklist"]["latest_revision_verified"] is True
         assert "review_manifest_revision" in comments["checklist"]
+
+
 @pytest.mark.integration_p0
 # INT-006 intentionally exercises invalid plan structure paths; both the
 # high-level gate and section-level reason signatures are expected.

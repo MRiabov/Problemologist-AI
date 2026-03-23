@@ -114,8 +114,8 @@ with BuildPart() as ibeam:
 
 ### Plural `with Locations` vs Singular `Location`
 
-* **The Trap**: `with Location((0,0,1)):` results in `AttributeError: __enter__`.
-* **The Fix**: Use `with Locations(Location((0,0,1))):` even for a single position. `Locations` is the context manager; `Location` is just the data.
+- **The Trap**: `with Location((0,0,1)):` results in `AttributeError: __enter__`.
+- **The Fix**: Use `with Locations(Location((0,0,1))):` even for a single position. `Locations` is the context manager; `Location` is just the data.
 
 ### Implicit Contexts
 
@@ -138,15 +138,15 @@ side_edges = bp.edges().filter_by(Axis.Z)
 
 ### Builder Object Properties Trap
 
-* **The Trap**: Attempting to access geometric properties like `.center`, `.volume`, or `.edges()` directly on the builder object (e.g., `with BuildPart() as bp: bp.center`) raises an `AttributeError`.
-* **The Fix**: Access the underlying geometry via the appropriate property of the builder:
-    * `bp.part` for `BuildPart`
-    * `bs.sketch` for `BuildSketch`
-    * `bl.line` for `BuildLine`
-* **Example**:
-    ```python
-    with BuildPart() as bp:
-        Box(10, 10, 10)
-        print(bp.part.center()) # Correct
-        # print(bp.center())    # Raises AttributeError
-    ```
+- **The Trap**: Attempting to access geometric properties like `.center`, `.volume`, or `.edges()` directly on the builder object (e.g., `with BuildPart() as bp: bp.center`) raises an `AttributeError`.
+- **The Fix**: Access the underlying geometry via the appropriate property of the builder:
+  - `bp.part` for `BuildPart`
+  - `bs.sketch` for `BuildSketch`
+  - `bl.line` for `BuildLine`
+- **Example**:
+  ```python
+  with BuildPart() as bp:
+      Box(10, 10, 10)
+      print(bp.part.center()) # Correct
+      # print(bp.center())    # Raises AttributeError
+  ```

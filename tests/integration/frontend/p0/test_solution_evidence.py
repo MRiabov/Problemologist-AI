@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import time
 import uuid
 from pathlib import Path
@@ -98,9 +99,15 @@ def _seed_engineer_handoff(client: httpx.Client, *, session_id: str) -> None:
     seed_ts = time.time()
     revision = repo_revision(Path(__file__).resolve().parents[4])
     render_path = "renders/render_preview.png"
+    stale_model_path = "zzz_stale_geometry.glb"
+    current_model_path = "aaa_current_geometry.glb"
+    current_video_path = "current_simulation.mp4"
     render_content = Path(
         "tests/integration/mock_responses/INT-039/engineer_coder/entry_01/02__renders_preview.png"
     ).read_bytes()
+    stale_model_content = Path("assets/part_0.glb").read_bytes()
+    current_model_content = Path("assets/target_box.glb").read_bytes()
+    current_video_content = b"not-a-real-mp4-but-sufficient-for-asset-routing"
 
     assembly = AssemblyDefinition(
         version="1.0",
@@ -173,6 +180,30 @@ def _seed_engineer_handoff(client: httpx.Client, *, session_id: str) -> None:
         session_id=session_id,
         path="simulation_result.json",
         content=simulation_result.model_dump_json(indent=2),
+        bypass_agent_permissions=True,
+    )
+    _upload_workspace_file(
+        client,
+        session_id=session_id,
+        path=stale_model_path,
+        content=stale_model_content,
+        content_type="model/gltf-binary",
+        bypass_agent_permissions=True,
+    )
+    _upload_workspace_file(
+        client,
+        session_id=session_id,
+        path=current_model_path,
+        content=current_model_content,
+        content_type="model/gltf-binary",
+        bypass_agent_permissions=True,
+    )
+    _upload_workspace_file(
+        client,
+        session_id=session_id,
+        path=current_video_path,
+        content=current_video_content,
+        content_type="video/mp4",
         bypass_agent_permissions=True,
     )
     _upload_workspace_file(
@@ -253,11 +284,17 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
         assert metadata.failure_class is None
 
     artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
+    model_assets = [
+        asset for asset in (episode.assets or []) if asset.s3_path.endswith(".glb")
+    ]
     assert any(path.endswith("simulation_result.json") for path in artifact_paths), (
         f"simulation_result.json missing. Artifacts: {artifact_paths}"
     )
     assert any(path.endswith("validation_results.json") for path in artifact_paths), (
         f"validation_results.json missing. Artifacts: {artifact_paths}"
+    )
+    assert any(path.endswith("current_simulation.mp4") for path in artifact_paths), (
+        f"current_simulation.mp4 missing. Artifacts: {artifact_paths}"
     )
 
     page.goto(FRONTEND_URL, timeout=60000)
@@ -318,10 +355,18 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
     expect(page.get_by_test_id("terminal-summary-failure-class")).to_be_visible()
 
+    viewport_debug = page.get_by_test_id("unified-debug-info").text_content()
+    assert viewport_debug is not None
+    viewport_state = json.loads(viewport_debug)
     terminal_reason = page.get_by_test_id(
         "terminal-summary-terminal-reason"
     ).inner_text()
     assert terminal_reason, "Expected terminal reason to be visible in workspace."
+    assert viewport_state["modelUrlsCount"] == 1, viewport_state
+    assert viewport_state["modelAssetPath"] == model_assets[0].s3_path, viewport_state
+    assert viewport_state["videoAssetPath"].endswith("current_simulation.mp4"), (
+        viewport_state
+    )
 
     artifact_debug = page.get_by_test_id("artifact-debug-info").text_content()
     assert artifact_debug is not None
@@ -332,6 +377,47 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     )
     assert artifact_state["activeArtifactName"] == "simulation_result.json"
     assert artifact_state["activeArtifactPath"].endswith("simulation_result.json")
+    assert len(model_assets) >= 2, (
+        f"Expected multiple GLB assets to prove latest-media binding, got: "
+        f"{[asset.s3_path for asset in (episode.assets or [])]}"
+    )
+    assert (
+        artifact_state["latestMediaBundle"]["model"]["path"] == model_assets[0].s3_path
+    ), artifact_state["latestMediaBundle"]
+    assert (
+        artifact_state["latestMediaBundle"]["model"]["name"]
+        == Path(model_assets[0].s3_path).name
+    )
+    assert artifact_state["latestMediaBundle"]["solutionEvidence"]["path"].endswith(
+        "simulation_result.json"
+    )
+
+    expect(page.get_by_test_id("design-viewer-video")).to_have_attribute(
+        "aria-hidden",
+        "false",
+        timeout=30000,
+    )
+    expect(page.get_by_test_id("design-viewer-3d-panel")).to_have_attribute(
+        "aria-hidden",
+        "true",
+        timeout=30000,
+    )
+    page.get_by_test_id("design-viewer-mode-3d").click()
+    expect(page.get_by_test_id("design-viewer-3d-panel")).to_have_attribute(
+        "aria-hidden",
+        "false",
+        timeout=30000,
+    )
+    page.get_by_title("Part Selection").click()
+    expect(page.get_by_title("Part Selection")).to_have_class(re.compile(r"bg-primary"))
+    page.get_by_test_id("design-viewer-mode-video").click()
+    expect(page.get_by_test_id("design-viewer-video")).to_have_attribute(
+        "aria-hidden",
+        "false",
+        timeout=30000,
+    )
+    page.get_by_test_id("design-viewer-mode-3d").click()
+    expect(page.get_by_title("Part Selection")).to_have_class(re.compile(r"bg-primary"))
 
     active_artifact = page.get_by_test_id("artifact-active-file")
     expect(active_artifact).to_have_attribute(

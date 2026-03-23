@@ -1,8 +1,8 @@
 ---
-name: 'step-03c-aggregate'
-description: 'Aggregate subagent outputs and complete test infrastructure'
+name: step-03c-aggregate
+description: Aggregate subagent outputs and complete test infrastructure
 outputFile: '{test_artifacts}/automation-summary.md'
-nextStepFile: './step-04-validate-and-summarize.md'
+nextStepFile: ./step-04-validate-and-summarize.md
 ---
 
 # Step 3C: Aggregate Test Generation Results
@@ -11,7 +11,7 @@ nextStepFile: './step-04-validate-and-summarize.md'
 
 Read outputs from parallel subagents (API + E2E and/or Backend test generation based on `{detected_stack}`), aggregate results, and create supporting infrastructure (fixtures, helpers).
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -23,7 +23,7 @@ Read outputs from parallel subagents (API + E2E and/or Backend test generation b
 - ❌ Do NOT regenerate tests (use subagent outputs)
 - ❌ Do NOT run tests yet (that's step 4)
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -38,7 +38,7 @@ Read outputs from parallel subagents (API + E2E and/or Backend test generation b
 - Limits: do not execute future steps
 - Dependencies: Step 3A and 3B subagent outputs
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -80,7 +80,7 @@ if (detected_stack === 'backend' || detected_stack === 'fullstack') {
 - If Backend was launched: check `backendTestsOutput.success === true`
 - If any failed, report error and stop (don't proceed)
 
----
+______________________________________________________________________
 
 ### 2. Write All Test Files to Disk
 
@@ -115,7 +115,7 @@ if (backendTestsOutput) {
 }
 ```
 
----
+______________________________________________________________________
 
 ### 3. Aggregate Fixture Needs
 
@@ -139,7 +139,7 @@ const uniqueFixtures = [...new Set(allFixtureNeeds)];
 - **Network mocks:** paymentMockFixture, apiResponseMocks, etc.
 - **Test helpers:** wait/retry/assertion helpers
 
----
+______________________________________________________________________
 
 ### 4. Generate Fixture Infrastructure
 
@@ -217,7 +217,7 @@ export const waitForApiResponse = async (page: Page, urlPattern: string) => {
 };
 ```
 
----
+______________________________________________________________________
 
 ### 5. Calculate Summary Statistics
 
@@ -288,7 +288,7 @@ Save summary to temp file for validation step:
 fs.writeFileSync('/tmp/tea-automate-summary-{{timestamp}}.json', JSON.stringify(summary, null, 2), 'utf8');
 ```
 
----
+______________________________________________________________________
 
 ### 6. Optional Cleanup
 
@@ -301,7 +301,7 @@ if (backendTestsOutput) fs.unlinkSync('/tmp/tea-automate-backend-tests-{{timesta
 console.log('✅ Subagent temp files cleaned up');
 ```
 
----
+______________________________________________________________________
 
 ## OUTPUT SUMMARY
 
@@ -335,7 +335,7 @@ Display to user:
 ✅ Ready for validation (Step 4)
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -346,7 +346,7 @@ Proceed to Step 4 when:
 - ✅ Summary statistics calculated and saved
 - ✅ Output displayed to user
 
----
+______________________________________________________________________
 
 ### 7. Save Progress
 
@@ -365,6 +365,7 @@ Proceed to Step 4 when:
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-03c-aggregate'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03c-aggregate'`
   - Set `lastSaved: '{date}'`
@@ -372,7 +373,7 @@ Proceed to Step 4 when:
 
 Load next step: `{nextStepFile}`
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
 

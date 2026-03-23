@@ -40,10 +40,15 @@ The split between plan and execution reviewers is mandatory.
 Implementation ownership is intentionally unified.
 
 - `Engineering Planner` and `Electronics Planner` may both refine planner-owned artifacts before the plan-review gate.
+
 - After plan approval, a single `Engineering Coder` owns implementation changes to `script.py` and any helper implementation modules.
+
 - We do not run separate mechanical and electrical implementation agents in sequence for the same workspace revision. That late serialized split creates avoidable cross-domain handoff damage when wiring, PSU placement, connector access, or route clearance require mechanical adjustments.
+
 - `Electronics Reviewer` stays as a specialist review gate for explicit-electronics tasks, but it reviews the unified coder output rather than owning a separate coding pass.
 
 - Plan review checks planning quality and contract completeness before implementation starts, and persists reviewer output to an engineering-plan review YAML pair in `reviews/`.
+
 - Execution review runs only after validation/simulation success artifacts are present for the latest revision, then checks robustness/non-flakiness and plan adherence, and persists reviewer output to an engineering-execution review YAML pair in `reviews/`.
+
 - Visual-inspection policy for vision-using roles is config-driven via `config/agents_config.yaml`; required roles must inspect render images through `inspect_media(...)` before valid completion/approval when images are available for the current node/revision (`submit_review` for reviewer native loops, `finish` for non-reviewer native loops).

@@ -6,6 +6,7 @@ description: Enforce fail-closed behavior by removing permissive fallbacks and f
 # No Fallbacks, Fix At Source
 
 Use this skill when:
+
 - outputs look "successful" but are semantically invalid
 - code uses synthetic/default artifacts to pass gates
 - status transitions rely on loose string heuristics or permissive fallback paths

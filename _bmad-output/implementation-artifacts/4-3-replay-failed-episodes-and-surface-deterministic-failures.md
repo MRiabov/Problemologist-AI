@@ -9,10 +9,10 @@ As a maintainer, I want failed episodes to replay from persisted artifacts and t
 ## Acceptance Criteria
 
 1. Given a failed episode, when replay mode loads it, then the replay bundle reconstructs the failure state using persisted artifacts only.
-1. Given a terminal episode, when I inspect the replay payload, then the terminal reason, failure classification, and explicit fallback or unsupported-feature mismatch are surfaced from persisted metadata and trace records rather than inferred from generic `FAILED` status alone.
-1. Given missing artifacts, stale manifests, unsupported mechanisms, or missing review evidence, when replay runs, then it fails closed with a concrete reason and does not return a success-like replay bundle.
-1. Given the same episode is replayed twice without artifact changes, when the replay bundle is resolved, then it returns the same episode/session linkage and artifact hashes instead of fabricating new runtime state.
-1. Given replayable evidence exists, when I inspect the replay payload, then it includes the latest-revision `validation_results.json`, `simulation_result.json`, review manifest(s), and the trace IDs for the relevant simulation, review, and entry-validation events.
+2. Given a terminal episode, when I inspect the replay payload, then the terminal reason, failure classification, and explicit fallback or unsupported-feature mismatch are surfaced from persisted metadata and trace records rather than inferred from generic `FAILED` status alone.
+3. Given missing artifacts, stale manifests, unsupported mechanisms, or missing review evidence, when replay runs, then it fails closed with a concrete reason and does not return a success-like replay bundle.
+4. Given the same episode is replayed twice without artifact changes, when the replay bundle is resolved, then it returns the same episode/session linkage and artifact hashes instead of fabricating new runtime state.
+5. Given replayable evidence exists, when I inspect the replay payload, then it includes the latest-revision `validation_results.json`, `simulation_result.json`, review manifest(s), and the trace IDs for the relevant simulation, review, and entry-validation events.
 
 ## Tasks / Subtasks
 
@@ -72,8 +72,8 @@ As a maintainer, I want failed episodes to replay from persisted artifacts and t
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 4: Dataset Export & Replay and Story 4.3: Replay Failed Episodes and Surface Deterministic Failures]
-- [Source: _bmad-output/planning-artifacts/prd.md, FR25-FR35 and the replayability / deterministic terminal reason requirements]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 4: Dataset Export & Replay and Story 4.3: Replay Failed Episodes and Surface Deterministic Failures]
+- [Source: \_bmad-output/planning-artifacts/prd.md, FR25-FR35 and the replayability / deterministic terminal reason requirements]
 - [Source: specs/desired_architecture.md, architecture index for agents, observability, simulation, and eval gates]
 - [Source: specs/architecture/primary-system-objectives.md, product-level benchmark and dataset goals]
 - [Source: specs/architecture/agents/overview.md, backend agent graph responsibilities and review split]
@@ -88,13 +88,13 @@ As a maintainer, I want failed episodes to replay from persisted artifacts and t
 - [Source: specs/architecture/evals-and-gates.md, fail-closed validation, deterministic terminal failure, and replay-oriented eval expectations]
 - [Source: specs/architecture/spec-reviews/round-1.md, immutable run/release bundle and replayable manifest gap]
 - [Source: docs/backend-reference.md, backend topology, handoff rules, observability, and replay contract summary]
-- [Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, `EntryValidationContext`, and `ReviewResult`]
-- [Source: shared/models/simulation.py, `SimulationResult` and structured failure payloads]
-- [Source: shared/observability/schemas.py, `ReviewDecisionEvent`, `NodeEntryValidationFailedEvent`, and media/trace event models]
-- [Source: shared/workers/schema.py, `ValidationResultRecord`, `ReviewManifest`, and worker artifact response contracts]
+- \[Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, `EntryValidationContext`, and `ReviewResult`\]
+- \[Source: shared/models/simulation.py, `SimulationResult` and structured failure payloads\]
+- \[Source: shared/observability/schemas.py, `ReviewDecisionEvent`, `NodeEntryValidationFailedEvent`, and media/trace event models\]
+- \[Source: shared/workers/schema.py, `ValidationResultRecord`, `ReviewManifest`, and worker artifact response contracts\]
 - [Source: controller/api/routes/episodes.py, existing episode read surface and normalization behavior to avoid for replay assembly]
 - [Source: controller/api/schemas.py, controller response model patterns for typed replay payloads]
-- [Source: controller/persistence/models.py, persisted `Episode`, `Trace`, and `Asset` records]
+- \[Source: controller/persistence/models.py, persisted `Episode`, `Trace`, and `Asset` records\]
 - [Source: controller/agent/benchmark/graph.py, terminal metadata persistence and entry-validation context recording]
 - [Source: controller/api/tasks.py, terminal episode updates and failure-class assignment]
 - [Source: controller/clients/worker.py, artifact sync path for persisted validation/simulation/review files]

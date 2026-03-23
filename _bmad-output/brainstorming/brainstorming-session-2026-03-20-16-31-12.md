@@ -1,8 +1,8 @@
 ---
 stepsCompleted: [1]
 inputDocuments: []
-session_topic: 'Problemologist-AI market vs publication positioning'
-session_goals: 'Decide whether to pursue a market product or a scientific publication path, and if pursuing a market, identify the best exact industry and company stage/size to target'
+session_topic: Problemologist-AI market vs publication positioning
+session_goals: Decide whether to pursue a market product or a scientific publication path, and if pursuing a market, identify the best exact industry and company stage/size to target
 selected_approach: ''
 techniques_used: []
 ideas_generated: []

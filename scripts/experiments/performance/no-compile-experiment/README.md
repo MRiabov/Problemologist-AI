@@ -24,6 +24,7 @@ uv run python scripts/experiments/no-compile-experiment/benchmark_compile_kernel
 The script prints grouped summaries and writes a JSON artifact into this folder by default.
 
 Notes:
+
 - `--force-cpu` is enabled by default.
 - `--isolate-cache` is enabled by default to avoid cache pollution between runs.
 - Scenario fixtures are integration-test-like benchmark setups (`int101_like`, `int133_like`).

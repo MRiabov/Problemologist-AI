@@ -6,6 +6,7 @@ description: Run, debug, and implement integration tests using the project runne
 # Integration Tests Workflow
 
 Use this skill when the user asks to:
+
 - debug or triage integration test failures
 - add or update integration tests
 - run integration suites or specific `INT-xxx` tests
@@ -29,6 +30,7 @@ Use this skill when the user asks to:
 ## Required runner behavior (assume and preserve)
 
 `./scripts/run_integration_tests.sh` is the source of truth for orchestration. It:
+
 - sets integration env vars and loads `.env`
 - ensures supporting dependencies/services are available
 - starts infra containers
@@ -78,6 +80,7 @@ Use this workflow when a test is likely to end in a long timeout:
 5. Apply fix, then rerun the same narrow scope first.
 
 Rules for early termination:
+
 - Only terminate early after you have enough log evidence to identify a concrete failure cause.
 - Keep one failing run artifact set (`logs/integration_tests/*`) for traceability before starting the next run.
 - Do not switch to plain `pytest`; always rerun via `./scripts/run_integration_tests.sh`.

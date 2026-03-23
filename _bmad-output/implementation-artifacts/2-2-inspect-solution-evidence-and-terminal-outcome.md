@@ -9,10 +9,10 @@ As a human engineer, I want to inspect rendered CAD previews, simulation preview
 ## Acceptance Criteria
 
 1. Given a completed engineer episode, when I open the run, then the workspace exposes the latest validation or simulation evidence and the terminal outcome metadata from `EpisodeMetadata` (`detailed_status`, `terminal_reason`, `failure_class`).
-1. Given render or video evidence exists, when I inspect the run, then the latest-revision media is visible, traceable to the exact asset path, and the viewport opens the relevant evidence rather than the planner draft.
-1. Given preview artifacts exist, when I inspect the run, then I can view the rendered CAD model and simulation preview for the latest engineer revision without manually hunting through raw files.
-1. Given the attempt failed, when I inspect the outcome, then failure classification is explicit and not inferred from generic `FAILED` status or `validation_logs` alone.
-1. Given evidence is missing, stale, or unavailable, when I inspect the run, then the UI shows an explicit missing-artifact state instead of synthesizing success.
+2. Given render or video evidence exists, when I inspect the run, then the latest-revision media is visible, traceable to the exact asset path, and the viewport opens the relevant evidence rather than the planner draft.
+3. Given preview artifacts exist, when I inspect the run, then I can view the rendered CAD model and simulation preview for the latest engineer revision without manually hunting through raw files.
+4. Given the attempt failed, when I inspect the outcome, then failure classification is explicit and not inferred from generic `FAILED` status or `validation_logs` alone.
+5. Given evidence is missing, stale, or unavailable, when I inspect the run, then the UI shows an explicit missing-artifact state instead of synthesizing success.
 
 ## Tasks / Subtasks
 

@@ -42,6 +42,7 @@ from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
     calculate_benchmark_drilling_cost,
+    resolve_requested_quantity,
     validate_and_price,
     validate_and_price_assembly,
 )
@@ -110,9 +111,7 @@ def _sanitize_stress_summaries(
     return safe
 
 
-def _benchmark_refusal_error(
-    reason: BenchmarkRefusalReason, message: str
-) -> str:
+def _benchmark_refusal_error(reason: BenchmarkRefusalReason, message: str) -> str:
     return f"{reason.value}: {message}"
 
 
@@ -121,7 +120,7 @@ def _boxes_intersect(
     a_max: tuple[float, float, float],
     b_min: tuple[float, float, float],
     b_max: tuple[float, float, float],
-    ) -> bool:
+) -> bool:
     return all(a_min[i] <= b_max[i] and b_min[i] <= a_max[i] for i in range(3))
 
 
@@ -205,12 +204,9 @@ def _validate_benchmark_definition_consistency(
             return zone_error
 
         if _boxes_intersect(goal.min, goal.max, zone.min, zone.max):
-            return (
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
-                    "goal_zone overlaps forbid zone "
-                    f"'{zone.name}'",
-                )
+            return _benchmark_refusal_error(
+                BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                f"goal_zone overlaps forbid zone '{zone.name}'",
             )
 
     if not _boxes_intersect(goal.min, goal.max, build_zone.min, build_zone.max):
@@ -221,9 +217,7 @@ def _validate_benchmark_definition_consistency(
 
     jitter = objectives.moved_object.runtime_jitter
     start = objectives.moved_object.start_position
-    jitter_error = _validate_non_negative_range(
-        "moved_object.runtime_jitter", jitter
-    )
+    jitter_error = _validate_non_negative_range("moved_object.runtime_jitter", jitter)
     if jitter_error is not None:
         return jitter_error
 
@@ -262,12 +256,10 @@ def _validate_benchmark_definition_consistency(
 
     for zone in objectives.objectives.forbid_zones:
         if _boxes_intersect(moved_min, moved_max, zone.min, zone.max):
-            return (
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
-                    "moved_object runtime envelope intersects forbid zone "
-                    f"'{zone.name}' across jitter/randomization",
-                )
+            return _benchmark_refusal_error(
+                BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                "moved_object runtime envelope intersects forbid zone "
+                f"'{zone.name}' across jitter/randomization",
             )
 
     return None
@@ -633,6 +625,7 @@ def calculate_assembly_totals(
     cots_parts: list[CotsPartEstimate] | None = None,
     manufacturing_config: ManufacturingConfig | None = None,
     session_id: str | None = None,
+    quantity: int = 1,
 ) -> tuple[float, float]:
     """
     Calculate total cost and weight of the assembly including electronics and COTS.
@@ -661,7 +654,13 @@ def calculate_assembly_totals(
             if not method:
                 continue
 
-            res = validate_and_price(child, method, config, session_id=session_id)
+            res = validate_and_price(
+                child,
+                method,
+                config,
+                session_id=session_id,
+                quantity=quantity,
+            )
             total_cost += res.unit_cost
             total_weight += res.weight_g
         except Exception as e:
@@ -962,6 +961,9 @@ def simulate(
                     if objectives.physics
                     else None,
                 )
+                requested_quantity = resolve_requested_quantity(
+                    benchmark_definition=objectives,
+                )
                 fem_valid, fem_message = validate_fem_manufacturability(
                     component,
                     working_dir,
@@ -1218,6 +1220,7 @@ def simulate(
             electronics=electronics,
             cots_parts=assembly_definition.cots_parts if assembly_definition else None,
             manufacturing_config=pricing_config,
+            quantity=requested_quantity if objectives is not None else 1,
         )
 
         result = SimulationResult(
@@ -1525,6 +1528,9 @@ def validate_fem_manufacturability(
                 manufactured_labels = {
                     part.part_name for part in assembly.manufactured_parts
                 }
+            requested_quantity = resolve_requested_quantity(
+                benchmark_definition=objs,
+            )
             val_report = validate_and_price_assembly(
                 component,
                 config,
@@ -1532,6 +1538,7 @@ def validate_fem_manufacturability(
                 part_labels=manufactured_labels or None,
                 fem_required=True,
                 session_id=session_id,
+                quantity=requested_quantity,
                 default_method=ManufacturingMethod.CNC,
             )
             if not val_report.is_manufacturable:

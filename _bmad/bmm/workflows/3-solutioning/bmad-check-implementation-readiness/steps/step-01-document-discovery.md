@@ -158,7 +158,7 @@ Display: **Select an Option:** [C] Continue to File Validation
 
 ONLY WHEN C is selected and document inventory is saved will you load ./step-02-prd-analysis.md to begin file validation.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

@@ -2,4 +2,3 @@
 - [x] Declare the ballast base and counterweight fin consistently across artifacts.
 - [x] Preserve zero benchmark-side DOFs.
 - [x] Keep benchmark-local cost and weight within the customer caps.
-

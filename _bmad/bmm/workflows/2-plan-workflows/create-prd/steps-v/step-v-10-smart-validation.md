@@ -1,9 +1,9 @@
 ---
-name: 'step-v-10-smart-validation'
-description: 'SMART Requirements Validation - Validate Functional Requirements meet SMART quality criteria'
+name: step-v-10-smart-validation
+description: SMART Requirements Validation - Validate Functional Requirements meet SMART quality criteria
 
 # File references (ONLY variables used in this step)
-nextStepFile: './step-v-11-holistic-quality-validation.md'
+nextStepFile: ./step-v-11-holistic-quality-validation.md
 prdFile: '{prd_file_path}'
 validationReportPath: '{validation_report_path}'
 ---
@@ -63,6 +63,7 @@ Validate Functional Requirements meet SMART quality criteria (Specific, Measurab
 ### 1. Extract All Functional Requirements
 
 From the PRD's Functional Requirements section, extract:
+
 - All FRs with their FR numbers (FR-001, FR-002, etc.)
 - Count total FRs
 
@@ -77,36 +78,43 @@ From the PRD's Functional Requirements section, extract:
 **For each FR, score on SMART criteria (1-5 scale):**
 
 **Specific (1-5):**
+
 - 5: Clear, unambiguous, well-defined
 - 3: Somewhat clear but could be more specific
 - 1: Vague, ambiguous, unclear
 
 **Measurable (1-5):**
+
 - 5: Quantifiable metrics, testable
 - 3: Partially measurable
 - 1: Not measurable, subjective
 
 **Attainable (1-5):**
+
 - 5: Realistic, achievable with constraints
 - 3: Probably achievable but uncertain
 - 1: Unrealistic, technically infeasible
 
 **Relevant (1-5):**
+
 - 5: Clearly aligned with user needs and business objectives
 - 3: Somewhat relevant but connection unclear
 - 1: Not relevant, doesn't align with goals
 
 **Traceable (1-5):**
+
 - 5: Clearly traces to user journey or business objective
 - 3: Partially traceable
 - 1: Orphan requirement, no clear source
 
 **For each FR with score < 3 in any category:**
+
 - Provide specific improvement suggestions
 
 Return scoring table with all FR scores and improvement suggestions for low-scoring FRs."
 
 **Graceful degradation (if no Task tool):**
+
 - Manually score each FR on SMART criteria
 - Note FRs with low scores
 - Provide improvement suggestions
@@ -114,6 +122,7 @@ Return scoring table with all FR scores and improvement suggestions for low-scor
 ### 3. Build Scoring Table
 
 For each FR:
+
 - FR number
 - Specific score (1-5)
 - Measurable score (1-5)
@@ -124,6 +133,7 @@ For each FR:
 - Flag if any category < 3
 
 **Calculate overall FR quality:**
+
 - Percentage of FRs with all scores ≥ 3
 - Percentage of FRs with all scores ≥ 4
 - Average score across all FRs and categories
@@ -181,7 +191,7 @@ FR Quality: {percentage}% with acceptable scores ({severity})
 
 Without delay, read fully and follow: {nextStepFile} (step-v-11-holistic-quality-validation.md)
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

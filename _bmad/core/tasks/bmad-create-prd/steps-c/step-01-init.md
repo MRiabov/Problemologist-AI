@@ -74,14 +74,16 @@ If no document exists or no `stepsCompleted` in frontmatter:
 #### A. Input Document Discovery
 
 Discover and load context documents using smart discovery. Documents can be in the following locations:
-- {planning_artifacts}/**
-- {output_folder}/**
-- {project_knowledge}/**
-- docs/**
+
+- {planning_artifacts}/\*\*
+- {output_folder}/\*\*
+- {project_knowledge}/\*\*
+- docs/\*\*
 
 Also - when searching - documents can be a single markdown file, or a folder with an index and multiple files. For Example, if searching for `*foo*.md` and not found, also search for a folder called *foo*/index.md (which indicates sharded content)
 
 Try to discover the following:
+
 - Product Brief (`*brief*.md`)
 - Research Documents (`/*research*.md`)
 - Project Documentation (generally multiple documents might be found for this in the `{project_knowledge}` or `docs` folder.)
@@ -151,7 +153,7 @@ Display menu after setup report:
 
 ONLY WHEN [C continue option] is selected and [frontmatter properly updated with this step added to stepsCompleted and documentCounts], will you then read fully and follow: `./step-02-discovery.md` to begin project discovery.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

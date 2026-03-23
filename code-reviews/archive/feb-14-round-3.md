@@ -7,7 +7,7 @@
 
 The infrastructure for WP2 has significantly progressed since the initial review. The core physics simulation engine (Genesis integration) now has a functional backend with real data extraction for stress and fluids. The meshing pipeline (`tetrahedralize`) and stress visualization (`preview_stress`) are implemented. Agent prompts in `prompts.yaml` now include WP2 instructions.
 
----
+______________________________________________________________________
 
 ## 1. Simulation Backends & factory
 
@@ -43,7 +43,7 @@ The infrastructure for WP2 has significantly progressed since the initial review
 - **[PASS]** `Architect`, `Engineer`, and `Benchmark Generator` prompt templates (`config/prompts.yaml`) have been updated with WP2 instructions (soft meshes, fluids, stress limits).
 - **[PASS]** Benchmark Generator schemas support `fluid_objectives` and `stress_objectives`.
 
----
+______________________________________________________________________
 
 ## Recommendation & Prioritization
 

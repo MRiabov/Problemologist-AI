@@ -108,7 +108,7 @@ The implementation readiness workflow is now complete. The report contains all f
 
 Implementation Readiness complete. Invoke the `bmad-help` skill.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

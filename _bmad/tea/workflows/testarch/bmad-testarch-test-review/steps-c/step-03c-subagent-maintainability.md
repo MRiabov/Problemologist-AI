@@ -1,8 +1,8 @@
 ---
-name: 'step-03c-subagent-maintainability'
+name: step-03c-subagent-maintainability
 description: 'Subagent: Check test maintainability (readability, structure, DRY)'
 subagent: true
-outputFile: '/tmp/tea-test-review-maintainability-{{timestamp}}.json'
+outputFile: /tmp/tea-test-review-maintainability-{{timestamp}}.json
 ---
 
 # Subagent 3C: Maintainability Quality Check
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other quality dimensio
 
 **Your task:** Analyze test files for MAINTAINABILITY violations only.
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -21,7 +21,7 @@ This is an **isolated subagent** running in parallel with other quality dimensio
 - ✅ Output structured JSON to temp file
 - ❌ Do NOT check determinism, isolation, coverage, or performance
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -56,7 +56,7 @@ const totalPenalty = violations.reduce((sum, v) => sum + severityWeights[v.sever
 const score = Math.max(0, 100 - totalPenalty);
 ```
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -93,7 +93,7 @@ const score = Math.max(0, 100 - totalPenalty);
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 

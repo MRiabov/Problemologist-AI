@@ -9,8 +9,8 @@ As a human operator, I want benchmark generator agents to produce simple rigid-b
 ## Acceptance Criteria
 
 1. Given a simple rigid-body benchmark seed or prompt, when generation runs, then the candidate remains within the simple rigid-body, gravity-enabled scope and does not introduce actuators, FEM, or fluids.
-1. Given an unsupported mechanism or modality, when generation runs, then the candidate is rejected rather than silently adapted.
-1. Given a generated benchmark candidate, when it is reviewed, then its objective, zones, and motion assumptions are explicit enough for a human engineer to work against it.
+2. Given an unsupported mechanism or modality, when generation runs, then the candidate is rejected rather than silently adapted.
+3. Given a generated benchmark candidate, when it is reviewed, then its objective, zones, and motion assumptions are explicit enough for a human engineer to work against it.
 
 ## Tasks / Subtasks
 

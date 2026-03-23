@@ -10,7 +10,14 @@ from temporalio.client import Client
 
 from controller.api import ops
 from controller.api.manager import task_tracker
-from controller.api.routes import benchmark, cots, episodes, script_tools, skills
+from controller.api.routes import (
+    benchmark,
+    cots,
+    datasets,
+    episodes,
+    script_tools,
+    skills,
+)
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
 from controller.persistence.db import get_sessionmaker
@@ -112,6 +119,7 @@ async def read_root():
 
 app.include_router(episodes.router, prefix="/api")
 app.include_router(benchmark.router, prefix="/api")
+app.include_router(datasets.router, prefix="/api")
 app.include_router(script_tools.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
 app.include_router(ops.router, prefix="/api")
@@ -120,6 +128,7 @@ app.include_router(cots.router, prefix="/api")
 # unprefixed controller routes.
 app.include_router(episodes.router)
 app.include_router(benchmark.router)
+app.include_router(datasets.router)
 app.include_router(script_tools.router)
 app.include_router(skills.router)
 app.include_router(ops.router)

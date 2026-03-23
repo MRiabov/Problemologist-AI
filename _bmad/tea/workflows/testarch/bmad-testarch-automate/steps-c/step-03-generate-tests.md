@@ -1,7 +1,7 @@
 ---
-name: 'step-03-generate-tests'
-description: 'Orchestrate adaptive test generation (agent-team, subagent, or sequential)'
-nextStepFile: './step-03c-aggregate.md'
+name: step-03-generate-tests
+description: Orchestrate adaptive test generation (agent-team, subagent, or sequential)
+nextStepFile: ./step-03c-aggregate.md
 ---
 
 # Step 3: Orchestrate Adaptive Test Generation
@@ -20,7 +20,7 @@ Select execution mode deterministically, then generate tests using agent-team, s
 - ❌ Do NOT skip capability checks when probing is enabled
 - ❌ Do NOT change output paths or JSON schema by mode
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -35,7 +35,7 @@ Select execution mode deterministically, then generate tests using agent-team, s
 - Limits: do not generate tests directly (delegate to worker steps)
 - Dependencies: Step 2 outputs (coverage plan, target features)
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -80,7 +80,7 @@ const subagentContext = {
 };
 ```
 
----
+______________________________________________________________________
 
 ### 2. Resolve Execution Mode with Capability Probe
 
@@ -165,7 +165,7 @@ Report selected mode before dispatch:
 - Resolved: {resolvedMode}
 ```
 
----
+______________________________________________________________________
 
 ### 3. Subagent Dispatch Matrix
 
@@ -181,7 +181,7 @@ Report selected mode before dispatch:
 
 When `resolvedMode` is `agent-team` or `subagent`, let the runtime decide concurrency and scheduling. TEA does not impose an additional worker ceiling.
 
----
+______________________________________________________________________
 
 ### Contract Test Generation Note
 
@@ -195,7 +195,7 @@ When `use_pactjs_utils` is enabled, the API test generation subagent (step-03a) 
 
 When `pact_mcp` is `"mcp"`, the subagent can use SmartBear MCP tools to fetch existing provider states and generate tests informed by broker data.
 
----
+______________________________________________________________________
 
 ### 4. Dispatch Worker A: API Test Generation (always)
 
@@ -217,7 +217,7 @@ When `pact_mcp` is `"mcp"`, the subagent can use SmartBear MCP tools to fetch ex
 ⏳ Status: Running...
 ```
 
----
+______________________________________________________________________
 
 ### 5. Dispatch Worker B: E2E Test Generation (frontend/fullstack only)
 
@@ -243,7 +243,7 @@ When `pact_mcp` is `"mcp"`, the subagent can use SmartBear MCP tools to fetch ex
 
 **If {detected_stack} is `backend`:** Skip this subagent.
 
----
+______________________________________________________________________
 
 ### 6. Dispatch Worker B-backend: Backend Test Generation (backend/fullstack only)
 
@@ -269,7 +269,7 @@ When `pact_mcp` is `"mcp"`, the subagent can use SmartBear MCP tools to fetch ex
 
 **If {detected_stack} is `frontend`:** Skip this subagent.
 
----
+______________________________________________________________________
 
 ### 7. Wait for Expected Worker Completion
 
@@ -313,7 +313,7 @@ if (detected_stack === 'backend' || detected_stack === 'fullstack') {
 if (!apiOutputExists) throw new Error('API subagent output missing!');
 ```
 
----
+______________________________________________________________________
 
 ### Subagent Output Schema Contract
 
@@ -324,7 +324,7 @@ The aggregate step expects both outputs to include `success`, but the payload sh
 
 The aggregate step reads whichever output file(s) exist based on `{detected_stack}` and must use the matching schema per subagent type.
 
----
+______________________________________________________________________
 
 ### 8. Execution Report
 
@@ -341,7 +341,7 @@ The aggregate step reads whichever output file(s) exist based on `{detected_stac
 - Parallel Gain: ~40-70% faster when mode is subagent/agent-team
 ```
 
----
+______________________________________________________________________
 
 ### 9. Proceed to Aggregation
 
@@ -355,7 +355,7 @@ The aggregation step (3C) will:
 - Generate shared fixtures and helpers
 - Calculate summary statistics
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -373,7 +373,7 @@ Proceed to Step 3C (Aggregation) when:
 - ❌ Output files missing or corrupted
 - ❌ Timeout occurred (parallel mode only)
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
 

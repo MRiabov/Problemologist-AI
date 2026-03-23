@@ -26,6 +26,12 @@ export type { controller__api__schemas__EpisodeResponse } from './models/control
 export type { CotsMetadataResponse } from './models/CotsMetadataResponse';
 export type { CotsSearchItem } from './models/CotsSearchItem';
 export type { CustomObjectives } from './models/CustomObjectives';
+export type { DatasetExportRequest } from './models/DatasetExportRequest';
+export type { DatasetExportResponse } from './models/DatasetExportResponse';
+export type { DatasetRowArchiveManifest } from './models/DatasetRowArchiveManifest';
+export type { DatasetRowArtifactReference } from './models/DatasetRowArtifactReference';
+export type { DatasetRowBenchmarkAsset } from './models/DatasetRowBenchmarkAsset';
+export type { DatasetRowLineage } from './models/DatasetRowLineage';
 export type { EpisodeCreateResponse } from './models/EpisodeCreateResponse';
 export type { EpisodeMetadata } from './models/EpisodeMetadata';
 export { EpisodePhase } from './models/EpisodePhase';
@@ -40,6 +46,7 @@ export type { GeometricSelection } from './models/GeometricSelection';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export type { MessageRequest } from './models/MessageRequest';
 export type { MultiRunResult } from './models/MultiRunResult';
+export type { ObjectStoragePointer } from './models/ObjectStoragePointer';
 export { ObservabilityEventType } from './models/ObservabilityEventType';
 export { ResponseStatus } from './models/ResponseStatus';
 export { ReviewDecision } from './models/ReviewDecision';
@@ -66,6 +73,7 @@ export type { ValidationError } from './models/ValidationError';
 
 export { BenchmarkService } from './services/BenchmarkService';
 export { CotsService } from './services/CotsService';
+export { DatasetsService } from './services/DatasetsService';
 export { DefaultService } from './services/DefaultService';
 export { EpisodesService } from './services/EpisodesService';
 export { OperationsService } from './services/OperationsService';

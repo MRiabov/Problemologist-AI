@@ -148,7 +148,7 @@ npx cypress run --env grepTags="@p0 @p1"     # OR logic
 - **Fast feedback**: @smoke runs < 5 min, full suite < 30 min
 - **CI integration**: Different jobs run different tag combinations
 
----
+______________________________________________________________________
 
 ### Example 2: Spec Filter Pattern (File-Based Selection)
 
@@ -295,7 +295,7 @@ try {
 - **Directory-based**: Organize tests by type (e2e, integration, component)
 - **CI optimization**: Run subsets in parallel CI jobs
 
----
+______________________________________________________________________
 
 ### Example 3: Diff-Based Test Selection (Changed Files Only)
 
@@ -477,7 +477,7 @@ jobs:
 - **Fast feedback**: Run only what's needed (< 2 min typical)
 - **Safety net**: Unrecognized changes run smoke tests
 
----
+______________________________________________________________________
 
 ### Example 4: Promotion Rules (Pre-Commit → CI → Staging → Production)
 

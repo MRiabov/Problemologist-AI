@@ -343,9 +343,7 @@ async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
             json=benchmark_request.model_dump(mode="json"),
         )
         assert benchmark_resp.status_code in [200, 202], benchmark_resp.text
-        benchmark_run = BenchmarkGenerateResponse.model_validate(
-            benchmark_resp.json()
-        )
+        benchmark_run = BenchmarkGenerateResponse.model_validate(benchmark_resp.json())
         benchmark_session_id = str(benchmark_run.session_id)
 
         benchmark_episode = await _poll_benchmark_session(
@@ -414,10 +412,7 @@ async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
         assert episode.status == EpisodeStatus.FAILED
         assert episode.metadata_vars is not None
         assert episode.metadata_vars.benchmark_id == benchmark_session_id
-        assert (
-            episode.metadata_vars.terminal_reason
-            == "HANDOFF_INVARIANT_VIOLATION"
-        )
+        assert episode.metadata_vars.terminal_reason == "HANDOFF_INVARIANT_VIOLATION"
         assert episode.metadata_vars.failure_class == "AGENT_SEMANTIC_FAILURE"
         assert any(
             "approved benchmark bundle validation failed" in log.lower()

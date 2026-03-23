@@ -1,7 +1,7 @@
 ---
-name: 'step-01-preflight'
-description: 'Verify prerequisites and gather project context'
-nextStepFile: './step-02-select-framework.md'
+name: step-01-preflight
+description: Verify prerequisites and gather project context
+nextStepFile: ./step-02-select-framework.md
 outputFile: '{test_artifacts}/framework-setup-progress.md'
 ---
 
@@ -17,7 +17,7 @@ Verify the project is ready for framework scaffolding and gather key context.
 - ✅ Speak in `{communication_language}`
 - 🚫 Halt if preflight requirements fail
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -51,7 +51,7 @@ Verify the project is ready for framework scaffolding and gather key context.
 
 Store result as `{detected_stack}` = `frontend` | `backend` | `fullstack`
 
----
+______________________________________________________________________
 
 ## 2. Validate Prerequisites
 
@@ -63,13 +63,14 @@ Store result as `{detected_stack}` = `frontend` | `backend` | `fullstack`
 **If {detected_stack} is `backend` or `fullstack`:**
 
 - At least one backend project manifest exists (`pyproject.toml`, `pom.xml`, `build.gradle`, `go.mod`, `*.csproj`, `Gemfile`, `Cargo.toml`)
+
 - No existing test framework config that conflicts (e.g., `conftest.py` with full pytest suite, `src/test/` with JUnit suite)
 
 - Architecture/stack context available (project type, bundler, dependencies)
 
 If any fail, **HALT** and report the missing requirement.
 
----
+______________________________________________________________________
 
 ## 3. Gather Project Context
 
@@ -82,9 +83,10 @@ If any fail, **HALT** and report the missing requirement.
 - Read the relevant project manifest (`pyproject.toml`, `pom.xml`, `go.mod`, `*.csproj`, `Gemfile`, `Cargo.toml`) to identify language, framework, and dependencies
 
 - Check for architecture docs (`architecture.md`, `tech-spec*.md`) if available
+
 - Note auth requirements and APIs (if documented)
 
----
+______________________________________________________________________
 
 ## 3. Confirm Findings
 
@@ -94,7 +96,7 @@ Summarize:
 - Whether a framework is already installed
 - Any relevant context docs found
 
----
+______________________________________________________________________
 
 ### 4. Save Progress
 
@@ -113,6 +115,7 @@ Summarize:
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-01-preflight'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-preflight'`
   - Set `lastSaved: '{date}'`

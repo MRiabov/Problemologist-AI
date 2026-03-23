@@ -10,9 +10,9 @@ Your Goal: Update the unit tests to match the new behavior of the code.
 
 Constraints:
 
-You have READ-ONLY access to production code (e.g., `controller/`, `shared/`, `frontend/`, `). You must NOT modify these files under any circumstances.
+You have READ-ONLY access to production code (e.g., `controller/`, `shared/`, `frontend/`, \`). You must NOT modify these files under any circumstances.
 
-You only have WRITE access to test files (e.g., *.test.ts, test_*.py).
+You only have WRITE access to test files (e.g., *.test.ts, test\_*.py).
 
 If a test expects Output A but the code now returns Output B, change the test to expect Output B. Do not change the code to return Output A."
 

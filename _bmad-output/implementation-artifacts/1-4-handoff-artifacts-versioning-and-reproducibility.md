@@ -9,9 +9,9 @@ As a human operator, I want validated benchmark artifacts and preview evidence p
 ## Acceptance Criteria
 
 1. Given a valid benchmark, when it is submitted, then the required handoff artifacts, revision metadata, and manifest are persisted for the latest revision only, together with preview artifacts for the rendered CAD model and simulation preview.
-1. Given render evidence exists, when the benchmark is reviewed, then the latest-revision preview artifacts, including the rendered CAD model and simulation preview, are available for inspection and traceable in the episode record.
-1. Given the persisted benchmark package, when it is reloaded later, then the revision identifier and artifact hashes make the experiment reproducible without relying on unstored runtime state.
-1. Given stale or superseded preview/review artifacts exist, when the benchmark is reloaded or reviewed, then only the latest-revision bundle is considered part of the handoff.
+2. Given render evidence exists, when the benchmark is reviewed, then the latest-revision preview artifacts, including the rendered CAD model and simulation preview, are available for inspection and traceable in the episode record.
+3. Given the persisted benchmark package, when it is reloaded later, then the revision identifier and artifact hashes make the experiment reproducible without relying on unstored runtime state.
+4. Given stale or superseded preview/review artifacts exist, when the benchmark is reloaded or reviewed, then only the latest-revision bundle is considered part of the handoff.
 
 ## Tasks / Subtasks
 

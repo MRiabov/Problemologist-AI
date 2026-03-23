@@ -76,17 +76,17 @@ It is measurable, has a coherent scope boundary, and matches the architecture di
 
 ### Coverage Matrix
 
-| FR Range | Coverage |
-| --- | --- |
-| `FR1-FR5` | Epic 1: Benchmark Creation & Validation |
-| `FR6-FR11` | Epic 2: Human Solution Workflow |
-| `FR12` | Epic 11: FEM Simulation |
-| `FR13` | Epic 17: Electronics Simulation |
-| `FR14` | Epics 11 and 14 |
-| `FR15` | Epic 4: Dataset Export & Replay |
+| FR Range    | Coverage                                    |
+| ----------- | ------------------------------------------- |
+| `FR1-FR5`   | Epic 1: Benchmark Creation & Validation     |
+| `FR6-FR11`  | Epic 2: Human Solution Workflow             |
+| `FR12`      | Epic 11: FEM Simulation                     |
+| `FR13`      | Epic 17: Electronics Simulation             |
+| `FR14`      | Epics 11 and 14                             |
+| `FR15`      | Epic 4: Dataset Export & Replay             |
 | `FR16-FR24` | Epic 3: Cost, Weight, and Manufacturability |
-| `FR25-FR35` | Epic 4: Dataset Export & Replay |
-| `FR36-FR38` | Epic 20: Steering & Control |
+| `FR25-FR35` | Epic 4: Dataset Export & Replay             |
+| `FR36-FR38` | Epic 20: Steering & Control                 |
 
 ### Coverage Statistics
 
@@ -143,10 +143,12 @@ Those requirements are present in PRD and frontend specs, but the UX artifact do
 ### Issues
 
 1. `specs/architecture/workbenches.md` is empty.
+
    - The supported-workbench contract exists elsewhere, but this file is still a placeholder.
    - Because costing/manufacturability is a core flow, this should either be populated or explicitly retired as a source-of-truth document.
 
 2. The architecture review docs still flag unresolved benchmark-release contracts.
+
    - In particular, the architecture review in `specs/architecture/spec-reviews/round-1.md` still calls out missing benchmark protocol, split/contamination policy, solvability certification bundle, and release metadata contracts.
    - This is not a blocker for core MVP implementation, but it is a blocker if the current phase intends to ship a frozen benchmark release, paper-grade evals, or a public leaderboard contract.
 
@@ -163,13 +165,16 @@ The epic set is acceptable for implementation, but it is not fully polished for 
 ### Critical Issues Requiring Immediate Action
 
 1. Complete the UX specification.
+
    - The current UX file is only a stub, while the product explicitly requires a browser-based inspection and steering surface.
 
 2. Decide whether benchmark-release protocol work is in scope for this phase.
+
    - If yes, add the missing benchmark protocol / split policy / reference-solution bundle contracts before implementation.
    - If no, explicitly mark that scope as deferred so implementation does not drift into an underspecified release contract.
 
 3. Resolve the empty workbenches spec.
+
    - Either populate `specs/architecture/workbenches.md` or make the canonical workbench contract explicit in the surviving source-of-truth docs.
 
 ### Recommended Next Steps

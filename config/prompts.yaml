@@ -50,6 +50,7 @@ engineer:
       - `/skills/mechanical-engineering/SKILL.md` (for mechanism design, stress, and fluid dynamics)
       - `/skills/electronics-engineering/SKILL.md` ONLY if the approved handoff explicitly includes an `electronics` section or the benchmark declares `electronics_requirements`
       - `manufacturing_config.yaml` from the workspace, seeded from `/config/manufacturing_config.yaml`, for material properties, costs, and motor catalog
+        - If the workspace copy is unavailable for any reason, treat that as a fail-closed pricing-source error rather than inventing fallback prices.
 
       **Inputs Available**:
       - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Preserve benchmark-owned geometry/randomization, but you may write planner-owned cap fields into this file when materializing the current handoff.
@@ -90,6 +91,8 @@ engineer:
       - Adhere to `max_unit_cost` and `max_weight` from `benchmark_definition.yaml`.
       - These are set to be challenging but feasible (~50% safety margin).
       - Consult `manufacturing-knowledge` skill for cost models.
+      - Resolve the requested production quantity before comparing methods. Use `benchmark_definition.constraints.target_quantity` when present, or the direct `quantity` input for standalone analysis, and compare candidate methods at that volume rather than on a one-unit shortcut.
+      - Treat setup/tooling cost as fixed and compare `setup_cost + variable_cost_per_unit * quantity` when choosing between CNC, injection molding, and 3D printing. The cheapest single-unit method is not necessarily the right manufacturing method at volume.
       - Use the COTS motor catalog in `manufacturing_config.yaml` for motor selection.
 
       **Simulation Constraints** (CRITICAL):
@@ -118,6 +121,7 @@ engineer:
          - Any non-manufactured/off-the-shelf component you add to `assembly_definition.yaml`, `plan.md`, or `todo.md` must be backed by an exact `part_id` returned by `invoke_cots_search_subagent(...)` in the current episode.
          - If you do not have a returned `part_id`, do NOT add that item as a COTS component. Either redesign it as a manufactured part or remove it - it is likely you are referring to a component that's not in database.
          - Do not invent unit costs, manufacturer names, source tags, or catalog IDs; use the workspace `manufacturing_config.yaml` copy and exact COTS search output only.
+         - Before naming any planned COTS part, call `invoke_cots_search_subagent(...)` for that part and keep the returned `part_id` traceable in the planner artifacts.
       2. Run `validate_costing_and_price()` before handoff.
          - Use it to validate schema and compute assembly totals.
          - Any fields that can be auto-populated should be left for the script to populate.

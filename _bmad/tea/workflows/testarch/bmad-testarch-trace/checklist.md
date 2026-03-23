@@ -8,7 +8,7 @@ This checklist covers **two sequential phases**:
 - **PHASE 1**: Requirements Traceability (always executed)
 - **PHASE 2**: Quality Gate Decision (executed if `enable_gate_decision: true`)
 
----
+______________________________________________________________________
 
 # PHASE 1: REQUIREMENTS TRACEABILITY
 
@@ -21,7 +21,7 @@ This checklist covers **two sequential phases**:
 - [ ] Story file is accessible (if using BMad mode)
 - [ ] Knowledge base is loaded (test-priorities, traceability, risk-governance)
 
----
+______________________________________________________________________
 
 ## Context Loading
 
@@ -33,7 +33,7 @@ This checklist covers **two sequential phases**:
 - [ ] `PRD.md` loaded (if available)
 - [ ] Relevant knowledge fragments loaded from `tea-index.csv`
 
----
+______________________________________________________________________
 
 ## Test Discovery and Cataloging
 
@@ -47,7 +47,7 @@ This checklist covers **two sequential phases**:
   - [ ] Priority markers (P0/P1/P2/P3)
 - [ ] All relevant test files found (no tests missed due to naming conventions)
 
----
+______________________________________________________________________
 
 ## Criteria-to-Test Mapping
 
@@ -63,7 +63,7 @@ This checklist covers **two sequential phases**:
   - [ ] Test Level
   - [ ] Coverage Status
 
----
+______________________________________________________________________
 
 ## Coverage Classification
 
@@ -76,7 +76,7 @@ This checklist covers **two sequential phases**:
 - [ ] Classification justifications provided
 - [ ] Edge cases considered in FULL vs PARTIAL determination
 
----
+______________________________________________________________________
 
 ## Duplicate Coverage Detection
 
@@ -86,7 +86,7 @@ This checklist covers **two sequential phases**:
 - [ ] Recommendations provided for consolidation
 - [ ] Selective testing principles applied
 
----
+______________________________________________________________________
 
 ## Gap Analysis
 
@@ -110,7 +110,7 @@ This checklist covers **two sequential phases**:
   - [ ] Recommended test ID (e.g., 1.3-E2E-004)
   - [ ] Explanation of why test is needed
 
----
+______________________________________________________________________
 
 ## Coverage Metrics
 
@@ -124,7 +124,7 @@ This checklist covers **two sequential phases**:
   - [ ] Component coverage %
   - [ ] Unit coverage %
 
----
+______________________________________________________________________
 
 ## Test Quality Verification
 
@@ -150,7 +150,7 @@ Knowledge fragments referenced:
 - [ ] `network-first.md` for Playwright best practices
 - [ ] `data-factories.md` for test data patterns
 
----
+______________________________________________________________________
 
 ## Phase 1 Deliverables Generated
 
@@ -175,7 +175,7 @@ Knowledge fragments referenced:
 - [ ] Link to traceability matrix included
 - [ ] Coverage summary included
 
----
+______________________________________________________________________
 
 ## Phase 1 Quality Assurance
 
@@ -204,7 +204,7 @@ Knowledge fragments referenced:
 - [ ] Impact explained for each gap
 - [ ] Priorities clear (CRITICAL, HIGH, MEDIUM, LOW)
 
----
+______________________________________________________________________
 
 ## Phase 1 Documentation
 
@@ -214,13 +214,13 @@ Knowledge fragments referenced:
 - [ ] Links are valid and accessible
 - [ ] Recommendations are clear and prioritized
 
----
+______________________________________________________________________
 
 # PHASE 2: QUALITY GATE DECISION
 
 **Note**: Phase 2 executes only if `enable_gate_decision: true` in workflow.yaml
 
----
+______________________________________________________________________
 
 ## Prerequisites
 
@@ -249,7 +249,7 @@ Knowledge fragments referenced:
 - [ ] `test-priorities.md` loaded successfully
 - [ ] `ci-burn-in.md` loaded (if burn-in results available)
 
----
+______________________________________________________________________
 
 ## Process Steps
 
@@ -310,7 +310,7 @@ Knowledge fragments referenced:
 **P1 Criteria Evaluation:**
 
 - [ ] P1 test pass rate evaluated (threshold: min_p1_pass_rate)
-- [ ] P1 acceptance criteria coverage evaluated (PASS >=90%, CONCERNS 80-89%, FAIL <80%)
+- [ ] P1 acceptance criteria coverage evaluated (PASS >=90%, CONCERNS 80-89%, FAIL \<80%)
 - [ ] Overall test pass rate evaluated (threshold: min_overall_pass_rate)
 - [ ] Overall requirements coverage evaluated (threshold: >=80%)
 - [ ] Code coverage considered if available (informational unless explicitly required by policy)
@@ -400,7 +400,7 @@ Knowledge fragments referenced:
 - [ ] Gate YAML saved to `{test_artifacts}/gate-decision-{target}.yaml`
 - [ ] All outputs are valid and readable
 
----
+______________________________________________________________________
 
 ## Phase 2 Output Validation
 
@@ -442,7 +442,7 @@ Knowledge fragments referenced:
 - [ ] Evidence references are accurate
 - [ ] Next steps align with decision type
 
----
+______________________________________________________________________
 
 ## Phase 2 Quality Checks
 
@@ -475,7 +475,7 @@ Knowledge fragments referenced:
 - [ ] Terminology consistent with test-quality knowledge fragment
 - [ ] Decision matrix followed correctly
 
----
+______________________________________________________________________
 
 ## Phase 2 Integration Points
 
@@ -493,7 +493,7 @@ Knowledge fragments referenced:
 - [ ] Next steps are specific and time-bound
 - [ ] Recipients are appropriate for decision type
 
----
+______________________________________________________________________
 
 ## Phase 2 Compliance and Audit
 
@@ -519,7 +519,7 @@ Knowledge fragments referenced:
 - [ ] Regulatory requirements addressed (if applicable)
 - [ ] Documentation sufficient for external audit
 
----
+______________________________________________________________________
 
 ## Phase 2 Edge Cases and Exceptions
 
@@ -554,7 +554,7 @@ Knowledge fragments referenced:
 - [ ] Waiver has remediation plan with concrete due date
 - [ ] Security vulnerabilities are NOT waived (enforced)
 
----
+______________________________________________________________________
 
 # FINAL VALIDATION (Both Phases)
 
@@ -566,7 +566,7 @@ Knowledge fragments referenced:
 - [ ] Integration with external systems supported (JIRA, Azure DevOps)
 - [ ] Compliance requirements considered (if applicable)
 
----
+______________________________________________________________________
 
 ## Documentation and Communication
 
@@ -577,7 +577,7 @@ Knowledge fragments referenced:
 - [ ] Recommendations are clear and prioritized
 - [ ] Gate decision is prominent and unambiguous (Phase 2)
 
----
+______________________________________________________________________
 
 ## Final Validation
 
@@ -606,7 +606,7 @@ Knowledge fragments referenced:
 - [ ] All outputs validated and saved
 - [ ] Ready to proceed based on gate decision
 
----
+______________________________________________________________________
 
 ## Sign-Off
 
@@ -630,7 +630,7 @@ Knowledge fragments referenced:
 - If FAIL (either phase): Run `*atdd` for missing tests, fix issues, re-run `*trace`
 - If WAIVED: Deploy with approved waiver, schedule remediation
 
----
+______________________________________________________________________
 
 ## Notes
 
@@ -642,6 +642,6 @@ Record any issues, deviations, or important observations during workflow executi
 - **Waiver Details**: [Document waiver negotiations or approvals]
 - **Follow-up Actions**: [List any actions required after gate decision]
 
----
+______________________________________________________________________
 
 <!-- Powered by BMAD-CORE™ -->

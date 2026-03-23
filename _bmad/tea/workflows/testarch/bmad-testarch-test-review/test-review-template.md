@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: 'testarch-test-review'
+workflowType: testarch-test-review
 inputDocuments: []
 ---
 
@@ -13,7 +13,7 @@ inputDocuments: []
 **Review Scope**: {single | directory | suite}
 **Reviewer**: {user_name or TEA Agent}
 
----
+______________________________________________________________________
 
 Note: This review audits existing tests; it does not generate tests.
 Coverage mapping and coverage gates are out of scope here. Use `trace` for coverage decisions.
@@ -40,7 +40,7 @@ Coverage mapping and coverage gates are out of scope here. Use `trace` for cover
 
 {1-2 paragraph summary of overall test quality, highlighting major findings and recommendation rationale}
 
----
+______________________________________________________________________
 
 ## Quality Criteria Assessment
 
@@ -62,7 +62,7 @@ Coverage mapping and coverage gates are out of scope here. Use `trace` for cover
 
 **Total Violations**: {critical_count} Critical, {high_count} High, {medium_count} Medium, {low_count} Low
 
----
+______________________________________________________________________
 
 ## Quality Score Breakdown
 
@@ -87,7 +87,7 @@ Final Score:             {final_score}/100
 Grade:                   {grade}
 ```
 
----
+______________________________________________________________________
 
 ## Critical Issues (Must Fix)
 
@@ -100,7 +100,7 @@ Grade:                   {grade}
 **Severity**: P0 (Critical)
 **Location**: `{filename}:{line_number}`
 **Criterion**: {criterion_name}
-**Knowledge Base**: [{fragment_name}]({fragment_path})
+**Knowledge Base**: [{fragment_name}](%7Bfragment_path%7D)
 
 **Issue Description**:
 {Detailed explanation of what the problem is and why it's critical}
@@ -129,7 +129,7 @@ Grade:                   {grade}
 **Related Violations**:
 {If similar issue appears elsewhere, note line numbers}
 
----
+______________________________________________________________________
 
 ## Recommendations (Should Fix)
 
@@ -142,7 +142,7 @@ Grade:                   {grade}
 **Severity**: {P1 (High) | P2 (Medium) | P3 (Low)}
 **Location**: `{filename}:{line_number}`
 **Criterion**: {criterion_name}
-**Knowledge Base**: [{fragment_name}]({fragment_path})
+**Knowledge Base**: [{fragment_name}](%7Bfragment_path%7D)
 
 **Issue Description**:
 {Detailed explanation of what could be improved and why}
@@ -171,7 +171,7 @@ Grade:                   {grade}
 **Priority**:
 {Why this is P1/P2/P3 - urgency and impact}
 
----
+______________________________________________________________________
 
 ## Best Practices Found
 
@@ -183,7 +183,7 @@ Grade:                   {grade}
 
 **Location**: `{filename}:{line_number}`
 **Pattern**: {pattern_name}
-**Knowledge Base**: [{fragment_name}]({fragment_path})
+**Knowledge Base**: [{fragment_name}](%7Bfragment_path%7D)
 
 **Why This Is Good**:
 {Explanation of why this pattern is excellent}
@@ -200,7 +200,7 @@ Grade:                   {grade}
 **Use as Reference**:
 {Encourage using this pattern in other tests}
 
----
+______________________________________________________________________
 
 ## Test File Analysis
 
@@ -235,7 +235,7 @@ Grade:                   {grade}
 - **Assertions per Test**: {avg_assertions_per_test} (avg)
 - **Assertion Types**: {assertion_types_used}
 
----
+______________________________________________________________________
 
 ## Context and Integration
 
@@ -243,21 +243,21 @@ Grade:                   {grade}
 
 {If story file found:}
 
-- **Story File**: [{story_filename}]({story_path})
+- **Story File**: [{story_filename}](%7Bstory_path%7D)
 
 {If test-design found:}
 
-- **Test Design**: [{test_design_filename}]({test_design_path})
+- **Test Design**: [{test_design_filename}](%7Btest_design_path%7D)
 - **Risk Assessment**: {risk_level}
 - **Priority Framework**: P0-P3 applied
 
----
+______________________________________________________________________
 
 ## Knowledge Base References
 
 This review consulted the following knowledge base fragments:
 
-- **[test-quality.md](../../../testarch/knowledge/test-quality.md)** - Definition of Done for tests (no hard waits, <300 lines, <1.5 min, self-cleaning)
+- **[test-quality.md](../../../testarch/knowledge/test-quality.md)** - Definition of Done for tests (no hard waits, \<300 lines, \<1.5 min, self-cleaning)
 - **[fixture-architecture.md](../../../testarch/knowledge/fixture-architecture.md)** - Pure function → Fixture → mergeTests pattern
 - **[network-first.md](../../../testarch/knowledge/network-first.md)** - Route intercept before navigate (race condition prevention)
 - **[data-factories.md](../../../testarch/knowledge/data-factories.md)** - Factory functions with overrides, API-first setup
@@ -271,18 +271,20 @@ For coverage mapping, consult `trace` workflow outputs.
 
 See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base.
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 ### Immediate Actions (Before Merge)
 
 1. **{action_1}** - {description}
+
    - Priority: {P0 | P1 | P2}
    - Owner: {team_or_person}
    - Estimated Effort: {time_estimate}
 
 2. **{action_2}** - {description}
+
    - Priority: {P0 | P1 | P2}
    - Owner: {team_or_person}
    - Estimated Effort: {time_estimate}
@@ -290,10 +292,12 @@ See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base
 ### Follow-up Actions (Future PRs)
 
 1. **{action_1}** - {description}
+
    - Priority: {P2 | P3}
    - Target: {next_milestone | backlog}
 
 2. **{action_2}** - {description}
+
    - Priority: {P2 | P3}
    - Target: {next_milestone | backlog}
 
@@ -303,7 +307,7 @@ See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base
 {⚠️ Re-review after critical fixes - request changes, then re-review}
 {❌ Major refactor required - block merge, pair programming recommended}
 
----
+______________________________________________________________________
 
 ## Decision
 
@@ -328,7 +332,7 @@ See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base
 
 > Test quality is insufficient with {score}/100 score. {Multiple critical issues make tests unsuitable for production.} Recommend pairing session with QA engineer to apply patterns from knowledge base.
 
----
+______________________________________________________________________
 
 ## Appendix
 
@@ -363,7 +367,7 @@ See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base
 
 **Suite Average**: {avg_score}/100 ({avg_grade})
 
----
+______________________________________________________________________
 
 ## Review Metadata
 
@@ -373,7 +377,7 @@ See [tea-index.csv](../../../testarch/tea-index.csv) for complete knowledge base
 **Timestamp**: {YYYY-MM-DD HH:MM:SS}
 **Version**: 1.0
 
----
+______________________________________________________________________
 
 ## Feedback on This Review
 

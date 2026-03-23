@@ -16,7 +16,7 @@ description: Expert CAD modeling using build123d. Includes builder modes, semant
 
 ## References & Contents
 
-### [assembly.md](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/assembly.md) (Assembly & Physics)
+### \[assembly.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/assembly.md) (Assembly & Physics)
 
 - Motor Pattern (stator/rotor) (L11)
 - Explicit Joint Control (L33)
@@ -24,7 +24,7 @@ description: Expert CAD modeling using build123d. Includes builder modes, semant
 - Environment Zones (Goal/Forbid) (L75)
 - Collision Best Practices (L82)
 
-### [cheat_sheet.md](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/cheat_sheet.md) (Syntax Reference)
+### \[cheat_sheet.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/cheat_sheet.md) (Syntax Reference)
 
 - Core Builders (L5)
 - Sketching & Surfaces (L15)
@@ -34,7 +34,7 @@ description: Expert CAD modeling using build123d. Includes builder modes, semant
 - IO & Export (L49)
 - Common Pitfalls for LLMs (L55)
 
-### [handpicked.md](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/handpicked.md) (Expert Patterns)
+### \[handpicked.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/handpicked.md) (Expert Patterns)
 
 - Simple Parts & Boolean Operations (L5)
 - Sketches & Extrusion (L21)
@@ -45,7 +45,7 @@ description: Expert CAD modeling using build123d. Includes builder modes, semant
 - Mirroring & Symmetries (L99)
 - **Expert Pitfalls & Patterns (L113)**: `with Locations` Plural Trap, Implicit Contexts.
 
-### [reference.md](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/reference.md) (Exhaustive Examples)
+### \[reference.md\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/.agent/skills/build123d_cad_drafting_skill/references/reference.md) (Exhaustive Examples)
 
 - 1-2: Simple Plates & Holes (L81)
 - 3-5: Prismatic Solids & Locations (L127)

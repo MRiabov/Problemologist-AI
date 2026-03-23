@@ -90,7 +90,7 @@
 - [ ] **PR execution**: All functional tests unless significant infrastructure overhead
 - [ ] **Nightly/Weekly**: Only performance, chaos, long-running, manual tests
 - [ ] **No redundancy**: Don't re-list all tests (already in coverage plan)
-- [ ] **Philosophy stated**: "Run everything in PRs if <15 min, defer only if expensive/long"
+- [ ] **Philosophy stated**: "Run everything in PRs if \<15 min, defer only if expensive/long"
 - [ ] **Playwright parallelization noted**: 100s of tests in 10-15 min
 
 ### Resource Estimates
@@ -439,7 +439,7 @@ If workflow fails:
 **Issue**: Execution order section too complex or redundant
 
 - **Solution**:
-  - Default: Run everything in PRs (<15 min with Playwright parallelization)
+  - Default: Run everything in PRs (\<15 min with Playwright parallelization)
   - Only defer to nightly/weekly if expensive (k6, chaos, 4+ hour tests)
   - Don't create smoke/P0/P1/P2/P3 tier structure
   - Don't re-list all tests (already in coverage plan)
@@ -448,13 +448,13 @@ If workflow fails:
 
 - Base risk assessment on evidence, not assumptions
 - High-priority risks (≥6) require immediate mitigation
-- P0 tests should cover <10% of total scenarios
+- P0 tests should cover \<10% of total scenarios
 - Avoid testing same behavior at multiple levels
 - **Use interval-based estimates** (e.g., "~25-40 hours") instead of exact numbers to avoid false precision and provide flexibility
-- **Keep execution strategy simple**: Default to "run everything in PRs" (<15 min with Playwright), only defer if expensive/long-running
+- **Keep execution strategy simple**: Default to "run everything in PRs" (\<15 min with Playwright), only defer if expensive/long-running
 - **Avoid execution order redundancy**: Don't create complex tier structures or re-list tests
 
----
+______________________________________________________________________
 
 **Checklist Complete**: Sign off when all items validated.
 

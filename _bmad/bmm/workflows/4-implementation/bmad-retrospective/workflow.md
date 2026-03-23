@@ -3,6 +3,7 @@
 **Goal:** Post-epic review to extract lessons and assess success.
 
 **Your Role:** Scrum Master facilitating retrospective.
+
 - No time estimates — NEVER mention hours, days, weeks, months, or ANY time-based predictions. AI has fundamentally changed development speed.
 - Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}
 - Generate all documents in {document_output_language}
@@ -20,7 +21,7 @@
   - Create natural back-and-forth with user actively participating
   - Show disagreements, diverse perspectives, authentic team dynamics
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -41,13 +42,13 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 ### Input Files
 
-| Input | Description | Path Pattern(s) | Load Strategy |
-|-------|-------------|------------------|---------------|
-| epics | The completed epic for retrospective | whole: `{planning_artifacts}/*epic*.md`, sharded_index: `{planning_artifacts}/*epic*/index.md`, sharded_single: `{planning_artifacts}/*epic*/epic-{{epic_num}}.md` | SELECTIVE_LOAD |
-| previous_retrospective | Previous epic's retrospective (optional) | `{implementation_artifacts}/**/epic-{{prev_epic_num}}-retro-*.md` | SELECTIVE_LOAD |
-| architecture | System architecture for context | whole: `{planning_artifacts}/*architecture*.md`, sharded: `{planning_artifacts}/*architecture*/*.md` | FULL_LOAD |
-| prd | Product requirements for context | whole: `{planning_artifacts}/*prd*.md`, sharded: `{planning_artifacts}/*prd*/*.md` | FULL_LOAD |
-| document_project | Brownfield project documentation (optional) | sharded: `{planning_artifacts}/*.md` | INDEX_GUIDED |
+| Input                  | Description                                 | Path Pattern(s)                                                                                                                                                    | Load Strategy  |
+| ---------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- |
+| epics                  | The completed epic for retrospective        | whole: `{planning_artifacts}/*epic*.md`, sharded_index: `{planning_artifacts}/*epic*/index.md`, sharded_single: `{planning_artifacts}/*epic*/epic-{{epic_num}}.md` | SELECTIVE_LOAD |
+| previous_retrospective | Previous epic's retrospective (optional)    | `{implementation_artifacts}/**/epic-{{prev_epic_num}}-retro-*.md`                                                                                                  | SELECTIVE_LOAD |
+| architecture           | System architecture for context             | whole: `{planning_artifacts}/*architecture*.md`, sharded: `{planning_artifacts}/*architecture*/*.md`                                                               | FULL_LOAD      |
+| prd                    | Product requirements for context            | whole: `{planning_artifacts}/*prd*.md`, sharded: `{planning_artifacts}/*prd*/*.md`                                                                                 | FULL_LOAD      |
+| document_project       | Brownfield project documentation (optional) | sharded: `{planning_artifacts}/*.md`                                                                                                                               | INDEX_GUIDED   |
 
 ### Required Inputs
 
@@ -57,7 +58,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 - `project_context` = `**/project-context.md` (load if exists)
 
----
+______________________________________________________________________
 
 ## EXECUTION
 
@@ -83,17 +84,17 @@ Bob (Scrum Master): "Welcome to the retrospective, {user_name}. Let me help you 
 <check if="{{detected_epic}} found">
   <action>Present finding to user with context</action>
 
-  <output>
+<output>
 Bob (Scrum Master): "Based on {sprint_status_file}, it looks like Epic {{detected_epic}} was recently completed. Is that the epic you want to review today, {user_name}?"
   </output>
 
 <action>WAIT for {user_name} to confirm or correct</action>
 
-  <check if="{user_name} confirms">
+<check if="{user_name} confirms">
     <action>Set {{epic_number}} = {{detected_epic}}</action>
   </check>
 
-  <check if="{user_name} provides different epic number">
+<check if="{user_name} provides different epic number">
     <action>Set {{epic_number}} = user-provided number</action>
     <output>
 Bob (Scrum Master): "Got it, we're reviewing Epic {{epic_number}}. Let me gather that information."
@@ -104,7 +105,7 @@ Bob (Scrum Master): "Got it, we're reviewing Epic {{epic_number}}. Let me gather
 <check if="{{detected_epic}} NOT found in sprint-status">
   <action>PRIORITY 2: Ask user directly</action>
 
-  <output>
+<output>
 Bob (Scrum Master): "I'm having trouble detecting the completed epic from {sprint_status_file}. {user_name}, which epic number did you just complete?"
   </output>
 
@@ -119,7 +120,7 @@ Bob (Scrum Master): "I'm having trouble detecting the completed epic from {sprin
 <action>Extract epic numbers from story filenames (pattern: epic-X-Y-story-name.md)</action>
 <action>Set {{detected_epic}} = highest epic number found</action>
 
-  <output>
+<output>
 Bob (Scrum Master): "I found stories for Epic {{detected_epic}} in the stories folder. Is that the epic we're reviewing, {user_name}?"
   </output>
 
@@ -167,7 +168,7 @@ Bob (Scrum Master): "{user_name}, we typically run retrospectives after all stor
 
 <ask if="{{non_interactive}} == false">Continue with incomplete epic? (yes/no)</ask>
 
-  <check if="user says no">
+<check if="user says no">
     <output>
 Bob (Scrum Master): "Smart call, {user_name}. Let's finish those stories first and then have a proper retrospective."
     </output>
@@ -205,7 +206,7 @@ Bob (Scrum Master): "Before we start the team discussion, let me review all the 
 Charlie (Senior Dev): "Good idea - those dev notes always have gold in them."
 </output>
 
-<action>For each story in epic {{epic_number}}, read the complete story file from {implementation_artifacts}/{{epic_number}}-{{story_num}}-*.md</action>
+<action>For each story in epic {{epic_number}}, read the complete story file from {implementation_artifacts}/{{epic_number}}-{{story_num}}-\*.md</action>
 
 <action>Extract and analyze from each story:</action>
 
@@ -298,56 +299,58 @@ Bob (Scrum Master): "We'll get to all of it. But first, let me load the previous
 <check if="{{prev_epic_num}} >= 1">
   <action>Search for previous retrospectives using pattern: {implementation_artifacts}/epic-{{prev_epic_num}}-retro-*.md</action>
 
-  <check if="previous retrospectives found">
+<check if="previous retrospectives found">
     <output>
 Bob (Scrum Master): "I found our retrospectives from Epic {{prev_epic_num}}. Let me see what we committed to back then..."
     </output>
 
-    <action>Read the previous retrospectives</action>
+```
+<action>Read the previous retrospectives</action>
 
-    <action>Extract key elements:</action>
-    - **Action items committed**: What did the team agree to improve?
-    - **Lessons learned**: What insights were captured?
-    - **Process improvements**: What changes were agreed upon?
-    - **Technical debt flagged**: What debt was documented?
-    - **Team agreements**: What commitments were made?
-    - **Preparation tasks**: What was needed for this epic?
+<action>Extract key elements:</action>
+- **Action items committed**: What did the team agree to improve?
+- **Lessons learned**: What insights were captured?
+- **Process improvements**: What changes were agreed upon?
+- **Technical debt flagged**: What debt was documented?
+- **Team agreements**: What commitments were made?
+- **Preparation tasks**: What was needed for this epic?
 
-    <action>Cross-reference with current epic execution:</action>
+<action>Cross-reference with current epic execution:</action>
 
-    **Action Item Follow-Through:**
-    - For each action item from Epic {{prev_epic_num}} retro, check if it was completed
-    - Look for evidence in current epic's story records
-    - Mark each action item: ✅ Completed, ⏳ In Progress, ❌ Not Addressed
+**Action Item Follow-Through:**
+- For each action item from Epic {{prev_epic_num}} retro, check if it was completed
+- Look for evidence in current epic's story records
+- Mark each action item: ✅ Completed, ⏳ In Progress, ❌ Not Addressed
 
-    **Lessons Applied:**
-    - For each lesson from Epic {{prev_epic_num}}, check if team applied it in Epic {{epic_number}}
-    - Look for evidence in dev notes, review feedback, or outcomes
-    - Document successes and missed opportunities
+**Lessons Applied:**
+- For each lesson from Epic {{prev_epic_num}}, check if team applied it in Epic {{epic_number}}
+- Look for evidence in dev notes, review feedback, or outcomes
+- Document successes and missed opportunities
 
-    **Process Improvements Effectiveness:**
-    - For each process change agreed to in Epic {{prev_epic_num}}, assess if it helped
-    - Did the change improve velocity, quality, or team satisfaction?
-    - Should we keep, modify, or abandon the change?
+**Process Improvements Effectiveness:**
+- For each process change agreed to in Epic {{prev_epic_num}}, assess if it helped
+- Did the change improve velocity, quality, or team satisfaction?
+- Should we keep, modify, or abandon the change?
 
-    **Technical Debt Status:**
-    - For each debt item from Epic {{prev_epic_num}}, check if it was addressed
-    - Did unaddressed debt cause problems in Epic {{epic_number}}?
-    - Did the debt grow or shrink?
+**Technical Debt Status:**
+- For each debt item from Epic {{prev_epic_num}}, check if it was addressed
+- Did unaddressed debt cause problems in Epic {{epic_number}}?
+- Did the debt grow or shrink?
 
-    <action>Prepare "continuity insights" for the retrospective discussion</action>
+<action>Prepare "continuity insights" for the retrospective discussion</action>
 
-    <action>Identify wins where previous lessons were applied successfully:</action>
-    - Document specific examples of applied learnings
-    - Note positive impact on Epic {{epic_number}} outcomes
-    - Celebrate team growth and improvement
+<action>Identify wins where previous lessons were applied successfully:</action>
+- Document specific examples of applied learnings
+- Note positive impact on Epic {{epic_number}} outcomes
+- Celebrate team growth and improvement
 
-    <action>Identify missed opportunities where previous lessons were ignored:</action>
-    - Document where team repeated previous mistakes
-    - Note impact of not applying lessons (without blame)
-    - Explore barriers that prevented application
+<action>Identify missed opportunities where previous lessons were ignored:</action>
+- Document where team repeated previous mistakes
+- Note impact of not applying lessons (without blame)
+- Explore barriers that prevented application
 
-    <output>
+<output>
+```
 
 Bob (Scrum Master): "Interesting... in Epic {{prev_epic_num}}'s retro, we committed to {{action_count}} action items."
 
@@ -364,9 +367,9 @@ Elena (Junior Dev): "That's... actually pretty insightful."
 Bob (Scrum Master): "That's why we track this stuff. Pattern recognition helps us improve."
 </output>
 
-  </check>
+</check>
 
-  <check if="no previous retro found">
+<check if="no previous retro found">
     <output>
 Bob (Scrum Master): "I don't see a retrospective for Epic {{prev_epic_num}}. Either we skipped it, or this is your first retro."
 
@@ -400,7 +403,7 @@ Alice (Product Owner): "Good thinking - helps us connect what we learned to what
 <action>Attempt to load next epic using selective loading strategy:</action>
 
 **Try sharded first (more specific):**
-<action>Check if file exists: {planning_artifacts}/epic*/epic-{{next_epic_num}}.md</action>
+<action>Check if file exists: {planning_artifacts}/epic\*/epic-{{next_epic_num}}.md</action>
 
 <check if="sharded epic file found">
   <action>Load {planning_artifacts}/*epic*/epic-{{next_epic_num}}.md</action>
@@ -409,9 +412,9 @@ Alice (Product Owner): "Good thinking - helps us connect what we learned to what
 
 **Fallback to whole document:**
 <check if="sharded epic not found">
-<action>Check if file exists: {planning_artifacts}/epic*.md</action>
+<action>Check if file exists: {planning_artifacts}/epic\*.md</action>
 
-  <check if="whole epic file found">
+<check if="whole epic file found">
     <action>Load entire epics document</action>
     <action>Extract Epic {{next_epic_num}} section</action>
     <action>Set {{next_epic_source}} = "whole"</action>
@@ -443,11 +446,15 @@ Alice (Product Owner): "Good thinking - helps us connect what we learned to what
 <action>Check for technical prerequisites:</action>
 
 - APIs or integrations that must be ready
+
 - Data migrations or schema changes needed
+
 - Testing infrastructure requirements
+
 - Deployment or environment setup
 
   <output>
+
 Bob (Scrum Master): "Alright, I've reviewed Epic {{next_epic_num}}: '{{next_epic_title}}'"
 
 Alice (Product Owner): "What are we looking at?"
@@ -934,21 +941,21 @@ Elena (Junior Dev): "I like agreement 2 - that would've saved me on Story {{diff
 ═══════════════════════════════════════════════════════════
 
 **Technical Setup:**
-[ ] {{setup_task_1}}
+\[ \] {{setup_task_1}}
 Owner: {{owner_1}}
 Estimated: {{est_1}}
 
-[ ] {{setup_task_2}}
+\[ \] {{setup_task_2}}
 Owner: {{owner_2}}
 Estimated: {{est_2}}
 
 **Knowledge Development:**
-[ ] {{research_task_1}}
+\[ \] {{research_task_1}}
 Owner: {{owner_3}}
 Estimated: {{est_3}}
 
 **Cleanup/Refactoring:**
-[ ] {{refactor_task_1}}
+\[ \] {{refactor_task_1}}
 Owner: {{owner_4}}
 Estimated: {{est_4}}
 
@@ -1045,7 +1052,7 @@ Bob (Scrum Master): "{user_name}, this is significant. We need to address this b
 
 <action>Add epic review session to critical path if user agrees</action>
 
-  <output>
+<output>
 Alice (Product Owner): "I agree with {user_name}'s approach. Better to adjust the plan now than fail mid-epic."
 
 Charlie (Senior Dev): "This is why retrospectives matter. We caught this before it became a disaster."
@@ -1414,11 +1421,13 @@ Retrospective document was saved successfully, but {sprint_status_file} may need
 1. **Review retrospective summary**: {implementation_artifacts}/epic-{{epic_number}}-retro-{date}.md
 
 2. **Execute preparation sprint** (Est: {{prep_days}} days)
+
    - Complete {{critical_count}} critical path items
    - Execute {{prep_task_count}} preparation tasks
    - Verify all action items are in progress
 
 3. **Review action items in next standup**
+
    - Ensure ownership is clear
    - Track progress on commitments
    - Adjust timelines if needed
@@ -1444,7 +1453,7 @@ Epic {{epic_number}} delivered {{completed_stories}} stories with {{velocity_sum
 ⚠️ **REMINDER**: Epic update required before starting Epic {{next_epic_num}}
 {{/if}}
 
----
+______________________________________________________________________
 
 Bob (Scrum Master): "Great session today, {user_name}. The team did excellent work."
 

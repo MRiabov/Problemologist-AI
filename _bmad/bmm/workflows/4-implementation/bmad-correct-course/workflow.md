@@ -4,7 +4,7 @@
 
 **Your Role:** You are a Scrum Master navigating change management. Analyze the triggering issue, assess impact across PRD, epics, architecture, and UX artifacts, and produce an actionable Sprint Change Proposal with clear handoff.
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -30,20 +30,20 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 ### Input Files
 
-| Input | Path | Load Strategy |
-|-------|------|---------------|
-| PRD | `{planning_artifacts}/*prd*.md` (whole) or `{planning_artifacts}/*prd*/*.md` (sharded) | FULL_LOAD |
-| Epics | `{planning_artifacts}/*epic*.md` (whole) or `{planning_artifacts}/*epic*/*.md` (sharded) | FULL_LOAD |
-| Architecture | `{planning_artifacts}/*architecture*.md` (whole) or `{planning_artifacts}/*architecture*/*.md` (sharded) | FULL_LOAD |
-| UX Design | `{planning_artifacts}/*ux*.md` (whole) or `{planning_artifacts}/*ux*/*.md` (sharded) | FULL_LOAD |
-| Tech Spec | `{planning_artifacts}/*tech-spec*.md` (whole) | FULL_LOAD |
-| Document Project | `{project_knowledge}/index.md` (sharded) | INDEX_GUIDED |
+| Input            | Path                                                                                                     | Load Strategy |
+| ---------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| PRD              | `{planning_artifacts}/*prd*.md` (whole) or `{planning_artifacts}/*prd*/*.md` (sharded)                   | FULL_LOAD     |
+| Epics            | `{planning_artifacts}/*epic*.md` (whole) or `{planning_artifacts}/*epic*/*.md` (sharded)                 | FULL_LOAD     |
+| Architecture     | `{planning_artifacts}/*architecture*.md` (whole) or `{planning_artifacts}/*architecture*/*.md` (sharded) | FULL_LOAD     |
+| UX Design        | `{planning_artifacts}/*ux*.md` (whole) or `{planning_artifacts}/*ux*/*.md` (sharded)                     | FULL_LOAD     |
+| Tech Spec        | `{planning_artifacts}/*tech-spec*.md` (whole)                                                            | FULL_LOAD     |
+| Document Project | `{project_knowledge}/index.md` (sharded)                                                                 | INDEX_GUIDED  |
 
 ### Context
 
 - Load `**/project-context.md` if it exists
 
----
+______________________________________________________________________
 
 ## EXECUTION
 
@@ -112,8 +112,11 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 <action>For Story changes:</action>
 
 - Show old → new text format
+
 - Include story ID and section being modified
+
 - Provide rationale for each change
+
 - Example format:
 
   ```

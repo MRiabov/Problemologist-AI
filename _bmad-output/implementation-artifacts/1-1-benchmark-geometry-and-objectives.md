@@ -9,11 +9,11 @@ As a human operator, I want to define benchmark goals, forbid zones, build zones
 ## Acceptance Criteria
 
 1. Given valid geometry inputs, when benchmark validation runs, then the system accepts only non-intersecting, in-bounds objective geometry.
-1. Given a valid benchmark package, then the package preserves the declared `goal_zone`, `forbid_zones`, and `build_zone` in `benchmark_definition.yaml`.
-1. Given runtime randomization values, when the benchmark is saved, then those ranges are persisted and visible in the benchmark package.
-1. Given a moved object with static randomization and runtime jitter, then the full runtime envelope stays inside `build_zone` and does not intersect any forbid zone across the declared randomization range.
-1. Given invalid geometry, overlapping objective zones, or out-of-bounds randomization, then validation fails closed with an explicit reason rather than silently correcting the benchmark.
-1. Given a benchmark definition for this story, then it remains schema-valid with at least one `benchmark_parts` entry, unique top-level part labels, and a `moved_object.material_id` that resolves to a known material in `manufacturing_config.yaml`.
+2. Given a valid benchmark package, then the package preserves the declared `goal_zone`, `forbid_zones`, and `build_zone` in `benchmark_definition.yaml`.
+3. Given runtime randomization values, when the benchmark is saved, then those ranges are persisted and visible in the benchmark package.
+4. Given a moved object with static randomization and runtime jitter, then the full runtime envelope stays inside `build_zone` and does not intersect any forbid zone across the declared randomization range.
+5. Given invalid geometry, overlapping objective zones, or out-of-bounds randomization, then validation fails closed with an explicit reason rather than silently correcting the benchmark.
+6. Given a benchmark definition for this story, then it remains schema-valid with at least one `benchmark_parts` entry, unique top-level part labels, and a `moved_object.material_id` that resolves to a known material in `manufacturing_config.yaml`.
 
 ## Tasks / Subtasks
 

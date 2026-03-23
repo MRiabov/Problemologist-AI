@@ -25,7 +25,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
 
 **Note**: Task generation in the target branch is standard for all spec-kitty missions. Implementation happens in per-WP worktrees.
 
----
+______________________________________________________________________
 
 ## Outline
 
@@ -36,6 +36,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    **YOU MUST USE THIS PATH** for ALL subsequent file operations.
 
 2. **Load design documents**:
+
    - spec.md (research question, scope, objectives)
    - plan.md (methodology, phases, quality criteria)
    - research.md (background, prior art)
@@ -46,6 +47,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    ### Subtask Patterns for Research
 
    **Literature Search & Source Collection** (Phase 1):
+
    - T001: Define search keywords and inclusion/exclusion criteria
    - T002: [P] Search academic database 1 (IEEE, PubMed, arXiv, etc.)
    - T003: [P] Search academic database 2
@@ -55,6 +57,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    - T007: Prioritize sources by relevance rating
 
    **Source Review & Evidence Extraction** (Phase 2):
+
    - T010: [P] Review high-relevance sources (parallelizable by source)
    - T011: Extract key findings into evidence-log.csv
    - T012: Assign confidence levels to findings
@@ -62,6 +65,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    - T014: Identify patterns/themes emerging from evidence
 
    **Analysis & Synthesis** (Phase 3):
+
    - T020: Code findings by theme/category
    - T021: Identify patterns across sources and confidence levels
    - T022: Assess strength of evidence supporting each claim
@@ -70,6 +74,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    - T025: Write findings.md with synthesis and bibliography references
 
    **Quality & Validation** (Phase 4):
+
    - T030: Verify source coverage meets minimum requirements
    - T031: Validate evidence citations are traceable
    - T032: Check for bias in source selection
@@ -81,12 +86,14 @@ git branch --show-current  # Should show the target branch (meta.json → target
    ### Work Package Patterns for Research
 
    **Standard Research Flow**:
+
    - WP01: Literature Search & Source Collection (T001-T007)
    - WP02: Source Review & Evidence Extraction (T010-T014)
    - WP03: Analysis & Synthesis (T020-T025)
    - WP04: Quality Validation (T030-T034)
 
    **Empirical Research (if applicable)**:
+
    - WP01: Literature Review (background, prior art)
    - WP02: Study Design & Setup
    - WP03: Data Collection
@@ -94,6 +101,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    - WP05: Quality Validation
 
    **Multi-Researcher Parallel**:
+
    - WP01: Search & Collect (foundation)
    - WP02a: [P] Source Review - Researcher 1 batch
    - WP02b: [P] Source Review - Researcher 2 batch
@@ -108,6 +116,7 @@ git branch --show-current  # Should show the target branch (meta.json → target
    - **P3 (polish)**: Quality validation, external review
 
 5. **Write `tasks.md`**:
+
    - Location: `FEATURE_DIR/tasks.md`
    - Use `templates/tasks-template.md` from research mission
    - Include work packages with subtasks
@@ -135,46 +144,53 @@ git branch --show-current  # Should show the target branch (meta.json → target
 7. **Finalize tasks with dependency parsing and commit**:
 
    **CRITICAL**: Run this command from repo root:
+
    ```bash
    spec-kitty agent feature finalize-tasks --json
    ```
 
    This step is MANDATORY. Without it:
+
    - Dependencies won't be in frontmatter
    - Tasks won't be committed to target branch
 
 8. **Report**:
+
    - Path to tasks.md
    - Work package count and subtask tallies
    - Parallelization opportunities (different sources, databases)
    - MVP recommendation (typically WP01 Literature Search)
    - Next command: `/spec-kitty.implement WP01`
 
----
+______________________________________________________________________
 
 ## Research-Specific Task Generation Rules
 
 **Evidence Tracking**:
+
 - Every subtask that produces findings MUST specify output to evidence-log.csv
 - Every subtask that identifies sources MUST specify output to source-register.csv
 - Include subtasks for evidence validation and citation verification
 
 **Parallel Opportunities**:
+
 - Database searches are parallel (`[P]`) - different databases can be searched simultaneously
 - Source reviews are parallel (`[P]`) - different sources can be reviewed simultaneously
 - Researcher batches are parallel (`[P]`) - work can be split across reviewers
 
 **Quality Subtasks**:
+
 - Include confidence level assignment for findings
 - Include bias checking for source selection
 - Include methodology adherence verification
 
 **Work Package Scope**:
+
 - Each methodology phase typically gets its own work package
 - Phase transitions are natural dependency boundaries
 - Quality validation is always the final work package
 
----
+______________________________________________________________________
 
 ## YAML Frontmatter Format (CRITICAL)
 
@@ -206,11 +222,12 @@ history:
 
 **DO NOT use markdown status fields like `**Status**: planned`**. The `lane:` field in YAML frontmatter is the ONLY status tracking mechanism. The review command (`/spec-kitty.review`) searches for `lane: "for_review"` in frontmatter to find WPs ready for review.
 
----
+______________________________________________________________________
 
 ## Key Guidelines
 
 **For Agents**:
+
 - Use methodology phases as natural WP boundaries
 - Mark parallel subtasks (database searches, source reviews)
 - Include evidence tracking in every WP prompt
@@ -218,6 +235,7 @@ history:
 - Use `spec-kitty agent tasks move-task` to change lanes
 
 **For Users**:
+
 - Tasks.md shows the full research work breakdown
 - Work packages follow methodology phases
 - MVP is typically the literature search phase

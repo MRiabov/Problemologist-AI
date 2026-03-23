@@ -20,6 +20,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 Before running any scripts or writing to disk, conduct a structured discovery interview tailored to documentation missions.
 
 **Scope proportionality**: For documentation missions, discovery depth depends on project maturity:
+
 - **New project** (initial mode): 3-4 questions about audience, goals, Divio types
 - **Existing docs** (gap-filling mode): 2-3 questions about gaps, priorities, maintenance
 - **Feature-specific** (documenting new feature): 1-2 questions about feature scope, integration
@@ -38,44 +39,48 @@ Ask user which documentation scenario applies:
 
 **Store answer in**: `meta.json → documentation_state.iteration_mode`
 
----
+______________________________________________________________________
 
 **Question 2A: For Initial Mode - What to Document**
 
 Ask user:
+
 - What is the primary audience? (developers, end users, contributors, operators)
 - What are the documentation goals? (onboarding, API reference, troubleshooting, understanding architecture)
 - Which Divio types are most important? (tutorial, how-to, reference, explanation)
 
 **Why it matters**: Determines which templates to generate, what content to prioritize.
 
----
+______________________________________________________________________
 
 **Question 2B: For Gap-Filling Mode - What's Missing**
 
 Inform user you will audit existing documentation, then ask:
+
 - What problems are users reporting? (can't get started, can't solve specific problems, APIs undocumented, don't understand concepts)
 - Which areas need documentation most urgently? (specific features, concepts, tasks)
 - What Divio types are you willing to add? (tutorial, how-to, reference, explanation)
 
 **Why it matters**: Focuses gap analysis on user-reported issues, prioritizes work.
 
----
+______________________________________________________________________
 
 **Question 2C: For Feature-Specific Mode - Feature Details**
 
 Ask user:
+
 - Which feature/module are you documenting?
 - Who will use this feature? (what audience)
 - What aspects need documentation? (getting started, common tasks, API details, architecture/design)
 
 **Why it matters**: Scopes documentation to just the feature, determines which Divio types apply.
 
----
+______________________________________________________________________
 
 **Question 3: Language Detection & Generators**
 
 Auto-detect project languages:
+
 - Scan for `.js`, `.ts`, `.jsx`, `.tsx` files → Recommend JSDoc/TypeDoc
 - Scan for `.py` files → Recommend Sphinx
 - Scan for `Cargo.toml`, `.rs` files → Recommend rustdoc
@@ -84,6 +89,7 @@ Present to user:
 "Detected languages: [list]. Recommend these generators: [list]. Proceed with these?"
 
 Allow user to:
+
 - Confirm all
 - Select subset
 - Skip generators (manual documentation only)
@@ -92,12 +98,13 @@ Allow user to:
 
 **Store answer in**: `meta.json → documentation_state.generators_configured`
 
----
+______________________________________________________________________
 
 **Question 4: Target Audience (if not already clear)**
 
 If not clear from earlier answers, ask:
 "Who is the primary audience for this documentation?"
+
 - Developers integrating your library/API
 - End users using your application
 - Contributors to your project
@@ -108,17 +115,18 @@ If not clear from earlier answers, ask:
 
 **Store answer in**: `spec.md → ## Documentation Scope → Target Audience`
 
----
+______________________________________________________________________
 
 **Question 5: Publish Scope (optional)**
 
 Ask user:
+
 - Is documentation release/publish in scope for this effort?
 - If yes, should we produce `release.md` with hosting and handoff details?
 
 **Why it matters**: Avoids unnecessary release work when publishing is handled elsewhere.
 
----
+______________________________________________________________________
 
 ### Intent Summary
 
@@ -139,16 +147,18 @@ After discovery questions answered, synthesize into Intent Summary:
 
 Confirm with user before proceeding.
 
----
+______________________________________________________________________
 
 ## Outline
 
 1. **Check discovery status**: If questions unanswered, ask one at a time (Discovery Gate above)
 
 2. **Generate feature directory**: Run `spec-kitty agent feature create-feature "doc-{project-name}" --json --mission documentation`
+
    - Feature naming convention: `doc-{project-name}` or `docs-{feature-name}` for feature-specific
 
 3. **Create meta.json**: Include `mission: "documentation"` and `documentation_state` field:
+
    ```json
    {
      "feature_number": "###",
@@ -171,12 +181,14 @@ Confirm with user before proceeding.
    ```
 
 4. **Run gap analysis** (gap-filling mode only):
+
    - Scan existing `docs/` directory
    - Classify docs into Divio types
    - Build coverage matrix
    - Generate `gap-analysis.md` with findings
 
 5. **Generate specification**:
+
    - Use `templates/spec-template.md` from documentation mission
    - Fill in Documentation Scope section with discovery answers
    - Include gap analysis results if gap-filling mode
@@ -187,11 +199,12 @@ Confirm with user before proceeding.
 
 7. **Report completion**: Spec file path, next command (`/spec-kitty.plan`)
 
----
+______________________________________________________________________
 
 ## Key Guidelines
 
 **For Agents**:
+
 - Ask discovery questions one at a time (don't overwhelm user)
 - Auto-detect languages to recommend generators
 - For gap-filling, show audit results to user before asking what to fill
@@ -200,6 +213,7 @@ Confirm with user before proceeding.
 - Link to Write the Docs and Divio resources in spec
 
 **For Users**:
+
 - Discovery helps ensure documentation meets real needs
 - Gap analysis (if iterating) shows what's missing
 - Generator recommendations save manual API documentation work

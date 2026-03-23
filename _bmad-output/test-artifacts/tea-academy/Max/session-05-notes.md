@@ -29,9 +29,9 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **ATDD:** write failing tests before implementation.
-1. **Automate:** generate tests around existing code to expand coverage.
-1. **Component TDD:** red-green-refactor with minimal implementation steps.
-1. **API Testing:** validate business logic and schemas without browser overhead.
+2. **Automate:** generate tests around existing code to expand coverage.
+3. **Component TDD:** red-green-refactor with minimal implementation steps.
+4. **API Testing:** validate business logic and schemas without browser overhead.
 
 ______________________________________________________________________
 
@@ -61,8 +61,8 @@ ______________________________________________________________________
 ### Questions & Answers
 
 1. What is the “red” phase in TDD? → `A` (correct)
-1. What’s the difference between ATDD and Automate workflows? → `B` (correct)
-1. Why use pure API tests without a browser? → `C` (correct)
+2. What’s the difference between ATDD and Automate workflows? → `B` (correct)
+3. Why use pure API tests without a browser? → `C` (correct)
 
 ______________________________________________________________________
 

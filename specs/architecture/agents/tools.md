@@ -8,7 +8,7 @@
 
 ## "Agent-native" tools (callable by DSPy.ReAct runtime)
 
-We use standard DSPy/LiteLLM *native* tool calls, as defined in the following snippet: 
+We use standard DSPy/LiteLLM *native* tool calls, as defined in the following snippet:
 
 ```py
 import dspy
@@ -36,9 +36,10 @@ result = react_agent(question="What's the weather like in Tokyo?")
 print(result.answer)
 print("Tool calls made:", result.trajectory)
 ```
+
 (from: https://dspy.ai/learn/programming/tools/)
 
-We allow DSPy and LiteLLM do all manipulations over said files. 
+We allow DSPy and LiteLLM do all manipulations over said files.
 In the end, the models will write `write_file` and not `next_tool_write_file` or whatever.
 
 ### DSPy adapter preference for tool-calling nodes
@@ -62,7 +63,7 @@ There is a mechanism for privileged filesystem-policy bypass, which is explicitl
 1. Request payload field `bypass_agent_permissions=true`.
 2. HTTP header `X-System-FS-Bypass: 1`.
 
-Header-only or payload-only requests remain policy-enforced (no bypass). 
+Header-only or payload-only requests remain policy-enforced (no bypass).
 This is mostly for integration tests where such bypass is convenient (for system access, why not just access directly?).
 
 ## Tool definitions
@@ -131,7 +132,7 @@ Native completion-call naming contract:
 
 ### Config-driven anti-stall reminder policy
 
-For native tool-loop nodes, if the model produces more than 5 consecutive no-tool turns, runtime injects a configured nudge telling it to stop narrating and actually act. 
+For native tool-loop nodes, if the model produces more than 5 consecutive no-tool turns, runtime injects a configured nudge telling it to stop narrating and actually act.
 
 ### The "tools" as Python functions - Utils
 
@@ -153,12 +154,17 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 - `validate_and_price(component: Part|Compound) -> float|dict[str, float]`: validates a part by for manufacturability, then prices it if valid using its workbench's cost calculation interface, or returns an error with a description and a location
   - If validating a compound, it will also check for unusual DOFs, e.g. a part has >=4 DOFs, which is unusual in engineering. It won't raise immediately, but it will throw a "warning". The reviewer will also get notified that DOFs are excessive in this part in particular, and will be more strict in review.
 - `simulate(Compound) -> SimulationResult` - Submits a model for a simulation. Robustness checking uses runtime randomization by executing one heavy-worker job with one backend scene build/load and `num_scenes` parallel jittered scene instances inside that one backend run. `num_scenes` is batch width, not permission for serialized whole-scene reruns or multiple heavy jobs on one worker; nor multithreaded implementation - only batch width.
+
 <!-- dev note: assert against submitting a BuildPart builders, or other types. -->
+
 <!-- should it contain its environment model or only the generated model?  -->
+
 - `submit_for_review(Compound)` - submits the whole assembly for a review to `Reviewer` agent node, which can later approve it and submit return the final design to the user.
+
 <!-- Same: what's in the compound? -->
+
 - `preview_design` - a way to render the CAD files. Used for the engineer to get a visual inspection of its work. Probably doesn't need to render all 24 pictures (maybe, allow a `pitch=180, yaw = 45` parameter to look from a specific side.)
-Note - used by default by
+  Note - used by default by
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service which does it fo us-->
 
 #### Reviewer / media-inspection tool
@@ -200,20 +206,25 @@ Note - used by default by
 #### Benchmark generator (CAD editor) tools
 
 - `validate(Compound) -> bool` the benchmark is validated to not be out of bounds, and not have intersecting:
-    - Input object with environment
-    - Goal objective with forbid objective
-    - Input objective with goal or forbid objectives.
-    - Top-level authored part labels must be unique and must not be `environment` or start with `zone_`, because the runtime reserves those names for the scene root and generated objective bodies.
-    - Benchmark-owned moving fixtures must declare their motion contract explicitly; validate rejects missing, contradictory, or unsupported motion metadata, but it does not apply the engineering minimum-DOF rule to benchmark fixtures.
-    
-    Validated under all environment randomization.
-    - The validation tool also generates the standard 24-view static preview package.
-    - That static preview package uses the validation-preview renderer, which is MuJoCo by default.
-    - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
+
+  - Input object with environment
+  - Goal objective with forbid objective
+  - Input objective with goal or forbid objectives.
+  - Top-level authored part labels must be unique and must not be `environment` or start with `zone_`, because the runtime reserves those names for the scene root and generated objective bodies.
+  - Benchmark-owned moving fixtures must declare their motion contract explicitly; validate rejects missing, contradictory, or unsupported motion metadata, but it does not apply the engineering minimum-DOF rule to benchmark fixtures.
+
+  Validated under all environment randomization.
+
+  - The validation tool also generates the standard 24-view static preview package.
+  - That static preview package uses the validation-preview renderer, which is MuJoCo by default.
+  - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.
+
 - `submit_for_review(Compound)` - submits the whole benchmark compound for a review to `Reviewer` agent node, which can later approve it and thus putting it to the "to solve" pipeline. This call is valid only after current-revision validation/simulation succeed.
+
 - `get_docs_for(type)` - a util invoking a documentation subagent that parses skill and then b123d documentation (local copy, built into container) in search of documentation <!--note: it's probably ideal to have some service like Context7 which does it for us-->
+
 <!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
 
 For benchmark and engineering submission scripts, direct Python calls inside the submission script are the canonical usage. The intended pattern is:
@@ -241,24 +252,25 @@ The preferred execution path for the agent is to run the submission script itsel
 2. Deterministically compute and normalize cost/weight totals to cent precision from the declared parts and manufacturing inputs.
 3. Overwrite the workspace file with the normalized numeric totals so the file on disk is the exit-time source of truth, not the LLM's draft.
 4. Reject handoff if a later node-entry equality check would not reproduce the same totals exactly.
+
 <!-- Future: will also add some basic planning suggestions. e.g.: i"t appears you are trying to CNC away over 80% of the stock. Consider picking a planning to use a smaller stock if possible."-->
 
 `submit_plan()`. Will:
 
-1. Validate planner-required files for the planner role (Engineering Planner/Electronics Planner/Benchmark Planner).
-2. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
-3. Be mandatory before planner completion/handoff.
-4. Be the only valid planner completion gate: planner transitions are `PLANNED` only when `ok=true`.
-5. Persist the stage-specific plan-review manifest for the next reviewer gate:
-   - Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
-   - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
-6. For `Benchmark Planner`, canonicalize benchmark constraints before final validation:
-   - require planner-authored `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g`,
-   - derive `constraints.max_unit_cost` and `constraints.max_weight_g` as `1.5x` those estimate fields,
-   - reject planner handoff if those estimate fields are missing, non-numeric, or non-positive.
-7. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
-8. For `Benchmark Planner`, reject handoff when moving benchmark fixtures lack explicit motion metadata, when the motion contract is contradictory or unsupported, or when the fixture motion cannot be reconstructed from the benchmark handoff artifacts and evidence.
-9. For planner handoffs with machine-readable pricing totals, the persisted file must exactly match the script-normalized values at node entry; any cent-level drift is a hard failure even when the YAML remains schema-valid.
+01. Validate planner-required files for the planner role (Engineering Planner/Electronics Planner/Benchmark Planner).
+02. Return structured submission status (`ok`, `status`, `errors`) to the ReAct loop.
+03. Be mandatory before planner completion/handoff.
+04. Be the only valid planner completion gate: planner transitions are `PLANNED` only when `ok=true`.
+05. Persist the stage-specific plan-review manifest for the next reviewer gate:
+    - Benchmark Plan Reviewer: `.manifests/benchmark_plan_review_manifest.json`
+    - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
+06. For `Benchmark Planner`, canonicalize benchmark constraints before final validation:
+    - require planner-authored `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g`,
+    - derive `constraints.max_unit_cost` and `constraints.max_weight_g` as `1.5x` those estimate fields,
+    - reject planner handoff if those estimate fields are missing, non-numeric, or non-positive.
+07. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
+08. For `Benchmark Planner`, reject handoff when moving benchmark fixtures lack explicit motion metadata, when the motion contract is contradictory or unsupported, or when the fixture motion cannot be reconstructed from the benchmark handoff artifacts and evidence.
+09. For planner handoffs with machine-readable pricing totals, the persisted file must exactly match the script-normalized values at node entry; any cent-level drift is a hard failure even when the YAML remains schema-valid.
 10. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
 
 Structured-output validation contract for planner/reviewer YAML artifacts:
@@ -295,8 +307,8 @@ So:
 2. Git commit all files.
 3. Start simulation, locally.
 4. If simulation passes, notify the engineer via logs. (don't ask the agent to improve for now, though it could be well cost-efficient and useful). The agent will then run a `submit_for_review(final_compound)`.
-    - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
-    The simulation will produce video. The issue is, it's expensive to render. 
+   - Don't render the video yet! If the simulation didn't pass, maybe we don't need to render the video. We can instead print positions (probably just final positions) of all parts in the simulation and let the agent introspect them.
+     The simulation will produce video. The issue is, it's expensive to render.
 5. If doesn't, retry the simulation.
 
 #### submit_for_review(compound: Compound)
@@ -331,18 +343,21 @@ Manifest persistence contract:
    - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
 
 Reviewer entry preconditions are explicit and fail-closed:
+
 1. `submit_for_review(compound)` must be called in the latest code revision (latest candidate script state), not in an earlier failed revision.
-2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in  pass).
+2. The latest validation artifacts must indicate success (`validate()` in benchmark / `validate_and_price()` in pass).
 3. The latest simulation artifact must indicate success and objective completion (target object reached the green/goal zone).
 4. The reviewer-stage manifest must parse into a typed model (`ReviewManifest`) with `status=ready_for_review`, matching session/revision metadata, and correct `reviewer_stage`.
 5. Reviewer model access to `.manifests/**` is denied by policy; reviewer eligibility is evaluated by deterministic system checks, not model-side reads of manifest files.
 
 If any precondition is missing/invalid, it is a handoff invariant violation (not a reviewer decision). The system must:
+
 1. Treat the handoff as invalid and route back to the producing agent with explicit validation feedback.
 2. Keep this as fail-closed control flow (`REJECTED`/retry path), not as a successful transition into reviewer acceptance semantics.
 3. Escalate to terminal `FAILED` when hard limits are reached (timeout/turn/token budget), rather than circling forever.
 
 Reviewer output contract is strict:
+
 1. Reviewer completion must produce a structured `review_decision`.
 2. Missing structured reviewer output is invalid reviewer output and stays in fail-closed routing (with explicit logs), never auto-promoted to acceptance.
 3. If renders/media are available for the current latest revision, reviewer approval is invalid unless the reviewer has called `inspect_media(...)` on that evidence during the current review attempt.

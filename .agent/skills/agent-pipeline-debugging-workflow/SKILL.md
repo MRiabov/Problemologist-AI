@@ -46,9 +46,10 @@ uv run dataset/evals/run_evals.py \
 ## Canonical debug commands
 
 - Preferred log-reading method:
-Use a subagent to inspect logs and return concise evidence (`cause`, `proof lines`, `next fix`), instead of raw full-log reads in the main agent context.
+  Use a subagent to inspect logs and return concise evidence (`cause`, `proof lines`, `next fix`), instead of raw full-log reads in the main agent context.
+
 - Primary agent log location:
-Agent pipeline logs/traces are in `logs/manual_run/` (`controller.log`, `worker_light.log`, `worker_heavy.log`, `temporal_worker.log`). Agent-level orchestration traces are in `logs/manual_run/controller.log`.
+  Agent pipeline logs/traces are in `logs/manual_run/` (`controller.log`, `worker_light.log`, `worker_heavy.log`, `temporal_worker.log`). Agent-level orchestration traces are in `logs/manual_run/controller.log`.
 
 - List available task IDs for one agent:
 
@@ -95,17 +96,17 @@ When asked to debug pipeline failures, keep iterating this loop until pass (or a
 ## Triage classification
 
 - Environment/bootstrap failure:
-`controller_unreachable`, `worker_unreachable`, dependency/import/startup errors.
+  `controller_unreachable`, `worker_unreachable`, dependency/import/startup errors.
 - API/orchestration contract failure:
-`eval_trigger_failed`, wrong status transitions, bad request/response shape.
+  `eval_trigger_failed`, wrong status transitions, bad request/response shape.
 - Trace/flow integrity failure:
-`eval_failed_missing_traces`, missing required agent trace despite completion-like state.
+  `eval_failed_missing_traces`, missing required agent trace despite completion-like state.
 - Timeout/stall failure:
-`eval_timeout`, repeated `RUNNING` without meaningful progress.
+  `eval_timeout`, repeated `RUNNING` without meaningful progress.
 - Prompt/behavior failure:
-pipeline executes but artifacts are invalid/incomplete relative to requirements.
+  pipeline executes but artifacts are invalid/incomplete relative to requirements.
 - Architecture gap:
-current code path is over-complex, contradictory, or missing logic needed by intended behavior.
+  current code path is over-complex, contradictory, or missing logic needed by intended behavior.
 
 ## Architecture and business alignment checks
 

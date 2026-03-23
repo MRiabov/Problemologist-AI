@@ -565,6 +565,8 @@ class RenderSiblingPaths(BaseModel):
     depth: StrictStr | None = None
     segmentation: StrictStr | None = None
 
+    model_config = ConfigDict(extra="forbid")
+
 
 class SegmentationLegendEntry(BaseModel):
     """One segmentation color entry exposed to media inspection."""
@@ -591,12 +593,21 @@ class RenderArtifactMetadata(BaseModel):
     depth_interpretation: StrictStr | None = None
     segmentation_legend: list[SegmentationLegendEntry] = Field(default_factory=list)
 
+    model_config = ConfigDict(extra="forbid")
+
 
 class RenderManifest(BaseModel):
     """Manifest persisted alongside rendered artifacts under renders/."""
 
     version: StrictStr = "1.0"
+    episode_id: StrictStr | None = None
+    worker_session_id: StrictStr | None = None
+    revision: StrictStr | None = None
+    environment_version: StrictStr | None = None
+    preview_evidence_paths: list[StrictStr] = Field(default_factory=list)
     artifacts: dict[StrictStr, RenderArtifactMetadata] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class MediaInspectionResult(BaseModel):

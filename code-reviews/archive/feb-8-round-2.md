@@ -1,16 +1,16 @@
 # Architecture Delta: Feb 8 Round 2
 
-**Date**: 2026-02-08  
-**Base Commit**: `d5b5d6dfa838a5f152a7d5dca2f0ad292e9af955` ("cleanup and spec")  
+**Date**: 2026-02-08\
+**Base Commit**: `d5b5d6dfa838a5f152a7d5dca2f0ad292e9af955` ("cleanup and spec")\
 **Diff Stats**: +479 lines, -39 lines across 16 commits
 
----
+______________________________________________________________________
 
 ## Summary of Changes
 
 The `desired_architecture.md` document received significant clarifications across **agent architecture**, **data exchange contracts**, **frontend specifications**, and **infrastructure**. This document categorizes all new or modified requirements for implementation.
 
----
+______________________________________________________________________
 
 <!--
 ## 1. Agent Purpose & Subagent Structure *(NEW)*
@@ -38,7 +38,7 @@ The `desired_architecture.md` document received significant clarifications acros
 
 **New constraint**: Engineer is constrained on `where the agent can actually build their solution` (build zones).
 
----
+______________________________________________________________________
 
 ## 2. Agent Handover Contracts *(NEW - MAJOR)*
 
@@ -69,15 +69,15 @@ User prompt →
 
 ### 2.3 Engineer Planner → CAD Agent Files
 
-| File | Contents |
-|------|----------|
-| `plan.md` | Solution overview, parts list, assembly strategy, cost/weight budget, risk assessment |
+| File                        | Contents                                                                                |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `plan.md`                   | Solution overview, parts list, assembly strategy, cost/weight budget, risk assessment   |
 | `benchmark_definition.yaml` | Stripped-down version with planner's **own** max price/weight (under benchmark ceiling) |
-| `todo.md` | TODO list |
+| `todo.md`                   | TODO list                                                                               |
 
 **Critical clarification**: The benchmark generator sets **ceiling** price/weight. The engineering planner sets operating constraints **under** that ceiling.
 
----
+______________________________________________________________________
 
 ## 3. `benchmark_definition.yaml` Structure *(NEW - COMPREHENSIVE)*
 
@@ -118,7 +118,7 @@ moving_parts:
 - **Runtime randomization**: Small jitter per simulation run
 - Engineer receives YAML with exact positions, moving parts, DOFs, **motors included**
 
----
+______________________________________________________________________
 
 ## 4. `plan.md` Structure for Engineering *(NEW)*
 
@@ -137,8 +137,10 @@ moving_parts:
 ## 5. Risk Assessment
   - Failure modes, mitigations, runtime randomization considerations
 ```
+
 <!-- note: also validation for markdown! -->
----
+
+______________________________________________________________________
 
 <!--
 ## 5. Review Structure Hardened *(NEW)*
@@ -153,7 +155,7 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 - Reviews stored in `/reviews/` folder
 -->
 
----
+______________________________________________________________________
 
 ## 6. File Validation *(NEW)*
 
@@ -170,7 +172,7 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 
 - Linted, won't pass execution if red errors exist
 
----
+______________________________________________________________________
 
 ## 7. Tools Updates
 
@@ -178,8 +180,8 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 
 *MISSING: Tool not implemented in worker.*
 
-**Purpose**: Render CAD files for visual inspection by Engineer agent  
-**Parameters**: `pitch`, `yaw` to look from specific side  
+**Purpose**: Render CAD files for visual inspection by Engineer agent\
+**Parameters**: `pitch`, `yaw` to look from specific side\
 **Note**: Doesn't need to render all 24 pictures
 
 ### 7.2 `validate_and_price` Clarification
@@ -188,7 +190,7 @@ decision: accepted | rejected | confirm_plan_refusal | reject_plan_refusal
 
 Step 4 changed: "Validate for being in **build zone bounds**" (not just generically "in bounds")
 
----
+______________________________________________________________________
 
 ## 8. Skill Management *(NEW)*
 
@@ -214,7 +216,7 @@ Skills versioned via **public git repo**. Workers handle git operations:
 - Has endpoint to update skills without container restart
 - Skills are **read-only** - for agents
 
----
+______________________________________________________________________
 
 ## 9. Infrastructure Clarifications
 
@@ -264,7 +266,7 @@ controller/
 - Use **Pydantic** for data models
 - Use **Beartype** for hard type checking
 
----
+______________________________________________________________________
 
 ## 10. Frontend Specifications *(NEW - DETAILED)*
 
@@ -277,6 +279,7 @@ controller/
 3. Enter "benchmark creation" mode
 4. Traces section shows textbox for prompting
 5. `plan.md` created with **"Start implementation"** button at top -->
+
 <!-- all above is done -->
 
 1. UI auto-updates with new models as build123d progresses
@@ -315,26 +318,26 @@ Plus: implementation history
 
 > "Vite, React. Autogenerated types on git hooks from Controller. **Super-modern, powerful look**"
 
----
+______________________________________________________________________
 
 ## 11. Typo/Wording Fixes (Minor)
 
 *MOSTLY DONE*
 
-| Before | After |
-|--------|-------|
-| `paralel` | `parallel` |
-| `outweights` | `outweighs` |
-| `probaly` | `probably` |
+| Before        | After          |
+| ------------- | -------------- |
+| `paralel`     | `parallel`     |
+| `outweights`  | `outweighs`    |
+| `probaly`     | `probably`     |
 | `asyncronous` | `asynchronous` |
-| `separte` | `separate` |
-| `Mulitple` | `Multiple` |
-| `throught` | `through` |
-| `continous` | `continuous` |
-| `prerender` | `pre-render` |
-| `Norably` | `Notably` |
+| `separte`     | `separate`     |
+| `Mulitple`    | `Multiple`     |
+| `throught`    | `through`      |
+| `continous`   | `continuous`   |
+| `prerender`   | `pre-render`   |
+| `Norably`     | `Notably`      |
 
----
+______________________________________________________________________
 
 ## Implementation Priorities
 
@@ -351,8 +354,9 @@ Based on the scope of changes, suggested implementation order:
 
 <!-- 1. Benchmark creation workflow UI
 2. 3-column layout with reasoning traces-->
+
 1. Artifact viewer with file tree
-1. CAD viewer integration (GLB via worker)
+2. CAD viewer integration (GLB via worker)
 
 <!-- note: frontend *design* is done well, don't touch it.-->
 
@@ -369,15 +373,15 @@ Based on the scope of changes, suggested implementation order:
 2. File structure validation (markdown, Python linting)
 3. Plan template enforcement
 
----
+______________________________________________________________________
 
 ## Files Affected by These Changes
 
-| Area | Files to Create/Modify |
-|------|----------------------|
-| Schema | `benchmark_definition.yaml` schema, `plan.md` templates |
-| Validation | Markdown validators, Python linting integration |
-| Tools | `preview_design` implementation |
-| Frontend | Benchmark creation flow, 3-column layout, CAD viewer |
-| Worker | GLB endpoint, simulation semaphore |
-| Infrastructure | Repo restructure, type enforcement |
+| Area           | Files to Create/Modify                                  |
+| -------------- | ------------------------------------------------------- |
+| Schema         | `benchmark_definition.yaml` schema, `plan.md` templates |
+| Validation     | Markdown validators, Python linting integration         |
+| Tools          | `preview_design` implementation                         |
+| Frontend       | Benchmark creation flow, 3-column layout, CAD viewer    |
+| Worker         | GLB endpoint, simulation semaphore                      |
+| Infrastructure | Repo restructure, type enforcement                      |

@@ -62,15 +62,15 @@ This matches the split-worker contract in `specs/architecture/distributed-execut
 
 The direct path is:
 
-1. Client or test sends `POST /benchmark/simulate`.
-2. `worker-heavy` enters `heavy_operation_admission`.
-3. The request bundle and session root are resolved.
-4. `run_simulation_task(...)` calls `run_simulation_in_isolated_process(...)`.
-5. The runtime creates a fresh `ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1, initializer=init_genesis_worker)`.
-6. A fresh child process starts.
-7. The child runs `init_genesis_worker()`.
-8. The child imports Genesis, resolves CPU or GPU, calls `gs.init(...)`, builds a tiny scene, and then runs the simulation subprocess function.
-9. The child returns the simulation result.
+01. Client or test sends `POST /benchmark/simulate`.
+02. `worker-heavy` enters `heavy_operation_admission`.
+03. The request bundle and session root are resolved.
+04. `run_simulation_task(...)` calls `run_simulation_in_isolated_process(...)`.
+05. The runtime creates a fresh `ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1, initializer=init_genesis_worker)`.
+06. A fresh child process starts.
+07. The child runs `init_genesis_worker()`.
+08. The child imports Genesis, resolves CPU or GPU, calls `gs.init(...)`, builds a tiny scene, and then runs the simulation subprocess function.
+09. The child returns the simulation result.
 10. The parent process collects artifacts and returns the HTTP response.
 11. The executor scope ends and the child process goes away.
 
@@ -100,12 +100,14 @@ The key point is that both paths pay the same fresh-child startup behavior becau
 There are two relevant initialization sites in the current runtime:
 
 1. `worker_heavy/runtime/simulation_runner.py::init_genesis_worker()`
+
    - Sets headless defaults.
    - Imports Genesis and Torch.
    - Calls `gs.init(...)`.
    - Builds a tiny plane scene as a best-effort prewarm.
 
 2. `worker_heavy/simulation/genesis_backend.py::_ensure_initialized()`
+
    - Checks `gs._initialized`.
    - Calls `gs.init(...)` only if Genesis is not already initialized in that process.
 

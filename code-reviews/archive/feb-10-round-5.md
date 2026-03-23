@@ -51,16 +51,20 @@ User review: we need to assert (and I tink we do) that the values are populated 
 ### Engineering CAD Prompt Mismatches
 
 1. **Fastener helper import path resolved**
+
    - Prompt updated to `from utils import fastener_hole, HoleType`.
    - `worker/utils/__init__.py` now re-exports `cad` utilities.
 
 2. **Fastener helper signature fixed**
+
    - Prompt updated to match `fastener_hole(part, location=Location((20, 25)), size="M5", length=10.0, hole_id="mount_1", ...)`.
 
 3. **HoleType enum aligned**
+
    - Prompt now uses `FlatHeadHole`, `CounterBoreHole`, `SimpleHole`.
 
 4. **validate_and_price signature aligned**
+
    - Prompt updated to `validate_and_price(part, method, config)`.
    - `worker/utils/__init__.py` re-exports `ManufacturingMethod` and `ManufacturingConfig`.
 
@@ -69,11 +73,13 @@ User review: we need to assert (and I tink we do) that the values are populated 
 ### Benchmark Coder Prompt Mismatches
 
 1. **`to_mjcf` function implemented**
+
    - Implemented `to_mjcf(component, model_name="scene")` in `worker/utils/validation.py`.
    - Re-exported in `worker/utils/__init__.py`.
    - Benchmark prompt updated to include it in utility list.
 
 2. **`validate(compound)` now generates renders**
+
    - `worker/utils/validation.validate()` now calls `prerender_24_views()`.
    - Logic: Ensuring agent expectation for render availability is met immediately after validation.
 

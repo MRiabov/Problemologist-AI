@@ -2701,6 +2701,16 @@
             "type": "number",
             "title": "Setup Cost"
           },
+          "variable_cost_per_unit": {
+            "type": "number",
+            "title": "Variable Cost Per Unit",
+            "default": 0.0
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity",
+            "default": 1
+          },
           "is_reused": {
             "type": "boolean",
             "title": "Is Reused"

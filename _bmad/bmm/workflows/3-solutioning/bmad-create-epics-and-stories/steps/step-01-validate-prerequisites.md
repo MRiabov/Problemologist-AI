@@ -232,7 +232,7 @@ Display: `**Confirm the Requirements are complete and correct to [C] continue:**
 
 ONLY WHEN C is selected and all requirements are saved to document and frontmatter is updated, will you then read fully and follow: ./step-02-design-epics.md to begin epic design step.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

@@ -1,11 +1,12 @@
 ---
+null
 ---
 
 # Step 5: Adversarial Code Review
 
 **Goal:** Construct diff of all changes, invoke adversarial review skill, present findings.
 
----
+______________________________________________________________________
 
 ## AVAILABLE STATE
 
@@ -15,7 +16,7 @@ From previous steps:
 - `{execution_mode}` - "tech-spec" or "direct"
 - `{tech_spec_path}` - Tech-spec file (if Mode A)
 
----
+______________________________________________________________________
 
 ### 1. Construct Diff
 
@@ -49,7 +50,7 @@ Merge all changes into `{diff_output}`.
 
 **Note:** Do NOT `git add` anything - this is read-only inspection.
 
----
+______________________________________________________________________
 
 ### 2. Invoke Adversarial Review
 
@@ -57,7 +58,7 @@ With `{diff_output}` constructed, invoke the `bmad-review-adversarial-general` s
 
 Pass `{diff_output}` as the content to review. The skill should return a list of findings.
 
----
+______________________________________________________________________
 
 ### 3. Process Findings
 
@@ -69,13 +70,13 @@ Order findings by severity.
 Number the ordered findings (F1, F2, F3, etc.).
 If TodoWrite or similar tool is available, turn each finding into a TODO, include ID, severity, validity, and description in the TODO; otherwise present findings as a table with columns: ID, Severity, Validity, Description
 
----
+______________________________________________________________________
 
 ## NEXT STEP
 
 With findings in hand, read fully and follow: `./step-06-resolve-findings.md` for user to choose resolution approach.
 
----
+______________________________________________________________________
 
 ## SUCCESS METRICS
 

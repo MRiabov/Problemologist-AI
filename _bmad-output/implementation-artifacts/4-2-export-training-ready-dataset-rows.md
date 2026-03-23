@@ -9,11 +9,11 @@ As a dataset operator, I want completed benchmark and solution episodes exported
 ## Acceptance Criteria
 
 1. Given a completed benchmark or solution episode that passes schema, completeness, and lineage checks, when export runs, then the system writes a strict dataset-row archive with the source episode ID, benchmark ID, user session ID, episode type, revision hash, artifact hash, seed lineage fields, and latest-revision artifact references only.
-1. Given a row missing required metadata or with invalid lineage, when export runs, then the row is excluded and no dataset-row archive is produced for it.
-1. Given an exported benchmark or solution row, when I inspect the persisted export metadata later, then I can recover the source benchmark, the solution, the review artifacts, and the joinable session and episode identifiers without needing live worker state.
-1. Given persisted benchmark-owned or engineer-owned assets exist, when export builds the row, then it reads the stored assets and metadata from the episode and benchmark persistence surfaces, not from live workspace files or the UI-normalized list projection.
-1. Given render or manifest artifacts exist, when export runs, then it preserves the exact latest-revision media and manifest paths rather than substituting stale prior-revision references or text-only placeholders.
-1. Given a completed exported row, when I open the archive contents, then I see the persisted artifact families for that episode type, including plans, TODOs, journals, implementation files, review YAMLs, and render manifests, rather than a partial UI projection.
+2. Given a row missing required metadata or with invalid lineage, when export runs, then the row is excluded and no dataset-row archive is produced for it.
+3. Given an exported benchmark or solution row, when I inspect the persisted export metadata later, then I can recover the source benchmark, the solution, the review artifacts, and the joinable session and episode identifiers without needing live worker state.
+4. Given persisted benchmark-owned or engineer-owned assets exist, when export builds the row, then it reads the stored assets and metadata from the episode and benchmark persistence surfaces, not from live workspace files or the UI-normalized list projection.
+5. Given render or manifest artifacts exist, when export runs, then it preserves the exact latest-revision media and manifest paths rather than substituting stale prior-revision references or text-only placeholders.
+6. Given a completed exported row, when I open the archive contents, then I see the persisted artifact families for that episode type, including plans, TODOs, journals, implementation files, review YAMLs, and render manifests, rather than a partial UI projection.
 
 ## Tasks / Subtasks
 
@@ -96,13 +96,13 @@ As a dataset operator, I want completed benchmark and solution episodes exported
 - [Source: specs/architecture/simulation-and-dod.md, latest-revision validation preview and reproducibility contract]
 - [Source: specs/architecture/observability.md, joinable IDs, lineage, terminal reasons, and dataset-export observability requirements]
 - [Source: specs/dataset-generation.md, S3 archive generation and metadata-only DB storage contract]
-- [Source: controller/api/schemas.py, `EpisodeResponse`, `EpisodeListItem`, `AssetResponse`, and response model patterns]
+- \[Source: controller/api/schemas.py, `EpisodeResponse`, `EpisodeListItem`, `AssetResponse`, and response model patterns\]
 - [Source: controller/api/main.py, controller router registration pattern]
-- [Source: controller/api/routes/episodes.py, persisted episode/assets read model and `_normalize_plan_markdown()` fallback to avoid for export]
+- \[Source: controller/api/routes/episodes.py, persisted episode/assets read model and `_normalize_plan_markdown()` fallback to avoid for export\]
 - [Source: controller/api/routes/benchmark.py, benchmark session read model and benchmark asset source surface]
 - [Source: controller/persistence/models.py, episode, trace, asset, and benchmark asset persistence models]
-- [Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, and lineage-bearing schema fields]
-- [Source: shared/enums.py, `EpisodeType`, `GenerationKind`, and `SeedMatchMethod` provenance enums]
+- \[Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, and lineage-bearing schema fields\]
+- \[Source: shared/enums.py, `EpisodeType`, `GenerationKind`, and `SeedMatchMethod` provenance enums\]
 - [Source: shared/workers/schema.py, review-manifest and validation-record schema patterns]
 - [Source: shared/observability/schemas.py, persisted event model patterns and lineage fields]
 - [Source: tests/integration/architecture_p1/test_handover.py, benchmark bundle persistence assertions]

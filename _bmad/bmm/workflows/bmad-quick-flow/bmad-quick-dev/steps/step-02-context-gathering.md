@@ -1,4 +1,5 @@
 ---
+null
 ---
 
 # Step 2: Context Gathering (Direct Mode)
@@ -7,7 +8,7 @@
 
 **Note:** This step only runs for Mode B (direct instructions). If `{execution_mode}` is "tech-spec", this step was skipped.
 
----
+______________________________________________________________________
 
 ## AVAILABLE STATE
 
@@ -17,7 +18,7 @@ From step-01:
 - `{execution_mode}` - Should be "direct"
 - `{project_context}` - Loaded if exists
 
----
+______________________________________________________________________
 
 ## EXECUTION SEQUENCE
 
@@ -57,7 +58,7 @@ Synthesize gathered context into:
 - Order of operations
 - Files to touch
 
----
+______________________________________________________________________
 
 ## PRESENT PLAN
 
@@ -87,7 +88,7 @@ Ready to execute? (y/n/adjust)
 - **n:** Gather more context or clarify
 - **adjust:** Modify the plan based on feedback
 
----
+______________________________________________________________________
 
 ## NEXT STEP DIRECTIVE
 
@@ -96,7 +97,7 @@ Ready to execute? (y/n/adjust)
 - **y:** "**NEXT:** Read fully and follow: `./step-03-execute.md`"
 - **n/adjust:** Continue gathering context, then re-present plan
 
----
+______________________________________________________________________
 
 ## SUCCESS METRICS
 

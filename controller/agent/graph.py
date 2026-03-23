@@ -12,16 +12,16 @@ from controller.agent.context_usage import (
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.agent.node_entry_validation import (
-    ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ELECTRONICS_REVIEW_MANIFEST,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     NodeEntryValidationError,
     ValidationGraph,
-    engineer_benchmark_handover_custom_check,
     build_engineer_node_contracts,
+    engineer_benchmark_handover_custom_check,
     evaluate_node_entry_contract,
     integration_mode_enabled,
     plan_reviewer_handover_custom_check_from_session_id,

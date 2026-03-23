@@ -26,7 +26,7 @@
 │   │   │   │   ├── ./controller/agent/benchmark/templates/planner_prompt.txt
 │   │   │   │   └── ./controller/agent/benchmark/templates/reviewer_prompt.txt
 │   │   │   └── ./controller/agent/benchmark/utils
-│   │   │       └── ./controller/agent/benchmark/utils/__init__.py # Package initialization file.
+│   │   │   └── ./controller/agent/benchmark/utils/__init__.py # Package initialization file.
 │   │   ├── ./controller/agent/config.py # Python source code.
 │   │   ├── ./controller/agent/graph.py # Python source code.
 │   │   ├── ./controller/agent/__init__.py # Package initialization file.
@@ -45,8 +45,8 @@
 │   │   ├── ./controller/api/manager.py # Python source code.
 │   │   ├── ./controller/api/ops.py # Python source code.
 │   │   └── ./controller/api/routes
-│   │       ├── ./controller/api/routes/episodes.py # API endpoints for managing episodes.
-│   │       └── ./controller/api/routes/skills.py # Python source code.
+│   │   ├── ./controller/api/routes/episodes.py # API endpoints for managing episodes.
+│   │   └── ./controller/api/routes/skills.py # Python source code.
 │   ├── ./controller/clients # Clients for external services and worker communication.
 │   │   ├── ./controller/clients/backend.py # Python source code.
 │   │   ├── ./controller/clients/__init__.py # Package initialization file.
@@ -65,9 +65,9 @@
 │   │   ├── ./controller/migrations/README
 │   │   ├── ./controller/migrations/script.py.mako
 │   │   └── ./controller/migrations/versions
-│   │       ├── ./controller/migrations/versions/5b673a27de1b_initial_benchmark_models.py # Python source code.
-│   │       ├── ./controller/migrations/versions/b5f3ce2a7b6d_add_episode_trace_and_asset_models.py # Python source code.
-│   │       └── ./controller/migrations/versions/__init__.py # Package initialization file.
+│   │   ├── ./controller/migrations/versions/5b673a27de1b_initial_benchmark_models.py # Python source code.
+│   │   ├── ./controller/migrations/versions/b5f3ce2a7b6d_add_episode_trace_and_asset_models.py # Python source code.
+│   │   └── ./controller/migrations/versions/__init__.py # Package initialization file.
 │   ├── ./controller/observability # Tracing (LangFuse), logging, and metrics.
 │   │   ├── ./controller/observability/broadcast.py # Python source code.
 │   │   ├── ./controller/observability/database.py # Python source code.
@@ -82,8 +82,8 @@
 │   ├── ./controller/tools
 │   │   └── ./controller/tools/fs.py # Python source code.
 │   └── ./controller/workflows # Temporal workflow definitions.
-│       ├── ./controller/workflows/execution.py # Python source code.
-│       └── ./controller/workflows/simulation.py # Python source code.
+│   ├── ./controller/workflows/execution.py # Python source code.
+│   └── ./controller/workflows/simulation.py # Python source code.
 ├── ./controller_openapi.json # OpenAPI specification for the Controller API.
 ├── ./debug_single_simulation.py # Python source code.
 ├── ./docker-compose.yml # Docker composition for local development.
@@ -140,11 +140,11 @@
 │   │   │   │   │   ├── ./frontend/src/api/generated/models/TraceResponse.ts # TypeScript source code.
 │   │   │   │   │   └── ./frontend/src/api/generated/models/ValidationError.ts # TypeScript source code.
 │   │   │   │   └── ./frontend/src/api/generated/services
-│   │   │   │       ├── ./frontend/src/api/generated/services/DefaultService.ts # TypeScript source code.
-│   │   │   │       ├── ./frontend/src/api/generated/services/EpisodesService.ts # TypeScript source code.
-│   │   │   │       └── ./frontend/src/api/generated/services/SkillsService.ts # TypeScript source code.
+│   │   │   │   ├── ./frontend/src/api/generated/services/DefaultService.ts # TypeScript source code.
+│   │   │   │   ├── ./frontend/src/api/generated/services/EpisodesService.ts # TypeScript source code.
+│   │   │   │   └── ./frontend/src/api/generated/services/SkillsService.ts # TypeScript source code.
 │   │   │   └── ./frontend/src/api/__tests__
-│   │   │       └── ./frontend/src/api/__tests__/client.test.ts # TypeScript source code.
+│   │   │   └── ./frontend/src/api/__tests__/client.test.ts # TypeScript source code.
 │   │   ├── ./frontend/src/App.css # Cascading Style Sheets.
 │   │   ├── ./frontend/src/App.test.tsx # React component (TypeScript).
 │   │   ├── ./frontend/src/App.tsx # React component (TypeScript).
@@ -169,8 +169,8 @@
 │   │   │   ├── ./frontend/src/components/visualization
 │   │   │   │   └── ./frontend/src/components/visualization/ModelViewer.tsx # React component (TypeScript).
 │   │   │   └── ./frontend/src/components/workspace
-│   │   │       ├── ./frontend/src/components/workspace/ArtifactView.tsx # React component (TypeScript).
-│   │   │       └── ./frontend/src/components/workspace/ReasoningTraces.tsx # React component (TypeScript).
+│   │   │   ├── ./frontend/src/components/workspace/ArtifactView.tsx # React component (TypeScript).
+│   │   │   └── ./frontend/src/components/workspace/ReasoningTraces.tsx # React component (TypeScript).
 │   │   ├── ./frontend/src/context
 │   │   │   ├── ./frontend/src/context/ConnectionContext.tsx # React component (TypeScript).
 │   │   │   └── ./frontend/src/context/EpisodeContext.tsx # React component (TypeScript).
@@ -182,10 +182,10 @@
 │   │   │   ├── ./frontend/src/pages/BenchmarkGeneration.tsx # React component (TypeScript).
 │   │   │   ├── ./frontend/src/pages/EngineerWorkspace.tsx # React component (TypeScript).
 │   │   │   └── ./frontend/src/pages/__tests__
-│   │   │       ├── ./frontend/src/pages/__tests__/BenchmarkGeneration.test.tsx # React component (TypeScript).
-│   │   │       └── ./frontend/src/pages/__tests__/EngineerWorkspace.test.tsx # React component (TypeScript).
+│   │   │   ├── ./frontend/src/pages/__tests__/BenchmarkGeneration.test.tsx # React component (TypeScript).
+│   │   │   └── ./frontend/src/pages/__tests__/EngineerWorkspace.test.tsx # React component (TypeScript).
 │   │   └── ./frontend/src/test
-│   │       └── ./frontend/src/test/setup.ts # TypeScript source code.
+│   │   └── ./frontend/src/test/setup.ts # TypeScript source code.
 │   ├── ./frontend/tailwind.config.js
 │   ├── ./frontend/tsconfig.app.json # JSON data or configuration.
 │   ├── ./frontend/tsconfig.json # JSON data or configuration.
@@ -371,42 +371,42 @@
 │   ├── ./scripts/spec_kitty_progress.py # Python source code.
 │   ├── ./scripts/test_import.py # Python source code.
 │   └── ./scripts/throwaway
-│       ├── ./scripts/throwaway/reproduce_500.py # Python source code.
-│       └── ./scripts/throwaway/reproduce_async_error.py # Python source code.
+│   ├── ./scripts/throwaway/reproduce_500.py # Python source code.
+│   └── ./scripts/throwaway/reproduce_async_error.py # Python source code.
 ├── ./shared # Code shared between Controller and Worker.
 │   ├── ./shared/assets # Static assets, schemas, and templates.
 │   │   ├── ./shared/assets/cots_descriptions.json # JSON data or configuration.
 │   │   ├── ./shared/assets/schemas
 │   │   │   └── ./shared/assets/schemas/mjcf
-│   │   │       ├── ./shared/assets/schemas/mjcf/attribute_types
-│   │   │       │   └── ./shared/assets/schemas/mjcf/attribute_types/attribute_types.xsd
-│   │   │       ├── ./shared/assets/schemas/mjcf/element_types
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/actuator.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/asset.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/body.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/compiler.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/contact.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/custom.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/default.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/equality.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/keyframe.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/option.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/root.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/sensor.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/size.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/statistic.xsd
-│   │   │       │   ├── ./shared/assets/schemas/mjcf/element_types/tendon.xsd
-│   │   │       │   └── ./shared/assets/schemas/mjcf/element_types/visual.xsd
-│   │   │       ├── ./shared/assets/schemas/mjcf/example.xml
-│   │   │       ├── ./shared/assets/schemas/mjcf/LICENSE
-│   │   │       ├── ./shared/assets/schemas/mjcf/mujoco.xsd
-│   │   │       └── ./shared/assets/schemas/mjcf/README.md # Markdown documentation or specification.
+│   │   │   ├── ./shared/assets/schemas/mjcf/attribute_types
+│   │   │   │   └── ./shared/assets/schemas/mjcf/attribute_types/attribute_types.xsd
+│   │   │   ├── ./shared/assets/schemas/mjcf/element_types
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/actuator.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/asset.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/body.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/compiler.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/contact.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/custom.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/default.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/equality.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/keyframe.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/option.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/root.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/sensor.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/size.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/statistic.xsd
+│   │   │   │   ├── ./shared/assets/schemas/mjcf/element_types/tendon.xsd
+│   │   │   │   └── ./shared/assets/schemas/mjcf/element_types/visual.xsd
+│   │   │   ├── ./shared/assets/schemas/mjcf/example.xml
+│   │   │   ├── ./shared/assets/schemas/mjcf/LICENSE
+│   │   │   ├── ./shared/assets/schemas/mjcf/mujoco.xsd
+│   │   │   └── ./shared/assets/schemas/mjcf/README.md # Markdown documentation or specification.
 │   │   └── ./shared/assets/template_repos
-│   │       ├── ./shared/assets/template_repos/benchmark_generator
-│   │       │   ├── ./shared/assets/template_repos/benchmark_generator/plan.md # Markdown documentation or specification.
-│   │       │   └── ./shared/assets/template_repos/benchmark_generator/result.py # Python source code.
-│   │       └── ./shared/assets/template_repos/engineer
-│   │           └── ./shared/assets/template_repos/engineer/result.py # Python source code.
+│   │   ├── ./shared/assets/template_repos/benchmark_generator
+│   │   │   ├── ./shared/assets/template_repos/benchmark_generator/plan.md # Markdown documentation or specification.
+│   │   │   └── ./shared/assets/template_repos/benchmark_generator/result.py # Python source code.
+│   │   └── ./shared/assets/template_repos/engineer
+│   │   └── ./shared/assets/template_repos/engineer/result.py # Python source code.
 │   ├── ./shared/cli
 │   │   └── ./shared/cli/benchmark.py # Python source code.
 │   ├── ./shared/cots # Commercial Off-The-Shelf parts logic.
@@ -500,13 +500,13 @@
 │   │   ├── ./tests/workbenches/test_im.py # Test file.
 │   │   └── ./tests/workbenches/test_print_3d.py # Test file.
 │   └── ./tests/worker # Test file.
-│       ├── ./tests/worker/simulation # Test file.
-│       │   ├── ./tests/worker/simulation/test_builder.py # Test file.
-│       │   └── ./tests/worker/simulation/test_loop.py # Test file.
-│       ├── ./tests/worker/test_benchmark_tools.py # Test file.
-│       ├── ./tests/worker/test_filesystem.py # Test file.
-│       ├── ./tests/worker/test_model_integration.py # Test file.
-│       └── ./tests/worker/test_utils.py # Test file.
+│   ├── ./tests/worker/simulation # Test file.
+│   │   ├── ./tests/worker/simulation/test_builder.py # Test file.
+│   │   └── ./tests/worker/simulation/test_loop.py # Test file.
+│   ├── ./tests/worker/test_benchmark_tools.py # Test file.
+│   ├── ./tests/worker/test_filesystem.py # Test file.
+│   ├── ./tests/worker/test_model_integration.py # Test file.
+│   └── ./tests/worker/test_utils.py # Test file.
 ├── ./test_utils_manual.py # Python source code.
 ├── ./uv.lock # Dependency lock file.
 ├── ./worker # The 'Muscle': Executes code, simulations, and utilizes heavy tools.
@@ -554,15 +554,15 @@
 │   │   └── ./worker/utils/validation.py # Python source code.
 │   ├── ./worker/verify_dependencies.py # Python source code.
 │   └── ./worker/workbenches # Manufacturing constraints and pricing logic (CNC, IM, 3D Print).
-│       ├── ./worker/workbenches/analysis_utils.py # Python source code.
-│       ├── ./worker/workbenches/base.py # Python source code.
-│       ├── ./worker/workbenches/cnc.py # Python source code.
-│       ├── ./worker/workbenches/config.py # Python source code.
-│       ├── ./worker/workbenches/__init__.py # Package initialization file.
-│       ├── ./worker/workbenches/injection_molding.py # Python source code.
-│       ├── ./worker/workbenches/manufacturing_config.yaml # YAML configuration.
-│       ├── ./worker/workbenches/models.py # Python source code.
-│       └── ./worker/workbenches/print_3d.py # Python source code.
+│   ├── ./worker/workbenches/analysis_utils.py # Python source code.
+│   ├── ./worker/workbenches/base.py # Python source code.
+│   ├── ./worker/workbenches/cnc.py # Python source code.
+│   ├── ./worker/workbenches/config.py # Python source code.
+│   ├── ./worker/workbenches/__init__.py # Package initialization file.
+│   ├── ./worker/workbenches/injection_molding.py # Python source code.
+│   ├── ./worker/workbenches/manufacturing_config.yaml # YAML configuration.
+│   ├── ./worker/workbenches/models.py # Python source code.
+│   └── ./worker/workbenches/print_3d.py # Python source code.
 └── ./worker_openapi.json # OpenAPI specification for the Worker API.
 
 106 directories, 460 files

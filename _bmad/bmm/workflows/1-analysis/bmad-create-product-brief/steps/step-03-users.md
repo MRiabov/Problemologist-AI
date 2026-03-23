@@ -1,7 +1,6 @@
 ---
 # File References
 outputFile: '{planning_artifacts}/product-brief-{{project_name}}-{{date}}.md'
-
 ---
 
 # Step 3: Target Users Discovery
@@ -169,7 +168,7 @@ Prepare the following structure for document append:
 
 ONLY WHEN [C continue option] is selected and [user personas finalized and saved to document with frontmatter updated], will you then read fully and follow: `./step-04-metrics.md` to begin success metrics definition.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

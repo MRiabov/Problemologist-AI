@@ -693,6 +693,176 @@
         }
       }
     },
+    "/api/datasets/export": {
+      "post": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Export Dataset",
+        "operationId": "export_dataset_api_datasets_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/{episode_id}/export": {
+      "post": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Export Dataset For Episode",
+        "operationId": "export_dataset_for_episode_api_datasets__episode_id__export_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/exports/{export_id}": {
+      "get": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Get Dataset Export",
+        "operationId": "get_dataset_export_api_datasets_exports__export_id__get",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/datasets/episodes/{episode_id}": {
+      "get": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Get Dataset Export By Episode",
+        "operationId": "get_dataset_export_by_episode_api_datasets_episodes__episode_id__get",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/script-tools/validate": {
       "post": {
         "tags": [
@@ -1708,6 +1878,176 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BenchmarkObjectivesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/export": {
+      "post": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Export Dataset",
+        "operationId": "export_dataset_datasets_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{episode_id}/export": {
+      "post": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Export Dataset For Episode",
+        "operationId": "export_dataset_for_episode_datasets__episode_id__export_post",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/exports/{export_id}": {
+      "get": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Get Dataset Export",
+        "operationId": "get_dataset_export_datasets_exports__export_id__get",
+        "parameters": [
+          {
+            "name": "export_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Export Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/episodes/{episode_id}": {
+      "get": {
+        "tags": [
+          "datasets"
+        ],
+        "summary": "Get Dataset Export By Episode",
+        "operationId": "get_dataset_export_by_episode_datasets_episodes__episode_id__get",
+        "parameters": [
+          {
+            "name": "episode_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Episode Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetExportResponse"
                 }
               }
             }
@@ -3119,6 +3459,381 @@
         "title": "CustomObjectives",
         "description": "User-defined objectives/constraints for the benchmark."
       },
+      "DatasetExportRequest": {
+        "properties": {
+          "episode_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Episode Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "episode_id"
+        ],
+        "title": "DatasetExportRequest"
+      },
+      "DatasetExportResponse": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ResponseStatus"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "export_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Export Id"
+          },
+          "episode_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Episode Id"
+          },
+          "archive": {
+            "$ref": "#/components/schemas/ObjectStoragePointer"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/DatasetRowArchiveManifest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "export_id",
+          "episode_id",
+          "archive",
+          "manifest"
+        ],
+        "title": "DatasetExportResponse"
+      },
+      "DatasetRowArchiveManifest": {
+        "properties": {
+          "export_id": {
+            "type": "string",
+            "title": "Export Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "lineage": {
+            "$ref": "#/components/schemas/DatasetRowLineage"
+          },
+          "source_benchmark_asset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetRowBenchmarkAsset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artifact_references": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetRowArtifactReference"
+            },
+            "type": "array",
+            "title": "Artifact References"
+          },
+          "artifact_families": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Artifact Families"
+          },
+          "validation_notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "export_id",
+          "created_at",
+          "lineage"
+        ],
+        "title": "DatasetRowArchiveManifest",
+        "description": "Strict manifest persisted alongside a dataset-row archive."
+      },
+      "DatasetRowArtifactReference": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "family": {
+            "type": "string",
+            "title": "Family"
+          },
+          "asset_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssetType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_surface": {
+            "type": "string",
+            "title": "Source Surface"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "family",
+          "source_surface",
+          "sha256"
+        ],
+        "title": "DatasetRowArtifactReference",
+        "description": "Reference to a persisted artifact included in a dataset row archive."
+      },
+      "DatasetRowBenchmarkAsset": {
+        "properties": {
+          "benchmark_id": {
+            "type": "string",
+            "title": "Benchmark Id"
+          },
+          "mjcf_url": {
+            "type": "string",
+            "title": "Mjcf Url"
+          },
+          "build123d_url": {
+            "type": "string",
+            "title": "Build123D Url"
+          },
+          "preview_bundle_url": {
+            "type": "string",
+            "title": "Preview Bundle Url"
+          },
+          "random_variants": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Random Variants"
+          },
+          "difficulty_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Score"
+          },
+          "benchmark_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Benchmark Metadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "benchmark_id",
+          "mjcf_url",
+          "build123d_url",
+          "preview_bundle_url"
+        ],
+        "title": "DatasetRowBenchmarkAsset",
+        "description": "Snapshot of the benchmark asset surface used to materialize a dataset row."
+      },
+      "DatasetRowLineage": {
+        "properties": {
+          "episode_id": {
+            "type": "string",
+            "title": "Episode Id"
+          },
+          "benchmark_id": {
+            "type": "string",
+            "title": "Benchmark Id"
+          },
+          "user_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Session Id"
+          },
+          "worker_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Session Id"
+          },
+          "episode_type": {
+            "$ref": "#/components/schemas/EpisodeType"
+          },
+          "seed_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Id"
+          },
+          "seed_dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Dataset"
+          },
+          "seed_match_method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeedMatchMethod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generation_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenerationKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parent_seed_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Seed Id"
+          },
+          "is_integration_test": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Integration Test"
+          },
+          "integration_test_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Integration Test Id"
+          },
+          "simulation_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulation Run Id"
+          },
+          "cots_query_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cots Query Id"
+          },
+          "review_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Id"
+          },
+          "revision_hash": {
+            "type": "string",
+            "title": "Revision Hash"
+          },
+          "artifact_hash": {
+            "type": "string",
+            "title": "Artifact Hash"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "episode_id",
+          "benchmark_id",
+          "episode_type",
+          "revision_hash",
+          "artifact_hash"
+        ],
+        "title": "DatasetRowLineage",
+        "description": "Joinable lineage fields persisted with a dataset export row."
+      },
       "EpisodeCreateResponse": {
         "properties": {
           "episode_id": {
@@ -3782,6 +4497,34 @@
         ],
         "title": "MultiRunResult",
         "description": "Result of batched runtime-randomization verification."
+      },
+      "ObjectStoragePointer": {
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "title": "Bucket"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "key",
+          "sha256",
+          "size_bytes"
+        ],
+        "title": "ObjectStoragePointer"
       },
       "ObservabilityEventType": {
         "type": "string",

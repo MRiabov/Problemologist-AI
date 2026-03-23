@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from controller.clients.worker import WorkerClient
 from shared.enums import AgentName, BenchmarkRefusalReason
-from pydantic import BaseModel, Field
 from shared.models.schemas import (
     AssemblyDefinition,
     BenchmarkDefinition,
@@ -76,8 +77,7 @@ def _validate_benchmark_motion_visibility(
     )
     if not is_valid:
         return [
-            f"planner_semantic: {message}"
-            for message in benchmark_definition_or_errors
+            f"planner_semantic: {message}" for message in benchmark_definition_or_errors
         ]
     benchmark_definition = benchmark_definition_or_errors
     if not isinstance(benchmark_definition, BenchmarkDefinition):
@@ -91,8 +91,7 @@ def _validate_benchmark_motion_visibility(
     )
     if not is_valid:
         return [
-            f"planner_semantic: {message}"
-            for message in assembly_definition_or_errors
+            f"planner_semantic: {message}" for message in assembly_definition_or_errors
         ]
     assembly_definition = assembly_definition_or_errors
     if not isinstance(assembly_definition, AssemblyDefinition):
@@ -315,8 +314,8 @@ def build_benchmark_plan_reviewer_evidence(
     joined_errors = "; ".join(validation_errors)
     refusal_reason = extract_benchmark_refusal_reason(joined_errors)
     if validation_errors:
-        solvability_summary = (
-            "deterministic solvability checks failed: " + "; ".join(validation_errors)
+        solvability_summary = "deterministic solvability checks failed: " + "; ".join(
+            validation_errors
         )
     elif normalized_render_paths:
         solvability_summary = (

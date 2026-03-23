@@ -810,6 +810,7 @@ def _acquire_integration_run_lock(
                     ),
                     file=sys.stderr,
                 )
+                lock_file.close()
                 return None
 
         lease = IntegrationRunLease(
@@ -1739,10 +1740,9 @@ def _run_integration_command(
     processes: list[StartedProcess] = []
     frontend_pid_path = repo_root / "logs" / "frontend.pid"
 
-    async_cleanup_enabled = (
-        os.environ.get("INTEGRATION_ASYNC_CLEANUP", "0").strip() == "1"
-        and not args.wait_cleanup
-    )
+    # Keep teardown synchronous so the shared integration lock remains held
+    # until the environment is fully quiesced.
+    async_cleanup_enabled = False
     cleanup_target_pids: list[int] = []
 
     try:

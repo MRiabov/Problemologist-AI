@@ -16,6 +16,7 @@ This review records the planning and prompt infrastructure risks that could prev
 - Suggested fix: Align prompt paths to the actual skill locations, or vendor the skills into the repo under `skills/` to match the prompt. -->
 
 <!-- Incorrect - the agent actually fetches skills from a git repo. That said, isn't this already done? -->
+
 <!-- 
 ### 2. Absolute Path Mismatch for Manufacturing Config and Available Parts
 
@@ -38,7 +39,7 @@ Response: Skills are synced in the worker on startup via `worker/skills/sync.py`
 - Impact: A planner or benchmark generator that follows the prompt example will produce an `benchmark_definition.yaml` that fails validation in `worker/utils/file_validation.py`.
 - Suggested fix: Update the prompt example to match the Pydantic schema or relax validation to accept the legacy flat schema.
 
-User review: it should be as in desired_architecture.md document, search for "```yaml" in that document. That template should be pre-populated at startup for the planner.
+User review: it should be as in desired_architecture.md document, search for "\`\`\`yaml" in that document. That template should be pre-populated at startup for the planner.
 Response: Updated `config/prompts.yaml` to use the objectives template from `desired_architecture.md` and to state that `benchmark_definition.yaml` is pre-populated at startup.
 
 ### 4. COTS Search Requirement Not Operationalized in Planner Prompt

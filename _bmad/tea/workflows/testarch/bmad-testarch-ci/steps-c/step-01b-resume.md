@@ -1,6 +1,6 @@
 ---
-name: 'step-01b-resume'
-description: 'Resume interrupted workflow from last completed step'
+name: step-01b-resume
+description: Resume interrupted workflow from last completed step
 outputFile: '{test_artifacts}/ci-pipeline-progress.md'
 ---
 
@@ -15,7 +15,7 @@ Resume an interrupted workflow by loading the existing progress document, displa
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -47,7 +47,7 @@ Read `{outputFile}` and parse YAML frontmatter for:
 
 **THEN:** Halt. Do not proceed.
 
----
+______________________________________________________________________
 
 ### 2. Verify Previously Created Artifacts
 
@@ -56,7 +56,7 @@ Since this is a file-creation workflow, verify that artifacts from completed ste
 - If `step-02-generate-pipeline` is in `stepsCompleted`, check that the pipeline config file exists (e.g., `.github/workflows/test.yml` or equivalent)
 - If any expected artifact is missing, warn the user and suggest re-running from the step that creates it
 
----
+______________________________________________________________________
 
 ### 3. Display Progress Dashboard
 
@@ -72,7 +72,7 @@ Display:
 3. Configure Quality Gates (step-03-configure-quality-gates) — {✅ if in stepsCompleted, ⬜ otherwise}
 4. Validate & Summary (step-04-validate-and-summary) — {✅ if in stepsCompleted, ⬜ otherwise}"
 
----
+______________________________________________________________________
 
 ### 4. Route to Next Step
 
@@ -89,7 +89,7 @@ Based on `lastStep`, load the next incomplete step:
 
 The existing content in `{outputFile}` provides context from previously completed steps. Use it as reference for remaining steps.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

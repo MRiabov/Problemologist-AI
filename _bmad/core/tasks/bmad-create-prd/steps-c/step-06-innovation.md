@@ -7,12 +7,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between PM peers
+
 - 📋 YOU ARE A FACILITATOR, not a content generator
+
 - 💬 FOCUS on detecting and exploring innovative aspects of the product
+
 - 🎯 OPTIONAL STEP: Only proceed if innovation signals are detected
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+
 - ✅ YOU MUST ALWAYS WRITE all artifact and document content in `{document_output_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -78,6 +85,7 @@ Match user descriptions against innovation_signals for their project_type:
 ### 3. Initial Innovation Screening
 
 Ask targeted innovation discovery questions:
+
 - Guide exploration of what makes the product innovative
 - Explore if they're challenging existing assumptions
 - Ask about novel combinations of technologies/approaches
@@ -89,6 +97,7 @@ Ask targeted innovation discovery questions:
 If innovation signals are found, explore deeply:
 
 #### Innovation Discovery Questions:
+
 - What makes it unique compared to existing solutions?
 - What assumption are you challenging?
 - How do we validate it works?
@@ -132,6 +141,7 @@ When saving to document, append these Level 2 and Level 3 sections:
 ### 6. Present MENU OPTIONS (Only if Innovation Detected)
 
 Present the innovation content for review, then display menu:
+
 - Show identified innovative aspects (using structure from section 5)
 - Highlight differentiation from existing solutions
 - Ask if they'd like to refine further, get other perspectives, or proceed
@@ -140,12 +150,14 @@ Present the innovation content for review, then display menu:
 Display: "**Select:** [A] Advanced Elicitation [P] Party Mode [C] Continue to Project Type Analysis (Step 7 of 11)"
 
 #### Menu Handling Logic:
+
 - IF A: Invoke the `bmad-advanced-elicitation` skill with the current innovation content, process the enhanced innovation insights that come back, ask user "Accept these improvements to the innovation analysis? (y/n)", if yes update content with improvements then redisplay menu, if no keep original content then redisplay menu
 - IF P: Invoke the `bmad-party-mode` skill with the current innovation content, process the collaborative innovation exploration and ideation, ask user "Accept these changes to the innovation analysis? (y/n)", if yes update content with improvements then redisplay menu, if no keep original content then redisplay menu
 - IF C: Append the final content to {outputFile}, update frontmatter by adding this step name to the end of the stepsCompleted array, then read fully and follow: ./step-07-project-type.md
 - IF Any other: help user respond, then redisplay menu
 
 #### EXECUTION RULES:
+
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed to next step when user selects 'C'
 - After other menu items execution, return to this menu
@@ -153,6 +165,7 @@ Display: "**Select:** [A] Advanced Elicitation [P] Party Mode [C] Continue to Pr
 ## NO INNOVATION DETECTED:
 
 If no genuine innovation signals are found after exploration:
+
 - Acknowledge that no clear innovation signals were found
 - Note this is fine - many successful products are excellent executions of existing concepts
 - Ask if they'd like to try finding innovative angles or proceed
@@ -160,10 +173,12 @@ If no genuine innovation signals are found after exploration:
 Display: "**Select:** [A] Advanced Elicitation - Let's try to find innovative angles [C] Continue - Skip innovation section and move to Project Type Analysis (Step 7 of 11)"
 
 ### Menu Handling Logic:
+
 - IF A: Proceed with content generation anyway, then return to menu
 - IF C: Skip this step, then read fully and follow: ./step-07-project-type.md
 
 ### EXECUTION RULES:
+
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed to next step when user selects 'C'
 

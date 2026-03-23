@@ -15,8 +15,10 @@ from pydantic import ValidationError
 sys.path.append(str(Path(__file__).parents[3]))
 from shared.enums import ManufacturingMethod
 from shared.models.schemas import AssemblyDefinition
-from worker_heavy.utils.dfm import calculate_declared_assembly_cost
-from worker_heavy.utils.dfm import load_planner_manufacturing_config
+from worker_heavy.utils.dfm import (
+    calculate_declared_assembly_cost,
+    load_planner_manufacturing_config,
+)
 
 logger = structlog.get_logger(__name__)
 

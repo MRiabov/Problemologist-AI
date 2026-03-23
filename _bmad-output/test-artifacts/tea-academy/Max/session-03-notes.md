@@ -29,9 +29,9 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **Fixture Composition:** build small fixtures and merge them to avoid repeated setup.
-1. **Network-First Patterns:** set up network interception before the triggering action to avoid races.
-1. **Data Factories:** generate consistent test data with override-friendly factory functions.
-1. **Step-File Architecture:** self-contained steps, just-in-time loading, sequential enforcement, and resumable progress.
+2. **Network-First Patterns:** set up network interception before the triggering action to avoid races.
+3. **Data Factories:** generate consistent test data with override-friendly factory functions.
+4. **Step-File Architecture:** self-contained steps, just-in-time loading, sequential enforcement, and resumable progress.
 
 ______________________________________________________________________
 
@@ -64,8 +64,8 @@ ______________________________________________________________________
 ### Questions & Answers
 
 1. What is the main benefit of fixture composition? → `B` (correct)
-1. Why is network-first better than mocking after the action? → `B` (correct)
-1. What pattern does this teaching workflow use? → `C` (correct)
+2. Why is network-first better than mocking after the action? → `B` (correct)
+3. What pattern does this teaching workflow use? → `C` (correct)
 
 ______________________________________________________________________
 

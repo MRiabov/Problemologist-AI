@@ -1,11 +1,12 @@
 ---
+null
 ---
 
 # Step 1: Mode Detection
 
 **Goal:** Determine execution mode, capture baseline, handle escalation if needed.
 
----
+______________________________________________________________________
 
 ## STATE VARIABLES (capture now, persist throughout)
 
@@ -15,7 +16,7 @@ These variables MUST be set in this step and available to all subsequent steps:
 - `{execution_mode}` - "tech-spec" or "direct"
 - `{tech_spec_path}` - Path to tech-spec file (if Mode A)
 
----
+______________________________________________________________________
 
 ## EXECUTION SEQUENCE
 
@@ -53,7 +54,7 @@ Analyze the user's input to determine mode:
 - Set `{execution_mode}` = "direct"
 - **NEXT:** Evaluate escalation threshold, then proceed
 
----
+______________________________________________________________________
 
 ## ESCALATION THRESHOLD (Mode B only)
 
@@ -75,7 +76,7 @@ Evaluate user input with minimal token usage (no file loading):
 
 Use holistic judgment, not mechanical keyword matching.
 
----
+______________________________________________________________________
 
 ## ESCALATION HANDLING
 
@@ -93,7 +94,7 @@ Display: "**Select:** [P] Plan first (tech-spec) [E] Execute directly"
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed when user makes a selection
 
----
+______________________________________________________________________
 
 ### Escalation Triggered - Level 0-2
 
@@ -116,7 +117,7 @@ Display:
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed when user makes a selection
 
----
+______________________________________________________________________
 
 ### Escalation Triggered - Level 3+
 
@@ -139,7 +140,7 @@ Display:
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed when user makes a selection
 
----
+______________________________________________________________________
 
 ## NEXT STEP DIRECTIVE
 
@@ -149,7 +150,7 @@ Display:
 - Mode B (direct, [E] selected): "**NEXT:** Read fully and follow: `./step-02-context-gathering.md`"
 - Escalation ([P] or [W]): "**EXITING Quick Dev.** Follow the directed workflow."
 
----
+______________________________________________________________________
 
 ## SUCCESS METRICS
 

@@ -127,7 +127,7 @@ Recap that the brief captures everything needed to guide subsequent product deve
 
 Product Brief complete. Invoke the `bmad-help` skill.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

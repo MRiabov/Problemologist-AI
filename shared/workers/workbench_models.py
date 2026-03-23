@@ -25,6 +25,8 @@ class CostBreakdown(BaseModel):
     unit_cost: float
     material_cost_per_unit: float
     setup_cost: float
+    variable_cost_per_unit: float = 0.0
+    quantity: int = 1
     is_reused: bool
     details: dict[str, Any] = Field(default_factory=dict)
     pricing_explanation: str = ""

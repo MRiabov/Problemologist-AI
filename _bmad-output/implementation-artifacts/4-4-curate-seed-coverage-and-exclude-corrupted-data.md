@@ -9,10 +9,10 @@ As a dataset operator, I want to manage coverage by seed and problem family and 
 ## Acceptance Criteria
 
 1. Given repeated seed variants or underrepresented families, when export prioritization runs, then the system tracks coverage through `seed_id`, `seed_dataset`, `seed_match_method`, `generation_kind`, and `parent_seed_id`, and uses those persisted lineage fields to order work deterministically instead of relying on incidental iteration order.
-1. Given integration-test runs or episodes inside known-corrupted windows, including the historical pre-2026-03-03 00:00 Europe/Dublin cutoff documented in `specs/dataset-generation.md`, when curation or export runs, then those rows are excluded fail-closed with stable machine-readable reason codes and no dataset row is produced for them.
-1. Given multiple seeds for the same benchmark family, when I inspect the curated export manifest, then it includes family-level coverage counts, accepted-vs-rejected counts, and dropped-lineage provenance so I can reproduce why a row was kept or excluded.
-1. Given the same seed inputs and persisted metadata, when curation runs twice without source changes, then the keep/drop decisions, family coverage counts, and output ordering are deterministic and do not depend on live workspace state, row materialization order, or UI-normalized read models.
-1. Given a row is excluded, when I inspect the curation metadata later, then the source episode and seed identifiers plus the exclusion reason list are preserved in a typed manifest rather than being inferred from missing output files.
+2. Given integration-test runs or episodes inside known-corrupted windows, including the historical pre-2026-03-03 00:00 Europe/Dublin cutoff documented in `specs/dataset-generation.md`, when curation or export runs, then those rows are excluded fail-closed with stable machine-readable reason codes and no dataset row is produced for them.
+3. Given multiple seeds for the same benchmark family, when I inspect the curated export manifest, then it includes family-level coverage counts, accepted-vs-rejected counts, and dropped-lineage provenance so I can reproduce why a row was kept or excluded.
+4. Given the same seed inputs and persisted metadata, when curation runs twice without source changes, then the keep/drop decisions, family coverage counts, and output ordering are deterministic and do not depend on live workspace state, row materialization order, or UI-normalized read models.
+5. Given a row is excluded, when I inspect the curation metadata later, then the source episode and seed identifiers plus the exclusion reason list are preserved in a typed manifest rather than being inferred from missing output files.
 
 ## Tasks / Subtasks
 
@@ -82,8 +82,8 @@ As a dataset operator, I want to manage coverage by seed and problem family and 
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 4: Dataset Export & Replay and Story 4.4: Curate Seed Coverage and Exclude Corrupted Data]
-- [Source: _bmad-output/planning-artifacts/prd.md, Journey 3 and Journey 4, dataset readiness, reproducibility, and corruption filtering]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 4: Dataset Export & Replay and Story 4.4: Curate Seed Coverage and Exclude Corrupted Data]
+- [Source: \_bmad-output/planning-artifacts/prd.md, Journey 3 and Journey 4, dataset readiness, reproducibility, and corruption filtering]
 - [Source: specs/desired_architecture.md, architecture index for agents, evaluation gates, simulation, and observability contracts]
 - [Source: specs/architecture/primary-system-objectives.md, product-level benchmark and training-dataset goals]
 - [Source: specs/architecture/agents/overview.md, benchmark/engineer workflow split]
@@ -97,8 +97,8 @@ As a dataset operator, I want to manage coverage by seed and problem family and 
 - [Source: specs/architecture/simulation-and-dod.md, latest-revision validation preview and reproducibility contract]
 - [Source: specs/architecture/observability.md, joinable IDs, lineage, terminal reasons, seed tracking, and dataset-export observability requirements]
 - [Source: specs/dataset-generation.md, S3 archive generation, metadata-only DB storage contract, and the historical corrupted-data cutoff]
-- [Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, and lineage-bearing schema fields]
-- [Source: shared/enums.py, `GenerationKind` and `SeedMatchMethod` provenance enums]
+- \[Source: shared/models/schemas.py, `EpisodeMetadata`, `TraceMetadata`, and lineage-bearing schema fields\]
+- \[Source: shared/enums.py, `GenerationKind` and `SeedMatchMethod` provenance enums\]
 - [Source: evals/logic/runner.py, seed lineage capture, hard-check aggregation, and manifest generation]
 - [Source: evals/logic/workspace.py, seeded workspace materialization and entry-contract preflight]
 - [Source: scripts/validate_eval_seed.py, seeded workspace validation and seed preflight]

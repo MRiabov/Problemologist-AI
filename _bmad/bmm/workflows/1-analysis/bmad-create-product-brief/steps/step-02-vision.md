@@ -1,7 +1,6 @@
 ---
 # File References
 outputFile: '{planning_artifacts}/product-brief-{{project_name}}-{{date}}.md'
-
 ---
 
 # Step 2: Product Vision Discovery
@@ -166,7 +165,7 @@ Prepare the following structure for document append:
 
 ONLY WHEN [C continue option] is selected and [vision content finalized and saved to document with frontmatter updated], will you then read fully and follow: `./step-03-users.md` to begin target user discovery.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

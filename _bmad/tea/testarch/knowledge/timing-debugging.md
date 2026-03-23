@@ -114,7 +114,7 @@ test.describe('Race Condition Prevention Patterns', () => {
 - Avoid networkidle: Unreliable in SPAs (WebSocket, polling connections)
 - Explicit waits: Document exactly what we're waiting for
 
----
+______________________________________________________________________
 
 ### Example 2: Deterministic Waiting Patterns (Event-Based, Not Time-Based)
 
@@ -198,7 +198,7 @@ test.describe('Deterministic Waiting Patterns', () => {
 - Cypress `cy.wait('@alias')`: Deterministic wait for aliased intercepts
 - All waits are event-based (not time-based)
 
----
+______________________________________________________________________
 
 ### Example 3: Timing Anti-Patterns (What NEVER to Do)
 
@@ -288,7 +288,7 @@ test.describe('Timing Anti-Patterns to Avoid', () => {
 
 **Better Approach**: Use event-based waits from examples above
 
----
+______________________________________________________________________
 
 ## Async Debugging Techniques
 
@@ -348,7 +348,7 @@ test('use trace viewer to debug timing', async ({ page }) => {
 });
 ```
 
----
+______________________________________________________________________
 
 ## Race Condition Checklist
 

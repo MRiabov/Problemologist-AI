@@ -15,7 +15,7 @@
 3. Describe risk if criterion unmet
 4. Map to test scenarios (what tests validate this criterion)
 
----
+______________________________________________________________________
 
 ## 1. Testability & Automation
 
@@ -42,7 +42,7 @@
 - 1.3 (State Control): Implement `/api/test-data` seeding endpoints (dev/staging only)
 - 1.4 (Sample Requests): Add "Example API Calls" section to ADR with cURL commands
 
----
+______________________________________________________________________
 
 ## 2. Test Data Strategy
 
@@ -66,7 +66,7 @@
 - 2.2 (Generation): Use Faker library, create synthetic data generators, prohibit prod dumps
 - 2.3 (Teardown): Auto-cleanup hooks in test framework, isolated test customer IDs
 
----
+______________________________________________________________________
 
 ## 3. Scalability & Availability
 
@@ -93,7 +93,7 @@
 - 3.3 (SLA): Define realistic SLA (99.9% = 43 min/month downtime), add redundancy
 - 3.4 (Circuit Breakers): Implement circuit breakers (Hystrix pattern), fail fast on errors
 
----
+______________________________________________________________________
 
 ## 4. Disaster Recovery (DR)
 
@@ -117,7 +117,7 @@
 - 4.2 (Failover): Automate multi-region failover, practice failover drills quarterly
 - 4.3 (Backups): Implement immutable backups (S3 versioning), test restore monthly
 
----
+______________________________________________________________________
 
 ## 5. Security
 
@@ -144,7 +144,7 @@
 - 5.3 (Secrets): Migrate to AWS Secrets Manager/Vault, scan git history for leaks
 - 5.4 (Input Validation): Sanitize all inputs, use parameterized queries, escape outputs
 
----
+______________________________________________________________________
 
 ## 6. Monitorability, Debuggability & Manageability
 
@@ -171,7 +171,7 @@
 - 6.3 (Metrics): Expose /metrics endpoint, track RED metrics (Rate, Errors, Duration)
 - 6.4 (Config): Externalize config (AWS SSM/AppConfig), use feature flags (LaunchDarkly)
 
----
+______________________________________________________________________
 
 ## 7. QoS (Quality of Service) & QoE (Quality of Experience)
 
@@ -179,7 +179,7 @@
 
 | #   | Criterion                                                                                            | Risk if Unmet                                          | Typical Test Scenarios (P0-P2)                                                                  |
 | --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| 7.1 | **Latency (QoS):** What are the P95 and P99 latency targets?                                         | Slow API responses affecting throughput                | P3: P95 latency <Xs (load test), P3: P99 latency <Ys (load test)                                |
+| 7.1 | **Latency (QoS):** What are the P95 and P99 latency targets?                                         | Slow API responses affecting throughput                | P3: P95 latency \<Xs (load test), P3: P99 latency \<Ys (load test)                              |
 | 7.2 | **Throttling (QoS):** Is there Rate Limiting to prevent "noisy neighbors" or DDoS?                   | Service degradation for all users due to one bad actor | P2: Rate limiting enforced, P2: 429 returned when limit exceeded                                |
 | 7.3 | **Perceived Performance (QoE):** Does the UI show optimistic updates or skeletons while loading?     | App feels sluggish to the user                         | P2: Skeleton/spinner shown while loading (E2E), P2: Optimistic updates (E2E)                    |
 | 7.4 | **Degradation (QoE):** If the service is slow, does it show a friendly message or a raw stack trace? | Poor user trust; frustration                           | P2: Friendly error message shown (not stack trace), P1: Error boundary catches exceptions (E2E) |
@@ -193,12 +193,12 @@
 
 **Mitigation Examples:**
 
-- 7.1 (Latency): Define SLOs (P95 <2s, P99 <5s), load test to validate
+- 7.1 (Latency): Define SLOs (P95 \<2s, P99 \<5s), load test to validate
 - 7.2 (Throttling): Implement rate limiting (per-user, per-IP), return 429 with Retry-After
 - 7.3 (Perceived Performance): Add skeleton screens, optimistic updates, progressive loading
 - 7.4 (Degradation): Implement error boundaries, show friendly messages, log stack traces server-side
 
----
+______________________________________________________________________
 
 ## 8. Deployability
 
@@ -222,7 +222,7 @@
 - 8.2 (Backward Compatibility): Separate DB migrations from code deploys, support N-1 schema
 - 8.3 (Rollback): Automate rollback on health check failures, test rollback procedures
 
----
+______________________________________________________________________
 
 ## Usage in Test Design Workflow
 
@@ -292,7 +292,7 @@ Can we verify this effectively without manual toil?
 - [ ] State Control: Inject edge case (expired subscription user)
 ```
 
----
+______________________________________________________________________
 
 ## Usage in NFR Assessment Workflow
 
@@ -346,7 +346,7 @@ Can we verify this effectively without manual toil?
 {Repeat for all 8 categories}
 ```
 
----
+______________________________________________________________________
 
 ## Benefits
 

@@ -173,7 +173,7 @@ Review and adjust priorities based on:
 - Test failure history
 - Business priority changes
 
----
+______________________________________________________________________
 
 ## Automated Priority Classification
 
@@ -332,7 +332,7 @@ npx playwright test --grep "@p0|@p1"
 npx playwright test
 ```
 
----
+______________________________________________________________________
 
 ## Integration with Risk Scoring
 
@@ -347,7 +347,7 @@ Priority should align with risk score from `probability-impact.md`:
 
 **Example**: Risk score 9 (checkout API failure) → P0 priority → comprehensive coverage required.
 
----
+______________________________________________________________________
 
 ## Priority Checklist
 
@@ -356,7 +356,7 @@ Before finalizing test priorities:
 - [ ] **Revenue impact assessed**: Payment, subscription, billing features → P0
 - [ ] **Security risks identified**: Auth, data exposure, injection attacks → P0
 - [ ] **Compliance requirements documented**: GDPR, PCI-DSS, SOC2 → P0
-- [ ] **User impact quantified**: >50% users → P0/P1, <10% → P2/P3
+- [ ] **User impact quantified**: >50% users → P0/P1, \<10% → P2/P3
 - [ ] **Previous failures reviewed**: Regression prevention → increase priority
 - [ ] **Complexity evaluated**: >500 LOC or multiple dependencies → increase priority
 - [ ] **Usage metrics consulted**: Frequent use → P0/P1, rare use → P2/P3

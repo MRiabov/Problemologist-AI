@@ -1096,9 +1096,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
                 "visual_inspection_satisfied": bool(
                     len(normalized_inspected_render_paths) >= policy.min_images
                 ),
-                "deterministic_error_count": float(
-                    len(evidence.deterministic_errors)
-                ),
+                "deterministic_error_count": float(len(evidence.deterministic_errors)),
                 "deterministic_refusal_reason": (
                     evidence.refusal_reason.value
                     if evidence.refusal_reason is not None
@@ -1124,9 +1122,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
             return review
 
         inspected_render_paths = [
-            path
-            for path in render_paths
-            if path in set(self._inspected_media_paths)
+            path for path in render_paths if path in set(self._inspected_media_paths)
         ]
         if len(set(inspected_render_paths)) >= policy.min_images:
             return review
@@ -1149,9 +1145,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
                 "inspected_render_count": float(len(inspected_render_paths)),
                 "visual_inspection_min_images": float(policy.min_images),
                 "visual_inspection_satisfied": False,
-                "deterministic_error_count": float(
-                    len(evidence.deterministic_errors)
-                ),
+                "deterministic_error_count": float(len(evidence.deterministic_errors)),
                 "deterministic_refusal_reason": (
                     evidence.refusal_reason.value
                     if evidence.refusal_reason is not None
@@ -1282,8 +1276,7 @@ class BenchmarkPlanReviewerNode(BaseNode):
             inspected_render_paths = [
                 path
                 for path in solvability_evidence.render_paths
-                if self._normalize_render_path(path)
-                in normalized_inspected_media_paths
+                if self._normalize_render_path(path) in normalized_inspected_media_paths
             ]
             review = self._augment_review_checklist(
                 review,

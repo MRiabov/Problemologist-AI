@@ -9,10 +9,10 @@ As a human operator, I want the system to identify unnecessary or unjustified de
 ## Acceptance Criteria
 
 1. Given two or more valid candidate solutions for the same benchmark, when the engineering planner compares them, then it prefers the candidate with fewer unnecessary degrees of freedom, actuators, and parts.
-1. Given a solution with unjustified extra movement, when the plan reviewer or execution reviewer inspects it, then the reviewer can reject or flag it as over-actuated or unnecessarily complex with an explicit reason.
-1. Given a solution whose motion is required by the benchmark objective or explicitly justified in the plan, when the reviewer evaluates it, then the system does not flag it as over-actuated merely because it moves.
-1. Given a part with `len(dofs) > 3`, when the plan reviewer or execution reviewer evaluates the handoff, then the run fails closed unless an accepted `DOF_JUSTIFICATION_ACCEPTED` or `DOF_JUSTIFICATION:<part_id>` marker is present.
-1. Given a reviewer decision, when the episode trace is persisted, then the event and checklist payload use the canonical DOF keys so downstream evals can distinguish minimality from justified deviation.
+2. Given a solution with unjustified extra movement, when the plan reviewer or execution reviewer inspects it, then the reviewer can reject or flag it as over-actuated or unnecessarily complex with an explicit reason.
+3. Given a solution whose motion is required by the benchmark objective or explicitly justified in the plan, when the reviewer evaluates it, then the system does not flag it as over-actuated merely because it moves.
+4. Given a part with `len(dofs) > 3`, when the plan reviewer or execution reviewer evaluates the handoff, then the run fails closed unless an accepted `DOF_JUSTIFICATION_ACCEPTED` or `DOF_JUSTIFICATION:<part_id>` marker is present.
+5. Given a reviewer decision, when the episode trace is persisted, then the event and checklist payload use the canonical DOF keys so downstream evals can distinguish minimality from justified deviation.
 
 ## Tasks / Subtasks
 

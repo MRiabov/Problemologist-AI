@@ -51,10 +51,10 @@ As a human operator, I want to submit feedback and present completed runs throug
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.4]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.4]
 - [Source: specs/frontend-specs.md, Collecting feedback from users]
 - [Source: specs/architecture/observability.md, User Reviews and trace feedback fields]
-- [Source: controller/api/schemas.py, `TraceResponse.feedback_score` and `feedback_comment`]
+- \[Source: controller/api/schemas.py, `TraceResponse.feedback_score` and `feedback_comment`\]
 - [Source: frontend/src/components/workspace/FeedbackSystem.tsx, modal UI, topic chips, and score editing]
 - [Source: frontend/src/components/workspace/TraceList.tsx, feedback entry points on completed traces]
 - [Source: frontend/src/components/layout/Sidebar.tsx, episode-level hover feedback entry points]

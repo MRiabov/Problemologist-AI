@@ -19,6 +19,7 @@ interface DesignViewerProps {
   modelUrls?: string[];
   videoUrl?: string | null;
   heatmapUrls?: string[];
+  mediaBundleKey?: string;
   circuitData?: any;
   isConnected?: boolean;
   resetTrigger?: number;
@@ -33,6 +34,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
   modelUrls = [],
   videoUrl,
   heatmapUrls = [],
+  mediaBundleKey,
   circuitData,
   isConnected = true,
   resetTrigger = 0,
@@ -43,16 +45,19 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>((videoUrl && videoUrl !== 'null') ? 'video' : '3d');
   const [activeHeatmapIdx, setActiveHeatmapIdx] = useState(0);
   const hasHeatmaps = heatmapUrls.length > 0;
+  const hasVideo = !!videoUrl && videoUrl !== 'null';
 
-  // WP11: Reset viewMode if video disappears or appears
+  // Reset the default view whenever the selected media bundle changes.
   useEffect(() => {
-    const hasVideo = !!videoUrl && videoUrl !== 'null';
-    if (hasVideo && viewMode !== 'video') {
-      setViewMode('video');
-    } else if (!hasVideo && viewMode === 'video') {
+    setViewMode(hasVideo ? 'video' : '3d');
+    setActiveHeatmapIdx(0);
+  }, [hasVideo, mediaBundleKey]);
+
+  useEffect(() => {
+    if (!hasVideo && viewMode === 'video') {
       setViewMode('3d');
     }
-  }, [videoUrl]);
+  }, [hasVideo, viewMode]);
 
   return (
     <div className="w-full h-full relative flex flex-col bg-slate-950 overflow-hidden" data-testid="design-viewer-root">
@@ -65,6 +70,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
         <Button
           variant="ghost"
           size="sm"
+          data-testid="design-viewer-mode-3d"
           className={cn(
             "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all",
             viewMode === '3d' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
@@ -78,6 +84,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
+            data-testid="design-viewer-mode-video"
             className={cn(
               "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all",
               viewMode === 'video' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
@@ -92,6 +99,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
+            data-testid="design-viewer-mode-heatmaps"
             className={cn(
               "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all",
               viewMode === 'heatmaps' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
@@ -106,6 +114,7 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
           <Button
             variant="ghost"
             size="sm"
+            data-testid="design-viewer-mode-electronics"
             className={cn(
               "h-7 px-3 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all",
               viewMode === 'electronics' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
@@ -120,7 +129,14 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 relative min-h-0 w-full h-full" data-testid="design-viewer-content">
-        {viewMode === '3d' && (
+        <div
+          data-testid="design-viewer-3d-panel"
+          className={cn(
+            "absolute inset-0 transition-opacity duration-150",
+            viewMode === "3d" ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+          )}
+          aria-hidden={viewMode !== "3d"}
+        >
           <ModelViewer 
             assetUrls={modelUrls} 
             isConnected={isConnected} 
@@ -131,10 +147,17 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
             onRebuildModel={onRebuildModel}
             data-testid="design-viewer-3d"
           />
-        )}
+        </div>
 
-        {viewMode === 'video' && videoUrl && (
-          <div className="w-full h-full flex items-center justify-center bg-black p-8" data-testid="design-viewer-video">
+        {videoUrl && (
+          <div
+            className={cn(
+              "absolute inset-0 w-full h-full flex items-center justify-center bg-black p-8 transition-opacity duration-150",
+              viewMode === "video" ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+            )}
+            data-testid="design-viewer-video"
+            aria-hidden={viewMode !== "video"}
+          >
             <video 
               src={videoUrl} 
               controls 
@@ -145,8 +168,15 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
           </div>
         )}
 
-        {viewMode === 'heatmaps' && hasHeatmaps && (
-          <div className="w-full h-full flex items-center justify-center bg-black relative p-8 group">
+        {hasHeatmaps && (
+          <div
+            className={cn(
+              "absolute inset-0 w-full h-full flex items-center justify-center bg-black relative p-8 group transition-opacity duration-150",
+              viewMode === "heatmaps" ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+            )}
+            aria-hidden={viewMode !== "heatmaps"}
+            data-testid="design-viewer-heatmaps"
+          >
             <img 
               src={heatmapUrls[activeHeatmapIdx]} 
               alt={`Stress Heatmap ${activeHeatmapIdx}`}
@@ -195,8 +225,15 @@ export const DesignViewer: React.FC<DesignViewerProps> = ({
           </div>
         )}
 
-        {viewMode === 'electronics' && circuitData && (
-          <div className="w-full h-full flex flex-col gap-6 p-16 overflow-y-auto no-scrollbar bg-slate-900/50">
+        {circuitData && (
+          <div
+            className={cn(
+              "absolute inset-0 w-full h-full flex flex-col gap-6 p-16 overflow-y-auto no-scrollbar bg-slate-900/50 transition-opacity duration-150",
+              viewMode === "electronics" ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+            )}
+            aria-hidden={viewMode !== "electronics"}
+            data-testid="design-viewer-electronics"
+          >
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[500px]">
                 <CircuitSchematic soup={circuitData.electronics} className="h-full" />
                 <WireView 

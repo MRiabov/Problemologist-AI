@@ -1,7 +1,6 @@
 ---
 # File References
 outputFile: '{planning_artifacts}/product-brief-{{project_name}}-{{date}}.md'
-
 ---
 
 # Step 5: MVP Scope Definition
@@ -186,7 +185,7 @@ Prepare the following structure for document append:
 
 ONLY WHEN [C continue option] is selected and [MVP scope finalized and saved to document with frontmatter updated], will you then read fully and follow: `./step-06-complete.md` to complete the product brief workflow.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

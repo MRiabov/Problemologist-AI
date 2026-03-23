@@ -9,9 +9,9 @@ As a human operator, I want to declare benchmark-owned fixtures with explicit in
 ## Acceptance Criteria
 
 1. Given benchmark-owned fixtures, when they are declared, then they remain read-only for the engineer by default.
-1. Given a fixture marked interactable, when the benchmark is validated and handed off, then the interaction surface is explicit and machine-readable in the persisted benchmark artifacts via the benchmark-owned permission marker.
-1. Given a benchmark-owned fixture declaration without explicit interaction permission, when an engineer-facing interaction is implied or attempted, then the handoff fails closed with a deterministic reason instead of inferring permission.
-1. Given benchmark-owned fixture declarations in the benchmark seed templates, when they round-trip through YAML serialization and reviewer handoff, then the explicit permission data remains visible in the engineer-read benchmark package.
+2. Given a fixture marked interactable, when the benchmark is validated and handed off, then the interaction surface is explicit and machine-readable in the persisted benchmark artifacts via the benchmark-owned permission marker.
+3. Given a benchmark-owned fixture declaration without explicit interaction permission, when an engineer-facing interaction is implied or attempted, then the handoff fails closed with a deterministic reason instead of inferring permission.
+4. Given benchmark-owned fixture declarations in the benchmark seed templates, when they round-trip through YAML serialization and reviewer handoff, then the explicit permission data remains visible in the engineer-read benchmark package.
 
 ## Tasks / Subtasks
 

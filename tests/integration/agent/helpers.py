@@ -11,8 +11,8 @@ import httpx
 import yaml
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
-from shared.git_utils import repo_revision
 from shared.enums import AgentName
+from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (

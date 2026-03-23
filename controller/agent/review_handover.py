@@ -148,13 +148,34 @@ async def _validate_render_manifest_bundle(
         except Exception as exc:
             return f"{manifest_path} invalid: {exc}"
 
+        if not render_manifest.revision:
+            return f"{manifest_path} revision is missing."
+        current_revision = _current_git_revision()
+        if current_revision is None:
+            return "current repository git revision could not be determined."
+        if render_manifest.revision.strip().lower() != current_revision:
+            return (
+                f"{manifest_path} revision does not match the latest repository "
+                "git revision."
+            )
+
         actual_render_paths = {
             _normalize_render_path(path)
             for path in render_manifest.artifacts.keys()
             if _is_static_preview_render(path)
         }
         if actual_render_paths == expected_render_paths:
-            continue
+            preview_paths = {
+                _normalize_render_path(path)
+                for path in render_manifest.preview_evidence_paths
+                if _is_static_preview_render(path)
+            }
+            if preview_paths == expected_render_paths:
+                continue
+            return (
+                f"{manifest_path} is out of sync with the latest preview bundle: "
+                "preview evidence paths do not match the artifact set."
+            )
 
         missing = sorted(expected_render_paths - actual_render_paths)
         unexpected = sorted(actual_render_paths - expected_render_paths)
@@ -216,6 +237,7 @@ async def _load_review_manifest(
     if manifest.assembly_definition_path:
         required_paths.append(manifest.assembly_definition_path)
     required_paths.extend(manifest.renders)
+    required_paths.extend(manifest.preview_evidence_paths)
 
     for path in required_paths:
         if not await worker_client.exists(path):
@@ -520,6 +542,25 @@ async def validate_approved_benchmark_bundle(
             None,
             "approved benchmark bundle invalid: review manifest session does not "
             "match the approved benchmark session.",
+        )
+    if (
+        manifest.episode_id
+        and manifest.episode_id.strip().lower() != normalized_episode_id.lower()
+    ):
+        return (
+            None,
+            "approved benchmark bundle invalid: review manifest episode does not "
+            "match the approved benchmark episode.",
+        )
+    if (
+        manifest.benchmark_worker_session_id
+        and manifest.benchmark_worker_session_id.strip().lower()
+        != benchmark_worker_session_id.lower()
+    ):
+        return (
+            None,
+            "approved benchmark bundle invalid: review manifest benchmark session "
+            "does not match the approved benchmark session.",
         )
 
     return (

@@ -16,8 +16,11 @@ from controller.api.schemas import (
 )
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import PlanReviewManifest
-from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from shared.workers.schema import PlanReviewManifest, RenderManifest
+from tests.integration.agent.helpers import (
+    repo_git_revision,
+    seed_benchmark_assembly_definition,
+)
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
 
@@ -79,11 +82,15 @@ async def test_reviewer_evidence_completeness():
                 and getattr(trace.trace_type, "value", str(trace.trace_type))
                 == "TOOL_START"
             ]
-            media_events = [trace for trace in traces if trace.name == "media_inspection"]
+            media_events = [
+                trace for trace in traces if trace.name == "media_inspection"
+            ]
             attachment_events = [
                 trace for trace in traces if trace.name == "llm_media_attached"
             ]
-            review_traces = [trace for trace in traces if trace.name == "review_decision"]
+            review_traces = [
+                trace for trace in traces if trace.name == "review_decision"
+            ]
             ep_data = candidate
             if (
                 manifest_paths
@@ -299,9 +306,15 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         ), "inspect_media must occur before the final benchmark plan review decision."
 
         artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
-        assert comments_paths, f"benchmark plan review comments missing. {artifact_paths}"
-        assert decision_paths, f"benchmark plan review decision missing. {artifact_paths}"
-        assert manifest_paths, f"benchmark plan review manifest missing. {artifact_paths}"
+        assert comments_paths, (
+            f"benchmark plan review comments missing. {artifact_paths}"
+        )
+        assert decision_paths, (
+            f"benchmark plan review decision missing. {artifact_paths}"
+        )
+        assert manifest_paths, (
+            f"benchmark plan review manifest missing. {artifact_paths}"
+        )
 
         decision_resp = await client.get(
             f"/episodes/{episode_id}/assets/{decision_paths[0]}"
@@ -310,7 +323,9 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         decision = yaml.safe_load(decision_resp.text)
         assert decision["decision"] == ReviewDecision.REJECT_PLAN.value, decision
 
-        comments_resp = await client.get(f"/episodes/{session_id}/assets/{comments_paths[0]}")
+        comments_resp = await client.get(
+            f"/episodes/{session_id}/assets/{comments_paths[0]}"
+        )
         assert comments_resp.status_code == 200, comments_resp.text
         comments = yaml.safe_load(comments_resp.text)
         assert comments["summary"].startswith("REJECT_PLAN:"), comments
@@ -329,6 +344,10 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         assert manifest.status == "ready_for_review"
         assert manifest.reviewer_stage == AgentName.BENCHMARK_PLAN_REVIEWER
         assert manifest.planner_node_type == AgentName.BENCHMARK_PLANNER
+        assert manifest.episode_id == str(benchmark_resp.episode_id)
+        assert manifest.worker_session_id == str(session_id)
+        assert manifest.benchmark_revision == repo_git_revision()
+        assert manifest.environment_version is not None
         assert manifest.artifact_hashes, manifest
         assert {
             "plan.md",
@@ -341,17 +360,31 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
         ]:
-            asset_resp = await client.get(
-                f"/episodes/{session_id}/assets/{rel_path}"
-            )
+            asset_resp = await client.get(f"/episodes/{session_id}/assets/{rel_path}")
             assert asset_resp.status_code == 200, asset_resp.text
-            expected_hash = hashlib.sha256(
-                asset_resp.text.encode("utf-8")
-            ).hexdigest()
+            expected_hash = hashlib.sha256(asset_resp.text.encode("utf-8")).hexdigest()
             assert manifest.artifact_hashes[rel_path] == expected_hash, (
                 f"{rel_path} hash mismatch. Manifest: {manifest.artifact_hashes[rel_path]} "
                 f"Asset hash: {expected_hash}"
             )
+
+        render_manifest_path = next(
+            path
+            for path in artifact_paths
+            if path.endswith("renders/render_manifest.json")
+        )
+        render_manifest_resp = await client.get(
+            f"/episodes/{session_id}/assets/{render_manifest_path}"
+        )
+        assert render_manifest_resp.status_code == 200, render_manifest_resp.text
+        render_manifest = RenderManifest.model_validate_json(render_manifest_resp.text)
+        assert render_manifest.episode_id == str(benchmark_resp.episode_id)
+        assert render_manifest.worker_session_id == str(session_id)
+        assert render_manifest.revision == repo_git_revision()
+        assert render_manifest.preview_evidence_paths
+        assert set(render_manifest.preview_evidence_paths).issubset(
+            set(render_manifest.artifacts.keys())
+        )
 
         assert not any(
             trace.name == "benchmark_coder"

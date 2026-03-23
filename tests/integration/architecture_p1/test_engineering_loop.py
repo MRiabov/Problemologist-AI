@@ -2,6 +2,7 @@ import asyncio
 import uuid
 
 import pytest
+import yaml
 from httpx import AsyncClient
 
 from controller.api.schemas import (
@@ -14,7 +15,8 @@ from controller.api.schemas import (
 )
 from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import ReviewManifest
+from shared.workers.schema import RenderManifest, ReviewManifest
+from tests.integration.agent.helpers import repo_git_revision
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -139,9 +141,7 @@ async def test_engineering_full_loop():
             assert episode_data.metadata_vars.failure_class is None
         artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
 
-        benchmark_episode_resp = await client.get(
-            f"/episodes/{benchmark_session_id}"
-        )
+        benchmark_episode_resp = await client.get(f"/episodes/{benchmark_session_id}")
         assert benchmark_episode_resp.status_code == 200, benchmark_episode_resp.text
         benchmark_episode_data = EpisodeResponse.model_validate(
             benchmark_episode_resp.json()
@@ -150,9 +150,7 @@ async def test_engineering_full_loop():
             a.s3_path for a in (benchmark_episode_data.assets or [])
         ]
 
-        async def _read_episode_asset_text(
-            episode_ref: str, asset_path: str
-        ) -> str:
+        async def _read_episode_asset_text(episode_ref: str, asset_path: str) -> str:
             resp = await client.get(f"/episodes/{episode_ref}/assets/{asset_path}")
             assert resp.status_code == 200, resp.text
             return resp.text
@@ -167,16 +165,12 @@ async def test_engineering_full_loop():
         assert any("assembly_definition.yaml" in p for p in artifact_paths), (
             f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
         )
-        assert any(
-            p.endswith("benchmark_definition.yaml") for p in artifact_paths
-        ), f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
-        assert any(
-            p.endswith("benchmark_assembly_definition.yaml")
-            for p in artifact_paths
-        ), (
-            "benchmark_assembly_definition.yaml missing. "
-            f"Artifacts: {artifact_paths}"
+        assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
+            f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
         )
+        assert any(
+            p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
+        ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
 
         source_benchmark_definition_path = next(
             p
@@ -220,9 +214,7 @@ async def test_engineering_full_loop():
             if p.endswith("benchmark_plan_review_manifest.json")
         )
         engineer_render_manifest_path = next(
-            p
-            for p in artifact_paths
-            if p.endswith("renders/render_manifest.json")
+            p for p in artifact_paths if p.endswith("renders/render_manifest.json")
         )
 
         source_benchmark_definition_text = await _read_episode_asset_text(
@@ -259,8 +251,7 @@ async def test_engineering_full_loop():
             episode_id, engineer_benchmark_plan_manifest_path
         )
         assert (
-            engineer_benchmark_plan_manifest_text
-            == source_benchmark_plan_manifest_text
+            engineer_benchmark_plan_manifest_text == source_benchmark_plan_manifest_text
         )
 
         source_render_manifest_text = await _read_episode_asset_text(
@@ -270,6 +261,50 @@ async def test_engineering_full_loop():
             episode_id, engineer_render_manifest_path
         )
         assert engineer_render_manifest_text == source_render_manifest_text
+
+        source_benchmark_review_manifest = ReviewManifest.model_validate_json(
+            source_benchmark_review_manifest_text
+        )
+        assert source_benchmark_review_manifest.episode_id == str(
+            benchmark_episode_data.id
+        )
+        assert source_benchmark_review_manifest.worker_session_id == str(
+            benchmark_session_id
+        )
+        assert source_benchmark_review_manifest.benchmark_episode_id == str(
+            benchmark_episode_data.id
+        )
+        assert source_benchmark_review_manifest.benchmark_worker_session_id == str(
+            benchmark_session_id
+        )
+        assert (
+            source_benchmark_review_manifest.benchmark_revision == repo_git_revision()
+        )
+        assert source_benchmark_review_manifest.solution_revision == repo_git_revision()
+        benchmark_assembly_definition = yaml.safe_load(source_benchmark_assembly_text)
+        assert (
+            source_benchmark_review_manifest.environment_version
+            == benchmark_assembly_definition["version"]
+        )
+        assert source_benchmark_review_manifest.preview_evidence_paths
+        assert set(source_benchmark_review_manifest.preview_evidence_paths) == set(
+            source_benchmark_review_manifest.renders
+        )
+
+        source_render_manifest = RenderManifest.model_validate_json(
+            source_render_manifest_text
+        )
+        assert source_render_manifest.episode_id == str(benchmark_episode_data.id)
+        assert source_render_manifest.worker_session_id == str(benchmark_session_id)
+        assert source_render_manifest.revision == repo_git_revision()
+        assert (
+            source_render_manifest.environment_version
+            == benchmark_assembly_definition["version"]
+        )
+        assert source_render_manifest.preview_evidence_paths
+        assert set(source_render_manifest.preview_evidence_paths) == set(
+            source_benchmark_review_manifest.renders
+        )
 
         # Check for Reviewer artifacts
         # Reviews are usually in reviews/ folder
@@ -300,9 +335,16 @@ async def test_engineering_full_loop():
         )
         assert manifest_resp.status_code == 200, manifest_resp.text
         manifest = ReviewManifest.model_validate_json(manifest_resp.text)
+        assert manifest.episode_id == str(episode_id)
+        assert manifest.worker_session_id == engineer_session_id
+        assert manifest.revision == repo_git_revision()
+        assert manifest.solution_revision == repo_git_revision()
+        assert manifest.environment_version == benchmark_assembly_definition["version"]
         assert manifest.validation_success is True
         assert manifest.simulation_success is True
         assert manifest.goal_reached is True
+        assert manifest.preview_evidence_paths
+        assert set(manifest.preview_evidence_paths) == set(manifest.renders)
         assert all(render_path in artifact_paths for render_path in manifest.renders)
 
 
@@ -328,7 +370,9 @@ async def _wait_for_episode_terminal(
             return episode
         await asyncio.sleep(1.0)
 
-    pytest.fail(f"Episode {episode_id} did not reach a terminal state (last={last_status})")
+    pytest.fail(
+        f"Episode {episode_id} did not reach a terminal state (last={last_status})"
+    )
 
 
 async def _reject_episode(client: AsyncClient, episode_id: str) -> EpisodeResponse:
@@ -382,7 +426,10 @@ async def test_engineering_retry_reuses_same_benchmark_linkage():
                 continue
             assert status_resp.status_code == 200, status_resp.text
             benchmark_episode = EpisodeResponse.model_validate(status_resp.json())
-            if benchmark_episode.status == EpisodeStatus.PLANNED and not benchmark_confirmed:
+            if (
+                benchmark_episode.status == EpisodeStatus.PLANNED
+                and not benchmark_confirmed
+            ):
                 await client.post(
                     f"/benchmark/{benchmark_session_id}/confirm",
                     json=ConfirmRequest(comment="Proceed").model_dump(),

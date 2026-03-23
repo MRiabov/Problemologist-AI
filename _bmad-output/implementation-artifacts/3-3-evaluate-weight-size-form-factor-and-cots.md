@@ -9,11 +9,11 @@ As a human operator, I want the system to evaluate weight, size, and form-factor
 ## Acceptance Criteria
 
 1. Given a design that includes catalog-backed COTS parts, when the solution is priced and weighed, then the COTS parts are counted in the totals using concrete catalog `part_id`, `manufacturer`, `source`, `unit_cost`, and `weight_g` provenance rather than invented values.
-1. Given a design that violates size, weight, or form-factor limits, when validation runs, then the system rejects it with an explicit reason that names the violated constraint and the offending part or subassembly.
-1. Given a candidate COTS part without a valid catalog or manufacturing reference, when the design is reviewed or submitted, then the system fails closed instead of assuming a price, weight, or geometry fit.
-1. Given a mixed assembly of manufactured parts and COTS parts, when planner validation, node-entry revalidation, and runtime handoff checks run, then the same deterministic assembly source of truth is used and the persisted artifacts round-trip without drift.
-1. Given benchmark-owned fixtures or benchmark-owned electronics that carry `cots_id`, when engineer totals are computed, then those read-only fixtures are excluded from engineer-owned cost and weight totals.
-1. Given the same COTS part is reused multiple times, when the assembly is priced, then the quantity remains explicit and the total remains stable across planner handoff, validation, and review.
+2. Given a design that violates size, weight, or form-factor limits, when validation runs, then the system rejects it with an explicit reason that names the violated constraint and the offending part or subassembly.
+3. Given a candidate COTS part without a valid catalog or manufacturing reference, when the design is reviewed or submitted, then the system fails closed instead of assuming a price, weight, or geometry fit.
+4. Given a mixed assembly of manufactured parts and COTS parts, when planner validation, node-entry revalidation, and runtime handoff checks run, then the same deterministic assembly source of truth is used and the persisted artifacts round-trip without drift.
+5. Given benchmark-owned fixtures or benchmark-owned electronics that carry `cots_id`, when engineer totals are computed, then those read-only fixtures are excluded from engineer-owned cost and weight totals.
+6. Given the same COTS part is reused multiple times, when the assembly is priced, then the quantity remains explicit and the total remains stable across planner handoff, validation, and review.
 
 ## Tasks / Subtasks
 

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
-import uuid
 from typing import Any, Protocol
 
 import httpx
 from pydantic import BaseModel, Field, model_validator
 
 from controller.agent.benchmark_handover_validation import (
-    extract_custom_objectives_from_state,
     extract_benchmark_refusal_reason,
+    extract_custom_objectives_from_state,
     validate_benchmark_planner_handoff_artifacts,
 )
 from controller.agent.config import settings as agent_settings
@@ -28,7 +28,11 @@ from controller.config.settings import settings as controller_settings
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Episode
 from shared.enums import AgentName, EntryFailureDisposition, EntryValidationSource
-from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition, EpisodeMetadata
+from shared.models.schemas import (
+    AssemblyDefinition,
+    BenchmarkDefinition,
+    EpisodeMetadata,
+)
 from shared.models.simulation import SimulationResult
 from shared.simulation.schemas import CustomObjectives
 from shared.workers.markdown_validator import validate_todo_md
@@ -38,9 +42,10 @@ from shared.workers.schema import (
     ReviewManifest,
     ValidationResultRecord,
 )
+from worker_heavy.utils.dfm import load_planner_manufacturing_config_from_text
 from worker_heavy.utils.file_validation import (
-    validate_benchmark_assembly_motion_contract,
     validate_assembly_definition_yaml,
+    validate_benchmark_assembly_motion_contract,
     validate_benchmark_definition_yaml,
     validate_plan_md_structure,
     validate_plan_refusal,
@@ -463,8 +468,7 @@ async def benchmark_plan_reviewer_handover_custom_check_from_session_id(
             evidence_bits.append(f"refusal_reason={evidence.refusal_reason.value}")
         if evidence.deterministic_errors:
             evidence_bits.append(
-                "deterministic_errors="
-                + " | ".join(evidence.deterministic_errors[:3])
+                "deterministic_errors=" + " | ".join(evidence.deterministic_errors[:3])
             )
         handover_error = f"{handover_error} | evidence: {'; '.join(evidence_bits)}"
 
@@ -509,7 +513,9 @@ async def benchmark_coder_handover_custom_check(
     else:
         session_id = getattr(session, "session_id", None)
     return await benchmark_coder_handover_custom_check_from_session_id(
-        session_id=str(worker_session_id or session_id) if worker_session_id or session_id else None,
+        session_id=str(worker_session_id or session_id)
+        if worker_session_id or session_id
+        else None,
         custom_objectives=extract_custom_objectives_from_state(state),
     )
 
@@ -814,6 +820,40 @@ async def validate_seeded_workspace_handoff_artifacts(
     errors: list[NodeEntryValidationError] = []
     contents: dict[str, str] = {}
     benchmark_definition_model: BenchmarkDefinition | None = None
+    manufacturing_config_model = None
+
+    if target_node in {
+        AgentName.BENCHMARK_PLANNER,
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+    }:
+        if not await worker_client.exists("manufacturing_config.yaml"):
+            errors.append(
+                _seeded_schema_error(
+                    message=(
+                        "manufacturing_config.yaml missing for planner handoff "
+                        "pricing source"
+                    ),
+                    artifact_path="manufacturing_config.yaml",
+                )
+            )
+        else:
+            try:
+                manufacturing_config_model = (
+                    load_planner_manufacturing_config_from_text(
+                        await worker_client.read_file("manufacturing_config.yaml")
+                    )
+                )
+            except Exception as exc:
+                errors.append(
+                    _seeded_schema_error(
+                        message=(
+                            "manufacturing_config.yaml invalid for planner handoff "
+                            f"pricing source: {exc}"
+                        ),
+                        artifact_path="manufacturing_config.yaml",
+                    )
+                )
 
     for rel_path in _SCHEMA_BACKED_HANDOFF_PATHS:
         if await worker_client.exists(rel_path):
@@ -881,6 +921,7 @@ async def validate_seeded_workspace_handoff_artifacts(
             is_valid, assembly_result = validate_assembly_definition_yaml(
                 content,
                 session_id=worker_client.session_id,
+                manufacturing_config=manufacturing_config_model,
             )
             if not is_valid and isinstance(assembly_result, list):
                 errors.extend(
@@ -890,9 +931,8 @@ async def validate_seeded_workspace_handoff_artifacts(
                     )
                     for message in assembly_result
                 )
-            elif (
-                rel_path == "benchmark_assembly_definition.yaml"
-                and isinstance(assembly_result, AssemblyDefinition)
+            elif rel_path == "benchmark_assembly_definition.yaml" and isinstance(
+                assembly_result, AssemblyDefinition
             ):
                 motion_errors = validate_benchmark_assembly_motion_contract(
                     benchmark_definition=benchmark_definition_model,

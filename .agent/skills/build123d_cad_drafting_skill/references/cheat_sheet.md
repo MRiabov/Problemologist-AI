@@ -60,7 +60,8 @@ Stateless creation:
 - **Locations vs Location**: **CRITICAL**: Use `with Locations(...):` (plural) as a context manager. `with Location(...):` (singular) will fail because it does not support the context manager protocol.
 - **Context Scope**: `with Locations(...)` only affects objects created *inside* the block.
 
----
+______________________________________________________________________
+
 *Reference version: 1.1 (Condensed with Examples)*
 
 ### Extended Resources

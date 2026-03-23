@@ -18,6 +18,7 @@ Before proceeding with planning, verify you are in the correct working directory
 ```
 
 **What this validates**:
+
 - Current branch follows the feature pattern like `001-feature-name`
 - You're not attempting to run from `main` or any release branch
 - The validator prints clear navigation instructions if you're outside the feature worktree
@@ -29,6 +30,7 @@ Before proceeding with planning, verify you are in the correct working directory
 Before executing any scripts or generating artifacts you must interrogate the specification and stakeholders.
 
 - **Scope proportionality (CRITICAL)**: FIRST, assess the feature's complexity from the spec:
+
   - **Trivial/Test Features** (hello world, simple static pages, basic demos): Ask 1-2 questions maximum about tech stack preference, then proceed with sensible defaults
   - **Simple Features** (small components, minor API additions): Ask 2-3 questions about tech choices and constraints
   - **Complex Features** (new subsystems, multi-component features): Ask 3-5 questions covering architecture, NFRs, integrations
@@ -37,6 +39,7 @@ Before executing any scripts or generating artifacts you must interrogate the sp
 - **User signals to reduce questioning**: If the user says "use defaults", "just make it simple", "skip to implementation", "vanilla HTML/CSS/JS" - recognize these as signals to minimize planning questions and use standard approaches.
 
 - **First response rule**:
+
   - For TRIVIAL features: Ask ONE tech stack question, then if answer is simple (e.g., "vanilla HTML"), proceed directly to plan generation
   - For other features: Ask a single architecture question and end with `WAITING_FOR_PLANNING_INPUT`
 
@@ -54,6 +57,7 @@ Planning requirements (scale to complexity):
 ## Outline
 
 1. **Check planning discovery status**:
+
    - If any planning questions remain unanswered or the user has not confirmed the **Engineering Alignment** summary, stay in the one-question cadence, capture the user’s response, update your internal table, and end with `WAITING_FOR_PLANNING_INPUT`. Do **not** surface the table. Do **not** run `{SCRIPT}` yet.
    - Once every planning question has a concrete answer and the alignment summary is confirmed by the user, continue.
 
@@ -62,6 +66,7 @@ Planning requirements (scale to complexity):
 3. **Load context**: Read FEATURE_SPEC and `.kittify/memory/constitution.md` if it exists. If the constitution file is missing, skip Constitution Check and note that it is absent. Load IMPL_PLAN template (already copied).
 
 4. **Execute plan workflow**: Follow the structure in IMPL_PLAN template, using the validated planning answers as ground truth:
+
    - Update Technical Context with explicit statements from the user or discovery research; mark `[NEEDS CLARIFICATION: …]` only when the user deliberately postpones a decision
    - If a constitution exists, fill Constitution Check section from it and challenge any conflicts directly with the user. If no constitution exists, mark the section as skipped.
    - Evaluate gates (ERROR if violations unjustified or questions remain unanswered)
@@ -77,11 +82,13 @@ Planning requirements (scale to complexity):
 ### Phase 0: Outline & Research
 
 1. **Extract unknowns from Technical Context** above:
+
    - For each NEEDS CLARIFICATION → research task
    - For each dependency → best practices task
    - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
+
    ```
    For each unknown in Technical Context:
      Task: "Research {unknown} for {feature context}"
@@ -90,6 +97,7 @@ Planning requirements (scale to complexity):
    ```
 
 3. **Consolidate findings** in `research.md` using format:
+
    - Decision: [what was chosen]
    - Rationale: [why chosen]
    - Alternatives considered: [what else evaluated]
@@ -101,23 +109,26 @@ Planning requirements (scale to complexity):
 **Prerequisites:** `research.md` complete
 
 1. **Extract entities from feature spec** → `data-model.md`:
+
    - Entity name, fields, relationships
    - Validation rules from requirements
    - State transitions if applicable
 
 2. **Generate API contracts** from functional requirements:
+
    - For each user action → endpoint
    - Use standard REST/GraphQL patterns
    - Output OpenAPI/GraphQL schema to `/contracts/`
 
 3. **Agent context update**:
+
    - Run `{AGENT_SCRIPT}`
    - These scripts detect which AI agent is in use
    - Update the appropriate agent-specific context file
    - Add only new technology from current plan
    - Preserve manual additions between markers
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/\*, quickstart.md, agent-specific file
 
 ## Key rules
 

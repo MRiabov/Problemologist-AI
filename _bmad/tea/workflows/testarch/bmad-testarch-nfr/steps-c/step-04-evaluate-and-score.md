@@ -1,7 +1,7 @@
 ---
-name: 'step-04-evaluate-and-score'
-description: 'Orchestrate adaptive NFR domain assessments (agent-team, subagent, or sequential)'
-nextStepFile: './step-04e-aggregate-nfr.md'
+name: step-04-evaluate-and-score
+description: Orchestrate adaptive NFR domain assessments (agent-team, subagent, or sequential)
+nextStepFile: ./step-04e-aggregate-nfr.md
 ---
 
 # Step 4: Orchestrate Adaptive NFR Assessment
@@ -19,7 +19,7 @@ Select execution mode deterministically, then assess NFR domains using agent-tea
 - ✅ Wait for required worker steps to complete
 - ❌ Do NOT skip capability checks when probing is enabled
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -27,7 +27,7 @@ Select execution mode deterministically, then assess NFR domains using agent-tea
 - 💾 Wait for subagent outputs
 - 📖 Load the next step only when instructed
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -64,7 +64,7 @@ const subagentContext = {
 };
 ```
 
----
+______________________________________________________________________
 
 ### 2. Resolve Execution Mode with Capability Probe
 
@@ -137,7 +137,7 @@ Resolution precedence:
 
 If probing is disabled, honor the requested mode strictly. If that mode cannot be executed at runtime, fail with explicit error instead of silent fallback.
 
----
+______________________________________________________________________
 
 ### 3. Dispatch 4 NFR Workers
 
@@ -170,7 +170,7 @@ If probing is disabled, honor the requested mode strictly. If that mode cannot b
 
 In `agent-team` and `subagent` modes, runtime decides worker scheduling and concurrency.
 
----
+______________________________________________________________________
 
 ### 4. Wait for Expected Worker Completion
 
@@ -194,7 +194,7 @@ In `agent-team` and `subagent` modes, runtime decides worker scheduling and conc
 ✅ Sequential mode: each worker already completed during dispatch.
 ```
 
----
+______________________________________________________________________
 
 ### 5. Verify All Outputs Exist
 
@@ -208,7 +208,7 @@ outputs.forEach((output) => {
 });
 ```
 
----
+______________________________________________________________________
 
 ### 6. Execution Report
 
@@ -219,7 +219,7 @@ outputs.forEach((output) => {
 - Parallel Gain: ~67% faster when mode is subagent/agent-team
 ```
 
----
+______________________________________________________________________
 
 ### 7. Proceed to Aggregation
 
@@ -233,13 +233,13 @@ The aggregation step will:
 - Identify cross-domain risks
 - Generate executive summary
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
 Proceed when all 4 required worker steps completed and outputs exist.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS METRICS
 

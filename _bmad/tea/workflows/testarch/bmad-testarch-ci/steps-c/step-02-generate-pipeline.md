@@ -1,7 +1,7 @@
 ---
-name: 'step-02-generate-pipeline'
-description: 'Generate CI pipeline configuration with adaptive orchestration (agent-team, subagent, or sequential)'
-nextStepFile: './step-03-configure-quality-gates.md'
+name: step-02-generate-pipeline
+description: Generate CI pipeline configuration with adaptive orchestration (agent-team, subagent, or sequential)
+nextStepFile: ./step-03-configure-quality-gates.md
 outputFile: '{test_artifacts}/ci-pipeline-progress.md'
 ---
 
@@ -18,7 +18,7 @@ Create platform-specific CI configuration with test execution, sharding, burn-in
 - ✅ Resolve execution mode from explicit user request first, then config
 - ✅ Apply fallback rules deterministically when requested mode is unsupported
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -117,7 +117,7 @@ Determine the pipeline output file path based on the detected `ci_platform`:
 
 Use templates from `./` when available. Adapt the template to the project's `test_stack_type` and `test_framework`.
 
----
+______________________________________________________________________
 
 ## Security: Script Injection Prevention
 
@@ -155,7 +155,7 @@ Include a `# Security: inputs passed through env: to prevent script injection` c
 
 **Safe contexts** (do NOT need `env:` intermediaries): `${{ steps.*.outputs.* }}`, `${{ matrix.* }}`, `${{ runner.os }}`, `${{ github.sha }}`, `${{ github.ref }}`, `${{ secrets.* }}`, `${{ env.* }}`.
 
----
+______________________________________________________________________
 
 ## 2. Pipeline Stages
 
@@ -167,7 +167,7 @@ Include stages:
 - burn-in (flaky detection)
 - report (aggregate + publish)
 
----
+______________________________________________________________________
 
 ## 3. Test Execution
 
@@ -203,35 +203,41 @@ env:
 > **Note:** `GITHUB_SHA` is auto-set by GitHub Actions, but `GITHUB_BRANCH` is **not** — it must be derived from `github.head_ref` (for PRs) or `github.ref_name` (for pushes). The pactjs-utils library reads both from `process.env`.
 
 1. **Consumer test + publish**: Run consumer contract tests, then publish pacts to broker
+
    - `npm run test:pact:consumer`
    - `npm run publish:pact`
    - Only publish on PR and main branch pushes
 
 2. **Provider verification**: Run provider verification against published pacts
+
    - `npm run test:pact:provider:remote:contract`
    - `buildVerifierOptions` auto-reads `PACT_BROKER_BASE_URL`, `PACT_BROKER_TOKEN`, `GITHUB_SHA`, `GITHUB_BRANCH`
    - Verification results published to broker when `CI=true`
 
 3. **Can-I-Deploy gate**: Block deployment if contracts are incompatible
+
    - `npm run can:i:deploy:provider`
    - Ensure the script adds `--retry-while-unknown 6 --retry-interval 10` for async verification
 
 4. **Webhook job**: Add `repository_dispatch` trigger for `pact_changed` event
+
    - Provider verification runs when consumers publish new pacts
    - Ensures compatibility is checked on both consumer and provider changes
 
 5. **Breaking change handling**: When `PACT_BREAKING_CHANGE=true` env var is set:
+
    - Provider test passes `includeMainAndDeployed: false` to `buildVerifierOptions` — verifies only matching branch
    - Coordinate with consumer team before removing the flag
 
 6. **Record deployment**: After successful deployment, record version in broker
+
    - `npm run record:provider:deployment --env=production`
 
 Required CI secrets: `PACT_BROKER_BASE_URL`, `PACT_BROKER_TOKEN`
 
 **If `tea_pact_mcp` is `"mcp"`:** Reference the SmartBear MCP `Can I Deploy` and `Matrix` tools for pipeline guidance in `pact-mcp.md`.
 
----
+______________________________________________________________________
 
 ### 4. Save Progress
 
@@ -250,6 +256,7 @@ Required CI secrets: `PACT_BROKER_BASE_URL`, `PACT_BROKER_TOKEN`
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-02-generate-pipeline'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-generate-pipeline'`
   - Set `lastSaved: '{date}'`

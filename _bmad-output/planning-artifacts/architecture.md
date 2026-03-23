@@ -124,97 +124,97 @@ The following are architecture-adjacent contracts that support the core system b
 ### Episode Lifecycle
 
 1. A benchmark seed or user task enters the controller with immutable task context.
-1. The planner writes stage artifacts and manifests.
-1. `worker_light` executes workspace changes and emits traces, logs, and `events.jsonl`.
-1. `worker_heavy` validates, simulates, renders, and computes deterministic outputs.
-1. Reviewers inspect persisted artifacts and media, then write the terminal review decision.
-1. The controller ingests events into Postgres and archives artifacts for replay, evaluation, and dataset materialization.
+2. The planner writes stage artifacts and manifests.
+3. `worker_light` executes workspace changes and emits traces, logs, and `events.jsonl`.
+4. `worker_heavy` validates, simulates, renders, and computes deterministic outputs.
+5. Reviewers inspect persisted artifacts and media, then write the terminal review decision.
+6. The controller ingests events into Postgres and archives artifacts for replay, evaluation, and dataset materialization.
 
 ### Failure Modes and Preventive Controls
 
-1. **Source-of-truth drift between `specs/` and `docs/`**
+01. **Source-of-truth drift between `specs/` and `docs/`**
 
-   - Failure: architecture decisions get updated in one place but not the other, so agents follow stale guidance.
-   - Cause: the repo is in a migration state, so both doc sets remain visible and usable.
-   - Prevention: define an explicit migration contract and retirement path for docs ownership; do not rely on implicit precedence rules.
+    - Failure: architecture decisions get updated in one place but not the other, so agents follow stale guidance.
+    - Cause: the repo is in a migration state, so both doc sets remain visible and usable.
+    - Prevention: define an explicit migration contract and retirement path for docs ownership; do not rely on implicit precedence rules.
 
-1. **Planner handoff succeeds without all required artifacts**
+02. **Planner handoff succeeds without all required artifacts**
 
-   - Failure: planner nodes reach a success-like state even though `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `assembly_definition.yaml` are missing or stale.
-   - Cause: permissive gating or fallback logic in submission flow.
-   - Prevention: keep planner submission fail-closed, require manifest generation, and make missing/invalid artifacts hard errors.
+    - Failure: planner nodes reach a success-like state even though `plan.md`, `todo.md`, `benchmark_definition.yaml`, or `assembly_definition.yaml` are missing or stale.
+    - Cause: permissive gating or fallback logic in submission flow.
+    - Prevention: keep planner submission fail-closed, require manifest generation, and make missing/invalid artifacts hard errors.
 
-1. **Reviewers approve stale or mismatched revisions**
+03. **Reviewers approve stale or mismatched revisions**
 
-   - Failure: reviewer output is based on an older manifest or an artifact set from a different revision.
-   - Cause: manifest freshness is not enforced strictly enough.
-   - Prevention: tie reviewer entry to latest-revision stage-specific manifests and reject stale or cross-session lookups.
+    - Failure: reviewer output is based on an older manifest or an artifact set from a different revision.
+    - Cause: manifest freshness is not enforced strictly enough.
+    - Prevention: tie reviewer entry to latest-revision stage-specific manifests and reject stale or cross-session lookups.
 
-1. **Visual inspection is skipped even when render evidence exists**
+04. **Visual inspection is skipped even when render evidence exists**
 
-   - Failure: a reviewer approves based on text artifacts only while render images are present.
-   - Cause: media inspection is treated as optional or UI-only.
-   - Prevention: enforce config-driven `inspect_media(...)` requirements for required roles whenever images exist, and persist inspection evidence in traces.
+    - Failure: a reviewer approves based on text artifacts only while render images are present.
+    - Cause: media inspection is treated as optional or UI-only.
+    - Prevention: enforce config-driven `inspect_media(...)` requirements for required roles whenever images exist, and persist inspection evidence in traces.
 
-1. **Validation preview is mistaken for full physics proof**
+05. **Validation preview is mistaken for full physics proof**
 
-   - Failure: a model passes MuJoCo validation preview, but the backend-specific simulation behavior was never actually established.
-   - Cause: preview and simulation responsibilities are conflated.
-   - Prevention: keep validation preview explicitly separate from Genesis simulation proof and verify backend parity in dedicated simulation tests.
+    - Failure: a model passes MuJoCo validation preview, but the backend-specific simulation behavior was never actually established.
+    - Cause: preview and simulation responsibilities are conflated.
+    - Prevention: keep validation preview explicitly separate from Genesis simulation proof and verify backend parity in dedicated simulation tests.
 
-1. **Episode identity gets conflated with session identity**
+06. **Episode identity gets conflated with session identity**
 
-   - Failure: trace joins and dataset exports blur one user session into one workflow run.
-   - Cause: the system treats `session_id` and `episode_id` as interchangeable.
-   - Prevention: propagate both IDs independently, plus `simulation_run_id` and `review_id`, so observability remains reconstructable.
+    - Failure: trace joins and dataset exports blur one user session into one workflow run.
+    - Cause: the system treats `session_id` and `episode_id` as interchangeable.
+    - Prevention: propagate both IDs independently, plus `simulation_run_id` and `review_id`, so observability remains reconstructable.
 
-1. **Engineering execution leaks benchmark-owned context into solution ownership**
+07. **Engineering execution leaks benchmark-owned context into solution ownership**
 
-   - Failure: engineer-owned pricing, manufacturability, or geometry changes accidentally mutate benchmark-owned fixtures.
-   - Cause: ownership boundaries are present in spec but not strongly enforced in runtime contracts.
-   - Prevention: make benchmark fixtures read-only task context and validate immutability across handoff.
+    - Failure: engineer-owned pricing, manufacturability, or geometry changes accidentally mutate benchmark-owned fixtures.
+    - Cause: ownership boundaries are present in spec but not strongly enforced in runtime contracts.
+    - Prevention: make benchmark fixtures read-only task context and validate immutability across handoff.
 
-1. **Hidden degradation is reported as success**
+08. **Hidden degradation is reported as success**
 
-   - Failure: fallback paths or degraded behavior look like normal success to the caller.
-   - Cause: runtime returns success without explicit degradation metadata.
-   - Prevention: make any fallback or degraded path explicit in events and result payloads, and fail closed when degradation is not declared.
+    - Failure: fallback paths or degraded behavior look like normal success to the caller.
+    - Cause: runtime returns success without explicit degradation metadata.
+    - Prevention: make any fallback or degraded path explicit in events and result payloads, and fail closed when degradation is not declared.
 
-1. **Heavy-worker failures cascade into broader service outages**
+09. **Heavy-worker failures cascade into broader service outages**
 
-   - Failure: one simulation crash takes down the service or poisons subsequent jobs.
-   - Cause: crash containment and admission control are too loose.
-   - Prevention: preserve single-flight admission, isolate heavy execution, and require deterministic retry/fail-closed behavior.
+    - Failure: one simulation crash takes down the service or poisons subsequent jobs.
+    - Cause: crash containment and admission control are too loose.
+    - Prevention: preserve single-flight admission, isolate heavy execution, and require deterministic retry/fail-closed behavior.
 
-1. **Dataset lineage becomes unusable for training**
+10. **Dataset lineage becomes unusable for training**
 
-   - Failure: artifacts are persisted without reliable seed, variant, or episode linkage.
-   - Cause: persistence is treated as storage rather than training-data provenance.
-   - Prevention: treat lineage, review evidence, and run metadata as core product outputs, not optional logs.
+    - Failure: artifacts are persisted without reliable seed, variant, or episode linkage.
+    - Cause: persistence is treated as storage rather than training-data provenance.
+    - Prevention: treat lineage, review evidence, and run metadata as core product outputs, not optional logs.
 
-1. **Debugging requires expensive remote provider calls or opaque workflows**
+11. **Debugging requires expensive remote provider calls or opaque workflows**
 
-   - Failure: engineers cannot reproduce failures cheaply with local tooling or the runtime forces one agent/provider shape onto every workflow.
-   - Cause: execution backend choice and model-provider choice are coupled to role-specific code instead of being first-class runtime abstractions.
-   - Prevention: make CLI-backed eval reproduction and workspace materialization supported paths, and keep role, backend, and model selection separate.
+    - Failure: engineers cannot reproduce failures cheaply with local tooling or the runtime forces one agent/provider shape onto every workflow.
+    - Cause: execution backend choice and model-provider choice are coupled to role-specific code instead of being first-class runtime abstractions.
+    - Prevention: make CLI-backed eval reproduction and workspace materialization supported paths, and keep role, backend, and model selection separate.
 
-1. **Logs are too sparse to explain agent or service failures**
+12. **Logs are too sparse to explain agent or service failures**
 
-   - Failure: debugging requires guessing across multiple subsystems instead of reading one structured trail.
-   - Cause: logs are unstructured or lack episode/service/test attribution.
-   - Prevention: keep structured logs consistent across agents, services, and eval helpers.
+    - Failure: debugging requires guessing across multiple subsystems instead of reading one structured trail.
+    - Cause: logs are unstructured or lack episode/service/test attribution.
+    - Prevention: keep structured logs consistent across agents, services, and eval helpers.
 
-1. **Integration-test helpers drift from runtime behavior**
+13. **Integration-test helpers drift from runtime behavior**
 
-   - Failure: tests become brittle or misleading because helper conventions differ from actual runtime contracts.
-   - Cause: the test harness is treated as external to architecture.
-   - Prevention: treat integration-test helper structure and HTTP-only boundaries as part of the supported architecture.
+    - Failure: tests become brittle or misleading because helper conventions differ from actual runtime contracts.
+    - Cause: the test harness is treated as external to architecture.
+    - Prevention: treat integration-test helper structure and HTTP-only boundaries as part of the supported architecture.
 
-1. **OpenAPI/client artifacts drift from live API behavior**
+14. **OpenAPI/client artifacts drift from live API behavior**
 
-   - Failure: generated schema or frontend client files no longer match controller behavior.
-   - Cause: schema regeneration is skipped, bypassed, or done manually outside the hook contract.
-   - Prevention: keep OpenAPI generation and client regeneration hook-driven and part of the normal change flow.
+    - Failure: generated schema or frontend client files no longer match controller behavior.
+    - Cause: schema regeneration is skipped, bypassed, or done manually outside the hook contract.
+    - Prevention: keep OpenAPI generation and client regeneration hook-driven and part of the normal change flow.
 
 ## Starter Template Evaluation
 
@@ -265,8 +265,8 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 #### Abstraction Stack
 
 1. Role contract: prompt shape, workspace files, required artifacts, review gates, and terminal criteria.
-1. Runtime backend contract: process launch or API session, trace capture, workspace diffing, run-local session identity, and failure normalization.
-1. Model provider contract: provider-specific call mechanics, rate limits, streaming, tool calling, multimodal support, and cost accounting.
+2. Runtime backend contract: process launch or API session, trace capture, workspace diffing, run-local session identity, and failure normalization.
+3. Model provider contract: provider-specific call mechanics, rate limits, streaming, tool calling, multimodal support, and cost accounting.
 
 #### Runtime Backend Contract
 
@@ -382,10 +382,10 @@ If a future isolated UI scaffold is needed, use Vite + React + TypeScript rather
 **Implementation Sequence:**
 
 1. Keep the relational schema and artifact storage boundaries stable.
-1. Preserve the REST + events contract and OpenAPI generation flow.
-1. Wire deployment/runtime assumptions to the Railway + Docker Compose + Temporal stack.
-1. Leave frontend architecture unchanged except for hosting/deployment compatibility.
-1. Revisit auth, websocket transport, and any deeper runtime-provider routing only if later product scope requires them.
+2. Preserve the REST + events contract and OpenAPI generation flow.
+3. Wire deployment/runtime assumptions to the Railway + Docker Compose + Temporal stack.
+4. Leave frontend architecture unchanged except for hosting/deployment compatibility.
+5. Revisit auth, websocket transport, and any deeper runtime-provider routing only if later product scope requires them.
 
 **Cross-Component Dependencies:**
 

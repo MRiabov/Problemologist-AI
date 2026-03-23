@@ -29,10 +29,10 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **Test Design Workflow:** load context, assess risk/testability, plan coverage, and produce a blueprint.
-1. **Risk Scoring:** `Probability × Impact` drives prioritization.
-1. **Testability:** determine whether a feature can be tested cleanly and what infrastructure is needed.
-1. **Coverage Planning:** align unit, integration, and E2E coverage with feature criticality.
-1. **Priority Matrix:** full coverage for P0, lighter coverage for P2/P3.
+2. **Risk Scoring:** `Probability × Impact` drives prioritization.
+3. **Testability:** determine whether a feature can be tested cleanly and what infrastructure is needed.
+4. **Coverage Planning:** align unit, integration, and E2E coverage with feature criticality.
+5. **Priority Matrix:** full coverage for P0, lighter coverage for P2/P3.
 
 ______________________________________________________________________
 
@@ -62,8 +62,8 @@ ______________________________________________________________________
 ### Questions & Answers
 
 1. What does the Test Design workflow help you do? → `B` (correct)
-1. How do you calculate risk? → `B` (correct)
-1. For P0 features, which test levels should you use? → `C` (correct)
+2. How do you calculate risk? → `B` (correct)
+3. For P0 features, which test levels should you use? → `C` (correct)
 
 ______________________________________________________________________
 

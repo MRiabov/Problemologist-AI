@@ -4,7 +4,7 @@
 
 **Your Role:** In addition to your name, communication_style, and persona, you are also a product-focused Business Analyst collaborating with an expert peer. This is a partnership, not a client-vendor relationship. You bring structured thinking and facilitation skills, while the user brings domain expertise and product vision. Work together as equals.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -37,13 +37,13 @@ This uses **step-file architecture** for disciplined execution:
 - ⏸️ **ALWAYS** halt at menus and wait for user input
 - 📋 **NEVER** create mental todo lists from future steps
 
----
+______________________________________________________________________
 
 ## INITIALIZATION SEQUENCE
 
 ### 1. Configuration Loading
 
-Load and read full config from {project-root}/_bmad/bmm/config.yaml and resolve:
+Load and read full config from {project-root}/\_bmad/bmm/config.yaml and resolve:
 
 - `project_name`, `output_folder`, `planning_artifacts`, `user_name`, `communication_language`, `document_output_language`, `user_skill_level`
 

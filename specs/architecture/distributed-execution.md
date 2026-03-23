@@ -98,7 +98,7 @@ To avoid drift between services, common models and logic are in shared modules:
 
 Worker-specific logic stays in:
 
-- `worker_light/*` for lightweight operations and design validation (e.g. intersection checks) that normally would be executed <1s.:
+- `worker_light/*` for lightweight operations and design validation (e.g. intersection checks) that normally would be executed \<1s.:
   - FS
   - runtime
   - git
@@ -216,6 +216,7 @@ Why: models don't strictly always need to view videos; they might want to view o
 We do persistence via SQLAlchemy and Alembic migrations to avoid issues with hand-written SQL.
 
 <!-- If something is a long-running process, prefer to persist it to a database and receive a callback. -->
+
 <!-- Solved via Temporal.  -->
 
 All important updates must be persisted into the DB (for observability, as below.)

@@ -1,9 +1,11 @@
-import structlog
-from build123d import Compound, Part
 from pathlib import Path
 from typing import Any
 
-from shared.models.schemas import AssemblyDefinition, BoundingBox
+import structlog
+import yaml
+from build123d import Compound, Part
+
+from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition, BoundingBox
 from shared.workers.workbench_models import (
     ManufacturingConfig,
     ManufacturingMethod,
@@ -28,6 +30,61 @@ def load_planner_manufacturing_config(
         override_data=override_data,
         source_name="manufacturing_config.yaml",
     )
+
+
+def load_planner_manufacturing_config_from_text(
+    config_text: str,
+    *,
+    source_name: str = "manufacturing_config.yaml",
+) -> ManufacturingConfig:
+    """Load the planner manufacturing config from raw YAML text."""
+    try:
+        override_data = yaml.safe_load(config_text)
+    except Exception as exc:
+        raise ValueError(f"{source_name} invalid: {exc}") from exc
+
+    if override_data is None:
+        raise ValueError(f"{source_name} is empty")
+    if not isinstance(override_data, dict):
+        raise ValueError(f"{source_name} must deserialize to a mapping")
+
+    return load_planner_manufacturing_config(override_data=override_data)
+
+
+def resolve_requested_quantity(
+    quantity: int | None = None,
+    benchmark_definition: BenchmarkDefinition | None = None,
+    *,
+    require_benchmark_quantity: bool = False,
+) -> int:
+    """Resolve the production quantity from explicit or benchmark-scoped input."""
+    benchmark_quantity = (
+        benchmark_definition.constraints.target_quantity
+        if benchmark_definition is not None and benchmark_definition.constraints
+        else None
+    )
+
+    if quantity is not None:
+        if quantity < 1:
+            raise ValueError("quantity must be >= 1")
+        if benchmark_quantity is not None and quantity != benchmark_quantity:
+            raise ValueError(
+                "quantity conflict: explicit quantity "
+                f"{quantity} does not match benchmark_definition.constraints.target_quantity "
+                f"{benchmark_quantity}"
+            )
+        return quantity
+
+    if benchmark_quantity is not None:
+        return benchmark_quantity
+
+    if require_benchmark_quantity:
+        raise ValueError(
+            "benchmark_definition.constraints.target_quantity is missing; "
+            "cannot resolve requested production quantity"
+        )
+
+    return 1
 
 
 def _part_reports_for_analysis(part: Part | Compound) -> list[Part | Compound]:
@@ -274,10 +331,23 @@ def validate_and_price(
 
     # Add DOF warning to metadata (for reviewer notification)
 
+    additional_info = dict(result.metadata.additional_info or {})
+    additional_info.update(
+        {
+            "quantity": quantity,
+            "requested_quantity": quantity,
+            "batch_total_cost_usd": (
+                result.metadata.cost_breakdown.total_cost
+                if result.metadata.cost_breakdown is not None
+                else result.unit_cost * quantity
+            ),
+        }
+    )
     result_metadata = result.metadata.model_copy(
         update={
             "dof_count": dof_count,
             "dof_warning": dof_warning,
+            "additional_info": additional_info,
         }
     )
 
@@ -331,6 +401,8 @@ def validate_and_price_assembly(
                 additional_info={
                     "part_reports": [],
                     "part_count": 0,
+                    "quantity": quantity,
+                    "requested_quantity": quantity,
                 }
             ),
         )
@@ -349,15 +421,43 @@ def validate_and_price_assembly(
             session_id=session_id,
         )
         if assembly_definition is None:
-            return result
+            result_metadata = result.metadata.model_copy(
+                update={
+                    "additional_info": {
+                        **dict(result.metadata.additional_info or {}),
+                        "quantity": quantity,
+                        "requested_quantity": quantity,
+                        "batch_total_cost_usd": (
+                            result.metadata.cost_breakdown.total_cost
+                            if result.metadata.cost_breakdown is not None
+                            else result.unit_cost * quantity
+                        ),
+                    }
+                }
+            )
+            return result.model_copy(update={"metadata": result_metadata})
 
         drilling_cost = calculate_benchmark_drilling_cost(assembly_definition, config)
+        result_metadata = result.metadata.model_copy(
+            update={
+                "additional_info": {
+                    **dict(result.metadata.additional_info or {}),
+                    "quantity": quantity,
+                    "requested_quantity": quantity,
+                    "batch_total_cost_usd": (
+                        result.metadata.cost_breakdown.total_cost
+                        if result.metadata.cost_breakdown is not None
+                        else result.unit_cost * quantity
+                    ),
+                }
+            }
+        )
         return WorkbenchResult(
             is_manufacturable=result.is_manufacturable,
             unit_cost=result.unit_cost + drilling_cost,
             weight_g=result.weight_g,
             violations=list(result.violations),
-            metadata=result.metadata,
+            metadata=result_metadata,
         )
 
     total_cost = 0.0
@@ -415,6 +515,10 @@ def validate_and_price_assembly(
                 "part_reports": per_part,
                 "part_count": len(reports),
                 "benchmark_drilling_cost_usd": benchmark_drilling_cost,
+                "quantity": quantity,
+                "requested_quantity": quantity,
+                "batch_total_cost_usd": total_cost * quantity,
+                "batch_total_weight_g": total_weight * quantity,
             }
         ),
     )

@@ -133,7 +133,7 @@ test('heal stale selector failures automatically', async ({ page }) => {
 - Prevention: Follow selector hierarchy (data-testid > ARIA > text > CSS)
 - Automation: Pattern matching on error message + stack trace
 
----
+______________________________________________________________________
 
 ### Example 2: Common Failure Pattern - Race Conditions (Timing Errors)
 
@@ -260,7 +260,7 @@ test('heal hard wait with event-based wait', async ({ page }) => {
 - Prevention: ALWAYS intercept before navigate, use waitForResponse()
 - Automation: Detect `page.waitForTimeout()` or `cy.wait(number)` in test code
 
----
+______________________________________________________________________
 
 ### Example 3: Common Failure Pattern - Dynamic Data Assertions (Non-Deterministic IDs)
 
@@ -389,7 +389,7 @@ test('heal order ID assertion with capture', async ({ page, request }) => {
 - Prevention: Never hardcode IDs, timestamps, or random data in assertions
 - Automation: Parse error message for expected/actual values, suggest regex patterns
 
----
+______________________________________________________________________
 
 ### Example 4: Common Failure Pattern - Network Errors (Missing Route Interception)
 
@@ -499,7 +499,7 @@ test('heal 500 error with error state mocking', async ({ page, context }) => {
 - Prevention: Mock ALL external dependencies (APIs, third-party services)
 - Automation: Extract URL from error message, generate route interception code
 
----
+______________________________________________________________________
 
 ### Example 5: Common Failure Pattern - Hard Waits (Unreliable Timing)
 
@@ -602,7 +602,7 @@ test('heal implicit wait with explicit network wait', async ({ page }) => {
 - Prevention: NEVER use hard waits, always use event-based/response-based waits
 - Automation: Scan test code for hard wait patterns, suggest deterministic replacements
 
----
+______________________________________________________________________
 
 ## Healing Pattern Catalog
 

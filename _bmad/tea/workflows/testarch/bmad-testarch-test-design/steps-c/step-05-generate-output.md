@@ -1,6 +1,6 @@
 ---
-name: 'step-05-generate-output'
-description: 'Generate output documents with adaptive orchestration (agent-team, subagent, or sequential)'
+name: step-05-generate-output
+description: Generate output documents with adaptive orchestration (agent-team, subagent, or sequential)
 outputFile: '{test_artifacts}/test-design-epic-{epic_num}.md'
 progressFile: '{test_artifacts}/test-design-progress.md'
 ---
@@ -19,7 +19,7 @@ Write the final test-design document(s) using the correct template(s), then vali
 - ✅ Resolve execution mode from explicit user request first, then config
 - ✅ Apply fallback rules deterministically when requested mode is unsupported
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -123,7 +123,7 @@ Generate **one** document:
 
 Epic-level mode remains single-worker by default (one output artifact).
 
----
+______________________________________________________________________
 
 ## 2. Populate Templates
 
@@ -136,7 +136,7 @@ Ensure the outputs include:
 - Quality gate criteria
 - Any mode-specific sections required by the template
 
----
+______________________________________________________________________
 
 ## 3. Validation
 
@@ -148,7 +148,7 @@ Validate the output(s) against:
 
 If any checklist criteria are missing, fix before completion.
 
----
+______________________________________________________________________
 
 ## 4. Generate BMAD Handoff Document (System-Level Mode Only)
 
@@ -164,7 +164,7 @@ If any checklist criteria are missing, fix before completion.
 
 > **Note**: The handoff document is designed for consumption by BMAD's `create-epics-and-stories` workflow. It is only generated for system-level test designs where epic/story decomposition is relevant.
 
----
+______________________________________________________________________
 
 ## 5. Polish Output
 
@@ -175,7 +175,7 @@ Before finalizing, review the complete output document for quality:
 3. **Check completeness**: All template sections should be populated or explicitly marked N/A
 4. **Format cleanup**: Ensure markdown formatting is clean (tables aligned, headers consistent, no orphaned references)
 
----
+______________________________________________________________________
 
 ## 6. Completion Report
 
@@ -186,7 +186,7 @@ Summarize:
 - Key risks and gate thresholds
 - Any open assumptions
 
----
+______________________________________________________________________
 
 ### 7. Save Progress
 
@@ -205,6 +205,7 @@ Summarize:
   Then write this step's output below the frontmatter.
 
 - **If `{progressFile}` already exists**, update:
+
   - Add `'step-05-generate-output'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-05-generate-output'`
   - Set `lastSaved: '{date}'`

@@ -9,31 +9,26 @@ As a human engineer, I want to review a colleague's solution under runtime jitte
 ## Acceptance Criteria
 
 1. Given a solution has jittered evaluation results, when I review it, then the workspace exposes pass/fail across the required variations, including batch width, success count, success rate, consistency, and per-scene failures.
-1. Given the solution is flaky or unstable, when I review it, then I can reject it with an explicit reason that is persisted with the review decision and the system fails closed if the stability summary is missing.
-1. Given the solution is robust across the required jitter cases, when I review it, then I can approve it for the next workflow stage.
-1. Given a solution under review, when I inspect it, then the rendered CAD model and simulation preview are available alongside the jittered pass/fail results.
+2. Given the solution is flaky or unstable, when I review it, then I can reject it with an explicit reason that is persisted with the review decision and the system fails closed if the stability summary is missing.
+3. Given the solution is robust across the required jitter cases, when I review it, then I can approve it for the next workflow stage.
+4. Given a solution under review, when I inspect it, then the rendered CAD model and simulation preview are available alongside the jittered pass/fail results.
 
 ## Tasks / Subtasks
 
-- [ ] Persist the batched runtime-randomization summary through the existing handover artifact path.
-  - [ ] Add controller-to-worker verification plumbing in `controller/clients/worker.py`, `controller/middleware/remote_fs.py`, and `controller/api/routes/script_tools.py` so the review path can request a batched jitter check without inventing a second transport.
-  - [ ] Extend the persisted validation record contract in `shared/workers/schema.py` and `shared/workers/persistence.py` so the stability summary can ride inside the existing `validation_results.json` handover artifact if possible.
-  - [ ] Update `worker_heavy/api/routes.py` so the verification response is written in a structured, typed form that preserves `num_scenes`, `success_count`, `success_rate`, `is_consistent`, `individual_results`, and `fail_reasons`.
-  - [ ] Keep `controller/agent/review_handover.py` and `controller/agent/nodes/execution_reviewer.py` fail-closed: approval must not proceed unless the stability summary exists and the runtime-jitter result is robust enough to trust.
 - [ ] Expose the peer-review workflow in the workspace UI.
   - [ ] Add a peer-review card to `frontend/src/components/workspace/ChatWindow.tsx` for reviewable engineer episodes with stable `data-testid` hooks and explicit approve/reject actions.
-  - [ ] Wire review submission through `frontend/src/api/client.ts` and `frontend/src/context/EpisodeContext.tsx` to `/api/episodes/{episode_id}/review` using the existing `ReviewDecision` frontmatter contract.
+  - [ ] Wire review submission through `frontend/src/api/client.ts` and `frontend/src/context/EpisodeContext.tsx` to `/api/episodes/{episode_id}/review` using the existing `ReviewDecision` frontmatter contract and `review_content` payload string.
   - [ ] Require a rejection reason and include the stability summary in the visible review copy so the user is not guessing why the solution was rejected.
 - [ ] Render the stability evidence next to the CAD/simulation preview.
-  - [ ] Extend `frontend/src/components/workspace/ArtifactView.tsx` and `frontend/src/components/visualization/SimulationResults.tsx` to render the batched jitter summary when `verification_result` is present.
+  - [ ] Extend `frontend/src/components/workspace/ArtifactView.tsx` and `frontend/src/components/visualization/SimulationResults.tsx` to render the batched jitter summary when `verification_result` is present in `validation_results.json`.
   - [ ] Keep the existing CAD and simulation preview surfaces intact; only add the runtime-jitter summary alongside them.
 - [ ] Surface lineage and review context in the workspace chrome.
   - [ ] Extend `frontend/src/components/workspace/UnifiedGeneratorView.tsx` with hidden debug payload fields for benchmark linkage, revision lineage, and verification summary data.
   - [ ] Add benchmark/revision lineage badges in `frontend/src/components/layout/Sidebar.tsx` so peer solutions can be compared at a glance.
 - [ ] Add integration coverage for the review/stability flow.
   - [ ] Extend `tests/integration/architecture_p1/test_reviewer_evidence.py` or `tests/integration/architecture_p1/test_engineering_loop.py` to assert the persisted stability summary and the review decision trail from a live run.
-  - [ ] Add a focused Playwright test under `tests/integration/frontend/p1/` (for example `test_int_180.py`) that proves the review card, CAD preview, simulation preview, and jitter summary render together and that approve/reject actions hit the review endpoint.
-  - [ ] Add deterministic mock-response coverage in `tests/integration/mock_responses/INT-180.yaml` only if the live stable/unstable cases cannot be driven reliably.
+  - [ ] Add a focused Playwright test under `tests/integration/frontend/p1/` (for example `test_int_206.py`) that proves the review card, CAD preview, simulation preview, and jitter summary render together and that approve/reject actions hit the review endpoint.
+  - [ ] Add deterministic mock-response coverage in `tests/integration/mock_responses/INT-206.yaml` only if the live stable/unstable cases cannot be driven reliably.
 
 ## Dev Notes
 
@@ -42,18 +37,10 @@ As a human engineer, I want to review a colleague's solution under runtime jitte
   - Use the existing runtime-jitter robustness threshold from `specs/architecture/evals-and-gates.md` when deciding whether a solution is approvable. The system should not approve solutions that only pass on a lucky seed.
   - `EpisodeMetadata` already carries the lineage fields needed for this screen: `benchmark_id`, `prior_episode_id`, `is_reused`, `seed_id`, `seed_dataset`, `seed_match_method`, `generation_kind`, and `parent_seed_id`.
   - Keep render inspection fail-closed: when renders exist, approval still requires `inspect_media(...)`.
-  - Prefer extending `validation_results.json` with a nested stability summary if that keeps the existing handover/sync contract intact; do not invent a second review contract unless the current one cannot carry `verification_result`.
+  - The existing handover/sync contract already carries `verification_result` inside `validation_results.json`; consume that field rather than introducing a second verification transport or review artifact.
   - Review decisions should use the existing `ReviewDecision` frontmatter contract and persist an explicit rejection reason.
   - The review endpoint already exists at `/api/episodes/{episode_id}/review`; reuse it rather than creating a separate review transport.
 - Source tree components to touch:
-  - `controller/clients/worker.py`
-  - `controller/middleware/remote_fs.py`
-  - `controller/api/routes/script_tools.py`
-  - `worker_heavy/api/routes.py`
-  - `shared/workers/schema.py`
-  - `shared/workers/persistence.py`
-  - `controller/agent/review_handover.py`
-  - `controller/agent/nodes/execution_reviewer.py`
   - `frontend/src/components/workspace/ChatWindow.tsx`
   - `frontend/src/components/workspace/ArtifactView.tsx`
   - `frontend/src/components/visualization/SimulationResults.tsx`
@@ -63,8 +50,8 @@ As a human engineer, I want to review a colleague's solution under runtime jitte
   - `frontend/src/context/EpisodeContext.tsx`
   - `tests/integration/architecture_p1/test_reviewer_evidence.py`
   - `tests/integration/architecture_p1/test_engineering_loop.py`
-  - `tests/integration/frontend/p1/test_int_180.py`
-  - `tests/integration/mock_responses/INT-180.yaml`
+  - `tests/integration/frontend/p1/test_int_206.py`
+  - `tests/integration/mock_responses/INT-206.yaml`
 - Testing standards summary:
   - Use integration tests only; verify via HTTP responses, persisted episode metadata, assets, and visible workspace state.
   - Assert against the review decision and the persisted stability evidence, not internal helper calls.

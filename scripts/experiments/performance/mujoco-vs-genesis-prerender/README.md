@@ -32,6 +32,7 @@ The script writes a timestamped JSON result in this folder by default:
 - `rows`: per-run raw records (including timeout/error details)
 
 Notes:
+
 - `runs_usable` means successful runs with at least one saved render image.
 - In strict headless environments, a backend can "succeed" but produce zero
   renders; such runs are tracked but excluded from `mean_sec_usable`.

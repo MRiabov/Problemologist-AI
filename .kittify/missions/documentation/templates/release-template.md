@@ -6,58 +6,71 @@
 
 > **Purpose**: This document captures the publish and handoff details for this documentation effort. Use it to record hosting configuration, deployment steps, and ownership information.
 
----
+______________________________________________________________________
 
 ## Hosting Target
 
 **Platform**: {platform}
+
 <!-- Examples: Read the Docs, GitHub Pages, Netlify, Vercel, GitBook, custom server -->
 
 **Production URL**: {production_url}
+
 <!-- The live documentation site URL -->
 
 **Staging URL** (if applicable): {staging_url}
+
 <!-- Preview/staging environment URL -->
 
 **Domain Configuration**:
+
 - Custom domain: {custom_domain} (or N/A)
 - DNS provider: {dns_provider}
 - SSL/TLS: {ssl_configuration}
 
----
+______________________________________________________________________
 
 ## Build Output
 
 **Build Command**:
+
 ```bash
 {build_command}
 ```
+
 <!-- Example: sphinx-build -b html docs/ docs/_build/html/ -->
 
 **Output Directory**: `{output_directory}`
+
 <!-- Example: docs/_build/html/ -->
 
 **Build Requirements**:
+
 - {requirement_1}
 - {requirement_2}
+
 <!-- Examples: Node.js 18+, Python 3.11+, Sphinx 7.x -->
 
 **Build Time**: ~{build_time} seconds
+
 <!-- Approximate time for full build -->
 
----
+______________________________________________________________________
 
 ## Deployment Steps
 
 ### Automated Deployment (if configured)
 
 **CI/CD Platform**: {ci_cd_platform}
+
 <!-- Examples: GitHub Actions, GitLab CI, CircleCI, Jenkins -->
 
 **Trigger**: {deployment_trigger}
+
 <!-- Examples: Push to main branch, Tag creation, Manual workflow dispatch -->
 
 **Workflow File**: `{workflow_file_path}`
+
 <!-- Example: .github/workflows/docs.yml -->
 
 ### Manual Deployment Steps
@@ -65,34 +78,38 @@
 If automated deployment is not available, follow these steps:
 
 1. **Build documentation locally**:
+
    ```bash
    {manual_build_step_1}
    ```
 
 2. **Verify build output**:
+
    ```bash
    {manual_verify_step}
    ```
 
 3. **Deploy to hosting**:
+
    ```bash
    {manual_deploy_step}
    ```
 
 4. **Verify live site**:
+
    - Navigate to {production_url}
    - Check all pages load correctly
    - Verify navigation works
    - Test search functionality (if applicable)
 
----
+______________________________________________________________________
 
 ## Configuration Files
 
 **Key Configuration Locations**:
 
-| File | Purpose | Location |
-|------|---------|----------|
+| File            | Purpose     | Location       |
+| --------------- | ----------- | -------------- |
 | {config_file_1} | {purpose_1} | `{location_1}` |
 | {config_file_2} | {purpose_2} | `{location_2}` |
 
@@ -102,11 +119,12 @@ If automated deployment is not available, follow these steps:
 - .readthedocs.yaml | RTD build config | .readthedocs.yaml
 -->
 
----
+______________________________________________________________________
 
 ## Access & Credentials
 
 **Hosting Platform Access**:
+
 - Login URL: {platform_login_url}
 - Access method: {access_method}
   <!-- Examples: SSO via GitHub, Email/password, API key -->
@@ -114,15 +132,18 @@ If automated deployment is not available, follow these steps:
   <!-- Examples: Team password manager, Environment secrets, 1Password vault -->
 
 **Required Permissions**:
+
 - {permission_1}
 - {permission_2}
+
 <!-- Examples: Admin access to Read the Docs project, GitHub Pages write permissions -->
 
 **Team Members with Access**:
+
 - {name_1} - {role_1} - {email_1}
 - {name_2} - {role_2} - {email_2}
 
----
+______________________________________________________________________
 
 ## Ownership & Maintenance
 
@@ -131,6 +152,7 @@ If automated deployment is not available, follow these steps:
 **Backup Maintainer**: {backup_maintainer_name}
 
 **Maintenance Schedule**:
+
 - Documentation reviews: {review_frequency}
   <!-- Example: Quarterly, After each release, Monthly -->
 - Dependency updates: {dependency_update_frequency}
@@ -139,31 +161,36 @@ If automated deployment is not available, follow these steps:
   <!-- Example: With each product release, As needed -->
 
 **Known Issues**:
+
 - {known_issue_1}
 - {known_issue_2}
+
 <!-- Document any current limitations, broken features, or planned improvements -->
 
----
+______________________________________________________________________
 
 ## Monitoring & Analytics
 
 **Analytics Platform**: {analytics_platform}
+
 <!-- Examples: Google Analytics, Plausible, PostHog, None -->
 
 **Dashboard URL**: {analytics_dashboard_url}
 
 **Key Metrics**:
+
 - Page views tracked: {yes_no}
 - Search queries tracked: {yes_no}
 - User feedback collected: {yes_no}
 
 **Monitoring**:
+
 - Uptime monitoring: {uptime_service}
   <!-- Examples: UptimeRobot, Pingdom, None -->
 - Build status: {build_status_url}
   <!-- Link to CI/CD build dashboard -->
 
----
+______________________________________________________________________
 
 ## Handoff Checklist
 
@@ -178,7 +205,7 @@ Use this checklist when transferring documentation ownership:
 - [ ] Contact information updated in this document
 - [ ] Team notification sent about ownership change
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -198,16 +225,18 @@ Use this checklist when transferring documentation ownership:
 
 **Symptom**: Changes committed but not visible on live site
 **Causes**:
+
 - Cache not cleared
 - Deployment pipeline failed silently
 - Wrong branch deployed
 
 **Solutions**:
+
 - Check CI/CD logs for errors
 - Clear browser cache and CDN cache
 - Verify correct branch is configured for deployment
 
----
+______________________________________________________________________
 
 ## Additional Resources
 
@@ -216,7 +245,8 @@ Use this checklist when transferring documentation ownership:
 - **Team Chat**: {chat_channel}
 - **Internal Docs**: {internal_docs_url}
 
----
+______________________________________________________________________
 
 **Notes**:
+
 <!-- Add any additional context, special instructions, or historical information -->

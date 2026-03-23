@@ -1,8 +1,8 @@
 ---
-name: 'step-04b-subagent-performance'
+name: step-04b-subagent-performance
 description: 'Subagent: Performance NFR assessment'
 subagent: true
-outputFile: '/tmp/tea-nfr-performance-{{timestamp}}.json'
+outputFile: /tmp/tea-nfr-performance-{{timestamp}}.json
 ---
 
 # Subagent 4B: Performance NFR Assessment
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 
 **Your task:** Assess PERFORMANCE NFR domain only.
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -21,9 +21,9 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 
 **A) Response Times:**
 
-- API response times (<200ms target)
-- Page load times (<2s target)
-- Time to interactive (<3s target)
+- API response times (\<200ms target)
+- Page load times (\<2s target)
+- Time to interactive (\<3s target)
 
 **B) Throughput:**
 
@@ -44,7 +44,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 - Code splitting/lazy loading
 - Database indexing
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -77,7 +77,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 

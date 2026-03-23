@@ -135,7 +135,7 @@ Display: "Ready to continue with Step {nextStepNumber}: {nextStepTitle}?
 
 ONLY WHEN [C continue option] is selected and [current state confirmed], will you then read fully and follow the appropriate next step file to resume the workflow.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

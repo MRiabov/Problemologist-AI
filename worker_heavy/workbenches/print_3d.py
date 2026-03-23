@@ -99,11 +99,15 @@ def calculate_3dp_cost(
         unit_cost=total_cost / quantity if quantity > 0 else 0.0,
         material_cost_per_unit=round(material_cost_per_part, 4),
         setup_cost=round(setup_cost, 2),
+        variable_cost_per_unit=round(unit_cost, 4),
+        quantity=quantity,
         is_reused=is_reused,
         details={
             "part_volume_cm3": round(volume_cm3, 2),
             "printing_time_hr": round(printing_time_hr, 2),
             "run_cost_per_unit": round(run_cost_per_part, 4),
+            "variable_cost_per_unit": round(unit_cost, 4),
+            "quantity": quantity,
         },
         pricing_explanation=(
             f"3DP cost (${total_cost:.2f}) for {quantity} units. "
@@ -177,7 +181,13 @@ def analyze_3dp(
         unit_cost=unit_cost,
         weight_g=weight_g,
         violations=violations,
-        metadata=WorkbenchMetadata(cost_breakdown=cost_breakdown),
+        metadata=WorkbenchMetadata(
+            cost_breakdown=cost_breakdown,
+            additional_info={
+                "quantity": quantity,
+                "requested_quantity": quantity,
+            },
+        ),
     )
 
 

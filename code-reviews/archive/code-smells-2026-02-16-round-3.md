@@ -20,7 +20,7 @@ The `_load_component` utility (used for loading build123d scripts) modifies `sys
 
 - **Location:** `controller/activities/simulation.py`, `worker/activities/rendering.py`
 - **User Review:**
-We have a pydantic settings model somewhere.
+  We have a pydantic settings model somewhere.
 
 ## 4. Business Logic Leakage into Worker Router
 
@@ -49,7 +49,7 @@ Many try-except blocks in the Worker and Controller activities catch generic `Ex
 
 - **Location:** `worker/filesystem/backend.py`, `worker/api/routes.py`
 - **User Review:**
-Confirm
+  Confirm
 
 ## 8. Hardcoded Physics Engine Assumptions
 
@@ -57,7 +57,7 @@ Confirm
 
 - **Location:** `worker/simulation/builder.py`
 - **User Review:**
-I suggest creating a `PartMetadata` and `CompoundMetadata` Pydantic models. This will serve as doc for what fields are there. So we'll do `part.metadata=PartMetadata(material_id="alu_6061)` or similar.
-Fail validation if the part doesn't contain it; or if any fields are missing. Fail with a string/error.
+  I suggest creating a `PartMetadata` and `CompoundMetadata` Pydantic models. This will serve as doc for what fields are there. So we'll do `part.metadata=PartMetadata(material_id="alu_6061)` or similar.
+  Fail validation if the part doesn't contain it; or if any fields are missing. Fail with a string/error.
 
 it will be imported just other (function) utils.

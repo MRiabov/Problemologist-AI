@@ -6,7 +6,7 @@ Review of the electronics implementation relative to `kitty-specs/desired_archit
 
 The electronics implementation (WP3) is **partially complete**. The core infrastructure for circuit simulation (PySpice), assembly-to-circuit mapping, and unified electromechanical simulation is present and integrated into the workflow. However, there are significant gaps in testing, wire clearance validation, and strict adherence to the per-step simulation requirement.
 
----
+______________________________________________________________________
 
 ## 1. Circuit Modelling & Validation (WP3 51-163)
 
@@ -22,7 +22,7 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 - **Naming**: The spec (line 123) mentions renaming `assembly_definition.yaml` to `assembly_definition.yaml`. The code still uses the old name.
 - **Transient Simulation**: While `simulate_circuit_transient` exists, it is not yet integrated into the main simulation loop for time-varying circuit states.
 
----
+______________________________________________________________________
 
 ## 2. Wiring in 3D Space (WP3 165-215)
 
@@ -37,7 +37,7 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 - **Bend Radius**: Minimum bend radius calculation exists as a heuristic but is not enforced as a validation gate.
 - **Attachment Logic**: `attach_to` parameter exists but physical interaction with "clips" or "frame rails" in simulation is not yet verified.
 
----
+______________________________________________________________________
 
 ## 3. Unified Electromechanical Simulation (WP3 217-256)
 
@@ -51,7 +51,7 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 
 - **Per-step Evaluation**: The spec requires evaluating circuit state **on every timestep** (line 241). Currently, the loop evaluates circuit state once at `__init__` and only updates on wire breakage. This prevents dynamic switching logic during simulation (though sensors/logic are deferred to WP7).
 
----
+______________________________________________________________________
 
 ## 4. Electronics Engineer Agent (WP3 258-304)
 
@@ -64,7 +64,7 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 
 - **Conflict Iteration**: While the graph allows looping, the explicit "Elec → Mech request for modification" loop logic (line 279) is handled via general `reviewer` rejection rather than a specialized electronics-to-mechanical feedback loop.
 
----
+______________________________________________________________________
 
 ## 5. Test Coverage & Observability
 
@@ -74,7 +74,7 @@ The electronics implementation (WP3) is **partially complete**. The core infrast
 - **Integration Test Spec**: `kitty-specs/integration-tests.md` (INT-120 to INT-128) confirms that electronics tests are "not covered or only weakly covered."
 - **Observability**: `SimulationLoop` emits events for backend selection and wire tearing, but other specified events (e.g., `circuit_validation`, `power_budget_check`) may be missing or under-utilized in the current agent node.
 
----
+______________________________________________________________________
 
 ## Recommendations
 

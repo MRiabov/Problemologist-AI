@@ -9,9 +9,9 @@ As a human operator, I want to review a colleague's benchmark for solvability by
 ## Acceptance Criteria
 
 1. Given a benchmark that passes schema and geometry checks but is logically unsolvable, when the Benchmark Plan Reviewer reviews it, then the reviewer can reject it explicitly with a solvability reason and the benchmark does not advance to downstream solution work.
-1. Given a benchmark that is solvable, when the Benchmark Plan Reviewer reviews it, then the reviewer can approve it for downstream solution work and the workflow transitions to `PLANNED`.
-1. Given render evidence exists for the latest revision under review, when the Benchmark Plan Reviewer approves or rejects the benchmark, then the reviewer must inspect the current revision's rendered CAD model and simulation preview through `inspect_media(...)`, and file listing alone is not sufficient.
-1. Given the review decision is persisted, when I inspect the episode later, then the latest-revision review manifest and stage-specific decision/comments YAML capture the solvability rationale and checklist, and the revision/hash linkage remains traceable without relying on stale or inferred state.
+2. Given a benchmark that is solvable, when the Benchmark Plan Reviewer reviews it, then the reviewer can approve it for downstream solution work and the workflow transitions to `PLANNED`.
+3. Given render evidence exists for the latest revision under review, when the Benchmark Plan Reviewer approves or rejects the benchmark, then the reviewer must inspect the current revision's rendered CAD model and simulation preview through `inspect_media(...)`, and file listing alone is not sufficient.
+4. Given the review decision is persisted, when I inspect the episode later, then the latest-revision review manifest and stage-specific decision/comments YAML capture the solvability rationale and checklist, and the revision/hash linkage remains traceable without relying on stale or inferred state.
 
 ## Tasks / Subtasks
 

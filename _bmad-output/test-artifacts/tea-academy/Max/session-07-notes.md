@@ -28,9 +28,9 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **Fragment Categories:** testing patterns, Playwright utils, configuration/governance, quality frameworks, and authentication/security.
-1. **Exploration Model:** Session 7 is repeatable and user-driven.
-1. **Knowledge Base:** fragments provide just-in-time depth for specific topics.
-1. **Navigation:** fragment exploration is optional and can be resumed later without losing progress.
+2. **Exploration Model:** Session 7 is repeatable and user-driven.
+3. **Knowledge Base:** fragments provide just-in-time depth for specific topics.
+4. **Navigation:** fragment exploration is optional and can be resumed later without losing progress.
 
 ______________________________________________________________________
 

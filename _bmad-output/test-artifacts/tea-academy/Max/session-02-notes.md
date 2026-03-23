@@ -29,10 +29,10 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **Testing as Engineering:** tests are designed, maintained, and reviewed like production code.
-1. **Risk-Based Testing:** use `Risk = Probability × Impact` to prioritize coverage.
-1. **P0-P3 Matrix:** critical features first, nice-to-have behavior last.
-1. **Definition of Done:** no flaky tests, no hard waits, stateless, parallelizable, self-cleaning.
-1. **Low Maintenance:** test suites should stay reliable and easy to inherit.
+2. **Risk-Based Testing:** use `Risk = Probability × Impact` to prioritize coverage.
+3. **P0-P3 Matrix:** critical features first, nice-to-have behavior last.
+4. **Definition of Done:** no flaky tests, no hard waits, stateless, parallelizable, self-cleaning.
+5. **Low Maintenance:** test suites should stay reliable and easy to inherit.
 
 ______________________________________________________________________
 
@@ -62,8 +62,8 @@ ______________________________________________________________________
 ### Questions & Answers
 
 1. In the P0-P3 matrix, what priority level should login/authentication have? → `D` (correct)
-1. What is the problem with using `sleep(5000)` instead of `waitFor` conditions? → `B` (correct)
-1. What does “self-cleaning tests” mean in TEA Definition of Done? → `B` (correct)
+2. What is the problem with using `sleep(5000)` instead of `waitFor` conditions? → `B` (correct)
+3. What does “self-cleaning tests” mean in TEA Definition of Done? → `B` (correct)
 
 ______________________________________________________________________
 

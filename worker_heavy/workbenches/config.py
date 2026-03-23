@@ -133,9 +133,12 @@ def load_required_merged_config(
 ) -> ManufacturingConfig:
     """Load a merged manufacturing config and fail closed if the override is missing."""
     if config_path is None and override_data is None:
-        raise FileNotFoundError(f"{source_name} missing")
+        raise FileNotFoundError(
+            f"{source_name} missing or unreadable: no workspace override was provided"
+        )
 
     try:
+        file_override: dict[str, Any] | None
         if config_path is not None:
             file_override = _read_config_data(Path(config_path))
             if not file_override:
@@ -153,16 +156,18 @@ def load_required_merged_config(
         if file_override is not None and override_data is not None:
             merged_override = _deep_merge(file_override, override_data)
         else:
-            merged_override = file_override if file_override is not None else override_data
+            merged_override = (
+                file_override if file_override is not None else override_data
+            )
 
         if merged_override is None:
-            raise FileNotFoundError(f"{source_name} missing")
+            raise FileNotFoundError(
+                f"{source_name} missing or unreadable: no override data available"
+            )
 
         return load_merged_config(override_data=merged_override)
     except FileNotFoundError as exc:
-        raise FileNotFoundError(
-            f"{source_name} missing or unreadable: {exc}"
-        ) from exc
+        raise FileNotFoundError(f"{source_name} missing or unreadable: {exc}") from exc
     except Exception as exc:
         raise ValueError(
             f"{source_name} cannot be merged into repository config: {exc}"

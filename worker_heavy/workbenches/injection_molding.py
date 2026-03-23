@@ -214,12 +214,16 @@ def _calculate_im_cost(
         unit_cost=total_cost / quantity if quantity > 0 else 0.0,
         material_cost_per_unit=round(material_cost_per_part, 4),
         setup_cost=round(tooling_cost, 2),
+        variable_cost_per_unit=round(unit_cost, 4),
+        quantity=quantity,
         is_reused=is_reused,
         details={
             "tooling_cost": round(tooling_cost, 2),
             "cycle_cost_per_unit": round(cycle_cost_per_part, 4),
             "cycle_time_s": round(cycle_time_s, 2),
             "part_volume_cm3": round(volume_cm3, 2),
+            "variable_cost_per_unit": round(unit_cost, 4),
+            "quantity": quantity,
         },
         pricing_explanation=(
             f"Tooling (${tooling_cost:.2f}) + "
@@ -289,6 +293,10 @@ def analyze_im(
         metadata=WorkbenchMetadata(
             cost_breakdown=cost_breakdown,
             undercut_count=len(real_undercuts),
+            additional_info={
+                "quantity": quantity,
+                "requested_quantity": quantity,
+            },
         ),
     )
 

@@ -2,14 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import os
+import uuid
 from pathlib import Path
 
 from controller.agent.benchmark.tools import _canonicalize_benchmark_constraints
 from shared.enums import AgentName
+from shared.git_utils import repo_revision
 from shared.models.schemas import PlannerSubmissionResult
 from shared.workers.schema import PlanReviewManifest
+from worker_heavy.utils.dfm import (
+    load_planner_manufacturing_config_from_text,
+)
 from worker_heavy.utils.file_validation import validate_node_output
-from worker_heavy.utils.dfm import load_planner_manufacturing_config
 
 
 def _planner_agent(workspace: Path | None = None) -> AgentName | None:
@@ -42,6 +46,34 @@ def _session_id() -> str:
     return os.getenv("SESSION_ID", "local-submit-plan")
 
 
+def _derived_episode_id(session_id: str) -> str:
+    try:
+        return str(uuid.UUID(session_id))
+    except Exception:
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, session_id))
+
+
+def _workspace_environment_version(workspace: Path) -> str | None:
+    candidate = (
+        workspace / "benchmark_assembly_definition.yaml"
+        if (workspace / "benchmark_assembly_definition.yaml").exists()
+        else workspace / "assembly_definition.yaml"
+    )
+    if not candidate.exists():
+        return None
+    try:
+        import yaml
+
+        data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return None
+    version = data.get("version")
+    if version is None:
+        return None
+    version_text = str(version).strip()
+    return version_text or None
+
+
 def _required_files(agent_name: AgentName) -> tuple[str, ...]:
     if agent_name == AgentName.BENCHMARK_PLANNER:
         return (
@@ -49,12 +81,14 @@ def _required_files(agent_name: AgentName) -> tuple[str, ...]:
             "todo.md",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
+            "manufacturing_config.yaml",
         )
     return (
         "plan.md",
         "todo.md",
         "benchmark_definition.yaml",
         "assembly_definition.yaml",
+        "manufacturing_config.yaml",
     )
 
 
@@ -88,11 +122,6 @@ def _read_workspace_files(workspace: Path, paths: tuple[str, ...]) -> dict[str, 
     if missing:
         raise ValueError("Missing required file(s): " + ", ".join(missing))
     return artifacts
-
-
-def _manufacturing_config(workspace: Path):
-    config_path = workspace / "manufacturing_config.yaml"
-    return load_planner_manufacturing_config(config_path=config_path)
 
 
 def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
@@ -142,7 +171,10 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
         )
 
     try:
-        manufacturing_config = _manufacturing_config(workspace)
+        manufacturing_config_text = artifacts["manufacturing_config.yaml"]
+        manufacturing_config = load_planner_manufacturing_config_from_text(
+            manufacturing_config_text
+        )
     except Exception as exc:
         return PlannerSubmissionResult(
             ok=False,
@@ -150,6 +182,8 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
             errors=[f"failed to load manufacturing_config.yaml: {exc}"],
             node_type=agent_name,
         )
+
+    artifacts["manufacturing_config.yaml"] = manufacturing_config_text
 
     is_valid, errors = validate_node_output(
         agent_name,
@@ -173,6 +207,10 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
         reviewer_stage=reviewer_stage,
         session_id=session_id,
         planner_node_type=agent_name,
+        episode_id=_derived_episode_id(session_id),
+        worker_session_id=session_id,
+        benchmark_revision=repo_revision(workspace),
+        environment_version=_workspace_environment_version(workspace),
         artifact_hashes={
             rel_path: hashlib.sha256(content.encode("utf-8")).hexdigest()
             for rel_path, content in artifacts.items()

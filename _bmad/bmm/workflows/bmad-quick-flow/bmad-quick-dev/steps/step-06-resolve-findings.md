@@ -1,11 +1,12 @@
 ---
+null
 ---
 
 # Step 6: Resolve Findings
 
 **Goal:** Handle adversarial review findings interactively, apply fixes, finalize tech-spec.
 
----
+______________________________________________________________________
 
 ## AVAILABLE STATE
 
@@ -16,7 +17,7 @@ From previous steps:
 - `{tech_spec_path}` - Tech-spec file (if Mode A)
 - Findings table from step-05
 
----
+______________________________________________________________________
 
 ## RESOLUTION OPTIONS
 
@@ -39,7 +40,7 @@ Display:
 - ALWAYS halt and wait for user input after presenting menu
 - ONLY proceed when user makes a selection
 
----
+______________________________________________________________________
 
 ## WALK THROUGH [W]
 
@@ -54,7 +55,7 @@ For each finding in order:
 
 After all findings processed, summarize what was fixed/skipped.
 
----
+______________________________________________________________________
 
 ## FIX AUTOMATICALLY [F]
 
@@ -71,7 +72,7 @@ After all findings processed, summarize what was fixed/skipped.
 Skipped (noise/uncertain): F2, F4
 ```
 
----
+______________________________________________________________________
 
 ## SKIP [S]
 
@@ -79,7 +80,7 @@ Skipped (noise/uncertain): F2, F4
 2. Note that user chose to proceed without fixes
 3. Continue to completion
 
----
+______________________________________________________________________
 
 ## UPDATE TECH-SPEC (Mode A only)
 
@@ -96,7 +97,7 @@ If `{execution_mode}` is "tech-spec":
    ```
 4. Save changes
 
----
+______________________________________________________________________
 
 ## COMPLETION OUTPUT
 
@@ -112,7 +113,7 @@ If `{execution_mode}` is "tech-spec":
 {Explain what was implemented based on user_skill_level}
 ```
 
----
+______________________________________________________________________
 
 ## WORKFLOW COMPLETE
 
@@ -124,7 +125,7 @@ User can:
 - Run additional tests
 - Start new Quick Dev session
 
----
+______________________________________________________________________
 
 ## SUCCESS METRICS
 

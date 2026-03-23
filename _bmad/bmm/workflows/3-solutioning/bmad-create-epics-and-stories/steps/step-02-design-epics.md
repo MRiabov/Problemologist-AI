@@ -189,7 +189,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 ONLY WHEN C is selected and the approved epics_list is saved to document, will you then read fully and follow: ./step-03-create-stories.md to begin story creation step.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

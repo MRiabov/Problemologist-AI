@@ -2,7 +2,7 @@
 
 This checklist ensures the framework workflow completes successfully and all deliverables meet quality standards.
 
----
+______________________________________________________________________
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Before starting the workflow:
 - [ ] Bundler identifiable (Vite, Webpack, Rollup, esbuild) or not applicable (backend projects)
 - [ ] User has write permissions to create directories and files
 
----
+______________________________________________________________________
 
 ## Process Steps
 
@@ -123,7 +123,7 @@ Before starting the workflow:
 - [ ] Type definitions added (if TypeScript)
 - [ ] Users can extend with additional scripts as needed
 
----
+______________________________________________________________________
 
 ## Output Validation
 
@@ -158,7 +158,7 @@ Before starting the workflow:
 - [ ] No hardcoded credentials or secrets in files
 - [ ] All file paths use correct separators for OS
 
----
+______________________________________________________________________
 
 ## Quality Checks
 
@@ -220,7 +220,7 @@ Before starting the workflow:
 - [ ] API keys and tokens use environment variables
 - [ ] No secrets committed to version control
 
----
+______________________________________________________________________
 
 ## Integration Points
 
@@ -244,7 +244,7 @@ Before starting the workflow:
 - [ ] Can proceed to `atdd` workflow after completion
 - [ ] Framework setup compatible with downstream workflows
 
----
+______________________________________________________________________
 
 ## Completion Criteria
 
@@ -260,7 +260,7 @@ Before starting the workflow:
 - [ ] Documentation is complete and accurate
 - [ ] No critical issues or blockers identified
 
----
+______________________________________________________________________
 
 ## Post-Workflow Actions
 
@@ -278,7 +278,7 @@ Before starting the workflow:
 2. [ ] Run `test-design` workflow to plan test coverage
 3. [ ] Run `atdd` workflow when ready to develop stories
 
----
+______________________________________________________________________
 
 ## Rollback Procedure
 
@@ -292,7 +292,7 @@ If workflow fails and needs to be rolled back:
 6. [ ] Remove test dependencies from package.json (if added)
 7. [ ] Run `npm install` to clean up node_modules
 
----
+______________________________________________________________________
 
 ## Notes
 
@@ -335,7 +335,7 @@ If workflow fails and needs to be rolled back:
 - [ ] TypeScript version compatible with framework
 - [ ] All peer dependencies satisfied
 
----
+______________________________________________________________________
 
 **Checklist Complete**: Sign off when all items checked and validated.
 

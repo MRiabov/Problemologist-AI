@@ -75,6 +75,7 @@ overhead and improve end-to-end tool latency (noted estimate: ~20-40% from OpenA
 ## TODO: no silent fallbacks pattern
 
 As per conversation:
+
 ```md
 specs/integration-tests.md; specs/desired_architecture.md
 

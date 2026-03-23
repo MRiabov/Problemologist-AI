@@ -3,13 +3,13 @@
 **Workflow:** `bmad-testarch-trace`
 **Version:** 5.0 (Step-File Architecture)
 
----
+______________________________________________________________________
 
 ## Overview
 
 Create a requirements-to-tests traceability matrix, analyze coverage gaps, and optionally make a gate decision (PASS/CONCERNS/FAIL/WAIVED) based on evidence.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -19,7 +19,7 @@ This workflow uses **step-file architecture**:
 - **JIT Loading**: Only the current step file is in memory
 - **Sequential Enforcement**: Execute steps in order
 
----
+______________________________________________________________________
 
 ## INITIALIZATION SEQUENCE
 

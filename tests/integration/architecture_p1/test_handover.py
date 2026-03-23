@@ -11,7 +11,6 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from tests.integration.agent.helpers import repo_git_revision
 from shared.enums import EpisodeStatus
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
@@ -19,6 +18,7 @@ from shared.workers.schema import (
     ReviewManifest,
     ValidationResultRecord,
 )
+from tests.integration.agent.helpers import repo_git_revision
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -138,10 +138,33 @@ async def test_benchmark_to_engineer_handoff():
         manifest = ReviewManifest.model_validate_json(manifest_resp.text)
         assert manifest.status == "ready_for_review"
         assert manifest.session_id == session_id
+        assert manifest.episode_id == str(benchmark_resp.episode_id)
+        assert manifest.worker_session_id == session_id
         assert manifest.revision == repo_git_revision()
+        assert manifest.benchmark_episode_id == str(benchmark_resp.episode_id)
+        assert manifest.benchmark_worker_session_id == session_id
+        assert manifest.benchmark_revision == repo_git_revision()
+        assert manifest.solution_revision == repo_git_revision()
         assert manifest.validation_success is True
         assert manifest.simulation_success is True
         assert manifest.goal_reached is True
+        benchmark_assembly_definition_path = next(
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_assembly_definition.yaml")
+        )
+        benchmark_assembly_definition_resp = await client.get(
+            f"/episodes/{session_id}/assets/{benchmark_assembly_definition_path}"
+        )
+        assert benchmark_assembly_definition_resp.status_code == 200, (
+            benchmark_assembly_definition_resp.text
+        )
+        benchmark_assembly_definition = yaml.safe_load(
+            benchmark_assembly_definition_resp.text
+        )
+        assert manifest.environment_version == benchmark_assembly_definition["version"]
+        assert manifest.preview_evidence_paths
+        assert set(manifest.preview_evidence_paths) == set(manifest.renders)
 
         plan_review_decision_paths = [
             p
@@ -165,7 +188,9 @@ async def test_benchmark_to_engineer_handoff():
         plan_review_comments_resp = await client.get(
             f"/episodes/{session_id}/assets/{plan_review_comments_paths[0]}"
         )
-        assert plan_review_comments_resp.status_code == 200, plan_review_comments_resp.text
+        assert plan_review_comments_resp.status_code == 200, (
+            plan_review_comments_resp.text
+        )
         plan_review_comments = yaml.safe_load(plan_review_comments_resp.text)
         assert plan_review_comments["summary"].startswith("APPROVED:"), (
             plan_review_comments
@@ -187,7 +212,9 @@ async def test_benchmark_to_engineer_handoff():
         validation_manifest_resp = await client.get(
             f"/episodes/{session_id}/assets/validation_results.json"
         )
-        assert validation_manifest_resp.status_code == 200, validation_manifest_resp.text
+        assert validation_manifest_resp.status_code == 200, (
+            validation_manifest_resp.text
+        )
         validation_record = ValidationResultRecord.model_validate_json(
             validation_manifest_resp.text
         )
@@ -200,6 +227,15 @@ async def test_benchmark_to_engineer_handoff():
         assert render_manifest_resp.status_code == 200, render_manifest_resp.text
         render_manifest = RenderManifest.model_validate_json(render_manifest_resp.text)
         assert render_manifest.artifacts, "render_manifest.json must not be empty."
-        assert set(manifest.renders).issubset(
-            set(render_manifest.artifacts.keys())
-        ), render_manifest.artifacts
+        assert render_manifest.episode_id == str(benchmark_resp.episode_id)
+        assert render_manifest.worker_session_id == session_id
+        assert render_manifest.revision == repo_git_revision()
+        assert (
+            render_manifest.environment_version
+            == benchmark_assembly_definition["version"]
+        )
+        assert render_manifest.preview_evidence_paths
+        assert set(manifest.renders).issubset(set(render_manifest.artifacts.keys())), (
+            render_manifest.artifacts
+        )
+        assert set(render_manifest.preview_evidence_paths) == set(manifest.renders)

@@ -1,6 +1,6 @@
 # Story 4.1: Persist Immutable Run and Release Bundles
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -9,23 +9,23 @@ As a human operator, I want validated benchmark artifacts, preview evidence, and
 ## Acceptance Criteria
 
 1. Given a valid benchmark or official evaluation run, when it is persisted, then the system stores the required manifest bundle, environment version, and revision identifiers for the latest revision only.
-1. Given the persisted bundle, when I inspect it later, then I can trace the benchmark revision, solution revision, environment version, joinable session and episode identifiers, and preview evidence from the same bundle without relying on undocumented runtime state.
-1. Given render evidence exists, when the benchmark or run is archived, then the latest-revision preview artifacts remain linked to the bundle and remain inspectable.
-1. Given stale or superseded run/release artifacts exist, when the bundle is resolved, then only the latest-revision bundle is considered active and older artifacts are rejected or ignored.
-1. Given a persisted benchmark or run bundle, when downstream export or replay logic reads it, then the bundle provides the metadata needed to reconstruct the same episode lineage later.
+2. Given the persisted bundle, when I inspect it later, then I can trace the benchmark revision, solution revision, environment version, joinable session and episode identifiers, and preview evidence from the same bundle without relying on undocumented runtime state.
+3. Given render evidence exists, when the benchmark or run is archived, then the latest-revision preview artifacts remain linked to the bundle and remain inspectable.
+4. Given stale or superseded run/release artifacts exist, when the bundle is resolved, then only the latest-revision bundle is considered active and older artifacts are rejected or ignored.
+5. Given a persisted benchmark or run bundle, when downstream export or replay logic reads it, then the bundle provides the metadata needed to reconstruct the same episode lineage later.
 
 ## Tasks / Subtasks
 
-- [ ] Verify the run/release persistence contract keeps the latest revision only.
-  - [ ] Confirm the manifest bundle includes benchmark revision, solution revision, environment version, episode/session identifiers, and preview evidence paths.
-  - [ ] Confirm stale or cross-revision artifacts are not treated as active bundle inputs.
-- [ ] Ensure persisted bundle metadata is sufficient for later replay or export.
-  - [ ] Keep the persisted identifiers joinable to the source episode and session records.
-  - [ ] Preserve render/preview evidence links when media exists so the bundle remains inspectable later.
-- [ ] Extend integration coverage for bundle persistence and latest-revision resolution.
-  - [ ] Add or refresh workflow assertions that validate the active bundle metadata and preview evidence are present in persisted artifacts.
-  - [ ] Add a regression test that proves stale bundle material does not satisfy latest-revision resolution.
-  - [ ] Assert the episode record exposes the metadata needed to reconstruct the benchmark package and later dataset row.
+- [x] Verify the run/release persistence contract keeps the latest revision only.
+  - [x] Confirm the manifest bundle includes benchmark revision, solution revision, environment version, episode/session identifiers, and preview evidence paths.
+  - [x] Confirm stale or cross-revision artifacts are not treated as active bundle inputs.
+- [x] Ensure persisted bundle metadata is sufficient for later replay or export.
+  - [x] Keep the persisted identifiers joinable to the source episode and session records.
+  - [x] Preserve render/preview evidence links when media exists so the bundle remains inspectable later.
+- [x] Extend integration coverage for bundle persistence and latest-revision resolution.
+  - [x] Add or refresh workflow assertions that validate the active bundle metadata and preview evidence are present in persisted artifacts.
+  - [x] Add a regression test that proves stale bundle material does not satisfy latest-revision resolution.
+  - [x] Assert the episode record exposes the metadata needed to reconstruct the benchmark package and later dataset row.
 
 ## Dev Notes
 
@@ -83,10 +83,37 @@ As a human operator, I want validated benchmark artifacts, preview evidence, and
 
 ### Agent Model Used
 
-TBD
+GPT-5
 
 ### Debug Log References
 
+- `2026-03-23`: Updated manifest schemas, worker-side manifest generation, latest-revision validation, and plan-review constructors; verified parseability with `python3 -m py_compile` across the touched files.
+
 ### Completion Notes List
 
+- Added lineage-bearing fields to review and render manifests so persisted bundles can carry episode/session identifiers, benchmark and solution revisions, environment version, and preview evidence paths.
+- Enforced latest-revision checks on render manifests and preview evidence paths so stale or cross-revision bundles are rejected instead of being treated as active handoff data.
+- Updated benchmark and engineer plan-review manifest constructors to populate the new lineage metadata at the source.
+- Refreshed integration coverage to assert persisted bundle traceability and the stale-manifest regression without running the test suite.
+
 ### File List
+
+- `shared/workers/schema.py`
+- `worker_heavy/utils/rendering.py`
+- `worker_heavy/utils/handover.py`
+- `worker_heavy/api/routes.py`
+- `worker_heavy/activities/heavy_tasks.py`
+- `shared/workers/filesystem/router.py`
+- `controller/agent/review_handover.py`
+- `controller/agent/benchmark/tools.py`
+- `controller/agent/tools.py`
+- `shared/agent_templates/codex/scripts/submit_plan.py`
+- `tests/integration/architecture_p0/test_int_188_validation_preview.py`
+- `tests/integration/architecture_p1/test_benchmark_workflow.py`
+- `tests/integration/architecture_p1/test_handover.py`
+- `tests/integration/architecture_p1/test_engineering_loop.py`
+- `tests/integration/architecture_p1/test_reviewer_evidence.py`
+
+## Change Log
+
+- 2026-03-23: Added immutable bundle lineage metadata to review and render manifests, tightened latest-revision preview bundle validation, and refreshed integration coverage for persisted bundle traceability.

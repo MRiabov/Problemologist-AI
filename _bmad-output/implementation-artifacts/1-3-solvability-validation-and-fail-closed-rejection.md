@@ -9,10 +9,10 @@ As a human operator, I want the system to validate solvability and reject ambigu
 ## Acceptance Criteria
 
 1. Given benchmark objective geometry that is contradictory or obstructed, when validation runs, then the benchmark is rejected with a deterministic reason and never transitions to `PLANNED` or `ACCEPTED`.
-1. Given a moved object plus static randomization and runtime jitter that leaves the `build_zone` or intersects a `forbid_zone`, when validation runs, then the system fails closed and names the violated boundary in the error message.
-1. Given benchmark-owned moving fixtures or motion metadata that is missing, contradictory, or unsupported by reviewer-visible bounds, axes, controller facts, or declared motion topology, when the benchmark plan reviewer inspects the handoff, then the reviewer rejects it with an explicit solvability reason rather than inferring motion.
-1. Given a benchmark candidate that is schema-valid but logically unsolvable, when planner handoff validation or reviewer entry validation runs, then the controller records a machine-readable rejection reason and failure class and blocks downstream coder/reviewer entry.
-1. Given a rejected benchmark candidate, when the workflow is queried later, then the persisted traces, review artifacts, and validation logs show the exact reason code, failing boundary, and stage that rejected the benchmark.
+2. Given a moved object plus static randomization and runtime jitter that leaves the `build_zone` or intersects a `forbid_zone`, when validation runs, then the system fails closed and names the violated boundary in the error message.
+3. Given benchmark-owned moving fixtures or motion metadata that is missing, contradictory, or unsupported by reviewer-visible bounds, axes, controller facts, or declared motion topology, when the benchmark plan reviewer inspects the handoff, then the reviewer rejects it with an explicit solvability reason rather than inferring motion.
+4. Given a benchmark candidate that is schema-valid but logically unsolvable, when planner handoff validation or reviewer entry validation runs, then the controller records a machine-readable rejection reason and failure class and blocks downstream coder/reviewer entry.
+5. Given a rejected benchmark candidate, when the workflow is queried later, then the persisted traces, review artifacts, and validation logs show the exact reason code, failing boundary, and stage that rejected the benchmark.
 
 ## Tasks / Subtasks
 

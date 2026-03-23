@@ -13,8 +13,8 @@ Document the outcomes of Phase 0 discovery work. Capture every clarification you
 
 For each decision, include the supporting sources and why the team aligned on this direction.
 
-| Decision | Rationale | Evidence | Status |
-|----------|-----------|----------|--------|
+| Decision                                 | Rationale                         | Evidence                               | Status                     |
+| ---------------------------------------- | --------------------------------- | -------------------------------------- | -------------------------- |
 | <!-- e.g., "Adopt vector database X" --> | <!-- Why this choice was made --> | <!-- Link to evidence rows / notes --> | <!-- final / follow-up --> |
 
 ## Evidence Highlights

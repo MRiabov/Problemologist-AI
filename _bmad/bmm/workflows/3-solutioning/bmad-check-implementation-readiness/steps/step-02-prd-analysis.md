@@ -147,7 +147,7 @@ After PRD analysis complete, immediately load next step for epic coverage valida
 
 PRD analysis complete. Read fully and follow: `./step-03-epic-coverage-validation.md`
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

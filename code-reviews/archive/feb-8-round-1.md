@@ -1,12 +1,12 @@
 # Agent Prompts & Handover Logic Review
 
-**Date**: 2026-02-08  
+**Date**: 2026-02-08\
 **Files Reviewed**:
 
 - `kitty-specs/desired_architecture.md`
 - `config/prompts.yaml`
 
----
+______________________________________________________________________
 
 ## ✅ What's Aligned
 
@@ -17,19 +17,19 @@
 5. **Review YAML frontmatter** format
 6. **`benchmark_definition.yaml`** structure matches
 
----
+______________________________________________________________________
 
 ## ⚠️ Inconsistencies Found
 
-| Issue | Architecture Says | Prompts.yaml Says |
-|-------|------------------|------------------|
-| **Benchmark coder output file** | `output.py` (line 245) | `result.py` (line 254) |
-| **Engineer script name** | `script.py` (line 212) or custom | `solution.py` (line 69) |
-| **Refuse plan function** | `refuse_plan` is a script that sends a request to an endpoint (lines 251, 265-266) | `refuse_plan(reason)` as a callable (line 96) - **not listed in utils imports** |
+| Issue                              | Architecture Says                                                                     | Prompts.yaml Says                                                                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Benchmark coder output file**    | `output.py` (line 245)                                                                | `result.py` (line 254)                                                                                                                       |
+| **Engineer script name**           | `script.py` (line 212) or custom                                                      | `solution.py` (line 69)                                                                                                                      |
+| **Refuse plan function**           | `refuse_plan` is a script that sends a request to an endpoint (lines 251, 265-266)    | `refuse_plan(reason)` as a callable (line 96) - **not listed in utils imports**                                                              |
 | **Validate vs validate_and_price** | Benchmark has `validate(Compound)` only (line 762), Engineer has `validate_and_price` | Benchmark coder prompt lists only `validate(compound)` ✓, but **template imports `validate_and_price`** in `common.code_template` (line 374) |
-| **preview_design** | Only for Engineer (line 756) | Listed in Engineer prompt ✓, but benchmark coder doesn't have it (correct) |
+| **preview_design**                 | Only for Engineer (line 756)                                                          | Listed in Engineer prompt ✓, but benchmark coder doesn't have it (correct)                                                                   |
 
----
+______________________________________________________________________
 
 ## 🚨 Poor/Missing Business Logic Specification
 
@@ -45,11 +45,13 @@ Architecture (lines 443-478) describes handover flows in detail, but **prompts.y
 - Where is it imported from? Not in `common.code_template`
 - What's the return contract?
 - How does Reviewer "confirm" the refusal (prompt line 98)?
+
 <!-- addressed -->
 
 ### 3. Reviewer → Planner Routing Logic Missing
 
 Architecture says "the Engineering Reviewer must agree... will pass the plan back to the lead engineer for replanning" (lines 453-454), but prompts don't specify the routing mechanism
+
 <!-- addressed -->
 
 ### 4. Economic Constraints Handover
@@ -69,7 +71,7 @@ Prompts mention both but don't specify **who is responsible for generating each*
 
 In coder prompt (lines 209-216) - **not listed in utils imports or anywhere**
 
----
+______________________________________________________________________
 
 ## 📋 Recommended Fixes
 

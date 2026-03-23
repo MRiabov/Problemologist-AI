@@ -658,7 +658,14 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
 
         stale_manifest_payload = {
             "version": manifest_payload.get("version", "1.0"),
-            "artifacts": {},
+            "episode_id": manifest_payload.get("episode_id"),
+            "worker_session_id": manifest_payload.get("worker_session_id"),
+            "revision": "stale-manifest-revision",
+            "environment_version": manifest_payload.get("environment_version"),
+            "preview_evidence_paths": manifest_payload.get(
+                "preview_evidence_paths", []
+            ),
+            "artifacts": manifest_payload.get("artifacts", {}),
         }
         stale_write_resp = await client.post(
             f"{WORKER_LIGHT_URL}/fs/write",
@@ -685,6 +692,5 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         submit_data = BenchmarkToolResponse.model_validate(submit_resp.json())
         assert not submit_data.success, submit_data
         assert submit_data.message is not None
-        assert "render manifest" in submit_data.message.lower() or "out of sync" in (
-            submit_data.message.lower()
-        )
+        lowered_message = submit_data.message.lower()
+        assert "revision" in lowered_message or "out of sync" in lowered_message

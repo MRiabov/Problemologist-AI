@@ -2,7 +2,6 @@
 description: Execute the implementation planning workflow using the plan template to generate design artifacts.
 ---
 
-
 # /spec-kitty.plan - Create Implementation Plan
 
 **Version**: 0.11.0+
@@ -46,6 +45,7 @@ This command runs in the **main repository**, not in a worktree.
 Before executing any scripts or generating artifacts you must interrogate the specification and stakeholders.
 
 - **Scope proportionality (CRITICAL)**: FIRST, assess the feature's complexity from the spec:
+
   - **Trivial/Test Features** (hello world, simple static pages, basic demos): Ask 1-2 questions maximum about tech stack preference, then proceed with sensible defaults
   - **Simple Features** (small components, minor API additions): Ask 2-3 questions about tech choices and constraints
   - **Complex Features** (new subsystems, multi-component features): Ask 3-5 questions covering architecture, NFRs, integrations
@@ -54,6 +54,7 @@ Before executing any scripts or generating artifacts you must interrogate the sp
 - **User signals to reduce questioning**: If the user says "use defaults", "just make it simple", "skip to implementation", "vanilla HTML/CSS/JS" - recognize these as signals to minimize planning questions and use standard approaches.
 
 - **First response rule**:
+
   - For TRIVIAL features: Ask ONE tech stack question, then if answer is simple (e.g., "vanilla HTML"), proceed directly to plan generation
   - For other features: Ask a single architecture question and end with `WAITING_FOR_PLANNING_INPUT`
 
@@ -71,6 +72,7 @@ Planning requirements (scale to complexity):
 ## Outline
 
 1. **Check planning discovery status**:
+
    - If any planning questions remain unanswered or the user has not confirmed the **Engineering Alignment** summary, stay in the one-question cadence, capture the user's response, update your internal table, and end with `WAITING_FOR_PLANNING_INPUT`. Do **not** surface the table. Do **not** run the setup command yet.
    - Once every planning question has a concrete answer and the alignment summary is confirmed by the user, continue.
 
@@ -79,32 +81,38 @@ Planning requirements (scale to complexity):
    Before running any commands, detect which feature you're working on:
 
    a. **Check git branch name**:
-      - Run: `git rev-parse --abbrev-ref HEAD`
-      - If branch matches pattern `###-feature-name` or `###-feature-name-WP##`, extract the feature slug (strip `-WP##` suffix if present)
-      - Example: Branch `020-my-feature` or `020-my-feature-WP01` → Feature `020-my-feature`
+
+   - Run: `git rev-parse --abbrev-ref HEAD`
+   - If branch matches pattern `###-feature-name` or `###-feature-name-WP##`, extract the feature slug (strip `-WP##` suffix if present)
+   - Example: Branch `020-my-feature` or `020-my-feature-WP01` → Feature `020-my-feature`
 
    b. **Check current directory**:
-      - Look for `###-feature-name` pattern in the current path
-      - Examples:
-        - Inside `kitty-specs/020-my-feature/` → Feature `020-my-feature`
-        - Not in a worktree during planning (worktrees only used during implement): If detection runs from `.worktrees/020-my-feature-WP01/` → Feature `020-my-feature`
+
+   - Look for `###-feature-name` pattern in the current path
+   - Examples:
+     - Inside `kitty-specs/020-my-feature/` → Feature `020-my-feature`
+     - Not in a worktree during planning (worktrees only used during implement): If detection runs from `.worktrees/020-my-feature-WP01/` → Feature `020-my-feature`
 
    c. **Prioritize features without plan.md** (if multiple exist):
-      - If multiple features exist and none detected from branch/path, list all features in `kitty-specs/`
-      - Prefer features that don't have `plan.md` yet (unplanned features)
-      - If ambiguous, ask the user which feature to plan
+
+   - If multiple features exist and none detected from branch/path, list all features in `kitty-specs/`
+   - Prefer features that don't have `plan.md` yet (unplanned features)
+   - If ambiguous, ask the user which feature to plan
 
    d. **Extract feature slug**:
-      - Feature slug format: `###-feature-name` (e.g., `020-my-feature`)
-      - You MUST pass this explicitly to the setup-plan command using `--feature` flag
-      - **DO NOT** rely on auto-detection by the CLI (prevents wrong feature selection)
+
+   - Feature slug format: `###-feature-name` (e.g., `020-my-feature`)
+   - You MUST pass this explicitly to the setup-plan command using `--feature` flag
+   - **DO NOT** rely on auto-detection by the CLI (prevents wrong feature selection)
 
 3. **Setup**: Run `spec-kitty agent feature setup-plan --feature <feature-slug> --json` from the repository root and parse JSON for:
+
    - `result`: "success" or error message
    - `plan_file`: Absolute path to the created plan.md
    - `feature_dir`: Absolute path to the feature directory
 
    **Example**:
+
    ```bash
    # If detected feature is 020-my-feature:
    spec-kitty agent feature setup-plan --feature 020-my-feature --json
@@ -115,6 +123,7 @@ Planning requirements (scale to complexity):
 4. **Load context**: Read FEATURE_SPEC and `.kittify/memory/constitution.md` if it exists. If the constitution file is missing, skip Constitution Check and note that it is absent. Load IMPL_PLAN template (already copied).
 
 5. **Execute plan workflow**: Follow the structure in IMPL_PLAN template, using the validated planning answers as ground truth:
+
    - Update Technical Context with explicit statements from the user or discovery research; mark `[NEEDS CLARIFICATION: …]` only when the user deliberately postpones a decision
    - If a constitution exists, fill Constitution Check section from it and challenge any conflicts directly with the user. If no constitution exists, mark the section as skipped.
    - Evaluate gates (ERROR if violations unjustified or questions remain unanswered)
@@ -132,11 +141,13 @@ Planning requirements (scale to complexity):
 ### Phase 0: Outline & Research
 
 1. **Extract unknowns from Technical Context** above:
+
    - For each NEEDS CLARIFICATION → research task
    - For each dependency → best practices task
    - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
+
    ```
    For each unknown in Technical Context:
      Task: "Research {unknown} for {feature context}"
@@ -145,6 +156,7 @@ Planning requirements (scale to complexity):
    ```
 
 3. **Consolidate findings** in `research.md` using format:
+
    - Decision: [what was chosen]
    - Rationale: [why chosen]
    - Alternatives considered: [what else evaluated]
@@ -156,36 +168,40 @@ Planning requirements (scale to complexity):
 **Prerequisites:** `research.md` complete
 
 1. **Extract entities from feature spec** → `data-model.md`:
+
    - Entity name, fields, relationships
    - Validation rules from requirements
    - State transitions if applicable
 
 2. **Generate API contracts** from functional requirements:
+
    - For each user action → endpoint
    - Use standard REST/GraphQL patterns
    - Output OpenAPI/GraphQL schema to `/contracts/`
 
 3. **Agent context update**:
-   - Run ``
+
+   - Run \`\`
    - These scripts detect which AI agent is in use
    - Update the appropriate agent-specific context file
    - Add only new technology from current plan
    - Preserve manual additions between markers
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/\*, quickstart.md, agent-specific file
 
 ## Key rules
 
 - Use absolute paths
 - ERROR on gate failures or unresolved clarifications
 
----
+______________________________________________________________________
 
 ## ⛔ MANDATORY STOP POINT
 
 **This command is COMPLETE after generating planning artifacts.**
 
 After reporting:
+
 - `plan.md` path
 - `research.md` path (if generated)
 - `data-model.md` path (if generated)
@@ -195,6 +211,7 @@ After reporting:
 **YOU MUST STOP HERE.**
 
 Do NOT:
+
 - ❌ Generate `tasks.md`
 - ❌ Create work package (WP) files
 - ❌ Create `tasks/` subdirectories

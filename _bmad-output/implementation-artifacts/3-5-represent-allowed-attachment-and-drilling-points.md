@@ -9,11 +9,11 @@ As a human operator, I want the system to represent allowed attachment and drill
 ## Acceptance Criteria
 
 1. Given a benchmark with declared attachment or drilling points, when the benchmark package is reviewed, then those points are persisted, visible, and tied to the latest revision.
-1. Given missing, conflicting, or unsupported attachment or drilling points, when validation runs, then the system rejects or flags the benchmark with an explicit reason.
-1. Given a CAD revision changes attachment or drilling constraints, when the benchmark is reopened, then the latest revision reflects the updated attachment and drilling rules in the review artifacts.
-1. Given benchmark-owned fixture metadata declares `attachment_policy`, when the planner or reviewer reads the handoff package, then the policy is treated as read-only benchmark context and is not rewritten into engineer-owned assembly metadata.
-1. Given a benchmark fixture allows fastener mounting or drilling, when handoff validation runs, then the engine enforces the whole-part allowlist contract and the declared `drill_policy` numeric limits, including hole count, diameter range, and depth.
-1. Given a benchmark fixture has no `attachment_policy`, when planning or validation runs, then the fixture is treated as non-attachable and non-drillable by default.
+2. Given missing, conflicting, or unsupported attachment or drilling points, when validation runs, then the system rejects or flags the benchmark with an explicit reason.
+3. Given a CAD revision changes attachment or drilling constraints, when the benchmark is reopened, then the latest revision reflects the updated attachment and drilling rules in the review artifacts.
+4. Given benchmark-owned fixture metadata declares `attachment_policy`, when the planner or reviewer reads the handoff package, then the policy is treated as read-only benchmark context and is not rewritten into engineer-owned assembly metadata.
+5. Given a benchmark fixture allows fastener mounting or drilling, when handoff validation runs, then the engine enforces the whole-part allowlist contract and the declared `drill_policy` numeric limits, including hole count, diameter range, and depth.
+6. Given a benchmark fixture has no `attachment_policy`, when planning or validation runs, then the fixture is treated as non-attachable and non-drillable by default.
 
 ## Tasks / Subtasks
 

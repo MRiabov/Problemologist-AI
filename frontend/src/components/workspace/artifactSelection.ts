@@ -10,6 +10,10 @@ export type ArtifactSelectionContext = {
 
 const MEDIA_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
 const MEDIA_VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov"]);
+const SOLUTION_EVIDENCE_FILENAMES = [
+  "simulation_result.json",
+  "validation_results.json",
+];
 
 export const getAssetFileName = (asset: AssetResponse): string => {
   return asset.s3_path.split("/").pop() || asset.s3_path;
@@ -19,11 +23,6 @@ const getAssetExtension = (asset: AssetResponse): string => {
   const fileName = getAssetFileName(asset).toLowerCase();
   const dotIndex = fileName.lastIndexOf(".");
   return dotIndex >= 0 ? fileName.slice(dotIndex + 1) : "";
-};
-
-const getAssetTimestamp = (asset: AssetResponse): number => {
-  const parsed = Date.parse(asset.created_at);
-  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 export const isImageAsset = (asset: AssetResponse): boolean => {
@@ -40,51 +39,91 @@ export const isVideoAsset = (asset: AssetResponse): boolean => {
   );
 };
 
-export const isRenderEvidenceAsset = (asset: AssetResponse): boolean => {
+export const isSolutionEvidenceAsset = (asset: AssetResponse): boolean => {
   const fileName = getAssetFileName(asset).toLowerCase();
   return (
-    fileName === "simulation_result.json" ||
-    fileName === "validation_results.json" ||
+    SOLUTION_EVIDENCE_FILENAMES.includes(fileName) ||
     isImageAsset(asset) ||
-    isVideoAsset(asset) ||
     asset.s3_path.toLowerCase().includes("/renders/") ||
     asset.s3_path.toLowerCase().startsWith("renders/")
   );
 };
 
-const getEvidencePriority = (asset: AssetResponse): number => {
-  const fileName = getAssetFileName(asset).toLowerCase();
-  if (fileName === "simulation_result.json") return 0;
-  if (fileName === "validation_results.json") return 1;
-  if (asset.asset_type === AssetType.VIDEO) return 2;
-  if (asset.asset_type === AssetType.IMAGE) return 3;
-  if (asset.s3_path.toLowerCase().includes("/renders/")) return 4;
-  if (asset.s3_path.toLowerCase().startsWith("renders/")) return 4;
-  if (MEDIA_VIDEO_EXTENSIONS.has(getAssetExtension(asset))) return 5;
-  if (MEDIA_IMAGE_EXTENSIONS.has(getAssetExtension(asset))) return 6;
-  return 10;
+export const getLatestMatchingAsset = (
+  assets: AssetResponse[] = [],
+  predicate: (asset: AssetResponse) => boolean,
+): AssetResponse | null => {
+  return assets.find(predicate) ?? null;
+};
+
+const getLatestAssetByFileName = (
+  assets: AssetResponse[] = [],
+  fileNames: string[],
+): AssetResponse | null => {
+  const normalizedTargets = fileNames.map((fileName) => fileName.toLowerCase());
+  for (const fileName of normalizedTargets) {
+    const match = assets.find(
+      (asset) => getAssetFileName(asset).toLowerCase() === fileName,
+    );
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+export const getLatestMediaBundle = (
+  assets: AssetResponse[] = [],
+): {
+  solutionEvidenceAsset: AssetResponse | null;
+  videoAsset: AssetResponse | null;
+  modelAsset: AssetResponse | null;
+  heatmapAsset: AssetResponse | null;
+} => {
+  const solutionEvidenceAsset =
+    getLatestAssetByFileName(assets, SOLUTION_EVIDENCE_FILENAMES) ??
+    getLatestMatchingAsset(
+      assets,
+      (asset) =>
+        isImageAsset(asset) ||
+        asset.s3_path.toLowerCase().includes("/renders/") ||
+        asset.s3_path.toLowerCase().startsWith("renders/"),
+    ) ??
+    getLatestMatchingAsset(assets, isVideoAsset);
+  const videoAsset = getLatestMatchingAsset(
+    assets,
+    (asset) => asset.asset_type === AssetType.VIDEO || MEDIA_VIDEO_EXTENSIONS.has(getAssetExtension(asset)),
+  );
+  const modelAsset = getLatestMatchingAsset(assets, (asset) => asset.asset_type === AssetType.GLB);
+  const heatmapAsset = getLatestMatchingAsset(
+    assets,
+    (asset) =>
+      isImageAsset(asset) &&
+      asset.s3_path.toLowerCase().includes("stress_"),
+  );
+
+  return {
+    solutionEvidenceAsset,
+    videoAsset,
+    modelAsset,
+    heatmapAsset,
+  };
 };
 
 export const getLatestSolutionEvidenceAsset = (
   assets: AssetResponse[] = []
 ): AssetResponse | null => {
-  const candidates = assets
-    .filter(isRenderEvidenceAsset)
-    .slice()
-    .sort((a, b) => {
-      const priorityDelta = getEvidencePriority(a) - getEvidencePriority(b);
-      if (priorityDelta !== 0) return priorityDelta;
-
-      const timestampDelta = getAssetTimestamp(b) - getAssetTimestamp(a);
-      if (timestampDelta !== 0) return timestampDelta;
-
-      const idDelta = b.id - a.id;
-      if (idDelta !== 0) return idDelta;
-
-      return getAssetFileName(a).localeCompare(getAssetFileName(b));
-    });
-
-  return candidates[0] ?? null;
+  return (
+    getLatestAssetByFileName(assets, SOLUTION_EVIDENCE_FILENAMES) ??
+    getLatestMatchingAsset(
+      assets,
+      (asset) =>
+        isImageAsset(asset) ||
+        asset.s3_path.toLowerCase().includes("/renders/") ||
+        asset.s3_path.toLowerCase().startsWith("renders/"),
+    ) ??
+    getLatestMatchingAsset(assets, isVideoAsset)
+  );
 };
 
 export const getDefaultArtifactId = ({

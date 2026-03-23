@@ -82,6 +82,8 @@ FR35: The system can keep failed episodes replayable from persisted artifacts an
 FR36: The system can accept corrective steering prompts during an active run with attached structured CAD, code, file, or media context.
 FR37: The system can let users switch CAD selection mode between faces, parts/bodies, and subassemblies, and preserve the selected entity in the prompt payload.
 FR38: The system can preserve steering context, selection metadata, and resulting edits in traces and replay artifacts.
+FR39: The system can generate preview-ready image, video, netlist, and schematic artifacts for simulation-family runs and expose them to authorized viewers.
+FR40: The system can render advanced simulation artifacts in-browser with interactive inspection and in-scene selections for steering.
 
 ### NonFunctional Requirements
 
@@ -123,6 +125,8 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 - Static preview must persist RGB, depth, segmentation, and render manifests when enabled.
 - Reviewer roles must inspect render media with `inspect_media(...)` when render evidence exists; text-only file listing is insufficient.
 - Simulation and validation must emit durable artifacts, events, and lineage; `events.jsonl` is batch transport, while Postgres and Langfuse are query sources.
+- Simulation-family epics must emit preview-ready image and video artifacts for each renderable revision, and authorized viewers must be able to display every persisted render artifact in the browser.
+- Electronics simulation must additionally persist a netlist artifact and a schematic image alongside the render artifacts.
 - Dataset generation must preserve seed, episode, and review lineage, exclude integration-test and corrupted windows, and support replayable exports.
 - Electromechanical tasks require explicit circuit validation, power budgets, wire routing, wire tear handling, and electrical evidence surfaces.
 - Fluids, deformables, and stress-aware tasks require Genesis-backed final validation and structured stress/fluid artifacts.
@@ -130,7 +134,7 @@ NFR25: Validation, review, and export artifacts shall round-trip through storage
 - Steering is a late-stage cross-cutting capability over the agents, not a first-milestone feature, and belongs after the gravity baseline is defined.
 - Supported workbenches and mechanisms are finite and explicit; unsupported mechanisms fail closed.
 - The frontend is an evidence surface for session history, chat/trace inspection, CAD viewer, code viewer, simulation playback, and feedback, not the source of truth.
-- Advanced FEM, fluids, and electronics visualization in the UI is deferred until after the MVP; the MVP UI only needs simple workflow control, inspection, and review actions.
+- Advanced FEM, fluids, and electronics visualization in the UI is deferred until after the MVP and is handled in Epic 21; the MVP UI only needs simple workflow control, inspection, and review actions.
 - Live steering must preserve selection metadata for faces, parts, bodies, subassemblies, code ranges, file references, and media references in traces and prompt payloads.
 - Codex debug mode uses workspace-relative paths, a local submission helper, and the same fail-closed workspace contract as runtime.
 - Local CLI agent flexibility is an optional, non-exclusive development and eval-debug path; supported CLI backends may supply benchmark and engineering decisions only when they satisfy the same workspace, prompt, artifact, and fail-closed validation contracts as the controller-backed runtime.
@@ -182,6 +186,10 @@ FR35: Epic 4 - Failed episodes remain replayable from persisted artifacts and tr
 FR36: Epic 20 - Corrective steering prompts can be attached with CAD, code, file, or media context
 FR37: Epic 20 - CAD selection mode can switch between faces, parts/bodies, and subassemblies while preserving selection
 FR38: Epic 20 - Steering context, selection metadata, and resulting edits are preserved in traces and replay artifacts
+FR39: Epic 8 / Epic 11 / Epic 14 / Epic 17 - Simulation-family epics emit preview-ready artifacts that authorized viewers can inspect in-browser
+FR40: Epic 21 - Advanced visualization renders FEM, fluids, and electronics artifacts in-browser and supports in-scene steering selections
+FR41: Epic 22 - Users can upload CAD models as input objects or benchmark environments and initiate validation or simulation runs from the uploaded asset set
+FR42: Epic 21 - Users can inspect imported CAD constraints, mates, and joints in the visualization surface and toggle their visibility
 
 ## Epic List
 
@@ -193,7 +201,7 @@ Human operators can author benchmark packages, preview the CAD model and simulat
 
 ### Epic 2: Human Solution Workflow
 
-Human engineers can take an approved benchmark, run candidate solutions against it, inspect pass/fail evidence, and iterate after failure without rebuilding the benchmark.
+Human engineers can take an approved benchmark, run candidate solutions against it, inspect CAD, render, and simulation evidence, and iterate after failure without rebuilding the benchmark.
 
 ### Epic 3: Cost, Weight, and Manufacturability
 
@@ -217,7 +225,7 @@ Engineering agents can solve simple rigid-body benchmarks with verified solution
 
 ### Epic 8: Actuators: Simulation
 
-Upgrade simulation fidelity for powered motion, actuators, and motion limits.
+Upgrade simulation fidelity for powered motion, actuators, and motion limits, and emit preview video and still-frame artifacts for inspection.
 
 ### Epic 9: Actuators: Benchmarks
 
@@ -229,7 +237,7 @@ Engineering agents can solve actuator benchmarks with verified solutions.
 
 ### Epic 11: FEM: Simulation
 
-Upgrade simulation fidelity for deformables, stress, and breakage.
+Upgrade simulation fidelity for deformables, stress, and breakage, and emit mesh preview images and stress/strain field artifacts for inspection.
 
 ### Epic 12: FEM: Benchmarks
 
@@ -241,7 +249,7 @@ Engineering agents can solve FEM benchmarks with verified, stress-aware solution
 
 ### Epic 14: Fluids: Simulation
 
-Upgrade simulation fidelity for fluid containment, flow, and fluid-solid interaction.
+Upgrade simulation fidelity for fluid containment, flow, and fluid-solid interaction, and emit preview video and still-frame artifacts for inspection.
 
 ### Epic 15: Fluids: Benchmarks
 
@@ -253,7 +261,7 @@ Engineering agents can solve fluid benchmarks with verified solutions.
 
 ### Epic 17: Electronics: Simulation
 
-Upgrade simulation fidelity for circuit validity, wire routing, and power-gated actuation.
+Upgrade simulation fidelity for circuit validity, wire routing, and power-gated actuation, and emit a netlist, schematic image, and preview artifacts for inspection.
 
 ### Epic 18: Electronics: Benchmarks
 
@@ -267,7 +275,11 @@ Engineering agents can solve electromechanical benchmarks with verified circuit,
 
 Human operators can steer the active benchmark generator and engineering agents with selected CAD/code context and targeted corrections. This is the active control surface, not the read-only evidence surface.
 
-### Epic 21: Market Fit & Hardening
+### Epic 21: Advanced Visualization
+
+Human operators can view advanced simulation artifacts in-browser, including actuator motion, FEM meshes, stress and strain fields, fluids, and electronics schematics, and can point to rendered regions or components to steer the agent with that in-scene context.
+
+### Epic 22: Market Fit & Hardening
 
 Define the target market and harden the product for that market.
 
@@ -1845,3 +1857,79 @@ As a product owner, I want the product hardened for the chosen market so that th
 **Given** the release candidate
 **When** it is reviewed
 **Then** the system is judged against the market-specific quality bar rather than an abstract internal prototype bar
+
+### Story 21.4: Inspect CAD Constraints and Joints
+
+As a human operator, I want to inspect CAD constraints, mates, and joints so that I can understand how an imported assembly moves and where the solver should respect motion relationships.
+
+**Acceptance Criteria:**
+
+**Given** a CAD model with imported constraints or joints
+**When** I open the visualization surface
+**Then** I can toggle an overlay that shows the constraint graph for the model
+
+**Given** the constraint overlay is enabled
+**When** I inspect a connected part pair
+**Then** I can see the constraint or mate type, the connected entities, and any available axis or limit metadata
+
+**Given** a model without imported constraints
+**When** I enable the constraint overlay
+**Then** the UI shows an explicit empty state rather than inventing joints or mates
+
+## Epic 22: Uploaded CAD Models
+
+Users can upload CAD models as input objects or benchmark environments, validate imported motion and constraint metadata, and run simulation against the uploaded asset set so that native CAD inputs can enter the product without first being manually rebuilt into a benchmark.
+
+### Story 22.1: Upload CAD Input Objects
+
+As a human operator, I want to upload CAD input objects so that I can start from an existing model instead of rebuilding the geometry manually.
+
+**Acceptance Criteria:**
+
+**Given** a supported CAD input model
+**When** I upload it
+**Then** the system stores the uploaded asset set and exposes it as the active episode input
+
+**Given** an uploaded input model with explicit motion or constraint metadata
+**When** the system imports it
+**Then** the imported metadata is preserved as structured evidence instead of being flattened into a generic file blob
+
+**Given** an unsupported file or a package that lacks the required motion metadata for the selected workflow
+**When** I upload it
+**Then** the system rejects it with an explicit failure reason
+
+### Story 22.2: Upload CAD Benchmark Environments
+
+As a human operator, I want to upload CAD benchmark environments so that I can reuse existing benchmark geometry without manually reconstructing the environment first.
+
+**Acceptance Criteria:**
+
+**Given** a supported CAD benchmark environment
+**When** I upload it
+**Then** the system stores the uploaded environment as benchmark-owned context
+
+**Given** an uploaded benchmark environment with explicit motion, zones, or constraints
+**When** the system imports it
+**Then** the imported benchmark metadata is preserved as structured evidence and remains read-only in downstream workflows
+
+**Given** an uploaded benchmark environment that is unsupported or incomplete
+**When** I upload it
+**Then** the system rejects it with an explicit failure reason
+
+### Story 22.3: Run Simulation on Uploaded Benchmarks
+
+As a human operator, I want to run simulation on an uploaded benchmark so that I can validate the imported model under the same physics and evidence rules as native benchmark inputs.
+
+**Acceptance Criteria:**
+
+**Given** an imported benchmark that passes validation
+**When** I start simulation
+**Then** the system runs the declared simulation path and persists the resulting simulation evidence
+
+**Given** an imported benchmark with moving parts
+**When** simulation runs
+**Then** the imported motion contract is respected or the run fails closed with an explicit reason
+
+**Given** the simulation fails
+**When** I inspect the episode
+**Then** I can see the terminal failure reason, the imported benchmark asset set, and the evidence that led to rejection

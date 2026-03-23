@@ -1,6 +1,7 @@
 ---
 description: Create or update the project constitution through interactive phase-based discovery.
 ---
+
 **Path reference rule:** When you mention directories or files, provide either the absolute path or a path relative to the project root (for example, `kitty-specs/<feature>/tasks/`). Never refer to a folder by name alone.
 
 *Path: [templates/commands/constitution.md](templates/commands/constitution.md)*
@@ -13,7 +14,7 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
----
+______________________________________________________________________
 
 ## What This Command Does
 
@@ -25,48 +26,55 @@ This command creates or updates the **project constitution** through an interact
 **Important**: The constitution is OPTIONAL. All spec-kitty commands work without it.
 
 **Constitution Purpose**:
+
 - Capture technical standards (languages, testing, deployment)
 - Document code quality expectations (review process, quality gates)
 - Record tribal knowledge (team conventions, lessons learned)
 - Define governance (how the constitution changes, who enforces it)
 
----
+______________________________________________________________________
 
 ## Discovery Workflow
 
 This command uses a **4-phase discovery process**:
 
 1. **Phase 1: Technical Standards** (Recommended)
+
    - Languages, frameworks, testing requirements
    - Performance targets, deployment constraints
    - ≈3-4 questions, creates a lean foundation
 
 2. **Phase 2: Code Quality** (Optional)
+
    - PR requirements, review checklist, quality gates
    - Documentation standards
    - ≈3-4 questions
 
 3. **Phase 3: Tribal Knowledge** (Optional)
+
    - Team conventions, lessons learned
    - Historical decisions (optional)
    - ≈2-4 questions
 
 4. **Phase 4: Governance** (Optional)
+
    - Amendment process, compliance validation
    - Exception handling (optional)
    - ≈2-3 questions
 
 **Paths**:
+
 - **Minimal** (≈1 page): Phase 1 only → ≈3-5 questions
 - **Comprehensive** (≈2-3 pages): All phases → ≈8-12 questions
 
----
+______________________________________________________________________
 
 ## Execution Outline
 
 ### Step 1: Initial Choice
 
 Ask the user:
+
 ```
 Do you want to establish a project constitution?
 
@@ -76,6 +84,7 @@ C) Yes, comprehensive - Full governance and tribal knowledge (≈2-3 pages, 8-12
 ```
 
 Handle responses:
+
 - **A (Skip)**: Create a minimal placeholder at `.kittify/memory/constitution.md`:
   - Title + short note: "Constitution skipped - not required for spec-kitty usage. Run /spec-kitty.constitution anytime to create one."
   - Exit successfully.
@@ -85,6 +94,7 @@ Handle responses:
 ### Step 2: Phase 1 - Technical Standards
 
 Context:
+
 ```
 Phase 1: Technical Standards
 These are the non-negotiable technical requirements that all features must follow.
@@ -94,6 +104,7 @@ This phase is recommended for all projects.
 Ask one question at a time:
 
 **Q1: Languages and Frameworks**
+
 ```
 What languages and frameworks are required for this project?
 Examples:
@@ -103,6 +114,7 @@ Examples:
 ```
 
 **Q2: Testing Requirements**
+
 ```
 What testing framework and coverage requirements?
 Examples:
@@ -112,6 +124,7 @@ Examples:
 ```
 
 **Q3: Performance and Scale Targets**
+
 ```
 What are the performance and scale expectations?
 Examples:
@@ -122,6 +135,7 @@ Examples:
 ```
 
 **Q4: Deployment and Constraints**
+
 ```
 What are the deployment constraints or platform requirements?
 Examples:
@@ -134,6 +148,7 @@ Examples:
 ### Step 3: Phase 2 - Code Quality (Optional)
 
 Ask only if comprehensive path is selected:
+
 ```
 Phase 2: Code Quality
 Skip this if your team uses standard practices without special requirements.
@@ -146,6 +161,7 @@ B) No, skip this phase (use standard practices)
 If yes, ask one at a time:
 
 **Q5: PR Requirements**
+
 ```
 What are the requirements for pull requests?
 Examples:
@@ -155,6 +171,7 @@ Examples:
 ```
 
 **Q6: Code Review Checklist**
+
 ```
 What should reviewers check during code review?
 Examples:
@@ -164,6 +181,7 @@ Examples:
 ```
 
 **Q7: Quality Gates**
+
 ```
 What quality gates must pass before merging?
 Examples:
@@ -173,6 +191,7 @@ Examples:
 ```
 
 **Q8: Documentation Standards**
+
 ```
 What documentation is required?
 Examples:
@@ -185,6 +204,7 @@ Examples:
 ### Step 4: Phase 3 - Tribal Knowledge (Optional)
 
 Ask only if comprehensive path is selected:
+
 ```
 Phase 3: Tribal Knowledge
 Skip this for new projects or if team conventions are minimal.
@@ -197,6 +217,7 @@ B) No, skip this phase
 If yes, ask:
 
 **Q9: Team Conventions**
+
 ```
 What team conventions or coding styles should everyone follow?
 Examples:
@@ -206,6 +227,7 @@ Examples:
 ```
 
 **Q10: Lessons Learned**
+
 ```
 What past mistakes or lessons learned should guide future work?
 Examples:
@@ -216,6 +238,7 @@ Examples:
 ```
 
 Optional follow-up:
+
 ```
 Do you want to document historical architectural decisions?
 A) Yes
@@ -223,6 +246,7 @@ B) No
 ```
 
 **Q11: Historical Decisions** (only if yes)
+
 ```
 Any historical architectural decisions that should guide future work?
 Examples:
@@ -234,6 +258,7 @@ Examples:
 ### Step 5: Phase 4 - Governance (Optional)
 
 Ask only if comprehensive path is selected:
+
 ```
 Phase 4: Governance
 Skip this to use simple defaults.
@@ -244,6 +269,7 @@ B) No, skip this phase (use simple defaults)
 ```
 
 If skipped, use defaults:
+
 - Amendment: Any team member can propose changes via PR
 - Compliance: Team validates during code review
 - Exceptions: Discuss with team, document in PR
@@ -251,6 +277,7 @@ If skipped, use defaults:
 If yes, ask:
 
 **Q12: Amendment Process**
+
 ```
 How should the constitution be amended?
 Examples:
@@ -260,6 +287,7 @@ Examples:
 ```
 
 **Q13: Compliance Validation**
+
 ```
 Who validates that features comply with the constitution?
 Examples:
@@ -269,6 +297,7 @@ Examples:
 ```
 
 Optional follow-up:
+
 ```
 Do you want to define exception handling?
 A) Yes
@@ -276,6 +305,7 @@ B) No
 ```
 
 **Q14: Exception Handling** (only if yes)
+
 ```
 How should exceptions to the constitution be handled?
 Examples:
@@ -287,6 +317,7 @@ Examples:
 ### Step 6: Summary and Confirmation
 
 Present a summary and ask for confirmation:
+
 ```
 Constitution Summary
 ====================
@@ -324,6 +355,7 @@ C) Cancel, don't create constitution
 ```
 
 Handle responses:
+
 - **A**: Write the constitution file.
 - **B**: Restart from Step 1.
 - **C**: Exit without writing.
@@ -417,11 +449,12 @@ Consider updating constitution if exceptions become common.
 ### Step 8: Success Message
 
 After writing, provide:
+
 - Location of the file
 - Phases completed and questions answered
 - Next steps (review, share with team, run /spec-kitty.specify)
 
----
+______________________________________________________________________
 
 ## Required Behaviors
 

@@ -1,7 +1,7 @@
 ---
-name: 'step-03f-aggregate-scores'
-description: 'Aggregate quality dimension scores into overall 0-100 score'
-nextStepFile: './step-04-generate-report.md'
+name: step-03f-aggregate-scores
+description: Aggregate quality dimension scores into overall 0-100 score
+nextStepFile: ./step-04-generate-report.md
 outputFile: '{test_artifacts}/test-review.md'
 ---
 
@@ -11,7 +11,7 @@ outputFile: '{test_artifacts}/test-review.md'
 
 Read outputs from 4 quality subagents, calculate weighted overall score (0-100), and aggregate violations for report generation.
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -22,7 +22,7 @@ Read outputs from 4 quality subagents, calculate weighted overall score (0-100),
 - ✅ Aggregate violations by severity
 - ❌ Do NOT re-evaluate quality (use subagent outputs)
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -30,7 +30,7 @@ Read outputs from 4 quality subagents, calculate weighted overall score (0-100),
 - 💾 Record outputs before proceeding
 - 📖 Load the next step only when instructed
 
----
+______________________________________________________________________
 
 ## MANDATORY SEQUENCE
 
@@ -60,7 +60,7 @@ if (!allSucceeded) {
 }
 ```
 
----
+______________________________________________________________________
 
 ### 2. Calculate Weighted Overall Score
 
@@ -99,7 +99,7 @@ const getGrade = (score) => {
 const overallGrade = getGrade(roundedScore);
 ```
 
----
+______________________________________________________________________
 
 ### 3. Aggregate Violations by Severity
 
@@ -126,7 +126,7 @@ const violationSummary = {
 };
 ```
 
----
+______________________________________________________________________
 
 ### 4. Prioritize Recommendations
 
@@ -145,7 +145,7 @@ const allRecommendations = dimensions.flatMap((dim) =>
 const prioritizedRecommendations = allRecommendations.sort((a, b) => (a.impact === 'HIGH' ? -1 : 1)).slice(0, 10); // Top 10 recommendations
 ```
 
----
+______________________________________________________________________
 
 ### 5. Create Review Summary Object
 
@@ -187,7 +187,7 @@ const reviewSummary = {
 fs.writeFileSync(`/tmp/tea-test-review-summary-${timestamp}.json`, JSON.stringify(reviewSummary, null, 2), 'utf8');
 ```
 
----
+______________________________________________________________________
 
 ### 6. Display Summary to User
 
@@ -215,9 +215,9 @@ fs.writeFileSync(`/tmp/tea-test-review-summary-${timestamp}.json`, JSON.stringif
 ✅ Ready for report generation (Step 4)
 ```
 
----
+______________________________________________________________________
 
----
+______________________________________________________________________
 
 ### 7. Save Progress
 
@@ -236,12 +236,13 @@ fs.writeFileSync(`/tmp/tea-test-review-summary-${timestamp}.json`, JSON.stringif
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-03f-aggregate-scores'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03f-aggregate-scores'`
   - Set `lastSaved: '{date}'`
   - Append this step's output to the appropriate section of the document.
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -257,7 +258,7 @@ Proceed to Step 4 when:
 
 Load next step: `{nextStepFile}`
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS METRICS
 

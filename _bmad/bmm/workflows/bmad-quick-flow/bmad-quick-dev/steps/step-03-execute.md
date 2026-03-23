@@ -1,4 +1,5 @@
 ---
+null
 ---
 
 # Step 3: Execute Implementation
@@ -7,7 +8,7 @@
 
 **Critical:** Continue through ALL tasks without stopping for milestones.
 
----
+______________________________________________________________________
 
 ## AVAILABLE STATE
 
@@ -23,7 +24,7 @@ From context:
 - Mode A: Tasks and AC extracted from tech-spec
 - Mode B: Tasks and AC from step-02 mental plan
 
----
+______________________________________________________________________
 
 ## EXECUTION LOOP
 
@@ -53,7 +54,7 @@ For each task:
 - Check off task: `- [x] Task N`
 - Continue to next task immediately
 
----
+______________________________________________________________________
 
 ## HALT CONDITIONS
 
@@ -70,7 +71,7 @@ For each task:
 - Warnings that don't block functionality
 - Style preferences (follow existing patterns)
 
----
+______________________________________________________________________
 
 ## CONTINUOUS EXECUTION
 
@@ -81,13 +82,13 @@ For each task:
 - Tests failing = fix before continuing
 - Track all completed work for self-check
 
----
+______________________________________________________________________
 
 ## NEXT STEP
 
 When ALL tasks are complete (or halted on blocker), read fully and follow: `./step-04-self-check.md`.
 
----
+______________________________________________________________________
 
 ## SUCCESS METRICS
 

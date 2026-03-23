@@ -159,7 +159,7 @@ async function login(request: any, email: string, password: string): Promise<str
 - ⚠️ CONCERNS: 1-2 tests failing with mitigation plan and owner assigned
 - ❌ FAIL: Critical exposure (unauthenticated access, password leak, SQL injection succeeds)
 
----
+______________________________________________________________________
 
 ### Example 2: Performance NFR Validation (k6 Load Testing for SLO/SLA)
 
@@ -287,7 +287,7 @@ k6 run --out json=performance-results.json tests/nfr/performance.k6.js
 
 **Note**: Playwright can validate **perceived performance** (Core Web Vitals via Lighthouse), but k6 validates **system performance** (throughput, latency, resource limits under load)
 
----
+______________________________________________________________________
 
 ### Example 3: Reliability NFR Validation (Playwright for UI Resilience)
 
@@ -444,7 +444,7 @@ test.describe('Reliability NFR: Error Handling & Recovery', () => {
 - ⚠️ CONCERNS: Partial coverage (e.g., missing circuit breaker) or no telemetry
 - ❌ FAIL: No recovery path (500 error crashes app) or unresolved crash scenarios
 
----
+______________________________________________________________________
 
 ### Example 4: Maintainability NFR Validation (CI Tools, Not Playwright)
 
@@ -604,30 +604,33 @@ test.describe('Maintainability NFR: Observability Validation', () => {
 
 **Maintainability NFR Criteria**:
 
-- ✅ PASS: Clean code (80%+ coverage from CI, <5% duplication from CI), observability validated in E2E, no critical vulnerabilities from npm audit
+- ✅ PASS: Clean code (80%+ coverage from CI, \<5% duplication from CI), observability validated in E2E, no critical vulnerabilities from npm audit
 - ⚠️ CONCERNS: Duplication >5%, coverage 60-79%, or unclear ownership
-- ❌ FAIL: Absent tests (<60%), tangled implementations (>10% duplication), or no observability
+- ❌ FAIL: Absent tests (\<60%), tangled implementations (>10% duplication), or no observability
 
----
+______________________________________________________________________
 
 ## NFR Assessment Checklist
 
 Before release gate:
 
 - [ ] **Security** (Playwright E2E + Security Tools):
+
   - [ ] Auth/authz tests green (unauthenticated redirect, RBAC enforced)
   - [ ] Secrets never logged or exposed in errors
   - [ ] OWASP Top 10 validated (SQL injection blocked, XSS sanitized)
   - [ ] Security audit completed (vulnerability scan, penetration test if applicable)
 
 - [ ] **Performance** (k6 Load Testing):
-  - [ ] SLO/SLA targets met with k6 evidence (p95 <500ms, error rate <1%)
+
+  - [ ] SLO/SLA targets met with k6 evidence (p95 \<500ms, error rate \<1%)
   - [ ] Load testing completed (expected load)
   - [ ] Stress testing completed (breaking point identified)
   - [ ] Spike testing completed (handles traffic spikes)
   - [ ] Endurance testing completed (no memory leaks under sustained load)
 
 - [ ] **Reliability** (Playwright E2E + API Tests):
+
   - [ ] Error handling graceful (500 → user-friendly message + retry)
   - [ ] Retries implemented (3 attempts on transient failures)
   - [ ] Health checks monitored (/api/health endpoint)
@@ -635,15 +638,19 @@ Before release gate:
   - [ ] Offline handling validated (network disconnection graceful)
 
 - [ ] **Maintainability** (CI Tools):
+
   - [ ] Test coverage ≥80% (from CI coverage report)
-  - [ ] Code duplication <5% (from jscpd CI job)
+  - [ ] Code duplication \<5% (from jscpd CI job)
   - [ ] No critical/high vulnerabilities (from npm audit CI job)
   - [ ] Structured logging validated (Playwright validates telemetry headers)
   - [ ] Error tracking configured (Sentry/monitoring integration validated)
 
 - [ ] **Ambiguous requirements**: Default to CONCERNS (force team to clarify thresholds and evidence)
+
 - [ ] **NFR criteria documented**: Measurable thresholds defined (not subjective "fast enough")
+
 - [ ] **Automated validation**: NFR tests run in CI pipeline (not manual checklists)
+
 - [ ] **Tool selection**: Right tool for each NFR (k6 for performance, Playwright for security/reliability E2E, CI tools for maintainability)
 
 ## NFR Gate Decision Matrix

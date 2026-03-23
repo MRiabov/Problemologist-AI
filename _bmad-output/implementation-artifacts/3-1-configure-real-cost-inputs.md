@@ -1,6 +1,6 @@
 # Story 3.1: Configure Real Cost Inputs
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -9,24 +9,24 @@ As a human operator, I want to configure the prices used for costing from real m
 ## Acceptance Criteria
 
 1. Given a workspace `manufacturing_config.yaml` or catalog source with valid pricing data, when the planner validates costing inputs, then the selected price assumptions are loaded from that source, applied to the handoff, and persisted in the planner artifact bundle for later validation.
-1. Given a missing, malformed, stale, or non-catalog price source, when costing inputs are validated, then the planner handoff is rejected with an explicit reason that names the missing or invalid source and no plan is submitted.
-1. Given catalog-backed COTS items or material inputs, when planner artifacts are written, then the chosen `part_id`/manufacturer/source/unit-cost data remain traceable in `assembly_definition.yaml` and the episode record, rather than being replaced with inferred or invented values.
+2. Given a missing, malformed, stale, or non-catalog price source, when costing inputs are validated, then the planner handoff is rejected with an explicit reason that names the missing or invalid source and no plan is submitted.
+3. Given catalog-backed COTS items or material inputs, when planner artifacts are written, then the chosen `part_id`/manufacturer/source/unit-cost data remain traceable in `assembly_definition.yaml` and the episode record, rather than being replaced with inferred or invented values.
 
 ## Tasks / Subtasks
 
-- [ ] Tighten the pricing-source path in `worker_heavy/workbenches/config.py`, `worker_heavy/utils/dfm.py`, and `controller/agent/tools.py` so planner validation and handoff submission both use the same merged manufacturing-config source of truth.
-  - [ ] Fail closed when the workspace override is missing, unreadable, or cannot be merged into the repository config.
-  - [ ] Keep the returned error text deterministic and specific enough for integration assertions.
-- [ ] Keep the planner prompt contract aligned in `config/prompts.yaml`.
-  - [ ] Tell the planner to read `manufacturing_config.yaml` or `/config/manufacturing_config.yaml`, use `invoke_cots_search_subagent(...)` for each planned COTS part, and run `validate_costing_and_price()` before `submit_plan()`.
-  - [ ] Explicitly forbid invented costs or uncatalogued COTS IDs in planner-authored artifacts.
-- [ ] Preserve and validate price provenance in the existing assembly schema and validation path.
-  - [ ] Reuse `ManufacturedPartEstimate`, `CotsPartEstimate`, and the current `validate_assembly_definition_yaml` / `validate_planner_handoff_cross_contract` flow rather than inventing a second costing record format.
-  - [ ] Ensure catalog-backed entries keep their source metadata and that later validation can replay the same pricing basis.
-- [ ] Extend integration coverage in `tests/integration/architecture_p0/test_planner_gates.py` and `tests/integration/architecture_p1/test_manufacturing.py`.
-  - [ ] Add a positive case that proves a real workspace cost override or catalog-backed price source is accepted and produces the expected totals.
-  - [ ] Add a negative case that proves missing or malformed price data fails closed with an explicit reason.
-  - [ ] Keep the assertions HTTP- and artifact-based, not unit-test-only.
+- [x] Tighten the pricing-source path in `worker_heavy/workbenches/config.py`, `worker_heavy/utils/dfm.py`, and `controller/agent/tools.py` so planner validation and handoff submission both use the same merged manufacturing-config source of truth.
+  - [x] Fail closed when the workspace override is missing, unreadable, or cannot be merged into the repository config.
+  - [x] Keep the returned error text deterministic and specific enough for integration assertions.
+- [x] Keep the planner prompt contract aligned in `config/prompts.yaml`.
+  - [x] Tell the planner to read `manufacturing_config.yaml` or `/config/manufacturing_config.yaml`, use `invoke_cots_search_subagent(...)` for each planned COTS part, and run `validate_costing_and_price()` before `submit_plan()`.
+  - [x] Explicitly forbid invented costs or uncatalogued COTS IDs in planner-authored artifacts.
+- [x] Preserve and validate price provenance in the existing assembly schema and validation path.
+  - [x] Reuse `ManufacturedPartEstimate`, `CotsPartEstimate`, and the current `validate_assembly_definition_yaml` / `validate_planner_handoff_cross_contract` flow rather than inventing a second costing record format.
+  - [x] Ensure catalog-backed entries keep their source metadata and that later validation can replay the same pricing basis.
+- [x] Extend integration coverage in `tests/integration/architecture_p0/test_planner_gates.py` and `tests/integration/architecture_p1/test_manufacturing.py`.
+  - [x] Add a positive case that proves a real workspace cost override or catalog-backed price source is accepted and produces the expected totals.
+  - [x] Add a negative case that proves missing or malformed price data fails closed with an explicit reason.
+  - [x] Keep the assertions HTTP- and artifact-based, not unit-test-only.
 - [ ] Run the cost-related integration slices before marking the story complete.
   - [ ] At minimum cover `INT-010`, `INT-012`, `INT-013`, `INT-014`, `INT-018`, and `INT-019`; include any follow-on regression needed to prove pricing provenance is stable.
 
@@ -75,10 +75,37 @@ As a human operator, I want to configure the prices used for costing from real m
 
 ### Agent Model Used
 
-TBD
+GPT-5
 
 ### Debug Log References
 
+- `2026-03-23`: Implemented fail-closed manufacturing-config provenance plumbing across planner validation, `submit_plan()`, seeded handoff validation, and planner prompt/config permissions. Integration execution was intentionally deferred at user request.
+
 ### Completion Notes List
 
+- Planner validation and handoff submission now require the same workspace `manufacturing_config.yaml` source and reject missing or malformed pricing inputs with deterministic errors.
+- Planner prompts and planner filesystem permissions now explicitly permit reading the workspace pricing source while still forbidding invented COTS pricing data.
+- Planner handoff manifests now persist `manufacturing_config.yaml` alongside the existing artifacts so provenance is traceable in the episode bundle.
+- Added integration coverage for a positive provenance assertion and a negative fail-closed missing-config case, but did not run the tests yet per request.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/3-1-configure-real-cost-inputs.md`
+- `config/agents_config.yaml`
+- `config/prompts.yaml`
+- `controller/agent/benchmark/tools.py`
+- `controller/agent/node_entry_validation.py`
+- `controller/agent/tools.py`
+- `shared/agent_templates/codex/scripts/submit_plan.py`
+- `tests/integration/architecture_p0/test_planner_gates.py`
+- `tests/integration/architecture_p1/test_manufacturing.py`
+- `worker_heavy/utils/dfm.py`
+- `worker_heavy/workbenches/config.py`
+
+### Change Log
+
+- 2026-03-23: Wired `manufacturing_config.yaml` into planner validation, seeded handoff preflight, manifest persistence, prompt guidance, and planner filesystem access so cost inputs fail closed instead of falling back to invented pricing.
+
+### Status
+
+review

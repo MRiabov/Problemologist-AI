@@ -2,7 +2,7 @@
 
 This document identifies **NEW** architectural smells and questionable decisions discovered during a deep-dive review of the codebase on **February 16, 2026**.
 
----
+______________________________________________________________________
 
 ## 🔴 Critical Architectural Issues
 
@@ -12,8 +12,8 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [database.py:L31-48](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py#L31-48) (`_broadcast_trace`)
-- [database.py:L90, L136, L181, L215](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py) (Calls to `_broadcast_trace` after every DB commit)
+- \[database.py:L31-48\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py#L31-48) (`_broadcast_trace`)
+- \[database.py:L90, L136, L181, L215\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py) (Calls to `_broadcast_trace` after every DB commit)
 
 **The Smell:**
 
@@ -22,7 +22,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
----
+______________________________________________________________________
 
 ### 2. Manual Retry and Validation Loops in `PlannerNode`
 
@@ -30,7 +30,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [planner.py:L115-186](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L115-186)
+- \[planner.py:L115-186\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L115-186)
 
 **The Smell:**
 
@@ -39,7 +39,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
----
+______________________________________________________________________
 
 ## 🟠 Moderate Design Issues
 
@@ -49,9 +49,9 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [schemas.py:L27-33](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py#L27-33)
-- [schemas.py:L56-61](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py#L56-61)
-- [schemas.py:L70-75](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py#L70-75)
+- \[schemas.py:L27-33\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py#L27-33)
+- \[schemas.py:L56-61\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py#L56-61)
+- \[schemas.py:L70-75\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/shared/models/schemas.py#L70-75)
 - (and many more...)
 
 **The Smell:**
@@ -61,7 +61,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
----
+______________________________________________________________________
 
 ### 4. "Magical" Input Cleaning with `ast.literal_eval`
 
@@ -69,7 +69,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [database.py:L106-112](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py#L106-112)
+- \[database.py:L106-112\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py#L106-112)
 
 **The Smell:**
 
@@ -78,7 +78,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
----
+______________________________________________________________________
 
 ## 🟡 Minor Issues & Smells
 
@@ -88,8 +88,8 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [database.py:L33, L53, L71, L114, L140, L165, L183, L199, L251](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py)
-- [planner.py:L128](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L128)
+- \[database.py:L33, L53, L71, L114, L140, L165, L183, L199, L251\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/observability/database.py)
+- \[planner.py:L128\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L128)
 
 **The Smell:**
 
@@ -98,7 +98,7 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
----
+______________________________________________________________________
 
 ### 6. Inconsistent Configuration Defaults
 
@@ -106,8 +106,8 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **Evidence:**
 
-- [planner.py:L34](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L34): `worker_url: str = "http://worker:8001"`
-- [planner.py:L201](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L201): `node = PlannerNode(worker_url=settings.spec_001_api_url, ...)`
+- \[planner.py:L34\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L34): `worker_url: str = "http://worker:8001"`
+- \[planner.py:L201\](file:///home/maksym/Work/proj/Problemologist/Problemologist-AI/controller/agent/nodes/planner.py#L201): `node = PlannerNode(worker_url=settings.spec_001_api_url, ...)`
 
 **The Smell:**
 
@@ -115,19 +115,19 @@ This document identifies **NEW** architectural smells and questionable decisions
 
 **User Review:**
 
----
+______________________________________________________________________
 
 ## Summary
 
-| Issue | Severity | Effort |
-|-------|----------|--------|
-| 1. Mixed Concerns in Tracing | 🔴 Critical | Medium |
-| 2. Manual Retry Loops (Planner) | 🔴 Critical | Medium |
-| 3. Redundant Pydantic Coercion | 🟠 Moderate | Low |
-| 4. Magical Input Cleaning | 🟠 Moderate | Low |
-| 5. Redundant Imports | 🟡 Minor | Trivial |
-| 6. Inconsistent Config | 🟡 Minor | Trivial |
+| Issue                           | Severity    | Effort  |
+| ------------------------------- | ----------- | ------- |
+| 1. Mixed Concerns in Tracing    | 🔴 Critical | Medium  |
+| 2. Manual Retry Loops (Planner) | 🔴 Critical | Medium  |
+| 3. Redundant Pydantic Coercion  | 🟠 Moderate | Low     |
+| 4. Magical Input Cleaning       | 🟠 Moderate | Low     |
+| 5. Redundant Imports            | 🟡 Minor    | Trivial |
+| 6. Inconsistent Config          | 🟡 Minor    | Trivial |
 
----
+______________________________________________________________________
 
 *Review conducted on 2026-02-16 by Gemini (Antigravity)*

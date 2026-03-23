@@ -1,23 +1,23 @@
 # Architecture Delta: Feb 9 Round 1
 
-**Date**: 2026-02-09  
+**Date**: 2026-02-09\
 **Status**: Review of current implementation against `desired_architecture.md` and previous review rounds.
 
----
+______________________________________________________________________
 
 ## 1. Motor Controller Functions *(MISSING - NEW)*
 
 The recently added motor controller specifications are not yet implemented.
 
-| Component | Description | Missing |
-|-----------|-------------|---------|
-| **Time-based** | `constant`, `sinusoidal`, `square`, `trapezoidal` functions | Entire `controllers` package |
-| **Position-based** | Inverse kinematics (rotate to 45deg, etc.) | Implementation & logic |
+| Component          | Description                                                 | Missing                      |
+| ------------------ | ----------------------------------------------------------- | ---------------------------- |
+| **Time-based**     | `constant`, `sinusoidal`, `square`, `trapezoidal` functions | Entire `controllers` package |
+| **Position-based** | Inverse kinematics (rotate to 45deg, etc.)                  | Implementation & logic       |
 
 > [!IMPORTANT]
 > A new utility package `worker/utils/controllers` (or similar) is required to house these functions.
 
----
+______________________________________________________________________
 
 ## 2. Agent Flow & Contracts
 
@@ -26,7 +26,7 @@ Handover validation is largely in place, but some refinements are needed.
 - **[MISSING]** Engineering `plan.md` and `todo.md` templates are missing from the `engineer/` template repo.
 - **[PARTIAL]** `benchmark_definition.yaml` is persisted during handover, but not all fields are utilized by subsequent tools.
 
----
+______________________________________________________________________
 
 ## 3. Frontend Specifications
 
@@ -35,7 +35,7 @@ The design and 3-column layout are completed and look premium.
 - **[MISSING]** **CAD Viewer Format**: Still uses **STL (client-side)**. Needs to switch to **GLB (server-side rendering fallback)** as per spec.
 - **[MISSING]** **Artifact Viewer**: Full file tree for browsing artifacts in the 3rd column.
 
----
+______________________________________________________________________
 
 ## 4. Infrastructure
 
@@ -43,14 +43,14 @@ The design and 3-column layout are completed and look premium.
 - **[DONE]** **Git Library**: Usage of `GitPython`. (Note: Transition to git2 is cancelled, GitPython is fine).
 - **[PARTIAL]** **Type Safety**: Beartype usage is sparse despite the mandate.
 
----
+______________________________________________________________________
 
 ## 5. Agent Tools & Validation
 
 - **[MISSING]** **`build_zone` Integration**: The main `validate` tool in `worker/utils/validation.py` uses a generic `MAX_SIZE` instead of the specific `build_zone` bounds from `benchmark_definition.yaml`.
 - **[DONE]** `preview_design` tool and `/lint` endpoint are implemented.
 
----
+______________________________________________________________________
 
 ## Suggested Next Steps
 

@@ -12,7 +12,11 @@ from shared.enums import (
     ReviewDecision,
     TraceType,
 )
-from shared.models.schemas import EpisodeMetadata, TraceMetadata
+from shared.models.schemas import (
+    DatasetRowArchiveManifest,
+    EpisodeMetadata,
+    TraceMetadata,
+)
 from shared.models.steerability import CodeReference, GeometricSelection
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -32,6 +36,13 @@ class BenchmarkGenerateResponse(StandardResponse):
 
 class BenchmarkConfirmResponse(StandardResponse):
     pass
+
+
+class ObjectStoragePointer(BaseModel):
+    bucket: str
+    key: str
+    sha256: str
+    size_bytes: int
 
 
 class AgentRunResponse(StandardResponse):
@@ -74,6 +85,17 @@ class AssetResponse(BaseModel):
 
 class BenchmarkObjectivesResponse(StandardResponse):
     objectives: dict
+
+
+class DatasetExportRequest(BaseModel):
+    episode_id: uuid.UUID
+
+
+class DatasetExportResponse(StandardResponse):
+    export_id: uuid.UUID
+    episode_id: uuid.UUID
+    archive: ObjectStoragePointer
+    manifest: DatasetRowArchiveManifest
 
 
 class EpisodeResponse(BaseModel):

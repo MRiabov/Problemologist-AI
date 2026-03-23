@@ -1,7 +1,7 @@
 ---
-name: 'step-01-load-context'
-description: 'Load NFR requirements, evidence sources, and knowledge base'
-nextStepFile: './step-02-define-thresholds.md'
+name: step-01-load-context
+description: Load NFR requirements, evidence sources, and knowledge base
+nextStepFile: ./step-02-define-thresholds.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 outputFile: '{test_artifacts}/nfr-assessment.md'
 ---
@@ -18,7 +18,7 @@ Gather NFR requirements, evidence sources, and knowledge fragments needed for as
 - ✅ Speak in `{communication_language}`
 - 🚫 Halt if implementation or evidence is unavailable
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -44,7 +44,7 @@ Gather NFR requirements, evidence sources, and knowledge fragments needed for as
 
 If missing: **HALT** and request the missing inputs.
 
----
+______________________________________________________________________
 
 ## 2. Load Configuration
 
@@ -52,7 +52,7 @@ From `{config_source}`:
 
 - Read `tea_browser_automation`
 
----
+______________________________________________________________________
 
 ### Tiered Knowledge Loading
 
@@ -82,7 +82,7 @@ From `{knowledgeIndex}` load:
 
 - (existing MCP-related fragments, if any are added in future)
 
----
+______________________________________________________________________
 
 ## 4. Load Artifacts
 
@@ -92,13 +92,13 @@ If available, read:
 - `PRD.md` (product-level NFRs)
 - `story` or `test-design` docs (feature-level NFRs)
 
----
+______________________________________________________________________
 
 ## 5. Confirm Inputs
 
 Summarize loaded NFR sources and evidence availability.
 
----
+______________________________________________________________________
 
 ## 6. Save Progress
 
@@ -117,6 +117,7 @@ Summarize loaded NFR sources and evidence availability.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-01-load-context'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-load-context'`
   - Set `lastSaved: '{date}'`

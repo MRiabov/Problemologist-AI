@@ -9,10 +9,10 @@ As a human operator, I want the system to evaluate whether a solution is manufac
 ## Acceptance Criteria
 
 1. Given `BenchmarkDefinition.constraints.target_quantity` or a direct `AnalyzeRequest.quantity`, when manufacturability is evaluated, then the analysis uses that quantity rather than silently defaulting to `1`.
-1. Given a design whose setup cost and variable cost differ across manufacturing methods, when validation runs at the requested quantity, then the returned workbench result exposes setup cost and variable cost separately and the planner can compare the methods at that quantity.
-1. Given a design that exceeds the allowed cost or weight envelope for the requested quantity, when validation or planner submission runs, then the run fails closed with an explicit reason that names the quantity-driven constraint that was exceeded.
-1. Given multiple manufacturing methods are viable for the same part, when the planner evaluates the design, then it selects the method that satisfies the requirements at the requested quantity instead of hardcoding the cheapest single-unit result.
-1. Given quantity is declared in `constraints.target_quantity` or direct analyze input, when the handoff is validated, then the same quantity remains traceable in the benchmark and assembly artifacts plus the runtime validation result metadata.
+2. Given a design whose setup cost and variable cost differ across manufacturing methods, when validation runs at the requested quantity, then the returned workbench result exposes setup cost and variable cost separately and the planner can compare the methods at that quantity.
+3. Given a design that exceeds the allowed cost or weight envelope for the requested quantity, when validation or planner submission runs, then the run fails closed with an explicit reason that names the quantity-driven constraint that was exceeded.
+4. Given multiple manufacturing methods are viable for the same part, when the planner evaluates the design, then it selects the method that satisfies the requirements at the requested quantity instead of hardcoding the cheapest single-unit result.
+5. Given quantity is declared in `constraints.target_quantity` or direct analyze input, when the handoff is validated, then the same quantity remains traceable in the benchmark and assembly artifacts plus the runtime validation result metadata.
 
 ## Tasks / Subtasks
 

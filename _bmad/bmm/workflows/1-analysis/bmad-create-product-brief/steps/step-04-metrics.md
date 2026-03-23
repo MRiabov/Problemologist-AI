@@ -1,7 +1,6 @@
 ---
 # File References
 outputFile: '{planning_artifacts}/product-brief-{{project_name}}-{{date}}.md'
-
 ---
 
 # Step 4: Success Metrics Definition
@@ -172,7 +171,7 @@ Prepare the following structure for document append:
 
 ONLY WHEN [C continue option] is selected and [success metrics finalized and saved to document with frontmatter updated], will you then read fully and follow: `./step-05-scope.md` to begin MVP scope definition.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

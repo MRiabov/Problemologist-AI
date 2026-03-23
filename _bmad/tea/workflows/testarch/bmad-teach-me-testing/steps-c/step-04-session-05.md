@@ -1,11 +1,11 @@
 ---
-name: 'step-04-session-05'
+name: step-04-session-05
 description: 'Session 5: ATDD & Automate - TDD red-green approach, generate tests (60 min)'
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-sessionNotesTemplate: '../templates/session-notes-template.md'
+sessionNotesTemplate: ../templates/session-notes-template.md
 sessionNotesFile: '{test_artifacts}/tea-academy/{user_name}/session-05-notes.md'
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
@@ -194,7 +194,7 @@ D) They're required by TEA"
 
 Correct: C
 
-Calculate score, handle <70% retry.
+Calculate score, handle \<70% retry.
 
 ### 8. Generate Session Notes
 
@@ -227,7 +227,7 @@ Progress: {completion_percentage}%"
 
 Return to {nextStepFile}.
 
----
+______________________________________________________________________
 
 ## 🚨 SUCCESS METRICS
 

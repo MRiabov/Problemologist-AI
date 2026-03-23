@@ -1,7 +1,7 @@
 ---
 stepsCompleted: []
 inputDocuments: []
-workflowType: 'research'
+workflowType: research
 lastStep: 1
 research_type: '{{research_type}}'
 research_topic: '{{research_topic}}'
@@ -18,12 +18,12 @@ source_verification: true
 **Author:** {{user_name}}
 **Research Type:** {{research_type}}
 
----
+______________________________________________________________________
 
 ## Research Overview
 
 [Research overview and methodology will be appended here]
 
----
+______________________________________________________________________
 
 <!-- Content will be appended sequentially through research workflow steps -->

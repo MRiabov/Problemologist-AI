@@ -1,7 +1,7 @@
 ---
-name: 'step-02-discover-tests'
-description: 'Discover and catalog tests by level'
-nextStepFile: './step-03-map-criteria.md'
+name: step-02-discover-tests
+description: Discover and catalog tests by level
+nextStepFile: ./step-03-map-criteria.md
 outputFile: '{test_artifacts}/traceability-report.md'
 ---
 
@@ -16,7 +16,7 @@ Identify tests relevant to the requirements and classify by test level.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -43,7 +43,7 @@ Search `{test_dir}` for:
 - Feature name matches
 - Spec patterns (`*.spec.*`, `*.test.*`)
 
----
+______________________________________________________________________
 
 ## 2. Categorize by Level
 
@@ -56,7 +56,7 @@ Classify as:
 
 Record test IDs, describe blocks, and priority markers if present.
 
----
+______________________________________________________________________
 
 ## 3. Build Coverage Heuristics Inventory
 
@@ -74,7 +74,7 @@ Capture explicit coverage signals so Phase 1 can detect common blind spots:
 
 Record these findings in step output as `coverage_heuristics` for Step 3/4.
 
----
+______________________________________________________________________
 
 ### 4. Save Progress
 
@@ -93,6 +93,7 @@ Record these findings in step output as `coverage_heuristics` for Step 3/4.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-02-discover-tests'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-discover-tests'`
   - Set `lastSaved: '{date}'`

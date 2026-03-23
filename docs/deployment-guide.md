@@ -7,7 +7,7 @@
 Problemologist-AI runs in two practical modes:
 
 1. A local development mode that starts the services with `scripts/env_up.sh`.
-1. A containerized stack defined by `docker-compose.yml` and `docker-compose.test.yaml`.
+2. A containerized stack defined by `docker-compose.yml` and `docker-compose.test.yaml`.
 
 The local workflow is the main entry point for day-to-day backend engineering. The containerized stack is the closest thing to a production deployment shape and is the reference for service dependencies and ports. The frontend is optional for backend-only work.
 
@@ -152,8 +152,8 @@ cd frontend && npm run build
 ## Deployment Checklist
 
 1. Confirm `.env` contains the model and storage credentials you intend to use.
-1. Start the environment with `./scripts/env_up.sh`.
-1. Verify controller, worker-light, worker-heavy, PostgreSQL, MinIO, and Temporal are healthy.
-1. Run the integration suite with `./scripts/run_integration_tests.sh`.
-1. Check the frontend at `http://127.0.0.1:15173` only if you are working on the UI.
-1. Review the logs in `logs/manual_run/` if any service fails to start.
+2. Start the environment with `./scripts/env_up.sh`.
+3. Verify controller, worker-light, worker-heavy, PostgreSQL, MinIO, and Temporal are healthy.
+4. Run the integration suite with `./scripts/run_integration_tests.sh`.
+5. Check the frontend at `http://127.0.0.1:15173` only if you are working on the UI.
+6. Review the logs in `logs/manual_run/` if any service fails to start.

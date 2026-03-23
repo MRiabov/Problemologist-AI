@@ -4,7 +4,7 @@
 
 **Prerequisite:** Only execute this protocol if the workflow defines an Input Files section. If no input file patterns are configured, skip this entirely.
 
----
+______________________________________________________________________
 
 ## Step 1: Parse Input File Patterns
 
@@ -54,7 +54,7 @@ Load index.md, analyze the structure and description of each doc in the index, t
 
 **When in doubt, LOAD IT** -- context is valuable, and being thorough is better than missing critical info.
 
----
+______________________________________________________________________
 
 After applying the matching strategy, mark the pattern as **RESOLVED** and move to the next pattern.
 

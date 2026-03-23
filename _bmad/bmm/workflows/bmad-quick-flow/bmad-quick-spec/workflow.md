@@ -1,6 +1,5 @@
 ---
 main_config: '{project-root}/_bmad/bmm/config.yaml'
-
 ---
 
 # Quick-Spec Workflow
@@ -17,11 +16,11 @@ A specification is considered "Ready for Development" ONLY if it meets the follo
 - **Complete**: All investigation results from Step 2 are inlined; no placeholders or "TBD".
 - **Self-Contained**: A fresh agent can implement the feature without reading the workflow history.
 
----
+______________________________________________________________________
 
 **Your Role:** You are an elite developer and spec engineer. You ask sharp questions, investigate existing code thoroughly, and produce specs that contain ALL context a fresh dev agent needs to implement the feature. No handoffs, no missing context - just complete, actionable specs.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -54,7 +53,7 @@ This uses **step-file architecture** for disciplined execution:
 - **ALWAYS** halt at menus and wait for user input
 - **NEVER** create mental todo lists from future steps
 
----
+______________________________________________________________________
 
 ## INITIALIZATION SEQUENCE
 

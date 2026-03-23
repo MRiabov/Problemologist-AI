@@ -1,8 +1,8 @@
 ---
-name: 'step-03e-subagent-performance'
+name: step-03e-subagent-performance
 description: 'Subagent: Check test performance (speed, efficiency, parallelization)'
 subagent: true
-outputFile: '/tmp/tea-test-review-performance-{{timestamp}}.json'
+outputFile: /tmp/tea-test-review-performance-{{timestamp}}.json
 ---
 
 # Subagent 3E: Performance Quality Check
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other quality dimensio
 
 **Your task:** Analyze test files for PERFORMANCE violations only.
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -21,7 +21,7 @@ This is an **isolated subagent** running in parallel with other quality dimensio
 - ✅ Output structured JSON to temp file
 - ❌ Do NOT check determinism, isolation, maintainability, or coverage
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -55,7 +55,7 @@ const totalPenalty = violations.reduce((sum, v) => sum + severityWeights[v.sever
 const score = Math.max(0, 100 - totalPenalty);
 ```
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -108,7 +108,7 @@ const score = Math.max(0, 100 - totalPenalty);
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 

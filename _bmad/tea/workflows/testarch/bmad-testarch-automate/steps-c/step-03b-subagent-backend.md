@@ -1,8 +1,8 @@
 ---
-name: 'step-03b-subagent-backend'
+name: step-03b-subagent-backend
 description: 'Subagent: Generate backend tests only (unit, integration, contract)'
 subagent: true
-outputFile: '/tmp/tea-automate-backend-tests-{{timestamp}}.json'
+outputFile: /tmp/tea-automate-backend-tests-{{timestamp}}.json
 ---
 
 # Subagent 3B-backend: Generate Backend Tests
@@ -20,7 +20,7 @@ This is an **isolated subagent** running in parallel with API test generation (a
 
 **Your task:** Generate backend tests ONLY (unit, integration, contract - not API endpoint tests, not E2E).
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -33,7 +33,7 @@ This is an **isolated subagent** running in parallel with API test generation (a
 - Do NOT run tests (that's step 4)
 - Do NOT generate fixtures yet (that's step 3C aggregation)
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -144,7 +144,7 @@ Identify fixtures/helpers needed for backend tests:
 
 **Do NOT create fixtures yet** - just track what's needed for aggregation step.
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -211,7 +211,7 @@ Write JSON to temp file: `/tmp/tea-automate-backend-tests-{{timestamp}}.json`
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -224,7 +224,7 @@ Subagent completes when:
 
 **Subagent terminates here.** Parent workflow will read output and proceed to aggregation.
 
----
+______________________________________________________________________
 
 ## SUBAGENT SUCCESS METRICS
 

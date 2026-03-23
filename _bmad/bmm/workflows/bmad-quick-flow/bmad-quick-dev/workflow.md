@@ -4,7 +4,7 @@
 
 **Your Role:** You are an elite full-stack developer executing tasks autonomously. Follow patterns, ship code, run tests. Every response moves the project forward.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -14,7 +14,7 @@ This uses **step-file architecture** for focused execution:
 - State persists via variables: `{baseline_commit}`, `{execution_mode}`, `{tech_spec_path}`
 - Sequential progression through implementation phases
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -31,7 +31,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 - `project_context` = `**/project-context.md` (load if exists)
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

@@ -43,9 +43,9 @@ EXAMPLE:
 | right_wall | 80 × 20 × 3 | PLA | Prevents ball escape on right side |
 -->
 
-| Part | Dimensions (mm) | Material | Purpose |
-|------|-----------------|----------|---------|
-| [part_name] | [L × W × H] | [material] | [function] |
+| Part        | Dimensions (mm) | Material   | Purpose    |
+| ----------- | --------------- | ---------- | ---------- |
+| [part_name] | [L × W × H]     | [material] | [function] |
 
 **Estimated Total Weight**: [X] g (max: see constraints.max_weight)
 **Estimated Total Cost**: $[X] (max: see constraints.max_unit_cost)
@@ -94,10 +94,10 @@ Constraints from benchmark_definition.yaml:
 - max_weight: [X] g
 -->
 
-| Item | Volume (cm³) | Weight (g) | Cost ($) |
-|------|--------------|------------|----------|
-| [part] | [vol] | [wt] | [cost] |
-| **TOTAL** | | | |
+| Item      | Volume (cm³) | Weight (g) | Cost ($) |
+| --------- | ------------ | ---------- | -------- |
+| [part]    | [vol]        | [wt]       | [cost]   |
+| **TOTAL** |              |            |          |
 
 **Budget Margin**: [X]% remaining (recommended: keep ≥20% margin)
 
@@ -117,8 +117,8 @@ EXAMPLE:
 | Ball escapes via jitter | High | High | Extend capture area beyond jitter range |
 -->
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
+| Risk               | Likelihood     | Impact         | Mitigation            |
+| ------------------ | -------------- | -------------- | --------------------- |
 | [risk description] | [Low/Med/High] | [Low/Med/High] | [mitigation strategy] |
 
 ### Jitter Robustness Check

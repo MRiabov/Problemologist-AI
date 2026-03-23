@@ -39,6 +39,7 @@ import { EpisodeType } from "../../api/generated/models/EpisodeType";
 import {
     getArtifactSelectionDescriptor,
     getDefaultArtifactId,
+    getLatestMediaBundle,
     getLatestSolutionEvidenceAsset,
     isImageAsset,
     isVideoAsset,
@@ -92,6 +93,10 @@ export default function ArtifactView({
   );
   const latestSolutionEvidenceAsset = useMemo(
     () => getLatestSolutionEvidenceAsset(assets),
+    [assets]
+  );
+  const latestMediaBundle = useMemo(
+    () => getLatestMediaBundle(assets),
     [assets]
   );
 
@@ -201,7 +206,10 @@ export default function ArtifactView({
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         <CircuitSchematic soup={data.electronics} />
                         <WireView 
-                            assetUrl={getAssetUrl(assets.find((a: AssetResponse) => a.asset_type === AssetType.GLB || a.asset_type === AssetType.STL)?.s3_path)} 
+                            assetUrl={getAssetUrl(
+                                latestMediaBundle.modelAsset?.s3_path ||
+                                    assets.find((a: AssetResponse) => a.asset_type === AssetType.GLB || a.asset_type === AssetType.STL)?.s3_path
+                            )} 
                             wireRoutes={data.electronics.wiring || []} 
                         />
                     </div>
@@ -539,6 +547,14 @@ export default function ArtifactView({
                     selectedSolutionEvidenceArtifact: getArtifactSelectionDescriptor(
                         latestSolutionEvidenceAsset
                     ),
+                    latestMediaBundle: {
+                        video: getArtifactSelectionDescriptor(latestMediaBundle.videoAsset),
+                        model: getArtifactSelectionDescriptor(latestMediaBundle.modelAsset),
+                        heatmap: getArtifactSelectionDescriptor(latestMediaBundle.heatmapAsset),
+                        solutionEvidence: getArtifactSelectionDescriptor(
+                            latestMediaBundle.solutionEvidenceAsset
+                        ),
+                    },
                 })}
             </div>
             {renderContent()}

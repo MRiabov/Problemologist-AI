@@ -14,7 +14,6 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from tests.integration.agent.helpers import repo_git_revision
 from shared.enums import (
     AgentName,
     EpisodePhase,
@@ -26,10 +25,11 @@ from shared.enums import (
 from shared.models.schemas import BenchmarkDefinition
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
-    RenderManifest,
     PlanReviewManifest,
+    RenderManifest,
     ReviewManifest,
 )
+from tests.integration.agent.helpers import repo_git_revision
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -246,10 +246,34 @@ async def test_benchmark_planner_cad_reviewer_path():
         manifest = ReviewManifest.model_validate_json(manifest_resp.text)
         assert manifest.status == "ready_for_review"
         assert manifest.session_id == session_id
+        assert manifest.episode_id == str(benchmark_resp.episode_id)
+        assert manifest.worker_session_id == session_id
         assert manifest.revision == repo_git_revision()
+        assert manifest.benchmark_episode_id == str(benchmark_resp.episode_id)
+        assert manifest.benchmark_worker_session_id == session_id
+        assert manifest.benchmark_revision == repo_git_revision()
+        assert manifest.solution_revision == repo_git_revision()
         assert manifest.validation_success is True
         assert manifest.simulation_success is True
         assert manifest.goal_reached is True
+        assert manifest.preview_evidence_paths
+        assert set(manifest.preview_evidence_paths) == set(manifest.renders)
+
+        benchmark_assembly_definition_path = next(
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_assembly_definition.yaml")
+        )
+        benchmark_assembly_definition_resp = await client.get(
+            f"/episodes/{session_id}/assets/{benchmark_assembly_definition_path}"
+        )
+        assert benchmark_assembly_definition_resp.status_code == 200, (
+            benchmark_assembly_definition_resp.text
+        )
+        benchmark_assembly_definition = yaml.safe_load(
+            benchmark_assembly_definition_resp.text
+        )
+        assert manifest.environment_version == benchmark_assembly_definition["version"]
 
         script_resp = await client.get(
             f"/episodes/{session_id}/assets/{manifest.script_path}"
@@ -409,9 +433,7 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
         assert run_resp.status_code == 202, run_resp.text
         run = AgentRunResponse.model_validate(run_resp.json())
 
-        episode = await _wait_for_planned_or_failed_episode(
-            client, str(run.episode_id)
-        )
+        episode = await _wait_for_planned_or_failed_episode(client, str(run.episode_id))
         metadata = episode.metadata_vars
         assert metadata is not None
         assert episode.status == EpisodeStatus.PLANNED
@@ -433,8 +455,7 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
             for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
         assert any(
-            "controller speed '0.15'" in log
-            for log in (metadata.validation_logs or [])
+            "controller speed '0.15'" in log for log in (metadata.validation_logs or [])
         ), metadata.validation_logs
 
         traces = episode.traces or []
@@ -444,8 +465,7 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
             if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
         ]
         assert len(submit_plan_traces) >= 2, (
-            "Benchmark workflow must retry submit_plan before fail-closed "
-            "rejection."
+            "Benchmark workflow must retry submit_plan before fail-closed rejection."
         )
         assert not any(
             trace.name == "benchmark_plan_reviewer"
@@ -484,9 +504,7 @@ async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
         assert run_resp.status_code == 202, run_resp.text
         run = AgentRunResponse.model_validate(run_resp.json())
 
-        episode = await _wait_for_planned_or_failed_episode(
-            client, str(run.episode_id)
-        )
+        episode = await _wait_for_planned_or_failed_episode(client, str(run.episode_id))
         metadata = episode.metadata_vars
         assert metadata is not None
         assert episode.status == EpisodeStatus.PLANNED
@@ -513,7 +531,9 @@ async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
             trace.name == "benchmark_plan_reviewer"
             and "Starting task phase" in (trace.content or "")
             for trace in traces
-        ), "Benchmark plan reviewer should not start after unsupported motion rejection."
+        ), (
+            "Benchmark plan reviewer should not start after unsupported motion rejection."
+        )
         assert not any(
             trace.name == "benchmark_coder"
             and "Starting task phase" in (trace.content or "")

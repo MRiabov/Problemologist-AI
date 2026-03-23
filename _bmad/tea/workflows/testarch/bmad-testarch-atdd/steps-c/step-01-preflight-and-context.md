@@ -1,8 +1,8 @@
 ---
-name: 'step-01-preflight-and-context'
-description: 'Verify prerequisites and load story, framework, and knowledge base'
+name: step-01-preflight-and-context
+description: Verify prerequisites and load story, framework, and knowledge base
 outputFile: '{test_artifacts}/atdd-checklist-{story_id}.md'
-nextStepFile: './step-02-generation-mode.md'
+nextStepFile: ./step-02-generation-mode.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 ---
 
@@ -18,7 +18,7 @@ Verify prerequisites and load all required inputs before generating failing test
 - ✅ Speak in `{communication_language}`
 - 🚫 Halt if requirements are missing
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -52,7 +52,7 @@ Verify prerequisites and load all required inputs before generating failing test
 
 Store result as `{detected_stack}` = `frontend` | `backend` | `fullstack`
 
----
+______________________________________________________________________
 
 ## 2. Prerequisites (Hard Requirements)
 
@@ -64,7 +64,7 @@ Store result as `{detected_stack}` = `frontend` | `backend` | `fullstack`
 
 If any are missing: **HALT** and notify the user.
 
----
+______________________________________________________________________
 
 ## 3. Load Story Context
 
@@ -72,7 +72,7 @@ If any are missing: **HALT** and notify the user.
 - Extract acceptance criteria and constraints
 - Identify affected components and integrations
 
----
+______________________________________________________________________
 
 ## 4. Load Framework & Existing Patterns
 
@@ -89,7 +89,7 @@ From `{config_source}`:
 - `tea_browser_automation`
 - `test_stack_type`
 
----
+______________________________________________________________________
 
 ### Tiered Knowledge Loading
 
@@ -180,13 +180,13 @@ Use `{knowledgeIndex}` to load:
 
 - `pact-mcp.md`
 
----
+______________________________________________________________________
 
 ## 6. Confirm Inputs
 
 Summarize loaded inputs and confirm with the user. Then proceed.
 
----
+______________________________________________________________________
 
 ## 7. Save Progress
 
@@ -205,6 +205,7 @@ Summarize loaded inputs and confirm with the user. Then proceed.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-01-preflight-and-context'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-preflight-and-context'`
   - Set `lastSaved: '{date}'`

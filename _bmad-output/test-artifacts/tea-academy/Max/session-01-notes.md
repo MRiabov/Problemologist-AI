@@ -29,11 +29,11 @@ ______________________________________________________________________
 ## Key Concepts Covered
 
 1. **TEA as a framework:** Structured workflows, not just static docs.
-1. **TEA Lite:** A 30-minute quick-start path focused on immediate value.
-1. **Automate workflow:** Describe the testing need, analyze structure, generate tests, review results.
-1. **Risk-based testing:** Use P0-P3 to prioritize what matters most.
-1. **Quality standards:** Tests should be reliable, stateless, self-cleaning, and avoid hard waits.
-1. **Engagement models:** Lite, Solo, Integrated, Enterprise, and Brownfield.
+2. **TEA Lite:** A 30-minute quick-start path focused on immediate value.
+3. **Automate workflow:** Describe the testing need, analyze structure, generate tests, review results.
+4. **Risk-based testing:** Use P0-P3 to prioritize what matters most.
+5. **Quality standards:** Tests should be reliable, stateless, self-cleaning, and avoid hard waits.
+6. **Engagement models:** Lite, Solo, Integrated, Enterprise, and Brownfield.
 
 ______________________________________________________________________
 
@@ -63,8 +63,8 @@ ______________________________________________________________________
 ### Questions & Answers
 
 1. What is the primary purpose of TEA? → `C` (incorrect)
-1. What does the P0-P3 risk matrix help with? → `1` / `A` (correct)
-1. Which TEA engagement model is best for quick value? → `B` (correct)
+2. What does the P0-P3 risk matrix help with? → `1` / `A` (correct)
+3. Which TEA engagement model is best for quick value? → `B` (correct)
 
 ______________________________________________________________________
 

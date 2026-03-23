@@ -1,5 +1,5 @@
 ---
-validationTarget: '/home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/planning-artifacts/prd.md'
+validationTarget: /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/planning-artifacts/prd.md
 validationDate: '2026-03-21'
 inputDocuments:
   - specs/desired_architecture.md
@@ -51,13 +51,13 @@ validationStepsCompleted:
   - step-v-11-holistic-quality-validation
   - step-v-12-completeness-validation
 validationStatus: COMPLETE
-holisticQualityRating: '4/5 - Good'
+holisticQualityRating: 4/5 - Good
 overallStatus: Warning
 ---
 
 # PRD Validation Report
 
-**PRD Being Validated:** /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/planning-artifacts/prd.md
+**PRD Being Validated:** /home/maksym/Work/proj/Problemologist/Problemologist-AI/\_bmad-output/planning-artifacts/prd.md
 **Validation Date:** 2026-03-21
 
 ## Input Documents
@@ -77,8 +77,8 @@ overallStatus: Warning
 - specs/architecture/fluids-and-deformables.md
 - specs/architecture/electronics-and-electromechanics.md
 - specs/architecture/workbenches.md
-- _bmad-output/project-context.md
-- _bmad-output/planning-artifacts/epics.md
+- \_bmad-output/project-context.md
+- \_bmad-output/planning-artifacts/epics.md
 - docs/index.md
 - docs/project-overview.md
 - docs/architecture.md
@@ -105,10 +105,12 @@ overallStatus: Warning
 ## Format Detection
 
 **PRD Frontmatter Classification:**
+
 - `projectType`: backend-first agentic engineering platform with a secondary React inspection dashboard
 - `domain`: AI-assisted mechanical/electromechanical engineering, CAD, physics simulation, benchmark generation, and dataset tooling
 
 **PRD Structure:**
+
 - Executive Summary
 - Project Classification
 - Success Criteria
@@ -121,6 +123,7 @@ overallStatus: Warning
 - Non-Functional Requirements
 
 **BMAD Core Sections Present:**
+
 - Executive Summary: Present
 - Success Criteria: Present
 - Product Scope: Present
@@ -163,6 +166,7 @@ PRD demonstrates good information density with minimal violations.
 **Subjective Adjectives Found:** 0
 
 **Vague Quantifiers Found:** 1
+
 - FR23, line 390: "multiple solutions satisfy the benchmark"
 
 **Implementation Leakage:** 0
@@ -213,13 +217,13 @@ Requirements demonstrate good measurability with minimal issues.
 
 ### Traceability Matrix
 
-| Source | Coverage |
-| --- | --- |
-| Journey 1: Mechanical engineer receives a design they can trust | FR1-FR24 |
+| Source                                                            | Coverage                      |
+| ----------------------------------------------------------------- | ----------------------------- |
+| Journey 1: Mechanical engineer receives a design they can trust   | FR1-FR24                      |
 | Journey 2: Mechanical engineer inspects validation and simulation | FR3-FR6, FR12-FR15, FR31-FR35 |
-| Journey 3: Researcher or company reuses the dataset | FR25-FR30, FR31-FR35 |
-| Journey 4: Dataset operator or curator keeps the corpus usable | FR28-FR35 |
-| Journey 5: Human engineer steers a live run | FR36-FR38 |
+| Journey 3: Researcher or company reuses the dataset               | FR25-FR30, FR31-FR35          |
+| Journey 4: Dataset operator or curator keeps the corpus usable    | FR28-FR35                     |
+| Journey 5: Human engineer steers a live run                       | FR36-FR38                     |
 
 **Total Traceability Issues:** 0
 
@@ -303,46 +307,46 @@ PRD uses a custom hybrid project type that is not represented in the validator C
 
 ### Scoring Table
 
-| FR # | Specific | Measurable | Attainable | Relevant | Traceable | Average | Flag |
-|------|----------|------------|------------|----------|-----------|--------|------|
-| FR-001 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-002 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-003 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-004 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-005 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-006 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-007 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-008 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-009 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-010 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-011 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
-| FR-012 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
-| FR-013 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-014 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-015 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-016 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-017 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-018 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-019 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-020 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
-| FR-021 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-022 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
-| FR-023 | 3 | 3 | 5 | 5 | 5 | 4.2 |  |
-| FR-024 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-025 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-026 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-027 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
-| FR-028 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-029 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-030 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-031 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-032 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-033 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-034 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-035 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-036 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-037 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
-| FR-038 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR #   | Specific | Measurable | Attainable | Relevant | Traceable | Average | Flag |
+| ------ | -------- | ---------- | ---------- | -------- | --------- | ------- | ---- |
+| FR-001 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-002 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-003 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-004 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-005 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-006 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-007 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-008 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-009 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-010 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-011 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
+| FR-012 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
+| FR-013 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-014 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-015 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-016 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-017 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-018 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-019 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-020 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
+| FR-021 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-022 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
+| FR-023 | 3        | 3          | 5          | 5        | 5         | 4.2     |      |
+| FR-024 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-025 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-026 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-027 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
+| FR-028 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-029 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-030 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-031 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-032 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-033 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-034 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-035 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-036 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-037 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR-038 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
 
 **Legend:** 1=Poor, 3=Acceptable, 5=Excellent
 **Flag:** X = Score < 3 in one or more categories
@@ -367,12 +371,14 @@ Functional Requirements demonstrate good SMART quality overall.
 **Assessment:** Good
 
 **Strengths:**
+
 - Clear progression from vision to success criteria, journeys, scope, requirements, and quality gates.
 - Strong separation between product narrative and requirement lists.
 - Dense markdown structure that is easy to scan and reuse downstream.
 - Requirements stay centered on verified engineering, replayability, and dataset generation.
 
 **Areas for Improvement:**
+
 - The project-type classification remains custom and does not map cleanly to the validator CSV.
 - A small number of FRs still rely on comparative language instead of an explicit tie-break rule.
 - The hybrid product surface could be described a little more explicitly for downstream classification.
@@ -380,12 +386,14 @@ Functional Requirements demonstrate good SMART quality overall.
 ### Dual Audience Effectiveness
 
 **For Humans:**
+
 - Executive-friendly: Good
 - Developer clarity: Good
 - Designer clarity: Adequate
 - Stakeholder decision-making: Good
 
 **For LLMs:**
+
 - Machine-readable structure: Good
 - UX readiness: Good
 - Architecture readiness: Good
@@ -395,15 +403,15 @@ Functional Requirements demonstrate good SMART quality overall.
 
 ### BMAD PRD Principles Compliance
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| Information Density | Met | Step 3 passed cleanly; the PRD is concise and low on filler. |
-| Measurability | Met | FRs and NFRs are testable; only a minor FR nuance remains. |
-| Traceability | Met | Step 6 found intact chains from vision to journeys to FRs. |
-| Domain Awareness | Met | Mechanical/electromechanical, manufacturability, simulation, and dataset concerns are present. |
-| Zero Anti-Patterns | Met | No meaningful implementation leakage or filler remains in FR/NFR text. |
-| Dual Audience | Met | The document works for both human readers and downstream LLM consumption. |
-| Markdown Format | Met | Clear headings and consistent structure throughout. |
+| Principle           | Status | Notes                                                                                          |
+| ------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| Information Density | Met    | Step 3 passed cleanly; the PRD is concise and low on filler.                                   |
+| Measurability       | Met    | FRs and NFRs are testable; only a minor FR nuance remains.                                     |
+| Traceability        | Met    | Step 6 found intact chains from vision to journeys to FRs.                                     |
+| Domain Awareness    | Met    | Mechanical/electromechanical, manufacturability, simulation, and dataset concerns are present. |
+| Zero Anti-Patterns  | Met    | No meaningful implementation leakage or filler remains in FR/NFR text.                         |
+| Dual Audience       | Met    | The document works for both human readers and downstream LLM consumption.                      |
+| Markdown Format     | Met    | Clear headings and consistent structure throughout.                                            |
 
 **Principles Met:** 7/7
 
@@ -450,6 +458,7 @@ No template variables remaining ✓
 **Non-Functional Requirements:** Complete
 
 **Other sections:**
+
 - Project Classification: Complete
 - Domain-Specific Requirements: Complete
 - Innovation & Novel Patterns: Complete
@@ -483,6 +492,7 @@ The PRD body includes a `Date` heading, but there is no frontmatter `date` key.
 **Critical Gaps:** 0
 
 **Minor Gaps:** 2
+
 - Success Criteria measurability is only partially explicit
 - Frontmatter `date` is missing
 
@@ -497,26 +507,28 @@ PRD has minor completeness gaps. Address minor gaps for complete documentation.
 
 ### Quick Results
 
-| Check | Result |
-| --- | --- |
-| Format | BMAD Standard |
-| Information Density | Pass |
-| Measurability | Pass |
-| Traceability | Pass |
-| Implementation Leakage | Pass |
-| Domain Compliance | N/A |
+| Check                   | Result                      |
+| ----------------------- | --------------------------- |
+| Format                  | BMAD Standard               |
+| Information Density     | Pass                        |
+| Measurability           | Pass                        |
+| Traceability            | Pass                        |
+| Implementation Leakage  | Pass                        |
+| Domain Compliance       | N/A                         |
 | Project-Type Compliance | N/A (custom hybrid warning) |
-| SMART Quality | 100.0% |
-| Holistic Quality | 4/5 |
-| Completeness | 100% |
+| SMART Quality           | 100.0%                      |
+| Holistic Quality        | 4/5                         |
+| Completeness            | 100%                        |
 
 **Critical Issues:** None
 
 **Warnings:**
+
 - Project-type compliance is custom-hybrid and does not map cleanly to the validator CSV.
 - Completeness has minor gaps: success criteria measurability is only partially explicit, and the frontmatter `date` key is missing.
 
 **Strengths:**
+
 - Clear narrative flow from vision through requirements and quality gates.
 - Strong information density with no filler or template residue.
 - Measurable, traceable FRs/NFRs with no implementation leakage in requirements.
@@ -526,6 +538,7 @@ PRD has minor completeness gaps. Address minor gaps for complete documentation.
 **Holistic Quality:** 4/5 - Good
 
 **Top 3 Improvements:**
+
 1. Resolve the custom project-type mapping so downstream validation has a canonical profile.
 2. Tighten the remaining comparative FR language with explicit thresholds or ranking rules.
 3. Clarify the phase boundary between core mechanical scope and later electromechanical/fluids expansion.

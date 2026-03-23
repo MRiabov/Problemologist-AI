@@ -10,37 +10,45 @@ Use this skill to execute the fix (not just policy) when fallback behavior cause
 ## Workflow
 
 1. Reproduce with system runner
+
 - Use `./scripts/run_integration_tests.sh` for integration behavior.
 - For evals, use `dataset/evals/run_evals.py` with explicit agent/task scope.
 
 2. Locate the transition gate
+
 - Find where status changes (`PLANNED`, `COMPLETED`, etc.).
 - Identify all conditions allowing transition.
 
 3. Locate fallback producers
+
 - Search for synthetic artifact writers and permissive defaults (`fallback`, `default`, heuristic string checks).
 - Map: producer -> validator -> transition.
 
 4. Tighten source contracts
+
 - Require structured outputs from the producing node.
 - Validate required artifacts and typed schema at gate time.
 - Add semantic checks for prompt/intent where needed.
 
 5. Remove permissive branches
+
 - Delete synthetic artifact generation used to pass gates.
 - Replace free-text inference with structured decision requirements.
 - Convert unknown/ambiguous paths to explicit failures.
 
 6. Preserve observability
+
 - Add explicit error logs and validation messages with actionable detail.
 - Persist reasons in status metadata for postmortem/debug.
 
 7. Validate end-to-end
+
 - Run targeted integration tests first, then marker suite.
 - Re-run affected eval slice.
 - Confirm invalid paths now fail; valid paths still pass.
 
 8. Clean bad generated data
+
 - Remove previously persisted invalid eval rows/artifacts derived from fallback paths.
 - Keep only rows generated from valid upstream outputs.
 

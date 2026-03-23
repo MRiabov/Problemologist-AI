@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: 'testarch-nfr-assess'
+workflowType: testarch-nfr-assess
 inputDocuments: []
 ---
 
@@ -12,7 +12,7 @@ inputDocuments: []
 **Story:** {STORY_ID} (if applicable)
 **Overall Status:** {OVERALL_STATUS} {STATUS_ICON}
 
----
+______________________________________________________________________
 
 Note: This assessment summarizes existing evidence; it does not run tests or CI workflows.
 
@@ -26,7 +26,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 
 **Recommendation:** {OVERALL_RECOMMENDATION}
 
----
+______________________________________________________________________
 
 ## Performance Assessment
 
@@ -49,12 +49,14 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Resource Usage
 
 - **CPU Usage**
+
   - **Status:** {STATUS} {STATUS_ICON}
   - **Threshold:** {THRESHOLD_VALUE}
   - **Actual:** {ACTUAL_VALUE}
   - **Evidence:** {EVIDENCE_SOURCE}
 
 - **Memory Usage**
+
   - **Status:** {STATUS} {STATUS_ICON}
   - **Threshold:** {THRESHOLD_VALUE}
   - **Actual:** {ACTUAL_VALUE}
@@ -68,7 +70,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 - **Evidence:** {EVIDENCE_SOURCE}
 - **Findings:** {FINDINGS_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Security Assessment
 
@@ -100,7 +102,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Vulnerability Management
 
 - **Status:** {STATUS} {STATUS_ICON}
-- **Threshold:** {THRESHOLD_DESCRIPTION} (e.g., "0 critical, <3 high vulnerabilities")
+- **Threshold:** {THRESHOLD_DESCRIPTION} (e.g., "0 critical, \<3 high vulnerabilities")
 - **Actual:** {ACTUAL_DESCRIPTION} (e.g., "0 critical, 1 high, 5 medium vulnerabilities")
 - **Evidence:** {EVIDENCE_SOURCE} (e.g., "Snyk scan results - scan-2025-10-14.json")
 - **Findings:** {FINDINGS_DESCRIPTION}
@@ -113,7 +115,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 - **Evidence:** {EVIDENCE_SOURCE}
 - **Findings:** {FINDINGS_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Reliability Assessment
 
@@ -128,7 +130,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Error Rate
 
 - **Status:** {STATUS} {STATUS_ICON}
-- **Threshold:** {THRESHOLD_VALUE} (e.g., "<0.1%")
+- **Threshold:** {THRESHOLD_VALUE} (e.g., "\<0.1%")
 - **Actual:** {ACTUAL_VALUE} (e.g., "0.05%")
 - **Evidence:** {EVIDENCE_SOURCE} (e.g., "Error logs - logs/errors-2025-10.log")
 - **Findings:** {FINDINGS_DESCRIPTION}
@@ -136,7 +138,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### MTTR (Mean Time To Recovery)
 
 - **Status:** {STATUS} {STATUS_ICON}
-- **Threshold:** {THRESHOLD_VALUE} (e.g., "<15 minutes")
+- **Threshold:** {THRESHOLD_VALUE} (e.g., "\<15 minutes")
 - **Actual:** {ACTUAL_VALUE} (e.g., "12 minutes")
 - **Evidence:** {EVIDENCE_SOURCE} (e.g., "Incident reports - incidents/")
 - **Findings:** {FINDINGS_DESCRIPTION}
@@ -160,18 +162,20 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Disaster Recovery (if applicable)
 
 - **RTO (Recovery Time Objective)**
+
   - **Status:** {STATUS} {STATUS_ICON}
   - **Threshold:** {THRESHOLD_VALUE}
   - **Actual:** {ACTUAL_VALUE}
   - **Evidence:** {EVIDENCE_SOURCE}
 
 - **RPO (Recovery Point Objective)**
+
   - **Status:** {STATUS} {STATUS_ICON}
   - **Threshold:** {THRESHOLD_VALUE}
   - **Actual:** {ACTUAL_VALUE}
   - **Evidence:** {EVIDENCE_SOURCE}
 
----
+______________________________________________________________________
 
 ## Maintainability Assessment
 
@@ -194,7 +198,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Technical Debt
 
 - **Status:** {STATUS} {STATUS_ICON}
-- **Threshold:** {THRESHOLD_VALUE} (e.g., "<5% debt ratio")
+- **Threshold:** {THRESHOLD_VALUE} (e.g., "\<5% debt ratio")
 - **Actual:** {ACTUAL_VALUE} (e.g., "3.2% debt ratio")
 - **Evidence:** {EVIDENCE_SOURCE} (e.g., "CodeClimate analysis - codeclimate-2025-10-14.json")
 - **Findings:** {FINDINGS_DESCRIPTION}
@@ -215,7 +219,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 - **Evidence:** {EVIDENCE_SOURCE} (e.g., "Test review report - test-review-2025-10-14.md")
 - **Findings:** {FINDINGS_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Custom NFR Assessments (if applicable)
 
@@ -235,31 +239,35 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 - **Evidence:** {EVIDENCE_SOURCE}
 - **Findings:** {FINDINGS_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Quick Wins
 
 {QUICK_WIN_COUNT} quick wins identified for immediate implementation:
 
 1. **{QUICK_WIN_TITLE_1}** ({NFR_CATEGORY}) - {PRIORITY} - {ESTIMATED_EFFORT}
+
    - {QUICK_WIN_DESCRIPTION}
    - No code changes needed / Minimal code changes
 
 2. **{QUICK_WIN_TITLE_2}** ({NFR_CATEGORY}) - {PRIORITY} - {ESTIMATED_EFFORT}
+
    - {QUICK_WIN_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Recommended Actions
 
 ### Immediate (Before Release) - CRITICAL/HIGH Priority
 
 1. **{ACTION_TITLE_1}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
+
    - {ACTION_DESCRIPTION}
    - {SPECIFIC_STEPS}
    - {VALIDATION_CRITERIA}
 
 2. **{ACTION_TITLE_2}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
+
    - {ACTION_DESCRIPTION}
    - {SPECIFIC_STEPS}
    - {VALIDATION_CRITERIA}
@@ -267,9 +275,11 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Short-term (Next Milestone) - MEDIUM Priority
 
 1. **{ACTION_TITLE_3}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
+
    - {ACTION_DESCRIPTION}
 
 2. **{ACTION_TITLE_4}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
+
    - {ACTION_DESCRIPTION}
 
 ### Long-term (Backlog) - LOW Priority
@@ -277,7 +287,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 1. **{ACTION_TITLE_5}** - {PRIORITY} - {ESTIMATED_EFFORT} - {OWNER}
    - {ACTION_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Monitoring Hooks
 
@@ -286,10 +296,12 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 ### Performance Monitoring
 
 - [ ] {MONITORING_TOOL_1} - {MONITORING_DESCRIPTION}
+
   - **Owner:** {OWNER}
   - **Deadline:** {DEADLINE}
 
 - [ ] {MONITORING_TOOL_2} - {MONITORING_DESCRIPTION}
+
   - **Owner:** {OWNER}
   - **Deadline:** {DEADLINE}
 
@@ -311,7 +323,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
   - **Owner:** {OWNER}
   - **Deadline:** {DEADLINE}
 
----
+______________________________________________________________________
 
 ## Fail-Fast Mechanisms
 
@@ -341,25 +353,27 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
   - **Owner:** {OWNER}
   - **Estimated Effort:** {EFFORT}
 
----
+______________________________________________________________________
 
 ## Evidence Gaps
 
 {EVIDENCE_GAP_COUNT} evidence gaps identified - action required:
 
 - [ ] **{NFR_NAME_1}** ({NFR_CATEGORY})
+
   - **Owner:** {OWNER}
   - **Deadline:** {DEADLINE}
   - **Suggested Evidence:** {SUGGESTED_EVIDENCE_SOURCE}
   - **Impact:** {IMPACT_DESCRIPTION}
 
 - [ ] **{NFR_NAME_2}** ({NFR_CATEGORY})
+
   - **Owner:** {OWNER}
   - **Deadline:** {DEADLINE}
   - **Suggested Evidence:** {SUGGESTED_EVIDENCE_SOURCE}
   - **Impact:** {IMPACT_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Findings Summary
 
@@ -381,9 +395,9 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 
 - ≥26/29 (90%+) = Strong foundation
 - 20-25/29 (69-86%) = Room for improvement
-- <20/29 (<69%) = Significant gaps
+- \<20/29 (\<69%) = Significant gaps
 
----
+______________________________________________________________________
 
 ## Gate YAML Snippet
 
@@ -416,7 +430,7 @@ nfr_assessment:
     - '{RECOMMENDATION_3}'
 ```
 
----
+______________________________________________________________________
 
 ## Related Artifacts
 
@@ -430,7 +444,7 @@ nfr_assessment:
   - Logs: {LOGS_DIR}
   - CI Results: {CI_RESULTS_PATH}
 
----
+______________________________________________________________________
 
 ## Recommendations Summary
 
@@ -442,7 +456,7 @@ nfr_assessment:
 
 **Next Steps:** {NEXT_STEPS_DESCRIPTION}
 
----
+______________________________________________________________________
 
 ## Sign-Off
 
@@ -465,6 +479,6 @@ nfr_assessment:
 **Generated:** {DATE}
 **Workflow:** testarch-nfr v4.0
 
----
+______________________________________________________________________
 
 <!-- Powered by BMAD-CORE™ -->
