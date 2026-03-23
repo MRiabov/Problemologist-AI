@@ -41,16 +41,28 @@ class DatasetRowArchive(Base):
     worker_session_id: Mapped[str | None] = mapped_column(String)
     benchmark_id: Mapped[uuid.UUID] = mapped_column(sa.UUID, index=True)
     episode_type: Mapped[EpisodeType] = mapped_column(
-        SQLEnum(EpisodeType, values_callable=lambda x: [e.value for e in x])
+        SQLEnum(
+            EpisodeType,
+            name="episodetype",
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
 
     seed_id: Mapped[str | None] = mapped_column(String)
     seed_dataset: Mapped[str | None] = mapped_column(String)
     seed_match_method: Mapped[SeedMatchMethod | None] = mapped_column(
-        SQLEnum(SeedMatchMethod, values_callable=lambda x: [e.value for e in x])
+        SQLEnum(
+            SeedMatchMethod,
+            name="seedmatchmethod",
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
     generation_kind: Mapped[GenerationKind | None] = mapped_column(
-        SQLEnum(GenerationKind, values_callable=lambda x: [e.value for e in x])
+        SQLEnum(
+            GenerationKind,
+            name="generationkind",
+            values_callable=lambda x: [e.value for e in x],
+        )
     )
     parent_seed_id: Mapped[str | None] = mapped_column(String)
     is_integration_test: Mapped[bool | None] = mapped_column(sa.Boolean)

@@ -172,6 +172,7 @@ class ExecuteRequest(BaseModel):
 
     code: StrictStr = Field(..., min_length=1)
     timeout: StrictInt = Field(default=30, ge=1, le=1000)
+    episode_id: StrictStr | None = None
 
 
 class ExecuteResponse(BaseModel):
@@ -190,6 +191,7 @@ class ScriptExecutionRequest(BaseModel):
     code: StrictStr
     session_id: StrictStr
     timeout: StrictInt = 30
+    episode_id: StrictStr | None = None
 
 
 class BenchmarkToolRequest(BaseModel):
@@ -226,6 +228,7 @@ class BenchmarkToolRequest(BaseModel):
         default=None,
         description="Reviewer stage when calling /benchmark/submit.",
     )
+    episode_id: StrictStr | None = None
 
     @field_validator("backend", mode="before")
     @classmethod
@@ -503,6 +506,7 @@ class HeavySubmitParams(BaseModel):
     script_path: str
     reviewer_stage: ReviewerStage
     session_id: str
+    episode_id: str | None = None
 
 
 class HeavyValidationResponse(BaseModel):

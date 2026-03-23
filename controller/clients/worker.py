@@ -485,14 +485,24 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
-    async def execute_command(self, command: str, timeout: int = 30) -> ExecuteResponse:
+    async def execute_command(
+        self,
+        command: str,
+        timeout: int = 30,
+        *,
+        episode_id: str | None = None,
+    ) -> ExecuteResponse:
         """Execute a shell command in the session runtime."""
         client = await self._get_client()
         try:
             http_timeout = float(timeout) + 5.0
             response = await client.post(
                 f"{self.base_url}/runtime/execute",
-                json={"code": command, "timeout": timeout},
+                json={
+                    "code": command,
+                    "timeout": timeout,
+                    "episode_id": episode_id,
+                },
                 headers=self.headers,
                 timeout=http_timeout,
             )

@@ -1827,6 +1827,17 @@
             "minimum": 1.0,
             "title": "Timeout",
             "default": 30
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
           }
         },
         "type": "object",
@@ -2531,6 +2542,17 @@
             "title": "Reviewer Stage",
             "description": "Reviewer stage when calling /benchmark/submit."
           },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
+          },
           "method": {
             "$ref": "#/components/schemas/ManufacturingMethod",
             "description": "Manufacturing method to analyze (cnc, 3dp, im)."
@@ -2626,6 +2648,17 @@
             ],
             "title": "Reviewer Stage",
             "description": "Reviewer stage when calling /benchmark/submit."
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
           }
         },
         "type": "object",
@@ -3577,6 +3610,17 @@
             ],
             "title": "Reviewer Stage",
             "description": "Reviewer stage when calling /benchmark/submit."
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
           },
           "jitter_range": {
             "prefixItems": [

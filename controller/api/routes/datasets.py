@@ -10,7 +10,6 @@ import uuid
 from pathlib import Path
 
 import boto3
-from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -171,6 +170,20 @@ def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
+def _asset_bytes(asset: Asset, *, s3_client, bucket: str) -> bytes:
+    if asset.content is not None:
+        return asset.content.encode("utf-8")
+
+    normalized = _normalize_path(asset.s3_path)
+    try:
+        return s3_client.get_object(Bucket=bucket, Key=normalized)["Body"].read()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"failed to read persisted artifact {normalized}: {exc}",
+        ) from exc
+
+
 async def _load_episode(db: AsyncSession, episode_id: uuid.UUID) -> Episode | None:
     stmt = (
         select(Episode)
@@ -216,18 +229,25 @@ def _missing_required_artifacts(
     def _has(prefix_or_path: str) -> bool:
         if prefix_or_path.endswith("/"):
             return any(path.startswith(prefix_or_path) for path in selected_paths)
-        return prefix_or_path in selected_paths
+        return any(
+            path == prefix_or_path
+            or path.endswith(f"/{prefix_or_path}")
+            or path.endswith(prefix_or_path)
+            for path in selected_paths
+        )
 
     if episode_type == EpisodeType.BENCHMARK:
         required = [
             "plan.md",
             "todo.md",
             "journal.md",
+            "script.py",
             "benchmark_definition.yaml",
             "benchmark_assembly_definition.yaml",
+            "validation_results.json",
+            "simulation_result.json",
             ".manifests/benchmark_plan_review_manifest.json",
             ".manifests/benchmark_review_manifest.json",
-            "renders/render_manifest.json",
         ]
         review_prefixes = [
             "reviews/benchmark-plan-review-decision-round-",
@@ -250,7 +270,6 @@ def _missing_required_artifacts(
             ".manifests/benchmark_plan_review_manifest.json",
             ".manifests/engineering_plan_review_manifest.json",
             ".manifests/engineering_execution_review_manifest.json",
-            "renders/render_manifest.json",
         ]
         review_prefixes = [
             "reviews/engineering-plan-review-decision-round-",
@@ -263,9 +282,11 @@ def _missing_required_artifacts(
     for prefix in review_prefixes:
         if not any(path.startswith(prefix) for path in selected_paths):
             missing.append(prefix)
-    if any(path.startswith("renders/") and path.endswith((".png", ".jpg", ".jpeg")) for path in selected_paths):
-        if not _has("renders/render_manifest.json"):
-            missing.append("renders/render_manifest.json")
+    if any(
+        path.startswith("renders/") and path != "renders/render_manifest.json"
+        for path in selected_paths
+    ) and not _has("renders/render_manifest.json"):
+        missing.append("renders/render_manifest.json")
     return missing
 
 
@@ -311,27 +332,43 @@ def _collect_revision_markers(
         if path in {_normalize_path(asset.s3_path) for asset in selected_assets}
     ]
 
+    def _extract_manifest_revision(manifest: object) -> str | None:
+        for field_name in ("revision", "benchmark_revision", "solution_revision"):
+            value = getattr(manifest, field_name, None)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
     for candidate_path in candidate_paths:
-        try:
-            payload = s3_client.get_object(Bucket=bucket, Key=candidate_path)[
-                "Body"
-            ].read()
-        except ClientError:
+        candidate_asset = next(
+            (
+                asset
+                for asset in selected_assets
+                if _normalize_path(asset.s3_path) == candidate_path
+            ),
+            None,
+        )
+        if candidate_asset is None:
             continue
-        except BotoCoreError:
+
+        try:
+            payload = _asset_bytes(candidate_asset, s3_client=s3_client, bucket=bucket)
+        except HTTPException:
             continue
 
         if candidate_path.endswith("render_manifest.json"):
             manifest = RenderManifest.model_validate_json(payload)
-            if manifest.revision:
-                revisions[candidate_path] = manifest.revision
+            manifest_revision = _extract_manifest_revision(manifest)
+            if manifest_revision:
+                revisions[candidate_path] = manifest_revision
         else:
             try:
                 manifest = ReviewManifest.model_validate_json(payload)
             except Exception:
                 continue
-            if manifest.revision:
-                revisions[candidate_path] = manifest.revision
+            manifest_revision = _extract_manifest_revision(manifest)
+            if manifest_revision:
+                revisions[candidate_path] = manifest_revision
 
     if not revisions:
         raise HTTPException(
@@ -379,13 +416,7 @@ def _archive_members(
     with tarfile.open(mode="w:gz", fileobj=buffer) as archive:
         for asset in selected_assets:
             path = _normalize_path(asset.s3_path)
-            try:
-                body = s3_client.get_object(Bucket=bucket, Key=path)["Body"].read()
-            except Exception as exc:
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"failed to read persisted artifact {path}: {exc}",
-                ) from exc
+            body = _asset_bytes(asset, s3_client=s3_client, bucket=bucket)
 
             info = tarfile.TarInfo(name=path)
             info.size = len(body)
@@ -473,15 +504,7 @@ async def _materialize_dataset_export(
     artifact_refs: list[DatasetRowArtifactReference] = []
     for asset in selected_assets:
         normalized = _normalize_path(asset.s3_path)
-        try:
-            payload = s3_client.get_object(Bucket=_ASSET_BUCKET, Key=normalized)[
-                "Body"
-            ].read()
-        except Exception as exc:
-            raise HTTPException(
-                status_code=422,
-                detail=f"failed to read persisted artifact {normalized}: {exc}",
-            ) from exc
+        payload = _asset_bytes(asset, s3_client=s3_client, bucket=_ASSET_BUCKET)
         artifact_refs.append(
             DatasetRowArtifactReference(
                 path=normalized,
@@ -502,11 +525,6 @@ async def _materialize_dataset_export(
     )
     cots_query_id = _trace_metadata_lookup(list(episode.traces), "cots_query_id")
     review_id = _trace_metadata_lookup(list(episode.traces), "review_id")
-    if review_id is None:
-        raise HTTPException(
-            status_code=422,
-            detail="dataset export requires a persisted review_id lineage",
-        )
 
     lineage = DatasetRowLineage(
         episode_id=str(episode.id),
@@ -665,7 +683,7 @@ async def get_dataset_export(
     manifest = DatasetRowArchiveManifest.model_validate_json(manifest_raw)
     return DatasetExportResponse(
         status=ResponseStatus.COMPLETED,
-        message="Dataset export loaded",
+        message="Dataset export materialized",
         export_id=record.id,
         episode_id=record.episode_id,
         archive=ObjectStoragePointer(
@@ -699,7 +717,7 @@ async def get_dataset_export_by_episode(
     manifest = DatasetRowArchiveManifest.model_validate_json(manifest_raw)
     return DatasetExportResponse(
         status=ResponseStatus.COMPLETED,
-        message="Dataset export loaded",
+        message="Dataset export materialized",
         export_id=record.id,
         episode_id=record.episode_id,
         archive=ObjectStoragePointer(

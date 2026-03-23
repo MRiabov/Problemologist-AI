@@ -134,7 +134,9 @@ async def test_dataset_export_benchmark_row_round_trip():
             prompt="Create a simple benchmark for dataset export coverage.",
             backend=SimulatorBackendType.GENESIS,
         )
-        resp = await client.post("/benchmark/generate", json=benchmark_request.model_dump())
+        resp = await client.post(
+            "/benchmark/generate", json=benchmark_request.model_dump()
+        )
         assert resp.status_code in (200, 202), resp.text
         benchmark_session_id = str(
             BenchmarkGenerateResponse.model_validate(resp.json()).session_id
@@ -182,7 +184,9 @@ async def test_dataset_export_benchmark_row_round_trip():
             ref.path.startswith("renders/") and ref.path.endswith(".png")
             for ref in manifest.artifact_references
         ), [ref.path for ref in manifest.artifact_references]
-        assert any(ref.path.startswith("reviews/") for ref in manifest.artifact_references)
+        assert any(
+            ref.path.startswith("reviews/") for ref in manifest.artifact_references
+        )
         assert any(
             ref.path.startswith(".manifests/") for ref in manifest.artifact_references
         )
@@ -202,7 +206,9 @@ async def test_dataset_export_benchmark_row_round_trip():
             Bucket=export_data.archive.bucket,
             Key=f"dataset-exports/{export_data.export_id}/dataset-row-manifest.json",
         )["Body"].read()
-        manifest_from_store = DatasetRowArchiveManifest.model_validate_json(manifest_body)
+        manifest_from_store = DatasetRowArchiveManifest.model_validate_json(
+            manifest_body
+        )
         assert manifest_from_store == manifest
 
         assert benchmark_episode.status == EpisodeStatus.COMPLETED
@@ -216,7 +222,9 @@ async def test_dataset_export_solution_row_round_trip():
             prompt="Create a simple benchmark for solution export coverage.",
             backend=SimulatorBackendType.GENESIS,
         )
-        resp = await client.post("/benchmark/generate", json=benchmark_request.model_dump())
+        resp = await client.post(
+            "/benchmark/generate", json=benchmark_request.model_dump()
+        )
         assert resp.status_code in (200, 202), resp.text
         benchmark_session_id = str(
             BenchmarkGenerateResponse.model_validate(resp.json()).session_id
@@ -225,7 +233,7 @@ async def test_dataset_export_solution_row_round_trip():
             client, benchmark_session_id
         )
 
-        engineer_session_id = f"INT-EXPORT-{uuid.uuid4().hex[:8]}"
+        engineer_session_id = f"INT-016-{uuid.uuid4().hex[:8]}"
         run_request = AgentRunRequest(
             task=f"Solve benchmark: {benchmark_session_id}",
             session_id=engineer_session_id,
@@ -271,11 +279,24 @@ async def test_dataset_export_solution_row_round_trip():
                 "benchmark_assembly_definition.yaml",
             ],
         )
-        assert any(ref.path.endswith("validation_results.json") for ref in manifest.artifact_references)
-        assert any(ref.path.endswith("simulation_result.json") for ref in manifest.artifact_references)
-        assert any(ref.path.endswith("renders/render_manifest.json") for ref in manifest.artifact_references)
-        assert any(ref.path.startswith("reviews/") for ref in manifest.artifact_references)
-        assert any(ref.path.startswith(".manifests/") for ref in manifest.artifact_references)
+        assert any(
+            ref.path.endswith("validation_results.json")
+            for ref in manifest.artifact_references
+        )
+        assert any(
+            ref.path.endswith("simulation_result.json")
+            for ref in manifest.artifact_references
+        )
+        assert any(
+            ref.path.endswith("renders/render_manifest.json")
+            for ref in manifest.artifact_references
+        )
+        assert any(
+            ref.path.startswith("reviews/") for ref in manifest.artifact_references
+        )
+        assert any(
+            ref.path.startswith(".manifests/") for ref in manifest.artifact_references
+        )
 
         s3 = _s3_client()
         archive_head = s3.head_object(
@@ -287,7 +308,9 @@ async def test_dataset_export_solution_row_round_trip():
             Bucket=export_data.archive.bucket,
             Key=f"dataset-exports/{export_data.export_id}/dataset-row-manifest.json",
         )["Body"].read()
-        manifest_from_store = DatasetRowArchiveManifest.model_validate_json(manifest_body)
+        manifest_from_store = DatasetRowArchiveManifest.model_validate_json(
+            manifest_body
+        )
         assert manifest_from_store == manifest
 
 

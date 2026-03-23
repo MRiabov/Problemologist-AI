@@ -504,13 +504,16 @@ class RemoteFilesystemMiddleware:
                             code=command,
                             session_id=self.client.session_id,
                             timeout=timeout,
+                            episode_id=self.episode_id,
                         ),
                         id=f"exec-{self.client.session_id}-{hash(command) % 10**8}",
                         task_queue="simulation-task-queue",
                         id_conflict_policy=WorkflowIDConflictPolicy.USE_EXISTING,
                     )
                 # Fallback to direct client call if Temporal is not available
-                return await self.client.execute_command(command, timeout=timeout)
+                return await self.client.execute_command(
+                    command, timeout=timeout, episode_id=self.episode_id
+                )
             except Exception as exc:
                 is_infra = isinstance(exc, (httpx.HTTPError, TimeoutError))
                 if not is_infra:
@@ -727,6 +730,7 @@ class RemoteFilesystemMiddleware:
                     script_path=p_str,
                     reviewer_stage=effective_stage or "engineering_execution_reviewer",
                     session_id=self.client.session_id,
+                    episode_id=self.episode_id,
                 ),
             )
         else:
