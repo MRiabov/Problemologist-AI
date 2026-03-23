@@ -1,6 +1,6 @@
 # Story 5.1: Inspect Session History and Run Timeline
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -9,31 +9,31 @@ As a human operator, I want a session history and run timeline so that I can ins
 ## Acceptance Criteria
 
 1. Given a session, when I open it in the UI, then I can see the episode history, status, terminal reason, and progress of the active or completed run.
-1. Given backend traces and tool calls exist, when I inspect the run, then the UI renders those persisted records rather than fabricating placeholders.
-1. Given an interrupted run, when I reopen the session, then I can resume from the last persisted state.
-1. Given context usage telemetry exists, when I inspect the run, then the UI shows it.
-1. Given a failed or cancelled session, when I revisit it later, then the summary still shows the persisted terminal reason and failure class instead of collapsing to a generic failure state.
-1. Given an active run with phase metadata, when I view the session rail or run header, then I can distinguish the current episode phase/progress from raw status without inventing new run state.
+2. Given backend traces and tool calls exist, when I inspect the run, then the UI renders those persisted records rather than fabricating placeholders.
+3. Given an interrupted run, when I reopen the session, then I can resume from the last persisted state.
+4. Given context usage telemetry exists, when I inspect the run, then the UI shows it.
+5. Given a failed or cancelled session, when I revisit it later, then the summary still shows the persisted terminal reason and failure class instead of collapsing to a generic failure state.
+6. Given an active run with phase metadata, when I view the session rail or run header, then I can distinguish the current episode phase/progress from raw status without inventing new run state.
 
 ## Tasks / Subtasks
 
-- [ ] Keep `EpisodeContext` as the single source of truth for selected episode restoration. Preserve the localStorage restore path and the `fetchEpisode(...)` hydration path on reload/reopen so interrupted sessions repopulate `traces`, `assets`, and episode metadata from the latest persisted API state. (AC: 1, 3)
-  - [ ] Keep the `selectedEpisodeId` restore behavior intact in `frontend/src/context/EpisodeContext.tsx`.
-  - [ ] Make sure the websocket/poll hydration path continues to repopulate the full episode record after status changes.
-- [ ] Extend the session history rail so each history item exposes persisted run state, not just title and icon. Show `status`, `episode_phase`/`detailed_status`, `terminal_reason`, and a small progress indicator derived from `EpisodeMetadata` when present. (AC: 1, 5, 6)
-  - [ ] Keep the list view backed by `GET /episodes`; do not fabricate a second history source.
-  - [ ] Keep the selected episode highlight tied to the actual persisted episode id.
-- [ ] Extend the run header / failure banner in `ChatWindow` so a selected run can show terminal reason, failure class, and context usage telemetry directly from persisted metadata. (AC: 1, 4, 5)
-  - [ ] Continue to derive context usage from `metadata_vars.additional_info.context_usage`.
-  - [ ] Keep the failure panel’s detailed logs, but add persisted terminal metadata alongside them.
-- [ ] Keep the run timeline strictly trace-driven in `TraceList` and its existing child cards. Render only persisted `TOOL_START`, `LLM_END`, `EVENT`, `LOG`, and `ERROR` rows from backend traces, and keep empty-state behavior explicit rather than synthetic. (AC: 2)
-  - [ ] Do not synthesize placeholder trace rows from phase labels or local UI state.
-  - [ ] Preserve existing reasoning/tool/event row behavior and ordering.
-- [ ] If the UI needs a typed field that is not already exposed cleanly, add the minimal schema change to `EpisodeListItem` / `EpisodeResponse` instead of parsing ad hoc JSON in components. (AC: 1, 4, 6)
-  - [ ] Prefer the shared `EpisodeMetadata` shape over custom frontend-only state.
-- [ ] Add or extend integration coverage for session selection, reload restore, terminal-reason/progress display, and persisted trace timeline rendering. Use live-browser integration tests only. (AC: 1-6)
-  - [ ] Anchor the regression coverage on `INT-157`, `INT-160`, and `INT-178`.
-  - [ ] Add a focused frontend integration slice only if the existing coverage cannot be extended cleanly.
+- [x] Keep `EpisodeContext` as the single source of truth for selected episode restoration. Preserve the localStorage restore path and the `fetchEpisode(...)` hydration path on reload/reopen so interrupted sessions repopulate `traces`, `assets`, and episode metadata from the latest persisted API state. (AC: 1, 3)
+  - [x] Keep the `selectedEpisodeId` restore behavior intact in `frontend/src/context/EpisodeContext.tsx`.
+  - [x] Make sure the websocket/poll hydration path continues to repopulate the full episode record after status changes.
+- [x] Extend the session history rail so each history item exposes persisted run state, not just title and icon. Show `status`, `episode_phase`/`detailed_status`, `terminal_reason`, and a small progress indicator derived from `EpisodeMetadata` when present. (AC: 1, 5, 6)
+  - [x] Keep the list view backed by `GET /episodes`; do not fabricate a second history source.
+  - [x] Keep the selected episode highlight tied to the actual persisted episode id.
+- [x] Extend the run header / failure banner in `ChatWindow` so a selected run can show terminal reason, failure class, and context usage telemetry directly from persisted metadata. (AC: 1, 4, 5)
+  - [x] Continue to derive context usage from `metadata_vars.additional_info.context_usage`.
+  - [x] Keep the failure panel’s detailed logs, but add persisted terminal metadata alongside them.
+- [x] Keep the run timeline strictly trace-driven in `TraceList` and its existing child cards. Render only persisted `TOOL_START`, `LLM_END`, `EVENT`, `LOG`, and `ERROR` rows from backend traces, and keep empty-state behavior explicit rather than synthetic. (AC: 2)
+  - [x] Do not synthesize placeholder trace rows from phase labels or local UI state.
+  - [x] Preserve existing reasoning/tool/event row behavior and ordering.
+- [x] If the UI needs a typed field that is not already exposed cleanly, add the minimal schema change to `EpisodeListItem` / `EpisodeResponse` instead of parsing ad hoc JSON in components. (AC: 1, 4, 6)
+  - [x] Prefer the shared `EpisodeMetadata` shape over custom frontend-only state.
+- [x] Add or extend integration coverage for session selection, reload restore, terminal-reason/progress display, and persisted trace timeline rendering. Use live-browser integration tests only. (AC: 1-6)
+  - [x] Anchor the regression coverage on `INT-157`, `INT-160`, and `INT-178`.
+  - [x] Add a focused frontend integration slice only if the existing coverage cannot be extended cleanly.
 
 ## Dev Notes
 
@@ -68,14 +68,14 @@ As a human operator, I want a session history and run timeline so that I can ins
 
 ### References
 
-- [Source: _bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.1]
-- [Source: _bmad-output/planning-artifacts/prd.md, Phase 1 UI and debuggability requirements]
+- [Source: \_bmad-output/planning-artifacts/epics.md, Epic 5: UI, Visualization, and Demo, Story 5.1]
+- [Source: \_bmad-output/planning-artifacts/prd.md, Phase 1 UI and debuggability requirements]
 - [Source: specs/frontend-specs.md, shared workflow, session history, reasoning, and timeline requirements]
 - [Source: specs/architecture/observability.md, episode/session linkage, context usage, and trace requirements]
 - [Source: specs/architecture/agents/artifacts-and-filesystem.md, persisted traces as the source of truth and no fabricated placeholders]
-- [Source: controller/api/routes/episodes.py, `GET /episodes` and `GET /episodes/{episode_id}` episode payloads]
-- [Source: controller/api/schemas.py, `EpisodeListItem`, `EpisodeResponse`, `TraceResponse`, and `EpisodeMetadata` typing]
-- [Source: shared/models/schemas.py, `EpisodeMetadata`, `EpisodePhase`, `TerminalReason`, and `FailureClass`]
+- \[Source: controller/api/routes/episodes.py, `GET /episodes` and `GET /episodes/{episode_id}` episode payloads\]
+- \[Source: controller/api/schemas.py, `EpisodeListItem`, `EpisodeResponse`, `TraceResponse`, and `EpisodeMetadata` typing\]
+- \[Source: shared/models/schemas.py, `EpisodeMetadata`, `EpisodePhase`, `TerminalReason`, and `FailureClass`\]
 - [Source: frontend/src/context/EpisodeContext.tsx, selected-episode restoration and hydration logic]
 - [Source: frontend/src/components/layout/Sidebar.tsx, session history rail]
 - [Source: frontend/src/components/workspace/ChatWindow.tsx, run summary, context usage, and failure banner]
@@ -87,10 +87,32 @@ As a human operator, I want a session history and run timeline so that I can ins
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- Frontend build: `npm run build` in `frontend/`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py -k test_int_157_session_history`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_178.py`
+- Prior validation from this work session also covered `tests/integration/frontend/p1/test_int_160.py` with a skip when the live backend did not persist reasoning traces.
+
 ### Completion Notes List
 
+- Added persisted session-history metadata to the sidebar: raw status, detailed status, episode phase, terminal reason, failure class, and a derived progress indicator.
+- Kept the run summary and reasoning surfaces aligned with persisted metadata and trace-driven rendering.
+- Extended live-browser coverage for session history, terminal metadata, context usage telemetry, and reload continuity.
+- The broader combined frontend integration sweep still encounters a pre-existing backend validation failure in `INT-159`; the story-specific slices listed above passed.
+
 ### File List
+
+- `frontend/src/components/layout/Sidebar.tsx`
+- `frontend/src/components/workspace/ChatWindow.tsx`
+- `frontend/src/components/workspace/TraceList.tsx`
+- `frontend/src/components/workspace/__tests__/ChatWindow.test.tsx`
+- `frontend/src/components/workspace/__tests__/FeedbackSystem.test.tsx`
+- `specs/frontend-specs.md`
+- `tests/integration/frontend/p0/test_frontend_p0.py`
+- `tests/integration/frontend/p0/test_solution_evidence.py`
+- `tests/integration/frontend/p1/test_int_160.py`
+- `tests/integration/frontend/p1/test_int_178.py`

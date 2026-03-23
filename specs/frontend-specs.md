@@ -1,211 +1,83 @@
 # Frontend specs
 
-As frontend has grown in the complexity and becomes an actual user-facing feature, it is worth separating it into the UI.
-The main architectural specification is in @./desired_architecture.md
+This document describes the current user-facing frontend contract for the controller-first React application.
+The architecture entrypoint remains `@./desired_architecture.md`.
 
-## Core flows
+## Scope
 
-The frontend has two core flows:
+The frontend exposes two primary workflows:
 
 1. Benchmark generation
-2. Problem solution (a.k.a. Engineering.)
+2. Problem solution, also called engineering
 
-In both, engineer submit requests one-by-one as a chat UI interface common in coding agents.
+Both workflows use the same shell: session history, chat, trace timeline, 3D/CAD or simulation viewer, and file/artifact browser.
+The route decides which episode type is active and which viewer defaults are shown.
 
-### Benchmark generation workflow
+## Shared workspace contract
 
-For engineers, benchmarks serve as a way to create a set of constraints that the model must follow - "problem" geometric constraints and unit cost/weight/manufacturing solutions constraints.
+1. The frontend talks to the controller first for episodes, traces, assets, feedback, and run control.
+2. The sidebar lists live episodes and lets the user switch between benchmark and engineer sessions.
+3. The main workspace keeps the active episode in sync with the controller through polling and websocket updates.
+4. The UI may show a mock-mode banner, but the displayed timeline and tool activity still come from backend episode data.
 
-To specify a benchmark, the engineers will define how the benchmark will behave, or at least how it looks (see main `desired_architecture.md` for details), and the model will implement it.
+## Chat and traces
 
-#### Confirming the workflow
+The chat timeline is a rendering of persisted backend traces for the active episode.
 
-Exact logic as in the "Solution workflow".
+### Reasoning traces
 
-### Solution workflow
+1. Reasoning rows are rendered only from persisted backend trace records for the active episode, typically `LLM_END` traces with node or stage names.
+2. The frontend does not synthesize reasoning rows from phase labels, tool rows, or placeholders.
+3. Reasoning can appear incrementally while the run is in progress.
+4. The `View reasoning` toggle only changes visibility of rendered reasoning content.
+5. If a run requires reasoning and the backend returns no reasoning traces for a running or completed episode, the UI shows an explicit telemetry-missing warning instead of a silent success state.
+6. When backend metadata includes `reasoning_step_index` or `reasoning_source`, the frontend preserves that metadata for ordering and labeling.
 
-Engineers must be able to prompt solutions to benchmarks (this is a core workflow). They will select a benchmark that will be solved and will generate solutions to the benchmark.
-The planning will then start, the engineers will be able to review edits, and the models will be generated from there.
-
-### Shared workflow parts
-
-The UI for benchmark generation and for solution is likely exactly equal, consisting of:
-
-1. A history of sessions,
-2. A coding agent chat interface,
-3. A 3d CAD viewer,
-4. A code file viewer.
-
-Thus, they share most of equal features.
-
-### Plan approval
-
-Plans are approved or commented on explicitly by the user. After the planning is done in the solution/benchmark workflow, the users are to be able to review and confirm/disapprove the plan, and share comments in the chat section. Confirmation is done by a button in the bottom of a chat interface, or in the top right top of the file explorer.
-
-### Chat UI
-
-In Chat UI, agents must be able to:
-
-1. View agents' reasoning traces
-2. View agents' tool calls (read, write)
-3. Interrupt agents before they finish.
-4. Steer agents reasoning in a "chat" mode, meaning, correct their reasoning in case they made an incorrect assumption.
-
-All data is shown as soon as the application receives it (or with a small delay)
-
-#### Reasoning traces
-
-By default, agents' reasoning is hidden, however users are able to expand it. [Chat UI desired design](/frontend/designs/Chat%20UI%20design.png)
-
-##### Reasoning trace contract (strict)
-
-1. Reasoning rows in chat are rendered only from persisted backend trace records for the active `episode_id` (for example, `LLM_END` traces with node/stage names).
-2. Frontend must not synthesize fake reasoning rows from phase labels, tool rows, or placeholders.
-3. Reasoning is expected to appear incrementally while an agent is running (streaming/polling updates), not only after workflow completion.
-4. `View reasoning` controls visibility only; it does not change backend capture behavior.
-5. If debugging/eval mode requires reasoning and backend returns zero reasoning traces for a running/completed episode, UI must show explicit telemetry-missing state (not silently appear successful).
-6. Reasoning traces should preserve backend metadata (`reasoning_step_index`, `reasoning_source`) when present, and use it for ordering/presentation.
-
-##### Context and compaction telemetry contract
-
-1. Frontend shows context usage from episode metadata (`additional_info.context_usage.used_tokens/max_tokens`, plus utilization ratio when present) in chat/workspace surfaces.
-2. Frontend renders `conversation_length_exceeded` trace events in the timeline with compaction details from event metadata.
-3. Missing reasoning in reasoning-required modes may show a UI warning, but run validity remains a backend fail-closed decision.
-
-### Interrupting the worker
-
-The engineers will have a "stop" button, superseding the "send" message button, but only active during agent generation.
-*Note:* if we want to stop the generation in the controller, it will also halt the job(s) in the workers.
-
-## Component layout
-
-Benchmark generator and engineer viewer have a very similar structure:
-
-We separate the entire UI to 3 columns about 3:3:6 split - 3 is a sidebar column with previous session history, 3 for the Chat UI, and 6 for the rightmost column - the CAD viewer and filesystem, split verticaly.
-      - Note! This is by default. We allow to resize the dashboard pieces.
-
-It is likely we will use the exact same component/template for the benchmark and engineer views.
-
-## CAD and simulation viewer
-
-A CAD viewer is a tool that engineers will use to:
-
-1. View the model
-2. View topology (on by default, hideable)
-3. View simulations (time-progressive)
-     - Move the simulation time forward or backward.
-4. View individual parts (hide some or all other parts):
-     - During design
-     - During simulation (make some parts hideable)
-5. Suggest improvements on the model.
-    - Add parts to context. Click the part or a face to reference it in during the next workflow
-
-Ideally, this the CAD viewer renders build123d directly as WASM in the browser, however, I don't want to debug it yet, so the GLB/OBJ model(s) will be pulled from the backend. (or STEP models? I'm not sure. Whatever YACV supports.)
-
-We will use standard GLB files exported from the backend. To support topology selection (faces, edges), the backend will break down the model into individual meshes for each face/edge within the GLB file, named accordingly (e.g., `face_1`, `edge_2`).
-
-Assets (GLB, OBJ, images, etc.) are served by the controller, which acts as a proxy to the worker filesystem or pulls from S3 storage. The frontend maintains a "controller-first" communication model for all requests.
-
-Viewing topology, the model, is done as in the standard CAD viewers. Viewing the simulation modifies the screen (to possibly a non-CAD viewer? to show simulation details)
-
-### Viewing the simulation
-
-Notably, simlations are sometimes rigid-body and sometimes (most of the time) deformable meshes. This means that the simulator viewer must support deformable meshes.
-
-In addition, the simulation is time-progressive, and that the users are to be able to rewind/skip kind of like they can in video viewers.
-
-We will use mostly `three.js` with wrappers to display simulation.
-
-### Selecting the CAD models
-
-The users are to be able to click on a CAD model and do actions with it, primarily show/hide. There will be a way to select if the user wants to:
-
-1. Select a part
-2. Particular primitive (face, vertex, line/arc.)
-3. Or a subassembly.
-
-Thus three buttons.
-
-### Viewing electronics and circuits
-
-We have circuit design in our application. The engineers are to be able to view circuits in the application.
-
-We use `tscircuit` as our dependency. (actively maintained, ships with a lot of features out of the box, including, circuit rendering and even, PCB rendering).
-
-Why not SVG rendering: the users should be able to click and add the particular part to a context.
-
-## Design
-
-A super-modern design to a degree, suitable for an engineering software, however signficantly more "modern" than incumbents.
-
-### Color palette
-
-Light mode: White with black (or just dark) as a primary color,
-Dark mode: Dark with white as a primary color
-
-The users are to be able to switch between light and dark modes.
-
-### Chat UI design and features
-
-For each successful tool call that the model has generated, we will have a text message in the UI (looking exactly as in design):
-
-- "Edited [file icon] [file name] [git diff lines]"
-- "Viewed [file icon] [file name]"
-- "Viewed [directory static icon] [directory]"
-
-And other annotated tool calls.
-
-Tool activity contract:
+### Tool activity
 
 1. Tool activity rows are rendered from backend tool-call traces only.
-2. File/directory names are derived from trace arguments exactly as recorded (no guessed paths).
-3. For directory listing calls, render the directory name (or `/` for root) as the primary label.
+2. File and directory labels come from the trace payload, not from guessed paths.
+3. Directory listing calls render the directory label as the primary name, with `/` used for root.
+4. Failed tool calls are shown with a visible failure state.
 
-If the model will fail, the user will be informed "The model has failed a tool call."
+### Context usage and compaction
 
-The user will be able to see the model context window as well as % from the total context length, using backend-provided context usage telemetry.
+1. The workspace shows context usage from `additional_info.context_usage.used_tokens` and `max_tokens` when the backend provides it.
+2. The UI renders `conversation_length_exceeded` events with the compaction metadata provided by the backend.
+3. Missing reasoning is a frontend warning only; run validity remains a backend fail-closed decision.
 
-#### Adding context
+## Plan approval
 
-The users should know what they are prompting with and should visually display the component they are passing as a context when selecting a prompt UI. When a user has clicked a part, a piece in a simulation, the part will be added to the context, above the UI. Please see [### Steerability](/kitty-specs/desired_architecture.md#steerability) section in the main spec for what can be added.
-However, in the UI, it will be shown on the top of the chat UI.
+Benchmark planning pauses for explicit user review when the backend reaches a planned state.
 
-By holding Ctrl, users can select mult  iple items, and each will have a card - parts, code items, and others.
-On top of each "context" card, the users will be able delete it from context by pressing a cross on top of them (top right corner).
+1. The approval control appears in the chat panel after the plan is ready.
+2. The same approval action is available from the file-explorer side of the workspace.
+3. The user can confirm or reject the plan and add a comment before the next stage starts.
 
-Frontend will only send a set of elements that are selected, and won't actually concatenate values to prompt; the backend will handle the prompting.
+## CAD, simulation, and files
 
-### Code viewer
+1. The 3D viewer loads controller-served assets, usually GLB output from the backend.
+2. Topology selection supports parts, faces, edges, and subassemblies through discrete selection modes.
+3. The frontend treats the controller as the source of truth for assets and does not fetch worker files directly.
+4. Simulation views remain time-progressive and support visible rewind/skip behavior.
 
-The core workflow of a user is to view code and markdown plans that the system produces. Use a code viewer to display, lint (color), the code.
+## Code viewer and context capture
 
-Requirements:
+1. The code viewer shows the file tree, syntax highlighting, and line numbers.
+2. Selecting code or topology can add structured context cards above the chat input.
+3. The frontend sends selected context items to the backend as structured payloads; it does not concatenate them into a prompt locally.
 
-1. File tree,
-2. Coloring (linting, meaning - markdown headings are linted, python syntax is colored, etc),
-3. Line numbers.
-4. Ideally, when the user selects a line, UI (see "#### Adding context" section), will add a line of the file that is selected, or a set of lines.
+## Feedback
 
-### Icons
+1. Users can submit thumbs up/down feedback on terminal or completed agent output.
+2. The feedback modal supports score changes, topic chips, and a free-text comment.
+3. Submitted feedback is persisted through the feedback API and reflected back in episode trace metadata.
 
-Icons are from vscode, colorful. E.g. Python is blue and yellow, YAML has standard icons, etc.
+## Design baseline
 
-## Collecting feedback from users
+1. The UI supports light and dark modes.
+2. The styling target is a modern engineering tool, not a generic consumer chat layout.
+3. The implementation uses Vite, React, and controller-generated TypeScript API types.
+4. `three.js` powers the simulation-oriented viewer path, and `tscircuit` powers circuit rendering.
 
-Users are to be able to submit thumbs up/down on model outputs, just as they would in common "chat" LLM UIs.
-
-The users will be able to rate the agent when the model ends its output, and not at each message.
-
-The feedback should be accompanied with a modal containing:
-
-1. A way to edit the feedback (recall thumbs up or down)
-2. A textbox explaining the feedback
-3. A set of common feedback topics - what went wrong (misinterpretation, doesn't follow instructions, etc).
-
-Ideally, the model would have a "selector"
-
-## Dependencies
-
-We will use Vite with React.
-
-Our schema will be generated automatically via typescript type generation, updated via git hooks; dependant on OpenAPI schema from controller.
+<!-- Future work: if a dedicated frontend epic file is introduced later, keep this document as the stable spec index for current contracts and move only the implementation plan details out of here. -->
