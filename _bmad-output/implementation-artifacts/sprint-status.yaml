@@ -1,5 +1,5 @@
 # generated: 2026-03-22T06:26:07+00:00
-# last_updated: 2026-03-23T17:22:32Z
+# last_updated: 2026-03-23T19:58:29Z
 # project: Problemologist-AI
 # project_key: NOKEY
 # tracking_system: file-system
@@ -30,7 +30,7 @@
 # - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
 
 generated: 2026-03-22T06:26:07+00:00
-last_updated: 2026-03-23T17:22:32Z
+last_updated: 2026-03-23T19:58:29Z
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -54,7 +54,7 @@ development_status:
 
   epic-3: in-progress
   3-1-configure-real-cost-inputs: ready-for-dev
-  3-2-evaluate-manufacturability-at-the-requested-quantity: ready-for-dev
+  3-2-evaluate-manufacturability-at-the-requested-quantity: done
   3-3-evaluate-weight-size-form-factor-and-cots: ready-for-dev
   3-4-prefer-the-simpler-valid-solution: ready-for-dev
   3-5-represent-allowed-attachment-and-drilling-points: ready-for-dev

@@ -79,14 +79,14 @@ GPT-5
 
 ### Debug Log References
 
-- `2026-03-23`: Implemented fail-closed manufacturing-config provenance plumbing across planner validation, `submit_plan()`, seeded handoff validation, and planner prompt/config permissions. Integration execution was intentionally deferred at user request.
+- `2026-03-23`: Implemented fail-closed manufacturing-config provenance plumbing across planner validation, `submit_plan()`, seeded handoff validation, and planner prompt/config permissions. Verified the INT-005 planner trace slice after re-enabling tests.
 
 ### Completion Notes List
 
 - Planner validation and handoff submission now require the same workspace `manufacturing_config.yaml` source and reject missing or malformed pricing inputs with deterministic errors.
 - Planner prompts and planner filesystem permissions now explicitly permit reading the workspace pricing source while still forbidding invented COTS pricing data.
 - Planner handoff manifests now persist `manufacturing_config.yaml` alongside the existing artifacts so provenance is traceable in the episode bundle.
-- Added integration coverage for a positive provenance assertion and a negative fail-closed missing-config case, but did not run the tests yet per request.
+- Added integration coverage for a positive provenance assertion and a negative fail-closed missing-config case, and verified the INT-005 planner-gate path after enabling test execution.
 
 ### File List
 

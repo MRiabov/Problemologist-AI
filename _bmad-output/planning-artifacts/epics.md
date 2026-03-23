@@ -188,7 +188,7 @@ FR37: Epic 20 - CAD selection mode can switch between faces, parts/bodies, and s
 FR38: Epic 20 - Steering context, selection metadata, and resulting edits are preserved in traces and replay artifacts
 FR39: Epic 8 / Epic 11 / Epic 14 / Epic 17 - Simulation-family epics emit preview-ready artifacts that authorized viewers can inspect in-browser
 FR40: Epic 21 - Advanced visualization renders FEM, fluids, and electronics artifacts in-browser and supports in-scene steering selections
-FR41: Epic 22 - Users can upload CAD models as input objects or benchmark environments and initiate validation or simulation runs from the uploaded asset set
+FR41: Epic 22 - Users can upload CAD models as input objects or benchmark environments and validate imported motion and constraint metadata from the uploaded asset set
 FR42: Epic 21 - Users can inspect imported CAD constraints, mates, and joints in the visualization surface and toggle their visibility
 
 ## Epic List
@@ -1878,7 +1878,7 @@ As a human operator, I want to inspect CAD constraints, mates, and joints so tha
 
 ## Epic 22: Uploaded CAD Models
 
-Users can upload CAD models as input objects or benchmark environments, validate imported motion and constraint metadata, and run simulation against the uploaded asset set so that native CAD inputs can enter the product without first being manually rebuilt into a benchmark.
+Users can upload CAD models as input objects or benchmark environments and validate imported motion and constraint metadata so that native CAD inputs can enter the product without first being manually rebuilt into a benchmark.
 
 ### Story 22.1: Upload CAD Input Objects
 
@@ -1916,20 +1916,20 @@ As a human operator, I want to upload CAD benchmark environments so that I can r
 **When** I upload it
 **Then** the system rejects it with an explicit failure reason
 
-### Story 22.3: Run Simulation on Uploaded Benchmarks
+### Story 22.3: Flag Missing Constraints in Uploaded Models
 
-As a human operator, I want to run simulation on an uploaded benchmark so that I can validate the imported model under the same physics and evidence rules as native benchmark inputs.
+As a human operator, I want the system to flag uploaded models that have no constraints, mates, or joints so that I can spot potentially ambiguous or underspecified assemblies before they are treated as usable benchmark or input objects.
 
 **Acceptance Criteria:**
 
-**Given** an imported benchmark that passes validation
-**When** I start simulation
-**Then** the system runs the declared simulation path and persists the resulting simulation evidence
+**Given** an uploaded CAD model without explicit constraints, mates, or joints
+**When** it is imported
+**Then** the system marks the model as unconstrained and surfaces that state in the episode artifacts and UI
 
-**Given** an imported benchmark with moving parts
-**When** simulation runs
-**Then** the imported motion contract is respected or the run fails closed with an explicit reason
+**Given** an uploaded benchmark environment or input object with intended motion but no recoverable constraint metadata
+**When** the model is reviewed
+**Then** the system raises an explicit warning or rejection reason instead of silently assuming a valid motion contract
 
-**Given** the simulation fails
-**When** I inspect the episode
-**Then** I can see the terminal failure reason, the imported benchmark asset set, and the evidence that led to rejection
+**Given** an uploaded model that is intentionally free or unconstrained
+**When** it is accepted
+**Then** the unconstrained state is still persisted explicitly rather than inferred later from simulation behavior
