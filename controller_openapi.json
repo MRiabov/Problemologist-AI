@@ -4742,6 +4742,17 @@
               }
             ],
             "title": "Seed"
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
           }
         },
         "type": "object",

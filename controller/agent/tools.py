@@ -542,7 +542,7 @@ def get_engineer_planner_tools(
                 reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER,
                 session_id=fs.client.session_id,
                 planner_node_type=planner_node_type,
-                episode_id=_derived_episode_id(fs.client.session_id),
+                episode_id=fs.episode_id,
                 worker_session_id=fs.client.session_id,
                 benchmark_revision=repo_revision(Path(__file__).resolve().parents[2]),
                 environment_version=_workspace_environment_version(

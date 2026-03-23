@@ -158,6 +158,7 @@ def submit_for_review(
     cwd: Path = Path(),
     session_id: str | None = None,
     reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
+    episode_id: str | None = None,
 ):
     """
     Standardized handover from Coder to Reviewer.
@@ -499,7 +500,11 @@ def submit_for_review(
             "Unable to determine current repository git revision for review manifest."
         )
     resolved_session_id = session_id or os.getenv("SESSION_ID", "default")
-    resolved_episode_id = _derived_episode_id(resolved_session_id)
+    resolved_episode_id = (
+        episode_id
+        or os.getenv("EPISODE_ID")
+        or _derived_episode_id(resolved_session_id)
+    )
 
     # 5. Create reviewer-stage manifest
     stage_to_manifest = {

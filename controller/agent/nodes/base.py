@@ -2050,7 +2050,9 @@ class BaseNode:
             )
 
         interpreter = WorkerInterpreter(
-            worker_client=self.ctx.worker_client, session_id=self.ctx.session_id
+            worker_client=self.ctx.worker_client,
+            session_id=self.ctx.session_id,
+            episode_id=self.ctx.episode_id,
         )
         tool_fns = self._get_tool_functions(
             tool_factory,

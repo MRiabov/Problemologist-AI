@@ -35,4 +35,6 @@ async def execute_script_activity(request: ScriptExecutionRequest) -> ExecuteRes
         session_id=session_id,
         heavy_url=settings.worker_heavy_url,
     )
-    return await client.execute_command(command, timeout=timeout)
+    return await client.execute_command(
+        command, timeout=timeout, episode_id=request.episode_id
+    )

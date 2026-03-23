@@ -757,6 +757,7 @@ async def api_submit(
                         cwd=root,
                         session_id=x_session_id,
                         reviewer_stage=reviewer_stage,
+                        episode_id=request.episode_id,
                     )
                 except ValueError as exc:
                     success = False

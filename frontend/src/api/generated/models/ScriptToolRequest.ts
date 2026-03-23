@@ -14,5 +14,6 @@ export type ScriptToolRequest = {
     num_scenes?: (number | null);
     duration?: (number | null);
     seed?: (number | null);
+    episode_id?: (string | null);
 };
 

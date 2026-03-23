@@ -40,7 +40,9 @@ class AgentModule(dspy.Module):
         )
         self.fs = RemoteFilesystemMiddleware(self.worker_client, agent_role=agent_name)
         self.interpreter = WorkerInterpreter(
-            worker_client=self.worker_client, session_id=self.session_id
+            worker_client=self.worker_client,
+            session_id=self.session_id,
+            episode_id=self.session_id,
         )
 
         # Configure Agent based on name

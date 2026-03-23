@@ -249,6 +249,7 @@ async def submit_for_review_activity(
                 cwd=root,
                 session_id=session_id,
                 reviewer_stage=reviewer_stage,
+                episode_id=getattr(params, "episode_id", None),
             )
         except ValueError as exc:
             success = False

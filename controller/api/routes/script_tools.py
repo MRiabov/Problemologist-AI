@@ -35,11 +35,12 @@ class ScriptToolRequest(BaseModel):
     num_scenes: int | None = None
     duration: float | None = None
     seed: int | None = None
+    episode_id: str | None = None
 
 
 @asynccontextmanager
 async def _controller_script_middleware(
-    session_id: str, agent_role: AgentName, request: Request
+    session_id: str, agent_role: AgentName, request: Request, episode_id: str | None
 ):
     async with httpx.AsyncClient() as http_client:
         client = WorkerClient(
@@ -53,6 +54,7 @@ async def _controller_script_middleware(
             client,
             temporal_client=getattr(request.app.state, "temporal_client", None),
             agent_role=agent_role,
+            episode_id=episode_id or session_id,
         )
         yield middleware
 
@@ -77,7 +79,7 @@ async def validate_script(
     x_session_id: str = Header(...),
 ):
     async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request
+        x_session_id, payload.agent_role, request, payload.episode_id
     ) as middleware:
         result = await middleware.validate(payload.script_path)
         if isinstance(result, BenchmarkToolResponse):
@@ -117,7 +119,7 @@ async def simulate_script(
     x_session_id: str = Header(...),
 ):
     async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request
+        x_session_id, payload.agent_role, request, payload.episode_id
     ) as middleware:
         result = await middleware.simulate(
             payload.script_path,
@@ -149,7 +151,7 @@ async def verify_script(
     x_session_id: str = Header(...),
 ):
     async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request
+        x_session_id, payload.agent_role, request, payload.episode_id
     ) as middleware:
         result = await _retry_busy(
             lambda: middleware.verify(
@@ -182,7 +184,7 @@ async def submit_script(
     x_session_id: str = Header(...),
 ):
     async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request
+        x_session_id, payload.agent_role, request, payload.episode_id
     ) as middleware:
         result = await _retry_busy(
             lambda: middleware.submit(

@@ -82,9 +82,15 @@ class WorkerInterpreter:
     Uses the project's 'well formed remote execution environment'.
     """
 
-    def __init__(self, worker_client: WorkerClient, session_id: str):
+    def __init__(
+        self,
+        worker_client: WorkerClient,
+        session_id: str,
+        episode_id: str | None = None,
+    ):
         self.worker_client = worker_client
         self.session_id = session_id
+        self.episode_id = episode_id
 
     def __call__(self, code: str) -> str:
         """Execute code on the worker and return the output."""
@@ -123,7 +129,8 @@ class WorkerInterpreter:
         # T025: Add timeout to prevent thread leak in BaseNode (Issue 1)
         # 1000s matches the expanded execution budget for long-running tasks.
         return await asyncio.wait_for(
-            self.worker_client.execute_command(code), timeout=1000.0
+            self.worker_client.execute_command(code, episode_id=self.episode_id),
+            timeout=1000.0,
         )
 
     def shutdown(self):

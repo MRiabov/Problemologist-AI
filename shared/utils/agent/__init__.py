@@ -171,6 +171,7 @@ def submit_for_review(compound: Compound) -> bool:
     """Proxy for benchmark submission to the benchmark reviewer stage."""
     if _is_script_import_mode():
         return True
+    episode_id = os.getenv("EPISODE_ID") or None
     if not Path("validation_results.json").exists():
         logger.info(
             "submit_for_review_deferred_missing_validation",
@@ -186,12 +187,17 @@ def submit_for_review(compound: Compound) -> bool:
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.handover import submit_for_review as real_submit
 
-        return real_submit(compound, reviewer_stage=AgentName.BENCHMARK_REVIEWER)
+        return real_submit(
+            compound,
+            reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            episode_id=episode_id,
+        )
 
     controller_payload = {
         "script_path": "script.py",
         "agent_role": _script_agent_role(),
         "reviewer_stage": AgentName.BENCHMARK_REVIEWER.value,
+        "episode_id": episode_id,
     }
     controller_res = _call_controller_script_tool(
         "submit",
@@ -204,6 +210,7 @@ def submit_for_review(compound: Compound) -> bool:
     payload = {
         "script_path": "script.py",
         "reviewer_stage": AgentName.BENCHMARK_REVIEWER,
+        "episode_id": episode_id,
     }
     res = _call_heavy_worker("/benchmark/submit", payload)
     return BenchmarkToolResponse.model_validate(res).success

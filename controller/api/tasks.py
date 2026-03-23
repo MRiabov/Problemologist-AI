@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage
 
 from controller.agent.initialization import (
     initialize_agent_files,
+    seed_manufacturing_config,
 )
 from controller.agent.review_handover import validate_approved_benchmark_bundle
 from controller.api.manager import task_tracker
@@ -480,6 +481,13 @@ async def execute_agent_task(
 
                 # Initialize agent files (templates, directories)
                 await initialize_agent_files(backend, agent_name=agent_name)
+                if agent_name in {
+                    AgentName.ENGINEER_CODER,
+                    AgentName.ENGINEER_PLANNER,
+                    AgentName.ELECTRONICS_PLANNER,
+                    AgentName.BENCHMARK_PLANNER,
+                }:
+                    await seed_manufacturing_config(backend)
 
                 metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
                 benchmark_id_str = (metadata.benchmark_id or "").strip()

@@ -5,6 +5,7 @@ import os
 import re
 import uuid
 from contextlib import suppress
+from pathlib import Path
 
 import httpx
 import pytest
@@ -48,6 +49,9 @@ from shared.workers.schema import (
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+REPO_MANUFACTURING_CONFIG = Path("config/manufacturing_config.yaml").read_text(
+    encoding="utf-8"
+)
 
 
 def _default_benchmark_parts():
@@ -351,7 +355,7 @@ async def _generate_ready_benchmark_session(
                 )
                 confirmed = True
             elif sess_data.status == EpisodeStatus.COMPLETED:
-                return benchmark_session_id
+                return str(run_resp.episode_id)
             elif sess_data.status == EpisodeStatus.FAILED:
                 pytest.fail(
                     "Benchmark generation failed during setup "
@@ -493,14 +497,14 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
         )
 
         manifest_resp = await client.get(
-            f"/episodes/{episode_id}/assets/.manifests/engineering_plan_review_manifest.json"
+            f"{CONTROLLER_URL}/episodes/{episode_id}/assets/.manifests/engineering_plan_review_manifest.json"
         )
         assert manifest_resp.status_code == 200, manifest_resp.text
         manifest = PlanReviewManifest.model_validate_json(manifest_resp.text)
         assert "manufacturing_config.yaml" in manifest.artifact_hashes, manifest
 
         config_resp = await client.get(
-            f"/episodes/{episode_id}/assets/manufacturing_config.yaml"
+            f"{CONTROLLER_URL}/episodes/{episode_id}/assets/manufacturing_config.yaml"
         )
         assert config_resp.status_code == 200, config_resp.text
         expected_hash = hashlib.sha256(config_resp.text.encode("utf-8")).hexdigest()
@@ -917,6 +921,7 @@ async def test_int_009_cost_estimation_validation(
             "plan.md": valid_plan,
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "solution.py": minimal_script,
         }
 
@@ -1726,15 +1731,15 @@ def build():
         await setup_workspace(
             client,
             base_headers,
-                {
-                    "plan.md": valid_plan,
-                    "todo.md": valid_todo,
-                    "benchmark_definition.yaml": objectives,
-                    "assembly_definition.yaml": assembly_definition,
-                    "manufacturing_config.yaml": custom_config,
-                    "script.py": script,
-                },
-            )
+            {
+                "plan.md": valid_plan,
+                "todo.md": valid_todo,
+                "benchmark_definition.yaml": objectives,
+                "assembly_definition.yaml": assembly_definition,
+                "manufacturing_config.yaml": custom_config,
+                "script.py": script,
+            },
+        )
 
         exec_resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
@@ -1756,6 +1761,24 @@ def build():
             script_path="script.py",
             reviewer_stage=AgentName.ENGINEER_EXECUTION_REVIEWER,
         )
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success, validate_data.message
+
+        simulate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        assert simulate_resp.status_code == 200, simulate_resp.text
+        simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+        assert simulate_data.success, simulate_data.message
+
         submit_resp = await client.post(
             f"{WORKER_HEAVY_URL}/benchmark/submit",
             json=submit_req.model_dump(mode="json"),

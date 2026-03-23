@@ -40,6 +40,11 @@ transcript:
     summary: INT-016 electronics planner submission complete.
 - node: engineer_plan_reviewer
   steps:
+  - thought: Inspect the benchmark render before approving the planner handoff.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/render_e45_a45.png
+    expected_observation: attached_to_model
   - finished: true
     review:
       decision: APPROVED

@@ -502,6 +502,7 @@ async def execute_code(
         command=request.code,
         env={
             "SESSION_ID": x_session_id,
+            "EPISODE_ID": request.episode_id or x_session_id,
             "WORKER_HEAVY_URL": settings.worker_heavy_url,
             "CONTROLLER_URL": "",
         },
