@@ -98,6 +98,7 @@ GPT-5.4
 - `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py -k int_189_engineer_run_defaults_to_solution_evidence`
 - `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip`
 - `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_solution_row_round_trip` (engineer solve path still failed in the benchmark setup stage; unrelated to the lineage fix)
+- `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_166.py::test_simulation_navigation_timeline --maxfail=1`
 
 ### Completion Notes List
 
@@ -108,6 +109,7 @@ GPT-5.4
 - Restored the engineer planner visual-inspection gate in `config/agents_config.yaml` and pinned it with `INT-190` coverage.
 - Added fail-closed dataset export lineage validation for missing `review_id`, then emitted `review_id` from benchmark, plan, engineer execution, and electronics review decision traces so valid exports still pass.
 - Verified the lineage and policy changes with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip`.
+- Verified Story 5.2 end-to-end with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_166.py::test_simulation_navigation_timeline --maxfail=1` and observed the benchmark planner advance through `PLANNED` into execution successfully.
 
 ### File List
 
@@ -124,3 +126,7 @@ GPT-5.4
 - `frontend/src/components/visualization/DesignViewer.tsx`
 - `frontend/src/components/workspace/ArtifactView.tsx`
 - `tests/integration/frontend/p0/test_solution_evidence.py`
+
+## Change Log
+
+- 2026-03-23: Confirmed the live-browser simulation timeline regression passes with the current implementation.
