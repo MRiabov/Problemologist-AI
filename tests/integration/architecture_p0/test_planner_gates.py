@@ -1700,6 +1700,13 @@ async def test_int_010_handoff_rejects_low_quantity_that_only_passes_at_volume(
                 "estimate_confidence": "high",
             },
         }
+        custom_config = {
+            "benchmark_operations": {
+                "drilling": {
+                    "cost_per_hole_usd": 2.0,
+                }
+            }
+        }
         script = """
 from build123d import Box, Location
 from shared.models.schemas import PartMetadata
@@ -1719,14 +1726,15 @@ def build():
         await setup_workspace(
             client,
             base_headers,
-            {
-                "plan.md": valid_plan,
-                "todo.md": valid_todo,
-                "benchmark_definition.yaml": objectives,
-                "assembly_definition.yaml": assembly_definition,
-                "script.py": script,
-            },
-        )
+                {
+                    "plan.md": valid_plan,
+                    "todo.md": valid_todo,
+                    "benchmark_definition.yaml": objectives,
+                    "assembly_definition.yaml": assembly_definition,
+                    "manufacturing_config.yaml": custom_config,
+                    "script.py": script,
+                },
+            )
 
         exec_resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
