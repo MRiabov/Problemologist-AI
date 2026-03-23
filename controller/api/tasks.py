@@ -1373,6 +1373,7 @@ async def continue_agent_task(
                 input_update = {
                     "messages": [human_message],
                     "episode_id": str(episode_id),
+                    "session_id": session_id,
                 }
 
                 with start_root_span(
