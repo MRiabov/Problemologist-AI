@@ -271,6 +271,7 @@ export default function ChatWindow({
                     theme={theme}
                     showReasoning={viewReasoning}
                     reasoningRequired={reasoningRequired}
+                    episodeStatus={selectedEpisode?.status}
                     onAssetClick={handleAssetClick}
                     addToContext={addToContext}
                     onShowFeedback={handleShowFeedback}

@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FeedbackSystem } from '../FeedbackSystem';
 import * as apiClient from '../../../api/client';
 
@@ -8,36 +8,54 @@ vi.mock('../../../api/client', () => ({
 }));
 
 describe('FeedbackSystem', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.useFakeTimers();
+    });
 
-  it('renders correctly and submits feedback', async () => {
-    (apiClient.submitTraceFeedback as any).mockResolvedValue({ status: 'success' });
-    const onClose = vi.fn();
-    render(<FeedbackSystem episodeId="test-episode" traceId={1} initialScore={1} onClose={onClose} />);
+    afterEach(() => {
+        vi.useRealTimers();
+    });
 
-    expect(screen.getByText(/Agent Feedback/i)).toBeInTheDocument();
-    
-    const textarea = screen.getByPlaceholderText(/What was satisfying/);
-    fireEvent.change(textarea, { target: { value: 'Great job!' } });
+    it('renders correctly and submits feedback', async () => {
+        (apiClient.submitTraceFeedback as any).mockResolvedValue({ status: 'success' });
+        const onClose = vi.fn();
+        render(
+            <FeedbackSystem
+                episodeId="test-episode"
+                traceId={1}
+                initialScore={1}
+                onClose={onClose}
+            />
+        );
 
-    const submitButton = screen.getByText(/Send Feedback/i);
-    fireEvent.click(submitButton);
+        expect(screen.getByText(/Agent Feedback/i)).toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByText('Feedback Received')).toBeInTheDocument());
-    
-    // Should call onClose after delay
-    await waitFor(() => expect(onClose).toHaveBeenCalled(), { timeout: 3000 });
-  });
+        const textarea = screen.getByPlaceholderText(/What was satisfying/);
+        fireEvent.change(textarea, { target: { value: 'Great job!' } });
 
-  it('calls onClose when clicking cancel', () => {
-    const onClose = vi.fn();
-    render(<FeedbackSystem episodeId="test-episode" traceId={1} initialScore={0} onClose={onClose} />);
+        const submitButton = screen.getByText(/Send Feedback/i);
+        fireEvent.click(submitButton);
 
-    const cancelButton = screen.getByText('Cancel');
-    fireEvent.click(cancelButton);
+        await vi.runAllTimersAsync();
+        expect(screen.getByText('Feedback Received')).toBeInTheDocument();
+        expect(onClose).toHaveBeenCalled();
+    });
 
-    expect(onClose).toHaveBeenCalled();
-  });
+    it('calls onClose when clicking cancel', () => {
+        const onClose = vi.fn();
+        render(
+            <FeedbackSystem
+                episodeId="test-episode"
+                traceId={1}
+                initialScore={0}
+                onClose={onClose}
+            />
+        );
+
+        const cancelButton = screen.getByText('Cancel');
+        fireEvent.click(cancelButton);
+
+        expect(onClose).toHaveBeenCalled();
+    });
 });

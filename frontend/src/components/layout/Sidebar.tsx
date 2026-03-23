@@ -7,12 +7,59 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useState, useCallback } from "react";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import { EpisodePhase } from "../../api/generated/models/EpisodePhase";
 import RevisionLineageSummary from "../workspace/RevisionLineageSummary";
 
 const navigation = [
   { name: "Workspace", href: "/", icon: LayoutDashboard },
   { name: "Benchmark", href: "/benchmark", icon: Rocket },
 ];
+
+const phaseProgressByEpisodePhase: Partial<Record<EpisodePhase, number>> = {
+  [EpisodePhase.BENCHMARK_PLANNING]: 20,
+  [EpisodePhase.BENCHMARK_PLAN_REVIEWING]: 35,
+  [EpisodePhase.BENCHMARK_CODING]: 60,
+  [EpisodePhase.BENCHMARK_REVIEWING]: 85,
+  [EpisodePhase.ENGINEERING_PLANNING]: 20,
+  [EpisodePhase.ENGINEERING_CODING]: 60,
+  [EpisodePhase.ENGINEERING_REVIEWING]: 85,
+};
+
+function getEpisodeRailProgress(ep: {
+  status: EpisodeStatus;
+  metadata_vars?: {
+    detailed_status?: string | null;
+    episode_phase?: EpisodePhase | null;
+  } | null;
+}): number | null {
+  const detailedStatus = ep.metadata_vars?.detailed_status?.trim() || null;
+  const episodePhase = ep.metadata_vars?.episode_phase ?? null;
+
+  if (
+    ep.status === EpisodeStatus.COMPLETED ||
+    ep.status === EpisodeStatus.FAILED ||
+    ep.status === EpisodeStatus.CANCELLED ||
+    detailedStatus === EpisodeStatus.COMPLETED ||
+    detailedStatus === EpisodeStatus.FAILED ||
+    detailedStatus === EpisodeStatus.CANCELLED
+  ) {
+    return 100;
+  }
+
+  if (episodePhase && phaseProgressByEpisodePhase[episodePhase] !== undefined) {
+    return phaseProgressByEpisodePhase[episodePhase] ?? null;
+  }
+
+  if (detailedStatus === "PLANNED") {
+    return 25;
+  }
+
+  if (detailedStatus === "WAITING_USER") {
+    return 45;
+  }
+
+  return null;
+}
 
 export default function Sidebar() {
   const { episodes, selectedEpisode, selectEpisode, createNewBenchmark, loading, setFeedbackState } = useEpisodes();
@@ -167,6 +214,87 @@ export default function Sidebar() {
                                     <span>•</span>
                                     <span className="font-mono">{ep.id.substring(0,4)}</span>
                                 </div>
+
+                                {(() => {
+                                  const detailedStatus = ep.metadata_vars?.detailed_status?.trim() || null;
+                                  const episodePhase = ep.metadata_vars?.episode_phase ?? null;
+                                  const terminalReason = ep.metadata_vars?.terminal_reason?.trim() || null;
+                                  const failureClass = ep.metadata_vars?.failure_class?.trim() || null;
+                                  const progress = getEpisodeRailProgress(ep);
+                                  const hasMetadataRail = !!detailedStatus || !!episodePhase || !!terminalReason || !!failureClass;
+
+                                  return (
+                                    <>
+                                      {hasMetadataRail && (
+                                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                          {detailedStatus && (
+                                            <span
+                                              data-testid="sidebar-episode-detailed-status"
+                                              data-detailed-status={detailedStatus}
+                                              className="rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground"
+                                            >
+                                              {detailedStatus}
+                                            </span>
+                                          )}
+                                          {episodePhase && (
+                                            <span
+                                              data-testid="sidebar-episode-phase"
+                                              data-episode-phase={episodePhase}
+                                              className="rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground"
+                                            >
+                                              {episodePhase}
+                                            </span>
+                                          )}
+                                          {terminalReason && (
+                                            <span
+                                              data-testid="sidebar-episode-terminal-reason"
+                                              data-terminal-reason={terminalReason}
+                                              className="rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground"
+                                            >
+                                              {terminalReason}
+                                            </span>
+                                          )}
+                                          {failureClass && (
+                                            <span
+                                              data-testid="sidebar-episode-failure-class"
+                                              data-failure-class={failureClass}
+                                              className="rounded-full border border-border/60 bg-background/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground"
+                                            >
+                                              {failureClass}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {typeof progress === "number" && (
+                                        <div className="mt-2 space-y-1">
+                                          <div
+                                            className="h-1.5 overflow-hidden rounded-full bg-muted"
+                                            aria-label="Episode progress"
+                                          >
+                                            <div
+                                              data-testid="sidebar-episode-progress"
+                                              data-progress={progress}
+                                              className={cn(
+                                                "h-full rounded-full transition-all",
+                                                ep.status === EpisodeStatus.FAILED
+                                                  ? "bg-red-500"
+                                                  : ep.status === EpisodeStatus.COMPLETED
+                                                    ? "bg-emerald-500"
+                                                    : "bg-primary",
+                                              )}
+                                              style={{ width: `${progress}%` }}
+                                            />
+                                          </div>
+                                          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                            <span>Progress</span>
+                                            <span>{progress}%</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                                 
                                 {/* Hover Feedback Actions */}
                                 <div className="absolute right-2 bottom-2 hidden group-hover:flex items-center gap-1.5 animate-in fade-in slide-in-from-right-1">

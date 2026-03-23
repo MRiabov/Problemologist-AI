@@ -7,6 +7,7 @@ import type { TraceResponse } from "../../api/generated/models/TraceResponse";
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import type { ContextItem } from "../../context/EpisodeContext";
 import { TraceType } from "../../api/generated/models/TraceType";
+import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 
 interface TraceListProps {
   traces: TraceResponse[] | undefined;
@@ -14,6 +15,7 @@ interface TraceListProps {
   theme: string;
   showReasoning: boolean;
   reasoningRequired?: boolean;
+  episodeStatus?: EpisodeStatus | null;
   onAssetClick: (id: string | null) => void;
   addToContext: (item: ContextItem) => void;
   onShowFeedback: (traceId: number, score: number) => void;
@@ -25,12 +27,30 @@ export const TraceList = memo(({
   theme,
   showReasoning,
   reasoningRequired = false,
+  episodeStatus,
   onAssetClick,
   addToContext,
   onShowFeedback
 }: TraceListProps) => {
 
-  if (!traces || traces.length === 0) {
+  const traceList = traces ?? [];
+  const hasReasoningTraces = traceList.some(
+    (t) => t.trace_type === TraceType.LLM_END && !!t.name
+  );
+  const shouldShowTelemetryWarning =
+    reasoningRequired &&
+    !hasReasoningTraces &&
+    episodeStatus !== undefined &&
+    episodeStatus !== null &&
+    [
+      EpisodeStatus.RUNNING,
+      EpisodeStatus.COMPLETED,
+      EpisodeStatus.FAILED,
+    ].includes(episodeStatus);
+  const showReasoningTelemetryWarning =
+    shouldShowTelemetryWarning;
+
+  if (traceList.length === 0 && !showReasoningTelemetryWarning) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-2 opacity-10 h-full">
          <Terminal className="h-8 w-8" />
@@ -38,16 +58,6 @@ export const TraceList = memo(({
       </div>
     );
   }
-
-  const hasReasoningTraces = traces.some(
-    (t) => t.trace_type === TraceType.LLM_END && !!t.name
-  );
-  const toolCalls = traces.filter((t) => t.trace_type === TraceType.TOOL_START);
-  const showReasoningTelemetryWarning =
-    reasoningRequired &&
-    showReasoning &&
-    toolCalls.length >= 3 &&
-    !hasReasoningTraces;
 
   return (
     <>
@@ -59,7 +69,7 @@ export const TraceList = memo(({
           Reasoning telemetry is required for this run, but no reasoning traces have been persisted yet.
         </div>
       )}
-      {traces.map((trace, index) => {
+      {traceList.map((trace, index) => {
           const type = trace.trace_type as string;
           const isLegacyThought = type === "llm_thought" || type === "thought";
           const isReasoningSpan =
@@ -71,7 +81,7 @@ export const TraceList = memo(({
             const stableDuration = (String(trace.id).split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % 5) + 1;
             let title = `Thought for ${stableDuration}s`;
             if (isReasoningSpan) {
-              const nextTool = traces
+              const nextTool = traceList
                 .slice(index + 1)
                 .find((t) => t.trace_type === TraceType.TOOL_START);
               const nodeName = trace.name || "step";

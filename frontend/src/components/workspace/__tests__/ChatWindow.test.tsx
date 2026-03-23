@@ -114,7 +114,12 @@ describe('ChatWindow', () => {
 
     it('renders traces correctly', () => {
         const traces = [
-            { id: '1', trace_type: 'thought', content: 'I am thinking' },
+            {
+                id: '1',
+                trace_type: TraceType.LLM_END,
+                name: 'planner',
+                content: 'I am thinking',
+            },
             { id: '2', trace_type: TraceType.TOOL_START, name: 'view_file', content: '{"path": "test.py"}' },
         ];
         (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
@@ -125,7 +130,7 @@ describe('ChatWindow', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByText(/Thought for/i)).toBeInTheDocument();
+        expect(screen.getByText(/Reasoning after planner/i)).toBeInTheDocument();
         expect(screen.getByText(/Read/i)).toBeInTheDocument();
         expect(screen.getByText(/test.py/i)).toBeInTheDocument();
     });
@@ -175,24 +180,19 @@ describe('ChatWindow', () => {
     });
 
     it('shows telemetry warning when reasoning is required but missing', () => {
-        const traces = [
-            { id: '1', trace_type: TraceType.TOOL_START, name: 'list_files', content: '{"kwargs":{"path":"/"}}' },
-            { id: '2', trace_type: TraceType.TOOL_START, name: 'read_file', content: '{"kwargs":{"path":"benchmark_definition.yaml"}}' },
-            { id: '3', trace_type: TraceType.TOOL_START, name: 'list_files', content: '{"kwargs":{"path":"/config"}}' },
-        ];
-        (useUISettings as any).mockReturnValue({ viewReasoning: true, setViewReasoning: vi.fn() });
+        (useUISettings as any).mockReturnValue({ viewReasoning: false, setViewReasoning: vi.fn() });
         (useEpisodes as any).mockReturnValue({
             ...defaultEpisodeContext,
             selectedEpisode: {
                 id: 'ep-telemetry',
-                status: EpisodeStatus.RUNNING,
+                status: EpisodeStatus.COMPLETED,
                 metadata_vars: { additional_info: { reasoning_required: true } },
             },
         });
 
         render(
             <MemoryRouter>
-                <ChatWindow traces={traces as any} />
+                <ChatWindow traces={[]} />
             </MemoryRouter>
         );
 
