@@ -96,6 +96,8 @@ GPT-5.4
 
 - `npm run build` in `frontend/`
 - `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py -k int_189_engineer_run_defaults_to_solution_evidence`
+- `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip`
+- `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_solution_row_round_trip` (engineer solve path still failed in the benchmark setup stage; unrelated to the lineage fix)
 
 ### Completion Notes List
 
@@ -103,9 +105,20 @@ GPT-5.4
 - Kept the 3D viewer mounted across mode switches so video playback does not discard the loaded model or topology state.
 - Added stable `data-testid` hooks for the DesignViewer mode toggles and updated the live-browser regression to use them.
 - Verified the regression with the deterministic integration slice `tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence[chromium]`.
+- Restored the engineer planner visual-inspection gate in `config/agents_config.yaml` and pinned it with `INT-190` coverage.
+- Added fail-closed dataset export lineage validation for missing `review_id`, then emitted `review_id` from benchmark, plan, engineer execution, and electronics review decision traces so valid exports still pass.
+- Verified the lineage and policy changes with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip`.
 
 ### File List
 
+- `config/agents_config.yaml`
+- `controller/api/routes/datasets.py`
+- `controller/agent/benchmark/nodes.py`
+- `controller/agent/nodes/plan_reviewer.py`
+- `controller/agent/nodes/execution_reviewer.py`
+- `controller/agent/nodes/electronics_reviewer.py`
+- `shared/observability/schemas.py`
+- `tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py`
 - `frontend/src/components/workspace/artifactSelection.ts`
 - `frontend/src/components/workspace/UnifiedGeneratorView.tsx`
 - `frontend/src/components/visualization/DesignViewer.tsx`

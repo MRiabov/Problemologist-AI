@@ -83,6 +83,7 @@ def test_int_190_unit_eval_allowlists_are_explicit_and_reviewer_driven():
         "engineer_planner",
         "engineer_plan_reviewer",
     }
+    assert agents["engineer_planner"]["visual_inspection"]["required"] is True
 
     engineer_execution_reviewer_allowlist = set(
         agents["engineer_execution_reviewer"]["allowed_during_unit_eval"]

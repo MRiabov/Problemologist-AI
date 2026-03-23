@@ -135,7 +135,7 @@ agents:
     allowed_during_unit_eval:
       [engineer_planner, engineer_plan_reviewer]
     visual_inspection:
-      required: false
+      required: true
       min_images: 1
       reminder_interval: 2
 
