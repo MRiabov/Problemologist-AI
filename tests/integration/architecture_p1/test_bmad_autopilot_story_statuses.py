@@ -1,4 +1,5 @@
 import importlib.util
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -18,6 +19,24 @@ def _load_autopilot_module():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _run_git(root: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _init_git_repo(root: Path) -> None:
+    _run_git(root, "init", "-b", "main")
+    _run_git(root, "config", "user.email", "codex@example.com")
+    _run_git(root, "config", "user.name", "Codex")
+    _run_git(root, "add", "-A")
+    _run_git(root, "commit", "-m", "init")
 
 
 @pytest.mark.integration_p1
@@ -52,12 +71,14 @@ def test_int_autopilot_story_status_lifecycle():
             + "\n",
             encoding="utf-8",
         )
+        _init_git_repo(root)
 
         runner = object.__new__(mod.AutopilotRunner)
         runner.project_root = root
         runner.tmp_dir = root / ".autopilot" / "tmp"
         runner.tmp_dir.mkdir(parents=True, exist_ok=True)
         runner.sprint_status_file = status_path
+        runner.base_branch = "main"
 
         runner.state_current_story = lambda: story_key
         runner.load_sprint_status = lambda root=None: mod.SprintStatus.model_validate(
@@ -73,18 +94,68 @@ def test_int_autopilot_story_status_lifecycle():
         runner.build_story_qa_prompt = lambda *args, **kwargs: "prompt"
         runner.build_story_code_review_prompt = lambda *args, **kwargs: "prompt"
 
-        def run_codex_exec(prompt, output_file, cwd=None, reasoning_effort=None):
+        def run_codex_session(
+            prompt, output_file, cwd=None, reasoning_effort=None, session_id=None
+        ):
             if output_file.name == "develop-story-output.txt":
-                output_file.write_text("STATUS: STORIES_COMPLETE\n", encoding="utf-8")
+                story_path.write_text("Status: review\n", encoding="utf-8")
+                sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
+                sprint_status["development_status"][story_key] = "review"
+                status_path.write_text(
+                    yaml.safe_dump(sprint_status, sort_keys=False), encoding="utf-8"
+                )
+                output_file.write_text(
+                    "\n".join(
+                        [
+                            "---",
+                            "workflow_status: stories_complete",
+                            f"story_key: {story_key}",
+                            "story_status: review",
+                            "---",
+                            "Implementation complete",
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
             elif output_file.name == "qa-story-output.txt":
-                output_file.write_text("STATUS: QA_COMPLETE\n", encoding="utf-8")
+                output_file.write_text(
+                    "---\nreview_status: pass\n---\nQA complete\n", encoding="utf-8"
+                )
             elif output_file.name == "code-review-output.txt":
-                output_file.write_text("STATUS: CODE_REVIEW_DONE\n", encoding="utf-8")
+                source = runner.collect_review_source_snapshot(root)
+                fingerprint = runner.review_scope_fingerprint(source)
+                reviewed_files = (
+                    runner.review_scope_file_names(source.branch_diff)
+                    + runner.review_scope_file_names(source.staged_diff)
+                    + runner.review_scope_file_names(source.unstaged_diff)
+                )
+                output_file.write_text(
+                    "\n".join(
+                        [
+                            "---",
+                            "review_status: pass",
+                            f"review_scope_fingerprint: {fingerprint}",
+                            "reviewed_files:",
+                            *[f"  - {path}" for path in reviewed_files],
+                            "---",
+                            "Review complete",
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
             else:
-                output_file.write_text("STATUS: OK\n", encoding="utf-8")
-            return 0
+                output_file.write_text(
+                    "---\nreview_status: pass\n---\nOK\n", encoding="utf-8"
+                )
+            return mod.CodexAttemptResult(
+                return_code=0,
+                thread_id="thread-1",
+                output_text=output_file.read_text(encoding="utf-8"),
+            )
 
-        runner.run_codex_exec = run_codex_exec
+        runner.run_codex_session = run_codex_session
         runner.autopilot_checks = lambda *args, **kwargs: None
         runner.persist_review_artifact = lambda *args, **kwargs: None
         runner.play_sound = lambda *args, **kwargs: None
@@ -155,12 +226,14 @@ def test_int_autopilot_story_status_fallbacks():
             + "\n",
             encoding="utf-8",
         )
+        _init_git_repo(root)
 
         runner = object.__new__(mod.AutopilotRunner)
         runner.project_root = root
         runner.tmp_dir = root / ".autopilot" / "tmp"
         runner.tmp_dir.mkdir(parents=True, exist_ok=True)
         runner.sprint_status_file = status_path
+        runner.base_branch = "main"
 
         runner.state_current_story = lambda: story_key
         runner.load_sprint_status = lambda root=None: mod.SprintStatus.model_validate(
@@ -176,23 +249,68 @@ def test_int_autopilot_story_status_fallbacks():
         runner.build_story_qa_prompt = lambda *args, **kwargs: "prompt"
         runner.build_story_code_review_prompt = lambda *args, **kwargs: "prompt"
 
-        def run_codex_exec(prompt, output_file, cwd=None, reasoning_effort=None):
+        def run_codex_session(
+            prompt, output_file, cwd=None, reasoning_effort=None, session_id=None
+        ):
             if output_file.name == "develop-story-output.txt":
                 story_path.write_text("Status: review\n", encoding="utf-8")
-                output_file.write_text("Implementation complete\n", encoding="utf-8")
-            elif output_file.name == "qa-story-output.txt":
-                output_file.write_text("STATUS: QA_COMPLETE\n", encoding="utf-8")
-            elif output_file.name == "code-review-output.txt":
+                sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
+                sprint_status["development_status"][story_key] = "review"
+                status_path.write_text(
+                    yaml.safe_dump(sprint_status, sort_keys=False), encoding="utf-8"
+                )
                 output_file.write_text(
-                    "No findings were raised at all.\n"
-                    "Summary: 0 intent_gap, 0 bad_spec, 0 patch, 0 defer findings.\n",
+                    "\n".join(
+                        [
+                            "---",
+                            "workflow_status: stories_complete",
+                            f"story_key: {story_key}",
+                            "story_status: review",
+                            "---",
+                            "Implementation complete",
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+            elif output_file.name == "qa-story-output.txt":
+                output_file.write_text(
+                    "---\nreview_status: pass\n---\nQA complete\n", encoding="utf-8"
+                )
+            elif output_file.name == "code-review-output.txt":
+                source = runner.collect_review_source_snapshot(root)
+                fingerprint = runner.review_scope_fingerprint(source)
+                reviewed_files = (
+                    runner.review_scope_file_names(source.branch_diff)
+                    + runner.review_scope_file_names(source.staged_diff)
+                    + runner.review_scope_file_names(source.unstaged_diff)
+                )
+                output_file.write_text(
+                    "\n".join(
+                        [
+                            "---",
+                            "review_status: pass",
+                            f"review_scope_fingerprint: {fingerprint}",
+                            "reviewed_files:",
+                            *[f"  - {path}" for path in reviewed_files],
+                            "---",
+                            "Review complete",
+                        ]
+                    )
+                    + "\n",
                     encoding="utf-8",
                 )
             else:
-                output_file.write_text("STATUS: OK\n", encoding="utf-8")
-            return 0
+                output_file.write_text(
+                    "---\nreview_status: pass\n---\nOK\n", encoding="utf-8"
+                )
+            return mod.CodexAttemptResult(
+                return_code=0,
+                thread_id="thread-1",
+                output_text=output_file.read_text(encoding="utf-8"),
+            )
 
-        runner.run_codex_exec = run_codex_exec
+        runner.run_codex_session = run_codex_session
         runner.autopilot_checks = lambda *args, **kwargs: None
         runner.persist_review_artifact = lambda *args, **kwargs: None
         runner.play_sound = lambda *args, **kwargs: None
