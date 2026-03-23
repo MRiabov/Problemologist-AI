@@ -1,33 +1,30 @@
 from __future__ import annotations
 
-import base64
 import asyncio
 import hashlib
+import uuid
 from pathlib import Path
 from typing import Literal
-import uuid
 
 import yaml
 from pydantic import BaseModel
 from sqlalchemy import select
 
-from shared.git_utils import repo_revision
-from controller.clients.worker import WorkerClient
-from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Asset, Episode
-from shared.enums import AgentName, EpisodeStatus, EpisodeType, TerminalReason
-from shared.models.schemas import EpisodeMetadata
-from shared.models.schemas import AssemblyDefinition
-from shared.models.simulation import SimulationResult
 from controller.agent.benchmark_handover_validation import (
     BenchmarkPlanReviewerEvidence,
     build_benchmark_plan_reviewer_evidence,
 )
+from controller.clients.worker import WorkerClient
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Asset, Episode
+from shared.enums import AgentName, EpisodeStatus, EpisodeType, TerminalReason
+from shared.git_utils import repo_revision
+from shared.models.schemas import AssemblyDefinition, EpisodeMetadata
+from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
-    RenderArtifactMetadata,
     PlanReviewManifest,
-    ReviewerStage,
     RenderManifest,
+    ReviewerStage,
     ReviewManifest,
     ValidationResultRecord,
 )
@@ -37,7 +34,7 @@ from worker_heavy.utils.file_validation import (
     validate_environment_attachment_contract,
     validate_planner_handoff_cross_contract,
 )
-from worker_heavy.workbenches.config import load_config, load_merged_config
+from worker_heavy.workbenches.config import load_required_merged_config
 
 PlanReviewerStage = Literal[
     AgentName.BENCHMARK_PLAN_REVIEWER,
@@ -67,34 +64,6 @@ def _normalize_render_path(path: str) -> str:
     if not normalized.startswith("/"):
         normalized = f"/{normalized}"
     return normalized
-
-
-_DEFAULT_BENCHMARK_PLAN_PREVIEW_PNG_BASE64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
-)
-
-
-async def _seed_benchmark_plan_preview_bundle(
-    worker_client: WorkerClient,
-) -> list[str]:
-    """Create a deterministic fallback preview bundle for benchmark plan review."""
-    cad_preview_path = "renders/cad_preview.png"
-    simulation_preview_path = "renders/simulation_preview.png"
-    preview_bytes = base64.b64decode(_DEFAULT_BENCHMARK_PLAN_PREVIEW_PNG_BASE64)
-    uploaded_paths: list[str] = []
-
-    for render_path in (cad_preview_path, simulation_preview_path):
-        try:
-            await worker_client.upload_file(
-                render_path,
-                preview_bytes,
-                bypass_agent_permissions=True,
-            )
-            uploaded_paths.append(render_path)
-        except Exception:
-            continue
-
-    return uploaded_paths
 
 
 async def _list_render_media_paths(worker_client: WorkerClient) -> list[str]:
@@ -164,29 +133,14 @@ async def _validate_render_manifest_bundle(
         if not _is_static_preview_render(render_path):
             continue
         normalized_render_path = _normalize_render_path(render_path)
-        manifest_path = str(Path(normalized_render_path).parent / "render_manifest.json")
+        manifest_path = str(
+            Path(normalized_render_path).parent / "render_manifest.json"
+        )
         render_manifests.setdefault(manifest_path, set()).add(normalized_render_path)
 
     for manifest_path, expected_render_paths in render_manifests.items():
         if not await worker_client.exists(manifest_path):
-            synthesized_manifest = RenderManifest(
-                artifacts={
-                    render_path: RenderArtifactMetadata(modality="rgb")
-                    for render_path in sorted(expected_render_paths)
-                }
-            )
-            try:
-                await worker_client.write_file(
-                    manifest_path,
-                    synthesized_manifest.model_dump_json(indent=2),
-                    overwrite=True,
-                    bypass_agent_permissions=True,
-                )
-            except Exception as exc:
-                return (
-                    "render manifest missing for latest preview bundle: "
-                    f"{manifest_path} (failed to synthesize: {exc})"
-                )
+            return f"render manifest missing for latest preview bundle: {manifest_path}"
 
         try:
             manifest_raw = await worker_client.read_file(manifest_path)
@@ -334,9 +288,7 @@ async def collect_plan_reviewer_handover_evidence(
     render_poll_interval_seconds = 0.5
     render_deadline = asyncio.get_running_loop().time() + render_timeout_seconds
     while True:
-        episode_render_paths = set(
-            await _list_episode_render_asset_paths(episode_id)
-        )
+        episode_render_paths = set(await _list_episode_render_asset_paths(episode_id))
         workspace_render_paths = set(await _list_render_media_paths(worker_client))
         render_paths = sorted(episode_render_paths | workspace_render_paths)
         if render_paths:
@@ -344,13 +296,6 @@ async def collect_plan_reviewer_handover_evidence(
         if asyncio.get_running_loop().time() >= render_deadline:
             break
         await asyncio.sleep(render_poll_interval_seconds)
-
-    if not render_paths:
-        seeded_render_paths = await _seed_benchmark_plan_preview_bundle(worker_client)
-        workspace_render_paths = set(await _list_render_media_paths(worker_client))
-        render_paths = sorted(episode_render_paths | workspace_render_paths)
-        if not render_paths and seeded_render_paths:
-            render_paths = sorted(set(seeded_render_paths))
 
     if render_paths:
         render_manifest_error = await _validate_render_manifest_bundle(
@@ -428,6 +373,46 @@ async def validate_reviewer_handover(
                 "validation_results.json is missing runtime verification summary; "
                 "run /benchmark/verify before requesting review approval."
             )
+        if (
+            len(verification_result.individual_results)
+            != verification_result.num_scenes
+        ):
+            return (
+                "runtime verification summary is invalid: individual_results count "
+                "does not match num_scenes."
+            )
+        computed_success_count = sum(
+            1 for result in verification_result.individual_results if result.success
+        )
+        if computed_success_count != verification_result.success_count:
+            return (
+                "runtime verification summary is invalid: success_count does not "
+                "match individual_results."
+            )
+        if verification_result.num_scenes > 0:
+            computed_success_rate = (
+                computed_success_count / verification_result.num_scenes
+            )
+            if abs(computed_success_rate - verification_result.success_rate) > 1e-9:
+                return (
+                    "runtime verification summary is invalid: success_rate does not "
+                    "match success_count / num_scenes."
+                )
+        if not verification_result.batched_execution:
+            return (
+                "runtime verification summary is invalid: batched_execution must "
+                "be true."
+            )
+        if verification_result.scene_build_count != 1:
+            return (
+                "runtime verification summary is invalid: scene_build_count must "
+                "be 1 for a batched verification result."
+            )
+        if verification_result.backend_run_count != 1:
+            return (
+                "runtime verification summary is invalid: backend_run_count must "
+                "be 1 for a batched verification result."
+            )
         if verification_result.success_rate < MIN_RUNTIME_JITTER_SUCCESS_RATE:
             return (
                 "runtime verification is not robust enough for approval: "
@@ -456,9 +441,11 @@ async def validate_reviewer_handover(
         return "review manifest simulation summary does not confirm goal completion."
 
     if expected_stage == "benchmark_reviewer":
-        benchmark_cross_contract_error = await validate_planner_artifacts_cross_contract(
-            worker_client,
-            expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+        benchmark_cross_contract_error = (
+            await validate_planner_artifacts_cross_contract(
+                worker_client,
+                expected_stage=AgentName.BENCHMARK_PLAN_REVIEWER,
+            )
         )
         if benchmark_cross_contract_error is not None:
             return benchmark_cross_contract_error
@@ -511,8 +498,8 @@ async def validate_approved_benchmark_bundle(
             )
 
         benchmark_worker_session_id = (
-            (metadata.worker_session_id or "").strip() or normalized_episode_id
-        )
+            metadata.worker_session_id or ""
+        ).strip() or normalized_episode_id
 
     manifest, manifest_error = await _load_review_manifest(
         worker_client,
@@ -631,18 +618,21 @@ async def validate_planner_artifacts_cross_contract(
     if attachment_errors:
         return "; ".join(attachment_errors)
 
+    if not await worker_client.exists("manufacturing_config.yaml"):
+        return (
+            "manufacturing_config.yaml missing for planner handoff "
+            "cross-contract validation."
+        )
+
     try:
-        if await worker_client.exists("manufacturing_config.yaml"):
-            manufacturing_config = load_merged_config(
-                override_data=(
-                    yaml.safe_load(
-                        await worker_client.read_file("manufacturing_config.yaml")
-                    )
-                    or {}
+        manufacturing_config = load_required_merged_config(
+            override_data=(
+                yaml.safe_load(
+                    await worker_client.read_file("manufacturing_config.yaml")
                 )
+                or {}
             )
-        else:
-            manufacturing_config = load_config()
+        )
     except Exception as e:
         return f"planner handoff pricing-config parse failure: {e}"
 

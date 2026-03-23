@@ -314,6 +314,8 @@ class ValidationResultRecord(BaseModel):
     script_sha256: StrictStr | None = None
     verification_result: MultiRunResult | None = None
 
+    model_config = {"extra": "forbid"}
+
 
 class ReviewManifest(BaseModel):
     """Persisted handoff manifest used to gate reviewer entry."""

@@ -75,6 +75,8 @@ TEMPLATE_PLACEHOLDERS = [
 _MISSING_FILE_ERROR_RE = re.compile(
     r"^Error:\s*File\s+'(?P<path>[^']+)'\s+not found\.?$", re.IGNORECASE
 )
+
+
 def _find_template_placeholders(filename: str, content: str) -> list[str]:
     """Return template placeholder markers, with Python-aware handling for ellipses."""
     found_placeholders = [
@@ -114,10 +116,18 @@ def _is_missing_file_error(content: str, *, expected_path: str | None = None) ->
     return returned_path == normalized_expected
 
 
-def _benchmark_refusal_error(
-    reason: BenchmarkRefusalReason, message: str
-) -> str:
+def _benchmark_refusal_error(reason: BenchmarkRefusalReason, message: str) -> str:
     return f"{reason.value}: {message}"
+
+
+_SUPPORTED_BENCHMARK_MOTION_TOKENS = {
+    "rotate_x",
+    "rotate_y",
+    "rotate_z",
+    "slide_x",
+    "slide_y",
+    "slide_z",
+}
 
 
 def _iter_benchmark_motion_configs(
@@ -548,9 +558,7 @@ def validate_benchmark_assembly_motion_contract(
         else set()
     )
 
-    for part_name, dofs, control in _iter_benchmark_motion_configs(
-        assembly_definition
-    ):
+    for part_name, dofs, control in _iter_benchmark_motion_configs(assembly_definition):
         if benchmark_part_ids and part_name not in benchmark_part_ids:
             errors.append(
                 _benchmark_refusal_error(
@@ -569,72 +577,78 @@ def validate_benchmark_assembly_motion_contract(
                         "benchmark_assembly_definition.yaml part "
                         f"'{part_name}' declares control metadata without any DOFs",
                     )
-            )
+                )
             continue
 
-        if len(dofs) != 1:
-            errors.append(
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
-                    "benchmark_assembly_definition.yaml part "
-                    f"'{part_name}' must expose exactly one DOF; got {dofs}",
+        normalized_dofs: list[str] = []
+        for raw_dof in dofs:
+            dof_token = str(raw_dof).strip()
+            if not dof_token:
+                errors.append(
+                    _benchmark_refusal_error(
+                        BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                        "benchmark_assembly_definition.yaml part "
+                        f"'{part_name}' has an empty DOF token",
+                    )
                 )
-            )
-            continue
-
-        dof_token = dofs[0].strip()
-        if not dof_token:
-            errors.append(
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
-                    "benchmark_assembly_definition.yaml part "
-                    f"'{part_name}' has an empty DOF token",
+                break
+            normalized_dof = dof_token.lower()
+            if normalized_dof not in _SUPPORTED_BENCHMARK_MOTION_TOKENS:
+                errors.append(
+                    _benchmark_refusal_error(
+                        BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                        "benchmark_assembly_definition.yaml part "
+                        f"'{part_name}' uses unsupported benchmark motion token "
+                        f"'{dof_token}'",
+                    )
                 )
-            )
-            continue
-
-        if dof_token.lower() not in {
-            "rotate_x",
-            "rotate_y",
-            "rotate_z",
-            "slide_x",
-            "slide_y",
-            "slide_z",
-        }:
-            errors.append(
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
-                    "benchmark_assembly_definition.yaml part "
-                    f"'{part_name}' uses unsupported benchmark motion token "
-                    f"'{dof_token}'",
+                break
+            normalized_dofs.append(normalized_dof)
+        else:
+            if len(set(normalized_dofs)) != len(normalized_dofs):
+                errors.append(
+                    _benchmark_refusal_error(
+                        BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                        "benchmark_assembly_definition.yaml part "
+                        f"'{part_name}' declares duplicate DOF tokens: {dofs}",
+                    )
                 )
-            )
-            continue
-
-        if control is None:
-            continue
-
-        control_speed = getattr(control, "speed", None)
-        try:
-            control_speed_value = float(control_speed)
-        except (TypeError, ValueError):
-            errors.append(
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
-                    "benchmark_assembly_definition.yaml part "
-                    f"'{part_name}' has an invalid controller speed value",
+                continue
+            if len(normalized_dofs) > 6:
+                errors.append(
+                    _benchmark_refusal_error(
+                        BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                        "benchmark_assembly_definition.yaml part "
+                        f"'{part_name}' declares more than 6 rigid-body DOFs: "
+                        f"{dofs}",
+                    )
                 )
-            )
-            continue
-        if control_speed_value <= 0:
-            errors.append(
-                _benchmark_refusal_error(
-                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
-                    "benchmark_assembly_definition.yaml part "
-                    f"'{part_name}' must use a positive controller speed; "
-                    f"got {control_speed_value:g}",
-                )
-            )
+                continue
+            if control is not None:
+                control_speed = getattr(control, "speed", None)
+                try:
+                    control_speed_value = float(control_speed)
+                except (TypeError, ValueError):
+                    errors.append(
+                        _benchmark_refusal_error(
+                            BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                            "benchmark_assembly_definition.yaml part "
+                            f"'{part_name}' has an invalid controller speed value",
+                        )
+                    )
+                    continue
+                if control_speed_value <= 0:
+                    errors.append(
+                        _benchmark_refusal_error(
+                            BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                            "benchmark_assembly_definition.yaml part "
+                            f"'{part_name}' must use a positive controller speed; "
+                            f"got {control_speed_value:g}",
+                        )
+                    )
+                    continue
+            # Explicit multi-DOF and free-body benchmark fixtures are valid when
+            # the benchmark contract declares them and the motion tokens are supported.
             continue
 
     return errors
@@ -992,9 +1006,7 @@ def validate_node_output(
                         todo_text=files_content_map.get("todo.md"),
                     )
                     if motion_errors:
-                        errors.extend(
-                            [f"{filename}: {e}" for e in motion_errors]
-                        )
+                        errors.extend([f"{filename}: {e}" for e in motion_errors])
         elif filename == "plan_refusal.md":
             is_valid, refusal_res = validate_plan_refusal(
                 content, session_id=session_id

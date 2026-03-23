@@ -96,3 +96,5 @@ class MultiRunResult(BaseModel):
     scene_build_count: int = 1
     backend_run_count: int = 1
     batched_execution: bool = True
+
+    model_config = {"extra": "forbid"}

@@ -136,8 +136,6 @@ async def initialize_agent_files(
     if tasks:
         await asyncio.gather(*tasks)
 
-    await seed_manufacturing_config(backend, overwrite=overwrite, existing_files=existing_files)
-
     # Skills are mounted read-only at /skills on worker side; initialization must not
     # attempt to write there through normal agent permissions.
     available_skills = 0

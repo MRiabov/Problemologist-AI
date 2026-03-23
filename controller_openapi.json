@@ -3770,6 +3770,7 @@
             "default": true
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "num_scenes",

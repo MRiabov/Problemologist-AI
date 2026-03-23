@@ -29,6 +29,7 @@ from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import (
     AssetType,
     EpisodeStatus,
+    EpisodeType,
     ResponseStatus,
     ReviewDecision,
     TraceType,
@@ -204,7 +205,9 @@ async def get_episode_asset(
                 raise HTTPException(
                     status_code=404, detail=f"Asset {path} not found on worker"
                 )
-            raise HTTPException(status_code=404, detail=f"Asset {path} not found on worker")
+            raise HTTPException(
+                status_code=404, detail=f"Asset {path} not found on worker"
+            )
         except HTTPException:
             raise
         except httpx.HTTPStatusError as e:
@@ -274,6 +277,53 @@ async def review_episode(
 
     # Update episode based on decision
     decision = review_data.decision
+    rejection_decisions = {
+        ReviewDecision.REJECTED,
+        ReviewDecision.REJECT_PLAN,
+        ReviewDecision.REJECT_CODE,
+    }
+    if decision in rejection_decisions:
+        rejection_reason = next(
+            (
+                comment.strip()
+                for comment in review_data.comments
+                if isinstance(comment, str) and comment.strip()
+            ),
+            "",
+        )
+        if not rejection_reason:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Rejection decisions require at least one non-empty reason "
+                    "in review comments."
+                ),
+            )
+
+    episode_metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+    engineer_execution_decisions = {
+        ReviewDecision.APPROVED,
+        ReviewDecision.REJECTED,
+        ReviewDecision.REJECT_PLAN,
+        ReviewDecision.REJECT_CODE,
+    }
+    if (
+        episode_metadata.episode_type == EpisodeType.ENGINEER
+        and decision in engineer_execution_decisions
+    ):
+        evidence = (
+            review_data.evidence if isinstance(review_data.evidence, dict) else {}
+        )
+        stability_summary = evidence.get("stability_summary")
+        if not stability_summary:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Engineer review decisions require stability_summary evidence "
+                    "from validation_results.json."
+                ),
+            )
+
     if decision == ReviewDecision.APPROVED:
         episode.status = EpisodeStatus.COMPLETED
     elif decision in (

@@ -89,19 +89,21 @@ async def validate_script(
             )
         script_content = await middleware.client.read_file(payload.script_path)
         script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+
         validation_record = ValidationResultRecord(
             success=result.success,
             message=result.message,
             timestamp=time.time(),
             script_path=payload.script_path,
             script_sha256=script_sha256,
+            verification_result=None,
         )
         response = BenchmarkToolResponse(
             success=result.success,
             message=result.message or "Validation completed",
             confidence="high",
             artifacts=SimulationArtifacts(
-                validation_results_json=validation_record.model_dump_json(),
+                validation_results_json=validation_record.model_dump_json(indent=2),
             ),
         )
         await middleware.client._sync_handover_artifacts_to_light(response)

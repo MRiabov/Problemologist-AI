@@ -8,7 +8,6 @@ from build123d import Compound, export_step
 from shared.git_utils import repo_revision
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
-    RenderArtifactMetadata,
     RenderManifest,
     ReviewerStage,
     ReviewManifest,
@@ -19,7 +18,7 @@ from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
 )
-from worker_heavy.workbenches.config import load_config, load_merged_config
+from worker_heavy.workbenches.config import load_required_merged_config
 
 logger = structlog.get_logger(__name__)
 
@@ -64,24 +63,10 @@ def _validate_render_manifest_bundle(
         )
         if missing_render_files:
             raise ValueError(
-                "latest preview bundle is missing render files: "
-                f"{missing_render_files}"
+                f"latest preview bundle is missing render files: {missing_render_files}"
             )
-
-        synthesized_manifest = RenderManifest(
-            artifacts={
-                path: RenderArtifactMetadata(modality="rgb")
-                for path in sorted(expected_render_paths)
-            }
-        )
-        manifest_path.write_text(
-            synthesized_manifest.model_dump_json(indent=2),
-            encoding="utf-8",
-        )
-        logger.info(
-            "render_manifest_synthesized_for_submit",
-            renders_dir=str(renders_dir),
-            render_count=len(expected_render_paths),
+        raise ValueError(
+            "renders/render_manifest.json missing for latest preview bundle"
         )
 
     try:
@@ -241,11 +226,7 @@ def submit_for_review(
         is_valid, estimation = validate_assembly_definition_yaml(
             cost_content,
             session_id=session_id,
-            manufacturing_config=(
-                load_merged_config(custom_config_path)
-                if custom_config_path.exists()
-                else load_config()
-            ),
+            manufacturing_config=load_required_merged_config(custom_config_path),
         )
         if not is_valid:
             logger.warning(
@@ -329,11 +310,7 @@ def submit_for_review(
     renders_dir.mkdir(parents=True, exist_ok=True)
     manifests_dir.mkdir(parents=True, exist_ok=True)
     custom_config_path = cwd / "manufacturing_config.yaml"
-    dfm_config = (
-        load_merged_config(custom_config_path)
-        if custom_config_path.exists()
-        else load_config()
-    )
+    dfm_config = load_required_merged_config(custom_config_path)
 
     objectives_raw = objectives_path.read_text()
     is_valid, objectives_result = validate_benchmark_definition_yaml(

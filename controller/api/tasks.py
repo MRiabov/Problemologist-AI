@@ -11,12 +11,11 @@ from langchain_core.messages import HumanMessage
 
 from controller.agent.initialization import (
     initialize_agent_files,
-    seed_manufacturing_config,
 )
 from controller.agent.review_handover import validate_approved_benchmark_bundle
 from controller.api.manager import task_tracker
-from controller.clients.worker import WorkerClient
 from controller.clients.backend import RemoteFilesystemBackend
+from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
@@ -26,7 +25,7 @@ from controller.observability.langfuse import (
     start_root_span,
 )
 from controller.persistence.db import get_sessionmaker
-from controller.persistence.models import Asset, Episode, Trace
+from controller.persistence.models import Episode, Trace
 from controller.utils import infer_integration_test_id
 from shared.enums import (
     AgentName,
@@ -127,7 +126,10 @@ def _derive_solution_terminal_metadata(
     feedback = (result_feedback or "").strip()
     normalized = feedback.lower()
 
-    if feedback.startswith("ENTRY_VALIDATION_FAILED[") or "handoff blocked" in normalized:
+    if (
+        feedback.startswith("ENTRY_VALIDATION_FAILED[")
+        or "handoff blocked" in normalized
+    ):
         return (
             TerminalReason.HANDOFF_INVARIANT_VIOLATION,
             FailureClass.AGENT_SEMANTIC_FAILURE,
@@ -245,7 +247,9 @@ async def _copy_approved_benchmark_bundle(
 ) -> None:
     for path in _benchmark_artifact_paths(review_manifest):
         if not await source_client.exists(path, bypass_agent_permissions=True):
-            raise RuntimeError(f"benchmark artifact missing from source workspace: {path}")
+            raise RuntimeError(
+                f"benchmark artifact missing from source workspace: {path}"
+            )
         await _copy_approved_benchmark_artifact(
             source_client=source_client,
             destination_client=destination_client,
@@ -275,10 +279,14 @@ async def _fail_episode_before_graph_start(
     metadata.terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
     metadata.failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
     metadata.error = reason
-    metadata.validation_logs = list(dict.fromkeys([
-        *metadata.validation_logs,
-        f"Benchmark handoff blocked: {reason}",
-    ]))
+    metadata.validation_logs = list(
+        dict.fromkeys(
+            [
+                *metadata.validation_logs,
+                f"Benchmark handoff blocked: {reason}",
+            ]
+        )
+    )
     episode.status = EpisodeStatus.FAILED
     episode.metadata_vars = metadata.model_dump(mode="json")
     db.add(
@@ -472,7 +480,6 @@ async def execute_agent_task(
 
                 # Initialize agent files (templates, directories)
                 await initialize_agent_files(backend, agent_name=agent_name)
-                await seed_manufacturing_config(backend, overwrite=False)
 
                 metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
                 benchmark_id_str = (metadata.benchmark_id or "").strip()
@@ -493,16 +500,16 @@ async def execute_agent_task(
                                 benchmark_episode.metadata_vars or {}
                             )
                             benchmark_worker_session_id = (
-                                (benchmark_metadata.worker_session_id or "").strip()
-                                or benchmark_id_str
-                            )
+                                benchmark_metadata.worker_session_id or ""
+                            ).strip() or benchmark_id_str
 
                         source_client = get_worker_client(benchmark_worker_session_id)
-                        approved_bundle, bundle_error = (
-                            await validate_approved_benchmark_bundle(
-                                source_client,
-                                benchmark_episode_id=benchmark_id_str,
-                            )
+                        (
+                            approved_bundle,
+                            bundle_error,
+                        ) = await validate_approved_benchmark_bundle(
+                            source_client,
+                            benchmark_episode_id=benchmark_id_str,
                         )
                         if bundle_error is not None or approved_bundle is None:
                             reason = (
@@ -532,11 +539,12 @@ async def execute_agent_task(
                             review_manifest=approved_bundle.review_manifest,
                         )
 
-                        destination_bundle, destination_error = (
-                            await validate_approved_benchmark_bundle(
-                                client,
-                                benchmark_episode_id=benchmark_id_str,
-                            )
+                        (
+                            destination_bundle,
+                            destination_error,
+                        ) = await validate_approved_benchmark_bundle(
+                            client,
+                            benchmark_episode_id=benchmark_id_str,
                         )
                         if destination_error is not None or destination_bundle is None:
                             reason = (
@@ -1087,16 +1095,13 @@ async def execute_agent_task(
                                 merged_logs.append(log)
                         metadata.validation_logs = merged_logs
                         episode.metadata_vars = metadata.model_dump(mode="json")
-                    planner_handoff_failed = (
-                        _is_planner_agent(agent_name)
-                        and (
-                            result_feedback.startswith("Planner handoff blocked:")
-                            or any(
-                                "planner_fail_fast" in log
-                                for log in (
-                                    _extract_session_validation_logs(result)
-                                    or metadata.validation_logs
-                                )
+                    planner_handoff_failed = _is_planner_agent(agent_name) and (
+                        result_feedback.startswith("Planner handoff blocked:")
+                        or any(
+                            "planner_fail_fast" in log
+                            for log in (
+                                _extract_session_validation_logs(result)
+                                or metadata.validation_logs
                             )
                         )
                     )
@@ -1106,7 +1111,10 @@ async def execute_agent_task(
                             if result_feedback.startswith("Planner handoff blocked:")
                             else (
                                 "Planner handoff blocked: "
-                                + (result_feedback or "benchmark terminal handoff error")
+                                + (
+                                    result_feedback
+                                    or "benchmark terminal handoff error"
+                                )
                             )
                         )
                         if planner_block_message not in metadata.validation_logs:
