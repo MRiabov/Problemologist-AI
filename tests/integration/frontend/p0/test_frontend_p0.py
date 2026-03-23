@@ -96,6 +96,7 @@ def test_int_157_session_history(page: Page):
     # 2. Poll until both episodes are available via the API
     max_retries = 30
     episodes_found = False
+    live_episodes = None
     with httpx.Client(timeout=10.0) as client:
         for i in range(max_retries):
             resp = client.get(f"{CONTROLLER_URL}/api/episodes/")
@@ -103,6 +104,7 @@ def test_int_157_session_history(page: Page):
                 episodes = TypeAdapter(list[EpisodeListItem]).validate_python(
                     resp.json()
                 )
+                live_episodes = episodes
                 ep_ids = [str(ep.id) for ep in episodes]
                 if benchmark_id in ep_ids and engineer_id in ep_ids:
                     episodes_found = True
@@ -124,6 +126,33 @@ def test_int_157_session_history(page: Page):
     # 4. Verify both sessions appear in sidebar
     expect(page.get_by_text(benchmark_name)).to_be_visible(timeout=30000)
     expect(page.get_by_text(engineer_name)).to_be_visible(timeout=30000)
+
+    assert live_episodes is not None
+    engineer_episode = next(ep for ep in live_episodes if str(ep.id) == engineer_id)
+    engineer_row = (
+        page.get_by_test_id("sidebar-episode-item").filter(has_text=engineer_name).first
+    )
+    expect(engineer_row.locator('[data-testid="episode-status"]')).to_have_attribute(
+        "data-status",
+        engineer_episode.status.value,
+    )
+    if (
+        engineer_episode.metadata_vars
+        and engineer_episode.metadata_vars.detailed_status
+    ):
+        expect(
+            engineer_row.locator('[data-testid="sidebar-episode-detailed-status"]')
+        ).to_have_attribute(
+            "data-detailed-status",
+            engineer_episode.metadata_vars.detailed_status,
+        )
+    if engineer_episode.metadata_vars and engineer_episode.metadata_vars.episode_phase:
+        expect(
+            engineer_row.locator('[data-testid="sidebar-episode-phase"]')
+        ).to_have_attribute(
+            "data-episode-phase",
+            engineer_episode.metadata_vars.episode_phase.value,
+        )
 
     # 5. Click benchmark session and verify navigation to /benchmark
     page.get_by_text(benchmark_name).click()

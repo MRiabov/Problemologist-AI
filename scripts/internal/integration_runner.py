@@ -7,6 +7,7 @@ import argparse
 import ast
 import asyncio
 import concurrent.futures
+import fcntl
 import json
 import os
 import re
@@ -21,15 +22,18 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TextIO
 
 INTEGRATION_WORKFLOW_HINT = (
     "If you are seeing a startup timeout or unhealthy service here, "
     "you are probably not using ./scripts/run_integration_tests.sh. "
     "Integration runs should follow the integration-tests-workflow."
 )
+
+INTEGRATION_RUN_LOCK_PATH = Path("/tmp/problemologist-integration.lock")
+INTEGRATION_RUN_STATE_PATH = Path("/tmp/problemologist-integration.run.json")
 
 CheckKind = Literal["http", "tcp", "cmd"]
 
@@ -54,8 +58,79 @@ class BackendErrorAllowRule:
     patterns: list[re.Pattern[str]] = field(default_factory=list)
 
 
+@dataclass
+class IntegrationRunState:
+    pid: int
+    ppid: int
+    started_at: str
+    requested_pytest_args: list[str] = field(default_factory=list)
+    requested_int_ids: list[str] = field(default_factory=list)
+    current_log_dir: str | None = None
+    current_int_ids: list[str] = field(default_factory=list)
+
+
+@dataclass
+class IntegrationRunLease:
+    lock_file: TextIO
+    lock_path: Path
+    state_path: Path
+    state: IntegrationRunState
+
+    def update_state(self, **updates: object) -> None:
+        for key, value in updates.items():
+            setattr(self.state, key, value)
+        _write_json_atomic(self.state_path, asdict(self.state))
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _extract_int_ids_from_args(values: list[str]) -> list[str]:
+    int_ids: set[str] = set()
+    for value in values:
+        for match in re.finditer(r"INT-(\d{3})", value, re.IGNORECASE):
+            int_ids.add(f"INT-{match.group(1)}")
+        for match in re.finditer(r"test_int_(\d{3})", value, re.IGNORECASE):
+            int_ids.add(f"INT-{match.group(1)}")
+        for match in re.finditer(r"test_int_(\d{3})_to_(\d{3})", value, re.IGNORECASE):
+            int_ids.add(f"INT-{match.group(1)}")
+            int_ids.add(f"INT-{match.group(2)}")
+    return sorted(int_ids)
+
+
+def _write_json_atomic(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def _read_json_file(path: Path) -> dict[str, object] | None:
+    try:
+        if not path.exists():
+            return None
+        raw = path.read_text(encoding="utf-8").strip()
+        if not raw:
+            return None
+        loaded = json.loads(raw)
+        return loaded if isinstance(loaded, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _integration_run_lock_path() -> Path:
+    override = os.environ.get("INTEGRATION_RUN_LOCK_PATH", "").strip()
+    if override:
+        return Path(override)
+    return INTEGRATION_RUN_LOCK_PATH
+
+
+def _integration_run_state_path() -> Path:
+    override = os.environ.get("INTEGRATION_RUN_STATE_PATH", "").strip()
+    if override:
+        return Path(override)
+    return INTEGRATION_RUN_STATE_PATH
 
 
 def _compile_backend_error_allowlist_from_env(
@@ -656,6 +731,123 @@ def _load_env_file(path: Path) -> None:
                 value = value[:hash_index].rstrip()
 
         os.environ[key] = value
+
+
+def _format_integration_run_block_message(
+    state: dict[str, object] | None,
+    *,
+    requested_int_ids: list[str],
+    requested_pytest_args: list[str],
+) -> str:
+    active_int_ids: list[str] = []
+    if state:
+        current = state.get("current_int_ids")
+        if isinstance(current, list) and current:
+            active_int_ids = [str(item) for item in current if str(item).strip()]
+        else:
+            requested = state.get("requested_int_ids")
+            if isinstance(requested, list):
+                active_int_ids = [str(item) for item in requested if str(item).strip()]
+
+    active_display = ", ".join(active_int_ids) if active_int_ids else "unknown"
+    if requested_int_ids:
+        requested_display = ", ".join(requested_int_ids)
+    elif requested_pytest_args:
+        requested_display = " ".join(requested_pytest_args)
+    else:
+        requested_display = "unspecified"
+    lines = [
+        "Be careful - another integration test suite is already running.",
+        f"Active tests: [{active_display}]",
+        f"Your requested tests: [{requested_display}]",
+        "If these match, you can reuse the active run's logs under "
+        "logs/integration_tests/current/ instead of starting a duplicate run.",
+        "If you want to wait for the shared lock, rerun with --queue.",
+    ]
+    return "\n".join(lines)
+
+
+def _acquire_integration_run_lock(
+    *,
+    queue: bool,
+    requested_pytest_args: list[str],
+) -> IntegrationRunLease | None:
+    lock_path = _integration_run_lock_path()
+    state_path = _integration_run_state_path()
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    lock_file = lock_path.open("a+", encoding="utf-8")
+    try:
+        if queue:
+            state = _read_json_file(state_path)
+            if state is not None:
+                print(
+                    _format_integration_run_block_message(
+                        state,
+                        requested_int_ids=_extract_int_ids_from_args(
+                            requested_pytest_args
+                        ),
+                        requested_pytest_args=requested_pytest_args,
+                    ),
+                    file=sys.stderr,
+                )
+            print(
+                f"[integration-runner] Waiting for integration lock at {lock_path}..."
+            )
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        else:
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                state = _read_json_file(state_path)
+                print(
+                    _format_integration_run_block_message(
+                        state,
+                        requested_int_ids=_extract_int_ids_from_args(
+                            requested_pytest_args
+                        ),
+                        requested_pytest_args=requested_pytest_args,
+                    ),
+                    file=sys.stderr,
+                )
+                return None
+
+        lease = IntegrationRunLease(
+            lock_file=lock_file,
+            lock_path=lock_path,
+            state_path=state_path,
+            state=IntegrationRunState(
+                pid=os.getpid(),
+                ppid=os.getppid(),
+                started_at=time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                requested_pytest_args=list(requested_pytest_args),
+                requested_int_ids=_extract_int_ids_from_args(requested_pytest_args),
+            ),
+        )
+        _write_json_atomic(lease.state_path, asdict(lease.state))
+        return lease
+    except Exception:
+        lock_file.close()
+        raise
+
+
+def _refresh_integration_run_state(
+    lease: IntegrationRunLease, **updates: object
+) -> None:
+    lease.update_state(**updates)
+
+
+def _release_integration_run_lock(lease: IntegrationRunLease | None) -> None:
+    if lease is None:
+        return
+    try:
+        lease.state_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+    try:
+        lease.lock_file.close()
+    except OSError:
+        pass
 
 
 def _ensure_postgres_database(db_name: str) -> None:
@@ -1441,6 +1633,17 @@ def _run_integration_command(
     repo_root = _repo_root()
     os.chdir(repo_root)
 
+    normalized_pytest_args, _, _ = _normalize_pytest_args(passthrough_pytest_args)
+    lease = _acquire_integration_run_lock(
+        queue=args.queue,
+        requested_pytest_args=normalized_pytest_args,
+    )
+    if lease is None:
+        return 1
+    _refresh_integration_run_state(
+        lease, current_int_ids=list(lease.state.requested_int_ids)
+    )
+
     print(f"Integration Tests Started at: {time.ctime()}")
 
     os.environ["IS_INTEGRATION_TEST"] = "true"
@@ -1494,7 +1697,7 @@ def _run_integration_command(
     os.environ["POSTGRES_URL"] = integration_db_url
     os.environ["DATABASE_URL"] = integration_db_url
 
-    pytest_args, _, _ = _normalize_pytest_args(passthrough_pytest_args)
+    pytest_args = normalized_pytest_args
     run_playwright = _should_run_playwright(pytest_args)
     git_dir = _git_output(["git", "rev-parse", "--git-dir"]) if run_playwright else ""
     frontend_state_file = (
@@ -1530,6 +1733,7 @@ def _run_integration_command(
     log_dir = _prepare_integration_run_dir(integration_logs_root)
     json_log_dir = log_dir / "json"
     os.environ["INTEGRATION_LOG_DIR"] = str(log_dir)
+    _refresh_integration_run_state(lease, current_log_dir=str(log_dir))
     _preemptive_cleanup()
 
     processes: list[StartedProcess] = []
@@ -1798,24 +2002,27 @@ def _run_integration_command(
         print(f"Integration Tests Finished at: {time.ctime()}")
         return pytest_exit
     finally:
-        _stop_processes(processes)
-        if async_cleanup_enabled:
-            print("Scheduling async teardown in background...")
-            _spawn_async_cleanup(
-                repo_root=repo_root,
-                sessions_dir=sessions_dir,
-                down=args.down,
-                target_pids=cleanup_target_pids,
-            )
-        else:
-            _run_cleanup_command(
-                argparse.Namespace(
-                    repo_root=str(repo_root),
+        try:
+            _stop_processes(processes)
+            if async_cleanup_enabled:
+                print("Scheduling async teardown in background...")
+                _spawn_async_cleanup(
+                    repo_root=repo_root,
                     sessions_dir=sessions_dir,
                     down=args.down,
-                    pid=cleanup_target_pids,
+                    target_pids=cleanup_target_pids,
                 )
-            )
+            else:
+                _run_cleanup_command(
+                    argparse.Namespace(
+                        repo_root=str(repo_root),
+                        sessions_dir=sessions_dir,
+                        down=args.down,
+                        pid=cleanup_target_pids,
+                    )
+                )
+        finally:
+            _release_integration_run_lock(lease)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -1864,6 +2071,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--wait-cleanup",
         action="store_true",
         help="Wait for teardown instead of scheduling cleanup in the background.",
+    )
+    run_parser.add_argument(
+        "--queue",
+        action="store_true",
+        help="Wait for the shared integration lock instead of failing fast when another run is active.",
     )
 
     cleanup_parser = sub.add_parser(

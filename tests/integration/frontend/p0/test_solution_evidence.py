@@ -18,11 +18,19 @@ from shared.models.schemas import (
     CostTotals,
 )
 from shared.models.simulation import SimulationResult
-from shared.workers.schema import ReviewManifest, ValidationResultRecord, WriteFileRequest
+from shared.workers.schema import (
+    ReviewManifest,
+    ValidationResultRecord,
+    WriteFileRequest,
+)
 
 FRONTEND_URL = "http://localhost:15173"
 CONTROLLER_URL = "http://localhost:18000"
 WORKER_LIGHT_URL = "http://localhost:18001"
+
+
+def _enum_value(value):
+    return value.value if hasattr(value, "value") else value
 
 
 def _write_workspace_file(
@@ -254,29 +262,81 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
 
     page.goto(FRONTEND_URL, timeout=60000)
     page.wait_for_load_state("networkidle")
-    episode_item = page.get_by_test_id("sidebar-episode-item").filter(has_text=task).first
+    episode_item = (
+        page.get_by_test_id("sidebar-episode-item").filter(has_text=task).first
+    )
     expect(episode_item).to_be_visible(timeout=30000)
+    expect(episode_item.locator('[data-testid="episode-status"]')).to_have_attribute(
+        "data-status",
+        _enum_value(episode.status),
+    )
+    expect(
+        episode_item.locator('[data-testid="sidebar-episode-detailed-status"]')
+    ).to_have_attribute("data-detailed-status", metadata.detailed_status)
+    expect(
+        episode_item.locator('[data-testid="sidebar-episode-terminal-reason"]')
+    ).to_have_attribute(
+        "data-terminal-reason",
+        _enum_value(metadata.terminal_reason),
+    )
+    if metadata.failure_class is not None:
+        expect(
+            episode_item.locator('[data-testid="sidebar-episode-failure-class"]')
+        ).to_have_attribute(
+            "data-failure-class",
+            _enum_value(metadata.failure_class),
+        )
+    if metadata.episode_phase is not None:
+        expect(
+            episode_item.locator('[data-testid="sidebar-episode-phase"]')
+        ).to_have_attribute(
+            "data-episode-phase",
+            _enum_value(metadata.episode_phase),
+        )
+    expect(
+        episode_item.locator('[data-testid="sidebar-episode-progress"]')
+    ).to_have_attribute("data-progress", "100")
     episode_item.click()
 
-    expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(
-        timeout=30000
-    )
+    context_usage = (metadata.additional_info or {}).get("context_usage")
+    if isinstance(context_usage, dict):
+        used_tokens = context_usage.get("used_tokens")
+        max_tokens = context_usage.get("max_tokens")
+        if used_tokens is not None and max_tokens is not None:
+            used_tokens = int(used_tokens)
+            max_tokens = int(max_tokens)
+            expected_pct = (used_tokens / max_tokens) * 100 if max_tokens else 0.0
+            expect(page.get_by_test_id("context-usage-indicator")).to_be_visible(
+                timeout=30000
+            )
+            expect(page.get_by_test_id("context-usage-indicator")).to_contain_text(
+                f"Ctx {used_tokens:,} / {max_tokens:,} ({expected_pct:.1f}%)"
+            )
+
+    expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(timeout=30000)
     expect(page.get_by_test_id("terminal-summary-detailed-status")).to_be_visible()
     expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
     expect(page.get_by_test_id("terminal-summary-failure-class")).to_be_visible()
 
-    terminal_reason = page.get_by_test_id("terminal-summary-terminal-reason").inner_text()
+    terminal_reason = page.get_by_test_id(
+        "terminal-summary-terminal-reason"
+    ).inner_text()
     assert terminal_reason, "Expected terminal reason to be visible in workspace."
 
     artifact_debug = page.get_by_test_id("artifact-debug-info").text_content()
     assert artifact_debug is not None
     artifact_state = json.loads(artifact_debug)
-    assert artifact_state["selectedSolutionEvidenceArtifact"]["name"] == "simulation_result.json"
+    assert (
+        artifact_state["selectedSolutionEvidenceArtifact"]["name"]
+        == "simulation_result.json"
+    )
     assert artifact_state["activeArtifactName"] == "simulation_result.json"
     assert artifact_state["activeArtifactPath"].endswith("simulation_result.json")
 
     active_artifact = page.get_by_test_id("artifact-active-file")
-    expect(active_artifact).to_have_attribute("data-artifact-name", "simulation_result.json")
+    expect(active_artifact).to_have_attribute(
+        "data-artifact-name", "simulation_result.json"
+    )
     expect(active_artifact).to_have_attribute(
         "data-artifact-path",
         artifact_state["activeArtifactPath"],
@@ -285,7 +345,9 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     expect(page.get_by_test_id("simulation-results-root")).to_be_visible()
 
     image_asset = next(
-        asset for asset in (episode.assets or []) if asset.s3_path.endswith("render_preview.png")
+        asset
+        for asset in (episode.assets or [])
+        if asset.s3_path.endswith("render_preview.png")
     )
     page.get_by_test_id(f"artifact-entry-{image_asset.id}").click()
     expect(page.get_by_test_id("artifact-media-view")).to_be_visible()

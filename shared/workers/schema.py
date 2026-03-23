@@ -1,6 +1,14 @@
 from typing import Any, Literal, TypeAlias
 
-from pydantic import BaseModel, Field, StrictBool, StrictInt, StrictStr, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    field_validator,
+)
 
 from shared.enums import AgentName, AssetType, EpisodeStatus, ResponseStatus
 from shared.models.schemas import ElectronicsSection
@@ -325,6 +333,14 @@ class ReviewManifest(BaseModel):
     timestamp: str | None = None
     session_id: StrictStr
     revision: StrictStr | None = None
+    episode_id: StrictStr | None = None
+    worker_session_id: StrictStr | None = None
+    benchmark_episode_id: StrictStr | None = None
+    benchmark_worker_session_id: StrictStr | None = None
+    benchmark_revision: StrictStr | None = None
+    solution_revision: StrictStr | None = None
+    environment_version: StrictStr | None = None
+    preview_evidence_paths: list[StrictStr] = Field(default_factory=list)
     script_path: StrictStr
     script_sha256: StrictStr
     validation_success: bool
@@ -339,6 +355,8 @@ class ReviewManifest(BaseModel):
     objectives_path: StrictStr | None = None
     assembly_definition_path: StrictStr | None = None
 
+    model_config = ConfigDict(extra="forbid")
+
 
 class PlanReviewManifest(BaseModel):
     """Planner handoff manifest used to gate engineering plan reviewer entry."""
@@ -350,7 +368,13 @@ class PlanReviewManifest(BaseModel):
     ]
     session_id: StrictStr
     planner_node_type: AgentName
+    episode_id: StrictStr | None = None
+    worker_session_id: StrictStr | None = None
+    benchmark_revision: StrictStr | None = None
+    environment_version: StrictStr | None = None
     artifact_hashes: dict[StrictStr, StrictStr]
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class COTSReproducibilityManifest(BaseModel):
