@@ -6,6 +6,7 @@ from typing import Any
 
 import structlog
 
+from shared.models.simulation import MultiRunResult
 from shared.workers.schema import ValidationResultRecord
 
 logger = structlog.get_logger(__name__)
@@ -40,6 +41,7 @@ def record_validation_result(
     message: str | None,
     script_path: str = "script.py",
     session_id: str | None = None,
+    verification_result: MultiRunResult | None = None,
 ) -> None:
     """Record validation results to satisfy the handover gate."""
     results_path = session_root / "validation_results.json"
@@ -57,6 +59,7 @@ def record_validation_result(
             timestamp=time.time(),
             script_path=script_path,
             script_sha256=script_hash,
+            verification_result=verification_result,
         )
         results_path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
     except Exception as e:

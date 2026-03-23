@@ -111,10 +111,12 @@ class RemoteFilesystemMiddleware:
         client: WorkerClient,
         temporal_client: Client | None = None,
         agent_role: AgentName = AgentName.ENGINEER_CODER,
+        episode_id: str | None = None,
     ):
         self.client = client
         self.temporal_client = temporal_client
         self.agent_role = agent_role
+        self.episode_id = episode_id or client.session_id
         self.policy = get_fs_policy()
 
     def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
@@ -214,7 +216,7 @@ class RemoteFilesystemMiddleware:
         """List files via the Worker client."""
         self._check_perm("read", path)
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[LsFilesToolEvent(path=str(path))],
         )
         entries = await self.client.list_files(str(path))
@@ -266,14 +268,14 @@ class RemoteFilesystemMiddleware:
             events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=events,
         )
 
         if p_str.startswith(("skills/", "utils/")):
             module_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
             await record_events(
-                episode_id=self.client.session_id,
+                episode_id=self.episode_id,
                 events=[
                     LibraryUsageEvent(
                         module_name=module_name, usage_type="reused", path=p_str
@@ -340,7 +342,7 @@ class RemoteFilesystemMiddleware:
             )
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[
                 InspectMediaToolEvent(
                     path=result.path,
@@ -384,7 +386,7 @@ class RemoteFilesystemMiddleware:
         p_str = str(path)
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[
                 WriteFileToolEvent(
                     path=p_str, content_snippet=content[:100], overwrite=overwrite
@@ -404,7 +406,7 @@ class RemoteFilesystemMiddleware:
                 from shared.observability.schemas import LibraryUsageEvent
 
                 await record_events(
-                    episode_id=self.client.session_id,
+                    episode_id=self.episode_id,
                     events=[
                         LibraryUsageEvent(
                             module_name=module_name, usage_type="new", path=path
@@ -441,7 +443,7 @@ class RemoteFilesystemMiddleware:
                         query_ids: list[str] = []
 
                         await record_events(
-                            episode_id=self.client.session_id,
+                            episode_id=self.episode_id,
                             events=[
                                 COTSSelectionEvent(
                                     selected_part_ids=selected_ids, query_ids=query_ids
@@ -452,7 +454,7 @@ class RemoteFilesystemMiddleware:
                     logger.warning("failed_to_emit_cots_selection_event", error=str(e))
 
             # Broadcast update and sync asset via helper
-            await broadcast_file_update(self.client.session_id, p_str, content)
+            await broadcast_file_update(self.episode_id, p_str, content)
 
         return success
 
@@ -462,7 +464,7 @@ class RemoteFilesystemMiddleware:
         p_str = str(path)
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[EditFileToolEvent(path=p_str, num_edits=len(edits))],
         )
         success = await self.client.edit_file(p_str, edits)
@@ -471,7 +473,7 @@ class RemoteFilesystemMiddleware:
             # content for the Asset table
             try:
                 content = await self.client.read_file(p_str)
-                await broadcast_file_update(self.client.session_id, p_str, content)
+                await broadcast_file_update(self.episode_id, p_str, content)
             except Exception:
                 # Don't fail the edit if sync fails
                 pass
@@ -488,7 +490,7 @@ class RemoteFilesystemMiddleware:
             timeout = self.policy.get_execution_policy(self.agent_role).timeout_seconds
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[RunCommandToolEvent(command=command)],
         )
         max_attempts = 3
@@ -559,7 +561,7 @@ class RemoteFilesystemMiddleware:
 
         p_str = str(path) if path else None
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[GrepToolEvent(pattern=pattern, path=p_str, glob=glob)],
         )
         matches = await self.client.grep(pattern, path=p_str, glob=glob)
@@ -578,7 +580,7 @@ class RemoteFilesystemMiddleware:
         resolved_backend = backend or get_default_simulator_backend()
         # Record request
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[SimulationRequestEvent(script_path=p_str)],
         )
 
@@ -598,7 +600,7 @@ class RemoteFilesystemMiddleware:
                 ),
                 result_type=SimulationResult,
             )
-            await record_simulation_result(self.client.session_id, res)
+            await record_simulation_result(self.episode_id, res)
             return res
 
         return await self.client.simulate(p_str, backend=resolved_backend)
@@ -659,7 +661,7 @@ class RemoteFilesystemMiddleware:
             res = await self.client.validate(p_str)
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[
                 ManufacturabilityCheckEvent(
                     part_id=p_str,  # Using script_path as part identifier
@@ -674,6 +676,27 @@ class RemoteFilesystemMiddleware:
         )
 
         return res
+
+    async def verify(
+        self,
+        script_path: str | Path,
+        backend: SimulatorBackendType | None = None,
+        smoke_test_mode: bool | None = None,
+        jitter_range: tuple[float, float, float] | None = None,
+        num_scenes: int | None = None,
+        duration: float | None = None,
+        seed: int | None = None,
+    ) -> BenchmarkToolResponse:
+        """Trigger runtime-randomization verification via worker client."""
+        return await self.client.verify(
+            str(script_path),
+            backend=backend,
+            smoke_test_mode=smoke_test_mode,
+            jitter_range=jitter_range,
+            num_scenes=num_scenes,
+            duration=duration,
+            seed=seed,
+        )
 
     async def submit(
         self,
@@ -721,7 +744,7 @@ class RemoteFilesystemMiddleware:
         )
 
         await record_events(
-            episode_id=self.client.session_id,
+            episode_id=self.episode_id,
             events=[
                 event_cls(
                     plan_path=p_str,

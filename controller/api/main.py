@@ -153,6 +153,7 @@ async def create_test_episode(request: AgentRunRequest):
         from shared.models.schemas import EpisodeMetadata
 
         metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
+        metadata.benchmark_id = (metadata.benchmark_id or "").strip() or None
         metadata.worker_session_id = request.session_id
         metadata.additional_info["reasoning_required"] = (
             settings.require_reasoning_traces
@@ -223,6 +224,7 @@ async def run_agent(request: AgentRunRequest):
     from shared.models.schemas import EpisodeMetadata
 
     metadata = EpisodeMetadata.model_validate(request.metadata_vars or {})
+    metadata.benchmark_id = (metadata.benchmark_id or "").strip() or None
     metadata.worker_session_id = request.session_id
     metadata.additional_info["reasoning_required"] = settings.require_reasoning_traces
     metadata.episode_type = EpisodeType.ENGINEER

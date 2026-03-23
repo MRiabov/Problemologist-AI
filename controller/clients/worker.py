@@ -607,6 +607,79 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def verify(
+        self,
+        script_path: str = "script.py",
+        script_content: str | None = None,
+        *,
+        backend: SimulatorBackendType | None = None,
+        jitter_range: tuple[float, float, float] | None = None,
+        num_scenes: int | None = None,
+        duration: float | None = None,
+        seed: int | None = None,
+        smoke_test_mode: bool | None = None,
+    ) -> BenchmarkToolResponse:
+        """Trigger runtime-randomization verification via worker."""
+        resolved_backend = backend or get_default_simulator_backend()
+        payload: dict[str, Any] = {
+            "script_path": script_path,
+            "agent_role": self.agent_role,
+            "backend": resolved_backend,
+        }
+        if jitter_range is not None:
+            payload["jitter_range"] = jitter_range
+        if num_scenes is not None:
+            payload["num_scenes"] = num_scenes
+        if duration is not None:
+            payload["duration"] = duration
+        if seed is not None:
+            payload["seed"] = seed
+        if smoke_test_mode is not None:
+            payload["smoke_test_mode"] = smoke_test_mode
+        if script_content is not None:
+            raise NotImplementedError(
+                "controller script-tools proxy does not accept script_content"
+            )
+
+        if self.controller_url:
+            parsed = await self._call_controller_script_tool("verify", payload)
+            if parsed is None:
+                raise RuntimeError("controller script-tools proxy unavailable")
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
+
+        client = await self._get_client()
+        try:
+            direct_payload = {
+                "script_path": script_path,
+                "backend": resolved_backend,
+            }
+            if jitter_range is not None:
+                direct_payload["jitter_range"] = jitter_range
+            if num_scenes is not None:
+                direct_payload["num_scenes"] = num_scenes
+            if duration is not None:
+                direct_payload["duration"] = duration
+            if seed is not None:
+                direct_payload["seed"] = seed
+            if smoke_test_mode is not None:
+                direct_payload["smoke_test_mode"] = smoke_test_mode
+
+            await self._add_bundle_to_payload(direct_payload)
+
+            response = await client.post(
+                f"{self.heavy_url}/benchmark/verify",
+                json=direct_payload,
+                headers=self.headers,
+                timeout=1000.0,
+            )
+            response.raise_for_status()
+            parsed = BenchmarkToolResponse.model_validate(response.json())
+            await self._sync_handover_artifacts_to_light(parsed)
+            return parsed
+        finally:
+            await self._close_client(client)
+
     async def analyze(
         self,
         method: ManufacturingMethod,

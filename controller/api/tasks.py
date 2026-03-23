@@ -3,13 +3,16 @@ import datetime
 import os
 import uuid
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
 import boto3
 from langchain_core.messages import HumanMessage
 
 from controller.agent.initialization import initialize_agent_files
+from controller.agent.review_handover import validate_approved_benchmark_bundle
 from controller.api.manager import task_tracker
+from controller.clients.worker import WorkerClient
 from controller.clients.backend import RemoteFilesystemBackend
 from controller.config.settings import settings
 from controller.graph.agent import create_agent_graph
@@ -21,6 +24,7 @@ from controller.observability.langfuse import (
 )
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
+from controller.utils import infer_integration_test_id
 from shared.enums import (
     AgentName,
     AssetType,
@@ -31,6 +35,7 @@ from shared.enums import (
 )
 from shared.logging import get_logger
 from shared.models.schemas import EpisodeMetadata
+from shared.workers.schema import ReviewManifest
 
 logger = get_logger(__name__)
 WORKER_LIGHT_URL = settings.worker_light_url
@@ -42,6 +47,18 @@ def _is_planner_agent(agent_name: AgentName) -> bool:
         AgentName.ENGINEER_PLANNER,
         AgentName.ELECTRONICS_PLANNER,
         AgentName.BENCHMARK_PLANNER,
+    }
+
+
+def _is_solution_workflow_agent(agent_name: AgentName) -> bool:
+    return agent_name in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ENGINEER_CODER,
+        AgentName.ENGINEER_PLAN_REVIEWER,
+        AgentName.ELECTRONICS_PLANNER,
+        AgentName.ELECTRONICS_ENGINEER,
+        AgentName.ELECTRONICS_REVIEWER,
+        AgentName.ENGINEER_EXECUTION_REVIEWER,
     }
 
 
@@ -62,6 +79,8 @@ def _result_status_lower(result: Any) -> str:
 
 def _result_feedback(result: Any) -> str:
     raw_feedback = _extract_result_field(result, "feedback")
+    if raw_feedback is None:
+        raw_feedback = _extract_result_field(result, "review_feedback")
     return str(raw_feedback or "").strip()
 
 
@@ -70,6 +89,221 @@ def _is_failed_result(result: Any) -> bool:
     if status == "failed":
         return True
     return bool(_extract_result_field(result, "entry_validation_terminal"))
+
+
+def _extract_session_validation_logs(result: Any) -> list[str]:
+    session = _extract_result_field(result, "session")
+    raw_logs = None
+    if isinstance(session, dict):
+        raw_logs = session.get("validation_logs")
+    elif session is not None:
+        raw_logs = getattr(session, "validation_logs", None)
+
+    if not isinstance(raw_logs, list):
+        return []
+    return [str(log) for log in raw_logs if str(log).strip()]
+
+
+def _derive_solution_terminal_metadata(
+    *,
+    result: Any,
+    result_feedback: str,
+    terminal_status: EpisodeStatus,
+    system_retry_exhausted: bool = False,
+) -> tuple[TerminalReason | None, FailureClass | None, str | None]:
+    if system_retry_exhausted:
+        return (
+            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED,
+            FailureClass.INFRA_DEVOPS_FAILURE,
+            SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER,
+        )
+
+    if terminal_status == EpisodeStatus.COMPLETED:
+        return TerminalReason.APPROVED, None, None
+
+    feedback = (result_feedback or "").strip()
+    normalized = feedback.lower()
+
+    if feedback.startswith("ENTRY_VALIDATION_FAILED[") or "handoff blocked" in normalized:
+        return (
+            TerminalReason.HANDOFF_INVARIANT_VIOLATION,
+            FailureClass.AGENT_SEMANTIC_FAILURE,
+            feedback or "Solution handoff blocked.",
+        )
+
+    if "rejected" in normalized and "review" in normalized:
+        return (
+            TerminalReason.REJECTED_BY_REVIEW,
+            FailureClass.AGENT_QUALITY_FAILURE,
+            feedback or "Solution rejected by review.",
+        )
+
+    if "timeout" in normalized:
+        return (
+            TerminalReason.TIMEOUT,
+            FailureClass.INFRA_DEVOPS_FAILURE,
+            feedback or "Solution run timed out.",
+        )
+
+    if any(term in normalized for term in ("connection", "worker", "http", "network")):
+        return (
+            TerminalReason.INFRA_ERROR,
+            FailureClass.INFRA_DEVOPS_FAILURE,
+            feedback or "Solution run hit an infrastructure error.",
+        )
+
+    return (
+        TerminalReason.INTERNAL_ERROR,
+        FailureClass.APPLICATION_LOGIC_FAILURE,
+        feedback or "Solution run failed.",
+    )
+
+
+_BENCHMARK_COPY_TEXT_EXTENSIONS = (
+    ".json",
+    ".md",
+    ".mjcf",
+    ".py",
+    ".step",
+    ".stp",
+    ".txt",
+    ".xml",
+    ".yaml",
+    ".yml",
+)
+
+
+def _is_text_benchmark_artifact(path: str) -> bool:
+    lower_path = path.lower()
+    return lower_path.endswith(_BENCHMARK_COPY_TEXT_EXTENSIONS)
+
+
+def _benchmark_artifact_paths(review_manifest: ReviewManifest) -> list[str]:
+    paths: list[str] = []
+    has_static_render_images = any(
+        Path(path).suffix.lower() in {".png", ".jpg", ".jpeg"}
+        for path in review_manifest.renders
+    )
+    for path in (
+        review_manifest.script_path,
+        "benchmark_definition.yaml",
+        "benchmark_assembly_definition.yaml",
+        ".manifests/benchmark_plan_review_manifest.json",
+        ".manifests/benchmark_review_manifest.json",
+        "validation_results.json",
+        "simulation_result.json",
+        review_manifest.mjcf_path,
+        review_manifest.cad_path,
+        *review_manifest.renders,
+        review_manifest.objectives_path,
+        review_manifest.assembly_definition_path,
+    ):
+        if path and path not in paths:
+            paths.append(path)
+    if has_static_render_images and "renders/render_manifest.json" not in paths:
+        paths.append("renders/render_manifest.json")
+    return paths
+
+
+async def _copy_approved_benchmark_artifact(
+    *,
+    source_client: WorkerClient,
+    destination_client: WorkerClient,
+    path: str,
+) -> None:
+    if _is_text_benchmark_artifact(path):
+        content = await source_client.read_file(path, bypass_agent_permissions=True)
+        if not await destination_client.write_file(
+            path,
+            content,
+            overwrite=True,
+            bypass_agent_permissions=True,
+        ):
+            raise RuntimeError(f"failed to write benchmark artifact: {path}")
+        return
+
+    content = await source_client.read_file_binary(
+        path,
+        bypass_agent_permissions=True,
+    )
+    if not await destination_client.upload_file(
+        path,
+        content,
+        bypass_agent_permissions=True,
+    ):
+        raise RuntimeError(f"failed to upload benchmark artifact: {path}")
+
+
+async def _copy_approved_benchmark_bundle(
+    *,
+    source_client: WorkerClient,
+    destination_client: WorkerClient,
+    review_manifest: ReviewManifest,
+) -> None:
+    for path in _benchmark_artifact_paths(review_manifest):
+        if not await source_client.exists(path, bypass_agent_permissions=True):
+            raise RuntimeError(f"benchmark artifact missing from source workspace: {path}")
+        await _copy_approved_benchmark_artifact(
+            source_client=source_client,
+            destination_client=destination_client,
+            path=path,
+        )
+        logger.info(
+            "copied_approved_benchmark_artifact",
+            source_session_id=source_client.session_id,
+            destination_session_id=destination_client.session_id,
+            path=path,
+        )
+
+
+async def _fail_episode_before_graph_start(
+    *,
+    db,
+    episode: Episode,
+    episode_id: uuid.UUID,
+    session_id: str,
+    reason: str,
+    benchmark_id: str | None,
+) -> None:
+    metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+    if benchmark_id:
+        metadata.benchmark_id = benchmark_id
+    metadata.detailed_status = EpisodeStatus.FAILED.value
+    metadata.terminal_reason = TerminalReason.HANDOFF_INVARIANT_VIOLATION
+    metadata.failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+    metadata.error = reason
+    metadata.validation_logs = list(dict.fromkeys([
+        *metadata.validation_logs,
+        f"Benchmark handoff blocked: {reason}",
+    ]))
+    episode.status = EpisodeStatus.FAILED
+    episode.metadata_vars = metadata.model_dump(mode="json")
+    db.add(
+        Trace(
+            episode_id=episode_id,
+            trace_type=TraceType.ERROR,
+            name="benchmark_handoff_validation_failed",
+            content=reason,
+            metadata_vars={
+                "reason": reason,
+                "benchmark_id": benchmark_id,
+                "session_id": session_id,
+            },
+        )
+    )
+    await db.commit()
+
+    from controller.api.manager import manager
+
+    await manager.broadcast(
+        episode_id,
+        {
+            "type": "status_update",
+            "status": EpisodeStatus.FAILED,
+            "metadata_vars": episode.metadata_vars,
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+        },
+    )
 
 
 def _extract_entry_validation_context(result: Any) -> dict[str, Any]:
@@ -221,7 +455,11 @@ async def execute_agent_task(
                 trace_id = uuid.uuid4().hex
 
                 client = get_worker_client(session_id)
-                middleware = RemoteFilesystemMiddleware(client, agent_role=agent_name)
+                middleware = RemoteFilesystemMiddleware(
+                    client,
+                    agent_role=agent_name,
+                    episode_id=str(episode_id),
+                )
                 backend = RemoteFilesystemBackend(middleware)
                 from controller.agent.execution_limits import (
                     mark_episode_execution_window_start,
@@ -232,45 +470,112 @@ async def execute_agent_task(
                 # Initialize agent files (templates, directories)
                 await initialize_agent_files(backend, agent_name=agent_name)
 
-                # If benchmark_id is present, copy benchmark assets to the session
-                from shared.models.schemas import EpisodeMetadata
-
                 metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
-                if metadata.benchmark_id:
-                    benchmark_id_str = metadata.benchmark_id
+                benchmark_id_str = (metadata.benchmark_id or "").strip()
+                if benchmark_id_str:
+                    benchmark_worker_session_id = benchmark_id_str
+                    source_client: WorkerClient | None = None
                     try:
-                        benchmark_id = uuid.UUID(benchmark_id_str)
+                        benchmark_uuid = uuid.UUID(benchmark_id_str)
                         async with session_factory() as db_inner:
-                            from sqlalchemy import select
+                            benchmark_episode = await db_inner.get(
+                                Episode, benchmark_uuid
+                            )
+                            if benchmark_episode is None:
+                                raise RuntimeError(
+                                    f"benchmark episode {benchmark_id_str} not found"
+                                )
+                            benchmark_metadata = EpisodeMetadata.model_validate(
+                                benchmark_episode.metadata_vars or {}
+                            )
+                            benchmark_worker_session_id = (
+                                (benchmark_metadata.worker_session_id or "").strip()
+                                or benchmark_id_str
+                            )
 
-                            stmt = select(Asset).where(Asset.episode_id == benchmark_id)
-                            res = await db_inner.execute(stmt)
-                            benchmark_assets = res.scalars().all()
+                        source_client = get_worker_client(benchmark_worker_session_id)
+                        approved_bundle, bundle_error = (
+                            await validate_approved_benchmark_bundle(
+                                source_client,
+                                benchmark_episode_id=benchmark_id_str,
+                            )
+                        )
+                        if bundle_error is not None or approved_bundle is None:
+                            reason = (
+                                "approved benchmark bundle validation failed: "
+                                f"{bundle_error or 'unknown error'}"
+                            )
+                            logger.error(
+                                "approved_benchmark_bundle_validation_failed",
+                                episode_id=episode_id,
+                                session_id=session_id,
+                                benchmark_id=benchmark_id_str,
+                                error=reason,
+                            )
+                            await _fail_episode_before_graph_start(
+                                db=db,
+                                episode=episode,
+                                episode_id=episode_id,
+                                session_id=session_id,
+                                reason=reason,
+                                benchmark_id=benchmark_id_str,
+                            )
+                            return
 
-                            for asset in benchmark_assets:
-                                if asset.content:
-                                    # Copy as a system operation: benchmark-to-engineer
-                                    # handoff must not be gated by agent-role FS policy.
-                                    await client.write_file(
-                                        asset.s3_path,
-                                        asset.content,
-                                        overwrite=True,
-                                        bypass_agent_permissions=True,
-                                    )
-                                    logger.info(
-                                        "copied_benchmark_asset",
-                                        episode_id=episode_id,
-                                        benchmark_id=benchmark_id,
-                                        path=asset.s3_path,
-                                    )
+                        await _copy_approved_benchmark_bundle(
+                            source_client=source_client,
+                            destination_client=client,
+                            review_manifest=approved_bundle.review_manifest,
+                        )
+
+                        destination_bundle, destination_error = (
+                            await validate_approved_benchmark_bundle(
+                                client,
+                                benchmark_episode_id=benchmark_id_str,
+                            )
+                        )
+                        if destination_error is not None or destination_bundle is None:
+                            reason = (
+                                "copied approved benchmark bundle failed validation: "
+                                f"{destination_error or 'unknown error'}"
+                            )
+                            logger.error(
+                                "copied_approved_benchmark_bundle_validation_failed",
+                                episode_id=episode_id,
+                                session_id=session_id,
+                                benchmark_id=benchmark_id_str,
+                                error=reason,
+                            )
+                            await _fail_episode_before_graph_start(
+                                db=db,
+                                episode=episode,
+                                episode_id=episode_id,
+                                session_id=session_id,
+                                reason=reason,
+                                benchmark_id=benchmark_id_str,
+                            )
+                            return
                     except Exception as e:
+                        reason = f"benchmark handoff failed: {e}"
                         logger.error(
-                            "failed_to_copy_benchmark_assets",
+                            "failed_to_copy_benchmark_bundle",
                             episode_id=episode_id,
                             session_id=session_id,
                             benchmark_id=benchmark_id_str,
                             error=str(e),
                         )
+                        await _fail_episode_before_graph_start(
+                            db=db,
+                            episode=episode,
+                            episode_id=episode_id,
+                            session_id=session_id,
+                            reason=reason,
+                            benchmark_id=benchmark_id_str,
+                        )
+                        return
+                    finally:
+                        if source_client is not None:
+                            await source_client.aclose()
 
                 agent, langfuse_callback = create_agent_graph(
                     agent_name=agent_name,
@@ -339,6 +644,10 @@ async def execute_agent_task(
                     except ValueError:
                         u_session_id = uuid.uuid4()
 
+                    worker_session_id = infer_integration_test_id(task, session_id)
+                    if not worker_session_id:
+                        worker_session_id = session_id
+
                     session = GenerationSession(
                         session_id=u_session_id,
                         prompt=task,
@@ -359,6 +668,7 @@ async def execute_agent_task(
                         "review_round": 0,
                         "start_node": agent_name.value,
                         "episode_id": str(episode_id),
+                        "worker_session_id": worker_session_id,
                     }
                 else:
                     initial_input = {
@@ -762,6 +1072,46 @@ async def execute_agent_task(
                         result=result,
                         result_feedback=result_feedback,
                     )
+                    metadata = EpisodeMetadata.model_validate(
+                        episode.metadata_vars or {}
+                    )
+                    result_logs = _extract_session_validation_logs(result)
+                    if result_logs:
+                        merged_logs = list(dict.fromkeys(metadata.validation_logs))
+                        for log in result_logs:
+                            if log not in merged_logs:
+                                merged_logs.append(log)
+                        metadata.validation_logs = merged_logs
+                        episode.metadata_vars = metadata.model_dump(mode="json")
+                    planner_handoff_failed = (
+                        _is_planner_agent(agent_name)
+                        and (
+                            result_feedback.startswith("Planner handoff blocked:")
+                            or any(
+                                "planner_fail_fast" in log
+                                for log in (
+                                    _extract_session_validation_logs(result)
+                                    or metadata.validation_logs
+                                )
+                            )
+                        )
+                    )
+                    if planner_handoff_failed:
+                        planner_block_message = (
+                            result_feedback
+                            if result_feedback.startswith("Planner handoff blocked:")
+                            else (
+                                "Planner handoff blocked: "
+                                + (result_feedback or "benchmark terminal handoff error")
+                            )
+                        )
+                        if planner_block_message not in metadata.validation_logs:
+                            metadata.validation_logs.append(planner_block_message)
+                        metadata.terminal_reason = (
+                            TerminalReason.HANDOFF_INVARIANT_VIOLATION
+                        )
+                        metadata.failure_class = FailureClass.AGENT_SEMANTIC_FAILURE
+                        episode.metadata_vars = metadata.model_dump(mode="json")
                     system_retry_exhausted = (
                         await _episode_has_system_tool_retry_exhausted(
                             db=db, episode_id=episode_id
@@ -776,14 +1126,22 @@ async def execute_agent_task(
                         )
                     if system_retry_exhausted:
                         target_status = EpisodeStatus.FAILED
+                    if _is_solution_workflow_agent(agent_name):
                         metadata = EpisodeMetadata.model_validate(
                             episode.metadata_vars or {}
                         )
-                        metadata.terminal_reason = (
-                            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED
+                        terminal_reason, failure_class, error_message = (
+                            _derive_solution_terminal_metadata(
+                                result=result,
+                                result_feedback=result_feedback,
+                                terminal_status=target_status,
+                                system_retry_exhausted=system_retry_exhausted,
+                            )
                         )
-                        metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
-                        metadata.error = SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER
+                        metadata.detailed_status = target_status.value
+                        metadata.terminal_reason = terminal_reason
+                        metadata.failure_class = failure_class
+                        metadata.error = error_message
                         episode.metadata_vars = metadata.model_dump(mode="json")
                     episode.status = target_status
                     if episode.todo_list is None:
@@ -1093,15 +1451,22 @@ async def continue_agent_task(
                         if (_is_failed_result(result) or system_retry_exhausted)
                         else EpisodeStatus.COMPLETED
                     )
-                    if system_retry_exhausted:
+                    if _is_solution_workflow_agent(agent_name):
                         metadata = EpisodeMetadata.model_validate(
                             episode.metadata_vars or {}
                         )
-                        metadata.terminal_reason = (
-                            TerminalReason.SYSTEM_TOOL_RETRY_EXHAUSTED
+                        terminal_reason, failure_class, error_message = (
+                            _derive_solution_terminal_metadata(
+                                result=result,
+                                result_feedback=result_feedback,
+                                terminal_status=episode.status,
+                                system_retry_exhausted=system_retry_exhausted,
+                            )
                         )
-                        metadata.failure_class = FailureClass.INFRA_DEVOPS_FAILURE
-                        metadata.error = SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER
+                        metadata.detailed_status = episode.status.value
+                        metadata.terminal_reason = terminal_reason
+                        metadata.failure_class = failure_class
+                        metadata.error = error_message
                         episode.metadata_vars = metadata.model_dump(mode="json")
                     if episode.todo_list is None:
                         episode.todo_list = {"completed": True}

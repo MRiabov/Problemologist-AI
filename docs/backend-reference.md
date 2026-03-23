@@ -124,7 +124,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Supported workbenches | CNC, injection molding, and 3D printing |
 | Fasteners | Rigid connections use build123d joints and bd-warehouse fasteners |
 | DOFs | Engineering solutions default to static parts; non-empty DOFs must be mechanism-necessary |
-| Benchmark fixture motion | Benchmark fixtures may be less realistic than engineering mechanisms, but they still must be reviewable and deterministic enough to inspect |
+| Benchmark fixture motion | Benchmark fixtures may use any explicit motion profile, including fully free rigid bodies, but the benchmark contract must declare and validate the motion; benchmark-side motion is not subject to the engineering minimum-DOF rule |
 | Drill policy | Benchmark-owned drilling is forbidden unless the benchmark explicitly declares a drill policy |
 | Renders | Static validation preview uses 24 views by default, with RGB, depth, and segmentation siblings and a `render_manifest.json` companion |
 | Segmentation legend | Legend entries must distinguish semantic labels from instance identifiers |
@@ -139,7 +139,7 @@ Runtime conversations use four message roles: `system`, `user`, `assistant`, and
 | Failure taxonomy | Out-of-bounds, timeout, instability, breakage, forbidden contact, and circuit/power failures must be classified explicitly |
 | Constraint realism | Engineer-authored constraints must be physically plausible; CAD constraints cannot stand in for real-world fasteners or joints |
 | Joints | `RigidJoint` maps to welds, `RevoluteJoint` maps to hinges, and `PrismaticJoint` maps to slides in the simulator contract |
-| Motion evidence | Moving benchmarks require dynamic evidence in addition to static preview images |
+| Motion evidence | Moving benchmarks require dynamic evidence in addition to static preview images, and the observed motion must match the declared benchmark contract |
 | Benchmark exception | Benchmark-owned moving fixtures may be less complete than engineer solutions, but they cannot be teleporting or unstable |
 | Timing | The rigid-body timestep is `0.002 s` and max simulation time is `30 s` unless a config says otherwise |
 

@@ -161,6 +161,24 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         """
         return await fs.inspect_topology(target_id, script_path)
 
+    async def verify(
+        script_path: str = "script.py",
+        jitter_range: tuple[float, float, float] | None = None,
+        num_scenes: int | None = None,
+        duration: float | None = None,
+        seed: int | None = None,
+        smoke_test_mode: bool | None = None,
+    ):
+        """Run runtime-randomization verification for the current solution."""
+        return await fs.verify(
+            script_path,
+            jitter_range=jitter_range,
+            num_scenes=num_scenes,
+            duration=duration,
+            seed=seed,
+            smoke_test_mode=smoke_test_mode,
+        )
+
     async def search_cots_catalog(
         query: str,
         max_weight_g: float | None = None,
@@ -203,6 +221,7 @@ def get_common_tools(fs: RemoteFilesystemMiddleware, session_id: str) -> list[Ca
         grep,
         execute_command,
         inspect_topology,
+        verify,
         search_cots_catalog,
         invoke_cots_search_subagent,
     ]

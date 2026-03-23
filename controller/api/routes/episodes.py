@@ -172,26 +172,41 @@ async def get_episode_asset(
         worker_session_id = str(episode_id)
 
     worker_light_url = settings.worker_light_url
-    # Ensure path doesn't start with a slash to avoid double slash in URL
+    # Episode assets are session-workspace artifacts. The worker also exposes
+    # read-only mounts such as /reviews, so we try the workspace path first to
+    # avoid accidentally resolving session review files against the static mount.
     safe_path = path.lstrip("/")
-    asset_url = f"{worker_light_url}/assets/{safe_path}"
+    candidate_paths = [safe_path]
+    if not safe_path.startswith("workspace/"):
+        candidate_paths.insert(0, f"workspace/{safe_path}")
 
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.get(
-                asset_url, headers={"X-Session-ID": worker_session_id}, timeout=10.0
-            )
-            if resp.status_code == 404:
+            last_404 = None
+            for candidate_path in candidate_paths:
+                asset_url = f"{worker_light_url}/assets/{candidate_path}"
+                resp = await client.get(
+                    asset_url,
+                    headers={"X-Session-ID": worker_session_id},
+                    timeout=10.0,
+                )
+                if resp.status_code == 404:
+                    last_404 = resp
+                    continue
+                resp.raise_for_status()
+
+                return Response(
+                    content=resp.content,
+                    media_type=resp.headers.get("content-type"),
+                    status_code=resp.status_code,
+                )
+            if last_404 is not None:
                 raise HTTPException(
                     status_code=404, detail=f"Asset {path} not found on worker"
                 )
-            resp.raise_for_status()
-
-            return Response(
-                content=resp.content,
-                media_type=resp.headers.get("content-type"),
-                status_code=resp.status_code,
-            )
+            raise HTTPException(status_code=404, detail=f"Asset {path} not found on worker")
+        except HTTPException:
+            raise
         except httpx.HTTPStatusError as e:
             raise HTTPException(
                 status_code=e.response.status_code, detail=str(e)

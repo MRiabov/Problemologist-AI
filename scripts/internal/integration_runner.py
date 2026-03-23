@@ -25,6 +25,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+INTEGRATION_WORKFLOW_HINT = (
+    "If you are seeing a startup timeout or unhealthy service here, "
+    "you are probably not using ./scripts/run_integration_tests.sh. "
+    "Integration runs should follow the integration-tests-workflow."
+)
+
 CheckKind = Literal["http", "tcp", "cmd"]
 
 
@@ -384,7 +390,8 @@ async def wait_for_check(
         elapsed = time.monotonic() - started
         if elapsed >= timeout_s:
             raise TimeoutError(
-                f"Timed out waiting for {check.name} ({check.kind}:{check.target})"
+                f"Timed out waiting for {check.name} ({check.kind}:{check.target}). "
+                f"{INTEGRATION_WORKFLOW_HINT}"
             )
         await asyncio.sleep(interval_s)
 

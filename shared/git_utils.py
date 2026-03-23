@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 import structlog
@@ -46,3 +47,16 @@ def commit_all(path: Path, message: str) -> str | None:
     except Exception as e:
         logger.warning("git_commit_failed", error=str(e))
         return None
+
+
+def repo_revision(path: Path) -> str | None:
+    """Return the current git HEAD commit for a repository root."""
+    try:
+        revision = subprocess.check_output(
+            ["git", "-C", str(path), "rev-parse", "--verify", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip().lower()
+    except Exception:
+        return None
+    return revision or None

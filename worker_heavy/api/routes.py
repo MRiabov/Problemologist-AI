@@ -32,8 +32,11 @@ from shared.workers.schema import (
     ElectronicsValidationRequest,
     PreviewDesignRequest,
     PreviewDesignResponse,
+    RenderArtifactMetadata,
+    RenderManifest,
     SimulationArtifacts,
     VerificationRequest,
+    ValidationResultRecord,
 )
 from shared.workers.workbench_models import WorkbenchResult
 from worker_heavy.runtime.simulation_runner import (
@@ -296,9 +299,41 @@ async def api_verify(
 
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
 
+                validation_result_path = root / "validation_results.json"
+                if not validation_result_path.exists():
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            "validation_results.json missing; run /benchmark/validate "
+                            "before requesting runtime verification."
+                        ),
+                    )
+                try:
+                    validation_record = ValidationResultRecord.model_validate_json(
+                        validation_result_path.read_text(encoding="utf-8")
+                    )
+                except Exception as exc:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"validation_results.json invalid: {exc}",
+                    ) from exc
+
+                record_validation_result(
+                    root,
+                    validation_record.success,
+                    validation_record.message,
+                    script_path=validation_record.script_path or request.script_path,
+                    session_id=x_session_id,
+                    verification_result=result,
+                )
+
+                validation_result_json = validation_result_path.read_text(
+                    encoding="utf-8"
+                )
+
                 # If consistent failure, we can return failure artifacts
                 fail_obj = None
-                if not result.success_rate > 0 and result.fail_reasons:
+                if result.success_rate < 0.7 and result.fail_reasons:
                     fail_obj = SimulationFailure(
                         reason=FailureReason.VALIDATION_FAILED,
                         detail="; ".join(result.fail_reasons),
@@ -306,13 +341,13 @@ async def api_verify(
 
                 artifacts = SimulationArtifacts(
                     verification_result=result,
+                    validation_results_json=validation_result_json,
                     scene_path=str(scene_path.relative_to(root)),
                     failure=fail_obj,
                 )
 
                 return BenchmarkToolResponse(
-                    success=result.success_rate
-                    > 0.9,  # Strict success criteria? Or report rate?
+                    success=result.success_rate >= 0.7,
                     message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_scenes})",
                     confidence="high" if result.num_scenes >= 5 else "medium",
                     artifacts=artifacts,
@@ -381,6 +416,42 @@ async def api_simulate(
                     artifacts.simulation_result_json = sim_result_path.read_text(
                         encoding="utf-8"
                     )
+                render_blobs_base64: dict[str, str] = {}
+                render_image_paths: list[str] = []
+                for rel_path in artifacts.render_paths:
+                    render_path = root / rel_path
+                    if not render_path.exists() or not render_path.is_file():
+                        continue
+                    suffix = render_path.suffix.lower()
+                    if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
+                        continue
+                    render_blobs_base64[rel_path] = base64.b64encode(
+                        render_path.read_bytes()
+                    ).decode("ascii")
+                    if suffix in {".png", ".jpg", ".jpeg"}:
+                        render_image_paths.append(rel_path)
+                render_manifest_path = root / "renders" / "render_manifest.json"
+                if render_manifest_path.exists():
+                    render_blobs_base64[
+                        str(Path("renders") / "render_manifest.json")
+                    ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
+                        "ascii"
+                    )
+                elif render_image_paths:
+                    synthesized_manifest = RenderManifest(
+                        artifacts={
+                            f"/{path.lstrip('/')}": RenderArtifactMetadata(
+                                modality="rgb"
+                            )
+                            for path in sorted(dict.fromkeys(render_image_paths))
+                        }
+                    )
+                    render_blobs_base64[
+                        str(Path("renders") / "render_manifest.json")
+                    ] = base64.b64encode(
+                        synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
+                    ).decode("ascii")
+                artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=result.success,
                     message=summary,
@@ -676,12 +747,17 @@ async def api_submit(
                             "engineering_execution_reviewer, electronics_reviewer."
                         ),
                     )
-                success = submit_for_review(
-                    component,
-                    cwd=root,
-                    session_id=x_session_id,
-                    reviewer_stage=reviewer_stage,
-                )
+                failure_message: str | None = None
+                try:
+                    success = submit_for_review(
+                        component,
+                        cwd=root,
+                        session_id=x_session_id,
+                        reviewer_stage=reviewer_stage,
+                    )
+                except ValueError as exc:
+                    success = False
+                    failure_message = str(exc)
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)
                 artifacts = SimulationArtifacts()
                 validation_result_path = root / "validation_results.json"
@@ -711,6 +787,14 @@ async def api_submit(
                 artifacts.review_manifests_json = review_manifests
                 render_blobs_base64: dict[str, str] = {}
                 renders_dir = root / "renders"
+                render_manifest_path = renders_dir / "render_manifest.json"
+                if render_manifest_path.exists():
+                    render_blobs_base64[
+                        str(Path("renders") / "render_manifest.json")
+                    ] = base64.b64encode(render_manifest_path.read_bytes()).decode(
+                        "ascii"
+                    )
+                render_image_paths: list[str] = []
                 if renders_dir.exists():
                     for render_path in sorted(renders_dir.iterdir()):
                         if not render_path.is_file():
@@ -723,14 +807,37 @@ async def api_submit(
                         }:
                             continue
                         rel_path = str(render_path.relative_to(root))
+                        if render_path.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+                            render_image_paths.append(rel_path)
                         artifacts.render_paths.append(rel_path)
                         render_blobs_base64[rel_path] = base64.b64encode(
                             render_path.read_bytes()
                         ).decode("ascii")
+                if (
+                    not render_manifest_path.exists()
+                    and render_image_paths
+                ):
+                    synthesized_manifest = RenderManifest(
+                        artifacts={
+                            f"/{path.lstrip('/')}": RenderArtifactMetadata(
+                                modality="rgb"
+                            )
+                            for path in sorted(dict.fromkeys(render_image_paths))
+                        }
+                    )
+                    render_blobs_base64[
+                        str(Path("renders") / "render_manifest.json")
+                    ] = base64.b64encode(
+                        synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
+                    ).decode("ascii")
                 artifacts.render_blobs_base64 = render_blobs_base64
                 return BenchmarkToolResponse(
                     success=success,
-                    message="Handover complete" if success else "Handover failed",
+                    message=(
+                        "Handover complete"
+                        if success
+                        else (failure_message or "Handover failed")
+                    ),
                     artifacts=artifacts,
                     events=events,
                 )

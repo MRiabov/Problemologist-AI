@@ -40,6 +40,7 @@ class ExecutionReviewerSignature(dspy.Signature):
     benchmark_assembly_definition = dspy.InputField()
     plan_refusal = dspy.InputField(default="")
     objectives = dspy.InputField()
+    validation_results = dspy.InputField()
     journal = dspy.InputField()
     review: ReviewResult = dspy.OutputField()
 
@@ -96,6 +97,14 @@ class ExecutionReviewerNode(BaseNode):
                 "required_fixes": fixes,
             }
         )
+
+    async def _read_validation_results_text(self) -> str:
+        if not await self.ctx.worker_client.exists("validation_results.json"):
+            return "# No validation_results.json found."
+        try:
+            return await self.ctx.worker_client.read_file("validation_results.json")
+        except Exception:
+            return "# Failed to read validation_results.json."
 
     async def __call__(self, state: AgentState) -> AgentState:
         db_callback = self.ctx.get_database_recorder(state.episode_id)
@@ -199,6 +208,8 @@ class ExecutionReviewerNode(BaseNode):
                         "benchmark_definition.yaml"
                     )
 
+            validation_results = await self._read_validation_results_text()
+
             assembly_definition = "# No assembly_definition.yaml found."
             with suppress(Exception):
                 if await self.ctx.worker_client.exists("assembly_definition.yaml"):
@@ -221,12 +232,14 @@ class ExecutionReviewerNode(BaseNode):
                 "benchmark_assembly_definition": benchmark_assembly_definition,
                 "plan_refusal": plan_refusal,
                 "objectives": objectives,
+                "validation_results": validation_results,
                 "journal": state.journal + simulation_journal,
             }
 
             # Validate existence of key reports
             validate_files = [
                 "simulation_result.json",
+                "validation_results.json",
                 "assembly_definition.yaml",
                 "benchmark_assembly_definition.yaml",
             ]
@@ -455,6 +468,16 @@ class ExecutionReviewerNode(BaseNode):
             return (
                 "Execution review blocked: simulate failed: "
                 f"{simulate_result.message or 'unknown simulation failure'}"
+            )
+
+        try:
+            verify_result = await self.ctx.worker_client.verify("script.py")
+        except Exception as exc:
+            return f"Execution review blocked: verify failed: {exc}"
+        if not verify_result.success:
+            return (
+                "Execution review blocked: verify failed: "
+                f"{verify_result.message or 'unknown verification failure'}"
             )
 
         try:

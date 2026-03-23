@@ -31,6 +31,10 @@ class ScriptToolRequest(BaseModel):
     backend: SimulatorBackendType = Field(default_factory=get_default_simulator_backend)
     smoke_test_mode: bool | None = None
     reviewer_stage: ReviewerStage | None = None
+    jitter_range: tuple[float, float, float] | None = None
+    num_scenes: int | None = None
+    duration: float | None = None
+    seed: int | None = None
 
 
 @asynccontextmanager
@@ -131,6 +135,39 @@ async def simulate_script(
                 total_cost=getattr(result, "total_cost", None),
                 total_weight_g=getattr(result, "total_weight_g", None),
             ),
+        )
+        await middleware.client._sync_handover_artifacts_to_light(response)
+        return response
+
+
+@router.post("/verify", response_model=BenchmarkToolResponse)
+async def verify_script(
+    request: Request,
+    payload: ScriptToolRequest,
+    x_session_id: str = Header(...),
+):
+    async with _controller_script_middleware(
+        x_session_id, payload.agent_role, request
+    ) as middleware:
+        result = await _retry_busy(
+            lambda: middleware.verify(
+                payload.script_path,
+                backend=payload.backend,
+                smoke_test_mode=payload.smoke_test_mode,
+                jitter_range=payload.jitter_range,
+                num_scenes=payload.num_scenes,
+                duration=payload.duration,
+                seed=payload.seed,
+            )
+        )
+        if isinstance(result, BenchmarkToolResponse):
+            await middleware.client._sync_handover_artifacts_to_light(result)
+            return result
+        response = BenchmarkToolResponse(
+            success=result.success,
+            message=result.message,
+            confidence=getattr(result, "confidence", "high"),
+            artifacts=getattr(result, "artifacts", None),
         )
         await middleware.client._sync_handover_artifacts_to_light(response)
         return response
