@@ -100,6 +100,7 @@ GPT-5.4
 - `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_solution_row_round_trip` (engineer solve path still failed in the benchmark setup stage; unrelated to the lineage fix)
 - `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_166.py::test_simulation_navigation_timeline --maxfail=1`
 - `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
 
 ### Completion Notes List
 
@@ -118,6 +119,7 @@ GPT-5.4
 - Re-verified the story coverage with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_int_174.py` and confirmed all three browser tests pass.
 - Aligned frontend artifact selection with controller-ordered episode assets so the viewer keeps the latest matching media authoritative without a second client-side sort.
 - Re-verified the browser slice and latest-media regression with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_int_174.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence`.
+- Re-verified the current story slice with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`, and the targeted frontend browser set passed.
 
 ### File List
 
@@ -149,3 +151,4 @@ GPT-5.4
 - 2026-03-23: Confirmed the reviewer-blocking regressions now pass with `tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py` and `tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip` plus `test_dataset_export_invalid_lineage_fails_closed`.
 - 2026-03-24: Synced the INT-174 planner fixture budgets and re-ran the frontend browser slice; INT-165, INT-166, and INT-174 all passed.
 - 2026-03-24: Removed the frontend-side asset re-sort so the viewer follows controller asset ordering for latest-media binding.
+- 2026-03-24: Re-ran the targeted frontend browser slice after the latest review pass; INT-165, INT-166, INT-167, and INT-174 all passed.
