@@ -15,26 +15,12 @@ const SOLUTION_EVIDENCE_FILENAMES = [
   "validation_results.json",
 ];
 
-const getAssetRevisionScore = (asset: AssetResponse): [number, number] => {
-  const createdAt = new Date(asset.created_at).getTime();
-  return [Number.isFinite(createdAt) ? createdAt : 0, asset.id ?? 0];
-};
-
-const pickLatestAsset = (assets: AssetResponse[]): AssetResponse | null => {
+const pickPreferredAsset = (assets: AssetResponse[]): AssetResponse | null => {
   if (assets.length === 0) {
     return null;
   }
 
-  return [...assets].sort((a, b) => {
-    const [aCreatedAt, aId] = getAssetRevisionScore(a);
-    const [bCreatedAt, bId] = getAssetRevisionScore(b);
-
-    if (aCreatedAt !== bCreatedAt) {
-      return bCreatedAt - aCreatedAt;
-    }
-
-    return bId - aId;
-  })[0] ?? null;
+  return assets[0] ?? null;
 };
 
 export const getAssetFileName = (asset: AssetResponse): string => {
@@ -75,7 +61,7 @@ export const getLatestMatchingAsset = (
   assets: AssetResponse[] = [],
   predicate: (asset: AssetResponse) => boolean,
 ): AssetResponse | null => {
-  return pickLatestAsset(assets.filter(predicate));
+  return pickPreferredAsset(assets.filter(predicate));
 };
 
 const getLatestAssetByFileName = (
@@ -84,9 +70,9 @@ const getLatestAssetByFileName = (
 ): AssetResponse | null => {
   const normalizedTargets = fileNames.map((fileName) => fileName.toLowerCase());
   for (const fileName of normalizedTargets) {
-    const match = pickLatestAsset(assets.filter(
-      (asset) => getAssetFileName(asset).toLowerCase() === fileName,
-    ));
+    const match = pickPreferredAsset(
+      assets.filter((asset) => getAssetFileName(asset).toLowerCase() === fileName),
+    );
     if (match) {
       return match;
     }
@@ -157,13 +143,15 @@ export const getDefaultArtifactId = ({
   const solutionEvidence = getLatestSolutionEvidenceAsset(assets);
   const isBenchmarkEpisode = episodeType === "benchmark" || isBenchmarkRoute;
 
+  // The controller already orders assets by the intended revision precedence,
+  // so the first matching item is the authoritative one.
   if (isBenchmarkEpisode) {
-    return plan ? "plan" : solutionEvidence?.id.toString() ?? pickLatestAsset(assets)?.id.toString() ?? null;
+    return plan ? "plan" : solutionEvidence?.id.toString() ?? pickPreferredAsset(assets)?.id.toString() ?? null;
   }
 
   return (
     solutionEvidence?.id.toString() ??
-    (plan ? "plan" : pickLatestAsset(assets)?.id.toString() ?? null)
+    (plan ? "plan" : pickPreferredAsset(assets)?.id.toString() ?? null)
   );
 };
 
