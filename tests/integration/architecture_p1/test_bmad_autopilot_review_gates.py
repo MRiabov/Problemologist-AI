@@ -271,45 +271,66 @@ def test_int_autopilot_requires_explicit_confirmation_on_dirty_workspace():
 
 
 @pytest.mark.integration_p2
-def test_int_autopilot_blocks_empty_review_source_before_codex():
+def test_int_autopilot_reroutes_empty_review_source_back_to_dev():
     """
-    INT-207: BMAD autopilot must fail closed when code review has no current
-    reviewable source in the workspace snapshot.
+    INT-207: BMAD autopilot must reroute empty review scope back to
+    development without invoking the review tool.
     """
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         env = _init_repo(root)
-        _write_story_workspace(root, story_status="review")
+        story_key, story_path, status_path = _write_story_workspace(
+            root, story_status="review"
+        )
         _git(["add", "-A"], cwd=root, env=env)
         _git(["commit", "-m", "seed review workspace"], cwd=root, env=env)
-        clean_status = _run(["git", "status", "--porcelain"], cwd=root, env=env)
-        assert clean_status.returncode == 0
-        assert clean_status.stdout.strip() == "", (
-            clean_status.stdout + clean_status.stderr
+
+        mod = _load_autopilot_module()
+
+        runner = object.__new__(mod.AutopilotRunner)
+        runner.project_root = root
+        runner.tmp_dir = root / ".autopilot" / "tmp"
+        runner.tmp_dir.mkdir(parents=True, exist_ok=True)
+        runner.sprint_status_file = status_path
+        runner.base_branch = "main"
+
+        runner.state_current_story = lambda: story_key
+        runner.load_sprint_status = lambda root=None: mod.SprintStatus.model_validate(
+            yaml.safe_load(status_path.read_text(encoding="utf-8"))
         )
-        codex_marker_present = False
-
-        with tempfile.TemporaryDirectory() as tool_tmp:
-            tool_root = Path(tool_tmp)
-            marker_file = tool_root / "codex-marker.txt"
-            _write_fake_codex(tool_root, marker_file)
-            base_path = env.get("PATH", "")
-            env["PATH"] = f"{tool_root}{os.pathsep}{base_path}"
-            env["FAKE_CODEX_MARKER"] = str(marker_file)
-
-            result = _run(
-                ["python3", str(SCRIPT_PATH)],
-                cwd=root,
-                env=env,
+        runner.story_file_for_key = lambda sprint_status, key, root=None: story_path
+        runner.collect_review_source_snapshot = lambda repo_root: (
+            mod.ReviewSourceSnapshot(
+                current_branch="main",
+                branch_diff="",
+                staged_diff="",
+                unstaged_diff="",
+                working_tree_status="",
+                has_reviewable_source=False,
             )
-            codex_marker_present = marker_file.exists()
-
-        assert result.returncode == 1, result.stdout + result.stderr
-        assert (
-            "No reviewable source found in the current workspace snapshot."
-            in result.stdout
         )
-        assert not codex_marker_present, "codex must not run when review scope is empty"
+        runner.persist_review_artifact = lambda *args, **kwargs: None
+        runner.autopilot_checks = lambda *args, **kwargs: None
+        runner.play_sound = lambda *args, **kwargs: None
+        runner.log = lambda *args, **kwargs: None
+
+        transitions = []
+        runner.state_set_story = lambda phase, sk, sf=None: transitions.append(
+            (phase.value if hasattr(phase, "value") else phase, sk)
+        )
+        runner.state_set = lambda phase, epic=None: transitions.append(
+            ("state_set", phase.value if hasattr(phase, "value") else phase, epic)
+        )
+
+        runner.phase_code_review_story()
+
+        sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        assert story_path.read_text(encoding="utf-8").strip() == "Status: in-progress"
+        assert sprint_status["development_status"][story_key] == "in-progress"
+        assert transitions[-1] == ("DEVELOP_STORIES", story_key)
+        assert not any(
+            item[0] == "state_set" and item[1] == "BLOCKED" for item in transitions
+        )
 
 
 @pytest.mark.integration_p2
@@ -490,6 +511,86 @@ def test_int_autopilot_story_dev_validation_failure_reroutes_to_dev():
         runner.run_codex_session_with_retry = run_codex_session_with_retry
 
         runner.phase_develop_story()
+
+        sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        assert story_path.read_text(encoding="utf-8").strip() == "Status: in-progress"
+        assert sprint_status["development_status"][story_key] == "in-progress"
+        assert transitions[-1] == ("DEVELOP_STORIES", story_key)
+        assert not any(
+            item[0] == "state_set" and item[1] == "BLOCKED" for item in transitions
+        )
+
+
+@pytest.mark.integration_p2
+def test_int_autopilot_code_review_validation_failure_reroutes_to_dev():
+    """
+    INT-211: a code-review validation failure must reroute the story back to
+    development instead of hard-blocking the run.
+    """
+    mod = _load_autopilot_module()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        env = _init_repo(root)
+        story_key, story_path, status_path = _write_story_workspace(
+            root, story_status="review"
+        )
+        _git(["add", "-A"], cwd=root, env=env)
+        _git(["commit", "-m", "seed code review reroute workspace"], cwd=root, env=env)
+
+        runner = object.__new__(mod.AutopilotRunner)
+        runner.project_root = root
+        runner.tmp_dir = root / ".autopilot" / "tmp"
+        runner.tmp_dir.mkdir(parents=True, exist_ok=True)
+        runner.sprint_status_file = status_path
+        runner.base_branch = "main"
+
+        runner.state_current_story = lambda: story_key
+        runner.load_sprint_status = lambda root=None: mod.SprintStatus.model_validate(
+            yaml.safe_load(status_path.read_text(encoding="utf-8"))
+        )
+        runner.story_file_for_key = lambda sprint_status, key, root=None: story_path
+        runner.collect_review_source_snapshot = lambda repo_root: (
+            mod.ReviewSourceSnapshot(
+                current_branch="main",
+                branch_diff="",
+                staged_diff="",
+                unstaged_diff="",
+                working_tree_status="",
+                has_reviewable_source=True,
+            )
+        )
+        runner.review_scope_fingerprint = lambda source: "fingerprint-1"
+        runner.review_scope_file_names = lambda text: []
+        runner.build_story_code_review_prompt = lambda *args, **kwargs: "prompt"
+        runner.autopilot_checks = lambda *args, **kwargs: None
+        runner.play_sound = lambda *args, **kwargs: None
+        runner.log = lambda *args, **kwargs: None
+
+        transitions = []
+        runner.state_set_story = lambda phase, sk, sf=None: transitions.append(
+            (phase.value if hasattr(phase, "value") else phase, sk)
+        )
+        runner.state_set = lambda phase, epic=None: transitions.append(
+            ("state_set", phase.value if hasattr(phase, "value") else phase, epic)
+        )
+
+        def run_codex_session_with_retry(*args, **kwargs):
+            return mod.CodexAttemptResult(
+                return_code=1,
+                thread_id="thread-review-fail",
+                output_text="broken output",
+                validation_failure=mod.ValidationFailure(
+                    error_code="mismatched_review_scope_fingerprint",
+                    field="review_scope_fingerprint",
+                    message="review_scope_fingerprint does not match the current workspace snapshot",
+                    expected="fingerprint-1",
+                ),
+            )
+
+        runner.run_codex_session_with_retry = run_codex_session_with_retry
+
+        runner.phase_code_review_story()
 
         sprint_status = yaml.safe_load(status_path.read_text(encoding="utf-8"))
         assert story_path.read_text(encoding="utf-8").strip() == "Status: in-progress"
