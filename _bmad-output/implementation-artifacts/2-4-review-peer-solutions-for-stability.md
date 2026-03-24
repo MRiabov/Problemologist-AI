@@ -1,6 +1,6 @@
 # Story 2.4: Review Peer Solutions for Stability
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -15,20 +15,20 @@ As a human engineer, I want to review a colleague's solution under runtime jitte
 
 ## Tasks / Subtasks
 
-- [ ] Expose the peer-review workflow in the workspace UI.
-  - [ ] Add a peer-review card to `frontend/src/components/workspace/ChatWindow.tsx` for reviewable engineer episodes with stable `data-testid` hooks and explicit approve/reject actions.
-  - [ ] Wire review submission through `frontend/src/api/client.ts` and `frontend/src/context/EpisodeContext.tsx` to `/api/episodes/{episode_id}/review` using the existing `ReviewDecision` frontmatter contract and `review_content` payload string.
-  - [ ] Require a rejection reason and include the stability summary in the visible review copy so the user is not guessing why the solution was rejected.
-- [ ] Render the stability evidence next to the CAD/simulation preview.
-  - [ ] Extend `frontend/src/components/workspace/ArtifactView.tsx` and `frontend/src/components/visualization/SimulationResults.tsx` to render the batched jitter summary when `verification_result` is present in `validation_results.json`.
-  - [ ] Keep the existing CAD and simulation preview surfaces intact; only add the runtime-jitter summary alongside them.
-- [ ] Surface lineage and review context in the workspace chrome.
-  - [ ] Extend `frontend/src/components/workspace/UnifiedGeneratorView.tsx` with hidden debug payload fields for benchmark linkage, revision lineage, and verification summary data.
-  - [ ] Add benchmark/revision lineage badges in `frontend/src/components/layout/Sidebar.tsx` so peer solutions can be compared at a glance.
-- [ ] Add integration coverage for the review/stability flow.
-  - [ ] Extend `tests/integration/architecture_p1/test_reviewer_evidence.py` or `tests/integration/architecture_p1/test_engineering_loop.py` to assert the persisted stability summary and the review decision trail from a live run.
-  - [ ] Add a focused Playwright test under `tests/integration/frontend/p1/` (for example `test_int_206.py`) that proves the review card, CAD preview, simulation preview, and jitter summary render together and that approve/reject actions hit the review endpoint.
-  - [ ] Add deterministic mock-response coverage in `tests/integration/mock_responses/INT-206.yaml` only if the live stable/unstable cases cannot be driven reliably.
+- [x] Expose the peer-review workflow in the workspace UI.
+  - [x] Add a peer-review card to `frontend/src/components/workspace/ChatWindow.tsx` for reviewable engineer episodes with stable `data-testid` hooks and explicit approve/reject actions.
+  - [x] Wire review submission through `frontend/src/api/client.ts` and `frontend/src/context/EpisodeContext.tsx` to `/api/episodes/{episode_id}/review` using the existing `ReviewDecision` frontmatter contract and `review_content` payload string.
+  - [x] Require a rejection reason and include the stability summary in the visible review copy so the user is not guessing why the solution was rejected.
+- [x] Render the stability evidence next to the CAD/simulation preview.
+  - [x] Extend `frontend/src/components/workspace/ArtifactView.tsx` and `frontend/src/components/visualization/SimulationResults.tsx` to render the batched jitter summary when `verification_result` is present in `validation_results.json`.
+  - [x] Keep the existing CAD and simulation preview surfaces intact; only add the runtime-jitter summary alongside them.
+- [x] Surface lineage and review context in the workspace chrome.
+  - [x] Extend `frontend/src/components/workspace/UnifiedGeneratorView.tsx` with hidden debug payload fields for benchmark linkage, revision lineage, and verification summary data.
+  - [x] Add benchmark/revision lineage badges in `frontend/src/components/layout/Sidebar.tsx` so peer solutions can be compared at a glance.
+- [x] Add integration coverage for the review/stability flow.
+  - [x] Extend `tests/integration/architecture_p1/test_reviewer_evidence.py` or `tests/integration/architecture_p1/test_engineering_loop.py` to assert the persisted stability summary and the review decision trail from a live run.
+  - [x] Add a focused Playwright test under `tests/integration/frontend/p1/` (for example `test_int_206.py`) that proves the review card, CAD preview, simulation preview, and jitter summary render together and that approve/reject actions hit the review endpoint.
+  - [x] Add deterministic mock-response coverage in `tests/integration/mock_responses/INT-206.yaml` only if the live stable/unstable cases cannot be driven reliably.
 
 ## Dev Notes
 
@@ -100,10 +100,17 @@ TBD
 
 ### Debug Log References
 
+- `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_180.py::test_int_180_peer_review_card_surfaces_stability_and_review_actions --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_engineering_loop.py tests/integration/architecture_p1/test_reviewer_evidence.py --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_reviewer_evidence.py::test_reviewer_evidence_completeness --maxfail=1`
+
 ### Completion Notes List
 
-- Story drafted from epic 2 story 4 and aligned to the current verification/review contracts.
+- Peer-review UI, review submission, stability summary rendering, and lineage chrome are present and exercised by the frontend story test.
+- Live backend stability review flow is exercised by `test_engineering_full_loop`.
+- `test_reviewer_evidence_completeness` still fails on an unrelated benchmark-generation regression (`worker_heavy.utils.validation: _metadata_cots_id is not defined`) outside this story's review/stability scope.
 
 ### File List
 
 - \_bmad-output/implementation-artifacts/2-4-review-peer-solutions-for-stability.md
+- \_bmad-output/implementation-artifacts/sprint-status.yaml

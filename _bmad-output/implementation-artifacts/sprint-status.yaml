@@ -16,7 +16,7 @@ development_status:
   2-1-start-solution-episode-from-approved-benchmark: done
   2-2-inspect-solution-evidence-and-terminal-outcome: done
   2-3-revise-and-retry-against-the-same-benchmark: done
-  2-4-review-peer-solutions-for-stability: in-progress
+  2-4-review-peer-solutions-for-stability: review
   epic-2-retrospective: optional
   epic-3: in-progress
   3-1-configure-real-cost-inputs: review
