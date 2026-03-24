@@ -48,14 +48,24 @@ cots_parts:
   # - part_id
   # - manufacturer
   # - unit_cost_usd
+  # - weight_g
   # - quantity
   # - source
+  # - catalog_version
+  # - bd_warehouse_commit
+  # - catalog_snapshot_id
+  # - generated_at
   # Example:
   # - part_id: M3_BOLT
   #   manufacturer: Generic
   #   unit_cost_usd: 0.5
+  #   weight_g: 1.2
   #   quantity: 8
   #   source: catalog
+  #   catalog_version: "1.0.0"
+  #   bd_warehouse_commit: "unknown"
+  #   catalog_snapshot_id: "<catalog snapshot hash>"
+  #   generated_at: "unknown"
 
 environment_drill_operations:
   # Optional.

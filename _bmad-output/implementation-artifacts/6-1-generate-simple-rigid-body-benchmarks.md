@@ -1,6 +1,6 @@
 # Story 6.1: Generate Simple Rigid-Body Benchmarks
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -17,16 +17,16 @@ As a human operator, I want benchmark generator agents to produce simple rigid-b
 - [ ] Tighten the benchmark-generator prompt and starter templates so the simple rigid-body, gravity-only family is explicit in the planner output shape and examples.
   - [ ] Keep the existing benchmark planner file contract intact: `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` at the workspace root.
   - [ ] Make the template language favor passive gravity-driven puzzle geometry and reject any accidental drift toward actuators, FEM, or fluids.
-- [ ] Reuse the existing fail-closed benchmark validation and handoff gates to keep unsupported modalities out of the simple rigid-body family.
-  - [ ] Preserve the current benchmark planner canonicalization and cross-contract checks instead of introducing a parallel validator path.
-  - [ ] If a new rejection case is needed, make it explicit and deterministic rather than silently converting the candidate into another benchmark family.
-- [ ] Refresh the benchmark-planner integration fixtures for a representative gravity-only benchmark and one negative unsupported-modality case.
-  - [ ] Keep the canonical benchmark planner submit-plan trace covered by a simple rigid-body example.
-  - [ ] Add or update the bad-path fixture so the planner or reviewer rejects unsupported motion assumptions cleanly.
-- [ ] Extend integration coverage for the simple rigid-body benchmark family and its reviewer gate.
-  - [ ] Assert that the benchmark definition remains within rigid-body scope and that the generated objective/zone/motion assumptions are explicit.
-  - [ ] Assert that unsupported mechanisms fail closed before the benchmark is accepted.
-  - [ ] Keep render-evidence coverage on the plan-review path when images exist.
+- [x] Reuse the existing fail-closed benchmark validation and handoff gates to keep unsupported modalities out of the simple rigid-body family.
+  - [x] Preserve the current benchmark planner canonicalization and cross-contract checks instead of introducing a parallel validator path.
+  - [x] If a new rejection case is needed, make it explicit and deterministic rather than silently converting the candidate into another benchmark family.
+- [x] Refresh the benchmark-planner integration fixtures for a representative gravity-only benchmark and one negative unsupported-modality case.
+  - [x] Keep the canonical benchmark planner submit-plan trace covered by a simple rigid-body example.
+  - [x] Add or update the bad-path fixture so the planner or reviewer rejects unsupported motion assumptions cleanly.
+- [x] Extend integration coverage for the simple rigid-body benchmark family and its reviewer gate.
+  - [x] Assert that the benchmark definition remains within rigid-body scope and that the generated objective/zone/motion assumptions are explicit.
+  - [x] Assert that unsupported mechanisms fail closed before the benchmark is accepted.
+  - [x] Keep render-evidence coverage on the plan-review path when images exist.
 - [ ] Run the benchmark-generation integration slices that cover planner submission, benchmark-definition validation, and benchmark workflow persistence before closing the story.
 
 ## Dev Notes
@@ -105,8 +105,42 @@ TBD
 
 ### Debug Log References
 
+- Updated the benchmark-generator starter templates and integration fixtures to a passive gravity-only rigid-body example.
+- Reverted the prompt-layer experiment after feedback to avoid overfitting the runtime prompts.
+- Performed local YAML schema validation and Python syntax compilation on the touched files.
+- Did not run the integration slices because the user explicitly asked not to run integration tests.
+
 ### Completion Notes List
 
-- Ultimate context engine analysis completed - comprehensive developer guide created.
+- Prompt-layer edits were reverted per user feedback; the remaining work is carried by the starter templates, mock fixtures, and integration assertions.
+- Updated benchmark-generator starter templates to a passive rigid-body gravity-only example.
+- Refreshed INT-114 happy-path fixtures and INT-202 unsupported-motion negative fixtures.
+- Extended integration assertions to prove the generated benchmark stays within the rigid-body gravity-only family.
+- Local YAML parsing and Python compilation passed for the touched files.
+- Integration slices were not executed because the user requested that the integration suite not be run.
 
 ### File List
+
+- `shared/assets/template_repos/benchmark_generator/plan.md`
+- `shared/assets/template_repos/benchmark_generator/todo.md`
+- `shared/assets/template_repos/benchmark_generator/benchmark_definition.yaml`
+- `shared/assets/template_repos/benchmark_generator/benchmark_assembly_definition.yaml`
+- `tests/integration/architecture_p0/test_planner_gates.py`
+- `tests/integration/architecture_p1/test_benchmark_workflow.py`
+- `tests/integration/mock_responses/INT-114.yaml`
+- `tests/integration/mock_responses/INT-114/benchmark_planner/entry_01/01__plan.md`
+- `tests/integration/mock_responses/INT-114/benchmark_planner/entry_01/02__todo.md`
+- `tests/integration/mock_responses/INT-114/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml`
+- `tests/integration/mock_responses/INT-114/benchmark_planner/entry_01/04__benchmark_definition.yaml`
+- `tests/integration/mock_responses/INT-202.yaml`
+- `tests/integration/mock_responses/INT-202/benchmark_planner/entry_01/01__plan.md`
+
+### Change Log
+
+- 2026-03-24: Refreshed the benchmark-generator starter templates and mock planner fixtures for a passive gravity-only rigid-body example.
+- 2026-03-24: Updated integration assertions to check that INT-114 stays within the rigid-body gravity-only family and that unsupported motion assumptions fail closed in INT-202.
+- 2026-03-24: Reverted prompt-layer edits after review feedback to avoid overfitting the benchmark prompts.
+
+### Status
+
+in-progress

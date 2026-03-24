@@ -1,70 +1,73 @@
-# Benchmark Scenario Plan
+## 1. Learning Objective
 
-## Learning Objective
+- Train gravity-first rigid-body reasoning with a passive benchmark that moves
+  a sphere into a goal zone using only gravity and static geometry.
+- Keep the family simple, reproducible, and fully rigid-body: no actuators,
+  FEM, or fluids.
 
-<!-- Describe what the agent needs to learn or demonstrate. -->
+## 2. Static Geometry
 
-- **Goal**: [e.g., Test spatial reasoning, gravity manipulation, etc.]
-- **Key Concepts**: [e.g., Slopes, funnels, containment]
+- `environment_fixture`: a passive rigid-body scene shell made from a base
+  plate, side walls, and a central blocker that forces the sphere to route
+  around the obstacle.
+- The static geometry may be scaled slightly at generation time, but it must
+  remain entirely passive and rigid-body.
 
-## Geometry
+## 3. Input Object
 
-### Static Environment
+- Shape: `sphere`
+- Label: `projectile_ball`
+- Static randomization: radius in `[4, 6]` mm
+- Nominal start position: `[0, 0, 48]`
+- Runtime jitter:
+  - Position: `[2, 2, 1]` mm
+  - Properties: keep mass and friction constant for the family
 
-<!-- Fixed parts of the scene. Coordinates are relative to world origin (0,0,0). -->
+## 4. Objectives
 
-- **Ground/Base**: [Description and approximate dimensions/location]
-- **Walls/Obstacles**: [Description and approximate dimensions/location]
+- Goal zone:
+  - Type: AABB
+  - Location: `min [22, 8, 2]`, `max [34, 20, 12]`
+- Forbid zones:
+  - `central_baffle`: `min [-8, -8, 0]`, `max [8, 8, 16]`
+- Build zone:
+  - `min [-36, -28, 0]`
+  - `max [36, 28, 60]`
 
-### Moving Parts (Active)
+## 5. Design
 
-<!-- Motors, actuators, or parts that move under their own power. -->
+- The benchmark stays passive: the sphere falls under gravity and the static
+  geometry redirects it into the goal zone.
+- There are no benchmark-owned moving fixtures, actuators, FEM parts, or fluid
+  features in this family.
+- Any benchmark-side motion that would require a controller is out of scope and
+  must be rejected rather than adapted.
 
-- **Motor 1**: [Type, Location, Function, explicit DOF axis, travel limit, controller facts]
+## 6. Randomization
 
-### Input Object
+- Static: allow small symmetric scale jitter on the passive environment shell
+  while preserving objective clearance.
+- Runtime: use the declared position jitter on the sphere spawn position to
+  test robustness.
 
-<!-- The object to be manipulated (e.g., the ball). -->
+## 7. Build123d Strategy
 
-- **Shape**: [e.g., Sphere, Cube, Custom]
-- **Dimensions**: [e.g., Radius=5mm]
-- **Spawn Position**: [X, Y, Z]
-- **Randomization**:
-  - **Position**: [e.g., X ± 5mm, Y ± 5mm]
-  - **Properties**: [e.g., Mass, Friction]
+- Use simple CSG primitives: slabs for the floor and walls, a block for the
+  center obstacle, and a simple box or pocket for the goal area.
+- Keep the geometry readable and aligned to world axes so the gravity path is
+  obvious to the reviewer.
 
-## Objectives
+## 8. Cost & Weight Envelope
 
-### Goal Zone
+- `totals.estimated_unit_cost_usd`: `24.0`
+- `totals.estimated_weight_g`: `650.0`
+- `totals.estimate_confidence`: `high`
+- The estimate assumes a small passive environment fixture built from common
+  rigid materials and a lightweight sphere input object.
 
-<!-- Where the input object must end up. -->
+## 9. Part Metadata
 
-- **Type**: AABB (Axis-Aligned Bounding Box)
-- **Location**: [X, Y, Z]
-- **Dimensions**: [Width, Depth, Height]
-
-### Forbid Zones
-
-<!-- Areas the input object or agent parts must NOT touch. -->
-
-- **Zone 1**: [Location and Dimensions]
-
-## Constraints
-
-- **Max Volume**: [e.g., 100x100x100 mm]
-- **Material**: [e.g., PLA, Aluminum]
-
-## Randomization Strategy
-
-<!-- Summary of how the scene varies between runs. -->
-
-- [Strategy 1]
-- [Strategy 2]
-
-## Motion Contract
-
-<!-- If any benchmark-owned part moves, state its axis, bounds, and controller facts explicitly. -->
-
-- [Moving part name + explicit DOF axis]
-- [Reviewer-visible travel limit / bounds]
-- [Controller facts such as mode and speed]
+- `environment_fixture` must be static (`fixed: true`) and carry a known
+  `material_id`.
+- The moved object uses `material_id: abs`.
+- No part in this family should introduce powered or deformable behavior.

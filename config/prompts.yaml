@@ -697,6 +697,7 @@ benchmark_generator:
          - All parts and assemblies MUST have metadata.
          - `PartMetadata` (for parts): requires `material_id` or `cots_id`.
          - `CompoundMetadata` (for assemblies): can use `fixed=True` for static environment geometry.
+         - COTS planner estimates should include catalog-backed `weight_g` and catalog snapshot metadata when `cots_parts` are declared.
 
       **Execution Discipline (CRITICAL)**:
       - Do not loop on discovery. Use at most:

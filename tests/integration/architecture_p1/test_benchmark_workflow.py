@@ -22,7 +22,7 @@ from shared.enums import (
     TerminalReason,
     TraceType,
 )
-from shared.models.schemas import BenchmarkDefinition
+from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     PlanReviewManifest,
@@ -169,6 +169,11 @@ async def test_benchmark_planner_cad_reviewer_path():
             "benchmark_definition.yaml must preserve unique benchmark_parts.label "
             "values."
         )
+        assert benchmark_definition.physics.fem_enabled is False
+        assert benchmark_definition.fluids == []
+        assert benchmark_definition.objectives.fluid_objectives == []
+        assert benchmark_definition.objectives.stress_objectives == []
+        assert benchmark_definition.electronics_requirements is None
         assert benchmark_definition.moved_object.material_id
         assert isinstance(
             benchmark_definition.benchmark_parts[
@@ -176,12 +181,38 @@ async def test_benchmark_planner_cad_reviewer_path():
             ].metadata.allows_engineer_interaction,
             bool,
         )
+        assert (
+            benchmark_definition.benchmark_parts[0].metadata.allows_engineer_interaction
+            is False
+        )
         assert benchmark_definition.randomization.runtime_jitter_enabled is True
         assert "randomization:" in benchmark_definition_resp.text
         assert "runtime_jitter:" in benchmark_definition_resp.text
+        plan_paths = [p for p in artifact_paths if p.endswith("plan.md")]
+        plan_resp = await client.get(f"/episodes/{session_id}/assets/{plan_paths[0]}")
+        assert plan_resp.status_code == 200, plan_resp.text
+        plan_text = plan_resp.text.lower()
+        assert "gravity" in plan_text
+        assert "rigid-body" in plan_text
+        assert "actuator" not in plan_text
+        assert "fluid" not in plan_text
+        assert "fem" not in plan_text
         assert any(
             p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
         ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        assembly_paths = [
+            p for p in artifact_paths if p.endswith("benchmark_assembly_definition.yaml")
+        ]
+        assembly_resp = await client.get(
+            f"/episodes/{session_id}/assets/{assembly_paths[0]}"
+        )
+        assert assembly_resp.status_code == 200, assembly_resp.text
+        benchmark_assembly_definition = AssemblyDefinition.model_validate(
+            yaml.safe_load(assembly_resp.text)
+        )
+        assert benchmark_assembly_definition.manufactured_parts == []
+        assert benchmark_assembly_definition.cots_parts == []
+        assert benchmark_assembly_definition.final_assembly == []
         assert submit_plan_traces, (
             "Expected planner to call submit_plan before workflow completion."
         )

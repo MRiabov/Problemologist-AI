@@ -1,1 +1,3 @@
 number = true
+[plugin.tables]
+compact_tables = true

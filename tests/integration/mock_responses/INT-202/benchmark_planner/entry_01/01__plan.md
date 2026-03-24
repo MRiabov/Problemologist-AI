@@ -1,7 +1,7 @@
 ## 1. Learning Objective
 
-Create a passive-looking bridge transfer benchmark that uses an explicit
-`sway_y` trim axis and keeps the motion visible in the planner handoff.
+Create a passive-looking bridge transfer benchmark that stays in the simple
+rigid-body family but tries to use an unsupported `sway_y` trim axis.
 
 ## 2. Geometry
 
@@ -28,8 +28,8 @@ Create a passive-looking bridge transfer benchmark that uses an explicit
 
 ## 5. Design
 
-- The bridge reference table uses a visible `sway_y` trim axis that is called
-  out directly in the handoff.
+- The bridge reference table stays passive and rigid-body, but it attempts to
+  use a visible `sway_y` trim axis that is called out directly in the handoff.
 - The trim travels only within a narrow 15 mm correction window.
 - Controller facts: `ON_OFF` control at speed `0.15`.
 - The benchmark should not hide motion; any movement must be explicit in both

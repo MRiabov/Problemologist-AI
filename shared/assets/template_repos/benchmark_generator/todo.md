@@ -1,35 +1,20 @@
 # TODO List - Benchmark Generator
 
-<!--
-This is your execution checklist for creating a valid benchmark.
-Mark items [x] when complete.
--->
+## Planning
 
-## Phase 1: Planning
+- [ ] Confirm the benchmark stays in the simple rigid-body, gravity-only family.
+- [ ] Define the passive static geometry and the sphere input object in `plan.md`.
+- [ ] Write objective zones and the build zone so the gravity path is clear.
+- [ ] Record the cost and weight envelope for the passive fixture.
 
-- [ ] Define Learning Objective in `plan.md`
-- [ ] Define Geometry (Static + Moving Parts) in `plan.md`
-- [ ] Define Input Object & Objectives in `plan.md`
-- [ ] Set Constraints & Randomization in `plan.md`
+## Handoff Artifacts
 
-## Phase 2: Implementation (CAD)
+- [ ] Write `benchmark_definition.yaml` with rigid-body-only scope and explicit bounds.
+- [ ] Write `benchmark_assembly_definition.yaml` with a schema-valid passive fixture handoff.
+- [ ] Keep any benchmark-side motion out of scope unless it remains passive and reviewable.
 
-- [ ] Create Static Environment (Walls, Base)
-- [ ] Create Moving Parts (Motors, Sliders)
-- [ ] Record the explicit motion axis, travel limit, and controller facts for each moving fixture
-- [ ] Create Input Object (Projectile)
-- [ ] Define Objectives (Goal Zone, Forbid Zones)
-- [ ] Export to MJCF
+## Validation
 
-## Phase 3: Validation
-
-- [ ] Verify Geometry (No intersections)
-- [ ] Verify Simulation Stability
-- [ ] Verify Randomization passes parameters
-- [ ] Check Constraints (Volume, etc.)
-
-## Phase 4: Submission
-
-- [ ] Final Review (Self-Correction)
-- [ ] Fail closed if motion cannot be explained with explicit bounds and controller facts
-- [ ] Submit for Engineer
+- [ ] Verify geometry, objective clearance, and runtime jitter robustness.
+- [ ] Reject any actuators, FEM, or fluids before submission.
+- [ ] Call `submit_plan()` only after the handoff files are internally consistent.

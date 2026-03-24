@@ -11,35 +11,15 @@ constraints:
   planner_target_max_unit_cost_usd: 0.0
   planner_target_max_weight_g: 0.0
 
-manufactured_parts:
-  # Add one item per benchmark-owned manufactured part.
-  # Keep part_id / part_name aligned with benchmark_definition.yaml object labels.
-  # If left empty, keep this as [] for schema-valid planner handoff.
-  []
+manufactured_parts: []
+cots_parts: []
+environment_drill_operations: []
 
-cots_parts:
-  # Benchmark-owned COTS fixtures are allowed when explicitly intended.
-  # Each entry still requires an exact part_id and source metadata.
-  []
-
-environment_drill_operations:
-  # Optional benchmark-owned drilling operations.
-  []
-
-final_assembly:
-  # Declare benchmark-owned parts, subassemblies, and motion metadata here.
-  # Use this file for benchmark-owned DOFs, fixture electronics, and any
-  # benchmark-owned component that explicitly sets allows_engineer_interaction:
-  # true in benchmark_definition.yaml.
-  # If a fixture moves, state the axis, controller facts, and travel limit in
-  # plan.md and todo.md as well.
-  # This artifact is copied into downstream engineer sessions as read-only
-  # benchmark-owned context.
-  []
+final_assembly: []
 
 totals:
   estimated_unit_cost_usd: 0.0
   estimated_weight_g: 0.0
-  estimate_confidence: "medium"
+  estimate_confidence: "high"
 
 dfm_suggestions: []

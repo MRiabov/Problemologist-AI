@@ -1,18 +1,16 @@
 objectives:
   goal_zone:
-    min: [8.0, -2.0, 0.0]
-    max: [12.0, 2.0, 4.0]
+    min: [22.0, 8.0, 2.0]
+    max: [34.0, 20.0, 12.0]
   forbid_zones:
-    - name: "obstacle_collision_zone"
-      min: [2.0, -3.0, 0.0]
-      max: [4.0, 3.0, 4.0]
+    - name: "central_baffle"
+      min: [-8.0, -8.0, 0.0]
+      max: [8.0, 8.0, 16.0]
   build_zone:
-    # The goal zone must be reachable while staying inside this volume.
-    min: [-12.0, -12.0, -2.0]
-    max: [12.0, 12.0, 12.0]
+    min: [-36.0, -28.0, 0.0]
+    max: [36.0, 28.0, 60.0]
   fluid_objectives: []
   stress_objectives: []
-
 benchmark_parts:
   - part_id: "environment_fixture"
     label: "environment_fixture"
@@ -20,25 +18,24 @@ benchmark_parts:
       fixed: true
       allows_engineer_interaction: false
       material_id: "aluminum_6061"
-
+physics:
+  backend: GENESIS
+  fem_enabled: false
+fluids: []
 simulation_bounds:
-  # Keep the build_zone entirely inside these simulation-wide bounds.
-  min: [-30.0, -30.0, -10.0]
-  max: [30.0, 30.0, 30.0]
-
+  min: [-48.0, -36.0, 0.0]
+  max: [48.0, 36.0, 72.0]
 moved_object:
   label: "projectile_ball"
   shape: "sphere"
   material_id: "abs"
   static_randomization:
-    radius: [1.0, 2.0]
-  start_position: [-8.0, 0.0, 2.0]
-  runtime_jitter: [0.5, 0.5, 0.5]
-
+    radius: [4.0, 6.0]
+  start_position: [0.0, 0.0, 48.0]
+  runtime_jitter: [2.0, 2.0, 1.0]
 constraints:
-  estimated_solution_cost_usd: 33.33
-  estimated_solution_weight_g: 800.0
-
+  estimated_solution_cost_usd: 24.0
+  estimated_solution_weight_g: 650.0
 randomization:
-  static_variation_id: "template-v1"
+  static_variation_id: "gravity_passive_drop_v1"
   runtime_jitter_enabled: true

@@ -1,41 +1,9 @@
-# generated: 2026-03-22T06:26:07+00:00
-# last_updated: 2026-03-24T06:54:35Z
-# project: Problemologist-AI
-# project_key: NOKEY
-# tracking_system: file-system
-# story_location: "/home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts"
-
-# STATUS DEFINITIONS:
-# ==================
-# Epic Status:
-#   - backlog: Epic not yet started
-#   - in-progress: Epic actively being worked on
-#   - done: All stories in epic completed
-#
-# Story Status:
-#   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created, ready for development
-#   - in-progress: Developer actively working on implementation
-#   - review: Implementation complete, ready for review
-#   - done: Story completed
-#
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
-#
-# WORKFLOW NOTES:
-# ===============
-# - Mark epic as 'in-progress' when starting work on its first story
-# - SM typically creates next story ONLY after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
-
-generated: 2026-03-22T06:26:07+00:00
-last_updated: 2026-03-24T06:54:35Z
+generated: 2026-03-22 06:26:07+00:00
+last_updated: 2026-03-24 08:12:31+00:00
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
-story_location: "/home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts"
-
+story_location: /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts
 development_status:
   epic-1: in-progress
   1-1-benchmark-geometry-and-objectives: done
@@ -44,14 +12,12 @@ development_status:
   1-4-handoff-artifacts-versioning-and-reproducibility: done
   1-5-review-colleague-benchmarks-for-solvability: done
   epic-1-retrospective: optional
-
   epic-2: in-progress
   2-1-start-solution-episode-from-approved-benchmark: done
   2-2-inspect-solution-evidence-and-terminal-outcome: done
   2-3-revise-and-retry-against-the-same-benchmark: done
-  2-4-review-peer-solutions-for-stability: ready-for-dev
+  2-4-review-peer-solutions-for-stability: review
   epic-2-retrospective: optional
-
   epic-3: in-progress
   3-1-configure-real-cost-inputs: ready-for-dev
   3-2-evaluate-manufacturability-at-the-requested-quantity: done
@@ -59,14 +25,12 @@ development_status:
   3-4-prefer-the-simpler-valid-solution: ready-for-dev
   3-5-represent-allowed-attachment-and-drilling-points: ready-for-dev
   epic-3-retrospective: optional
-
   epic-4: in-progress
   4-1-persist-immutable-run-and-release-bundles: ready-for-dev
   4-2-export-training-ready-dataset-rows: ready-for-dev
   4-3-replay-failed-episodes-and-surface-deterministic-failures: ready-for-dev
   4-4-curate-seed-coverage-and-exclude-corrupted-data: ready-for-dev
   epic-4-retrospective: optional
-
   epic-5: in-progress
   5-1-inspect-session-history-and-run-timeline: ready-for-dev
   5-2-visualize-cad-and-simulation-evidence: review
@@ -75,115 +39,98 @@ development_status:
   5-5-inspect-live-agent-output-and-interrupt-execution: ready-for-dev
   5-6-create-benchmarks-and-review-simple-plans: ready-for-dev
   epic-5-retrospective: optional
-
   epic-6: in-progress
   6-1-generate-simple-rigid-body-benchmarks: ready-for-dev
-  6-2-produce-a-representative-simple-rigid-body-validation-set: backlog
-  6-3-refine-simple-rigid-body-benchmark-quality: backlog
+  6-2-produce-a-representative-simple-rigid-body-validation-set: ready-for-dev
+  6-3-refine-simple-rigid-body-benchmark-quality: ready-for-dev
   6-4-reliable-simple-rigid-body-benchmark-output-and-reviews: backlog
   epic-6-retrospective: optional
-
   epic-7: backlog
   7-1-solve-simple-rigid-body-benchmarks: backlog
   7-2-verify-physics-correct-simple-rigid-body-solutions: backlog
   7-3-persist-final-proof-for-simple-rigid-body-solutions: backlog
   7-4-reliable-simple-rigid-body-solution-output-and-reviews: backlog
   epic-7-retrospective: optional
-
   epic-8: backlog
   8-1-model-actuator-driven-motion: backlog
   8-2-enforce-motion-limits-and-overload-behavior: backlog
   8-3-expose-actuator-evidence-in-review: backlog
   epic-8-retrospective: optional
-
   epic-9: backlog
   9-1-generate-benchmarks-involving-actuators: backlog
   9-2-produce-a-representative-actuator-validation-set: backlog
   9-3-refine-actuator-benchmark-quality: backlog
   9-4-reliable-actuator-benchmark-output-and-reviews: backlog
   epic-9-retrospective: optional
-
   epic-10: backlog
   10-1-solve-benchmarks-involving-actuators: backlog
   10-2-verify-actuator-solutions-under-load: backlog
   10-3-persist-final-proof-for-actuator-solutions: backlog
   10-4-reliable-actuator-solution-output-and-reviews: backlog
   epic-10-retrospective: optional
-
   epic-11: backlog
   11-1-model-deformable-and-stress-aware-behavior: backlog
   11-2-enforce-stress-thresholds-and-breakage: backlog
   11-3-expose-fem-review-artifacts: backlog
   epic-11-retrospective: optional
-
   epic-12: backlog
   12-1-generate-fem-benchmarks: backlog
   12-2-produce-a-representative-fem-validation-set: backlog
   12-3-refine-fem-benchmark-quality: backlog
   12-4-reliable-fem-benchmark-output-and-reviews: backlog
   epic-12-retrospective: optional
-
   epic-13: backlog
   13-1-solve-fem-benchmarks: backlog
   13-2-verify-fem-solutions-under-load: backlog
   13-3-persist-final-proof-for-fem-solutions: backlog
   13-4-reliable-fem-solution-output-and-reviews: backlog
   epic-13-retrospective: optional
-
   epic-14: backlog
   14-1-model-fluid-containment-and-flow: backlog
   14-2-enforce-fluid-solid-interaction-and-failure: backlog
   14-3-expose-fluid-review-artifacts: backlog
   epic-14-retrospective: optional
-
   epic-15: backlog
   15-1-generate-fluid-benchmarks: backlog
   15-2-produce-a-representative-fluid-validation-set: backlog
   15-3-refine-fluid-benchmark-quality: backlog
   15-4-reliable-fluid-benchmark-output-and-reviews: backlog
   epic-15-retrospective: optional
-
   epic-16: backlog
   16-1-solve-fluid-benchmarks: backlog
   16-2-verify-fluid-solutions-under-load: backlog
   16-3-persist-final-proof-for-fluid-solutions: backlog
   16-4-reliable-fluid-solution-output-and-reviews: backlog
   epic-16-retrospective: optional
-
   epic-17: backlog
   17-1-model-circuit-valid-powered-behavior: backlog
   17-2-enforce-wiring-current-and-power-failure-modes: backlog
   17-3-expose-schematic-and-route-evidence: backlog
   epic-17-retrospective: optional
-
   epic-18: backlog
   18-1-generate-benchmarks-involving-electronics: backlog
   18-2-produce-a-representative-electronics-validation-set: backlog
   18-3-refine-electronics-benchmark-quality: backlog
   18-4-reliable-electronics-benchmark-output-and-reviews: backlog
   epic-18-retrospective: optional
-
   epic-19: backlog
   19-1-solve-benchmarks-involving-electronics: backlog
   19-2-verify-electromechanical-solutions-under-load: backlog
   19-3-persist-final-proof-for-electromechanical-solutions: backlog
   19-4-reliable-electromechanical-solution-output-and-reviews: backlog
   epic-19-retrospective: optional
-
   epic-20: backlog
   20-1-attach-structured-context-to-steering-prompts: backlog
   20-2-switch-cad-selection-mode: backlog
   20-3-apply-corrective-steering-during-active-runs: backlog
   20-4-preserve-steering-provenance: backlog
   epic-20-retrospective: optional
-
   epic-21: backlog
   21-1-render-advanced-simulation-in-browser: backlog
   21-2-inspect-fem-mesh-and-field-data-interactively: backlog
   21-3-inspect-actuators-fluids-and-electronics-visualizations: backlog
   21-4-steer-from-advanced-visualization: backlog
   epic-21-retrospective: optional
-
   epic-22: backlog
   22-1-define-the-target-market: backlog
   22-2-translate-market-needs-into-product-requirements: backlog
