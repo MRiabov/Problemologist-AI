@@ -277,6 +277,17 @@ def _metadata_is_fixed(metadata: Any) -> bool:
     return False
 
 
+def _prefix_part_violation(label: str, violation: str) -> str:
+    prefix = f"{label}: "
+    return violation if violation.startswith(prefix) else f"{prefix}{violation}"
+
+
+def _resolve_cots_catalog_item(part_id: str) -> tuple[Any, dict[str, str | None]] | None:
+    from shared.cots.runtime import get_catalog_item_with_metadata
+
+    return get_catalog_item_with_metadata(part_id)
+
+
 def _validate_parent_fixed_contract(
     component: Compound, objectives: BenchmarkDefinition | None
 ) -> str | None:
@@ -643,6 +654,47 @@ def calculate_assembly_totals(
         metadata = getattr(child, "metadata", None)
         if not metadata:
             continue
+        if _metadata_is_fixed(metadata):
+            continue
+
+        cots_id = _metadata_cots_id(metadata)
+        if cots_id:
+            lookup = _resolve_cots_catalog_item(cots_id)
+            if lookup is None:
+                raise ValueError(
+                    f"{_part_label(child)}: unresolved COTS part_id '{cots_id}'"
+                )
+
+            catalog_item, catalog_metadata = lookup
+            catalog_details = catalog_item.metadata or {}
+            total_cost += catalog_item.unit_cost
+            total_weight += catalog_item.weight_g
+
+            manufacturer = getattr(metadata, "manufacturer", None)
+            catalog_manufacturer = catalog_details.get("manufacturer")
+            if (
+                manufacturer
+                and catalog_manufacturer
+                and manufacturer != catalog_manufacturer
+            ):
+                raise ValueError(
+                    f"{_part_label(child)}: manufacturer '{manufacturer}' does not match catalog manufacturer '{catalog_manufacturer}'"
+                )
+
+            for field_name, observed in (
+                ("catalog_version", getattr(metadata, "catalog_version", None)),
+                ("bd_warehouse_commit", getattr(metadata, "bd_warehouse_commit", None)),
+                ("catalog_snapshot_id", getattr(metadata, "catalog_snapshot_id", None)),
+                ("generated_at", getattr(metadata, "generated_at", None)),
+            ):
+                if observed is None:
+                    continue
+                expected = catalog_metadata.get(field_name)
+                if expected is not None and observed != expected:
+                    raise ValueError(
+                        f"{_part_label(child)}: {field_name} '{observed}' does not match catalog value '{expected}'"
+                    )
+            continue
 
         method = getattr(metadata, "manufacturing_method", None)
         from shared.workers.workbench_models import ManufacturingMethod
@@ -670,6 +722,7 @@ def calculate_assembly_totals(
                 error=str(e),
                 session_id=session_id,
             )
+            raise
 
     # 2. Electronics and COTS parts
     if electronics:
@@ -688,6 +741,9 @@ def calculate_assembly_totals(
                         error=str(e),
                         session_id=session_id,
                     )
+                    raise ValueError(
+                        f"Failed to resolve power supply COTS part_id '{comp.cots_part_id}'"
+                    ) from e
             elif comp.type == ElectronicComponentType.RELAY and comp.cots_part_id:
                 from shared.cots.parts.electronics import ElectronicRelay
 
@@ -702,6 +758,9 @@ def calculate_assembly_totals(
                         error=str(e),
                         session_id=session_id,
                     )
+                    raise ValueError(
+                        f"Failed to resolve relay COTS part_id '{comp.cots_part_id}'"
+                    ) from e
             elif comp.type == ElectronicComponentType.SWITCH and comp.cots_part_id:
                 from shared.cots.parts.electronics import Switch
 
@@ -716,6 +775,9 @@ def calculate_assembly_totals(
                         error=str(e),
                         session_id=session_id,
                     )
+                    raise ValueError(
+                        f"Failed to resolve switch COTS part_id '{comp.cots_part_id}'"
+                    ) from e
             elif comp.type == ElectronicComponentType.CONNECTOR and comp.cots_part_id:
                 from shared.cots.parts.electronics import Connector
 
@@ -730,6 +792,9 @@ def calculate_assembly_totals(
                         error=str(e),
                         session_id=session_id,
                     )
+                    raise ValueError(
+                        f"Failed to resolve connector COTS part_id '{comp.cots_part_id}'"
+                    ) from e
             elif comp.type == ElectronicComponentType.MOTOR and comp.cots_part_id:
                 from shared.cots.parts.motors import ServoMotor
 
@@ -744,6 +809,9 @@ def calculate_assembly_totals(
                         error=str(e),
                         session_id=session_id,
                     )
+                    raise ValueError(
+                        f"Failed to resolve motor COTS part_id '{comp.cots_part_id}'"
+                    ) from e
 
         for wire in electronics.wiring:
             from shared.wire_utils import get_awg_properties
@@ -774,17 +842,50 @@ def calculate_assembly_totals(
     # 3. Generic COTS parts from assembly definition
     if cots_parts:
         for p in cots_parts:
-            total_cost += p.unit_cost_usd * p.quantity
-            # Weight is not always in CotsPartEstimate, but we can try to find it
-            # if we had a more detailed catalog access here.
-            # For now, we'll try to use metadata if we can find it in shared catalog.
-            import contextlib
+            lookup = _resolve_cots_catalog_item(p.part_id)
+            if lookup is None:
+                raise ValueError(f"Unknown catalog COTS part_id '{p.part_id}'")
 
-            with contextlib.suppress(Exception):
-                # Heuristic: try to look up weight if not provided
-                # In current schema CotsPartEstimate doesn't have weight_g
-                # But the indexer extracts it.
-                pass
+            catalog_item, catalog_metadata = lookup
+            catalog_details = catalog_item.metadata or {}
+            total_cost += catalog_item.unit_cost * p.quantity
+            total_weight += catalog_item.weight_g * p.quantity
+
+            manufacturer = catalog_details.get("manufacturer")
+            if manufacturer and p.manufacturer != manufacturer:
+                raise ValueError(
+                    "COTS manufacturer mismatch for part_id "
+                    f"'{p.part_id}': planner manufacturer '{p.manufacturer}' "
+                    f"does not match catalog manufacturer '{manufacturer}'"
+                )
+
+            if p.weight_g is not None and abs(p.weight_g - catalog_item.weight_g) > 1e-6:
+                raise ValueError(
+                    "COTS weight mismatch for part_id "
+                    f"'{p.part_id}': planner weight {p.weight_g}g does not match "
+                    f"catalog weight {catalog_item.weight_g}g"
+                )
+
+            provenance_pairs = (
+                ("catalog_version", p.catalog_version, catalog_metadata.get("catalog_version")),
+                (
+                    "bd_warehouse_commit",
+                    p.bd_warehouse_commit,
+                    catalog_metadata.get("bd_warehouse_commit"),
+                ),
+                (
+                    "catalog_snapshot_id",
+                    p.catalog_snapshot_id,
+                    catalog_metadata.get("catalog_snapshot_id"),
+                ),
+                ("generated_at", p.generated_at, catalog_metadata.get("generated_at")),
+            )
+            for field_name, observed, expected in provenance_pairs:
+                if observed is not None and expected is not None and observed != expected:
+                    raise ValueError(
+                        f"COTS provenance mismatch for part_id '{p.part_id}': "
+                        f"{field_name} '{observed}' does not match catalog '{expected}'"
+                    )
 
     if assembly_definition is not None:
         total_cost += calculate_benchmark_drilling_cost(assembly_definition, config)

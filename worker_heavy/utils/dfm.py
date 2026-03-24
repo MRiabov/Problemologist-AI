@@ -9,6 +9,7 @@ from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition, Bound
 from shared.workers.workbench_models import (
     ManufacturingConfig,
     ManufacturingMethod,
+    CostBreakdown,
     WorkbenchMetadata,
     WorkbenchResult,
 )
@@ -174,6 +175,161 @@ def _count_dofs(part: Part | Compound) -> int:
     return dof_count
 
 
+def _metadata_is_fixed(metadata: Any) -> bool:
+    if metadata is None:
+        return False
+    value = getattr(metadata, "is_fixed", None)
+    if value is not None:
+        return bool(value)
+    if isinstance(metadata, dict):
+        return bool(metadata.get("is_fixed", metadata.get("fixed", False)))
+    return False
+
+
+def _metadata_cots_id(metadata: Any) -> str | None:
+    if metadata is None:
+        return None
+    value = getattr(metadata, "cots_id", None)
+    if value:
+        return str(value)
+    if isinstance(metadata, dict):
+        raw = metadata.get("cots_id")
+        if raw:
+            return str(raw)
+    return None
+
+
+def _part_label(part: Part | Compound) -> str:
+    return getattr(part, "label", None) or "unnamed_part"
+
+
+def _prefix_part_violation(label: str, violation: str) -> str:
+    prefix = f"{label}: "
+    return violation if violation.startswith(prefix) else f"{prefix}{violation}"
+
+
+def _resolve_cots_catalog_item(part_id: str):
+    from shared.cots.runtime import get_catalog_item_with_metadata
+
+    return get_catalog_item_with_metadata(part_id)
+
+
+def _build_cots_workbench_result(
+    part: Part | Compound,
+    *,
+    quantity: int,
+    build_zone: BoundingBox | None,
+    session_id: str | None,
+) -> WorkbenchResult:
+    label = _part_label(part)
+    metadata = getattr(part, "metadata", None)
+    cots_id = _metadata_cots_id(metadata)
+    if not cots_id:
+        raise ValueError(f"{label}: COTS validation requested without cots_id")
+
+    lookup = _resolve_cots_catalog_item(cots_id)
+    if lookup is None:
+        raise ValueError(f"{label}: unresolved COTS part_id '{cots_id}'")
+
+    catalog_item, catalog_metadata = lookup
+    catalog_details = catalog_item.metadata or {}
+    if build_zone is not None:
+        is_valid, error_msg = _is_within_bounds(part, build_zone)
+        if not is_valid:
+            breakdown = CostBreakdown(
+                process="cots",
+                total_cost=catalog_item.unit_cost * quantity,
+                unit_cost=catalog_item.unit_cost,
+                material_cost_per_unit=catalog_item.unit_cost,
+                setup_cost=0.0,
+                variable_cost_per_unit=catalog_item.unit_cost,
+                quantity=quantity,
+                is_reused=quantity > 1,
+                details={
+                    "part_id": cots_id,
+                    "manufacturer": catalog_details.get("manufacturer", "unknown"),
+                    "source": "catalog",
+                    "catalog_version": catalog_metadata.get("catalog_version"),
+                    "bd_warehouse_commit": catalog_metadata.get("bd_warehouse_commit"),
+                    "catalog_snapshot_id": catalog_metadata.get("catalog_snapshot_id"),
+                    "generated_at": catalog_metadata.get("generated_at"),
+                },
+                pricing_explanation="Exact COTS catalog lookup",
+            )
+            return WorkbenchResult(
+                is_manufacturable=False,
+                unit_cost=catalog_item.unit_cost,
+                weight_g=catalog_item.weight_g,
+                violations=[
+                    _prefix_part_violation(
+                        label, f"COTS build zone violation: {error_msg}"
+                    )
+                ],
+                metadata=WorkbenchMetadata(
+                    cost_breakdown=breakdown,
+                    additional_info={
+                        "cots_part_id": cots_id,
+                        "manufacturer": catalog_item.metadata.get(
+                            "manufacturer", "unknown"
+                        ),
+                        "source": "catalog",
+                        "catalog_version": catalog_metadata.get("catalog_version"),
+                        "bd_warehouse_commit": catalog_metadata.get(
+                            "bd_warehouse_commit"
+                        ),
+                        "catalog_snapshot_id": catalog_metadata.get(
+                            "catalog_snapshot_id"
+                        ),
+                        "generated_at": catalog_metadata.get("generated_at"),
+                        "quantity": quantity,
+                        "requested_quantity": quantity,
+                    },
+                ),
+            )
+
+    breakdown = {
+        "cots_part_id": cots_id,
+        "manufacturer": catalog_details.get("manufacturer", "unknown"),
+        "source": "catalog",
+        "catalog_version": catalog_metadata.get("catalog_version"),
+        "bd_warehouse_commit": catalog_metadata.get("bd_warehouse_commit"),
+        "catalog_snapshot_id": catalog_metadata.get("catalog_snapshot_id"),
+        "generated_at": catalog_metadata.get("generated_at"),
+        "quantity": quantity,
+        "requested_quantity": quantity,
+    }
+    cost_breakdown = CostBreakdown(
+        process="cots",
+        total_cost=catalog_item.unit_cost * quantity,
+        unit_cost=catalog_item.unit_cost,
+        material_cost_per_unit=catalog_item.unit_cost,
+        setup_cost=0.0,
+        variable_cost_per_unit=catalog_item.unit_cost,
+        quantity=quantity,
+        is_reused=quantity > 1,
+        details={
+            "part_id": cots_id,
+            "manufacturer": catalog_details.get("manufacturer", "unknown"),
+            "source": "catalog",
+            "catalog_version": catalog_metadata.get("catalog_version"),
+            "bd_warehouse_commit": catalog_metadata.get("bd_warehouse_commit"),
+            "catalog_snapshot_id": catalog_metadata.get("catalog_snapshot_id"),
+            "generated_at": catalog_metadata.get("generated_at"),
+        },
+        pricing_explanation="Exact COTS catalog lookup",
+    )
+    return WorkbenchResult(
+        is_manufacturable=True,
+        unit_cost=catalog_item.unit_cost,
+        weight_g=catalog_item.weight_g,
+        violations=[],
+        metadata=WorkbenchMetadata(
+            cost_breakdown=cost_breakdown,
+            additional_info=breakdown,
+        ),
+    )
+
+
 def calculate_benchmark_drilling_cost(
     assembly_definition: AssemblyDefinition,
     config: ManufacturingConfig,
@@ -262,13 +418,42 @@ def validate_and_price(
     logger.info(
         "starting_dfm_facade_analysis", method=method, fem_required=fem_required
     )
+    metadata = getattr(part, "metadata", None)
+    label = _part_label(part)
+
+    if _metadata_is_fixed(metadata):
+        return WorkbenchResult(
+            is_manufacturable=True,
+            unit_cost=0.0,
+            weight_g=0.0,
+            violations=[],
+            metadata=WorkbenchMetadata(
+                additional_info={
+                    "quantity": quantity,
+                    "requested_quantity": quantity,
+                    "batch_total_cost_usd": 0.0,
+                    "skipped_fixed_context": True,
+                }
+            ),
+        )
+
+    cots_id = _metadata_cots_id(metadata)
+    if cots_id:
+        return _build_cots_workbench_result(
+            part,
+            quantity=quantity,
+            build_zone=build_zone,
+            session_id=session_id,
+        )
 
     # First, check build zone if provided
     build_zone_violations: list[str] = []
     if build_zone is not None:
         is_valid, error_msg = _is_within_bounds(part, build_zone)
         if not is_valid:
-            build_zone_violations = [f"Build zone violation: {error_msg}"]
+            build_zone_violations = [
+                _prefix_part_violation(label, f"Build zone violation: {error_msg}")
+            ]
             logger.warning("build_zone_violations", violations=build_zone_violations)
 
     # Check for excessive DOFs (per architecture spec Item 8)
@@ -301,7 +486,6 @@ def validate_and_price(
     # WP2: FEM Material Field Validation (INT-111)
     fem_violations: list[str] = []
     if fem_required:
-        metadata = getattr(part, "metadata", None)
         material_id = getattr(metadata, "material_id", None)
         # Check global materials and method-specific materials
         mat_def = config.materials.get(material_id)
@@ -318,7 +502,10 @@ def validate_and_price(
 
         if not mat_def:
             fem_violations = [
-                f"FEM Validation Error: Material '{material_id}' not found in configuration."
+                _prefix_part_violation(
+                    label,
+                    f"FEM Validation Error: Material '{material_id}' not found in configuration.",
+                )
             ]
         else:
             required_fields = [
@@ -330,7 +517,11 @@ def validate_and_price(
             missing = [f for f in required_fields if getattr(mat_def, f) is None]
             if missing:
                 fem_violations = [
-                    f"FEM Validation Error: Material '{material_id}' missing required FEM fields: {', '.join(missing)}"
+                    _prefix_part_violation(
+                        label,
+                        "FEM Validation Error: Material "
+                        f"'{material_id}' missing required FEM fields: {', '.join(missing)}",
+                    )
                 ]
 
     # Add DOF warning to metadata (for reviewer notification)
@@ -356,7 +547,12 @@ def validate_and_price(
     )
 
     # Combine all violations
-    all_violations = list(result.violations) + build_zone_violations + fem_violations
+    all_violations = [
+        _prefix_part_violation(label, violation)
+        for violation in (
+            list(result.violations) + build_zone_violations + fem_violations
+        )
+    ]
     is_manufacturable = (
         result.is_manufacturable and not build_zone_violations and not fem_violations
     )
@@ -473,9 +669,22 @@ def validate_and_price_assembly(
     for child in reports:
         label = getattr(child, "label", None) or "unnamed_part"
         metadata = getattr(child, "metadata", None)
+        if _metadata_is_fixed(metadata):
+            per_part.append(
+                {
+                    "label": label,
+                    "method": "fixed",
+                    "is_manufacturable": True,
+                    "unit_cost": 0.0,
+                    "weight_g": 0.0,
+                    "skipped": True,
+                }
+            )
+            continue
         method = getattr(metadata, "manufacturing_method", None) or default_method
         if isinstance(method, str):
             method = ManufacturingMethod(method)
+        cots_id = _metadata_cots_id(metadata)
 
         child_result = validate_and_price(
             child,
@@ -492,14 +701,15 @@ def validate_and_price_assembly(
         per_part.append(
             {
                 "label": label,
-                "method": method.value,
+                "method": "COTS" if cots_id else method.value,
                 "is_manufacturable": child_result.is_manufacturable,
                 "unit_cost": child_result.unit_cost,
                 "weight_g": child_result.weight_g,
             }
         )
         violations.extend(
-            f"{label}: {violation}" for violation in child_result.violations
+            _prefix_part_violation(label, violation)
+            for violation in child_result.violations
         )
 
     benchmark_drilling_cost = (

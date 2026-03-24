@@ -214,8 +214,13 @@ engineer:
         - part_id: M3_BOLT
           manufacturer: Generic
           unit_cost_usd: 0.5
+          weight_g: 1.2
           quantity: 8
           source: catalog
+          catalog_version: "1.0.0"
+          bd_warehouse_commit: "unknown"
+          catalog_snapshot_id: "<catalog snapshot hash>"
+          generated_at: "unknown"
 
       environment_drill_operations: []
 
@@ -237,6 +242,7 @@ engineer:
       - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
       - **Objectives sync**: `benchmark_definition.yaml` constraints must match validated assembly totals (under benchmark caps).
       - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
+      - **COTS traceability**: Every `cots_parts` entry must carry the catalog-backed `weight_g` and snapshot fields so the same selection can be replayed without drift.
       - **Benchmark part references**: If a joint or drilled hole targets a benchmark-owned fixture, that target must be a declared `benchmark_parts[].part_id` from `benchmark_definition.yaml`.
       - **Physical feasibility**: Ensure the planned mechanism is physically achievable with no self-intersection risk.
       - **Breakage risk**: Flag any motor/part choices that could cause breakage under loads.

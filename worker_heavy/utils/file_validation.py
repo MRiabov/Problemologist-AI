@@ -297,6 +297,74 @@ def validate_assembly_definition_yaml(
             )
             return False, cost_errors
 
+        from shared.cots.runtime import get_catalog_item_with_metadata
+
+        for cots_part in estimation.cots_parts:
+            lookup = get_catalog_item_with_metadata(cots_part.part_id)
+            if lookup is None:
+                msg = (
+                    "cots_parts: part_id "
+                    f"'{cots_part.part_id}' does not resolve to a catalog item"
+                )
+                logger.error(
+                    "cots_part_catalog_lookup_failed",
+                    part_id=cots_part.part_id,
+                    session_id=session_id,
+                )
+                return False, [msg]
+
+            catalog_item, catalog_metadata = lookup
+            catalog_details = catalog_item.metadata or {}
+            if abs(cots_part.unit_cost_usd - catalog_item.unit_cost) > 1e-6:
+                msg = (
+                    "cots_parts: part_id "
+                    f"'{cots_part.part_id}' unit_cost_usd ({cots_part.unit_cost_usd}) "
+                    f"must match catalog unit cost ({catalog_item.unit_cost})"
+                )
+                return False, [msg]
+
+            if (
+                cots_part.weight_g is not None
+                and abs(cots_part.weight_g - catalog_item.weight_g) > 1e-6
+            ):
+                msg = (
+                    "cots_parts: part_id "
+                    f"'{cots_part.part_id}' weight_g ({cots_part.weight_g}) "
+                    f"must match catalog weight ({catalog_item.weight_g})"
+                )
+                return False, [msg]
+
+            manufacturer = catalog_details.get("manufacturer")
+            if manufacturer and cots_part.manufacturer != manufacturer:
+                msg = (
+                    "cots_parts: part_id "
+                    f"'{cots_part.part_id}' manufacturer ({cots_part.manufacturer}) "
+                    f"must match catalog manufacturer ({manufacturer})"
+                )
+                return False, [msg]
+
+            provenance_values = (
+                cots_part.catalog_version,
+                cots_part.bd_warehouse_commit,
+                cots_part.catalog_snapshot_id,
+                cots_part.generated_at,
+            )
+            if any(value is not None for value in provenance_values):
+                for field_name, observed in (
+                    ("catalog_version", cots_part.catalog_version),
+                    ("bd_warehouse_commit", cots_part.bd_warehouse_commit),
+                    ("catalog_snapshot_id", cots_part.catalog_snapshot_id),
+                    ("generated_at", cots_part.generated_at),
+                ):
+                    expected = catalog_metadata.get(field_name)
+                    if expected is not None and observed != expected:
+                        msg = (
+                            "cots_parts: part_id "
+                            f"'{cots_part.part_id}' {field_name} ({observed}) "
+                            f"must match catalog value ({expected})"
+                        )
+                        return False, [msg]
+
         if estimation.electronics:
             from shared.models.schemas import PartConfig, SubassemblyEstimate
 

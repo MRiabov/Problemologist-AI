@@ -1,5 +1,7 @@
 import os
 import uuid
+from hashlib import sha256
+from pathlib import Path
 
 from sqlalchemy import create_engine, or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -12,6 +14,13 @@ from .database.models import CatalogMetadataORM, COTSItemORM
 from .models import COTSItem, SearchQuery
 
 DEFAULT_DB_PATH = os.environ.get("COTS_DB_PATH", "parts.db")
+
+
+def _catalog_snapshot_id(db_path: str) -> str | None:
+    try:
+        return sha256(Path(db_path).read_bytes()).hexdigest()
+    except Exception:
+        return None
 
 
 def get_catalog_metadata(db_path: str = DEFAULT_DB_PATH) -> dict[str, str | None]:
@@ -31,20 +40,59 @@ def get_catalog_metadata(db_path: str = DEFAULT_DB_PATH) -> dict[str, str | None
 
     if not meta_result:
         return {
-            "catalog_version": None,
-            "bd_warehouse_commit": None,
-            "catalog_snapshot_id": None,
-            "generated_at": None,
+            "catalog_version": "unknown",
+            "bd_warehouse_commit": "unknown",
+            "catalog_snapshot_id": _catalog_snapshot_id(db_path),
+            "generated_at": "unknown",
         }
 
     return {
-        "catalog_version": meta_result.catalog_version,
-        "bd_warehouse_commit": meta_result.bd_warehouse_commit,
-        "catalog_snapshot_id": getattr(meta_result, "catalog_snapshot_id", None),
+        "catalog_version": meta_result.catalog_version or "unknown",
+        "bd_warehouse_commit": meta_result.bd_warehouse_commit or "unknown",
+        "catalog_snapshot_id": getattr(meta_result, "catalog_snapshot_id", None)
+        or _catalog_snapshot_id(db_path),
         "generated_at": (
-            meta_result.generated_at.isoformat() if meta_result.generated_at else None
+            meta_result.generated_at.isoformat() if meta_result.generated_at else "unknown"
         ),
     }
+
+
+def _cots_item_from_orm(item: COTSItemORM) -> COTSItem:
+    return COTSItem(
+        part_id=item.part_id,
+        name=item.name,
+        category=item.category,
+        unit_cost=item.unit_cost,
+        weight_g=item.weight_g,
+        import_recipe=item.import_recipe,
+        metadata=item.metadata_dict,
+    )
+
+
+def get_catalog_item_by_part_id(
+    part_id: str, db_path: str = DEFAULT_DB_PATH
+) -> COTSItem | None:
+    """Return an exact COTS catalog item by part_id."""
+    engine = create_engine(f"sqlite:///{db_path}")
+
+    try:
+        with Session(engine) as session:
+            item = session.get(COTSItemORM, part_id)
+            if item is None:
+                return None
+            return _cots_item_from_orm(item)
+    except SQLAlchemyError:
+        return None
+
+
+def get_catalog_item_with_metadata(
+    part_id: str, db_path: str = DEFAULT_DB_PATH
+) -> tuple[COTSItem, dict[str, str | None]] | None:
+    """Return an exact COTS catalog item and catalog provenance snapshot."""
+    item = get_catalog_item_by_part_id(part_id, db_path=db_path)
+    if item is None:
+        return None
+    return item, get_catalog_metadata(db_path)
 
 
 def search_parts(query: SearchQuery, db_path: str) -> tuple[list[COTSItem], dict]:

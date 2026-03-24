@@ -854,8 +854,13 @@ class CotsPartEstimate(StrictContractModel):
     part_id: str
     manufacturer: str
     unit_cost_usd: float
+    weight_g: float | None = None
     quantity: int
     source: str
+    catalog_version: str | None = None
+    bd_warehouse_commit: str | None = None
+    catalog_snapshot_id: str | None = None
+    generated_at: str | None = None
 
     @field_validator("part_id", "manufacturer", "source")
     @classmethod
@@ -864,6 +869,47 @@ class CotsPartEstimate(StrictContractModel):
         if not text:
             raise ValueError("must be a non-empty string")
         return text
+
+    @field_validator("unit_cost_usd", "weight_g", mode="before")
+    @classmethod
+    def validate_numeric_values(cls, value: Any) -> Any:
+        if value is None:
+            return value
+        if float(value) <= 0:
+            raise ValueError("must be > 0")
+        return value
+
+    @field_validator(
+        "catalog_version",
+        "bd_warehouse_commit",
+        "catalog_snapshot_id",
+        "generated_at",
+        mode="before",
+    )
+    @classmethod
+    def validate_optional_non_empty_strings(cls, value: Any) -> Any:
+        if value is None:
+            return value
+        text = str(value).strip()
+        if not text:
+            raise ValueError("must be a non-empty string")
+        return text
+
+    @model_validator(mode="after")
+    def validate_catalog_provenance(self) -> "CotsPartEstimate":
+        provenance_fields = (
+            self.catalog_version,
+            self.bd_warehouse_commit,
+            self.catalog_snapshot_id,
+            self.generated_at,
+        )
+        has_any_provenance = any(field is not None for field in provenance_fields)
+        if has_any_provenance and not all(field is not None for field in provenance_fields):
+            raise ValueError(
+                "catalog provenance must include catalog_version, "
+                "bd_warehouse_commit, catalog_snapshot_id, and generated_at together"
+            )
+        return self
 
 
 class AssemblyPartConfig(StrictContractModel):
