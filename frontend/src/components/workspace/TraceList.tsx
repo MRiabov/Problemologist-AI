@@ -8,6 +8,8 @@ import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import type { ContextItem } from "../../context/EpisodeContext";
 import { TraceType } from "../../api/generated/models/TraceType";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import { cn } from "../../lib/utils";
+import { splitFeedbackComment } from "./feedbackUtils";
 
 interface TraceListProps {
   traces: TraceResponse[] | undefined;
@@ -168,6 +170,10 @@ export const TraceList = memo(({
               return null;
             }
             const isLastLlmEnd = traces && traces.filter(t => t.trace_type === TraceType.LLM_END).pop()?.id === trace.id;
+            const hasSavedFeedback =
+              (trace.feedback_score !== null && trace.feedback_score !== undefined) ||
+              !!trace.feedback_comment;
+            const feedbackDraft = splitFeedbackComment(trace.feedback_comment);
 
             return (
                 <div key={trace.id} data-testid="chat-message" className="relative group/msg">
@@ -179,8 +185,39 @@ export const TraceList = memo(({
                       addToContext={addToContext}
                       setActiveArtifactId={onAssetClick}
                     />
+                    {hasSavedFeedback && (
+                      <div
+                        data-testid={`trace-feedback-summary-${trace.id}`}
+                        className="mt-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2 space-y-1"
+                      >
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 border",
+                              trace.feedback_score === 1
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                                : trace.feedback_score === 0
+                                  ? "border-red-500/30 bg-red-500/10 text-red-500"
+                                  : "border-border/60 bg-background text-muted-foreground",
+                            )}
+                          >
+                            {trace.feedback_score === 1 ? "Thumbs Up" : trace.feedback_score === 0 ? "Thumbs Down" : "Feedback"}
+                          </span>
+                          {feedbackDraft.topic && (
+                            <span className="rounded-full border border-border/60 bg-background px-2 py-0.5 text-foreground">
+                              {feedbackDraft.topic}
+                            </span>
+                          )}
+                        </div>
+                        {feedbackDraft.comment && (
+                          <p className="text-[11px] leading-relaxed text-foreground whitespace-pre-wrap">
+                            {feedbackDraft.comment}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mt-1 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                        {isLastLlmEnd ? (
+                        {isLastLlmEnd && (
                             <div className="flex items-center gap-1">
                                 <button
                                     data-testid="chat-thumbs-up"
@@ -198,15 +235,12 @@ export const TraceList = memo(({
                                 >
                                     <ThumbsDown className="h-3.5 w-3.5" />
                                 </button>
+                                {hasSavedFeedback && (
+                                  <span className="text-[10px] text-muted-foreground font-semibold pl-1">
+                                    Edit saved feedback
+                                  </span>
+                                )}
                             </div>
-                        ) : (
-                            <button
-                                onClick={() => onShowFeedback(trace.id, 1)}
-                                className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
-                            >
-                                <AlertCircle className="h-3 w-3" />
-                                Feedback
-                            </button>
                         )}
                     </div>
                 </div>

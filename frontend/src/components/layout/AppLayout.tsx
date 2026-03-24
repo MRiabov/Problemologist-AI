@@ -8,6 +8,9 @@ import { AlertTriangle } from "lucide-react";
 export default function AppLayout() {
   const { isMockMode } = useConnection();
   const { feedbackState, setFeedbackState, selectedEpisode } = useEpisodes();
+  const activeTrace = selectedEpisode?.traces?.find((trace) => trace.id === feedbackState?.traceId) ?? null;
+  const initialScore = activeTrace?.feedback_score ?? feedbackState?.score ?? 1;
+  const initialComment = activeTrace?.feedback_comment ?? null;
 
   return (
     <div className="h-screen w-full overflow-hidden bg-background text-foreground flex" data-testid="app-layout">
@@ -38,7 +41,8 @@ export default function AppLayout() {
           <FeedbackSystem 
               episodeId={selectedEpisode.id} 
               traceId={feedbackState.traceId}
-              initialScore={feedbackState.score}
+              initialScore={initialScore}
+              initialComment={initialComment}
               onClose={() => setFeedbackState(null)}
           />
       )}

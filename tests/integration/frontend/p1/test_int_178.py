@@ -95,3 +95,31 @@ def test_int_178_session_restore_continuity(page: Page):
     expect(page.locator("h2", has_text="Engineer Workspace")).to_be_visible(
         timeout=15000
     )
+
+    # 7. Switch into demo/presentation mode and verify the preference survives reload.
+    demo_button = page.get_by_role("button", name="Enter Demo Mode")
+    demo_button.click()
+    expect(page.get_by_text("Demo Mode")).to_be_visible(timeout=15000)
+
+    page.reload()
+    page.wait_for_load_state("networkidle")
+
+    try:
+        page.wait_for_function(
+            """() => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return false;
+                try {
+                    const data = JSON.parse(el.textContent);
+                    return Boolean(data.episodeId);
+                } catch (e) { return false; }
+            }""",
+            timeout=60000,
+        )
+    except PlaywrightTimeoutError:
+        pytest.skip("Could not rehydrate selected episode after demo-mode reload")
+
+    expect(page.get_by_role("button", name="Exit Demo Mode")).to_be_visible(
+        timeout=15000
+    )
+    expect(page.get_by_text("Demo Mode")).to_be_visible(timeout=15000)

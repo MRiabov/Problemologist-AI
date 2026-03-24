@@ -160,5 +160,29 @@ def test_int_177_feedback_modal_edit_recall(page: Page):
         "Persisted feedback did not match final edited state (Score: 0, Comment: [Topic] Text)"
     )
 
+    # 10. Reload and reopen the same feedback entry to verify the saved draft is preloaded.
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    page.wait_for_selector('[data-testid="sidebar-episode-item"]', timeout=60000)
+    episode_row = (
+        page.get_by_test_id("sidebar-episode-item")
+        .filter(has_text=re.compile("INT-177"))
+        .first
+    )
+    episode_row.hover()
+    episode_row.get_by_test_id("sidebar-thumbs-down").evaluate("node => node.click()")
+
+    modal = page.get_by_test_id("feedback-modal")
+    expect(modal).to_be_visible(timeout=10000)
+    expect(modal.get_by_test_id("modal-thumbs-down")).to_have_class(
+        re.compile(r"text-red-500")
+    )
+    expect(modal.get_by_role("button", name=topic_name)).to_have_class(
+        re.compile(r"bg-primary/10")
+    )
+    expect(page.get_by_placeholder("How can the agent improve?")).to_have_value(
+        test_comment
+    )
+
 
 import re

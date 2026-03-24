@@ -1,6 +1,6 @@
 # Story 5.4: Collect Feedback and Present Demos
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -15,20 +15,20 @@ As a human operator, I want to submit feedback and present completed runs throug
 
 ## Tasks / Subtasks
 
-- [ ] Keep `FeedbackSystem` as the single global modal host in `AppLayout`, but pass it enough trace/episode context to prefill the selected trace's score/comment and resubmit edited feedback cleanly. (AC: 1, 2, 4)
-  - [ ] Reuse the existing topic chips and `submitTraceFeedback(...)` flow; do not create a second feedback form or a separate persistence path.
-- [ ] Surface persisted trace feedback back into the episode UI so later review is visible. Render `TraceResponse.feedback_score` and `feedback_comment` on the relevant trace or summary row, and keep the final assistant turn as the only place where new feedback can be launched. (AC: 2)
-  - [ ] Keep the combined `[topic] comment` format unless a new typed topic field is intentionally added to the controller/OpenAPI schema.
-  - [ ] Do not infer topics from UI state after the episode has already been persisted.
-- [ ] Add a presentation/demo layout mode to the shared workspace shell. Reuse `UnifiedGeneratorView` plus the existing page wrappers so demo mode is a shell composition change, not a new route or duplicated workspace. (AC: 3, 4)
-  - [ ] Keep session history, chat, viewport, and artifact panels visible and stable.
-  - [ ] Preserve selected episode and layout state across reloads.
-- [ ] Keep episode restore and feedback modal state tied to `EpisodeContext`. Clear modal state only on explicit close or successful submission. (AC: 2, 4)
-  - [ ] Do not add a parallel presentation-state store.
-  - [ ] Reuse the existing controller-first episode polling/hydration path.
-- [ ] Extend live-browser integration coverage for completion-gated feedback, edited feedback persistence, and demo-layout stability. (AC: 1-4)
-  - [ ] Anchor on `INT-170`, `INT-171`, `INT-177`, and `INT-178`.
-  - [ ] Extend `tests/integration/frontend/p0/test_frontend_p0.py`, `tests/integration/frontend/p0/test_int_177.py`, and `tests/integration/frontend/p1/test_int_178.py`; add a focused `test_int_171.py` only if the layout regression needs its own slice.
+- [x] Keep `FeedbackSystem` as the single global modal host in `AppLayout`, but pass it enough trace/episode context to prefill the selected trace's score/comment and resubmit edited feedback cleanly. (AC: 1, 2, 4)
+  - [x] Reuse the existing topic chips and `submitTraceFeedback(...)` flow; do not create a second feedback form or a separate persistence path.
+- [x] Surface persisted trace feedback back into the episode UI so later review is visible. Render `TraceResponse.feedback_score` and `feedback_comment` on the relevant trace or summary row, and keep the final assistant turn as the only place where new feedback can be launched. (AC: 2)
+  - [x] Keep the combined `[topic] comment` format unless a new typed topic field is intentionally added to the controller/OpenAPI schema.
+  - [x] Do not infer topics from UI state after the episode has already been persisted.
+- [x] Add a presentation/demo layout mode to the shared workspace shell. Reuse `UnifiedGeneratorView` plus the existing page wrappers so demo mode is a shell composition change, not a new route or duplicated workspace. (AC: 3, 4)
+  - [x] Keep session history, chat, viewport, and artifact panels visible and stable.
+  - [x] Preserve selected episode and layout state across reloads.
+- [x] Keep episode restore and feedback modal state tied to `EpisodeContext`. Clear modal state only on explicit close or successful submission. (AC: 2, 4)
+  - [x] Do not add a parallel presentation-state store.
+  - [x] Reuse the existing controller-first episode polling/hydration path.
+- [x] Extend live-browser integration coverage for completion-gated feedback, edited feedback persistence, and demo-layout stability. (AC: 1-4)
+  - [x] Anchor on `INT-170`, `INT-171`, `INT-177`, and `INT-178`.
+  - [x] Extend `tests/integration/frontend/p0/test_frontend_p0.py`, `tests/integration/frontend/p0/test_int_177.py`, and `tests/integration/frontend/p1/test_int_178.py`; add a focused `test_int_171.py` only if the layout regression needs its own slice.
 
 ## Dev Notes
 
@@ -69,10 +69,36 @@ As a human operator, I want to submit feedback and present completed runs throug
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- `npm run build -- --mode development` in `frontend/` completed successfully after a single syntax fix in `TraceList.tsx`.
+- Integration tests were not run in this turn per user request because a parallel suite is already active.
+
 ### Completion Notes List
 
+- Added feedback prefill plumbing from `EpisodeContext`/selected trace into the global `FeedbackSystem` host.
+- Preserved the existing `submitTraceFeedback(...)` controller flow and kept the combined `[topic] comment` format.
+- Rendered persisted trace feedback back into the chat trace UI so reopened runs show score/topic/comment context.
+- Added a persisted demo/presentation mode flag in `UISettingsContext` and surfaced it in both workspace shells.
+- Extended the browser integration coverage files for feedback recall and demo-mode persistence.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/5-4-collect-feedback-and-present-demos.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `frontend/src/components/layout/AppLayout.tsx`
+- `frontend/src/components/workspace/FeedbackSystem.tsx`
+- `frontend/src/components/workspace/TraceList.tsx`
+- `frontend/src/components/workspace/UnifiedGeneratorView.tsx`
+- `frontend/src/components/workspace/feedbackUtils.ts`
+- `frontend/src/context/UISettingsContext.tsx`
+- `frontend/src/pages/BenchmarkGeneration.tsx`
+- `frontend/src/pages/EngineerWorkspace.tsx`
+- `tests/integration/frontend/p0/test_int_177.py`
+- `tests/integration/frontend/p1/test_int_178.py`
+
+## Change Log
+
+- 2026-03-24: Implemented persisted feedback prefill/display, demo-mode shell persistence, and live-browser coverage updates for INT-170/171/177/178.

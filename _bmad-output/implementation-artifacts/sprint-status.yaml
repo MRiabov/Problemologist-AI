@@ -1,5 +1,5 @@
 generated: 2026-03-22 06:26:07+00:00
-last_updated: 2026-03-24 11:12:13+00:00
+last_updated: 2026-03-24 16:01:51+00:00
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -16,7 +16,7 @@ development_status:
   2-1-start-solution-episode-from-approved-benchmark: done
   2-2-inspect-solution-evidence-and-terminal-outcome: done
   2-3-revise-and-retry-against-the-same-benchmark: done
-  2-4-review-peer-solutions-for-stability: review
+  2-4-review-peer-solutions-for-stability: done
   epic-2-retrospective: optional
   epic-3: in-progress
   3-1-configure-real-cost-inputs: review
@@ -35,7 +35,7 @@ development_status:
   5-1-inspect-session-history-and-run-timeline: review
   5-2-visualize-cad-and-simulation-evidence: review
   5-3-view-code-and-artifacts: ready-for-dev
-  5-4-collect-feedback-and-present-demos: ready-for-dev
+  5-4-collect-feedback-and-present-demos: in-progress
   5-5-inspect-live-agent-output-and-interrupt-execution: ready-for-dev
   5-6-create-benchmarks-and-review-simple-plans: ready-for-dev
   epic-5-retrospective: optional

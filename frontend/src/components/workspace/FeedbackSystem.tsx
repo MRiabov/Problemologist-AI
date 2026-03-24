@@ -3,11 +3,13 @@ import { CheckCircle, ThumbsUp, ThumbsDown, AlertTriangle } from "lucide-react";
 import { Button } from "../ui/button";
 import { submitTraceFeedback } from "../../api/client";
 import { cn } from "../../lib/utils";
+import { combineFeedbackComment, splitFeedbackComment } from "./feedbackUtils";
 
 interface FeedbackSystemProps {
     episodeId: string;
     traceId: number;
     initialScore: number;
+    initialComment?: string | null;
     onClose?: () => void;
 }
 
@@ -19,10 +21,11 @@ const FEEDBACK_TOPICS = [
     "Other"
 ];
 
-export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: FeedbackSystemProps) {
-    const [comment, setComment] = useState("");
+export function FeedbackSystem({ episodeId, traceId, initialScore, initialComment, onClose }: FeedbackSystemProps) {
+    const initialDraft = splitFeedbackComment(initialComment);
+    const [comment, setComment] = useState(initialDraft.comment);
     const [score, setScore] = useState(initialScore);
-    const [topic, setTopic] = useState<string | null>(null);
+    const [topic, setTopic] = useState<string | null>(initialDraft.topic);
     const [submitted, setSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: Fe
         setError(null);
         console.log("Submitting feedback for episode:", episodeId, "trace:", traceId, "score:", score);
         try {
-            const combinedComment = topic ? `[${topic}] ${comment}` : comment;
+            const combinedComment = combineFeedbackComment(topic, comment);
             await submitTraceFeedback(episodeId, traceId, score, combinedComment);
             console.log("Feedback submitted successfully");
             setSubmitted(true);
@@ -74,7 +77,14 @@ export function FeedbackSystem({ episodeId, traceId, initialScore, onClose }: Fe
                 className="bg-background border border-border shadow-2xl rounded-2xl p-6 max-w-lg w-full relative animate-in fade-in zoom-in-95 duration-200"
             >
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Agent Feedback</h2>
+                    <div className="space-y-1">
+                        <h2 className="text-lg font-bold text-foreground uppercase tracking-tight">Agent Feedback</h2>
+                        {initialComment !== undefined && initialComment !== null && initialComment.trim() !== "" && (
+                            <p className="text-[10px] text-muted-foreground">
+                                Editing saved feedback for this trace.
+                            </p>
+                        )}
+                    </div>
                     <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
                         <button
                             data-testid="modal-thumbs-up"

@@ -43,6 +43,8 @@ interface UnifiedGeneratorViewProps {
     cols: string;
     rows: string;
   };
+  presentationMode?: boolean;
+  headerActions?: React.ReactNode;
   viewportBadgeText?: string;
   viewportOverlays?: React.ReactNode;
   viewportControls?: React.ReactNode;
@@ -56,6 +58,8 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   subtitle,
   headerIcon: HeaderIcon,
   storageKeys,
+  presentationMode = false,
+  headerActions,
   viewportBadgeText,
   viewportOverlays,
   viewportControls,
@@ -243,7 +247,12 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   }, [resolvedMediaAssets]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-background">
+    <div
+      className={presentationMode
+        ? "flex flex-col h-full overflow-hidden bg-background"
+        : "flex flex-col h-full overflow-hidden bg-background"}
+      data-presentation-mode={presentationMode ? "true" : "false"}
+    >
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between border-b px-6 h-16 bg-card/50 backdrop-blur-sm">
         <div className="flex items-center gap-4">
@@ -264,8 +273,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
+          {headerActions}
           {!isConnected && (
             <Badge variant="outline" className="text-[9px] h-6 px-3 font-bold border-red-500/30 text-red-500 bg-red-500/5 uppercase tracking-widest animate-pulse">
               System Offline

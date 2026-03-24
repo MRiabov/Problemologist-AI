@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useEpisodes } from '../context/EpisodeContext';
 import { BrainCircuit, Box } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
 import UnifiedGeneratorView from '../components/workspace/UnifiedGeneratorView';
+import { useUISettings } from '../context/UISettingsContext';
 
 function formatMetadataValue(value: unknown, fallback: string): string {
   if (typeof value === 'string' || typeof value === 'number') {
@@ -16,12 +18,14 @@ function formatMetadataValue(value: unknown, fallback: string): string {
 
 export default function EngineerWorkspace() {
   const { selectedEpisode } = useEpisodes();
+  const { presentationMode, setPresentationMode } = useUISettings();
   const [resetTrigger, setResetTrigger] = useState(0);
   const metadata = selectedEpisode?.metadata_vars as
     | Record<string, unknown>
     | undefined;
   const cost = formatMetadataValue(metadata?.['cost'], '0.00');
   const weight = formatMetadataValue(metadata?.['weight'], '0');
+  const modeLabel = presentationMode ? 'Exit Demo Mode' : 'Enter Demo Mode';
 
   return (
     <UnifiedGeneratorView
@@ -32,6 +36,24 @@ export default function EngineerWorkspace() {
         cols: 'resizable-layout:workspace-cols',
         rows: 'resizable-layout:workspace-rows'
       }}
+      presentationMode={presentationMode}
+      headerActions={
+        <div className="flex items-center gap-2">
+          {presentationMode && (
+            <Badge variant="outline" className="text-[9px] h-6 px-3 font-black uppercase tracking-widest border-primary/30 text-primary bg-primary/5">
+              Demo Mode
+            </Badge>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest"
+            onClick={() => setPresentationMode(!presentationMode)}
+          >
+            {modeLabel}
+          </Button>
+        </div>
+      }
       viewportBadgeText="Live Viewport • Isolated"
       resetTrigger={resetTrigger}
       viewportOverlays={
