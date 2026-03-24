@@ -49,9 +49,9 @@ from shared.workers.schema import (
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
-REPO_MANUFACTURING_CONFIG = Path("config/manufacturing_config.yaml").read_text(
-    encoding="utf-8"
-)
+REPO_MANUFACTURING_CONFIG = Path(
+    "worker_heavy/workbenches/manufacturing_config.yaml"
+).read_text(encoding="utf-8")
 
 
 def _default_benchmark_parts():
@@ -349,6 +349,15 @@ async def _generate_ready_benchmark_session(
         if status_resp.status_code == 200:
             sess_data = EpisodeResponse.model_validate(status_resp.json())
             if sess_data.status == EpisodeStatus.PLANNED and not confirmed:
+                await client.post(
+                    f"{WORKER_LIGHT_URL}/fs/write",
+                    json=WriteFileRequest(
+                        path="manufacturing_config.yaml",
+                        content=REPO_MANUFACTURING_CONFIG,
+                        overwrite=True,
+                    ).model_dump(mode="json"),
+                    headers={"X-Session-ID": benchmark_session_id},
+                )
                 await client.post(
                     f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}/confirm",
                     json=ConfirmRequest(comment="Proceed").model_dump(),
@@ -1083,6 +1092,7 @@ async def test_int_011_planner_caps_enforcement(
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
             "benchmark_assembly_definition.yaml": invalid_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1526,6 +1536,7 @@ def build():
             "todo.md": valid_todo,
             "benchmark_definition.yaml": tight_objectives,
             "benchmark_assembly_definition.yaml": valid_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "script.py": expensive_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1603,6 +1614,7 @@ async def test_int_010_planner_pricing_script_integration(
             "todo.md": valid_todo,
             "benchmark_definition.yaml": valid_objectives,
             "benchmark_assembly_definition.yaml": invalid_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "solution.py": minimal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -2130,6 +2142,7 @@ def build():
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
             "benchmark_assembly_definition.yaml": valid_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)

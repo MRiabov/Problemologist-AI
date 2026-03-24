@@ -31,9 +31,9 @@ CONTROLLER_URL = "http://127.0.0.1:18000"
 WORKER_HEAVY_URL = "http://127.0.0.1:18002"
 WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 
-REPO_MANUFACTURING_CONFIG = Path("config/manufacturing_config.yaml").read_text(
-    encoding="utf-8"
-)
+REPO_MANUFACTURING_CONFIG = Path(
+    "worker_heavy/workbenches/manufacturing_config.yaml"
+).read_text(encoding="utf-8")
 
 
 @pytest.mark.integration_p1
