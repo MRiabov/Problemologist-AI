@@ -1,6 +1,7 @@
 import json
 import uuid
 from contextlib import suppress
+from pathlib import Path
 from typing import Literal
 
 import dspy
@@ -14,10 +15,12 @@ from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
+from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewResult
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
+from shared.workers.schema import RenderManifest
 
 from ..review_handover import validate_reviewer_handover
 from .base import BaseNode, SharedNodeContext
@@ -65,12 +68,46 @@ class ExecutionReviewerNode(BaseNode):
     Engineer Execution Reviewer node: Evaluates the implementation after simulation.
     """
 
+    async def _list_current_revision_render_paths(self) -> list[str]:
+        render_manifest_path = "renders/render_manifest.json"
+        if not await self.ctx.worker_client.exists(render_manifest_path):
+            return []
+
+        try:
+            manifest_raw = await self.ctx.worker_client.read_file(render_manifest_path)
+            render_manifest = RenderManifest.model_validate_json(manifest_raw)
+        except Exception:
+            return []
+
+        current_revision = repo_revision(Path(__file__).resolve().parents[2])
+        if not current_revision:
+            return []
+        if not render_manifest.revision:
+            return []
+        if render_manifest.revision.strip().lower() != current_revision.lower():
+            return []
+
+        preview_paths = [
+            path.lstrip("/")
+            for path in render_manifest.preview_evidence_paths
+            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+        if preview_paths:
+            return sorted(dict.fromkeys(preview_paths))
+
+        artifact_paths = [
+            path.lstrip("/")
+            for path in render_manifest.artifacts.keys()
+            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+        return sorted(dict.fromkeys(artifact_paths))
+
     async def _enforce_render_inspection_gate(
         self, review: ReviewResult
     ) -> ReviewResult:
         if review.decision != ReviewDecision.APPROVED:
             return review
-        render_paths = await self._list_render_media_paths()
+        render_paths = await self._list_current_revision_render_paths()
         if not render_paths:
             return review
         render_error = await validate_render_images_non_black(self.ctx.worker_client)

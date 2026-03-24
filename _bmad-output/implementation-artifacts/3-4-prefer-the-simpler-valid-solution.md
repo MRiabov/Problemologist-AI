@@ -92,6 +92,8 @@ GPT-5.4
 - Seeded benchmark reviewer preview renders at `renders/cad_preview.png` and `renders/simulation_preview.png` so `inspect_media()` can attach real media during benchmark plan review.
 - Aligned `tests/integration/architecture_p1/test_reviewer_evidence.py` with the benchmark review manifest contract and current-revision media inspection evidence for benchmark episodes.
 - Verified with `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_reviewer_evidence.py::test_benchmark_plan_reviewer_rejection_persists_latest_revision_evidence`.
+- Bound engineer execution reviewer render approval to the current revision's render manifest so unrelated images in `/renders` no longer satisfy the visual-evidence gate.
+- Re-ran the DOF regression slice after the render-manifest fix and kept the targeted integration tests green.
 
 ### Completion Notes List
 
