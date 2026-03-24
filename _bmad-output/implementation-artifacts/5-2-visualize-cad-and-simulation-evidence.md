@@ -164,3 +164,4 @@ GPT-5.4
 - 2026-03-24: Removed the frontend-side asset re-sort so the viewer follows controller asset ordering for latest-media binding.
 - 2026-03-24: Re-ran the targeted frontend browser slice after the latest review pass; INT-165, INT-166, INT-167, and INT-174 all passed.
 - 2026-03-24: Resolved latest-media episode binding in the workspace resolver, aligned the INT-167 benchmark caps, and re-ran the story slice plus INT-189 successfully.
+- 2026-03-24: Marked the story ready for review after confirming all tasks are complete and the QA slice passed.
