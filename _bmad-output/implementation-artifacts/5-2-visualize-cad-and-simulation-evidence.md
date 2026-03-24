@@ -101,6 +101,9 @@ GPT-5.4
 - `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_166.py::test_simulation_navigation_timeline --maxfail=1`
 - `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
 - `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence --maxfail=1`
 
 ### Completion Notes List
 
@@ -120,6 +123,10 @@ GPT-5.4
 - Aligned frontend artifact selection with controller-ordered episode assets so the viewer keeps the latest matching media authoritative without a second client-side sort.
 - Re-verified the browser slice and latest-media regression with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_int_174.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence`.
 - Re-verified the current story slice with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`, and the targeted frontend browser set passed.
+- Resolved latest-media episode binding in the workspace resolver so the viewport and artifact surface follow the latest media-bearing revision and keep proxy asset URLs anchored to the resolved episode.
+- Fixed the INT-167 benchmark mock fixture caps so the planner validation gate can complete and the live browser slice can reach proxy asset rendering.
+- Re-verified the story slice with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1` and confirmed `INT-165`, `INT-166`, `INT-167`, and `INT-174` all passed.
+- Re-verified the engineer solution-evidence path with `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence --maxfail=1`.
 
 ### File List
 
@@ -142,6 +149,10 @@ GPT-5.4
 - `tests/integration/mock_responses/INT-174/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml`
 - `tests/integration/mock_responses/INT-174/benchmark_planner/entry_01/04__benchmark_definition.yaml`
 - `tests/integration/mock_responses/INT-174/engineer_planner/entry_01/04__benchmark_definition.yaml`
+- `tests/integration/mock_responses/INT-167/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml`
+- `tests/integration/mock_responses/INT-167/engineer_planner/entry_01/03__assembly_definition.yaml`
+- `_bmad-output/implementation-artifacts/5-2-visualize-cad-and-simulation-evidence.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ## Change Log
 
@@ -152,3 +163,4 @@ GPT-5.4
 - 2026-03-24: Synced the INT-174 planner fixture budgets and re-ran the frontend browser slice; INT-165, INT-166, and INT-174 all passed.
 - 2026-03-24: Removed the frontend-side asset re-sort so the viewer follows controller asset ordering for latest-media binding.
 - 2026-03-24: Re-ran the targeted frontend browser slice after the latest review pass; INT-165, INT-166, INT-167, and INT-174 all passed.
+- 2026-03-24: Resolved latest-media episode binding in the workspace resolver, aligned the INT-167 benchmark caps, and re-ran the story slice plus INT-189 successfully.
