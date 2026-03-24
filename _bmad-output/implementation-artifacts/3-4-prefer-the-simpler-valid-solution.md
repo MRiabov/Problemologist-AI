@@ -1,6 +1,6 @@
 # Story 3.4: Prefer the Simpler Valid Solution
 
-Status: review
+Status: in-progress
 
 ## Story
 

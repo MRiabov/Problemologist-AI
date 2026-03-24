@@ -22,7 +22,7 @@ development_status:
   3-1-configure-real-cost-inputs: done
   3-2-evaluate-manufacturability-at-the-requested-quantity: done
   3-3-evaluate-weight-size-form-factor-and-cots: ready-for-dev
-  3-4-prefer-the-simpler-valid-solution: review
+  3-4-prefer-the-simpler-valid-solution: in-progress
   3-5-represent-allowed-attachment-and-drilling-points: in-progress
   epic-3-retrospective: optional
   epic-4: in-progress
