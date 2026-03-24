@@ -106,6 +106,18 @@ def _trace_blob(episode_payload: dict) -> str:
     return json.dumps(traces, sort_keys=True)
 
 
+def _service_debug_log_path(service: str) -> Path:
+    candidates = [
+        Path(f"logs/integration_tests/current/{service}_debug.log"),
+        Path(f"logs/integration_tests/{service}_debug.log"),
+        Path(f"logs/{service}_debug.log"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 def _slim_episode(episode: dict) -> dict:
     return {k: v for k, v in episode.items() if k != "traces"}
 
@@ -254,6 +266,14 @@ async def test_int_183_steerability_queue_single_consumption():
     steer_text = f"INT-183 steer text {uuid.uuid4().hex}"
     log_path = get_controller_log_path()
     start_offset = log_path.stat().st_size if log_path.exists() else 0
+    controller_debug_log = _service_debug_log_path("controller")
+    controller_debug_start_offset = (
+        controller_debug_log.stat().st_size if controller_debug_log.exists() else 0
+    )
+    worker_light_debug_log = _service_debug_log_path("worker_light")
+    worker_debug_start_offset = (
+        worker_light_debug_log.stat().st_size if worker_light_debug_log.exists() else 0
+    )
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id, episode_id = await run_agent_episode(
@@ -295,6 +315,22 @@ async def test_int_183_steerability_queue_single_consumption():
         "Expected consumed steering log to include the run session_id."
     )
     assert steer_text in log_segment, "Expected steer text in consumption log entry."
+
+    controller_debug_segment = strip_ansi(
+        read_log_segment(controller_debug_log, controller_debug_start_offset)
+    )
+    assert any(
+        "agent_role" in line and AgentName.ENGINEER_CODER.value in line
+        for line in controller_debug_segment.splitlines()
+    ), controller_debug_segment
+
+    worker_debug_segment = strip_ansi(
+        read_log_segment(worker_light_debug_log, worker_debug_start_offset)
+    )
+    assert any(
+        "agent_role" in line and AgentName.ENGINEER_CODER.value in line
+        for line in worker_debug_segment.splitlines()
+    ), worker_debug_segment
 
 
 @pytest.mark.integration_agent

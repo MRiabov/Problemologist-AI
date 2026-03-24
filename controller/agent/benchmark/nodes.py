@@ -1388,7 +1388,12 @@ class BenchmarkCoderNode(BaseNode):
             try:
                 async with httpx.AsyncClient() as http_client:
                     response = await http_client.get(
-                        url, headers={"X-Session-ID": session_id}
+                        url,
+                        headers={
+                            "X-Session-ID": session_id,
+                            "X-Agent-Role": AgentName.BENCHMARK_CODER.value,
+                            "X-Stage": AgentName.BENCHMARK_CODER.value,
+                        },
                     )
                     return response.content if response.status_code == 200 else None
             except Exception:

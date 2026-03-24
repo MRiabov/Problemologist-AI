@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import boto3
+import structlog
 from langchain_core.messages import HumanMessage
 
 from controller.agent.initialization import (
@@ -450,6 +451,12 @@ async def execute_agent_task(
     start_node: AgentName | None = None,
 ):
     session_factory = get_sessionmaker()
+    context_tokens = structlog.contextvars.bind_contextvars(
+        session_id=session_id,
+        episode_id=str(episode_id),
+        agent_role=agent_name.value,
+        stage=agent_name.value,
+    )
 
     try:
         async with session_factory() as db:
@@ -1247,6 +1254,7 @@ async def execute_agent_task(
                     )
 
     finally:
+        structlog.contextvars.reset_contextvars(**context_tokens)
         # Always remove task from tracker
         task_tracker.remove_task(episode_id)
 
@@ -1261,6 +1269,7 @@ async def continue_agent_task(
     Continue an existing agent task with a new user message.
     """
     session_factory = get_sessionmaker()
+    context_tokens: dict[str, Any] = {}
 
     try:
         async with session_factory() as db:
@@ -1308,6 +1317,13 @@ async def continue_agent_task(
                 if not session_id:
                     # Fallback
                     session_id = str(episode_id)
+
+                context_tokens = structlog.contextvars.bind_contextvars(
+                    session_id=session_id,
+                    episode_id=str(episode_id),
+                    agent_role=AgentName.ENGINEER_CODER.value,
+                    stage=AgentName.ENGINEER_CODER.value,
+                )
 
                 client = get_worker_client(session_id)
 
@@ -1572,4 +1588,6 @@ async def continue_agent_task(
                         },
                     )
     finally:
+        if context_tokens:
+            structlog.contextvars.reset_contextvars(**context_tokens)
         pass

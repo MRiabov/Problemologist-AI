@@ -25,11 +25,18 @@ AGENT_NAME_ENV = "AGENT_NAME"
 def _call_heavy_worker(endpoint: str, payload: dict | BaseModel) -> dict:
     heavy_url = os.getenv("WORKER_HEAVY_URL", "http://worker-heavy:8002")
     session_id = os.getenv("SESSION_ID", "default")
+    json_payload = payload.model_dump() if isinstance(payload, BaseModel) else payload
+    agent_role = str(json_payload.get("agent_role") or _script_agent_role())
+    stage = str(json_payload.get("reviewer_stage") or agent_role)
 
     url = f"{heavy_url.rstrip('/')}/{endpoint.lstrip('/')}"
-    headers = {"X-Session-ID": session_id}
-
-    json_payload = payload.model_dump() if isinstance(payload, BaseModel) else payload
+    headers = {
+        "X-Session-ID": session_id,
+        "X-Agent-Role": agent_role,
+        "X-Stage": stage,
+    }
+    if json_payload.get("reviewer_stage") is not None:
+        headers["X-Reviewer-Stage"] = str(json_payload["reviewer_stage"])
 
     try:
         with httpx.Client(timeout=300.0) as client:
@@ -57,8 +64,16 @@ def _call_controller_script_tool(action: str, payload: dict[str, Any]) -> dict |
     if not controller_url:
         return None
     session_id = os.getenv("SESSION_ID", "default")
+    agent_role = str(payload.get("agent_role") or _script_agent_role())
+    stage = str(payload.get("reviewer_stage") or agent_role)
     url = f"{controller_url}/api/script-tools/{action.lstrip('/')}"
-    headers = {"X-Session-ID": session_id}
+    headers = {
+        "X-Session-ID": session_id,
+        "X-Agent-Role": agent_role,
+        "X-Stage": stage,
+    }
+    if payload.get("reviewer_stage") is not None:
+        headers["X-Reviewer-Stage"] = str(payload["reviewer_stage"])
     try:
         with httpx.Client(timeout=1000.0) as client:
             resp = client.post(url, json=payload, headers=headers)

@@ -58,15 +58,28 @@ class WorkerClient:
         self.agent_role = (
             agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
         )
-        self.headers = {"X-Session-ID": session_id}
+        self.headers = {
+            "X-Session-ID": session_id,
+            "X-Agent-Role": self.agent_role,
+            "X-Stage": self.agent_role,
+        }
         self.http_client = http_client
         self._loop_clients: dict[int, httpx.AsyncClient] = {}
         self._loop_locks: dict[int, asyncio.Lock] = {}
 
     def _request_headers(
-        self, *, bypass_agent_permissions: bool = False
+        self,
+        *,
+        bypass_agent_permissions: bool = False,
+        stage: str | None = None,
+        reviewer_stage: ReviewerStage | None = None,
     ) -> dict[str, str]:
         headers = dict(self.headers)
+        if stage:
+            headers["X-Stage"] = stage
+        if reviewer_stage:
+            headers["X-Reviewer-Stage"] = reviewer_stage
+            headers["X-Stage"] = reviewer_stage
         if bypass_agent_permissions:
             headers["X-System-FS-Bypass"] = "1"
         return headers
@@ -121,7 +134,7 @@ class WorkerClient:
         return role_to_stage.get(role_value)
 
     async def _call_controller_script_tool(
-        self, action: str, payload: dict[str, Any]
+        self, action: str, payload: dict[str, Any], *, stage: str | None = None
     ) -> BenchmarkToolResponse | None:
         if not self.controller_url:
             return None
@@ -129,7 +142,7 @@ class WorkerClient:
         response = await client.post(
             f"{self.controller_url}/api/script-tools/{action.lstrip('/')}",
             json=payload,
-            headers=self.headers,
+            headers=self._request_headers(stage=stage),
             timeout=1000.0,
         )
         response.raise_for_status()
@@ -449,7 +462,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.heavy_url}/benchmark/preview",
                 json=payload,
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=30.0,
             )
             response.raise_for_status()
@@ -503,7 +516,7 @@ class WorkerClient:
                     "timeout": timeout,
                     "episode_id": episode_id,
                 },
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=http_timeout,
             )
             response.raise_for_status()
@@ -535,7 +548,9 @@ class WorkerClient:
                 raise NotImplementedError(
                     "controller script-tools proxy does not accept script_content"
                 )
-            parsed = await self._call_controller_script_tool("simulate", payload)
+            parsed = await self._call_controller_script_tool(
+                "simulate", payload, stage=self.agent_role
+            )
             if parsed is None:
                 raise RuntimeError("controller script-tools proxy unavailable")
             await self._sync_handover_artifacts_to_light(parsed)
@@ -554,7 +569,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.heavy_url}/benchmark/simulate",
                 json=payload,
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=1000.0,
             )
             response.raise_for_status()
@@ -590,7 +605,9 @@ class WorkerClient:
                 raise NotImplementedError(
                     "controller script-tools proxy does not accept script_content"
                 )
-            parsed = await self._call_controller_script_tool("validate", payload)
+            parsed = await self._call_controller_script_tool(
+                "validate", payload, stage=self.agent_role
+            )
             if parsed is None:
                 raise RuntimeError("controller script-tools proxy unavailable")
             await self._sync_handover_artifacts_to_light(parsed)
@@ -607,7 +624,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.heavy_url}/benchmark/validate",
                 json=payload,
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=60.0,
             )
             response.raise_for_status()
@@ -652,7 +669,9 @@ class WorkerClient:
             )
 
         if self.controller_url:
-            parsed = await self._call_controller_script_tool("verify", payload)
+            parsed = await self._call_controller_script_tool(
+                "verify", payload, stage=self.agent_role
+            )
             if parsed is None:
                 raise RuntimeError("controller script-tools proxy unavailable")
             await self._sync_handover_artifacts_to_light(parsed)
@@ -680,7 +699,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.heavy_url}/benchmark/verify",
                 json=direct_payload,
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=1000.0,
             )
             response.raise_for_status()
@@ -713,7 +732,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.heavy_url}/benchmark/analyze",
                 json=payload,
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=60.0,
             )
             response.raise_for_status()
@@ -741,7 +760,9 @@ class WorkerClient:
                 raise NotImplementedError(
                     "controller script-tools proxy does not accept script_content"
                 )
-            parsed = await self._call_controller_script_tool("submit", payload)
+            parsed = await self._call_controller_script_tool(
+                "submit", payload, stage=effective_stage or self.agent_role
+            )
             if parsed is None:
                 raise RuntimeError("controller script-tools proxy unavailable")
             await self._sync_handover_artifacts_to_light(parsed)
@@ -760,7 +781,10 @@ class WorkerClient:
             response = await client.post(
                 f"{self.heavy_url}/benchmark/submit",
                 json=payload,
-                headers=self.headers,
+                headers=self._request_headers(
+                    stage=effective_stage or self.agent_role,
+                    reviewer_stage=effective_stage,
+                ),
                 timeout=60.0,
             )
             response.raise_for_status()
@@ -786,7 +810,7 @@ class WorkerClient:
         try:
             response = await client.post(
                 f"{self.base_url}/git/init",
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -801,7 +825,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.base_url}/git/commit",
                 json={"message": message},
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=30.0,
             )
             response.raise_for_status()
@@ -815,7 +839,7 @@ class WorkerClient:
         try:
             response = await client.get(
                 f"{self.base_url}/git/status",
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -832,7 +856,7 @@ class WorkerClient:
             response = await client.post(
                 f"{self.base_url}/git/resolve",
                 json={"file_path": file_path, "strategy": strategy},
-                headers=self.headers,
+                headers=self._request_headers(stage=self.agent_role),
                 timeout=10.0,
             )
             response.raise_for_status()

@@ -143,6 +143,48 @@ def _compact_json(value: Any, *, limit: int = 280) -> str:
     return _normalize_text(text, limit=limit)
 
 
+def _format_item_event(event_type: str, item: dict[str, Any]) -> str | None:
+    item_type = _normalize_text(item.get("type"), limit=60)
+    item_id = _normalize_text(item.get("id"), limit=48)
+    if not item_type and not item_id:
+        return None
+
+    parts: list[str] = []
+    if item_type:
+        parts.append(item_type)
+    if item_id:
+        parts.append(item_id)
+
+    if event_type == "item.started":
+        command = _normalize_text(item.get("command"), limit=180)
+        if command:
+            parts.append(f"cmd={command}")
+        aggregated_output = _normalize_text(item.get("aggregated_output"), limit=180)
+        if aggregated_output:
+            parts.append(f"output={aggregated_output}")
+        status = _normalize_text(item.get("status"), limit=32)
+        if status:
+            parts.append(f"status={status}")
+        return "ITEM_START " + " ".join(parts)
+
+    if event_type == "item.completed":
+        text = _normalize_text(
+            item.get("text") or item.get("message") or item.get("output"),
+            limit=240,
+        )
+        if text:
+            parts.append(f"text={text}")
+        exit_code = item.get("exit_code")
+        if exit_code is not None:
+            parts.append(f"exit_code={exit_code}")
+        status = _normalize_text(item.get("status"), limit=32)
+        if status:
+            parts.append(f"status={status}")
+        return "ITEM_COMPLETE " + " ".join(parts)
+
+    return None
+
+
 def _sha256_text(content: str) -> str:
     return sha256(content.encode("utf-8")).hexdigest()
 
@@ -336,6 +378,14 @@ def _format_session_line(
 ) -> str | None:
     record_type = record.get("type")
     payload = record.get("payload")
+
+    if record_type in {"item.started", "item.completed"}:
+        item = record.get("item")
+        if isinstance(item, dict):
+            return _format_item_event(str(record_type), item)
+        if isinstance(payload, dict):
+            return _format_item_event(str(record_type), payload)
+        return None
 
     if record_type == "session_meta" and isinstance(payload, dict):
         transcript_stats.session_meta_count += 1

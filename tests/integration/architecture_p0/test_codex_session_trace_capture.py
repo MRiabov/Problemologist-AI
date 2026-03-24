@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -27,6 +28,87 @@ def _write_session_copy(
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(text, encoding="utf-8")
     return destination
+
+
+@pytest.mark.integration_p0
+def test_codex_session_trace_renders_item_events_readably(tmp_path: Path) -> None:
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+
+    session_file = (
+        tmp_path
+        / ".codex"
+        / "sessions"
+        / "2026"
+        / "03"
+        / "22"
+        / "rollout-item-events.jsonl"
+    )
+    session_file.parent.mkdir(parents=True, exist_ok=True)
+    records = [
+        {
+            "timestamp": "2026-03-22T10:00:00.000Z",
+            "type": "session_meta",
+            "payload": {
+                "id": "019d0000-0000-7000-9000-000000000010",
+                "cwd": workspace_dir.as_posix(),
+            },
+        },
+        {
+            "timestamp": "2026-03-22T10:00:00.100Z",
+            "type": "item.started",
+            "item": {
+                "id": "item_15",
+                "type": "command_execution",
+                "command": "/bin/bash -lc \"sed -n '1,220p' specs/architecture/CAD-and-other-infra.md\"",
+                "aggregated_output": "",
+                "status": "in_progress",
+            },
+        },
+        {
+            "timestamp": "2026-03-22T10:00:00.200Z",
+            "type": "item.completed",
+            "item": {
+                "id": "item_15",
+                "type": "command_execution",
+                "exit_code": 0,
+                "status": "completed",
+            },
+        },
+        {
+            "timestamp": "2026-03-22T10:00:00.300Z",
+            "type": "item.completed",
+            "item": {
+                "id": "item_16",
+                "type": "agent_message",
+                "text": "The initial diff slice is misleadingly quiet for the visualization files.",
+            },
+        },
+    ]
+    session_file.write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n",
+        encoding="utf-8",
+    )
+
+    artifact = render_codex_session_artifacts(
+        session_file=session_file,
+        workspace_dir=workspace_dir,
+        artifact_root=tmp_path / "artifacts" / "codex",
+        baseline_snapshot=snapshot_workspace_state(workspace_dir=workspace_dir),
+    )
+
+    transcript = artifact.transcript_path.read_text(encoding="utf-8")
+    assert "ITEM_START command_execution item_15" in transcript
+    assert "cmd=/bin/bash -lc" in transcript
+    assert (
+        "ITEM_COMPLETE command_execution item_15 exit_code=0 status=completed"
+        in transcript
+    )
+    assert (
+        "ITEM_COMPLETE agent_message item_16 text=The initial diff slice is misleadingly quiet for the visualization files."
+        in transcript
+    )
+    assert '{"timestamp":"2026-03-22T10:00:00.100Z"' not in transcript
 
 
 @pytest.mark.integration_p0

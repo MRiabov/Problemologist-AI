@@ -4,10 +4,13 @@ import os
 import re
 import sys
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 
 import structlog
 from structlog.types import Processor
+
+from shared.enums import AgentName
 
 _SESSION_KEY_INT_RE = re.compile(r"(INT-\d{3})", re.IGNORECASE)
 _SESSION_KEY_EVAL_RE = re.compile(r"\b([a-z]{1,12}-\d{3})\b", re.IGNORECASE)
@@ -77,6 +80,40 @@ def _append_session_fanout_line(
         error_target = session_dir / f"{safe_service}_errors.log"
         with error_target.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
+
+
+def _normalize_context_value(value):
+    if value is None:
+        return None
+    if isinstance(value, AgentName):
+        return value.value
+    if hasattr(value, "value") and isinstance(getattr(value, "value"), str):
+        return value.value
+    return str(value)
+
+
+@contextmanager
+def bind_log_context(**context):
+    """
+    Temporarily bind structlog contextvars for the current execution scope.
+
+    Use this for per-request or per-task metadata such as session_id, agent_role,
+    and stage so downstream structlog events inherit the same identifiers.
+    """
+    normalized = {
+        key: _normalize_context_value(value)
+        for key, value in context.items()
+        if value is not None
+    }
+    if not normalized:
+        yield
+        return
+
+    tokens = structlog.contextvars.bind_contextvars(**normalized)
+    try:
+        yield
+    finally:
+        structlog.contextvars.reset_contextvars(**tokens)
 
 
 def configure_logging(service_name: str):
@@ -276,20 +313,31 @@ def log_marker_middleware():
             # Extract markers
             session_id = request.headers.get("X-Session-ID")
             test_id = request.headers.get("X-Integration-Test-ID")
+            agent_role = (
+                request.headers.get("X-Agent-Role")
+                or request.headers.get("X-Stage")
+                or request.headers.get("X-Reviewer-Stage")
+            )
+            stage = (
+                request.headers.get("X-Stage")
+                or request.headers.get("X-Reviewer-Stage")
+                or agent_role
+            )
             query_marker = request.query_params.get("marker")
 
-            # Clear context and bind new markers
+            # Clear context and bind new markers for the lifetime of this request.
             structlog.contextvars.clear_contextvars()
-            if session_id:
-                structlog.contextvars.bind_contextvars(session_id=session_id)
-            if test_id:
-                structlog.contextvars.bind_contextvars(test_id=test_id)
+            with bind_log_context(
+                session_id=session_id,
+                test_id=test_id,
+                agent_role=agent_role,
+                stage=stage,
+            ):
+                if query_marker:
+                    # Log a prominent marker if requested via query param
+                    logger = structlog.get_logger("marker")
+                    logger.info(f"\n\n{'=' * 20} {query_marker} {'=' * 20}\n")
 
-            if query_marker:
-                # Log a prominent marker if requested via query param
-                logger = structlog.get_logger("marker")
-                logger.info(f"\n\n{'=' * 20} {query_marker} {'=' * 20}\n")
-
-            return await call_next(request)
+                return await call_next(request)
 
     return LogMarkerMiddleware

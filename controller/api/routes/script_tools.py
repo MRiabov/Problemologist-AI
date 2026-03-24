@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 
 import httpx
 from fastapi import APIRouter, Header, Request
@@ -11,6 +11,7 @@ from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
 from shared.enums import AgentName
+from shared.logging import bind_log_context
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -59,6 +60,18 @@ async def _controller_script_middleware(
         yield middleware
 
 
+@contextmanager
+def _script_log_context(payload: ScriptToolRequest, session_id: str):
+    stage = payload.reviewer_stage or payload.agent_role.value
+    with bind_log_context(
+        session_id=session_id,
+        episode_id=payload.episode_id or session_id,
+        agent_role=payload.agent_role.value,
+        stage=stage,
+    ):
+        yield
+
+
 async def _retry_busy(callable_):
     delay = 1.5
     max_attempts = 10
@@ -78,38 +91,39 @@ async def validate_script(
     payload: ScriptToolRequest,
     x_session_id: str = Header(...),
 ):
-    async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request, payload.episode_id
-    ) as middleware:
-        result = await middleware.validate(payload.script_path)
-        if isinstance(result, BenchmarkToolResponse):
-            await middleware.client._sync_handover_artifacts_to_light(result)
-            return result
-        if not await middleware.client.exists(payload.script_path):
-            raise FileNotFoundError(
-                f"script missing while materializing validation record: {payload.script_path}"
-            )
-        script_content = await middleware.client.read_file(payload.script_path)
-        script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+    with _script_log_context(payload, x_session_id):
+        async with _controller_script_middleware(
+            x_session_id, payload.agent_role, request, payload.episode_id
+        ) as middleware:
+            result = await middleware.validate(payload.script_path)
+            if isinstance(result, BenchmarkToolResponse):
+                await middleware.client._sync_handover_artifacts_to_light(result)
+                return result
+            if not await middleware.client.exists(payload.script_path):
+                raise FileNotFoundError(
+                    f"script missing while materializing validation record: {payload.script_path}"
+                )
+            script_content = await middleware.client.read_file(payload.script_path)
+            script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
 
-        validation_record = ValidationResultRecord(
-            success=result.success,
-            message=result.message,
-            timestamp=time.time(),
-            script_path=payload.script_path,
-            script_sha256=script_sha256,
-            verification_result=None,
-        )
-        response = BenchmarkToolResponse(
-            success=result.success,
-            message=result.message or "Validation completed",
-            confidence="high",
-            artifacts=SimulationArtifacts(
-                validation_results_json=validation_record.model_dump_json(indent=2),
-            ),
-        )
-        await middleware.client._sync_handover_artifacts_to_light(response)
-        return response
+            validation_record = ValidationResultRecord(
+                success=result.success,
+                message=result.message,
+                timestamp=time.time(),
+                script_path=payload.script_path,
+                script_sha256=script_sha256,
+                verification_result=None,
+            )
+            response = BenchmarkToolResponse(
+                success=result.success,
+                message=result.message or "Validation completed",
+                confidence="high",
+                artifacts=SimulationArtifacts(
+                    validation_results_json=validation_record.model_dump_json(indent=2),
+                ),
+            )
+            await middleware.client._sync_handover_artifacts_to_light(response)
+            return response
 
 
 @router.post("/simulate", response_model=BenchmarkToolResponse)
@@ -118,30 +132,31 @@ async def simulate_script(
     payload: ScriptToolRequest,
     x_session_id: str = Header(...),
 ):
-    async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request, payload.episode_id
-    ) as middleware:
-        result = await middleware.simulate(
-            payload.script_path,
-            backend=payload.backend,
-            smoke_test_mode=payload.smoke_test_mode,
-        )
-        if isinstance(result, BenchmarkToolResponse):
-            await middleware.client._sync_handover_artifacts_to_light(result)
-            return result
-        response = BenchmarkToolResponse(
-            success=result.success,
-            message=result.summary,
-            confidence=getattr(result, "confidence", "high"),
-            artifacts=SimulationArtifacts(
-                render_paths=list(getattr(result, "render_paths", [])),
-                simulation_result_json=result.model_dump_json(),
-                total_cost=getattr(result, "total_cost", None),
-                total_weight_g=getattr(result, "total_weight_g", None),
-            ),
-        )
-        await middleware.client._sync_handover_artifacts_to_light(response)
-        return response
+    with _script_log_context(payload, x_session_id):
+        async with _controller_script_middleware(
+            x_session_id, payload.agent_role, request, payload.episode_id
+        ) as middleware:
+            result = await middleware.simulate(
+                payload.script_path,
+                backend=payload.backend,
+                smoke_test_mode=payload.smoke_test_mode,
+            )
+            if isinstance(result, BenchmarkToolResponse):
+                await middleware.client._sync_handover_artifacts_to_light(result)
+                return result
+            response = BenchmarkToolResponse(
+                success=result.success,
+                message=result.summary,
+                confidence=getattr(result, "confidence", "high"),
+                artifacts=SimulationArtifacts(
+                    render_paths=list(getattr(result, "render_paths", [])),
+                    simulation_result_json=result.model_dump_json(),
+                    total_cost=getattr(result, "total_cost", None),
+                    total_weight_g=getattr(result, "total_weight_g", None),
+                ),
+            )
+            await middleware.client._sync_handover_artifacts_to_light(response)
+            return response
 
 
 @router.post("/verify", response_model=BenchmarkToolResponse)
@@ -150,31 +165,32 @@ async def verify_script(
     payload: ScriptToolRequest,
     x_session_id: str = Header(...),
 ):
-    async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request, payload.episode_id
-    ) as middleware:
-        result = await _retry_busy(
-            lambda: middleware.verify(
-                payload.script_path,
-                backend=payload.backend,
-                smoke_test_mode=payload.smoke_test_mode,
-                jitter_range=payload.jitter_range,
-                num_scenes=payload.num_scenes,
-                duration=payload.duration,
-                seed=payload.seed,
+    with _script_log_context(payload, x_session_id):
+        async with _controller_script_middleware(
+            x_session_id, payload.agent_role, request, payload.episode_id
+        ) as middleware:
+            result = await _retry_busy(
+                lambda: middleware.verify(
+                    payload.script_path,
+                    backend=payload.backend,
+                    smoke_test_mode=payload.smoke_test_mode,
+                    jitter_range=payload.jitter_range,
+                    num_scenes=payload.num_scenes,
+                    duration=payload.duration,
+                    seed=payload.seed,
+                )
             )
-        )
-        if isinstance(result, BenchmarkToolResponse):
-            await middleware.client._sync_handover_artifacts_to_light(result)
-            return result
-        response = BenchmarkToolResponse(
-            success=result.success,
-            message=result.message,
-            confidence=getattr(result, "confidence", "high"),
-            artifacts=getattr(result, "artifacts", None),
-        )
-        await middleware.client._sync_handover_artifacts_to_light(response)
-        return response
+            if isinstance(result, BenchmarkToolResponse):
+                await middleware.client._sync_handover_artifacts_to_light(result)
+                return result
+            response = BenchmarkToolResponse(
+                success=result.success,
+                message=result.message,
+                confidence=getattr(result, "confidence", "high"),
+                artifacts=getattr(result, "artifacts", None),
+            )
+            await middleware.client._sync_handover_artifacts_to_light(response)
+            return response
 
 
 @router.post("/submit", response_model=BenchmarkToolResponse)
@@ -183,22 +199,23 @@ async def submit_script(
     payload: ScriptToolRequest,
     x_session_id: str = Header(...),
 ):
-    async with _controller_script_middleware(
-        x_session_id, payload.agent_role, request, payload.episode_id
-    ) as middleware:
-        result = await _retry_busy(
-            lambda: middleware.submit(
-                payload.script_path, reviewer_stage=payload.reviewer_stage
+    with _script_log_context(payload, x_session_id):
+        async with _controller_script_middleware(
+            x_session_id, payload.agent_role, request, payload.episode_id
+        ) as middleware:
+            result = await _retry_busy(
+                lambda: middleware.submit(
+                    payload.script_path, reviewer_stage=payload.reviewer_stage
+                )
             )
-        )
-        if isinstance(result, BenchmarkToolResponse):
-            await middleware.client._sync_handover_artifacts_to_light(result)
-            return result
-        response = BenchmarkToolResponse(
-            success=result.success,
-            message=result.message or "Submission completed",
-            confidence=getattr(result, "confidence", "high"),
-            artifacts=getattr(result, "artifacts", None),
-        )
-        await middleware.client._sync_handover_artifacts_to_light(response)
-        return response
+            if isinstance(result, BenchmarkToolResponse):
+                await middleware.client._sync_handover_artifacts_to_light(result)
+                return result
+            response = BenchmarkToolResponse(
+                success=result.success,
+                message=result.message or "Submission completed",
+                confidence=getattr(result, "confidence", "high"),
+                artifacts=getattr(result, "artifacts", None),
+            )
+            await middleware.client._sync_handover_artifacts_to_light(response)
+            return response

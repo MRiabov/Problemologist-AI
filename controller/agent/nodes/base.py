@@ -80,6 +80,13 @@ class SharedNodeContext:
         # Fallback for episode_id if not provided
         eid = episode_id or session_id
 
+        structlog.contextvars.bind_contextvars(
+            session_id=session_id,
+            episode_id=eid,
+            agent_role=agent_role.value,
+            stage=agent_role.value,
+        )
+
         if not worker_client:
             worker_client = WorkerClient(
                 base_url=worker_light_url,
