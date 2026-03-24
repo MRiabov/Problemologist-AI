@@ -1,6 +1,6 @@
 # Story 5.1: Inspect Session History and Run Timeline
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -95,6 +95,7 @@ GPT-5.4
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py -k test_int_157_session_history`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_178.py`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py tests/integration/frontend/p1/test_int_178.py`
 - Prior validation from this work session also covered `tests/integration/frontend/p1/test_int_160.py` with a skip when the live backend did not persist reasoning traces.
 
 ### Completion Notes List
@@ -102,7 +103,7 @@ GPT-5.4
 - Added persisted session-history metadata to the sidebar: raw status, detailed status, episode phase, terminal reason, failure class, and a derived progress indicator.
 - Kept the run summary and reasoning surfaces aligned with persisted metadata and trace-driven rendering.
 - Extended live-browser coverage for session history, terminal metadata, context usage telemetry, and reload continuity.
-- The broader combined frontend integration sweep still encounters a pre-existing backend validation failure in `INT-159`; the story-specific slices listed above passed.
+- Tightened the `INT-178` demo-mode assertion to use an exact text match so the reload continuity check targets the status badge instead of colliding with the exit button.
 
 ### File List
 

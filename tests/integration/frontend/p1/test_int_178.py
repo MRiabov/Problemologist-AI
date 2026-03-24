@@ -99,7 +99,7 @@ def test_int_178_session_restore_continuity(page: Page):
     # 7. Switch into demo/presentation mode and verify the preference survives reload.
     demo_button = page.get_by_role("button", name="Enter Demo Mode")
     demo_button.click()
-    expect(page.get_by_text("Demo Mode")).to_be_visible(timeout=15000)
+    expect(page.get_by_text("Demo Mode", exact=True)).to_be_visible(timeout=15000)
 
     page.reload()
     page.wait_for_load_state("networkidle")
@@ -122,4 +122,4 @@ def test_int_178_session_restore_continuity(page: Page):
     expect(page.get_by_role("button", name="Exit Demo Mode")).to_be_visible(
         timeout=15000
     )
-    expect(page.get_by_text("Demo Mode")).to_be_visible(timeout=15000)
+    expect(page.get_by_text("Demo Mode", exact=True)).to_be_visible(timeout=15000)
