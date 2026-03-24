@@ -111,6 +111,7 @@ GPT-5.4
 
 ### Completion Notes List
 
+- Re-verified the story slice with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence --maxfail=1`; all five checks passed.
 - Resolved latest-media selection in the frontend bundle resolver so the viewport uses the newest model, video, and heatmap assets from controller-sorted episode assets.
 - Kept the 3D viewer mounted across mode switches so video playback does not discard the loaded model or topology state.
 - Added stable `data-testid` hooks for the DesignViewer mode toggles and updated the live-browser regression to use them.
@@ -176,3 +177,4 @@ GPT-5.4
 - 2026-03-24: Resolved latest-media episode binding in the workspace resolver, aligned the INT-167 benchmark caps, and re-ran the story slice plus INT-189 successfully.
 - 2026-03-24: Marked the story ready for review after confirming all tasks are complete and the QA slice passed.
 - 2026-03-24: Extended the INT-174 wait timeout to 180s and re-ran the full frontend browser slice; INT-165, INT-166, INT-167, and INT-174 all passed.
+- 2026-03-24: Re-ran the full frontend browser slice with INT-165, INT-166, INT-167, INT-174, and INT-189; all five checks passed.
