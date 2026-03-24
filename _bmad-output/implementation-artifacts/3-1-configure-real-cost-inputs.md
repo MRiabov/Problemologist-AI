@@ -81,6 +81,7 @@ GPT-5
 
 - `2026-03-23`: Implemented fail-closed manufacturing-config provenance plumbing across planner validation, `submit_plan()`, seeded handoff validation, and planner prompt/config permissions. Verified the INT-005 planner trace slice after re-enabling tests.
 - `2026-03-24`: Repaired planner-gate and manufacturing provenance integration fixtures to include the workspace pricing source where the tightened gate now expects it, then verified the cost-related INT-010/018/019 planner slice and the COTS provenance/manufacturing-config INT-033/035 slice through the integration runner.
+- `2026-03-24`: Re-ran the cost/provenance integration slices in the repo integration harness: `tests/integration/architecture_p0/test_planner_gates.py` cost slice (`INT-010`, `INT-018`, `INT-019`) and `tests/integration/architecture_p1/test_manufacturing.py` provenance slice (`INT-033`, `INT-035`); both passed.
 
 ### Completion Notes List
 
