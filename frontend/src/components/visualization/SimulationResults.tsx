@@ -6,9 +6,15 @@ import {
   CheckCircle2, 
   Thermometer, 
   Droplets,
-  Activity
+  Activity,
+  CircleAlert
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import type { MultiRunResult } from "../../api/generated/models/MultiRunResult";
+import {
+  formatStabilitySummaryLines,
+  summarizeVerificationResult,
+} from "../workspace/stabilitySummary";
 
 // Types from backend SimulationResult
 export interface StressSummary {
@@ -33,6 +39,7 @@ interface SimulationResultsProps {
   fluidMetrics?: FluidMetricResult[];
   summary?: string | null;
   renderPaths?: string[];
+  verificationResult?: MultiRunResult | null;
   className?: string;
 }
 
@@ -41,11 +48,18 @@ export const SimulationResults: React.FC<SimulationResultsProps> = ({
   fluidMetrics = [],
   summary = null,
   renderPaths = [],
+  verificationResult = null,
   className
 }) => {
   const hasOverviewEvidence = !!summary || renderPaths.length > 0;
+  const stabilitySummary = summarizeVerificationResult(verificationResult);
 
-  if (stressSummaries.length === 0 && fluidMetrics.length === 0 && !hasOverviewEvidence) {
+  if (
+    stressSummaries.length === 0 &&
+    fluidMetrics.length === 0 &&
+    !hasOverviewEvidence &&
+    !stabilitySummary
+  ) {
     return (
       <div data-testid="simulation-results-empty" className={cn("p-8 text-center text-muted-foreground italic", className)}>
         No simulation data available.
@@ -91,6 +105,78 @@ export const SimulationResults: React.FC<SimulationResultsProps> = ({
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {stabilitySummary && (
+        <div data-testid="verification-summary-panel">
+          <Card
+            data-testid="simulation-verification-card"
+            className="bg-card/50 backdrop-blur-sm border-border/50"
+          >
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+              <CircleAlert className="h-4 w-4 text-primary" />
+              Runtime Jitter Verification
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-[11px]">
+              {formatStabilitySummaryLines(stabilitySummary).map((line) => (
+                <div
+                  key={line}
+                  className="rounded-md border border-border/40 bg-muted/20 px-3 py-2 text-muted-foreground"
+                >
+                  {line}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-2 text-[11px] font-mono">
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2">
+                <span className="uppercase tracking-widest text-muted-foreground">Scene build count</span>
+                <span>{stabilitySummary.sceneBuildCount}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border/40 bg-muted/10 px-3 py-2">
+                <span className="uppercase tracking-widest text-muted-foreground">Backend run count</span>
+                <span>{stabilitySummary.backendRunCount}</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {stabilitySummary.sceneSummaries.map((scene) => (
+                <div
+                  key={scene.sceneIndex}
+                  data-testid={`simulation-verification-scene-${scene.sceneIndex}`}
+                  className="rounded-md border border-border/40 bg-background/70 px-3 py-2 text-[11px] font-mono"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold uppercase tracking-widest">
+                      Scene {scene.sceneIndex}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[9px] font-black uppercase tracking-widest h-5 px-2",
+                        scene.success
+                          ? "border-emerald-500/40 text-emerald-600 bg-emerald-500/5"
+                          : "border-red-500/40 text-red-500 bg-red-500/5",
+                      )}
+                    >
+                      {scene.success ? "Pass" : "Fail"}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 text-muted-foreground whitespace-pre-wrap">
+                    {scene.summary}
+                  </div>
+                  {!scene.success && scene.failReason && (
+                    <div className="mt-1 text-red-400">
+                      Reason: {scene.failReason}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Stress Summaries */}

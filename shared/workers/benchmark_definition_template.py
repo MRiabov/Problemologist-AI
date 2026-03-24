@@ -44,7 +44,7 @@ benchmark_parts:
     label: "environment_fixture"
     metadata:
       fixed: true
-      material_id: "aluminum_6061"
+      material_id: "aluminum-6061"
   # Every benchmark part must have a unique `part_id` and a unique `label`.
   # Authored top-level build123d part labels must also be unique and must not
   # use the reserved `environment` label or the reserved `zone_` namespace,

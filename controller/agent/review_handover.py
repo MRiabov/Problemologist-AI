@@ -305,6 +305,20 @@ async def collect_plan_reviewer_handover_evidence(
             return None, f"review manifest evidence missing: {rel_path}"
         artifacts[rel_path] = await worker_client.read_file(rel_path)
 
+    benchmark_definition = None
+    benchmark_definition_text = artifacts.get("benchmark_definition.yaml")
+    if benchmark_definition_text:
+        try:
+            is_valid, benchmark_result = validate_benchmark_definition_yaml(
+                benchmark_definition_text,
+                session_id=worker_client.session_id,
+            )
+            if not is_valid:
+                return None, "; ".join(benchmark_result)
+            benchmark_definition = benchmark_result
+        except Exception as exc:
+            return None, f"benchmark_definition.yaml invalid: {exc}"
+
     render_paths: list[str] = []
     render_timeout_seconds = 10.0
     render_poll_interval_seconds = 0.5
@@ -329,6 +343,7 @@ async def collect_plan_reviewer_handover_evidence(
 
     evidence = build_benchmark_plan_reviewer_evidence(
         artifacts=artifacts,
+        benchmark_definition=benchmark_definition,
         session_id=worker_client.session_id,
         render_paths=render_paths,
         review_manifest_path=manifest_path,

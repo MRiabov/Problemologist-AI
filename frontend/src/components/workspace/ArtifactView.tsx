@@ -45,6 +45,9 @@ import {
     isImageAsset,
     isVideoAsset,
 } from "./artifactSelection";
+import {
+    getValidationResultsRecord,
+} from "./stabilitySummary";
 
 interface ArtifactViewProps {
   plan?: string | null;
@@ -106,6 +109,11 @@ export default function ArtifactView({
     () => getLatestModelAsset(assets),
     [assets]
   );
+  const validationResultsRecord = useMemo(
+    () => getValidationResultsRecord(assets),
+    [assets]
+  );
+  const validationResultsMessage = validationResultsRecord?.message ?? null;
 
   const getAssetUrl = (assetPath: string | undefined) => {
     const resolvedEpisodeId = episodeId ?? selectedEpisode?.id ?? null;
@@ -310,6 +318,7 @@ export default function ArtifactView({
                             fluidMetrics={data.fluid_metrics}
                             summary={data.summary}
                             renderPaths={data.render_paths}
+                            verificationResult={validationResultsRecord?.verification_result ?? null}
                         />
                         <div className="p-6 border-t border-border/50">
                             <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Simulation Data</h3>
@@ -329,53 +338,113 @@ export default function ArtifactView({
         }
     }
 
+    if (activeAsset.name === 'validation_results.json' && activeAsset.content) {
+        try {
+            const data = JSON.parse(activeAsset.content);
+            const verificationResult = data.verification_result ?? null;
+            return (
+                <div className="flex h-full flex-col">
+                    <div
+                        data-testid="artifact-active-file"
+                        data-artifact-id={activeArtifactId ?? ""}
+                        data-artifact-name={activeArtifactName ?? ""}
+                        data-artifact-path={activeArtifactPath ?? ""}
+                        data-artifact-type={activeArtifactType ?? ""}
+                        className="flex items-center justify-between px-4 py-2 border-b bg-muted/50"
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-medium text-muted-foreground truncate">
+                                {activeArtifactName}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">
+                                {activeArtifactType || "OTHER"}
+                            </Badge>
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[55%]">
+                            {activeArtifactPath}
+                        </div>
+                    </div>
+                    <div className="bg-background flex-1 overflow-y-auto no-scrollbar">
+                        <SimulationResults
+                            summary={validationResultsMessage ?? "Validation results"}
+                            verificationResult={verificationResult}
+                        />
+                        <div className="p-6 border-t border-border/50">
+                            <h3 className="text-slate-200 text-sm font-semibold mb-4">Raw Validation Data</h3>
+                            <SyntaxHighlighter
+                                language="json"
+                                style={theme === 'dark' ? vscDarkPlus : vs}
+                                customStyle={{ margin: 0, padding: '1rem', background: 'transparent', fontSize: '12px' }}
+                            >
+                                {activeAsset.content}
+                            </SyntaxHighlighter>
+                        </div>
+                    </div>
+                </div>
+            );
+        } catch (e) {
+            console.error("Failed to parse validation results", e);
+        }
+    }
+
     if (resolvedAsset && (isImageAsset(resolvedAsset) || isVideoAsset(resolvedAsset))) {
         const assetUrl = getAssetUrl(resolvedAsset.s3_path);
         return (
-            <div className="flex h-full flex-col">
-                <div
-                    data-testid="artifact-active-file"
-                    data-artifact-id={activeArtifactId ?? ""}
-                    data-artifact-name={activeArtifactName ?? ""}
-                    data-artifact-path={activeArtifactPath ?? ""}
-                    data-artifact-type={activeArtifactType ?? ""}
-                    className="flex items-center justify-between px-4 py-2 border-b bg-muted/50"
-                >
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-medium text-muted-foreground truncate">
-                            {activeArtifactName}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] h-4 px-1">
-                            {activeArtifactType || "OTHER"}
-                        </Badge>
+            <div className="grid h-full grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem]">
+                <div className="flex h-full flex-col">
+                    <div
+                        data-testid="artifact-active-file"
+                        data-artifact-id={activeArtifactId ?? ""}
+                        data-artifact-name={activeArtifactName ?? ""}
+                        data-artifact-path={activeArtifactPath ?? ""}
+                        data-artifact-type={activeArtifactType ?? ""}
+                        className="flex items-center justify-between px-4 py-2 border-b bg-muted/50"
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-medium text-muted-foreground truncate">
+                                {activeArtifactName}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">
+                                {activeArtifactType || "OTHER"}
+                            </Badge>
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[55%]">
+                            {activeArtifactPath}
+                        </div>
                     </div>
-                    <div className="text-[10px] font-mono text-muted-foreground truncate max-w-[55%]">
+                    <div className="flex-1 overflow-auto bg-black/90 flex items-center justify-center p-4">
+                        {isVideoAsset(resolvedAsset) ? (
+                            <video
+                                data-testid="artifact-media-view"
+                                src={assetUrl ?? undefined}
+                                controls
+                                className="max-h-full max-w-full rounded-lg shadow-2xl border border-white/10"
+                            />
+                        ) : (
+                            <img
+                                data-testid="artifact-media-view"
+                                src={assetUrl ?? undefined}
+                                alt={activeArtifactName ?? activeAsset.name}
+                                className="max-h-full max-w-full object-contain rounded-lg shadow-2xl border border-white/10"
+                            />
+                        )}
+                    </div>
+                    <div
+                        data-testid="artifact-media-path"
+                        className="border-t border-border/50 bg-background px-4 py-2 text-[10px] font-mono text-muted-foreground break-all"
+                    >
                         {activeArtifactPath}
                     </div>
                 </div>
-                <div className="flex-1 overflow-auto bg-black/90 flex items-center justify-center p-4">
-                    {isVideoAsset(resolvedAsset) ? (
-                        <video
-                            data-testid="artifact-media-view"
-                            src={assetUrl ?? undefined}
-                            controls
-                            className="max-h-full max-w-full rounded-lg shadow-2xl border border-white/10"
+                {validationResultsRecord?.verification_result && (
+                    <div className="border-l border-border/50 bg-background/95 overflow-y-auto">
+                        <SimulationResults
+                            summary={validationResultsMessage ?? "Validation results"}
+                            verificationResult={validationResultsRecord.verification_result}
+                            className="p-3"
                         />
-                    ) : (
-                        <img
-                            data-testid="artifact-media-view"
-                            src={assetUrl ?? undefined}
-                            alt={activeArtifactName ?? activeAsset.name}
-                            className="max-h-full max-w-full object-contain rounded-lg shadow-2xl border border-white/10"
-                        />
-                    )}
-                </div>
-                <div
-                    data-testid="artifact-media-path"
-                    className="border-t border-border/50 bg-background px-4 py-2 text-[10px] font-mono text-muted-foreground break-all"
-                >
-                    {activeArtifactPath}
-                </div>
+                    </div>
+                )}
             </div>
         );
     }

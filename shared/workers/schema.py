@@ -11,7 +11,7 @@ from pydantic import (
 )
 
 from shared.enums import AgentName, AssetType, EpisodeStatus, ResponseStatus
-from shared.models.schemas import ElectronicsSection
+from shared.models.schemas import BenchmarkPartAttachmentPolicy, ElectronicsSection
 from shared.models.simulation import (
     FluidMetricResult,
     MultiRunResult,
@@ -353,12 +353,24 @@ class ReviewManifest(BaseModel):
     simulation_timestamp: float
     goal_reached: bool
     renders: list[StrictStr] = Field(default_factory=list)
+    benchmark_attachment_policy_summary: list["BenchmarkAttachmentPolicySummary"] = (
+        Field(default_factory=list)
+    )
     mjcf_path: StrictStr | None = None
     cad_path: StrictStr | None = None
     objectives_path: StrictStr | None = None
     assembly_definition_path: StrictStr | None = None
 
     model_config = ConfigDict(extra="forbid")
+
+
+class BenchmarkAttachmentPolicySummary(BaseModel):
+    """Structured summary of a benchmark-owned fixture attachment policy."""
+
+    part_id: StrictStr
+    label: StrictStr
+    allows_engineer_interaction: StrictBool
+    attachment_policy: BenchmarkPartAttachmentPolicy | None = None
 
 
 class PlanReviewManifest(BaseModel):
@@ -634,3 +646,6 @@ class PlanRefusal(BaseModel):
     reason: str
     timestamp: str | None = None
     session_id: str = "default"
+
+
+ReviewManifest.model_rebuild()

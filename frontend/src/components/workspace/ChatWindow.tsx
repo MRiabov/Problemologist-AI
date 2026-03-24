@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ScrollArea } from "../../components/ui/scroll-area";
 import type { TraceResponse } from "../../api/generated/models/TraceResponse";
-import { 
+import {
   Check, 
   AlertCircle,
   Zap,
   Play,
   Rocket,
-  RotateCcw
+  RotateCcw,
+  CircleAlert
 } from "lucide-react";
 import { runSimulation, type BenchmarkObjectives } from "../../api/client";
 import { ObjectivesForm } from "./ObjectivesForm";
@@ -22,6 +23,13 @@ import { ChatInput } from "../Chat/ChatInput";
 import { TraceList } from "./TraceList";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 import { EpisodeType } from "../../api/generated/models/EpisodeType";
+import { ReviewDecision } from "../../api/generated/models/ReviewDecision";
+import {
+  buildReviewContent,
+  formatStabilitySummaryLines,
+  getValidationResultsRecord,
+  summarizeVerificationResult,
+} from "./stabilitySummary";
 
 interface ChatWindowProps {
   traces?: TraceResponse[];
@@ -45,6 +53,7 @@ export default function ChatWindow({
       continueAgent,
       steerAgent,
       confirmBenchmark,
+      submitReview,
       interruptAgent, 
       selectedEpisode, 
       updateObjectives, 
@@ -59,6 +68,9 @@ export default function ChatWindow({
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
   const [confirmComment, setConfirmComment] = useState("");
+  const [reviewReason, setReviewReason] = useState("");
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const location = window.location;
   const isBenchmarkPath = location.pathname === '/benchmark';
@@ -132,6 +144,16 @@ export default function ChatWindow({
   const isEngineerEpisode =
     selectedEpisode?.metadata_vars?.episode_type === EpisodeType.ENGINEER ||
     (!isBenchmarkEpisode && !!selectedEpisode);
+  const validationResultsRecord = useMemo(
+    () => getValidationResultsRecord(selectedEpisode?.assets ?? []),
+    [selectedEpisode?.assets]
+  );
+  const verificationSummary = useMemo(
+    () => summarizeVerificationResult(
+      validationResultsRecord?.verification_result ?? null
+    ),
+    [validationResultsRecord?.verification_result]
+  );
   const isFailedEngineerEpisode =
     !!selectedEpisode &&
     selectedEpisode.status === EpisodeStatus.FAILED &&
@@ -160,6 +182,15 @@ export default function ChatWindow({
     selectedEpisode?.status === EpisodeStatus.FAILED
       ? "Terminal failure"
       : "Terminal outcome";
+  const isReviewableEngineerEpisode =
+    !!selectedEpisode &&
+    selectedEpisode.metadata_vars?.episode_type === EpisodeType.ENGINEER &&
+    !!verificationSummary &&
+    selectedEpisode.status !== EpisodeStatus.RUNNING &&
+    selectedEpisode.status !== EpisodeStatus.CANCELLED;
+  const stabilitySummaryLines = verificationSummary
+    ? formatStabilitySummaryLines(verificationSummary)
+    : ["Stability summary unavailable."];
   const handleRetryFailedEpisode = useCallback(async () => {
     if (!selectedEpisode || !isFailedEngineerEpisode) {
       return;
@@ -176,10 +207,54 @@ export default function ChatWindow({
       {
         benchmark_id: benchmarkId,
         prior_episode_id: selectedEpisode.id,
-        is_reused: true,
+      is_reused: true,
       },
     );
   }, [isFailedEngineerEpisode, selectedEpisode, startAgent]);
+
+  const handleSubmitReview = useCallback(async (decision: ReviewDecision) => {
+    if (!selectedEpisode || !verificationSummary) {
+      setReviewError("Stability summary is required before submitting a review.");
+      return;
+    }
+
+    const reason = reviewReason.trim();
+    if (decision !== ReviewDecision.APPROVED && !reason) {
+      setReviewError("A rejection reason is required.");
+      return;
+    }
+
+    const reviewContent = buildReviewContent({
+      decision,
+      reason,
+      stabilitySummary: verificationSummary,
+      context: {
+        benchmarkId: selectedEpisode.metadata_vars?.benchmark_id ?? null,
+        episodeId: selectedEpisode.id,
+        priorEpisodeId: selectedEpisode.metadata_vars?.prior_episode_id ?? null,
+        revisionCount: null,
+        reused: selectedEpisode.metadata_vars?.is_reused ?? null,
+      },
+    });
+
+    setIsSubmittingReview(true);
+    setReviewError(null);
+    try {
+      await submitReview(selectedEpisode.id, reviewContent);
+      setReviewReason("");
+    } catch (error) {
+      setReviewError(
+        error instanceof Error ? error.message : "Failed to submit review.",
+      );
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  }, [
+    reviewReason,
+    selectedEpisode,
+    submitReview,
+    verificationSummary,
+  ]);
 
   // Stable handlers
   const handleShowFeedback = useCallback((traceId: number, score: number) => {
@@ -456,6 +531,131 @@ export default function ChatWindow({
                                   : "The agent encountered an unrecoverable error during execution."}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {isReviewableEngineerEpisode && (
+                    <div
+                      data-testid="peer-review-card"
+                      className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4 shadow-sm"
+                    >
+                        <div className="flex items-center gap-2 text-primary mb-3">
+                            <CircleAlert className="h-4 w-4" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">
+                                Engineer peer review
+                            </span>
+                        </div>
+                        <div className="space-y-3">
+                            <div
+                              data-testid="peer-review-status"
+                              className="text-[11px] font-mono text-muted-foreground"
+                            >
+                                {verificationSummary
+                                  ? "stability summary ready"
+                                  : "stability summary missing"}
+                            </div>
+                            {verificationSummary && (
+                                <div
+                                  data-testid="peer-review-stability-summary"
+                                  className="space-y-2 rounded-lg border border-border/60 bg-background/80 p-3"
+                                >
+                                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                                        <div className="rounded-md border border-border/40 bg-muted/20 px-2 py-1">
+                                            Batch width: {verificationSummary.batchWidth}
+                                        </div>
+                                        <div className="rounded-md border border-border/40 bg-muted/20 px-2 py-1">
+                                            Success count: {verificationSummary.successCount}
+                                        </div>
+                                        <div className="rounded-md border border-border/40 bg-muted/20 px-2 py-1">
+                                            Success rate: {(verificationSummary.successRate * 100).toFixed(1)}%
+                                        </div>
+                                        <div className="rounded-md border border-border/40 bg-muted/20 px-2 py-1">
+                                            Consistency: {verificationSummary.isConsistent ? "consistent" : "inconsistent"}
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2 text-[11px] font-mono">
+                                        <div className="rounded-md border border-border/40 bg-muted/10 px-2 py-1">
+                                            Scene build count: {validationResultsRecord?.verification_result?.scene_build_count ?? verificationSummary.sceneBuildCount}
+                                        </div>
+                                        <div className="rounded-md border border-border/40 bg-muted/10 px-2 py-1">
+                                            Backend run count: {validationResultsRecord?.verification_result?.backend_run_count ?? verificationSummary.backendRunCount}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {stabilitySummaryLines.map((line) => (
+                                            <div
+                                              key={line}
+                                              className="rounded-md border border-border/30 bg-muted/10 px-2 py-1 text-[11px] font-mono text-muted-foreground"
+                                            >
+                                                {line}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="space-y-2">
+                                        {verificationSummary.sceneSummaries.map((scene) => (
+                                            <div
+                                              key={scene.sceneIndex}
+                                              data-testid={`peer-review-scene-${scene.sceneIndex}`}
+                                              className="rounded-md border border-border/40 bg-background px-3 py-2 text-[11px] font-mono"
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-semibold uppercase tracking-widest">
+                                                        Scene {scene.sceneIndex}
+                                                    </span>
+                                                    <span className={scene.success ? "text-emerald-500" : "text-red-500"}>
+                                                        {scene.success ? "pass" : "fail"}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-1 text-muted-foreground whitespace-pre-wrap">
+                                                    {scene.summary}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                    Rejection reason
+                                </label>
+                                <textarea
+                                    data-testid="peer-review-reason"
+                                    placeholder="Required when rejecting a solution"
+                                    value={reviewReason}
+                                    onChange={(e) => {
+                                      setReviewReason(e.target.value);
+                                      setReviewError(null);
+                                    }}
+                                    className="w-full min-h-[84px] rounded-lg border border-border/70 bg-background/80 px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                                />
+                                {reviewError && (
+                                    <div className="text-[11px] text-red-500 font-mono">
+                                        {reviewError}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  data-testid="peer-review-approve-button"
+                                  disabled={!verificationSummary || isSubmittingReview}
+                                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest h-10"
+                                  onClick={() => void handleSubmitReview(ReviewDecision.APPROVED)}
+                                >
+                                    Approve
+                                </Button>
+                                <Button
+                                  type="button"
+                                  data-testid="peer-review-reject-button"
+                                  disabled={!verificationSummary || isSubmittingReview}
+                                  variant="outline"
+                                  className="flex-1 border-red-500/30 text-red-500 hover:bg-red-500/10 font-black text-[10px] uppercase tracking-widest h-10"
+                                  onClick={() => void handleSubmitReview(ReviewDecision.REJECTED)}
+                                >
+                                    Reject
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

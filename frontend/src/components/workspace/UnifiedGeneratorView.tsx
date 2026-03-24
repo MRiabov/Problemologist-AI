@@ -29,6 +29,10 @@ import {
   getDefaultArtifactId,
   getLatestMediaBundle,
 } from "./artifactSelection";
+import {
+  getValidationResultsRecord,
+  summarizeVerificationResult,
+} from "./stabilitySummary";
 import { getEngineerRevisionLineage } from "./RevisionLineageSummary";
 
 interface UnifiedGeneratorViewProps {
@@ -206,6 +210,16 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
       episodeType: metadata.episode_type ?? null,
     };
   }, [selectedEpisode?.metadata_vars]);
+  const validationResultsRecord = useMemo(
+    () => getValidationResultsRecord(resolvedMediaAssets),
+    [resolvedMediaAssets]
+  );
+  const verificationSummary = useMemo(
+    () => summarizeVerificationResult(
+      validationResultsRecord?.verification_result ?? null
+    ),
+    [validationResultsRecord?.verification_result]
+  );
   const revisionLineage = useMemo(
     () => getEngineerRevisionLineage(episodes, selectedEpisode),
     [
@@ -346,6 +360,19 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
 
                   <div data-testid="unified-debug-info" className="hidden">
                       {JSON.stringify({ 
+                          benchmarkLinkage: {
+                            benchmarkId: selectedEpisode?.metadata_vars?.benchmark_id ?? null,
+                            priorEpisodeId: selectedEpisode?.metadata_vars?.prior_episode_id ?? null,
+                            isReused: selectedEpisode?.metadata_vars?.is_reused ?? null,
+                            episodeType: selectedEpisode?.metadata_vars?.episode_type ?? null,
+                          },
+                          revisionLineage: revisionLineage.map((episode) => ({
+                            id: episode.id,
+                            status: episode.status,
+                            benchmarkId: episode.metadata_vars?.benchmark_id ?? null,
+                            priorEpisodeId: episode.metadata_vars?.prior_episode_id ?? null,
+                            isReused: episode.metadata_vars?.is_reused ?? null,
+                          })),
                           modelUrlsCount: modelUrls.length, 
                           hasVideoAsset: !!videoAsset, 
                           videoAssetType: videoAsset?.asset_type,
@@ -365,6 +392,10 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                             ?? selectedEpisode?.metadata_vars?.benchmark_id
                             ?? selectedEpisode?.id
                             ?? null,
+                          verificationSummary,
+                          validationResultsPath: validationResultsRecord
+                            ? "validation_results.json"
+                            : null,
                           terminalMetadata: terminalSummary,
                           defaultArtifactId,
                           defaultSolutionEvidenceArtifact: getArtifactSelectionDescriptor(defaultSolutionEvidenceAsset),

@@ -2,17 +2,20 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { 
   fetchEpisodes, 
   fetchEpisode, 
+  fetchEpisodeAsset,
   runAgent, 
   generateBenchmark, 
   updateBenchmarkObjectives, 
   continueEpisode, 
   confirmBenchmark as apiConfirmBenchmark,
   interruptEpisode as apiInterruptEpisode,
+  submitEpisodeReview as apiSubmitEpisodeReview,
   type Episode, 
   type BenchmarkObjectives, 
   steerAgent as apiSteerAgent 
 } from '../api/client';
 import { EpisodeStatus } from '../api/generated/models/EpisodeStatus';
+import { AssetType } from '../api/generated/models/AssetType';
 import { OpenAPI } from '../api/generated/core/OpenAPI';
 import type { TopologyNode } from "../components/visualization/ModelBrowser";
 
@@ -43,6 +46,7 @@ interface EpisodeContextType {
   continueAgent: (id: string, message: string, metadata?: Record<string, unknown>) => Promise<void>;
   steerAgent: (id: string, text: string, metadata?: Record<string, any>) => Promise<void>;
   confirmBenchmark: (id: string, comment?: string) => Promise<void>;
+  submitReview: (id: string, reviewContent: string) => Promise<void>;
   updateObjectives: (objectives: BenchmarkObjectives) => Promise<void>;
   interruptAgent: (id: string) => Promise<void>;
   setRunning: (running: boolean) => void;
@@ -68,12 +72,70 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const isCreationModeRef = useRef(false);
   const isBenchmarkCreationRef = useRef(false);
 
+  const hydrateEpisodeAssets = useCallback(async (episode: Episode): Promise<Episode> => {
+    const assets = episode.assets ?? [];
+    const hydrateTargets = assets.filter((asset) => {
+      if (asset.content) {
+        return false;
+      }
+
+      const path = asset.s3_path.toLowerCase();
+      if (
+        path.endsWith(".json") ||
+        path.endsWith(".yaml") ||
+        path.endsWith(".yml") ||
+        path.endsWith(".md") ||
+        path.endsWith(".txt")
+      ) {
+        return true;
+      }
+
+      return (
+        asset.asset_type === AssetType.MARKDOWN ||
+        asset.asset_type === AssetType.LOG ||
+        asset.asset_type === AssetType.ERROR ||
+        asset.asset_type === AssetType.PYTHON ||
+        asset.asset_type === AssetType.MJCF ||
+        asset.asset_type === AssetType.OTHER
+      );
+    });
+
+    if (hydrateTargets.length === 0) {
+      return episode;
+    }
+
+    const hydratedAssets = await Promise.all(
+      hydrateTargets.map(async (asset) => {
+        try {
+          const content = await fetchEpisodeAsset(episode.id, asset.s3_path);
+          return { ...asset, content };
+        } catch (error) {
+          console.error("Failed to hydrate episode asset content", {
+            episodeId: episode.id,
+            path: asset.s3_path,
+            error,
+          });
+          return asset;
+        }
+      }),
+    );
+
+    const hydratedByPath = new Map(
+      hydratedAssets.map((asset) => [asset.s3_path, asset]),
+    );
+
+    return {
+      ...episode,
+      assets: assets.map((asset) => hydratedByPath.get(asset.s3_path) ?? asset),
+    };
+  }, []);
+
   // WP10: Restore selected episode from localStorage on mount
   useEffect(() => {
     const savedId = localStorage.getItem("selectedEpisodeId");
     if (savedId && !selectedEpisode) {
-        fetchEpisode(savedId).then(data => {
-            setSelectedEpisode(data);
+        fetchEpisode(savedId).then(async data => {
+            setSelectedEpisode(await hydrateEpisodeAssets(data));
         }).catch(err => {
             console.error("Failed to restore episode from localStorage:", err);
             localStorage.removeItem("selectedEpisodeId");
@@ -91,13 +153,14 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       // listEpisodes intentionally omits traces/assets for payload size.
       if (selectedEpisode) {
           const detailed = await fetchEpisode(selectedEpisode.id);
+          const hydratedDetailed = await hydrateEpisodeAssets(detailed);
           setSelectedEpisode(prev => {
-            if (!prev) return detailed;
+            if (!prev) return hydratedDetailed;
             return {
               ...prev,
-              ...detailed,
-              traces: detailed.traces || [],
-              assets: detailed.assets || [],
+              ...hydratedDetailed,
+              traces: hydratedDetailed.traces || [],
+              assets: hydratedDetailed.assets || [],
             };
           });
       }
@@ -122,13 +185,13 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setRunning(false);
     try {
       const fullEp = await fetchEpisode(id);
-      setSelectedEpisode(fullEp);
+      setSelectedEpisode(await hydrateEpisodeAssets(fullEp));
       localStorage.setItem("selectedEpisodeId", id);
     } catch (e) {
       console.error("Failed to fetch episode details", e);
       const ep = episodes.find(e => e.id === id);
       if (ep) {
-          setSelectedEpisode(ep);
+          setSelectedEpisode(await hydrateEpisodeAssets(ep));
           localStorage.setItem("selectedEpisodeId", id);
       }
     }
@@ -247,6 +310,16 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshEpisodes]);
 
+  const submitReview = useCallback(async (id: string, reviewContent: string) => {
+    try {
+      await apiSubmitEpisodeReview(id, reviewContent);
+      await refreshEpisodes();
+    } catch (e) {
+      console.error("Failed to submit episode review", e);
+      throw e;
+    }
+  }, [refreshEpisodes]);
+
   const [selectedContext, setSelectedContext] = useState<ContextItem[]>([]);
 
   const addToContext = useCallback((item: ContextItem) => {
@@ -357,14 +430,15 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
                   setRunning(false);
                   // Hydrate full episode payload to avoid missing traces/assets after completion.
                   fetchEpisode(connectionEpisodeId)
-                    .then((fullEp) => {
+                    .then(async (fullEp) => {
+                      const hydratedFullEp = await hydrateEpisodeAssets(fullEp);
                       setSelectedEpisode((prev: Episode | null) => {
                         if (!prev || prev.id !== connectionEpisodeId || prev.id !== selectedEpisodeIdRef.current) {
                           return prev;
                         }
-                        return fullEp;
+                        return hydratedFullEp;
                       });
-                      setEpisodes(prevEpisodes => prevEpisodes.map(ep => ep.id === connectionEpisodeId ? { ...ep, ...fullEp } : ep));
+                      setEpisodes(prevEpisodes => prevEpisodes.map(ep => ep.id === connectionEpisodeId ? { ...ep, ...hydratedFullEp } : ep));
                     })
                     .catch((e) => {
                       console.error("Failed to hydrate episode after status update", e);
@@ -459,26 +533,27 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
             fetchEpisode(selectedEpisode.id)
           ]);
           setEpisodes(episodesData);
-          
+          const hydratedCurrentEp = await hydrateEpisodeAssets(currentEp);
+
           // Only update if something changed (avoid re-rendering everything if WS handled it)
           setSelectedEpisode((prev: Episode | null) => {
-             if (!prev) return currentEp;
+             if (!prev) return hydratedCurrentEp;
              // Check for meaningful changes to avoid re-rendering components like buttons
              const prevDetailedStatus = prev.metadata_vars?.detailed_status || null;
-             const currentDetailedStatus = currentEp.metadata_vars?.detailed_status || null;
-             if (prev.id === currentEp.id && 
-                 prev.status === currentEp.status && 
+             const currentDetailedStatus = hydratedCurrentEp.metadata_vars?.detailed_status || null;
+             if (prev.id === currentEp.id &&
+                 prev.status === hydratedCurrentEp.status &&
                  prevDetailedStatus === currentDetailedStatus &&
-                 prev.last_trace_id === currentEp.last_trace_id &&
-                 (prev.assets?.length || 0) === (currentEp.assets?.length || 0) &&
-                 (prev.plan === currentEp.plan)) {
+                 prev.last_trace_id === hydratedCurrentEp.last_trace_id &&
+                 (prev.assets?.length || 0) === (hydratedCurrentEp.assets?.length || 0) &&
+                 (prev.plan === hydratedCurrentEp.plan)) {
                  return prev;
              }
-             console.log("Updating selectedEpisode from poller", { old: prev.status, new: currentEp.status });
-             return currentEp;
+             console.log("Updating selectedEpisode from poller", { old: prev.status, new: hydratedCurrentEp.status });
+             return hydratedCurrentEp;
           });
 
-          if (currentEp.status !== EpisodeStatus.RUNNING) {
+          if (hydratedCurrentEp.status !== EpisodeStatus.RUNNING) {
             setRunning(false);
           }
         } catch (e) {
@@ -502,6 +577,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       continueAgent,
       steerAgent,
       confirmBenchmark,
+      submitReview,
       interruptAgent,
       setRunning,
       createNewBenchmark,

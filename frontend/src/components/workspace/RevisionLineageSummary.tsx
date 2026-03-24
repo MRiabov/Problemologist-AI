@@ -3,6 +3,7 @@ import type { Episode } from "../../api/client";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 import { EpisodeType } from "../../api/generated/models/EpisodeType";
 import { cn } from "../../lib/utils";
+import { Badge } from "../ui/badge";
 
 interface RevisionLineageSummaryProps {
   episodes: Episode[];
@@ -95,6 +96,27 @@ export default function RevisionLineageSummary({
         >
           {revisionEpisodes.length} revision{revisionEpisodes.length === 1 ? "" : "s"}
         </span>
+      </div>
+
+      <div
+        data-testid="sidebar-lineage-badges"
+        className="flex flex-wrap gap-2"
+      >
+        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest">
+          Benchmark {shortId(benchmarkId)}
+        </Badge>
+        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest">
+          {revisionEpisodes.length} Revision{revisionEpisodes.length === 1 ? "" : "s"}
+        </Badge>
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-[9px] font-black uppercase tracking-widest",
+            selectedEpisode.metadata_vars?.is_reused ? "border-emerald-500/40 text-emerald-600" : "border-border/60 text-muted-foreground",
+          )}
+        >
+          {selectedEpisode.metadata_vars?.is_reused ? "Reused" : "Original"}
+        </Badge>
       </div>
 
       <div className="space-y-2">

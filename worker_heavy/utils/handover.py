@@ -7,8 +7,10 @@ import structlog
 from build123d import Compound, export_step
 
 from shared.git_utils import repo_revision
+from shared.models.schemas import BenchmarkDefinition
 from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
+    BenchmarkAttachmentPolicySummary,
     RenderManifest,
     ReviewerStage,
     ReviewManifest,
@@ -34,6 +36,30 @@ def _sha256_file(path: Path) -> str:
 def _goal_reached(summary: str) -> bool:
     s = (summary or "").lower()
     return "goal achieved" in s or "green zone" in s or "goal zone" in s
+
+
+def _benchmark_attachment_policy_summary(
+    benchmark_definition: BenchmarkDefinition | None,
+) -> list[BenchmarkAttachmentPolicySummary]:
+    if benchmark_definition is None:
+        return []
+    summary: list[BenchmarkAttachmentPolicySummary] = []
+    for benchmark_part in benchmark_definition.benchmark_parts:
+        metadata = benchmark_part.metadata
+        if (
+            not metadata.allows_engineer_interaction
+            and metadata.attachment_policy is None
+        ):
+            continue
+        summary.append(
+            BenchmarkAttachmentPolicySummary(
+                part_id=benchmark_part.part_id,
+                label=benchmark_part.label,
+                allows_engineer_interaction=metadata.allows_engineer_interaction,
+                attachment_policy=metadata.attachment_policy,
+            )
+        )
+    return summary
 
 
 def _is_static_preview_render(path: str) -> bool:
@@ -226,6 +252,7 @@ def submit_for_review(
 
     # benchmark_definition.yaml
     objectives_path = cwd / "benchmark_definition.yaml"
+    benchmark_definition = None
     if objectives_path.exists():
         from .file_validation import validate_benchmark_definition_yaml
 
@@ -240,6 +267,7 @@ def submit_for_review(
                 session_id=session_id,
             )
             raise ValueError(f"benchmark_definition.yaml invalid: {result}")
+        benchmark_definition = result
 
         # INT-015: Verify immutability
         from .file_validation import validate_immutability
@@ -543,6 +571,9 @@ def submit_for_review(
         simulation_timestamp=simulation_results_path.stat().st_mtime,
         goal_reached=_goal_reached(simulation_result.summary),
         renders=render_paths,
+        benchmark_attachment_policy_summary=_benchmark_attachment_policy_summary(
+            benchmark_definition
+        ),
         mjcf_path=(
             None
             if normalized_stage

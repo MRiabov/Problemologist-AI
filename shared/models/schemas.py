@@ -60,10 +60,24 @@ def _coerce_to_tuple(v: Any) -> Any:
     return v
 
 
+def _normalize_material_id_text(value: Any) -> Any:
+    """Normalize external material identifiers to the internal underscore form."""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            raise ValueError("material_id must be a non-empty string")
+        if text.startswith("cots-"):
+            return text
+        return text.replace("-", "_")
+    return value
+
+
 CoercedTuple3D = Annotated[
     tuple[float, float, float], BeforeValidator(_coerce_to_tuple)
 ]
 CoercedTuple2D = Annotated[tuple[float, float], BeforeValidator(_coerce_to_tuple)]
+MaterialId = Annotated[str, BeforeValidator(_normalize_material_id_text)]
+OptionalMaterialId = Annotated[str, BeforeValidator(_normalize_material_id_text)] | None
 
 
 class StrictContractModel(BaseModel):
@@ -200,7 +214,7 @@ class MovedObject(StrictContractModel):
 
     label: str
     shape: str
-    material_id: str
+    material_id: MaterialId
     static_randomization: StaticRandomization = StaticRandomization()
     start_position: CoercedTuple3D
     runtime_jitter: CoercedTuple3D
@@ -276,7 +290,7 @@ class EntityDefinition(BaseModel):
     file: str | None = None
     pos: CoercedTuple3D = (0.0, 0.0, 0.0)
     euler: CoercedTuple3D = (0.0, 0.0, 0.0)
-    material_id: str = "aluminum_6061"
+    material_id: MaterialId = "aluminum_6061"
     is_zone: bool = False
 
     # For zones
@@ -301,7 +315,7 @@ class CableDefinition(BaseModel):
     wire_id: str
     points: list[CoercedTuple3D]
     radius: float = 0.001
-    material_id: str = "copper"
+    material_id: MaterialId = "copper"
 
     model_config = ConfigDict(extra="allow")
 
@@ -441,7 +455,7 @@ class BenchmarkPartMetadata(StrictContractModel):
 
     fixed: bool = False
     allows_engineer_interaction: bool = False
-    material_id: str | None = None
+    material_id: OptionalMaterialId = None
     cots_id: str | None = None
     attachment_policy: BenchmarkPartAttachmentPolicy | None = None
 
@@ -514,7 +528,7 @@ class JointMetadata(BaseModel):
 class PartMetadata(BaseModel):
     """Metadata for individual parts in a CAD assembly."""
 
-    material_id: str | None = None
+    material_id: OptionalMaterialId = None
     cots_id: str | None = None
     is_fixed: bool = Field(default=False, alias="fixed")
     manufacturing_method: ManufacturingMethod | None = None
@@ -730,6 +744,15 @@ class ReviewResult(StrictContractModel):
         return v
 
 
+class ReviewComments(StrictContractModel):
+    """Persisted YAML comments file written alongside a review decision."""
+
+    summary: str
+    comments: list[str] = Field(default_factory=list)
+    required_fixes: list[str] = Field(default_factory=list)
+    checklist: dict[str, str | float | bool] = Field(default_factory=dict)
+
+
 class ReviewFrontmatter(StrictContractModel):
     """
     YAML frontmatter schema for review documents.
@@ -811,7 +834,7 @@ class ManufacturedPartEstimate(StrictContractModel):
     part_name: str
     part_id: str
     manufacturing_method: ManufacturingMethod
-    material_id: str
+    material_id: MaterialId
 
     @field_validator("manufacturing_method", mode="before")
     @classmethod
@@ -839,7 +862,7 @@ class ManufacturedPartEstimate(StrictContractModel):
     pricing_notes: str | None = None
     dfm_suggestions: list[str] = Field(default_factory=list)
 
-    @field_validator("part_name", "part_id", "material_id")
+    @field_validator("part_name", "part_id")
     @classmethod
     def validate_non_empty_strings(cls, value: str) -> str:
         text = value.strip()
@@ -904,7 +927,9 @@ class CotsPartEstimate(StrictContractModel):
             self.generated_at,
         )
         has_any_provenance = any(field is not None for field in provenance_fields)
-        if has_any_provenance and not all(field is not None for field in provenance_fields):
+        if has_any_provenance and not all(
+            field is not None for field in provenance_fields
+        ):
             raise ValueError(
                 "catalog provenance must include catalog_version, "
                 "bd_warehouse_commit, catalog_snapshot_id, and generated_at together"

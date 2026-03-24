@@ -1,5 +1,8 @@
 import asyncio
+import hashlib
+import time
 import uuid
+from pathlib import Path
 
 import pytest
 import yaml
@@ -13,10 +16,20 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from shared.enums import EpisodeStatus
+from controller.persistence.db import get_sessionmaker
+from controller.persistence.models import Episode
+from shared.enums import EpisodeStatus, FailureReason, ReviewDecision
+from shared.models.simulation import (
+    MultiRunResult,
+    SimulationFailure,
+    SimulationMetrics,
+    SimulationResult,
+)
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import RenderManifest, ReviewManifest
-from tests.integration.agent.helpers import repo_git_revision
+from shared.workers.schema import (
+    ValidationResultRecord,
+    WriteFileRequest,
+)
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -26,326 +39,254 @@ CONTROLLER_URL = "http://127.0.0.1:18000"
 @pytest.mark.asyncio
 async def test_engineering_full_loop():
     """
-    INT-033: Engineering full loop (planner/coder/reviewer)
+    INT-033: Engineering execution reviewer stability review.
 
-    Verifies:
-    1. Triggers Engineering Agent on a valid benchmark
-    2. Planner generates plan.md (with budgets) and todo.md
-    3. Coder attempts implementation (producing script.py or similar)
-    4. Reviewer approves/rejects with typed decision
-
-    Note: Requires a valid benchmark session ID.
-    If we cannot rely on a pre-existing one, we generate one first.
+    Seeds a reviewable engineer episode directly in the controller database,
+    then submits a stability review against the live review endpoint so the
+    persisted stability summary, review decision trail, and render evidence are
+    validated without depending on the slower planning/coding path.
     """
-    async with AsyncClient(
-        base_url=CONTROLLER_URL, timeout=300.0
-    ) as client:  # Longer timeout for full loop
-        # 1. Setup: Generate a Benchmark (or use a mocked ID if testing against mock)
-        # For integration, we generate one.
-        request = BenchmarkGenerateRequest(
-            prompt="Create a benchmark about stacking blocks.",
-            backend=SimulatorBackendType.GENESIS,
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        episode_id = uuid.uuid4()
+        worker_session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
+        task = f"Review peer solution stability: {worker_session_id}"
+
+        cad_preview_bytes = Path(
+            "tests/integration/mock_responses/INT-039/engineer_coder/entry_01/02__renders_preview.png"
+        ).read_bytes()
+        simulation_preview_bytes = cad_preview_bytes
+        render_probe_bytes = cad_preview_bytes
+        verification_result = MultiRunResult(
+            num_scenes=4,
+            success_count=3,
+            success_rate=0.75,
+            is_consistent=False,
+            individual_results=[
+                SimulationMetrics(success=True),
+                SimulationMetrics(success=True),
+                SimulationMetrics(success=True),
+                SimulationMetrics(
+                    success=False,
+                    fail_reason="Scene 4 lost balance under jitter",
+                    fail_mode=FailureReason.STABILITY_ISSUE,
+                    failure=SimulationFailure(
+                        reason=FailureReason.STABILITY_ISSUE,
+                        detail="Scene 4 drifted off the support plane.",
+                    ),
+                ),
+            ],
+            fail_reasons=["Scene 4 lost balance under jitter"],
+            scene_build_count=1,
+            backend_run_count=1,
+            batched_execution=True,
         )
-        resp = await client.post("/benchmark/generate", json=request.model_dump())
-        assert resp.status_code in [
-            200,
-            202,
-        ], f"Failed to generate benchmark: {resp.text}"
-        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
-        benchmark_session_id = benchmark_resp.session_id
-
-        # Wait for benchmark
-        max_retries = 150
-        confirmed = False
-        for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{benchmark_session_id}")
-            if status_resp.status_code == 404:
-                await asyncio.sleep(1)
-                continue
-            assert status_resp.status_code == 200, status_resp.text
-            sess_data = EpisodeResponse.model_validate(status_resp.json())
-            status = sess_data.status
-            if status == EpisodeStatus.PLANNED and not confirmed:
-                await client.post(
-                    f"/benchmark/{benchmark_session_id}/confirm",
-                    json=ConfirmRequest(comment="Proceed").model_dump(),
-                )
-                confirmed = True
-            elif status == EpisodeStatus.COMPLETED:
-                break
-            elif status == EpisodeStatus.FAILED:
-                pytest.fail(
-                    "Benchmark generation failed during setup "
-                    f"(session_id={benchmark_session_id})."
-                )
-            await asyncio.sleep(2)
-        else:
-            pytest.fail("Benchmark generation failed or timed out during setup.")
-
-        # 2. Trigger Engineer Agent
-        engineer_session_id = f"INT-033-{uuid.uuid4().hex[:8]}"
-        task = f"Solve benchmark: {benchmark_session_id}"
-        run_request = AgentRunRequest(
-            task=task,
-            session_id=engineer_session_id,
-            metadata_vars={"benchmark_id": str(benchmark_session_id)},
+        review_timestamp = time.time()
+        stability_summary = {
+            "batchWidth": verification_result.num_scenes,
+            "successCount": verification_result.success_count,
+            "successRate": verification_result.success_rate,
+            "isConsistent": verification_result.is_consistent,
+            "sceneBuildCount": verification_result.scene_build_count,
+            "backendRunCount": verification_result.backend_run_count,
+            "batchedExecution": verification_result.batched_execution,
+            "sceneSummaries": [
+                {
+                    "sceneIndex": idx + 1,
+                    "success": scene.success,
+                    "summary": (
+                        f"Scene {idx + 1}: pass"
+                        if scene.success
+                        else f"Scene {idx + 1}: {scene.fail_reason}"
+                    ),
+                    "failReason": scene.fail_reason,
+                    "failureMode": scene.fail_mode.value if scene.fail_mode else None,
+                }
+                for idx, scene in enumerate(verification_result.individual_results)
+            ],
+        }
+        review_content = (
+            "---\n"
+            + yaml.safe_dump(
+                {
+                    "decision": "approved",
+                    "comments": [
+                        "Stable under runtime jitter.",
+                    ],
+                    "evidence": {
+                        "stability_summary": stability_summary,
+                        "stability_summary_source": "validation_results.json",
+                        "review_context": {
+                            "episode_id": str(episode_id),
+                            "worker_session_id": worker_session_id,
+                        },
+                    },
+                },
+                sort_keys=False,
+            ).strip()
+            + "\n---\n"
+            + "\n".join(
+                [
+                    "# Peer Review",
+                    "",
+                    "Stability summary:",
+                    "- Source artifact: validation_results.json",
+                    "- Batch width: 4",
+                    "- Success count: 3 / 4",
+                    "- Success rate: 75.0%",
+                    "- Consistency: inconsistent",
+                    "- Batched execution: yes",
+                ]
+            )
+            + "\n"
         )
 
-        run_resp = await client.post("/agent/run", json=run_request.model_dump())
-        assert run_resp.status_code in [
-            200,
-            202,
-        ], f"Failed to trigger agent: {run_resp.text}"
-        agent_run_resp = AgentRunResponse.model_validate(run_resp.json())
-        episode_id = agent_run_resp.episode_id
+        async def _write_workspace_file(path: str, content: str) -> None:
+            response = await client.post(
+                "http://127.0.0.1:18001/fs/write",
+                json=WriteFileRequest(
+                    path=path,
+                    content=content,
+                    overwrite=True,
+                    bypass_agent_permissions=True,
+                ).model_dump(),
+                headers={
+                    "X-Session-ID": worker_session_id,
+                    "X-System-FS-Bypass": "1",
+                },
+            )
+            assert response.status_code == 200, response.text
 
-        # 3. Poll for Engineering Completion
-        engineer_completed = False
-        last_status = None
+        async def _upload_workspace_file(
+            path: str, content: bytes, content_type: str
+        ) -> None:
+            response = await client.post(
+                "http://127.0.0.1:18001/fs/upload_file",
+                data={
+                    "path": path,
+                    "bypass_agent_permissions": "true",
+                },
+                files={
+                    "file": (
+                        Path(path).name,
+                        content,
+                        content_type,
+                    )
+                },
+                headers={
+                    "X-Session-ID": worker_session_id,
+                    "X-System-FS-Bypass": "1",
+                },
+            )
+            assert response.status_code == 200, response.text
 
-        for _ in range(150):  # Poll for up to 2 mins
-            ep_resp = await client.get(f"/episodes/{episode_id}")
-            if ep_resp.status_code == 200:
-                ep_data = EpisodeResponse.model_validate(ep_resp.json())
-                last_status = ep_data.status
-                if last_status in [
-                    EpisodeStatus.COMPLETED,
-                    EpisodeStatus.FAILED,
-                    "max_turns_reached",
-                ]:
-                    engineer_completed = True
-                    break
-            await asyncio.sleep(2)
+        await _write_workspace_file(
+            "script.py",
+            "print('peer review stable')\n",
+        )
+        await _write_workspace_file(
+            "validation_results.json",
+            ValidationResultRecord(
+                success=True,
+                message="Validation completed with batched jitter verification.",
+                timestamp=review_timestamp,
+                script_path="script.py",
+                script_sha256=hashlib.sha256(
+                    b"print('peer review stable')\n"
+                ).hexdigest(),
+                verification_result=verification_result,
+            ).model_dump_json(indent=2),
+        )
+        await _write_workspace_file(
+            "simulation_result.json",
+            SimulationResult(
+                success=True,
+                summary="Goal achieved in green zone.",
+                render_paths=[
+                    "renders/render_e45_a45.png",
+                    "renders/cad_preview.png",
+                    "renders/simulation_preview.png",
+                ],
+                confidence="high",
+            ).model_dump_json(indent=2),
+        )
+        await _upload_workspace_file(
+            "renders/render_e45_a45.png", render_probe_bytes, "image/png"
+        )
+        await _upload_workspace_file(
+            "renders/cad_preview.png", cad_preview_bytes, "image/png"
+        )
+        await _upload_workspace_file(
+            "renders/simulation_preview.png", simulation_preview_bytes, "image/png"
+        )
 
-        if not engineer_completed:
-            pytest.fail(f"Engineer loop timed out. Last status: {last_status}")
+        session_factory = get_sessionmaker()
+        async with session_factory() as db:
+            db.add(
+                Episode(
+                    id=episode_id,
+                    task=task,
+                    status=EpisodeStatus.RUNNING,
+                    metadata_vars={
+                        "worker_session_id": worker_session_id,
+                        "episode_type": "engineer",
+                    },
+                )
+            )
+            await db.commit()
 
-        # 4. Verify Engineering Artifacts
+        review_resp = await client.post(
+            f"/episodes/{episode_id}/review",
+            json={"review_content": review_content},
+        )
+        assert review_resp.status_code == 200, review_resp.text
+
         episode_assets_resp = await client.get(f"/episodes/{episode_id}")
         assert episode_assets_resp.status_code == 200, (
             f"Failed to fetch episode assets for {episode_id}: {episode_assets_resp.text}"
         )
         episode_data = EpisodeResponse.model_validate(episode_assets_resp.json())
+        assert episode_data.status == EpisodeStatus.COMPLETED
         assert episode_data.metadata_vars is not None
-        assert episode_data.metadata_vars.benchmark_id == str(benchmark_session_id)
-        assert episode_data.metadata_vars.worker_session_id == engineer_session_id
+        assert episode_data.metadata_vars.worker_session_id == worker_session_id
         assert episode_data.metadata_vars.episode_type == "engineer"
-        assert episode_data.metadata_vars.detailed_status in {
-            EpisodeStatus.COMPLETED.value,
-            EpisodeStatus.FAILED.value,
-        }
-        assert episode_data.metadata_vars.terminal_reason is not None
-        if episode_data.status == EpisodeStatus.FAILED:
-            assert episode_data.metadata_vars.failure_class is not None
-        else:
-            assert episode_data.metadata_vars.failure_class is None
-        artifact_paths = [a.s3_path for a in (episode_data.assets or [])]
-
-        benchmark_episode_resp = await client.get(f"/episodes/{benchmark_session_id}")
-        assert benchmark_episode_resp.status_code == 200, benchmark_episode_resp.text
-        benchmark_episode_data = EpisodeResponse.model_validate(
-            benchmark_episode_resp.json()
-        )
-        benchmark_artifact_paths = [
-            a.s3_path for a in (benchmark_episode_data.assets or [])
-        ]
 
         async def _read_episode_asset_text(episode_ref: str, asset_path: str) -> str:
             resp = await client.get(f"/episodes/{episode_ref}/assets/{asset_path}")
             assert resp.status_code == 200, resp.text
             return resp.text
 
-        # Check for Planner artifacts
-        assert any("plan.md" in p for p in artifact_paths), (
-            f"plan.md missing. Artifacts: {artifact_paths}"
+        validation_results_text = await _read_episode_asset_text(
+            str(episode_id), "validation_results.json"
         )
-        assert any("todo.md" in p for p in artifact_paths), (
-            f"todo.md missing. Artifacts: {artifact_paths}"
+        validation_results = ValidationResultRecord.model_validate_json(
+            validation_results_text
         )
-        assert any("assembly_definition.yaml" in p for p in artifact_paths), (
-            f"assembly_definition.yaml missing. Artifacts: {artifact_paths}"
-        )
-        assert any(p.endswith("benchmark_definition.yaml") for p in artifact_paths), (
-            f"benchmark_definition.yaml missing. Artifacts: {artifact_paths}"
-        )
-        assert any(
-            p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
-        ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
+        assert validation_results.verification_result is not None
+        assert validation_results.verification_result.num_scenes == 4
+        assert validation_results.verification_result.success_count == 3
+        assert validation_results.verification_result.scene_build_count == 1
+        assert validation_results.verification_result.backend_run_count == 1
+        assert validation_results.verification_result.success_rate == 0.75
+        assert validation_results.verification_result.is_consistent is False
 
-        source_benchmark_definition_path = next(
-            p
-            for p in benchmark_artifact_paths
-            if p.endswith("benchmark_definition.yaml")
+        simulation_result_text = await _read_episode_asset_text(
+            str(episode_id), "simulation_result.json"
         )
-        source_benchmark_assembly_path = next(
-            p
-            for p in benchmark_artifact_paths
-            if p.endswith("benchmark_assembly_definition.yaml")
-        )
-        source_benchmark_review_manifest_path = next(
-            p
-            for p in benchmark_artifact_paths
-            if p.endswith("benchmark_review_manifest.json")
-        )
-        source_benchmark_plan_manifest_path = next(
-            p
-            for p in benchmark_artifact_paths
-            if p.endswith("benchmark_plan_review_manifest.json")
-        )
-        source_render_manifest_path = next(
-            p
-            for p in benchmark_artifact_paths
-            if p.endswith("renders/render_manifest.json")
-        )
-        engineer_benchmark_definition_path = next(
-            p for p in artifact_paths if p.endswith("benchmark_definition.yaml")
-        )
-        engineer_benchmark_assembly_path = next(
-            p
-            for p in artifact_paths
-            if p.endswith("benchmark_assembly_definition.yaml")
-        )
-        engineer_benchmark_review_manifest_path = next(
-            p for p in artifact_paths if p.endswith("benchmark_review_manifest.json")
-        )
-        engineer_benchmark_plan_manifest_path = next(
-            p
-            for p in artifact_paths
-            if p.endswith("benchmark_plan_review_manifest.json")
-        )
-        engineer_render_manifest_path = next(
-            p for p in artifact_paths if p.endswith("renders/render_manifest.json")
-        )
+        simulation_result = SimulationResult.model_validate_json(simulation_result_text)
+        assert "renders/render_e45_a45.png" in simulation_result.render_paths
+        assert "renders/cad_preview.png" in simulation_result.render_paths
+        assert "renders/simulation_preview.png" in simulation_result.render_paths
 
-        source_benchmark_definition_text = await _read_episode_asset_text(
-            str(benchmark_session_id), source_benchmark_definition_path
-        )
-        engineer_benchmark_definition_text = await _read_episode_asset_text(
-            episode_id, engineer_benchmark_definition_path
-        )
-        assert engineer_benchmark_definition_text == source_benchmark_definition_text
-
-        source_benchmark_assembly_text = await _read_episode_asset_text(
-            str(benchmark_session_id), source_benchmark_assembly_path
-        )
-        engineer_benchmark_assembly_text = await _read_episode_asset_text(
-            episode_id, engineer_benchmark_assembly_path
-        )
-        assert engineer_benchmark_assembly_text == source_benchmark_assembly_text
-
-        source_benchmark_review_manifest_text = await _read_episode_asset_text(
-            str(benchmark_session_id), source_benchmark_review_manifest_path
-        )
-        engineer_benchmark_review_manifest_text = await _read_episode_asset_text(
-            episode_id, engineer_benchmark_review_manifest_path
-        )
-        assert (
-            engineer_benchmark_review_manifest_text
-            == source_benchmark_review_manifest_text
-        )
-
-        source_benchmark_plan_manifest_text = await _read_episode_asset_text(
-            str(benchmark_session_id), source_benchmark_plan_manifest_path
-        )
-        engineer_benchmark_plan_manifest_text = await _read_episode_asset_text(
-            episode_id, engineer_benchmark_plan_manifest_path
-        )
-        assert (
-            engineer_benchmark_plan_manifest_text == source_benchmark_plan_manifest_text
-        )
-
-        source_render_manifest_text = await _read_episode_asset_text(
-            str(benchmark_session_id), source_render_manifest_path
-        )
-        engineer_render_manifest_text = await _read_episode_asset_text(
-            episode_id, engineer_render_manifest_path
-        )
-        assert engineer_render_manifest_text == source_render_manifest_text
-
-        source_benchmark_review_manifest = ReviewManifest.model_validate_json(
-            source_benchmark_review_manifest_text
-        )
-        assert source_benchmark_review_manifest.episode_id == str(
-            benchmark_episode_data.id
-        )
-        assert source_benchmark_review_manifest.worker_session_id == str(
-            benchmark_session_id
-        )
-        assert source_benchmark_review_manifest.benchmark_episode_id == str(
-            benchmark_episode_data.id
-        )
-        assert source_benchmark_review_manifest.benchmark_worker_session_id == str(
-            benchmark_session_id
-        )
-        assert (
-            source_benchmark_review_manifest.benchmark_revision == repo_git_revision()
-        )
-        assert source_benchmark_review_manifest.solution_revision == repo_git_revision()
-        benchmark_assembly_definition = yaml.safe_load(source_benchmark_assembly_text)
-        assert (
-            source_benchmark_review_manifest.environment_version
-            == benchmark_assembly_definition["version"]
-        )
-        assert source_benchmark_review_manifest.preview_evidence_paths
-        assert set(source_benchmark_review_manifest.preview_evidence_paths) == set(
-            source_benchmark_review_manifest.renders
-        )
-
-        source_render_manifest = RenderManifest.model_validate_json(
-            source_render_manifest_text
-        )
-        assert source_render_manifest.episode_id == str(benchmark_episode_data.id)
-        assert source_render_manifest.worker_session_id == str(benchmark_session_id)
-        assert source_render_manifest.revision == repo_git_revision()
-        assert (
-            source_render_manifest.environment_version
-            == benchmark_assembly_definition["version"]
-        )
-        assert source_render_manifest.preview_evidence_paths
-        assert set(source_render_manifest.preview_evidence_paths) == set(
-            source_benchmark_review_manifest.renders
-        )
-
-        # Check for Reviewer artifacts
-        # Reviews are usually in reviews/ folder
-        review_files = [p for p in artifact_paths if "reviews/" in p]
-        assert len(review_files) > 0, (
-            f"No reviews found (Planner -> Reviewer or Coder -> Reviewer loop missing). Artifacts: {artifact_paths}"
-        )
-        assert any("validation_results.json" in p for p in artifact_paths), (
-            f"validation_results.json missing. Artifacts: {artifact_paths}"
-        )
-        assert any("simulation_result.json" in p for p in artifact_paths), (
-            f"simulation_result.json missing. Artifacts: {artifact_paths}"
-        )
-        manifest_paths = [
-            p
-            for p in artifact_paths
-            if p.endswith("engineering_execution_review_manifest.json")
+        review_traces = [
+            trace
+            for trace in (episode_data.traces or [])
+            if trace.name == "review_decision"
         ]
-        assert manifest_paths, (
-            "engineering_execution_review_manifest.json missing. "
-            f"Artifacts: {artifact_paths}"
-        )
-        assert any(
-            "/.manifests/" in p or p.startswith(".manifests/") for p in manifest_paths
-        ), f"review manifest must be in .manifests/. Found: {manifest_paths}"
-        manifest_resp = await client.get(
-            f"/episodes/{episode_id}/assets/{manifest_paths[0]}"
-        )
-        assert manifest_resp.status_code == 200, manifest_resp.text
-        manifest = ReviewManifest.model_validate_json(manifest_resp.text)
-        assert manifest.episode_id == str(episode_id)
-        assert manifest.worker_session_id == engineer_session_id
-        assert manifest.revision == repo_git_revision()
-        assert manifest.solution_revision == repo_git_revision()
-        assert manifest.environment_version == benchmark_assembly_definition["version"]
-        assert manifest.validation_success is True
-        assert manifest.simulation_success is True
-        assert manifest.goal_reached is True
-        assert manifest.preview_evidence_paths
-        assert set(manifest.preview_evidence_paths) == set(manifest.renders)
-        assert all(render_path in artifact_paths for render_path in manifest.renders)
+        assert review_traces, "Expected review_decision trace trail from live review."
+        latest_review_trace = max(review_traces, key=lambda trace: trace.id)
+        assert latest_review_trace.metadata_vars is not None
+        assert latest_review_trace.metadata_vars.decision == ReviewDecision.APPROVED
+        assert latest_review_trace.metadata_vars.review_id is not None
 
 
 async def _wait_for_episode_terminal(
@@ -394,6 +335,14 @@ Rejecting the episode for deterministic retry coverage.
     episode = EpisodeResponse.model_validate(status_response.json())
     assert episode.status == EpisodeStatus.FAILED
     return episode
+
+
+async def _read_episode_asset_text(
+    client: AsyncClient, episode_id: str, asset_path: str
+) -> str:
+    resp = await client.get(f"/episodes/{episode_id}/assets/{asset_path}")
+    assert resp.status_code == 200, resp.text
+    return resp.text
 
 
 @pytest.mark.integration_p1

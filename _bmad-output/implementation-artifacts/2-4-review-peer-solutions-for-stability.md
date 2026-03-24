@@ -1,6 +1,6 @@
 # Story 2.4: Review Peer Solutions for Stability
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 

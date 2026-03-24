@@ -451,10 +451,19 @@ def validate_environment_drilling_contract(
         drill_policy = (
             attachment_policy.drill_policy if attachment_policy is not None else None
         )
+        if attachment_policy is None:
+            errors.append(
+                "environment_drill_operations: benchmark part "
+                f"'{operation.target_part_id}' does not declare attachment_policy "
+                "and is non-drillable by default"
+            )
+            continue
+
         if drill_policy is None or not drill_policy.allowed:
             errors.append(
                 "environment_drill_operations: drilling is not allowed for "
-                f"benchmark part '{operation.target_part_id}'"
+                f"benchmark part '{operation.target_part_id}' because its "
+                "attachment_policy does not declare an allowed drill_policy"
             )
             continue
 
@@ -574,14 +583,20 @@ def validate_environment_attachment_contract(
                 )
                 continue
             attachment_policy = target.metadata.attachment_policy
-            if (
-                attachment_policy is None
-                or BenchmarkAttachmentMethod.FASTENER
+            if attachment_policy is None:
+                errors.append(
+                    "final_assembly.joints: benchmark part "
+                    f"'{benchmark_ref}' does not declare attachment_policy and is "
+                    "non-attachable by default"
+                )
+            elif (
+                BenchmarkAttachmentMethod.FASTENER
                 not in attachment_policy.attachment_methods
             ):
                 errors.append(
                     "final_assembly.joints: benchmark part "
-                    f"'{benchmark_ref}' does not permit fastener attachment"
+                    f"'{benchmark_ref}' does not permit fastener attachment "
+                    "under its attachment_policy"
                 )
 
             non_benchmark_refs = [

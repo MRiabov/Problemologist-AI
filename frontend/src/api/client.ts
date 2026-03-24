@@ -1,7 +1,7 @@
-import { EpisodesService } from './generated/services/EpisodesService';
 import { SkillsService } from './generated/services/SkillsService';
 import { DefaultService } from './generated/services/DefaultService';
 import { SimulationService } from './generated/services/SimulationService';
+import { EpisodesService } from './generated/services/EpisodesService';
 import type { controller__api__routes__episodes__EpisodeResponse as EpisodeResponse } from './generated/models/controller__api__routes__episodes__EpisodeResponse';
 import type { Skill } from './generated/models/Skill';
 import type { AgentRunResponse } from './generated/models/AgentRunResponse';
@@ -22,6 +22,30 @@ export async function fetchSkills(): Promise<Skill[]> {
 
 export async function fetchEpisode(id: string): Promise<EpisodeResponse> {
     return EpisodesService.getEpisodeApiEpisodesEpisodeIdGet(id);
+}
+
+export async function fetchEpisodeAsset(
+    episodeId: string,
+    path: string,
+): Promise<string> {
+    const content = await EpisodesService.getEpisodeAssetApiEpisodesEpisodeIdAssetsPathGet(
+        episodeId,
+        path,
+    );
+    if (typeof content === "string") {
+        return content;
+    }
+    return JSON.stringify(content, null, 2);
+}
+
+export async function submitEpisodeReview(
+    episodeId: string,
+    reviewContent: string,
+): Promise<any> {
+    return EpisodesService.reviewEpisodeApiEpisodesEpisodeIdReviewPost(
+        episodeId,
+        { review_content: reviewContent },
+    );
 }
 
 export async function runAgent(task: string, sessionId: string, metadata?: Record<string, any>): Promise<AgentRunResponse> {
