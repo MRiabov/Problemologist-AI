@@ -22,6 +22,7 @@ import { DesignViewer } from '../visualization/DesignViewer';
 import { PathUtils } from '../../lib/pathUtils';
 import type { AssetResponse } from "../../api/generated/models/AssetResponse";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
+import { EpisodeType } from "../../api/generated/models/EpisodeType";
 import {
   getArtifactSelectionDescriptor,
   getDefaultArtifactId,
@@ -66,6 +67,39 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   } = useEpisodes();
   const { isConnected } = useConnection();
 
+  const resolvedMediaEpisode = useMemo(() => {
+    if (!selectedEpisode) return null;
+
+    const benchmarkId = selectedEpisode.metadata_vars?.benchmark_id?.trim() ?? selectedEpisode.id;
+    const latestEngineerEpisode = episodes
+      .filter(
+        (episode) =>
+          episode.metadata_vars?.episode_type === EpisodeType.ENGINEER &&
+          episode.metadata_vars?.benchmark_id?.trim() === benchmarkId,
+      )
+      .filter((episode) => (episode.assets?.length ?? 0) > 0)
+      .slice()
+      .sort((a, b) => {
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+        if (aTime !== bTime) {
+          return aTime - bTime;
+        }
+        return String(a.id).localeCompare(String(b.id));
+      });
+
+    return latestEngineerEpisode[latestEngineerEpisode.length - 1] ?? selectedEpisode;
+  }, [
+    episodes,
+    selectedEpisode,
+    selectedEpisode?.created_at,
+    selectedEpisode?.id,
+    selectedEpisode?.metadata_vars?.benchmark_id,
+    selectedEpisode?.metadata_vars?.episode_type,
+  ]);
+
+  const resolvedMediaAssets = resolvedMediaEpisode?.assets ?? selectedEpisode?.assets ?? [];
+
   const getSavedLayout = (key: string, defaultVal: string) => {
     const saved = localStorage.getItem(key);
     if (saved) {
@@ -79,15 +113,16 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   };
 
   const getAssetUrl = useCallback((asset: AssetResponse) => {
-    if (!asset || !selectedEpisode) return null;
+    const episodeId = resolvedMediaEpisode?.id ?? selectedEpisode?.id ?? null;
+    if (!asset || !episodeId) return null;
     if (asset.s3_path.startsWith('http')) return asset.s3_path;
-    const path = PathUtils.join(OpenAPI.BASE || '', '/api/episodes', selectedEpisode.id, 'assets', asset.s3_path);
+    const path = PathUtils.join(OpenAPI.BASE || '', '/api/episodes', episodeId, 'assets', asset.s3_path);
     return path.startsWith('http') ? path : PathUtils.ensureLeadingSlash(path);
-  }, [selectedEpisode?.id]);
+  }, [resolvedMediaEpisode?.id, selectedEpisode?.id]);
 
   const latestMediaBundle = useMemo(
-    () => getLatestMediaBundle(selectedEpisode?.assets || []),
-    [selectedEpisode?.assets]
+    () => getLatestMediaBundle(resolvedMediaAssets),
+    [resolvedMediaAssets]
   );
   const videoAsset = latestMediaBundle.videoAsset;
   const modelAsset = latestMediaBundle.modelAsset;
@@ -125,12 +160,19 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   const defaultArtifactId = useMemo(
     () =>
       getDefaultArtifactId({
-        episodeType: selectedEpisode?.metadata_vars?.episode_type ?? null,
+        episodeType: resolvedMediaEpisode?.metadata_vars?.episode_type ?? selectedEpisode?.metadata_vars?.episode_type ?? null,
         isBenchmarkRoute: window.location.pathname === '/benchmark',
-        plan: selectedEpisode?.plan ?? null,
-        assets: selectedEpisode?.assets || [],
+        plan: resolvedMediaEpisode?.plan ?? selectedEpisode?.plan ?? null,
+        assets: resolvedMediaAssets,
       }),
-    [selectedEpisode?.assets, selectedEpisode?.metadata_vars?.episode_type, selectedEpisode?.plan, window.location.pathname]
+    [
+      resolvedMediaAssets,
+      resolvedMediaEpisode?.metadata_vars?.episode_type,
+      resolvedMediaEpisode?.plan,
+      selectedEpisode?.metadata_vars?.episode_type,
+      selectedEpisode?.plan,
+      window.location.pathname,
+    ]
   );
   const terminalSummary = useMemo(() => {
     const metadata = selectedEpisode?.metadata_vars ?? null;
@@ -154,7 +196,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
   );
 
   const circuitData = useMemo(() => {
-    const assemblyAsset = selectedEpisode?.assets?.find((a: AssetResponse) => a.s3_path.endsWith('assembly_definition.yaml'));
+    const assemblyAsset = resolvedMediaAssets.find((a: AssetResponse) => a.s3_path.endsWith('assembly_definition.yaml'));
     if (!assemblyAsset?.content) return null;
     try {
       const data = yaml.load(assemblyAsset.content) as any;
@@ -163,7 +205,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
       console.error("Failed to parse assembly definition for electronics", e);
       return null; 
     }
-  }, [selectedEpisode]);
+  }, [resolvedMediaAssets]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
@@ -291,6 +333,8 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                           heatmapAssetPath: heatmapAsset?.s3_path ?? null,
                           solutionEvidenceAssetPath: defaultSolutionEvidenceAsset?.s3_path ?? null,
                           episodeId: selectedEpisode?.id,
+                          mediaEpisodeId: resolvedMediaEpisode?.id ?? null,
+                          mediaEpisodeStatus: resolvedMediaEpisode?.metadata_vars?.detailed_status || resolvedMediaEpisode?.status || null,
                           episodeStatus: selectedEpisode?.metadata_vars?.detailed_status || selectedEpisode?.status,
                           benchmarkId: selectedEpisode?.metadata_vars?.benchmark_id ?? null,
                           priorEpisodeId: selectedEpisode?.metadata_vars?.prior_episode_id ?? null,
@@ -365,8 +409,9 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
               <ResizablePanel defaultSize="50%" minSize="20%">
                 <div className="h-full flex-1 overflow-hidden">
                   <ArtifactView 
-                    plan={selectedEpisode?.plan || ""}
-                    assets={selectedEpisode?.assets || []}
+                    plan={resolvedMediaEpisode?.plan || selectedEpisode?.plan || ""}
+                    assets={resolvedMediaAssets}
+                    episodeId={resolvedMediaEpisode?.id ?? selectedEpisode?.id ?? null}
                     isConnected={isConnected}
                   />
                 </div>

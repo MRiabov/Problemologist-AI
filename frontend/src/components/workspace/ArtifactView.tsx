@@ -49,12 +49,14 @@ interface ArtifactViewProps {
   plan?: string | null;
   assets?: AssetResponse[];
   isConnected?: boolean;
+  episodeId?: string | null;
 }
 
 export default function ArtifactView({
   plan,
   assets = [],
-  isConnected = true
+  isConnected = true,
+  episodeId = null,
 }: ArtifactViewProps) {
   const { 
     selectedEpisode, 
@@ -101,9 +103,10 @@ export default function ArtifactView({
   );
 
   const getAssetUrl = (assetPath: string | undefined) => {
-    if (!assetPath || !selectedEpisode) return null;
+    const resolvedEpisodeId = episodeId ?? selectedEpisode?.id ?? null;
+    if (!assetPath || !resolvedEpisodeId) return null;
     if (assetPath.startsWith('http')) return assetPath;
-    return PathUtils.join('/api/episodes', selectedEpisode.id, 'assets', assetPath);
+    return PathUtils.join('/api/episodes', resolvedEpisodeId, 'assets', assetPath);
   };
 
   const getFileIconInfo = (name: string, type: string) => {
