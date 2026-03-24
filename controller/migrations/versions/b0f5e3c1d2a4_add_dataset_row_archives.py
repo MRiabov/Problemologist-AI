@@ -10,6 +10,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "b0f5e3c1d2a4"
@@ -41,25 +42,31 @@ def upgrade() -> None:
         sa.Column("benchmark_id", sa.UUID(), nullable=False),
         sa.Column(
             "episode_type",
-            sa.Enum("benchmark", "engineer", name="episodetype"),
+            postgresql.ENUM(
+                "benchmark",
+                "engineer",
+                name="episodetype",
+                create_type=False,
+            ),
             nullable=False,
         ),
         sa.Column("seed_id", sa.String(), nullable=True),
         sa.Column("seed_dataset", sa.String(), nullable=True),
         sa.Column(
             "seed_match_method",
-            sa.Enum(
+            postgresql.ENUM(
                 "runtime_explicit",
                 "exact_task",
                 "no_exact_task_match",
                 "ambiguous_exact_task",
                 name="seedmatchmethod",
+                create_type=False,
             ),
             nullable=True,
         ),
         sa.Column(
             "generation_kind",
-            sa.Enum(
+            postgresql.ENUM(
                 "seeded",
                 "derived",
                 "seeded_eval",
@@ -67,6 +74,7 @@ def upgrade() -> None:
                 "cots_search",
                 "skill_agent",
                 name="generationkind",
+                create_type=False,
             ),
             nullable=True,
         ),

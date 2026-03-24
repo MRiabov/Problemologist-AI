@@ -80,10 +80,7 @@ def apply_canonical_dof_checklist(
 
     checklist = dict(review.checklist)
     key = canonical_dof_checklist_key(reviewer_stage)
-    checklist.setdefault(
-        key,
-        "pass" if review.decision == ReviewDecision.APPROVED else "fail",
-    )
+    checklist[key] = "pass" if review.decision == ReviewDecision.APPROVED else "fail"
     return review.model_copy(update={"checklist": checklist})
 
 

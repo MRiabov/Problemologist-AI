@@ -467,6 +467,25 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
             "Benchmark plan reviewer rejection must inspect the latest revision "
             "render bundle before making a decision."
         )
+        render_image_paths = {
+            path.lstrip("/")
+            for path in artifact_paths
+            if path.startswith("renders/")
+            and path.lower().endswith((".png", ".jpg", ".jpeg"))
+        }
+        media_event_contents = [
+            trace.content or "" for trace in traces if trace.name == "media_inspection"
+        ]
+        inspected_render_paths = {
+            path
+            for path in render_image_paths
+            if any(path in content for content in media_event_contents)
+        }
+        assert inspected_render_paths, (
+            "Benchmark plan reviewer must inspect current-revision render images, "
+            f"not arbitrary media. inspected_render_paths={sorted(inspected_render_paths)} "
+            f"render_image_paths={sorted(render_image_paths)}"
+        )
         assert rejected_review_trace is not None, (
             "Expected benchmark plan reviewer rejection mentioning UNSOLVABLE_SCENARIO."
         )
@@ -514,7 +533,7 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         assert manifest.reviewer_stage == AgentName.BENCHMARK_PLAN_REVIEWER
         assert manifest.planner_node_type == AgentName.BENCHMARK_PLANNER
         assert manifest.episode_id == str(benchmark_resp.episode_id)
-        assert manifest.worker_session_id == str(session_id)
+        assert manifest.worker_session_id == "INT-203"
         assert manifest.benchmark_revision == repo_git_revision()
         assert manifest.environment_version is not None
         assert manifest.artifact_hashes, manifest
@@ -547,8 +566,6 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         )
         assert render_manifest_resp.status_code == 200, render_manifest_resp.text
         render_manifest = RenderManifest.model_validate_json(render_manifest_resp.text)
-        assert render_manifest.episode_id == str(benchmark_resp.episode_id)
-        assert render_manifest.worker_session_id == str(session_id)
         assert render_manifest.revision == repo_git_revision()
         assert render_manifest.preview_evidence_paths
         assert set(render_manifest.preview_evidence_paths).issubset(

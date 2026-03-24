@@ -45,7 +45,7 @@ transcript:
       reason: Planner justification accepted for planner_link.
       required_fixes: []
       checklist:
-        dof_minimality: pass
+        dof_minimality: fail
 - node: engineer_plan_reviewer
   steps:
   - finished: true
@@ -157,18 +157,18 @@ transcript:
       reason: Execution deviation is justified by planner_link.
       required_fixes: []
       checklist:
-        dof_deviation_justified: pass
+        dof_deviation_justified: fail
 engineer_plan_reviewer:
   review:
     decision: APPROVED
     reason: Planner justification accepted for planner_link.
     required_fixes: []
     checklist:
-      dof_minimality: pass
+      dof_minimality: fail
 engineer_execution_reviewer:
   review:
     decision: APPROVED
     reason: Execution deviation is justified by planner_link.
     required_fixes: []
     checklist:
-      dof_deviation_justified: pass
+      dof_deviation_justified: fail

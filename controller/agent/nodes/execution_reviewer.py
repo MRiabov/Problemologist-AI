@@ -70,7 +70,8 @@ class ExecutionReviewerNode(BaseNode):
     ) -> ReviewResult:
         if review.decision != ReviewDecision.APPROVED:
             return review
-        if not await self._workspace_has_render_media():
+        render_paths = await self._list_render_media_paths()
+        if not render_paths:
             return review
         render_error = await validate_render_images_non_black(self.ctx.worker_client)
         if render_error is not None:
@@ -86,18 +87,20 @@ class ExecutionReviewerNode(BaseNode):
                     "required_fixes": fixes,
                 }
             )
-        if self._used_tool("inspect_media"):
+        inspected_render_count = self._count_inspected_render_media_paths(render_paths)
+        if inspected_render_count > 0:
             return review
         fixes = list(review.required_fixes or [])
         fixes.append(
-            "Inspect at least one render via inspect_media(path) before approving."
+            "Inspect at least one current-revision render via inspect_media(path) "
+            "before approving."
         )
         return review.model_copy(
             update={
                 "decision": ReviewDecision.REJECTED,
                 "reason": (
-                    "Approval blocked: renders exist but the reviewer did not use "
-                    "inspect_media(path) to inspect visual evidence."
+                    "Approval blocked: current-revision renders exist but the "
+                    "reviewer did not inspect any of them with inspect_media(path)."
                 ),
                 "required_fixes": fixes,
             }

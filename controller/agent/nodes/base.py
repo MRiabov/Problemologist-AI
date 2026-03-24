@@ -180,6 +180,21 @@ class BaseNode:
     def _inspected_unique_media_path_count(self) -> int:
         return len(set(self._inspected_media_paths))
 
+    def _normalized_inspected_media_path_set(self) -> set[str]:
+        return {
+            self._normalize_inspected_media_path(path)
+            for path in self._inspected_media_paths
+        }
+
+    def _count_inspected_render_media_paths(self, render_paths: list[str]) -> int:
+        inspected_paths = self._normalized_inspected_media_path_set()
+        current_render_paths = {
+            self._normalize_inspected_media_path(path)
+            for path in render_paths
+            if self._is_image_media_path(path)
+        }
+        return len(inspected_paths.intersection(current_render_paths))
+
     def _get_visual_inspection_policy(
         self, node_type: AgentName
     ) -> VisualInspectionPolicy:
