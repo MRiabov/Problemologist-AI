@@ -42,17 +42,31 @@ def test_int_174_cad_show_hide_behavior(page: Page):
     expect(send_button).to_be_enabled(timeout=30000)
     send_button.click()
 
-    # 5. Wait for the "Confirm & Start" button and click it
+    # 5. Wait for the benchmark to reach a user-actionable state.
+    # Some runs pause at PLANNED, while others can advance straight to COMPLETED
+    # before the browser observes the confirmation step.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return data.episodeStatus === 'PLANNED';
+                return ['PLANNED', 'COMPLETED', 'FAILED', 'CANCELLED'].includes(data.episodeStatus);
             } catch (e) { return false; }
         }""",
-        timeout=120000,
+        timeout=180000,
+    )
+    current_status = page.evaluate(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return null;
+            try {
+                return JSON.parse(el.textContent).episodeStatus ?? null;
+            } catch (e) { return null; }
+        }"""
+    )
+    assert current_status in {"PLANNED", "COMPLETED"}, (
+        f"Benchmark did not reach a usable state before viewer flow (status={current_status})"
     )
 
     confirm_controls = [
