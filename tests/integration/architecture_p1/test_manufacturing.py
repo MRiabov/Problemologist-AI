@@ -416,7 +416,11 @@ async def test_validate_and_price_round_trips_cots_provenance():
         exec_resp = await client.post(
             f"{WORKER_LIGHT_URL}/runtime/execute",
             json=ExecuteRequest(
-                code="python skills/manufacturing-knowledge/scripts/validate_and_price.py",
+                code=(
+                    "python "
+                    "/home/maksym/Work/proj/Problemologist/Problemologist-AI/"
+                    "skills/manufacturing-knowledge/scripts/validate_and_price.py"
+                ),
                 timeout=120,
             ).model_dump(mode="json"),
             headers=headers,
@@ -482,6 +486,18 @@ totals:
             headers=headers,
         )
         assert write_resp.status_code == 200, write_resp.text
+
+        config_resp = await client.post(
+            "/fs/write",
+            json=WriteFileRequest(
+                path="manufacturing_config.yaml",
+                content=REPO_MANUFACTURING_CONFIG,
+                overwrite=True,
+                bypass_agent_permissions=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert config_resp.status_code == 200, config_resp.text
 
         delete_resp = await client.post(
             "/fs/delete",

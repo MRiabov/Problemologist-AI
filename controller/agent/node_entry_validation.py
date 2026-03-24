@@ -738,7 +738,12 @@ async def _materialize_reviewer_handover(
     try:
         verify_result = await _run_with_transient_busy_retry(
             "verify",
-            lambda: client.verify("script.py"),
+            lambda: client.verify(
+                "script.py",
+                num_scenes=1 if controller_settings.is_integration_test else None,
+                duration=1.0 if controller_settings.is_integration_test else None,
+                smoke_test_mode=controller_settings.is_integration_test,
+            ),
         )
     except Exception as exc:
         return f"verify failed while materializing handover: {exc}"

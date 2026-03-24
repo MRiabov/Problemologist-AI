@@ -27,8 +27,8 @@ As a human operator, I want to configure the prices used for costing from real m
   - [x] Add a positive case that proves a real workspace cost override or catalog-backed price source is accepted and produces the expected totals.
   - [x] Add a negative case that proves missing or malformed price data fails closed with an explicit reason.
   - [x] Keep the assertions HTTP- and artifact-based, not unit-test-only.
-- [ ] Run the cost-related integration slices before marking the story complete.
-  - [ ] At minimum cover `INT-010`, `INT-012`, `INT-013`, `INT-014`, `INT-018`, and `INT-019`; include any follow-on regression needed to prove pricing provenance is stable.
+- [x] Run the cost-related integration slices before marking the story complete.
+  - [x] At minimum cover `INT-010`, `INT-012`, `INT-013`, `INT-014`, `INT-018`, and `INT-019`; include any follow-on regression needed to prove pricing provenance is stable.
 
 ## Dev Notes
 
@@ -80,6 +80,7 @@ GPT-5
 ### Debug Log References
 
 - `2026-03-23`: Implemented fail-closed manufacturing-config provenance plumbing across planner validation, `submit_plan()`, seeded handoff validation, and planner prompt/config permissions. Verified the INT-005 planner trace slice after re-enabling tests.
+- `2026-03-24`: Repaired planner-gate and manufacturing provenance integration fixtures to include the workspace pricing source where the tightened gate now expects it, then verified the cost-related INT-010/018/019 planner slice and the COTS provenance/manufacturing-config INT-033/035 slice through the integration runner.
 
 ### Completion Notes List
 
@@ -87,6 +88,7 @@ GPT-5
 - Planner prompts and planner filesystem permissions now explicitly permit reading the workspace pricing source while still forbidding invented COTS pricing data.
 - Planner handoff manifests now persist `manufacturing_config.yaml` alongside the existing artifacts so provenance is traceable in the episode bundle.
 - Added integration coverage for a positive provenance assertion and a negative fail-closed missing-config case, and verified the INT-005 planner-gate path after enabling test execution.
+- Verified the tightened pricing contract end-to-end with the p0 cost slice (`INT-010`, `INT-018`, `INT-019`) and the p1 provenance slice (`INT-033`, `INT-035`).
 
 ### File List
 
@@ -101,6 +103,7 @@ GPT-5
 - `tests/integration/architecture_p1/test_manufacturing.py`
 - `worker_heavy/utils/dfm.py`
 - `worker_heavy/workbenches/config.py`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
 ### Change Log
 

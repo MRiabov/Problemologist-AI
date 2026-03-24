@@ -1245,6 +1245,7 @@ def build():
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
             "benchmark_assembly_definition.yaml": invalid_drilling_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1357,6 +1358,7 @@ def build():
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
             "benchmark_assembly_definition.yaml": invalid_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -1466,6 +1468,7 @@ def build():
             "todo.md": valid_todo,
             "benchmark_definition.yaml": relaxed_objectives,
             "benchmark_assembly_definition.yaml": invalid_cost,
+            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
             "script.py": goal_script,
         }
         await setup_workspace(client, base_headers, files)
@@ -2369,6 +2372,7 @@ def build():
                 "todo.md": todo_md,
                 "benchmark_definition.yaml": objectives,
                 "benchmark_assembly_definition.yaml": assembly_definition,
+                "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
                 "script.py": goal_script,
             },
         )
