@@ -14,4 +14,4 @@ benchmark_parts:
       fixed: true
       material_id: aluminum_6061
 simulation_bounds: {min: [-100,-100,0], max: [100,100,100]}
-constraints: {max_unit_cost: 50, max_weight_g: 1000.0}
+constraints: {max_unit_cost: 100, max_weight_g: 1000.0}
