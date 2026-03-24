@@ -13,11 +13,6 @@ review_status: fail
   - Story file: /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts/5-2-visualize-cad-and-simulation-evidence.md
   - Sprint status: /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts/sprint-status.yaml
 
----
-
----
-review_status: fail
----
 Story slice validation through `./scripts/run_integration_tests.sh` was not fully green.
 
 - Passed: `INT-165`, `INT-166`, `INT-167`
