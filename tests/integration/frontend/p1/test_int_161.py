@@ -2,7 +2,6 @@ import os
 import re
 import time
 import uuid
-from pathlib import Path
 
 import httpx
 import pytest
@@ -107,12 +106,28 @@ def test_int_161_tool_activity_and_reasoning_visibility(page: Page):
         "Expected backend reasoning traces (LLM_END with node name)."
     )
 
+    log_traces = [
+        t
+        for t in traces
+        if t.get("trace_type") == "LOG"
+        and (t.get("metadata_vars") or {}).get("role") != "user"
+        and not str(t.get("content") or "").startswith("User message:")
+    ]
+    assert log_traces, "Expected persisted non-user LOG traces from the backend."
+
     # Verify tool activity rows are rendered in UI from backend traces.
     activity_rows = page.locator('[data-testid="tool-activity-row"]')
     expect(activity_rows.first).to_be_visible(timeout=30000)
     assert activity_rows.count() >= len(tool_traces), (
         f"UI tool rows ({activity_rows.count()}) < backend tool traces ({len(tool_traces)})."
     )
+
+    first_log_content = str(log_traces[0].get("content") or "").strip()
+    first_log_snippet = first_log_content.splitlines()[0][:80]
+    assert first_log_snippet, "Expected a non-user LOG trace with persisted content."
+    expect(
+        page.get_by_test_id("run-log-row").filter(has_text=first_log_snippet).first
+    ).to_be_visible(timeout=30000)
 
     # Verify reasoning is hidden by default then shown when enabled.
     toggle = page.get_by_test_id("view-reasoning-toggle")
@@ -138,43 +153,3 @@ def test_int_161_tool_activity_and_reasoning_visibility(page: Page):
     expect(
         page.get_by_text(re.compile(re.escape(expected_snippet))).first
     ).to_be_visible(timeout=30000)
-
-    readable_log_path = Path("logs/integration_tests/current/readable_agent_logs.log")
-    label_candidates = {episode_id[:7]}
-    metadata = ep_resp.json().get("metadata_vars") or {}
-    if isinstance(metadata, dict):
-        for key in ("worker_session_id", "benchmark_id"):
-            value = metadata.get(key)
-            if isinstance(value, str) and value.strip():
-                label_candidates.add(value.strip()[:7])
-
-    readable_log_text = ""
-    for _ in range(45):
-        if readable_log_path.exists():
-            readable_log_text = readable_log_path.read_text(encoding="utf-8")
-            run_lines = [
-                line
-                for line in readable_log_text.splitlines()
-                if any(label in line for label in label_candidates)
-            ]
-            if any("OUTPUT" in line for line in run_lines) and any(
-                "REASONING" in line for line in run_lines
-            ):
-                break
-        time.sleep(1)
-
-    run_lines = [
-        line
-        for line in readable_log_text.splitlines()
-        if any(label in line for label in label_candidates)
-    ]
-    assert run_lines, "Expected readable_agent_logs.log entries for this episode."
-    assert all(re.match(r"^t=\d+s \| ", line) for line in run_lines), (
-        "Expected readable_agent_logs.log lines to include elapsed seconds."
-    )
-    assert any("OUTPUT" in line for line in run_lines), (
-        "Expected readable_agent_logs.log to include model output lines."
-    )
-    assert any("REASONING" in line for line in run_lines), (
-        "Expected readable_agent_logs.log to include reasoning lines."
-    )

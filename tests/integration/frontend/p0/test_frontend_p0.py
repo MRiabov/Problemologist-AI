@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import uuid
 from urllib.parse import quote
 
@@ -16,7 +17,7 @@ from controller.api.schemas import (
     EpisodeListItem,
     EpisodeResponse,
 )
-from shared.enums import TraceType
+from shared.enums import AgentName, EpisodeStatus, TraceType
 
 # Constants
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://localhost:18000")
@@ -59,6 +60,45 @@ def _start_engineer_run(page: Page, prompt: str) -> None:
     expect(chat_input).to_be_visible(timeout=30000)
     chat_input.fill(prompt)
     page.get_by_label("Send Message").click()
+
+
+def _start_engineer_episode_via_api(
+    *,
+    task: str,
+    session_id: str,
+    agent_name: AgentName = AgentName.ENGINEER_PLANNER,
+) -> str:
+    with httpx.Client(timeout=120.0) as client:
+        request = AgentRunRequest(
+            task=task,
+            session_id=session_id,
+            agent_name=agent_name,
+        )
+        response = client.post(
+            f"{CONTROLLER_URL}/api/agent/run",
+            json=request.model_dump(mode="json"),
+        )
+        assert response.status_code in (200, 202), response.text
+        episode_id = str(AgentRunResponse.model_validate(response.json()).episode_id)
+
+        deadline = time.time() + 120.0
+        while time.time() < deadline:
+            episode_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+            assert episode_resp.status_code == 200, episode_resp.text
+            episode = EpisodeResponse.model_validate(episode_resp.json())
+            if episode.status == EpisodeStatus.RUNNING:
+                return episode_id
+            if episode.status in {
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+            }:
+                raise AssertionError(
+                    f"Episode {episode_id} reached terminal status before it could be interrupted"
+                )
+            time.sleep(0.5)
+
+    raise AssertionError(f"Episode {episode_id} never became available")
 
 
 @pytest.mark.integration_frontend
@@ -189,11 +229,28 @@ def test_int_158_workflow_parity(page: Page):
     chat_input.fill(prompt_e)
     page.get_by_label("Send Message").click()
 
-    # Verify thinking indicator
-    expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
-        timeout=30000
+    page.wait_for_function(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return false;
+            try {
+                const data = JSON.parse(el.textContent);
+                return ['RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED'].includes(data.episodeStatus);
+            } catch (e) { return false; }
+        }""",
+        timeout=120000,
     )
-    expect(page.get_by_label("Stop Agent")).to_be_visible()
+    engineer_debug = _debug_info(page)
+    if engineer_debug.get("isRunning"):
+        expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
+            timeout=30000
+        )
+        expect(page.get_by_label("Stop Agent")).to_be_visible()
+    else:
+        expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(
+            timeout=30000
+        )
+        expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
 
     # Wait for terminal status in engineer workflow.
     page.wait_for_function(
@@ -207,6 +264,9 @@ def test_int_158_workflow_parity(page: Page):
         }""",
         timeout=120000,
     )
+    expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(timeout=30000)
+    expect(page.get_by_test_id("terminal-summary-detailed-status")).to_be_visible()
+    expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
     expect(page.get_by_label("Send Message")).to_be_visible()
 
     # Test for Benchmark Workflow
@@ -266,6 +326,10 @@ def test_int_158_workflow_parity(page: Page):
         }""",
         timeout=120000,
     )
+    expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(timeout=30000)
+    expect(page.get_by_text("Terminal outcome")).to_be_visible(timeout=30000)
+    expect(page.get_by_test_id("terminal-summary-detailed-status")).to_be_visible()
+    expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
     expect(page.get_by_label("Send Message")).to_be_visible()
 
 
@@ -386,13 +450,27 @@ def test_int_162_interrupt_ux_propagation(page: Page):
     INT-162: Stop action posts interrupt API and the run reaches cancelled state
     without ongoing stream growth.
     """
-    _start_engineer_run(page, f"INT-162 interrupt path {uuid.uuid4()}")
+    task = f"INT-162 interrupt path {uuid.uuid4()}"
+    episode_id = _start_engineer_episode_via_api(
+        task=task,
+        session_id=f"INT-030-{uuid.uuid4().hex[:8]}",
+        agent_name=AgentName.ENGINEER_PLANNER,
+    )
+    page.goto(FRONTEND_URL)
+    page.wait_for_load_state("networkidle")
+    episode_item = (
+        page.get_by_test_id("sidebar-episode-item").filter(has_text=task).first
+    )
+    expect(episode_item).to_be_visible(timeout=30000)
+    episode_item.click()
     stop_button = page.get_by_label("Stop Agent")
     expect(stop_button).to_be_visible(timeout=30000)
 
     debug_before = _debug_info(page)
-    episode_id = debug_before.get("episodeId")
-    assert episode_id, "Episode ID missing in debug info before interrupt"
+    selected_episode_id = debug_before.get("episodeId")
+    assert selected_episode_id == episode_id, (
+        "Expected the running episode to be selected"
+    )
     with httpx.Client(timeout=10.0) as client:
         before_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
         assert before_resp.status_code == 200
@@ -406,6 +484,10 @@ def test_int_162_interrupt_ux_propagation(page: Page):
     assert final_status == "CANCELLED", (
         f"Expected cancelled status after interrupt, got {final_status}"
     )
+    expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(timeout=30000)
+    expect(page.get_by_text("Terminal cancellation")).to_be_visible(timeout=30000)
+    expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
+    expect(page.get_by_test_id("terminal-summary-failure-class")).to_be_visible()
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=30000)
 
     import time

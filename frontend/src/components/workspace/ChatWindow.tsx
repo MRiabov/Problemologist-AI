@@ -138,12 +138,6 @@ export default function ChatWindow({
     }
     return { used, max, pct: (used / max) * 100 };
   }, [selectedEpisode?.metadata_vars]);
-  const isBenchmarkEpisode =
-    selectedEpisode?.metadata_vars?.episode_type === EpisodeType.BENCHMARK ||
-    isBenchmarkPath;
-  const isEngineerEpisode =
-    selectedEpisode?.metadata_vars?.episode_type === EpisodeType.ENGINEER ||
-    (!isBenchmarkEpisode && !!selectedEpisode);
   const validationResultsRecord = useMemo(
     () => getValidationResultsRecord(selectedEpisode?.assets ?? []),
     [selectedEpisode?.assets]
@@ -170,17 +164,30 @@ export default function ChatWindow({
   const shouldShowFallbackLogs =
     selectedEpisode?.status === EpisodeStatus.FAILED &&
     !hasStructuredTerminalMetadata;
+  const isTerminalEpisode =
+    !!selectedEpisode &&
+    [
+      EpisodeStatus.COMPLETED,
+      EpisodeStatus.FAILED,
+      EpisodeStatus.CANCELLED,
+    ].includes(selectedEpisode.status);
   const terminalBannerClass =
     selectedEpisode?.status === EpisodeStatus.FAILED
       ? "mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm"
-      : "mt-6 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-sm";
+      : selectedEpisode?.status === EpisodeStatus.CANCELLED
+        ? "mt-6 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20 shadow-sm"
+        : "mt-6 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-sm";
   const terminalIconClass =
     selectedEpisode?.status === EpisodeStatus.FAILED
       ? "text-red-500"
-      : "text-emerald-500";
+      : selectedEpisode?.status === EpisodeStatus.CANCELLED
+        ? "text-amber-500"
+        : "text-emerald-500";
   const terminalHeading =
     selectedEpisode?.status === EpisodeStatus.FAILED
       ? "Terminal failure"
+      : selectedEpisode?.status === EpisodeStatus.CANCELLED
+        ? "Terminal cancellation"
       : "Terminal outcome";
   const isReviewableEngineerEpisode =
     !!selectedEpisode &&
@@ -483,7 +490,7 @@ export default function ChatWindow({
                 )}
 
                 {/* Terminal outcome summary */}
-                {selectedEpisode && isEngineerEpisode && (
+                {isTerminalEpisode && (
                     <div
                       data-testid="terminal-summary-block"
                       className={terminalBannerClass}

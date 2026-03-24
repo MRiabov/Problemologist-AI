@@ -148,10 +148,15 @@ export const TraceList = memo(({
                 </div>
               );
           }
-          if (trace.trace_type === TraceType.LOG && trace.content) {
+          if (trace.trace_type === TraceType.LOG) {
               const meta = (trace.metadata_vars || {}) as any;
-              if (meta.role === 'user' || trace.content.startsWith('User message:')) {
-                  const displayContent = meta.message || trace.content.replace('User message: ', '');
+              const content = trace.content || "";
+              const hasRenderableLogText = !!content.trim() || !!trace.name?.trim();
+              if (!hasRenderableLogText) {
+                return null;
+              }
+              if (meta.role === 'user' || content.startsWith('User message:')) {
+                  const displayContent = meta.message || content.replace('User message: ', '');
                   return (
                     <div key={trace.id} data-testid="chat-message" className="flex justify-end mb-4">
                         <div className="max-w-[85%] bg-primary/10 rounded-2xl p-3 shadow-sm border border-primary/20">
@@ -159,11 +164,25 @@ export const TraceList = memo(({
                                 {displayContent}
                             </div>
                         </div>
-                    </div>
-                  );
+                      </div>
+                    );
               }
-              // Other logs are intentionally not shown in the chat timeline.
-              return null;
+              return (
+                <div
+                  key={trace.id}
+                  data-testid="run-log-row"
+                  data-log-name={trace.name || ""}
+                  className="my-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 shadow-sm"
+                >
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <Terminal className="h-3.5 w-3.5 shrink-0" />
+                    <span data-testid="run-log-row-label">{trace.name || "LOG"}</span>
+                  </div>
+                  <div className="mt-1 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
+                    {content || trace.name}
+                  </div>
+                </div>
+              );
           }
           if (trace.trace_type === TraceType.LLM_END && trace.content) {
             if (trace.name) {
