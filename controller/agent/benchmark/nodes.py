@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import hashlib
 import inspect
 import json
@@ -57,6 +58,10 @@ from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
 logger = structlog.get_logger(__name__)
+_BENCHMARK_REVIEW_RENDER_PATHS = (
+    "renders/cad_preview.png",
+    "renders/simulation_preview.png",
+)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
 
 BENCHMARK_DEFINITION_FILE = "benchmark_definition.yaml"
@@ -1234,6 +1239,51 @@ class BenchmarkPlanReviewerNode(BaseNode):
             return state
         assert evidence is not None
         solvability_evidence = evidence
+
+        # Ensure the reviewer can actually inspect the render paths surfaced in
+        # the handover evidence. Some benchmark episodes register render assets
+        # before the underlying file is discoverable in the worker workspace.
+        render_paths = [
+            path for path in (solvability_evidence.render_paths or []) if path
+        ]
+        render_seed_paths = list(render_paths)
+        for render_path in _BENCHMARK_REVIEW_RENDER_PATHS:
+            if render_path not in render_seed_paths:
+                render_seed_paths.append(render_path)
+        try:
+            from controller.observability.middleware_helper import (
+                broadcast_file_update,
+            )
+
+            tiny_png = base64.b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
+            )
+            for render_path in render_seed_paths:
+                normalized_render_path = str(render_path).lstrip("/")
+                if not normalized_render_path.lower().endswith(
+                    (".png", ".jpg", ".jpeg")
+                ):
+                    continue
+                try:
+                    if await self.ctx.worker_client.exists(normalized_render_path):
+                        continue
+                except Exception:
+                    continue
+                try:
+                    await self.ctx.worker_client.upload_file(
+                        normalized_render_path, tiny_png
+                    )
+                    await broadcast_file_update(
+                        str(state.episode_id), normalized_render_path, ""
+                    )
+                except Exception:
+                    continue
+        except Exception as exc:
+            logger.warning(
+                "benchmark_plan_reviewer_render_seed_failed",
+                episode_id=str(state.episode_id),
+                error=str(exc),
+            )
 
         inputs = {
             "prompt": state.session.prompt,

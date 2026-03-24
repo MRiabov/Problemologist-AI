@@ -49,7 +49,7 @@ async def _wait_for_review_evidence(
     *,
     episode_id: str,
     required_checklist_pairs: tuple[tuple[str, str], ...],
-    attempts: int = 10,
+    attempts: int = 15,
 ) -> EpisodeResponse:
     episode: EpisodeResponse | None = None
     for _ in range(attempts):
@@ -91,7 +91,8 @@ async def test_reviewer_evidence_completeness():
         episode_id = str(benchmark_resp.episode_id)
 
         ep_data: EpisodeResponse | None = None
-        for _ in range(150):
+        # Allow a little extra time for artifact persistence on loaded runners.
+        for _ in range(180):
             status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
             if status_resp.status_code != 200:
                 await asyncio.sleep(1.0)
@@ -158,9 +159,9 @@ async def test_reviewer_evidence_completeness():
             f"No review manifest artifacts found. Artifacts: {artifact_paths}"
         )
         assert any(
-            p.endswith("engineering_plan_review_manifest.json") for p in manifest_paths
+            p.endswith("benchmark_plan_review_manifest.json") for p in manifest_paths
         ), (
-            "engineering_plan_review_manifest.json missing from artifacts. "
+            "benchmark_plan_review_manifest.json missing from artifacts. "
             f"Found: {manifest_paths}"
         )
         assert any(

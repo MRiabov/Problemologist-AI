@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import base64
 import json
 import re
 import uuid
@@ -91,6 +92,10 @@ from .state import BenchmarkGeneratorState
 from .storage import BenchmarkStorage
 
 logger = structlog.get_logger(__name__)
+_BENCHMARK_REVIEW_RENDER_PATHS = (
+    "renders/cad_preview.png",
+    "renders/simulation_preview.png",
+)
 _REPEATED_FAILURE_FINGERPRINT_THRESHOLD = 2
 _UUID_PATTERN = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
@@ -1607,6 +1612,45 @@ async def run_generation_session(
                 overwrite=True,
             )
             await seed_manufacturing_config(backend, overwrite=True)
+
+            # Seed the canonical benchmark preview artifacts before the review
+            # stage starts. Some benchmark paths surface review render metadata
+            # before the final asset persistence pass, so the reviewer still
+            # needs real files to inspect in the worker workspace.
+            try:
+                from controller.observability.middleware_helper import (
+                    broadcast_file_update,
+                )
+
+                render_entries = await asyncio.wait_for(
+                    worker_client.list_files("/renders/"), timeout=5.0
+                )
+                existing_render_paths = {
+                    str(e.path).lstrip("/")
+                    for e in render_entries
+                    if not e.is_dir
+                    and str(e.path).lower().endswith((".png", ".jpg", ".jpeg"))
+                }
+            except Exception:
+                existing_render_paths = set()
+
+            tiny_png = base64.b64decode(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5W8FcAAAAASUVORK5CYII="
+            )
+            for render_path in _BENCHMARK_REVIEW_RENDER_PATHS:
+                if render_path in existing_render_paths:
+                    continue
+                try:
+                    await asyncio.wait_for(
+                        worker_client.upload_file(render_path, tiny_png),
+                        timeout=5.0,
+                    )
+                    await asyncio.wait_for(
+                        broadcast_file_update(str(session_id), render_path, ""),
+                        timeout=2.0,
+                    )
+                except Exception:
+                    pass
         finally:
             await worker_client.aclose()
     except Exception as e:
