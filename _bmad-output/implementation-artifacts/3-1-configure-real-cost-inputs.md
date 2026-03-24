@@ -1,6 +1,6 @@
 # Story 3.1: Configure Real Cost Inputs
 
-Status: review
+Status: done
 
 ## Story
 
