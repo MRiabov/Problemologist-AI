@@ -6,6 +6,7 @@ These models define the contracts for:
 - Review frontmatter: YAML frontmatter for reviewer decisions
 """
 
+import re
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -23,6 +24,7 @@ from shared.enums import (
     AssetType,
     BenchmarkAttachmentMethod,
     BenchmarkRefusalReason,
+    DatasetCurationReasonCode,
     ElectricalRefusalReason,
     ElectronicComponentType,
     EntryFailureDisposition,
@@ -580,6 +582,7 @@ class EpisodeMetadata(BaseModel):
 
     worker_session_id: str | None = None
     benchmark_id: str | None = None
+    benchmark_family: str | None = None
     custom_objectives: CustomObjectives | None = None
     detailed_status: str | None = None  # Using str to avoid circular deps if needed
     episode_phase: EpisodePhase | None = None
@@ -604,6 +607,7 @@ class EpisodeMetadata(BaseModel):
     seed_match_method: SeedMatchMethod | None = None
     generation_kind: GenerationKind | None = None
     parent_seed_id: str | None = None
+    benchmark_family: str | None = None
     is_integration_test: bool | None = None
     integration_test_id: str | None = None
     disable_sidecars: bool | None = None
@@ -721,6 +725,168 @@ class DatasetRowArchiveManifest(StrictContractModel):
     artifact_references: list[DatasetRowArtifactReference] = Field(default_factory=list)
     artifact_families: list[str] = Field(default_factory=list)
     validation_notes: list[str] = Field(default_factory=list)
+
+
+class DatasetCurationCounts(StrictContractModel):
+    """Aggregate counts for a curated dataset manifest."""
+
+    accepted_before_pending_filter: int
+    accepted_after_pending_filter: int
+    dedup_identity_groups_with_drops: int
+    rejected: int
+
+
+class DatasetCurationRejectedRow(StrictContractModel):
+    """A rejected row captured in a dataset curation manifest."""
+
+    source_episode_id: str
+    source_seed_id: str | None = None
+    seed_dataset: str | None = None
+    seed_match_method: SeedMatchMethod | None = None
+    generation_kind: GenerationKind | None = None
+    parent_seed_id: str | None = None
+    source_family: str | None = None
+    reasons: list[DatasetCurationReasonCode]
+
+    @field_validator("source_episode_id")
+    @classmethod
+    def validate_source_episode_id(cls, value: str) -> str:
+        episode_id = value.strip()
+        if not episode_id:
+            raise ValueError("source_episode_id must be a non-empty string")
+        return episode_id
+
+    @field_validator("reasons", mode="before")
+    @classmethod
+    def normalize_reasons(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("reasons must not be empty")
+
+        if isinstance(value, (str, DatasetCurationReasonCode)):
+            candidates = [value]
+        else:
+            candidates = list(value)
+
+        normalized: list[str] = []
+        for item in candidates:
+            text = str(item).strip()
+            if not text:
+                raise ValueError("reasons must not contain empty values")
+            text = text.splitlines()[0]
+            text = text.split(":", 1)[0]
+            text = re.sub(r"[^a-zA-Z0-9]+", "_", text).strip("_").lower()
+            if not text:
+                raise ValueError("reasons must normalize to non-empty codes")
+            normalized.append(text)
+
+        if len(normalized) != len(set(normalized)):
+            raise ValueError("reasons must not contain duplicates")
+        return normalized
+
+
+class DatasetCurationFamilyCoverage(StrictContractModel):
+    """Coverage summary for a family within a curated dataset manifest."""
+
+    accepted: int
+    rejected: int
+    ordered_source_episode_ids: list[str] = Field(default_factory=list)
+    ordered_source_seed_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_coverage(self) -> "DatasetCurationFamilyCoverage":
+        if self.accepted < 0 or self.rejected < 0:
+            raise ValueError("family coverage counts must be non-negative")
+        if len(self.ordered_source_episode_ids) != len(
+            set(self.ordered_source_episode_ids)
+        ):
+            raise ValueError("ordered_source_episode_ids must not contain duplicates")
+        if len(self.ordered_source_seed_ids) != len(set(self.ordered_source_seed_ids)):
+            raise ValueError("ordered_source_seed_ids must not contain duplicates")
+        return self
+
+
+class DatasetCurationManifest(StrictContractModel):
+    """Strict manifest persisted alongside a curated dataset family."""
+
+    agent_target: str
+    bucket_counts: dict[str, int] = Field(default_factory=dict)
+    counts: DatasetCurationCounts
+    dataset_version: str
+    dropped_lineage: dict[str, list[str]] = Field(default_factory=dict)
+    dry_run: bool = False
+    family: str
+    generated_at: datetime
+    rejected: list[DatasetCurationRejectedRow] = Field(default_factory=list)
+    coverage_by_family: dict[str, DatasetCurationFamilyCoverage] = Field(
+        default_factory=dict
+    )
+
+    @field_validator("bucket_counts", mode="before")
+    @classmethod
+    def validate_bucket_counts(cls, value: Any) -> Any:
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise ValueError("bucket_counts must be a mapping")
+        normalized: dict[str, int] = {}
+        for key, raw_count in value.items():
+            name = str(key).strip()
+            if not name:
+                raise ValueError("bucket_counts keys must be non-empty")
+            count = int(raw_count)
+            if count < 0:
+                raise ValueError("bucket_counts values must be non-negative")
+            normalized[name] = count
+        return normalized
+
+    @field_validator("dropped_lineage", mode="before")
+    @classmethod
+    def validate_dropped_lineage(cls, value: Any) -> Any:
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise ValueError("dropped_lineage must be a mapping")
+        normalized: dict[str, list[str]] = {}
+        for lineage_key, raw_episode_ids in value.items():
+            key = str(lineage_key).strip()
+            if not key:
+                raise ValueError("dropped_lineage keys must be non-empty")
+            if not isinstance(raw_episode_ids, list):
+                raise ValueError(
+                    "dropped_lineage values must be lists of episode identifiers"
+                )
+            ordered_episode_ids: list[str] = []
+            for raw_episode_id in raw_episode_ids:
+                episode_id = str(raw_episode_id).strip()
+                if not episode_id:
+                    raise ValueError(
+                        "dropped_lineage episode identifiers must be non-empty"
+                    )
+                if episode_id not in ordered_episode_ids:
+                    ordered_episode_ids.append(episode_id)
+            normalized[key] = ordered_episode_ids
+        return normalized
+
+    @field_validator("coverage_by_family", mode="before")
+    @classmethod
+    def validate_coverage_by_family(cls, value: Any) -> Any:
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise ValueError("coverage_by_family must be a mapping")
+        return value
+
+    @model_validator(mode="after")
+    def validate_manifest(self) -> "DatasetCurationManifest":
+        if not self.agent_target.strip():
+            raise ValueError("agent_target must be a non-empty string")
+        if not self.dataset_version.strip():
+            raise ValueError("dataset_version must be a non-empty string")
+        if not self.family.strip():
+            raise ValueError("family must be a non-empty string")
+        if self.generated_at.tzinfo is None:
+            raise ValueError("generated_at must be timezone-aware")
+        return self
 
 
 # =============================================================================

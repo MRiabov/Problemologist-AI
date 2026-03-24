@@ -183,6 +183,26 @@ class GenerationKind(StrEnum):
     SKILL_AGENT = "skill_agent"
 
 
+class DatasetCurationReasonCode(StrEnum):
+    """Stable machine-readable reason codes used by dataset curation."""
+
+    INTEGRATION_TEST_ROW = "integration_test_row"
+    INTEGRATION_TEST_GENERATION_KIND = "integration_test_generation_kind"
+    CORRUPTED_WINDOW_PRE_2026_03_03_DUBLIN = "corrupted_window_pre_2026_03_03_dublin"
+    MISSING_CREATED_AT = "missing_created_at"
+    INVALID_CREATED_AT = "invalid_created_at"
+    MISSING_SOURCE_EPISODE_ID = "missing_source_episode_id"
+    MISSING_IDENTITY_HASH = "missing_identity_hash"
+    MISSING_FAMILY = "missing_family"
+    AMBIGUOUS_LINEAGE = "ambiguous_lineage"
+    DUPLICATE_LINEAGE = "duplicate_lineage"
+    MALFORMED_REASON_PAYLOAD = "malformed_reason_payload"
+    MISSING_OR_EMPTY = "missing_or_empty"
+    INVALID_OBJECTIVES_YAML = "invalid_objectives_yaml"
+    MISSING_REQUIRED_TRACES = "missing_required_traces"
+    WORKFLOW_NOT_COMPLETED = "workflow_not_completed"
+
+
 class BenchmarkAttachmentMethod(StrEnum):
     """Allowed ways an engineer may attach to a benchmark-owned fixture."""
 

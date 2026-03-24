@@ -3873,6 +3873,17 @@
             ],
             "title": "Benchmark Id"
           },
+          "benchmark_family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark Family"
+          },
           "custom_objectives": {
             "anyOf": [
               {

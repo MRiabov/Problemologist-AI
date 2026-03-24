@@ -15,6 +15,7 @@ import type { TerminalReason } from './TerminalReason';
 export type EpisodeMetadata = {
     worker_session_id?: (string | null);
     benchmark_id?: (string | null);
+    benchmark_family?: (string | null);
     custom_objectives?: (CustomObjectives | null);
     detailed_status?: (string | null);
     episode_phase?: (EpisodePhase | null);

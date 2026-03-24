@@ -544,6 +544,7 @@ async def _materialize_dataset_export(
         seed_match_method=metadata.seed_match_method,
         generation_kind=metadata.generation_kind,
         parent_seed_id=metadata.parent_seed_id,
+        benchmark_family=metadata.benchmark_family,
         is_integration_test=metadata.is_integration_test,
         integration_test_id=metadata.integration_test_id,
         simulation_run_id=simulation_run_id,
