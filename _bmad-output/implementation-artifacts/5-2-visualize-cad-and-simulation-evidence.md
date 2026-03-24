@@ -114,6 +114,8 @@ GPT-5.4
 - Fixed the episode follow-up continuation path to carry `session_id` into resumed agent graphs so node-entry validation can resolve the worker workspace.
 - Restored the INT-174 benchmark mock transcript to the benchmark graph and added the engineer follow-up transcript so the post-confirm viewer interaction completes without backend mock-LM errors.
 - Verified INT-174 with `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1` and confirmed the browser slice passes.
+- Synced the INT-174 planner fixture caps so `benchmark_definition.yaml` now matches the copied caps in each planner `assembly_definition.yaml`, clearing the fail-closed planner handoff gate.
+- Re-verified the story coverage with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_int_174.py` and confirmed all three browser tests pass.
 
 ### File List
 
@@ -134,6 +136,8 @@ GPT-5.4
 - `tests/integration/frontend/p0/test_int_174.py`
 - `tests/integration/mock_responses/INT-174.yaml`
 - `tests/integration/mock_responses/INT-174/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml`
+- `tests/integration/mock_responses/INT-174/benchmark_planner/entry_01/04__benchmark_definition.yaml`
+- `tests/integration/mock_responses/INT-174/engineer_planner/entry_01/04__benchmark_definition.yaml`
 
 ## Change Log
 
@@ -141,3 +145,4 @@ GPT-5.4
 - 2026-03-23: Confirmed the live-browser simulation timeline regression passes with the current implementation.
 - 2026-03-23: Completed INT-174 benchmark and follow-up continuation verification after fixing session-id propagation and mock transcript coverage.
 - 2026-03-23: Confirmed the reviewer-blocking regressions now pass with `tests/integration/architecture_p0/test_int_190_benchmark_coder_permissions.py` and `tests/integration/architecture_p1/test_dataset_export.py::test_dataset_export_benchmark_row_round_trip` plus `test_dataset_export_invalid_lineage_fails_closed`.
+- 2026-03-24: Synced the INT-174 planner fixture budgets and re-ran the frontend browser slice; INT-165, INT-166, and INT-174 all passed.
