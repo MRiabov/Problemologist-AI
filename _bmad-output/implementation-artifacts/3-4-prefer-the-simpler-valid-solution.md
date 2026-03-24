@@ -1,6 +1,6 @@
 # Story 3.4: Prefer the Simpler Valid Solution
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -88,12 +88,16 @@ GPT-5.4
 - Added `seed_execution_reviewer_handover` import to `tests/integration/architecture_p1/test_reviewer_evidence.py`.
 - Added re-fetch helpers for persisted review evidence in the DOF regression tests.
 - Verified with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_074.py::test_int_074_engineering_dof_minimization_review_gate tests/integration/architecture_p1/test_reviewer_evidence.py::test_engineering_dof_review_evidence_uses_canonical_keys`.
+- Seeded benchmark reviewer preview renders at `renders/cad_preview.png` and `renders/simulation_preview.png` so `inspect_media()` can attach real media during benchmark plan review.
+- Aligned `tests/integration/architecture_p1/test_reviewer_evidence.py` with the benchmark review manifest contract for benchmark episodes.
+- Verified with `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_reviewer_evidence.py::test_reviewer_evidence_completeness`.
 
 ### Completion Notes List
 
 - Comprehensive story context assembled from epic, PRD, architecture, reviewer gate code, reward config, and seeded DOF regression coverage.
 - Canonical DOF checklist keys now persist through review events and review artifacts for both the rejection and justified-motion paths.
 - Integration regression slices passed after aligning the INT-075 execution seed with the justification marker expected by the reviewer helper.
+- Benchmark plan reviewer now receives canonical preview renders early enough to complete multimodal inspection and persist the benchmark review manifest.
 
 ### File List
 
@@ -103,4 +107,7 @@ GPT-5.4
 - `tests/integration/mock_responses/INT-075/engineer_coder/entry_01/01__assembly_definition.yaml`
 - `tests/integration/architecture_p0/test_int_074.py`
 - `tests/integration/architecture_p1/test_reviewer_evidence.py`
+- `controller/agent/benchmark/graph.py`
+- `controller/agent/benchmark/nodes.py`
+- `controller/middleware/remote_fs.py`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
