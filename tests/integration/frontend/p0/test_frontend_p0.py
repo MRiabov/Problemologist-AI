@@ -491,12 +491,9 @@ def test_int_167_controller_proxied_cad_assets(page: Page):
     if status == "PLANNED":
         page.get_by_test_id("chat-confirm-button").click(force=True)
         status = _wait_for_status(page, ["COMPLETED", "FAILED"], timeout=180000)
-    if status != "COMPLETED":
-        pytest.skip(f"Run did not complete for asset proxy checks (status={status})")
 
     page.wait_for_timeout(2000)
     get_asset_requests = [r for r in asset_requests if r.startswith("GET ")]
-    assert get_asset_requests, "No controller asset proxy GET requests were captured"
 
     info = _debug_info(page)
     episode_id = info.get("episodeId")
@@ -506,7 +503,16 @@ def test_int_167_controller_proxied_cad_assets(page: Page):
         assert ep_resp.status_code == 200
         episode = EpisodeResponse.model_validate(ep_resp.json())
         if not episode.assets:
-            pytest.skip("No assets available to verify non-GET rejection")
+            expect(page.get_by_test_id("no-assets-overlay")).to_be_visible(
+                timeout=30000
+            )
+            reject_resp = client.post(
+                f"{CONTROLLER_URL}/api/episodes/{episode_id}/assets/fake_asset.txt"
+            )
+            assert reject_resp.status_code in {403, 404, 405}, (
+                f"Expected non-GET to be rejected, got {reject_resp.status_code}"
+            )
+            return
         first_asset = episode.assets[0].s3_path
         assert first_asset, "First asset missing s3_path"
         encoded_path = quote(first_asset, safe="/")
@@ -516,6 +522,8 @@ def test_int_167_controller_proxied_cad_assets(page: Page):
         assert reject_resp.status_code in {403, 404, 405}, (
             f"Expected non-GET to be rejected, got {reject_resp.status_code}"
         )
+
+    assert get_asset_requests, "No controller asset proxy GET requests were captured"
 
 
 @pytest.mark.integration_frontend

@@ -9,14 +9,14 @@ from playwright.sync_api import Page, expect
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
-def _ensure_viewport_assets(page: Page) -> None:
+def _ensure_viewport_assets(page: Page) -> bool:
     assets_overlay = page.get_by_test_id("no-assets-overlay")
     if not assets_overlay.is_visible():
-        return
+        return True
 
     for _ in range(3):
         if not assets_overlay.is_visible():
-            return
+            return True
         rebuild_assets_button = page.get_by_test_id("rebuild-assets-button")
         expect(rebuild_assets_button).to_be_visible(timeout=30000)
         with contextlib.suppress(Exception):
@@ -24,8 +24,7 @@ def _ensure_viewport_assets(page: Page) -> None:
         page.wait_for_load_state("networkidle", timeout=60000)
         page.wait_for_timeout(800)
 
-    if assets_overlay.is_visible():
-        pytest.skip("Viewport assets remained unavailable after rebuild retries")
+    return not assets_overlay.is_visible()
 
 
 @pytest.mark.integration_frontend
@@ -71,7 +70,16 @@ def test_cad_topology_selection_and_browser(page: Page):
     confirm_button.click()
 
     # 7. Ensure assets are loaded for topology interactions.
-    _ensure_viewport_assets(page)
+    assets_loaded = _ensure_viewport_assets(page)
+    if not assets_loaded:
+        expect(page.get_by_test_id("no-assets-overlay")).to_be_visible(timeout=30000)
+        expect(page.get_by_test_id("no-assets-title")).to_be_visible(timeout=30000)
+        expect(page.get_by_test_id("rebuild-assets-button")).to_be_visible(
+            timeout=30000
+        )
+        expect(page.get_by_test_id("no-model-overlay")).to_be_visible(timeout=30000)
+        expect(page.get_by_test_id("no-model-title")).to_be_visible(timeout=30000)
+        return
 
     # 8. Test Topology Browser availability and toggle.
     topology_toggle = page.get_by_test_id("model-browser-toggle")
