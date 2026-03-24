@@ -3,6 +3,8 @@ import { Canvas, useFrame, useLoader } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera, Environment, Grid, Float, ContactShadows, Center, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { 
   Layers, 
   Play, 
@@ -41,21 +43,33 @@ class ModelErrorBoundary extends React.Component<{children: React.ReactNode, url
 
 export type SelectionMode = 'FACE' | 'PART' | 'SUBASSEMBLY'
 
-function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronicsView = false, onSelect, onStructureParsed }: { 
-    url: string, 
-    hiddenParts: string[], 
+const getAssetExtension = (url: string): string => {
+  const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+  const dotIndex = cleanUrl.lastIndexOf(".");
+  return dotIndex >= 0 ? cleanUrl.slice(dotIndex + 1) : "";
+};
+
+function ModelObject({
+  rootObject,
+  hiddenParts = [],
+  selectionMode = 'PART',
+  isElectronicsView = false,
+  onSelect,
+  onStructureParsed,
+}: {
+    rootObject: THREE.Object3D,
+    hiddenParts: string[],
     selectionMode?: SelectionMode,
     isElectronicsView?: boolean,
     onSelect?: (partName: string, level: SelectionMode, metadata?: any) => void,
     onStructureParsed?: (nodes: TopologyNode[]) => void
 }) {
-  const gltf = useLoader(GLTFLoader, url)
   const meshRef = useRef<THREE.Group>(null!)
   const [hovered, setHovered] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
 
   useEffect(() => {
-    if (gltf.scene && onStructureParsed) {
+    if (rootObject && onStructureParsed) {
         const collectTopology = (object: THREE.Object3D): TopologyNode | null => {
             // YACV / Occ naming convention support
             let type: TopologyNode['type'] = 'group';
@@ -84,13 +98,13 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
             return node;
         };
 
-        const rootNode = collectTopology(gltf.scene);
+        const rootNode = collectTopology(rootObject);
         if (rootNode) onStructureParsed([rootNode]);
     }
-  }, [gltf.scene, onStructureParsed]);
+  }, [onStructureParsed, rootObject]);
 
   useEffect(() => {
-    gltf.scene.traverse((child) => {
+    rootObject.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         // Handle transparency for electronics view
         if (isElectronicsView) {
@@ -149,16 +163,16 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
         }
       }
     });
-  }, [gltf, hiddenParts, selected, hovered, selectionMode, isElectronicsView]);
+  }, [hiddenParts, isElectronicsView, hovered, rootObject, selected, selectionMode]);
 
   // Initial capture of materials
   useEffect(() => {
-    gltf.scene.traverse((child) => {
+    rootObject.traverse((child) => {
         if (child instanceof THREE.Mesh && !child.userData.originalMaterial) {
             child.userData.originalMaterial = child.material.clone();
         }
     });
-  }, [gltf]);
+  }, [rootObject]);
 
   // Handle Selection Traversal
   const findTarget = (mesh: THREE.Mesh): { object: THREE.Object3D, id: string, type: SelectionMode } => {
@@ -168,7 +182,7 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
 
     if (selectionMode === 'PART') {
         let p: THREE.Object3D = mesh;
-        while (p.parent && p.parent !== gltf.scene && !p.name.includes('part')) {
+        while (p.parent && p.parent !== rootObject && !p.name.includes('part')) {
             p = p.parent;
         }
         return { object: p, id: p.name || p.uuid, type: 'PART' };
@@ -177,7 +191,7 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
     if (selectionMode === 'SUBASSEMBLY') {
         let p: THREE.Object3D = mesh;
         // Traverse up to find top-level group or group with children
-        while (p.parent && p.parent !== gltf.scene) {
+        while (p.parent && p.parent !== rootObject) {
             p = p.parent;
         }
         return { object: p, id: p.name || p.uuid, type: 'SUBASSEMBLY' };
@@ -190,7 +204,7 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
       <Center>
         <primitive 
-          object={gltf.scene} 
+          object={rootObject} 
           ref={meshRef}
           castShadow 
           receiveShadow 
@@ -232,6 +246,62 @@ function GlbModel({ url, hiddenParts = [], selectionMode = 'PART', isElectronics
       </Center>
     </Float>
   )
+}
+
+function GltfModel({
+  url,
+  ...props
+}: Omit<React.ComponentProps<typeof ModelObject>, "rootObject"> & { url: string }) {
+  const gltf = useLoader(GLTFLoader, url)
+  return <ModelObject rootObject={gltf.scene} {...props} />
+}
+
+function ObjModel({
+  url,
+  ...props
+}: Omit<React.ComponentProps<typeof ModelObject>, "rootObject"> & { url: string }) {
+  const object = useLoader(OBJLoader, url)
+  return <ModelObject rootObject={object} {...props} />
+}
+
+function StlModel({ url }: { url: string }) {
+  const geometry = useLoader(STLLoader, url);
+  const meshRef = useRef<THREE.Mesh>(null!);
+
+  useFrame((state) => {
+    const t = state.clock.getElapsedTime();
+    if (meshRef.current) {
+      meshRef.current.rotation.x = Math.cos(t / 4) / 12;
+      meshRef.current.rotation.y = Math.sin(t / 4) / 12;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <Center>
+        <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
+          <meshStandardMaterial color="#3b82f6" roughness={0.35} metalness={0.2} />
+        </mesh>
+      </Center>
+    </Float>
+  );
+}
+
+function StepModel({ url }: { url: string }) {
+  useEffect(() => {
+    let cancelled = false;
+    fetch(url, { method: 'GET' })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error(`STEP asset fetch failed for ${url}:`, error);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  return <PlaceholderModel />;
 }
 
 interface WireProps {
@@ -413,17 +483,46 @@ export default function ModelViewer({
                 {urls.length > 0 ? (
                     urls.map(url => (
                         <ModelErrorBoundary key={`eb-${url}`} url={url}>
-                            <GlbModel 
-                                key={url} 
-                                url={url} 
-                                hiddenParts={hiddenParts} 
-                                selectionMode={selectionMode}
-                                isElectronicsView={isElectronicsView}
-                                onStructureParsed={onTopologyChange}
-                                onSelect={(name, level, metadata) => {
-                                    addCadContext(name, level, metadata);
-                                }}
-                            />
+                            {(() => {
+                                const extension = getAssetExtension(url);
+                                if (extension === 'obj') {
+                                  return (
+                                    <ObjModel
+                                      key={url}
+                                      url={url}
+                                      hiddenParts={hiddenParts}
+                                      selectionMode={selectionMode}
+                                      isElectronicsView={isElectronicsView}
+                                      onStructureParsed={onTopologyChange}
+                                      onSelect={(name, level, metadata) => {
+                                        addCadContext(name, level, metadata);
+                                      }}
+                                    />
+                                  );
+                                }
+
+                                if (extension === 'stl') {
+                                  return <StlModel key={url} url={url} />;
+                                }
+
+                                if (extension === 'step' || extension === 'stp') {
+                                  return <StepModel key={url} url={url} />;
+                                }
+
+                                return (
+                                  <GltfModel
+                                    key={url}
+                                    url={url}
+                                    hiddenParts={hiddenParts}
+                                    selectionMode={selectionMode}
+                                    isElectronicsView={isElectronicsView}
+                                    onStructureParsed={onTopologyChange}
+                                    onSelect={(name, level, metadata) => {
+                                      addCadContext(name, level, metadata);
+                                    }}
+                                  />
+                                );
+                            })()}
                         </ModelErrorBoundary>
                     ))
                 ) : (

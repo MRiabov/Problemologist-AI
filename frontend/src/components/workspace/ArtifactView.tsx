@@ -40,6 +40,7 @@ import {
     getArtifactSelectionDescriptor,
     getDefaultArtifactId,
     getLatestMediaBundle,
+    getLatestModelAsset,
     getLatestSolutionEvidenceAsset,
     isImageAsset,
     isVideoAsset,
@@ -99,6 +100,10 @@ export default function ArtifactView({
   );
   const latestMediaBundle = useMemo(
     () => getLatestMediaBundle(assets),
+    [assets]
+  );
+  const latestModelAsset = useMemo(
+    () => getLatestModelAsset(assets),
     [assets]
   );
 
@@ -209,10 +214,7 @@ export default function ArtifactView({
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         <CircuitSchematic soup={data.electronics} />
                         <WireView 
-                            assetUrl={getAssetUrl(
-                                latestMediaBundle.modelAsset?.s3_path ||
-                                    assets.find((a: AssetResponse) => a.asset_type === AssetType.GLB || a.asset_type === AssetType.STL)?.s3_path
-                            )} 
+                            assetUrl={getAssetUrl(latestModelAsset?.s3_path)} 
                             wireRoutes={data.electronics.wiring || []} 
                         />
                     </div>
@@ -251,7 +253,7 @@ export default function ArtifactView({
                         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                             <CircuitSchematic />
                             <WireView 
-                                assetUrl={getAssetUrl(assets.find(a => a.asset_type === AssetType.GLB || a.asset_type === AssetType.STL)?.s3_path)} 
+                                assetUrl={getAssetUrl(latestModelAsset?.s3_path)} 
                                 wireRoutes={data.electronics.wiring || []} 
                             />
                         </div>

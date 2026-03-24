@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useEpisodes } from '../../context/EpisodeContext';
 import { useConnection } from '../../context/ConnectionContext';
 import * as yaml from 'js-yaml';
@@ -157,6 +158,26 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
     () => (heatmapAsset ? [getAssetUrl(heatmapAsset)] : []).filter(Boolean) as string[],
     [heatmapAsset, getAssetUrl]
   );
+
+  useEffect(() => {
+    const urlsToPreload = Array.from(
+      new Set(
+        [
+          ...modelUrls,
+          videoUrl,
+          ...heatmapUrls,
+          defaultSolutionEvidenceAsset ? getAssetUrl(defaultSolutionEvidenceAsset) : null,
+        ].filter((url): url is string => !!url),
+      ),
+    );
+
+    urlsToPreload.forEach((url) => {
+      fetch(url, { method: 'GET' }).catch(() => {
+        // Preloading is best-effort; the visible viewer still owns the user-facing state.
+      });
+    });
+  }, [defaultSolutionEvidenceAsset, getAssetUrl, heatmapUrls, modelUrls, videoUrl]);
+
   const defaultArtifactId = useMemo(
     () =>
       getDefaultArtifactId({

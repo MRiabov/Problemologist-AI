@@ -10,6 +10,12 @@ export type ArtifactSelectionContext = {
 
 const MEDIA_IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
 const MEDIA_VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov"]);
+const CAD_RENDERABLE_EXTENSIONS = new Set(["glb", "gltf", "obj", "stl"]);
+const CAD_SOURCE_EXTENSIONS = new Set(["step", "stp"]);
+const CAD_MODEL_EXTENSIONS = new Set([
+  ...CAD_RENDERABLE_EXTENSIONS,
+  ...CAD_SOURCE_EXTENSIONS,
+]);
 const SOLUTION_EVIDENCE_FILENAMES = [
   "simulation_result.json",
   "validation_results.json",
@@ -44,6 +50,23 @@ export const isVideoAsset = (asset: AssetResponse): boolean => {
   return (
     asset.asset_type === AssetType.VIDEO ||
     MEDIA_VIDEO_EXTENSIONS.has(getAssetExtension(asset))
+  );
+};
+
+export const isModelAsset = (asset: AssetResponse): boolean => {
+  return (
+    asset.asset_type === AssetType.GLB ||
+    asset.asset_type === AssetType.STL ||
+    asset.asset_type === AssetType.STEP ||
+    CAD_MODEL_EXTENSIONS.has(getAssetExtension(asset))
+  );
+};
+
+export const isRenderableModelAsset = (asset: AssetResponse): boolean => {
+  return (
+    asset.asset_type === AssetType.GLB ||
+    asset.asset_type === AssetType.STL ||
+    CAD_RENDERABLE_EXTENSIONS.has(getAssetExtension(asset))
   );
 };
 
@@ -102,7 +125,9 @@ export const getLatestMediaBundle = (
     assets,
     (asset) => asset.asset_type === AssetType.VIDEO || MEDIA_VIDEO_EXTENSIONS.has(getAssetExtension(asset)),
   );
-  const modelAsset = getLatestMatchingAsset(assets, (asset) => asset.asset_type === AssetType.GLB);
+  const modelAsset =
+    getLatestMatchingAsset(assets, isRenderableModelAsset) ??
+    getLatestMatchingAsset(assets, isModelAsset);
   const heatmapAsset = getLatestMatchingAsset(
     assets,
     (asset) =>
@@ -116,6 +141,15 @@ export const getLatestMediaBundle = (
     modelAsset,
     heatmapAsset,
   };
+};
+
+export const getLatestModelAsset = (
+  assets: AssetResponse[] = [],
+): AssetResponse | null => {
+  return (
+    getLatestMatchingAsset(assets, isRenderableModelAsset) ??
+    getLatestMatchingAsset(assets, isModelAsset)
+  );
 };
 
 export const getLatestSolutionEvidenceAsset = (
