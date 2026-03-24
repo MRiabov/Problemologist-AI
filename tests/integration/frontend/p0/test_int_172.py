@@ -22,6 +22,16 @@ def test_int_172_plan_approval_control_placement(page: Page):
     # proxies non-static paths to the controller. Navigate via React Router instead.
     page.goto(FRONTEND_URL)
     page.wait_for_load_state("networkidle")
+    page.evaluate("localStorage.clear()")
+    page.reload()
+    page.wait_for_load_state("networkidle")
+
+    expect(page.get_by_test_id("chat-confirm-button")).not_to_be_visible()
+    expect(
+        page.locator("[data-testid='file-explorer-confirm-button']")
+    ).not_to_be_visible()
+    expect(page.get_by_role("button", name="Planning")).not_to_be_visible()
+
     page.get_by_role("link", name="Benchmark").click()
     expect(page).to_have_url(re.compile(r".*/benchmark"))
 

@@ -60,20 +60,28 @@ export default function ChatWindow({
       selectedContext,
       addToContext,
       setActiveArtifactId,
-      setFeedbackState
+      setFeedbackState,
+      isBenchmarkCreation,
+      benchmarkPlanComment,
+      setBenchmarkPlanComment
   } = useEpisodes();
   const { theme } = useTheme();
   const { viewReasoning, setViewReasoning } = useUISettings();
 
   const [objectives, setObjectives] = useState<BenchmarkObjectives>({});
   const [showObjectives, setShowObjectives] = useState(false);
-  const [confirmComment, setConfirmComment] = useState("");
+  const [planDecisionError, setPlanDecisionError] = useState<string | null>(null);
   const [reviewReason, setReviewReason] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const location = window.location;
   const isBenchmarkPath = location.pathname === '/benchmark';
+  const episodeType = selectedEpisode?.metadata_vars?.episode_type ?? null;
+  const isBenchmarkEpisode = episodeType === EpisodeType.BENCHMARK;
+  const showBenchmarkControls =
+    isBenchmarkPath &&
+    (isBenchmarkEpisode || (isCreationMode && isBenchmarkCreation));
 
   const handleSendMessage = async (prompt: string, metadata: any) => {
     // Add objectives to startAgent if needed
@@ -121,6 +129,8 @@ export default function ChatWindow({
     selectedEpisode?.status === EpisodeStatus.PLANNED ||
     selectedEpisode?.metadata_vars?.detailed_status === "PLANNED";
   const showExecutionPlan =
+    isBenchmarkPath &&
+    isBenchmarkEpisode &&
     !!selectedEpisode &&
     (isPlanned || !!selectedEpisode.plan) &&
     selectedEpisode.status !== EpisodeStatus.COMPLETED &&
@@ -310,7 +320,7 @@ export default function ChatWindow({
         <ScrollArea className="flex-1" ref={scrollRef}>
             <div className="p-4 flex flex-col min-h-full">
                 {/* Creation Mode Prompt */}
-                {isCreationMode && !task && (
+                {isCreationMode && !task && (!isBenchmarkCreation || isBenchmarkPath) && (
                     <div className="mb-6 p-4 bg-primary/5 rounded-xl border-2 border-dashed border-primary/20 animate-in fade-in zoom-in-95 duration-500">
                         <div className="flex flex-col items-center text-center gap-3">
                             <div className="size-10 flex items-center justify-center bg-primary/20 rounded-full text-primary">
@@ -376,11 +386,19 @@ export default function ChatWindow({
                             <div className="w-full space-y-2 mt-2">
                                 <textarea
                                     placeholder="Optional comment for the agent..."
-                                    value={confirmComment}
-                                    onChange={(e) => setConfirmComment(e.target.value)}
+                                    value={benchmarkPlanComment}
+                                    onChange={(e) => {
+                                      setBenchmarkPlanComment(e.target.value);
+                                      setPlanDecisionError(null);
+                                    }}
                                     className="w-full bg-background/50 border border-primary/20 rounded-lg p-2 text-xs focus:ring-1 focus:ring-primary/30 outline-none resize-none h-16"
                                 />
                             </div>
+                            {planDecisionError && (
+                                <div className="w-full text-left text-[11px] text-red-500 font-mono">
+                                    {planDecisionError}
+                                </div>
+                            )}
 
                             <div className="flex gap-2 w-full mt-2">
                                 <Button 
@@ -390,12 +408,12 @@ export default function ChatWindow({
                                         if (!selectedEpisode) return;
                                         try {
                                             if (isPlanned) {
-                                                await confirmBenchmark(selectedEpisode.id, confirmComment);
+                                                await confirmBenchmark(selectedEpisode.id, benchmarkPlanComment.trim() || undefined);
                                             } else {
                                                 const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
                                                 await runSimulation(sessionId);
                                             }
-                                            setConfirmComment("");
+                                            setPlanDecisionError(null);
                                         } catch (e) {
                                             console.error("Failed to start implementation", e);
                                         }
@@ -405,11 +423,24 @@ export default function ChatWindow({
                                     Confirm & Start
                                 </Button>
                                 <Button 
+                                    data-testid="chat-request-changes-button"
                                     variant="outline"
                                     className="px-3 border-border/50 hover:bg-muted/50 text-[10px] uppercase font-bold text-muted-foreground"
-                                    onClick={() => {
-                                      const input = document.getElementById('chat-input');
-                                      input?.focus();
+                                    onClick={async () => {
+                                      if (!selectedEpisode) return;
+
+                                      const reason = benchmarkPlanComment.trim();
+                                      if (!reason) {
+                                        setPlanDecisionError("Add a reason before requesting changes.");
+                                        return;
+                                      }
+
+                                      try {
+                                        await confirmBenchmark(selectedEpisode.id, reason);
+                                        setPlanDecisionError(null);
+                                      } catch (error) {
+                                        console.error("Failed to request benchmark changes", error);
+                                      }
                                     }}
                                 >
                                     Request Changes
@@ -682,21 +713,22 @@ export default function ChatWindow({
                 addToContext={addToContext}
                 showObjectives={showObjectives}
                 setShowObjectives={setShowObjectives}
+                showPlanningControls={showBenchmarkControls}
             />
 
-            {showObjectives && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 px-4 animate-in slide-in-from-bottom-2 duration-200">
-                    <div className="bg-background border border-border shadow-2xl rounded-xl overflow-hidden">
-                        <ObjectivesForm 
-                            objectives={objectives} 
-                            onChange={setObjectives} 
-                            onUpdate={() => updateObjectives(objectives)}
-                            showUpdate={!isCreationMode && !!selectedEpisode}
-                            disabled={isRunning}
-                        />
+                {showObjectives && showBenchmarkControls && (
+                    <div className="absolute bottom-full left-0 right-0 mb-2 px-4 animate-in slide-in-from-bottom-2 duration-200">
+                        <div className="bg-background border border-border shadow-2xl rounded-xl overflow-hidden">
+                            <ObjectivesForm
+                                objectives={objectives}
+                                onChange={setObjectives}
+                                onUpdate={() => updateObjectives(objectives)}
+                                showUpdate={showBenchmarkControls && !isCreationMode && !!selectedEpisode}
+                                disabled={isRunning}
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
         </div>
       </div>
     </div>

@@ -411,7 +411,9 @@ def test_int_159_plan_approval_comment(page: Page):
     # 4. Fill in a comment and confirm
     test_comment = f"Test Comment {uuid.uuid4()}"
     comment_field.fill(test_comment)
-    page.get_by_test_id("chat-confirm-button").click()
+    file_explorer_confirm = page.get_by_test_id("file-explorer-confirm-button")
+    expect(file_explorer_confirm).to_be_visible(timeout=30000)
+    file_explorer_confirm.click()
 
     # Wait for the agent to transition to RUNNING state in the UI
     expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(

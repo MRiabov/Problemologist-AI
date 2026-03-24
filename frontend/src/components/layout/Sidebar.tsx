@@ -5,7 +5,7 @@ import { useEpisodes } from "../../context/EpisodeContext";
 import { ScrollArea } from "../ui/scroll-area";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { EpisodeStatus } from "../../api/generated/models/EpisodeStatus";
 import { EpisodePhase } from "../../api/generated/models/EpisodePhase";
 import RevisionLineageSummary from "../workspace/RevisionLineageSummary";
@@ -78,6 +78,19 @@ export default function Sidebar() {
     getEpisodeTitle(ep).toLowerCase().includes(filter.toLowerCase()) || 
     ep.id.toLowerCase().includes(filter.toLowerCase())
   );
+
+  useEffect(() => {
+    if (!selectedEpisode || location.pathname.startsWith('/settings')) {
+      return;
+    }
+
+    const episodeType = selectedEpisode.metadata_vars?.episode_type;
+    const targetPath = episodeType === 'benchmark' ? '/benchmark' : '/';
+
+    if (location.pathname !== targetPath) {
+      navigate(targetPath, { replace: true });
+    }
+  }, [location.pathname, navigate, selectedEpisode?.id, selectedEpisode?.metadata_vars?.episode_type]);
 
   const handleEpisodeClick = useCallback(async (id: string) => {
     await selectEpisode(id);

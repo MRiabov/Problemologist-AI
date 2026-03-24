@@ -68,7 +68,8 @@ export default function ArtifactView({
     setActiveArtifactId, 
     addToContext, 
     selectedContext,
-    confirmBenchmark
+    confirmBenchmark,
+    benchmarkPlanComment
   } = useEpisodes();
   const { theme } = useTheme();
   const [inlineContextLabel, setInlineContextLabel] = useState<string | null>(null);
@@ -79,10 +80,11 @@ export default function ArtifactView({
     selectedEpisode?.status === EpisodeStatus.PLANNED ||
     selectedEpisode?.metadata_vars?.detailed_status === "PLANNED";
   const episodeType = selectedEpisode?.metadata_vars?.episode_type ?? null;
-  const isBenchmarkEpisode =
-    episodeType === EpisodeType.BENCHMARK ||
-    window.location.pathname === "/benchmark";
+  const isBenchmarkEpisode = episodeType === EpisodeType.BENCHMARK;
+  const isBenchmarkRoute = window.location.pathname === "/benchmark";
   const showExecutionPlan =
+    isBenchmarkRoute &&
+    isBenchmarkEpisode &&
     !!selectedEpisode &&
     (isPlanned || !!selectedEpisode.plan) &&
     selectedEpisode.status !== EpisodeStatus.COMPLETED &&
@@ -91,11 +93,11 @@ export default function ArtifactView({
     () =>
       getDefaultArtifactId({
         episodeType,
-        isBenchmarkRoute: window.location.pathname === "/benchmark",
+        isBenchmarkRoute,
         plan,
         assets,
       }),
-    [assets, episodeType, plan, window.location.pathname]
+    [assets, episodeType, isBenchmarkRoute, plan]
   );
   const latestSolutionEvidenceAsset = useMemo(
     () => getLatestSolutionEvidenceAsset(assets),
@@ -564,7 +566,7 @@ export default function ArtifactView({
                                 if (!selectedEpisode) return;
                                 try {
                                     if (isPlanned) {
-                                        await confirmBenchmark(selectedEpisode.id, "");
+                                        await confirmBenchmark(selectedEpisode.id, benchmarkPlanComment.trim() || undefined);
                                     } else {
                                         const sessionId = `sim-${Math.random().toString(36).substring(2, 10)}`;
                                         await runSimulation(sessionId);

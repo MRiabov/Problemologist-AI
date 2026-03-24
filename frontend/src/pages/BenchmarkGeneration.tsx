@@ -1,14 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Cpu } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import UnifiedGeneratorView from '../components/workspace/UnifiedGeneratorView';
 import { useUISettings } from '../context/UISettingsContext';
+import { useEpisodes } from '../context/EpisodeContext';
 
 export default function BenchmarkGeneration() {
   const [error, setError] = useState<string | null>(null);
   const { presentationMode, setPresentationMode } = useUISettings();
+  const { selectedEpisode, isCreationMode, createNewBenchmark } = useEpisodes();
   const modeLabel = presentationMode ? 'Exit Demo Mode' : 'Enter Demo Mode';
+  const benchmarkCreationModeStorageKey = "benchmarkCreationMode";
+
+  useEffect(() => {
+    if (localStorage.getItem("selectedEpisodeId") || selectedEpisode || isCreationMode) {
+      return;
+    }
+
+    if (localStorage.getItem(benchmarkCreationModeStorageKey) === "true") {
+      createNewBenchmark(true);
+    }
+  }, [createNewBenchmark, isCreationMode, selectedEpisode]);
 
   // Note: Local episode fetching was removed as it seems redundant with EpisodeContext
   // which handles global state for selected episodes/traces.

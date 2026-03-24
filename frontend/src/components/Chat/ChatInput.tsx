@@ -35,6 +35,7 @@ interface ChatInputProps {
   addToContext: (item: ContextItem) => void;
   showObjectives: boolean;
   setShowObjectives: (show: boolean) => void;
+  showPlanningControls?: boolean;
 }
 
 const findNodeByName = (nodes: TopologyNode[], name: string): TopologyNode | undefined => {
@@ -69,7 +70,8 @@ export function ChatInput({
   topologyNodes,
   addToContext,
   showObjectives,
-  setShowObjectives
+  setShowObjectives,
+  showPlanningControls = true
 }: ChatInputProps) {
   const [prompt, setPrompt] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -429,19 +431,21 @@ export function ChatInput({
                         <Plus className="h-4 w-4 opacity-40" />
                     </Button>
                     
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-7 px-2 gap-1 rounded-lg hover:bg-white/5 text-[11px] font-medium text-muted-foreground"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            setShowObjectives(!showObjectives);
-                        }}
-                    >
-                        <Zap className="h-3 w-3 opacity-40" />
-                        Planning
-                        {showObjectives ? <ChevronDown className="h-3 w-3 ml-0.5 opacity-40" /> : <ChevronUp className="h-3 w-3 ml-0.5 opacity-40" />}
-                    </Button>
+                    {showPlanningControls && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 gap-1 rounded-lg hover:bg-white/5 text-[11px] font-medium text-muted-foreground"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setShowObjectives(!showObjectives);
+                            }}
+                        >
+                            <Zap className="h-3 w-3 opacity-40" />
+                            Planning
+                            {showObjectives ? <ChevronDown className="h-3 w-3 ml-0.5 opacity-40" /> : <ChevronUp className="h-3 w-3 ml-0.5 opacity-40" />}
+                        </Button>
+                    )}
 
                     <Button 
                         variant="ghost" 

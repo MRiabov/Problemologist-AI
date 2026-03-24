@@ -33,6 +33,8 @@ interface EpisodeContextType {
   loading: boolean;
   running: boolean;
   isCreationMode: boolean;
+  isBenchmarkCreation: boolean;
+  benchmarkPlanComment: string;
   activeArtifactId: string | null;
   selectedContext: ContextItem[];
   topologyNodes: TopologyNode[];
@@ -55,6 +57,7 @@ interface EpisodeContextType {
   addToContext: (item: ContextItem) => void;
   removeFromContext: (id: string) => void;
   clearContext: () => void;
+  setBenchmarkPlanComment: (comment: string) => void;
 }
 
 const EpisodeContext = createContext<EpisodeContextType | undefined>(undefined);
@@ -65,12 +68,14 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [isCreationMode, setIsCreationMode] = useState(false);
-  const [, setIsBenchmarkCreation] = useState(false);
+  const [isBenchmarkCreation, setIsBenchmarkCreation] = useState(false);
+  const [benchmarkPlanComment, setBenchmarkPlanComment] = useState("");
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([]);
   const [feedbackState, setFeedbackState] = useState<{ traceId: number; score: number } | null>(null);
   const isCreationModeRef = useRef(false);
   const isBenchmarkCreationRef = useRef(false);
+  const benchmarkCreationModeStorageKey = "benchmarkCreationMode";
 
   const hydrateEpisodeAssets = useCallback(async (episode: Episode): Promise<Episode> => {
     const assets = episode.assets ?? [];
@@ -182,6 +187,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setIsBenchmarkCreation(false);
     isCreationModeRef.current = false;
     isBenchmarkCreationRef.current = false;
+    localStorage.removeItem(benchmarkCreationModeStorageKey);
+    setBenchmarkPlanComment("");
     setRunning(false);
     try {
       const fullEp = await fetchEpisode(id);
@@ -200,12 +207,14 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const clearSelection = useCallback(() => {
     setSelectedEpisode(null);
     localStorage.removeItem("selectedEpisodeId");
+    localStorage.removeItem(benchmarkCreationModeStorageKey);
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
     isCreationModeRef.current = false;
     isBenchmarkCreationRef.current = false;
     setTopologyNodes([]);
     setRunning(false);
+    setBenchmarkPlanComment("");
   }, []);
 
   const createNewBenchmark = useCallback((isBenchmark: boolean = false) => {
@@ -215,6 +224,12 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setIsBenchmarkCreation(isBenchmark);
     isCreationModeRef.current = true;
     isBenchmarkCreationRef.current = isBenchmark;
+    if (isBenchmark) {
+      localStorage.setItem(benchmarkCreationModeStorageKey, "true");
+    } else {
+      localStorage.removeItem(benchmarkCreationModeStorageKey);
+    }
+    setBenchmarkPlanComment("");
     setTopologyNodes([]);
     setRunning(false);
   }, []);
@@ -233,16 +248,18 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const startAgent = useCallback(async (task: string, objectives?: BenchmarkObjectives, metadata?: Record<string, unknown>) => {
     setRunning(true);
     const wasBenchmarkCreation = isBenchmarkCreationRef.current;
+    const isBenchmarkRoute = window.location.pathname === "/benchmark";
     setIsCreationMode(false);
     setIsBenchmarkCreation(false);
     isCreationModeRef.current = false;
     isBenchmarkCreationRef.current = false;
+    localStorage.removeItem(benchmarkCreationModeStorageKey);
     
     try {
       let response;
       const isSolvingBenchmark = metadata && metadata.benchmark_id;
 
-      if (wasBenchmarkCreation && !isSolvingBenchmark) {
+      if (wasBenchmarkCreation && isBenchmarkRoute && !isSolvingBenchmark) {
          response = await generateBenchmark(task, objectives);
          // Backend returns { session_id: ... }
          if (response.session_id) {
@@ -304,10 +321,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     try {
         await apiConfirmBenchmark(id, comment);
         await refreshEpisodes();
+        setBenchmarkPlanComment("");
     } catch (e) {
         console.error("Failed to confirm benchmark", e);
         setRunning(false);
-    }
+      }
   }, [refreshEpisodes]);
 
   const submitReview = useCallback(async (id: string, reviewContent: string) => {
@@ -571,6 +589,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       loading,
       running,
       isCreationMode,
+      isBenchmarkCreation,
+      benchmarkPlanComment,
       refreshEpisodes,
       selectEpisode,
       startAgent,
@@ -589,6 +609,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       addToContext,
       removeFromContext,
       clearContext,
+      setBenchmarkPlanComment,
       topologyNodes,
       setTopologyNodes,
       feedbackState,
