@@ -1,6 +1,6 @@
 # Story 2.4: Review Peer Solutions for Stability
 
-Status: review
+Status: in-progress
 
 ## Story
 
