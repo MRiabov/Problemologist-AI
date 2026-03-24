@@ -23,6 +23,9 @@ from shared.workers.schema import (
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
+REPO_MANUFACTURING_CONFIG = Path(
+    "worker_heavy/workbenches/manufacturing_config.yaml"
+).read_text(encoding="utf-8")
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -191,6 +194,12 @@ async def seed_benchmark_assembly_definition(
             estimated_weight_g=estimated_weight_g,
             estimate_confidence=estimate_confidence,
         ),
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="manufacturing_config.yaml",
+        content=REPO_MANUFACTURING_CONFIG,
     )
 
 

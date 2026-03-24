@@ -41,6 +41,7 @@ from worker_heavy.simulation.factory import get_simulation_builder
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
+    _metadata_cots_id,
     calculate_benchmark_drilling_cost,
     resolve_requested_quantity,
     validate_and_price,
@@ -282,7 +283,9 @@ def _prefix_part_violation(label: str, violation: str) -> str:
     return violation if violation.startswith(prefix) else f"{prefix}{violation}"
 
 
-def _resolve_cots_catalog_item(part_id: str) -> tuple[Any, dict[str, str | None]] | None:
+def _resolve_cots_catalog_item(
+    part_id: str,
+) -> tuple[Any, dict[str, str | None]] | None:
     from shared.cots.runtime import get_catalog_item_with_metadata
 
     return get_catalog_item_with_metadata(part_id)
@@ -659,11 +662,10 @@ def calculate_assembly_totals(
 
         cots_id = _metadata_cots_id(metadata)
         if cots_id:
+            part_label = getattr(child, "label", "unknown")
             lookup = _resolve_cots_catalog_item(cots_id)
             if lookup is None:
-                raise ValueError(
-                    f"{_part_label(child)}: unresolved COTS part_id '{cots_id}'"
-                )
+                raise ValueError(f"{part_label}: unresolved COTS part_id '{cots_id}'")
 
             catalog_item, catalog_metadata = lookup
             catalog_details = catalog_item.metadata or {}
@@ -678,7 +680,7 @@ def calculate_assembly_totals(
                 and manufacturer != catalog_manufacturer
             ):
                 raise ValueError(
-                    f"{_part_label(child)}: manufacturer '{manufacturer}' does not match catalog manufacturer '{catalog_manufacturer}'"
+                    f"{part_label}: manufacturer '{manufacturer}' does not match catalog manufacturer '{catalog_manufacturer}'"
                 )
 
             for field_name, observed in (
@@ -692,7 +694,7 @@ def calculate_assembly_totals(
                 expected = catalog_metadata.get(field_name)
                 if expected is not None and observed != expected:
                     raise ValueError(
-                        f"{_part_label(child)}: {field_name} '{observed}' does not match catalog value '{expected}'"
+                        f"{part_label}: {field_name} '{observed}' does not match catalog value '{expected}'"
                     )
             continue
 
@@ -859,7 +861,10 @@ def calculate_assembly_totals(
                     f"does not match catalog manufacturer '{manufacturer}'"
                 )
 
-            if p.weight_g is not None and abs(p.weight_g - catalog_item.weight_g) > 1e-6:
+            if (
+                p.weight_g is not None
+                and abs(p.weight_g - catalog_item.weight_g) > 1e-6
+            ):
                 raise ValueError(
                     "COTS weight mismatch for part_id "
                     f"'{p.part_id}': planner weight {p.weight_g}g does not match "
@@ -867,7 +872,11 @@ def calculate_assembly_totals(
                 )
 
             provenance_pairs = (
-                ("catalog_version", p.catalog_version, catalog_metadata.get("catalog_version")),
+                (
+                    "catalog_version",
+                    p.catalog_version,
+                    catalog_metadata.get("catalog_version"),
+                ),
                 (
                     "bd_warehouse_commit",
                     p.bd_warehouse_commit,
@@ -881,7 +890,11 @@ def calculate_assembly_totals(
                 ("generated_at", p.generated_at, catalog_metadata.get("generated_at")),
             )
             for field_name, observed, expected in provenance_pairs:
-                if observed is not None and expected is not None and observed != expected:
+                if (
+                    observed is not None
+                    and expected is not None
+                    and observed != expected
+                ):
                     raise ValueError(
                         f"COTS provenance mismatch for part_id '{p.part_id}': "
                         f"{field_name} '{observed}' does not match catalog '{expected}'"

@@ -163,7 +163,7 @@ async def test_int_014_cots_propagation():
         )
         assert plan_resp.status_code == 200
         plan_data = ReadFileResponse.model_validate(plan_resp.json())
-        assert "MOCK-MOTOR-ID" in plan_data.content
+        assert "ServoMotor_SG90" in plan_data.content
 
         # Verify assembly_definition.yaml contains COTS data
         read_asm_req = ReadFileRequest(path="assembly_definition.yaml")
@@ -174,7 +174,7 @@ async def test_int_014_cots_propagation():
         )
         assert asm_resp.status_code == 200
         asm_data = ReadFileResponse.model_validate(asm_resp.json())
-        assert "MOCK-MOTOR-ID" in asm_data.content
+        assert "ServoMotor_SG90" in asm_data.content
 
 
 @pytest.mark.integration_p0

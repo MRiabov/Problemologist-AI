@@ -6,6 +6,7 @@ from typing import Any, Literal
 import httpx
 import structlog
 
+from controller.config.settings import settings
 from shared.enums import AgentName, ResponseStatus
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -25,6 +26,13 @@ from shared.workers.schema import (
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
 logger = structlog.get_logger(__name__)
+
+
+def _default_smoke_test_mode() -> bool:
+    env_smoke = os.getenv("SMOKE_TEST_MODE")
+    if env_smoke is not None:
+        return env_smoke.strip().lower() in {"1", "true", "yes", "on"}
+    return settings.is_integration_test
 
 
 class WorkerClient:
@@ -50,7 +58,11 @@ class WorkerClient:
         self.base_url = base_url.rstrip("/")
         self.light_url = self.base_url
         self.heavy_url = (heavy_url or base_url).rstrip("/")
-        controller_base_url = controller_url or os.getenv("CONTROLLER_URL")
+        controller_base_url = (
+            controller_url
+            if controller_url is not None
+            else os.getenv("CONTROLLER_URL")
+        )
         self.controller_url = (
             controller_base_url.rstrip("/") if controller_base_url else None
         )
@@ -663,6 +675,8 @@ class WorkerClient:
             payload["seed"] = seed
         if smoke_test_mode is not None:
             payload["smoke_test_mode"] = smoke_test_mode
+        else:
+            payload["smoke_test_mode"] = _default_smoke_test_mode()
         if script_content is not None:
             raise NotImplementedError(
                 "controller script-tools proxy does not accept script_content"
@@ -693,6 +707,8 @@ class WorkerClient:
                 direct_payload["seed"] = seed
             if smoke_test_mode is not None:
                 direct_payload["smoke_test_mode"] = smoke_test_mode
+            else:
+                direct_payload["smoke_test_mode"] = _default_smoke_test_mode()
 
             await self._add_bundle_to_payload(direct_payload)
 

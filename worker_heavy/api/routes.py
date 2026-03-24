@@ -239,6 +239,14 @@ async def api_verify(
         if isinstance(backend_type, str):
             backend_type = SimulatorBackendType(backend_type)
 
+        num_scenes = request.num_scenes
+        duration = request.duration
+        if request.smoke_test_mode:
+            # Smoke verification should stay lightweight when callers omit the
+            # tuning knobs. Keep explicit overrides intact for focused tests.
+            num_scenes = num_scenes or 1
+            duration = duration or 1.0
+
         async with heavy_operation_admission("verify", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
@@ -289,8 +297,8 @@ async def api_verify(
                     xml_path=str(scene_path),
                     control_inputs={},  # Static inputs for now
                     jitter_range=request.jitter_range,
-                    num_scenes=request.num_scenes,
-                    duration=request.duration,
+                    num_scenes=num_scenes or 5,
+                    duration=duration or 10.0,
                     seed=request.seed,
                     smoke_test_mode=request.smoke_test_mode,
                     backend_type=backend_type.value,

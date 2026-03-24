@@ -1,1 +1,1 @@
-- [ ] Design with MOCK-MOTOR-ID
+- [ ] Design with ServoMotor_SG90

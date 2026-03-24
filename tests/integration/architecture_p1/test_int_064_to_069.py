@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 
 import httpx
 import pytest
@@ -21,6 +22,8 @@ from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
+    ExecuteRequest,
+    ExecuteResponse,
     WriteFileRequest,
 )
 from tests.integration.backend_utils import skip_unless_genesis
@@ -73,6 +76,37 @@ async def test_int_064_cots_metadata():
         assert search_resp.status_code == 200
         results = [CotsSearchItem.model_validate(item) for item in search_resp.json()]
         assert len(results) > 0
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_064_session_workspace_copies_parts_db_catalog():
+    """INT-064: session workspaces must receive a usable catalog snapshot."""
+    session_id = f"INT-064-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        exec_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=(
+                    "python - <<'PY'\n"
+                    "import sqlite3\n"
+                    "conn = sqlite3.connect('parts.db')\n"
+                    "row = conn.execute(\n"
+                    "    'SELECT part_id FROM parts WHERE part_id = ?',\n"
+                    "    ('ServoMotor_SG90',),\n"
+                    ").fetchone()\n"
+                    "print(row[0] if row else '')\n"
+                    "PY"
+                ),
+                timeout=60,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+        assert exec_resp.status_code == 200, exec_resp.text
+        data = ExecuteResponse.model_validate(exec_resp.json())
+        assert data.exit_code == 0, data
+        assert data.stdout.strip() == "ServoMotor_SG90", data.stdout
 
 
 @pytest.mark.integration_p1

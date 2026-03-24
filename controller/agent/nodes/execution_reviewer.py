@@ -474,7 +474,12 @@ class ExecutionReviewerNode(BaseNode):
             )
 
         try:
-            verify_result = await self.ctx.worker_client.verify("script.py")
+            verify_result = await self.ctx.worker_client.verify(
+                "script.py",
+                num_scenes=1 if settings.is_integration_test else None,
+                duration=1.0 if settings.is_integration_test else None,
+                smoke_test_mode=settings.is_integration_test,
+            )
         except Exception as exc:
             return f"Execution review blocked: verify failed: {exc}"
         if not verify_result.success:

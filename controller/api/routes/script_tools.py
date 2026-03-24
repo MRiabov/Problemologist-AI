@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import os
 import time
 from contextlib import asynccontextmanager, contextmanager
 
@@ -49,6 +50,7 @@ async def _controller_script_middleware(
             session_id=session_id,
             http_client=http_client,
             heavy_url=settings.worker_heavy_url,
+            controller_url="",
             agent_role=agent_role,
         )
         middleware = RemoteFilesystemMiddleware(
@@ -166,6 +168,18 @@ async def verify_script(
     x_session_id: str = Header(...),
 ):
     with _script_log_context(payload, x_session_id):
+        smoke_test_mode = payload.smoke_test_mode
+        if smoke_test_mode is None:
+            env_smoke = os.getenv("SMOKE_TEST_MODE")
+            if env_smoke is not None:
+                smoke_test_mode = env_smoke.strip().lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }
+            else:
+                smoke_test_mode = settings.is_integration_test
         async with _controller_script_middleware(
             x_session_id, payload.agent_role, request, payload.episode_id
         ) as middleware:
@@ -173,7 +187,7 @@ async def verify_script(
                 lambda: middleware.verify(
                     payload.script_path,
                     backend=payload.backend,
-                    smoke_test_mode=payload.smoke_test_mode,
+                    smoke_test_mode=smoke_test_mode,
                     jitter_range=payload.jitter_range,
                     num_scenes=payload.num_scenes,
                     duration=payload.duration,

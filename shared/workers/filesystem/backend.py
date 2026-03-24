@@ -195,6 +195,22 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
         else:
             root = get_session_root(session_id)
         backend = cls(root=root, session_id=session_id)
+
+        # Seed the session-local catalog database from the repository snapshot.
+        # Session workspaces start empty, but validation and pricing code expects
+        # a usable `parts.db` inside the workspace root.
+        try:
+            repo_root = Path(__file__).resolve().parents[3]
+            source_db = repo_root / "parts.db"
+            target_db = backend.root / "parts.db"
+            if source_db.exists() and (
+                not target_db.exists() or target_db.stat().st_size == 0
+            ):
+                target_db.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_db, target_db)
+        except Exception as e:
+            logger.warning("catalog_db_seed_failed", error=str(e))
+
         try:
             from shared.workers.benchmark_definition_template import (
                 ensure_benchmark_definition_yaml,

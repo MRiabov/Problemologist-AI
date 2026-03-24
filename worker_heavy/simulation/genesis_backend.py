@@ -968,13 +968,22 @@ class GenesisBackend(PhysicsBackend):
                     pos_arr = pos_arr[env_idx]
                     if vel_arr is not None and vel_arr.ndim >= 2:
                         vel_arr = vel_arr[env_idx]
-                if pos_arr.ndim == 3:
-                    pos_arr = pos_arr[0]
-                if vel_arr is not None and vel_arr.ndim == 3:
-                    vel_arr = vel_arr[0]
-                pos = tuple(float(x) for x in np.mean(pos_arr, axis=0).tolist())
+
+                def _collapse_state_vector(
+                    arr: np.ndarray,
+                ) -> tuple[float, float, float]:
+                    if arr.ndim == 1:
+                        flat = arr
+                    else:
+                        flat = np.mean(arr.reshape(-1, arr.shape[-1]), axis=0)
+                    values = np.asarray(flat).reshape(-1)
+                    if values.size < 3:
+                        return (0.0, 0.0, 0.0)
+                    return tuple(float(x) for x in values[:3].tolist())
+
+                pos = _collapse_state_vector(pos_arr)
                 vel = (
-                    tuple(float(x) for x in np.mean(vel_arr, axis=0).tolist())
+                    _collapse_state_vector(vel_arr)
                     if vel_arr is not None
                     else (0.0, 0.0, 0.0)
                 )

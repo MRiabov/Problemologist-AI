@@ -1018,9 +1018,24 @@ def _should_rebuild_frontend(frontend_state_file: Path | None) -> bool:
 
 def _prepare_parts_db(repo_root: Path) -> None:
     parts_db = repo_root / "parts.db"
-    if parts_db.exists() and parts_db.stat().st_size > 0:
+    needs_population = not parts_db.exists() or parts_db.stat().st_size == 0
+
+    if not needs_population:
+        try:
+            import sqlite3
+
+            with sqlite3.connect(parts_db) as conn:
+                motor_count = conn.execute(
+                    "SELECT COUNT(*) FROM parts WHERE category = 'motor'"
+                ).fetchone()[0]
+            needs_population = int(motor_count or 0) == 0
+        except Exception:
+            needs_population = True
+
+    if not needs_population:
         return
-    print("parts.db missing or empty. Populating COTS database...")
+
+    print("parts.db missing motor catalog entries. Populating COTS database...")
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
     _run(["uv", "run", "python", "-m", "shared.cots.indexer"], env=env)
@@ -1650,6 +1665,7 @@ def _run_integration_command(
     os.environ["IS_INTEGRATION_TEST"] = "true"
     os.environ.setdefault("LOG_LEVEL", "INFO")
     os.environ["PYTHONUNBUFFERED"] = "1"
+    os.environ["SMOKE_TEST_MODE"] = "true"
 
     integration_db_name = "problemologist_integration"
     integration_db_url = (

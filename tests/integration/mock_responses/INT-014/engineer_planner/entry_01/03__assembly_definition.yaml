@@ -10,9 +10,9 @@ totals:
   estimate_confidence: high
 manufactured_parts: []
 cots_parts:
-  - part_id: "MOCK-MOTOR-ID"
-    manufacturer: "Mock Motors Inc."
-    unit_cost_usd: 10.0
+  - part_id: "ServoMotor_SG90"
+    manufacturer: "unknown"
+    unit_cost_usd: 2.5
     quantity: 1
     source: "internal"
 final_assembly: []

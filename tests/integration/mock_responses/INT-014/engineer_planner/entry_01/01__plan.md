@@ -1,10 +1,10 @@
 ## 1. Solution Overview
 
-Mechanism with MOCK-MOTOR-ID.
+Mechanism with ServoMotor_SG90.
 
 ## 2. Parts List
 
-- MOCK-MOTOR-ID (Servo Motor)
+- ServoMotor_SG90 (Servo Motor)
 
 ## 3. Assembly Strategy
 

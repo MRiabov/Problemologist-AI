@@ -68,6 +68,7 @@ from shared.workers.schema import (
     ReviewerStage,
     ScriptExecutionRequest,
 )
+from worker_heavy.config import settings as worker_settings
 
 logger = structlog.get_logger(__name__)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
@@ -691,6 +692,8 @@ class RemoteFilesystemMiddleware:
         seed: int | None = None,
     ) -> BenchmarkToolResponse:
         """Trigger runtime-randomization verification via worker client."""
+        if smoke_test_mode is None:
+            smoke_test_mode = worker_settings.smoke_test_mode
         return await self.client.verify(
             str(script_path),
             backend=backend,
