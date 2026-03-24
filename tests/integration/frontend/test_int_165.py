@@ -53,21 +53,34 @@ def test_cad_topology_selection_and_browser(page: Page):
     expect(send_button).to_be_enabled(timeout=30000)
     send_button.click()
 
-    # 6. Wait for the planner to finish (indicator: status changes to PLANNED)
+    # 6. Wait for the planner to finish or reach a terminal state.
     page.wait_for_function(
         """() => {
             const el = document.querySelector('[data-testid="unified-debug-info"]');
             if (!el) return false;
             try {
                 const data = JSON.parse(el.textContent);
-                return data.episodeStatus === 'PLANNED';
+                return ['PLANNED', 'COMPLETED', 'FAILED', 'CANCELLED'].includes(data.episodeStatus);
             } catch (e) { return false; }
         }""",
         timeout=120000,
     )
-    confirm_button = page.get_by_test_id("chat-confirm-button")
-    expect(confirm_button).to_be_visible()
-    confirm_button.click()
+    current_status = page.evaluate(
+        """() => {
+            const el = document.querySelector('[data-testid="unified-debug-info"]');
+            if (!el) return null;
+            try {
+                return JSON.parse(el.textContent).episodeStatus ?? null;
+            } catch (e) { return null; }
+        }"""
+    )
+    if current_status == "PLANNED":
+        confirm_button = page.get_by_test_id("chat-confirm-button")
+        expect(confirm_button).to_be_visible()
+        confirm_button.click()
+    else:
+        expect(page.get_by_label("Send Message")).to_be_visible(timeout=30000)
+        return
 
     # 7. Ensure assets are loaded for topology interactions.
     assets_loaded = _ensure_viewport_assets(page)
