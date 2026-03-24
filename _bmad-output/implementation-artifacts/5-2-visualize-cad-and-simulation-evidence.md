@@ -104,6 +104,7 @@ GPT-5.4
 - `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets --maxfail=1`
 - `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1`
 - `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence --maxfail=1`
+- `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1` (re-run after extending the INT-174 wait timeout to 180s; all four browser checks passed)
 
 ### Completion Notes List
 
@@ -127,6 +128,8 @@ GPT-5.4
 - Fixed the INT-167 benchmark mock fixture caps so the planner validation gate can complete and the live browser slice can reach proxy asset rendering.
 - Re-verified the story slice with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1` and confirmed `INT-165`, `INT-166`, `INT-167`, and `INT-174` all passed.
 - Re-verified the engineer solution-evidence path with `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence --maxfail=1`.
+- Extended the INT-174 planner wait timeout to 180 seconds so the browser flow remains stable when run after the other frontend browser tests.
+- Re-verified the full frontend browser slice with `./scripts/run_integration_tests.sh tests/integration/frontend/test_int_165.py tests/integration/frontend/test_int_166.py tests/integration/frontend/p0/test_frontend_p0.py::test_int_167_controller_proxied_cad_assets tests/integration/frontend/p0/test_int_174.py::test_int_174_cad_show_hide_behavior --maxfail=1` and confirmed all four checks passed.
 
 ### File List
 
@@ -165,3 +168,4 @@ GPT-5.4
 - 2026-03-24: Re-ran the targeted frontend browser slice after the latest review pass; INT-165, INT-166, INT-167, and INT-174 all passed.
 - 2026-03-24: Resolved latest-media episode binding in the workspace resolver, aligned the INT-167 benchmark caps, and re-ran the story slice plus INT-189 successfully.
 - 2026-03-24: Marked the story ready for review after confirming all tasks are complete and the QA slice passed.
+- 2026-03-24: Extended the INT-174 wait timeout to 180s and re-ran the full frontend browser slice; INT-165, INT-166, INT-167, and INT-174 all passed.
