@@ -1,6 +1,6 @@
 # Story 5.1: Inspect Session History and Run Timeline
 
-Status: done
+Status: in-progress
 
 ## Story
 

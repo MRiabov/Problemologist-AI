@@ -1,6 +1,6 @@
 # Story 5.6: Create Benchmarks and Review Simple Plans
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -16,21 +16,21 @@ As a human operator, I want to create benchmark drafts and accept or reject simp
 
 ## Tasks / Subtasks
 
-- [ ] Keep the benchmark draft lifecycle controller-backed in `EpisodeContext`, `BenchmarkGeneration`, `ChatWindow`, and `ObjectivesForm`. Preserve `createNewBenchmark`, `startAgent(..., objectives)`, `updateObjectives`, and `confirmBenchmark` as the only paths for creating a benchmark draft, persisting objective edits, and continuing after plan approval. (AC: 1, 4, 5)
-  - [ ] Keep `/benchmark` entering benchmark creation mode via `createNewBenchmark(true)` and `generateBenchmark(...)`, not the engineer run path.
-  - [ ] Preserve the `BenchmarkObjectives` to `CustomObjectives` field mapping (`max_cost`/`max_weight`/`target_quantity` on the frontend, `max_unit_cost`/`max_weight`/`target_quantity` in persisted episode metadata).
-  - [ ] Do not add a second local benchmark draft store or route-specific shadow state.
-- [ ] Keep the plan-approval surfaces in `ChatWindow` and `ArtifactView` aligned with the backend planner state. `chat-confirm-button` and `file-explorer-confirm-button` should remain the visible approval entry points, with optional comments or reasons persisted via the existing controller-backed confirmation/comment trace flow. (AC: 2, 3)
-  - [ ] Keep `Request Changes` explicit and user-visible; it should route to a reason-bearing comment/message path rather than a silent no-op.
-  - [ ] Preserve the existing `user_confirmation` trace behavior and do not replace it with a synthetic frontend-only approval record.
-- [ ] Keep benchmark/workspace routing and shell composition consistent. `Sidebar`, `BenchmarkGeneration`, and `UnifiedGeneratorView` should continue to route benchmark sessions to `/benchmark`, engineer sessions to `/`, and keep the benchmark create-new button behavior route-aware. (AC: 1, 5)
-  - [ ] Preserve the benchmark-specific header, subtitle, and badge configuration in `BenchmarkGeneration`.
-  - [ ] Keep benchmark session selection tied to persisted episode metadata, not page-local state.
-- [ ] Extend live-browser integration coverage for benchmark draft creation, objective persistence, approval/comment persistence, and control placement. Use the existing benchmark frontend P0 coverage as the source of truth and add only the minimal assertions needed. (AC: 1-5)
-  - [ ] Keep `INT-158` for benchmark/solution workflow parity.
-  - [ ] Keep `INT-159` for approval/comment persistence.
-  - [ ] Keep `INT-172` for control placement.
-  - [ ] Keep `INT-114` for planner submission gating, because the UI approval flow depends on the backend benchmark plan handoff.
+- [x] Keep the benchmark draft lifecycle controller-backed in `EpisodeContext`, `BenchmarkGeneration`, `ChatWindow`, and `ObjectivesForm`. Preserve `createNewBenchmark`, `startAgent(..., objectives)`, `updateObjectives`, and `confirmBenchmark` as the only paths for creating a benchmark draft, persisting objective edits, and continuing after plan approval. (AC: 1, 4, 5)
+  - [x] Keep `/benchmark` entering benchmark creation mode via `createNewBenchmark(true)` and `generateBenchmark(...)`, not the engineer run path.
+  - [x] Preserve the `BenchmarkObjectives` to `CustomObjectives` field mapping (`max_cost`/`max_weight`/`target_quantity` on the frontend, `max_unit_cost`/`max_weight`/`target_quantity` in persisted episode metadata).
+  - [x] Do not add a second local benchmark draft store or route-specific shadow state.
+- [x] Keep the plan-approval surfaces in `ChatWindow` and `ArtifactView` aligned with the backend planner state. `chat-confirm-button` and `file-explorer-confirm-button` should remain the visible approval entry points, with optional comments or reasons persisted via the existing controller-backed confirmation/comment trace flow. (AC: 2, 3)
+  - [x] Keep `Request Changes` explicit and user-visible; it should route to a reason-bearing comment/message path rather than a silent no-op.
+  - [x] Preserve the existing `user_confirmation` trace behavior and do not replace it with a synthetic frontend-only approval record.
+- [x] Keep benchmark/workspace routing and shell composition consistent. `Sidebar`, `BenchmarkGeneration`, and `UnifiedGeneratorView` should continue to route benchmark sessions to `/benchmark`, engineer sessions to `/`, and keep the benchmark create-new button behavior route-aware. (AC: 1, 5)
+  - [x] Preserve the benchmark-specific header, subtitle, and badge configuration in `BenchmarkGeneration`.
+  - [x] Keep benchmark session selection tied to persisted episode metadata, not page-local state.
+- [x] Extend live-browser integration coverage for benchmark draft creation, objective persistence, approval/comment persistence, and control placement. Use the existing benchmark frontend P0 coverage as the source of truth and add only the minimal assertions needed. (AC: 1-5)
+  - [x] Keep `INT-158` for benchmark/solution workflow parity.
+  - [x] Keep `INT-159` for approval/comment persistence.
+  - [x] Keep `INT-172` for control placement.
+  - [x] Keep `INT-114` for planner submission gating, because the UI approval flow depends on the backend benchmark plan handoff.
 
 ## Dev Notes
 
@@ -90,10 +90,38 @@ As a human operator, I want to create benchmark drafts and accept or reject simp
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- 2026-03-24: Updated benchmark-only draft/approval control flow in `EpisodeContext`, `ChatWindow`, `ArtifactView`, `ChatInput`, `BenchmarkGeneration`, and `Sidebar`.
+- 2026-03-24: Verified frontend production build with `npm run build` in `frontend/`.
+
 ### Completion Notes List
 
+- Kept benchmark draft creation controller-backed through the existing `generateBenchmark`, `updateBenchmarkObjectives`, and `confirmBenchmark` paths.
+- Moved benchmark approval comment handling into shared episode context so chat and file-explorer approval surfaces use the same persisted comment value.
+- Gated benchmark planning/approval controls to the benchmark route and hid them from engineer sessions.
+- Updated integration coverage so benchmark approval/comment persistence and control placement are exercised through the existing P0 browser suite.
+- Confirmed the frontend production build passes after the implementation changes.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/5-6-create-benchmarks-and-review-simple-plans.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `frontend/src/context/EpisodeContext.tsx`
+- `frontend/src/components/workspace/ChatWindow.tsx`
+- `frontend/src/components/workspace/ArtifactView.tsx`
+- `frontend/src/components/Chat/ChatInput.tsx`
+- `frontend/src/components/layout/Sidebar.tsx`
+- `frontend/src/pages/BenchmarkGeneration.tsx`
+- `tests/integration/frontend/p0/test_frontend_p0.py`
+- `tests/integration/frontend/p0/test_int_172.py`
+
+### Change Log
+
+- 2026-03-24: Completed the benchmark draft and plan-review UI wiring, routed approval comments through shared controller-backed episode state, tightened benchmark-only control visibility, and extended the browser coverage for approval/comment persistence and control placement.
+
+### Status
+
+review
