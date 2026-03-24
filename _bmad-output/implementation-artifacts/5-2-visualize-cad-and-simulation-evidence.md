@@ -1,6 +1,6 @@
 # Story 5.2: Visualize CAD and Simulation Evidence
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -178,3 +178,4 @@ GPT-5.4
 - 2026-03-24: Marked the story ready for review after confirming all tasks are complete and the QA slice passed.
 - 2026-03-24: Extended the INT-174 wait timeout to 180s and re-ran the full frontend browser slice; INT-165, INT-166, INT-167, and INT-174 all passed.
 - 2026-03-24: Re-ran the full frontend browser slice with INT-165, INT-166, INT-167, INT-174, and INT-189; all five checks passed.
+- 2026-03-24: Re-verified the story slice with INT-165, INT-166, INT-167, INT-174, and INT-189 after the latest integration run; all five checks passed and the story is ready for review.
