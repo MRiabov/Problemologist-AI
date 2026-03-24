@@ -1,8 +1,8 @@
 ---
-name: step-03b-subagent-isolation
+name: 'step-03b-subagent-isolation'
 description: 'Subagent: Check test isolation (no shared state/dependencies)'
 subagent: true
-outputFile: /tmp/tea-test-review-isolation-{{timestamp}}.json
+outputFile: '/tmp/tea-test-review-isolation-{{timestamp}}.json'
 ---
 
 # Subagent 3B: Isolation Quality Check
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other quality dimensio
 
 **Your task:** Analyze test files for ISOLATION violations only.
 
-______________________________________________________________________
+---
 
 ## MANDATORY EXECUTION RULES
 
@@ -22,7 +22,7 @@ ______________________________________________________________________
 - ❌ Do NOT check determinism, maintainability, coverage, or performance
 - ❌ Do NOT modify test files (read-only analysis)
 
-______________________________________________________________________
+---
 
 ## SUBAGENT TASK
 
@@ -60,7 +60,7 @@ const totalPenalty = violations.reduce((sum, v) => sum + severityWeights[v.sever
 const score = Math.max(0, 100 - totalPenalty);
 ```
 
-______________________________________________________________________
+---
 
 ## OUTPUT FORMAT
 
@@ -98,7 +98,7 @@ ______________________________________________________________________
 }
 ```
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 
@@ -110,7 +110,7 @@ Subagent completes when:
 
 **Subagent terminates here.**
 
-______________________________________________________________________
+---
 
 ## 🚨 SUBAGENT SUCCESS METRICS
 

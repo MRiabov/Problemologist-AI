@@ -1,6 +1,6 @@
 ---
-name: step-05-generate-report
-description: Create NFR report and validation summary
+name: 'step-05-generate-report'
+description: 'Create NFR report and validation summary'
 outputFile: '{test_artifacts}/nfr-assessment.md'
 ---
 
@@ -15,7 +15,7 @@ Produce the NFR assessment report and validate completeness.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -43,7 +43,7 @@ Use `nfr-report-template.md` to produce `{outputFile}` containing:
 - Remediation actions
 - Gate-ready YAML snippet (if applicable)
 
-______________________________________________________________________
+---
 
 ## 2. Polish Output
 
@@ -54,7 +54,7 @@ Before finalizing, review the complete output document for quality:
 3. **Check completeness**: All template sections should be populated or explicitly marked N/A
 4. **Format cleanup**: Ensure markdown formatting is clean (tables aligned, headers consistent, no orphaned references)
 
-______________________________________________________________________
+---
 
 ## 3. Validation
 
@@ -62,7 +62,7 @@ Validate against `checklist.md` and fix gaps.
 
 - [ ] CLI sessions cleaned up (no orphaned browsers)
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -81,13 +81,12 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-05-generate-report'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-05-generate-report'`
   - Set `lastSaved: '{date}'`
   - Append this step's output to the appropriate section of the document.
 
-______________________________________________________________________
+---
 
 ## 5. Completion Summary
 

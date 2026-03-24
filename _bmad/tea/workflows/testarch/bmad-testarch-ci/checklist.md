@@ -130,10 +130,10 @@ Note: CI setup is typically a one-time task per repo and can be run any time aft
 
 ### Performance Validation
 
-- [ ] Lint stage: \<2 minutes
-- [ ] Test stage (per shard): \<10 minutes
-- [ ] Burn-in stage: \<30 minutes
-- [ ] Total pipeline: \<45 minutes
+- [ ] Lint stage: <2 minutes
+- [ ] Test stage (per shard): <10 minutes
+- [ ] Burn-in stage: <30 minutes
+- [ ] Total pipeline: <45 minutes
 - [ ] Cache reduces install time by 2-5 minutes
 
 ## Quality Checks
@@ -279,7 +279,7 @@ If workflow fails:
 - Delegates: Install Harness delegate in target infrastructure
 - Steps: Use Run steps with appropriate container images
 
-______________________________________________________________________
+---
 
 **Checklist Complete**: Sign off when all items validated.
 

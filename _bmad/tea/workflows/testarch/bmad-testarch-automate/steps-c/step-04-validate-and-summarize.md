@@ -1,6 +1,6 @@
 ---
-name: step-04-validate-and-summarize
-description: Validate outputs and produce automation summary
+name: 'step-04-validate-and-summarize'
+description: 'Validate outputs and produce automation summary'
 outputFile: '{test_artifacts}/automation-summary.md'
 ---
 
@@ -16,7 +16,7 @@ Validate generated outputs and produce a concise automation summary.
 - ✅ Speak in `{communication_language}`
 - ✅ Validate against the checklist before completion
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -48,7 +48,7 @@ Use `checklist.md` to validate:
 
 Fix gaps before proceeding.
 
-______________________________________________________________________
+---
 
 ## 2. Polish Output
 
@@ -59,7 +59,7 @@ Before finalizing, review the complete output document for quality:
 3. **Check completeness**: All template sections should be populated or explicitly marked N/A
 4. **Format cleanup**: Ensure markdown formatting is clean (tables aligned, headers consistent, no orphaned references)
 
-______________________________________________________________________
+---
 
 ## 3. Summary Output
 
@@ -70,7 +70,7 @@ Write `{outputFile}` including:
 - Key assumptions and risks
 - Next recommended workflow (e.g., `test-review` or `trace`)
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -89,7 +89,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-04-validate-and-summarize'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04-validate-and-summarize'`
   - Set `lastSaved: '{date}'`

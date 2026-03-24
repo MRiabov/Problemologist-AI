@@ -1,7 +1,7 @@
 ---
-name: step-04-coverage-plan
-description: Design test coverage, priorities, execution strategy, and estimates
-nextStepFile: ./step-05-generate-output.md
+name: 'step-04-coverage-plan'
+description: 'Design test coverage, priorities, execution strategy, and estimates'
+nextStepFile: './step-05-generate-output.md'
 outputFile: '{test_artifacts}/test-design-progress.md'
 ---
 
@@ -17,7 +17,7 @@ Create the test coverage matrix, prioritize scenarios, and define execution stra
 - ✅ Speak in `{communication_language}`
 - 🚫 Avoid redundant coverage across test levels
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -52,17 +52,17 @@ For each requirement or risk-driven scenario:
 - P2: Secondary flows + low/medium risk
 - P3: Nice-to-have, exploratory, benchmarks
 
-______________________________________________________________________
+---
 
 ## 2. Execution Strategy (Keep Simple)
 
 Use a **PR / Nightly / Weekly** model:
 
-- **PR**: All functional tests if \<15 minutes
+- **PR**: All functional tests if <15 minutes
 - **Nightly/Weekly**: Long-running or expensive suites (perf, chaos, large datasets)
 - Avoid re-listing all tests (refer to coverage plan)
 
-______________________________________________________________________
+---
 
 ## 3. Resource Estimates (Ranges Only)
 
@@ -74,7 +74,7 @@ Provide intervals (no false precision):
 - P3: e.g., "~2–5 hours"
 - Total and timeline as ranges
 
-______________________________________________________________________
+---
 
 ## 4. Quality Gates
 
@@ -85,7 +85,7 @@ Define thresholds:
 - High-risk mitigations complete before release
 - Coverage target ≥ 80% (adjust if justified)
 
-______________________________________________________________________
+---
 
 ### 5. Save Progress
 
@@ -104,7 +104,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-04-coverage-plan'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04-coverage-plan'`
   - Set `lastSaved: '{date}'`

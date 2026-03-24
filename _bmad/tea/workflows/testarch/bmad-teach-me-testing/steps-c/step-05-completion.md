@@ -1,9 +1,9 @@
 ---
-name: step-05-completion
-description: Generate completion certificate, final progress update, congratulate learner
+name: 'step-05-completion'
+description: 'Generate completion certificate, final progress update, congratulate learner'
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-certificateTemplate: ../templates/certificate-template.md
+certificateTemplate: '../templates/certificate-template.md'
 certificateFile: '{test_artifacts}/tea-academy/{user_name}/tea-completion-certificate.md'
 ---
 
@@ -67,7 +67,7 @@ Please return to the session menu to complete the remaining sessions before gene
 
 **THEN:** Stop and do not proceed. This is an error state.
 
-______________________________________________________________________
+---
 
 **If all 7 sessions complete:** Proceed to step 2.
 
@@ -302,7 +302,7 @@ You've successfully completed the entire TEA Academy curriculum!
 
 **Thank you for investing in testing excellence!** 🧪
 
-______________________________________________________________________
+---
 
 **TEA Academy - Mission Accomplished** ✅"
 
@@ -312,7 +312,7 @@ ______________________________________________________________________
 
 Workflow ends here. User can run the workflow again to re-take sessions or explore more fragments.
 
-______________________________________________________________________
+---
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

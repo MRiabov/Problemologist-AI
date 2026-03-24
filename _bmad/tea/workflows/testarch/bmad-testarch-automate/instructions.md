@@ -5,7 +5,7 @@
 **Workflow ID**: `_bmad/tea/testarch/bmad-testarch-automate`
 **Version**: 5.0 (Step-File Architecture)
 
-______________________________________________________________________
+---
 
 ## Overview
 
@@ -16,7 +16,7 @@ Modes:
 - **BMad-Integrated**: Uses story/PRD/test-design artifacts when available
 - **Standalone**: Analyzes existing codebase without BMad artifacts
 
-______________________________________________________________________
+---
 
 ## WORKFLOW ARCHITECTURE
 
@@ -26,7 +26,7 @@ This workflow uses **step-file architecture** for disciplined execution:
 - **JIT Loading**: Only the current step file is in memory
 - **Sequential Enforcement**: Execute steps in order without skipping
 
-______________________________________________________________________
+---
 
 ## INITIALIZATION SEQUENCE
 

@@ -1,7 +1,7 @@
 ---
-name: step-04e-aggregate-nfr
-description: Aggregate NFR domain assessments into executive summary
-nextStepFile: ./step-05-generate-report.md
+name: 'step-04e-aggregate-nfr'
+description: 'Aggregate NFR domain assessments into executive summary'
+nextStepFile: './step-05-generate-report.md'
 outputFile: '{test_artifacts}/nfr-assessment.md'
 ---
 
@@ -11,7 +11,7 @@ outputFile: '{test_artifacts}/nfr-assessment.md'
 
 Read outputs from 4 parallel NFR subagents, calculate overall risk level, aggregate compliance status, and identify cross-domain risks.
 
-______________________________________________________________________
+---
 
 ## MANDATORY EXECUTION RULES
 
@@ -21,7 +21,7 @@ ______________________________________________________________________
 - ✅ Calculate overall risk level
 - ❌ Do NOT re-assess NFRs (use subagent outputs)
 
-______________________________________________________________________
+---
 
 ## MANDATORY SEQUENCE
 
@@ -37,7 +37,7 @@ domains.forEach((domain) => {
 });
 ```
 
-______________________________________________________________________
+---
 
 ### 2. Calculate Overall Risk Level
 
@@ -56,7 +56,7 @@ const overallRisk = Object.keys(riskLevels).find((k) => riskLevels[k] === maxRis
 - If ANY domain is MEDIUM (and none HIGH) → overall is MEDIUM
 - If ALL domains are LOW/NONE → overall is LOW
 
-______________________________________________________________________
+---
 
 ### 3. Aggregate Compliance Status
 
@@ -83,7 +83,7 @@ Object.entries(allCompliance).forEach(([standard, statuses]) => {
 });
 ```
 
-______________________________________________________________________
+---
 
 ### 4. Identify Cross-Domain Risks
 
@@ -115,7 +115,7 @@ if (securityFails.length > 0 && reliabilityConcerns.length > 0) {
 }
 ```
 
-______________________________________________________________________
+---
 
 ### 5. Aggregate Priority Actions
 
@@ -132,7 +132,7 @@ const allPriorityActions = domains.flatMap((domain) =>
 const prioritizedActions = allPriorityActions.sort((a, b) => (a.urgency === 'URGENT' ? -1 : 1));
 ```
 
-______________________________________________________________________
+---
 
 ### 6. Generate Executive Summary
 
@@ -181,7 +181,7 @@ const executiveSummary = {
 fs.writeFileSync('/tmp/tea-nfr-summary-{{timestamp}}.json', JSON.stringify(executiveSummary, null, 2), 'utf8');
 ```
 
-______________________________________________________________________
+---
 
 ### 7. Display Summary to User
 
@@ -208,9 +208,9 @@ ______________________________________________________________________
 ✅ Ready for report generation (Step 5)
 ```
 
-______________________________________________________________________
+---
 
-______________________________________________________________________
+---
 
 ### 8. Save Progress
 
@@ -229,13 +229,12 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-04e-aggregate-nfr'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04e-aggregate-nfr'`
   - Set `lastSaved: '{date}'`
   - Append this step's output to the appropriate section of the document.
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 
@@ -249,7 +248,7 @@ Proceed to Step 5 when:
 
 Load next step: `{nextStepFile}`
 
-______________________________________________________________________
+---
 
 ## 🚨 SYSTEM SUCCESS METRICS
 

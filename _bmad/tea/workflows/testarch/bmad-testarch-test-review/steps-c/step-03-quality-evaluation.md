@@ -1,7 +1,7 @@
 ---
-name: step-03-quality-evaluation
-description: Orchestrate adaptive quality dimension checks (agent-team, subagent, or sequential)
-nextStepFile: ./step-03f-aggregate-scores.md
+name: 'step-03-quality-evaluation'
+description: 'Orchestrate adaptive quality dimension checks (agent-team, subagent, or sequential)'
+nextStepFile: './step-03f-aggregate-scores.md'
 ---
 
 # Step 3: Orchestrate Adaptive Quality Evaluation
@@ -27,7 +27,7 @@ Coverage is intentionally excluded from this workflow and handled by `trace`.
 - ❌ Do NOT skip capability checks when probing is enabled
 - ❌ Do NOT proceed until required worker steps finish
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -41,7 +41,7 @@ ______________________________________________________________________
 - Focus: orchestration only (mode selection + worker dispatch)
 - Limits: do not evaluate quality directly (delegate to worker steps)
 
-______________________________________________________________________
+---
 
 ## MANDATORY SEQUENCE
 
@@ -77,7 +77,7 @@ const subagentContext = {
 };
 ```
 
-______________________________________________________________________
+---
 
 ### 2. Resolve Execution Mode with Capability Probe
 
@@ -150,7 +150,7 @@ Resolution precedence:
 
 If probing is disabled, honor the requested mode strictly. If that mode cannot be executed at runtime, fail with explicit error instead of silent fallback.
 
-______________________________________________________________________
+---
 
 ### 3. Dispatch 4 Quality Workers
 
@@ -183,7 +183,7 @@ ______________________________________________________________________
 
 In `agent-team` and `subagent` modes, runtime decides worker scheduling and concurrency.
 
-______________________________________________________________________
+---
 
 ### 4. Wait for Expected Worker Completion
 
@@ -200,7 +200,7 @@ ______________________________________________________________________
 ✅ Sequential mode: each worker already completed during dispatch.
 ```
 
-______________________________________________________________________
+---
 
 ### 5. Verify All Outputs Exist
 
@@ -216,7 +216,7 @@ outputs.forEach((output) => {
 });
 ```
 
-______________________________________________________________________
+---
 
 ### 6. Execution Report
 
@@ -227,7 +227,7 @@ ______________________________________________________________________
 - Parallel Gain: ~60-70% faster when mode is subagent/agent-team
 ```
 
-______________________________________________________________________
+---
 
 ### 7. Proceed to Aggregation
 
@@ -242,7 +242,7 @@ The aggregation step (3F) will:
 - Aggregate violations by severity
 - Generate review report with top suggestions
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 
@@ -254,7 +254,7 @@ Proceed to Step 3F when:
 
 **Do NOT proceed if any subagent failed.**
 
-______________________________________________________________________
+---
 
 ## 🚨 SYSTEM SUCCESS METRICS
 

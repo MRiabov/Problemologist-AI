@@ -83,7 +83,7 @@ npx playwright show-report
 - Screenshots + video give visual context without trace overhead
 - Interactive timeline makes timing issues obvious (race conditions, slow API)
 
-______________________________________________________________________
+---
 
 ### Example 2: HAR File Recording for Network Debugging
 
@@ -159,7 +159,7 @@ test('should replay checkout flow from HAR', async ({ page, context }) => {
 - Analyzing third-party API behavior (Stripe, Auth0)
 - Reproducing production issues locally (record HAR in staging)
 
-______________________________________________________________________
+---
 
 ### Example 3: Custom Artifact Capture (Console Logs + Network on Failure)
 
@@ -281,7 +281,7 @@ jobs:
 - CI uploads artifacts for post-mortem analysis
 - `continue-on-error: true` ensures artifact upload even when tests fail
 
-______________________________________________________________________
+---
 
 ### Example 4: Accessibility Debugging Integration (axe-core in Trace Viewer)
 
@@ -387,7 +387,7 @@ describe('Checkout Accessibility', () => {
 - Provides actionable links (helpUrl) to fix issues
 - Screenshots show visual context (contrast, layout)
 
-______________________________________________________________________
+---
 
 ### Example 5: Time-Travel Debugging Workflow (Playwright Inspector)
 
@@ -500,7 +500,7 @@ test('debug state mutation', async ({ page }) => {
 - "Pick locator" feature helps find robust selectors
 - Record mode generates test code from manual interactions
 
-______________________________________________________________________
+---
 
 ## Visual Debugging Checklist
 

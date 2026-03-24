@@ -1,7 +1,7 @@
 ---
-name: step-02-discover-tests
-description: Find and parse test files
-nextStepFile: ./step-03-quality-evaluation.md
+name: 'step-02-discover-tests'
+description: 'Find and parse test files'
+nextStepFile: './step-03-quality-evaluation.md'
 outputFile: '{test_artifacts}/test-review.md'
 ---
 
@@ -16,7 +16,7 @@ Collect test files in scope and parse structure/metadata.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -43,7 +43,7 @@ ______________________________________________________________________
 
 Halt if no tests are found.
 
-______________________________________________________________________
+---
 
 ## 2. Parse Metadata (per file)
 
@@ -56,7 +56,7 @@ Collect:
 - Imports, fixtures, factories, network interception
 - Waits/timeouts and control flow (if/try/catch)
 
-______________________________________________________________________
+---
 
 ## 3. Evidence Collection (if `tea_browser_automation` is `cli` or `auto`)
 
@@ -75,7 +75,7 @@ All commands use the same named session to target the correct browser:
 
 > **Session Hygiene:** Always close sessions using `playwright-cli -s=tea-review close`. Do NOT use `close-all` — it kills every session on the machine and breaks parallel execution.
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -94,7 +94,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-02-discover-tests'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-discover-tests'`
   - Set `lastSaved: '{date}'`

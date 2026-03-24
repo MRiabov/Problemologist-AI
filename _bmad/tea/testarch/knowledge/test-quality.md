@@ -456,7 +456,7 @@ test('admin can update notification preferences', async ({ adminPage, seedUser }
 
 **Key Points**:
 
-- Split monolithic tests into focused scenarios (\<300 lines each)
+- Split monolithic tests into focused scenarios (<300 lines each)
 - Extract common setup into fixtures (auto-runs for each test)
 - Each test validates one concern (user creation, permissions, preferences)
 - Failures are easier to diagnose: "Permission assignment failed" vs "Complete journey failed"

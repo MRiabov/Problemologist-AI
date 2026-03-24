@@ -1,7 +1,7 @@
 ---
-name: step-02-select-framework
-description: Select Playwright or Cypress and justify choice
-nextStepFile: ./step-03-scaffold-framework.md
+name: 'step-02-select-framework'
+description: 'Select Playwright or Cypress and justify choice'
+nextStepFile: './step-03-scaffold-framework.md'
 outputFile: '{test_artifacts}/framework-setup-progress.md'
 ---
 
@@ -16,7 +16,7 @@ Choose the most appropriate framework and document the rationale.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -73,13 +73,13 @@ Select both a browser-based framework (Playwright/Cypress) AND the appropriate b
 
 Respect `config.test_framework` if explicitly set (not `"auto"`).
 
-______________________________________________________________________
+---
 
 ## 2. Announce Decision
 
 State the selected framework and reasoning.
 
-______________________________________________________________________
+---
 
 ### 3. Save Progress
 
@@ -98,7 +98,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-02-select-framework'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-select-framework'`
   - Set `lastSaved: '{date}'`

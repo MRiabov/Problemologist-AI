@@ -1,8 +1,8 @@
 ---
-name: step-04a-subagent-security
+name: 'step-04a-subagent-security'
 description: 'Subagent: Security NFR assessment'
 subagent: true
-outputFile: /tmp/tea-nfr-security-{{timestamp}}.json
+outputFile: '/tmp/tea-nfr-security-{{timestamp}}.json'
 ---
 
 # Subagent 4A: Security NFR Assessment
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 
 **Your task:** Assess SECURITY NFR domain only.
 
-______________________________________________________________________
+---
 
 ## MANDATORY EXECUTION RULES
 
@@ -21,7 +21,7 @@ ______________________________________________________________________
 - ✅ Output structured JSON to temp file
 - ❌ Do NOT assess other NFR domains
 
-______________________________________________________________________
+---
 
 ## SUBAGENT TASK
 
@@ -83,7 +83,7 @@ For each category, determine status:
 - PCI-DSS
 - ISO 27001
 
-______________________________________________________________________
+---
 
 ## OUTPUT FORMAT
 
@@ -129,7 +129,7 @@ ______________________________________________________________________
 }
 ```
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 

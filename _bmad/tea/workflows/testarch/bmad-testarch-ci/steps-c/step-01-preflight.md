@@ -1,7 +1,7 @@
 ---
-name: step-01-preflight
-description: Verify prerequisites and detect CI platform
-nextStepFile: ./step-02-generate-pipeline.md
+name: 'step-01-preflight'
+description: 'Verify prerequisites and detect CI platform'
+nextStepFile: './step-02-generate-pipeline.md'
 outputFile: '{test_artifacts}/ci-pipeline-progress.md'
 ---
 
@@ -17,7 +17,7 @@ Verify CI prerequisites and determine target CI platform.
 - ✅ Speak in `{communication_language}`
 - 🚫 Halt if requirements fail
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -43,7 +43,7 @@ ______________________________________________________________________
 
 If missing: **HALT** with "Git repository required for CI/CD setup."
 
-______________________________________________________________________
+---
 
 ## 2. Detect Test Stack Type
 
@@ -60,7 +60,7 @@ Determine the project's test stack type (`test_stack_type`) using the following 
 
 Record detected `test_stack_type` in step output.
 
-______________________________________________________________________
+---
 
 ## 3. Verify Test Framework
 
@@ -77,7 +77,7 @@ ______________________________________________________________________
 
 If missing: **HALT** with "Run `framework` workflow first."
 
-______________________________________________________________________
+---
 
 ## 4. Ensure Tests Pass Locally
 
@@ -90,7 +90,7 @@ ______________________________________________________________________
   - **Ruby**: `bundle exec rspec`
 - If failing: **HALT** and request fixes before CI setup
 
-______________________________________________________________________
+---
 
 ## 5. Detect CI Platform
 
@@ -108,7 +108,7 @@ ______________________________________________________________________
 
 Record detected `ci_platform` in step output.
 
-______________________________________________________________________
+---
 
 ## 6. Read Environment Context
 
@@ -120,7 +120,7 @@ ______________________________________________________________________
   - **C#/.NET**: Read `*.csproj`/`global.json` for .NET SDK version; note NuGet cache
   - **Ruby**: Read `.ruby-version` or `Gemfile` for Ruby version; note Bundler cache
 
-______________________________________________________________________
+---
 
 ### 7. Save Progress
 
@@ -139,7 +139,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-01-preflight'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-preflight'`
   - Set `lastSaved: '{date}'`

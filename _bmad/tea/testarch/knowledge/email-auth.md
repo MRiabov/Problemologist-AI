@@ -184,7 +184,7 @@ describe('Magic Link Authentication', () => {
 - **State verification**: localStorage/session checked
 - **Fast email retrieval**: 30 second timeout typical
 
-______________________________________________________________________
+---
 
 ### Example 2: State Preservation Pattern with cy.session / Playwright storageState
 
@@ -343,7 +343,7 @@ describe('Dashboard', () => {
 - **Quota optimization**: Massive reduction in email consumption
 - **Fast tests**: Cached auth takes seconds vs. minutes
 
-______________________________________________________________________
+---
 
 ### Example 3: Negative Flow Tests (Expired, Invalid, Reused Links)
 
@@ -504,7 +504,7 @@ test.describe('Email Auth Negative Flows', () => {
 - **Rapid requests**: Multiple requests handled gracefully
 - **Rate limiting**: Excessive requests blocked
 
-______________________________________________________________________
+---
 
 ### Example 4: Caching Strategy with cypress-data-session / Playwright Projects
 
@@ -696,7 +696,7 @@ setup('authenticate via magic link', async ({ page }) => {
 - **shareAcrossSpecs**: Session shared across all spec files
 - **Massive savings**: 500 tests = 1 email (not 500!)
 
-______________________________________________________________________
+---
 
 ## Email Authentication Testing Checklist
 

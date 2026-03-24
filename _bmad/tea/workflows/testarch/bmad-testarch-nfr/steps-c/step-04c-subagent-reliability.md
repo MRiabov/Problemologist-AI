@@ -1,8 +1,8 @@
 ---
-name: step-04c-subagent-reliability
+name: 'step-04c-subagent-reliability'
 description: 'Subagent: Reliability NFR assessment'
 subagent: true
-outputFile: /tmp/tea-nfr-reliability-{{timestamp}}.json
+outputFile: '/tmp/tea-nfr-reliability-{{timestamp}}.json'
 ---
 
 # Subagent 4C: Reliability NFR Assessment
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 
 **Your task:** Assess RELIABILITY NFR domain only.
 
-______________________________________________________________________
+---
 
 ## SUBAGENT TASK
 
@@ -46,7 +46,7 @@ ______________________________________________________________________
 - Historical uptime
 - Incident response
 
-______________________________________________________________________
+---
 
 ## OUTPUT FORMAT
 
@@ -78,7 +78,7 @@ ______________________________________________________________________
 }
 ```
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 

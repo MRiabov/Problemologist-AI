@@ -1,5 +1,14 @@
 ---
-stepsCompleted: [step-01-discovery, step-02-classification, step-03-requirements, step-04-tools, step-05-plan-review, step-06-design, step-07-foundation]
+stepsCompleted:
+  [
+    'step-01-discovery',
+    'step-02-classification',
+    'step-03-requirements',
+    'step-04-tools',
+    'step-05-plan-review',
+    'step-06-design',
+    'step-07-foundation',
+  ]
 created: 2026-01-27
 status: FOUNDATION_COMPLETE
 approvedDate: 2026-01-27
@@ -197,14 +206,12 @@ Create an ongoing learning companion that teaches testing progressively through 
 #### Phase 1: Initialization & Continuation
 
 1. **step-01-init.md** (Init Step - Continuable)
-
    - Goal: Welcome user, check for existing progress file, explain workflow, create initial progress if new
    - Type: Init (Continuable) - checks for `{user}-tea-progress.yaml`, routes to step-01b if exists
    - Menu: Auto-proceed (Pattern 3) - no user menu
    - Logic: Checks for existing progress → routes to step-01b if exists, otherwise creates new and proceeds to step-02
 
 2. **step-01b-continue.md** (Continuation Step)
-
    - Goal: Load existing progress, show dashboard with completion status, route to session menu
    - Type: Continuation - reads `stepsCompleted`, displays progress percentage
    - Menu: Auto-proceed (Pattern 3) - no user menu
@@ -213,14 +220,12 @@ Create an ongoing learning companion that teaches testing progressively through 
 #### Phase 2: Assessment & Path Selection
 
 3. **step-02-assess.md** (Middle Step - Standard)
-
    - Goal: Gather role (QA/Dev/Lead/VP), experience level, learning goals, optional pain points
    - Type: Middle (Standard) auto-proceed
    - Menu: Auto-proceed (Pattern 3) - no user menu
    - On completion: Saves assessment to progress file → loads step-03-session-menu
 
 4. **step-03-session-menu.md** (Branch Step - Hub)
-
    - Goal: Present 7 sessions with descriptions + completion status, allow non-linear selection
    - Type: Branch Step (custom menu: 1-7, X for exit)
    - Menu: Custom branching (Pattern 4)
@@ -311,12 +316,12 @@ lastContinued: '2026-01-27'
 - **step-01b-continue:** Reads progress file, updates lastContinued
 - **step-02-assess:** Updates role, experience, goals, pain_points
 - **step-03-session-menu:** Reads sessions array (display status)
-- **step-04-session-\[N\]:** Reads progress (for role), writes session notes, updates sessions array
+- **step-04-session-[N]:** Reads progress (for role), writes session notes, updates sessions array
 - **step-05-completion:** Reads all sessions data, writes certificate
 
 **Error Handling:**
 
-- Quiz failure (\<70%): Offer review or continue anyway
+- Quiz failure (<70%): Offer review or continue anyway
 - Missing TEA docs: Use Web-Browsing fallback
 - Corrupted progress: Backup and offer fresh start
 - Session interrupted: Auto-save after quiz completion
@@ -430,7 +435,7 @@ teach-me-testing/
 **Conditional Logic:**
 
 - Session menu routing: Check if all complete → route to completion or show menu
-- Quiz scoring: If ≥70% proceed, if \<70% offer review
+- Quiz scoring: If ≥70% proceed, if <70% offer review
 
 **Branch Points:**
 
@@ -509,14 +514,12 @@ teach-me-testing/
 **Files Created:**
 
 1. **workflow.md**
-
    - Tri-modal routing logic (Create/Edit/Validate)
    - Configuration loading from TEA module
    - Step-file architecture principles
    - Initialization sequence
 
 2. **templates/progress-template.yaml**
-
    - Complete progress tracking schema
    - 7 sessions defined
    - Session status tracking (not-started/in-progress/completed)
@@ -524,7 +527,6 @@ teach-me-testing/
    - Progress metrics (completion_percentage, next_recommended)
 
 3. **templates/session-notes-template.md**
-
    - Session metadata
    - Key concepts, objectives, takeaways
    - TEA resources referenced
@@ -532,7 +534,6 @@ teach-me-testing/
    - Practical examples
 
 4. **templates/certificate-template.md**
-
    - Completion certificate structure
    - All 7 sessions with scores
    - Skills acquired checklist
@@ -540,14 +541,12 @@ teach-me-testing/
    - Next steps recommendations
 
 5. **instructions.md**
-
    - How to run the workflow
    - Session structure and flow
    - Progress tracking details
    - Troubleshooting guide
 
 6. **checklist.md**
-
    - Quality validation checklist
    - Foundation quality checks
    - Step file quality standards
@@ -712,7 +711,7 @@ teach-me-testing/
 - Teaching content: What is TEA, TEA Lite, Automate workflow, engagement models
 - Role-adapted examples (QA/Dev/Lead/VP perspectives)
 - 3-question quiz with validation (passing: ≥70%)
-- Quiz retry option if failing (\<70%)
+- Quiz retry option if failing (<70%)
 - Generates session notes using template with all quiz results
 - Updates progress file (status, score, notes_artifact, completion_percentage)
 - Updates stepsCompleted array with 'step-04-session-01'
@@ -804,21 +803,21 @@ teach-me-testing/
 **Final:** Updates progress (certificate_generated: true, completion_date)
 **No Menu:** Workflow ends here
 
-______________________________________________________________________
+---
 
 ## CREATE Mode Build Complete (12 Steps)
 
 **All CREATE mode steps built:** ✓
 
-01. step-01-init.md - Initialize with continuation detection
-02. step-01b-continue.md - Resume with progress dashboard
-03. step-02-assess.md - Role/experience assessment
-04. step-03-session-menu.md - Session selection hub
-05. step-04-session-01.md - Quick Start
-06. step-04-session-02.md - Core Concepts
-07. step-04-session-03.md - Architecture & Patterns
-08. step-04-session-04.md - Test Design
-09. step-04-session-05.md - ATDD & Automate
+1. step-01-init.md - Initialize with continuation detection
+2. step-01b-continue.md - Resume with progress dashboard
+3. step-02-assess.md - Role/experience assessment
+4. step-03-session-menu.md - Session selection hub
+5. step-04-session-01.md - Quick Start
+6. step-04-session-02.md - Core Concepts
+7. step-04-session-03.md - Architecture & Patterns
+8. step-04-session-04.md - Test Design
+9. step-04-session-05.md - ATDD & Automate
 10. step-04-session-06.md - Quality & Trace
 11. step-04-session-07.md - Advanced Patterns
 12. step-05-completion.md - Certificate generation
@@ -829,7 +828,7 @@ ______________________________________________________________________
 - EDIT mode steps (2 steps)
 - VALIDATE mode steps (1 step)
 
-______________________________________________________________________
+---
 
 ## Data Files Build Complete
 
@@ -845,7 +844,7 @@ ______________________________________________________________________
 
 **All 5 data files complete.**
 
-______________________________________________________________________
+---
 
 ## EDIT Mode Build Complete
 
@@ -858,7 +857,7 @@ ______________________________________________________________________
 
 **All 2 EDIT mode steps complete.**
 
-______________________________________________________________________
+---
 
 ## VALIDATE Mode Build Complete
 
@@ -870,7 +869,7 @@ ______________________________________________________________________
 
 **All 1 VALIDATE mode step complete.**
 
-______________________________________________________________________
+---
 
 ## 🏆 WORKFLOW BUILD COMPLETE
 
@@ -918,7 +917,7 @@ ______________________________________________________________________
 
 - step-v-01-validate.md
 
-______________________________________________________________________
+---
 
 ## Next Action Required
 
@@ -944,7 +943,7 @@ cp -r {external-project-root}/_bmad-output/bmb-creations/workflows/teach-me-test
 3. Validate: `bmad run teach-me-testing -v`
 4. Document in TEA module README
 
-______________________________________________________________________
+---
 
 **Workflow Creation: COMPLETE** ✅
 **Ready for Deployment:** YES

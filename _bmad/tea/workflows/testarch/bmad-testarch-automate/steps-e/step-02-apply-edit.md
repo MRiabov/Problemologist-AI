@@ -1,6 +1,6 @@
 ---
-name: step-02-apply-edit
-description: Apply edits to the selected output
+name: 'step-02-apply-edit'
+description: 'Apply edits to the selected output'
 ---
 
 # Step 2: Apply Edits

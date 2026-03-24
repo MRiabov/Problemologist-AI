@@ -1,6 +1,6 @@
 ---
-name: step-04-generate-report
-description: Create test-review report and validate
+name: 'step-04-generate-report'
+description: 'Create test-review report and validate'
 outputFile: '{test_artifacts}/test-review.md'
 ---
 
@@ -15,7 +15,7 @@ Produce the test-review report and validate against checklist.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -44,7 +44,7 @@ Use `test-review-template.md` to produce `{outputFile}` including:
 - Context references (story/test-design if available)
 - Coverage boundary note: `test-review` does not score coverage. Direct coverage findings to `trace`.
 
-______________________________________________________________________
+---
 
 ## 2. Polish Output
 
@@ -55,7 +55,7 @@ Before finalizing, review the complete output document for quality:
 3. **Check completeness**: All template sections should be populated or explicitly marked N/A
 4. **Format cleanup**: Ensure markdown formatting is clean (tables aligned, headers consistent, no orphaned references)
 
-______________________________________________________________________
+---
 
 ## 3. Validation
 
@@ -64,7 +64,7 @@ Validate against `checklist.md` and fix any gaps.
 - [ ] CLI sessions cleaned up (no orphaned browsers)
 - [ ] Temp artifacts stored in `{test_artifacts}/` not random locations
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -83,13 +83,12 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-04-generate-report'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04-generate-report'`
   - Set `lastSaved: '{date}'`
   - Append this step's output to the appropriate section of the document.
 
-______________________________________________________________________
+---
 
 ## 5. Completion Summary
 

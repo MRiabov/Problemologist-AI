@@ -1,9 +1,9 @@
 ---
-name: step-v-01-validate
-description: Validate teach-me-testing workflow quality against BMAD standards
+name: 'step-v-01-validate'
+description: 'Validate teach-me-testing workflow quality against BMAD standards'
 
-workflowPath: ../
-checklistFile: ../checklist.md
+workflowPath: '../'
+checklistFile: '../checklist.md'
 validationReport: '{test_artifacts}/workflow-validation/teach-me-testing-validation-{date}.md'
 ---
 
@@ -95,7 +95,7 @@ Report findings.
 - [ ] Step goal clearly stated
 - [ ] MANDATORY SEQUENCE present
 - [ ] Success/failure metrics present
-- [ ] File size reasonable (\<250 lines recommended)
+- [ ] File size reasonable (<250 lines recommended)
 
 Report findings per step.
 
@@ -254,7 +254,7 @@ Workflow is usable but could be improved.
 
 **This is the final validation step - workflow ends here.**
 
-______________________________________________________________________
+---
 
 ## 🚨 SUCCESS METRICS
 

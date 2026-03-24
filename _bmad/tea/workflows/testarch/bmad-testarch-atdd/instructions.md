@@ -5,13 +5,13 @@
 **Workflow ID**: `_bmad/tea/testarch/bmad-testarch-atdd`
 **Version**: 5.0 (Step-File Architecture)
 
-______________________________________________________________________
+---
 
 ## Overview
 
 Generates **failing acceptance tests** before implementation (TDD red phase), plus an implementation checklist. Produces tests at appropriate levels (E2E/API/Component) with supporting fixtures and helpers.
 
-______________________________________________________________________
+---
 
 ## WORKFLOW ARCHITECTURE
 
@@ -21,7 +21,7 @@ This workflow uses **step-file architecture**:
 - **JIT Loading**: Only the current step file is in memory
 - **Sequential Enforcement**: Execute steps in order without skipping
 
-______________________________________________________________________
+---
 
 ## INITIALIZATION SEQUENCE
 

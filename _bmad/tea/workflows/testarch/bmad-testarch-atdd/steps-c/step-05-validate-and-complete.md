@@ -1,6 +1,6 @@
 ---
-name: step-05-validate-and-complete
-description: Validate ATDD outputs and summarize
+name: 'step-05-validate-and-complete'
+description: 'Validate ATDD outputs and summarize'
 outputFile: '{test_artifacts}/atdd-checklist-{story_id}.md'
 ---
 
@@ -16,7 +16,7 @@ Validate ATDD outputs and provide a completion summary.
 - ✅ Speak in `{communication_language}`
 - ✅ Validate against the checklist
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -48,7 +48,7 @@ Use `checklist.md` to validate:
 
 Fix any gaps before completion.
 
-______________________________________________________________________
+---
 
 ## 2. Polish Output
 
@@ -59,7 +59,7 @@ Before finalizing, review the complete output document for quality:
 3. **Check completeness**: All template sections should be populated or explicitly marked N/A
 4. **Format cleanup**: Ensure markdown formatting is clean (tables aligned, headers consistent, no orphaned references)
 
-______________________________________________________________________
+---
 
 ## 3. Completion Summary
 
@@ -70,7 +70,7 @@ Report:
 - Key risks or assumptions
 - Next recommended workflow (e.g., implementation or `automate`)
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -89,7 +89,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-05-validate-and-complete'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-05-validate-and-complete'`
   - Set `lastSaved: '{date}'`

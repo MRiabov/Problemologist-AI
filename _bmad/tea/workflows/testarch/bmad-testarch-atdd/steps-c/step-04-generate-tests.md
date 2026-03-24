@@ -1,7 +1,7 @@
 ---
-name: step-04-generate-tests
-description: Orchestrate adaptive FAILING test generation (TDD red phase)
-nextStepFile: ./step-04c-aggregate.md
+name: 'step-04-generate-tests'
+description: 'Orchestrate adaptive FAILING test generation (TDD red phase)'
+nextStepFile: './step-04c-aggregate.md'
 ---
 
 # Step 4: Orchestrate Adaptive FAILING Test Generation
@@ -22,7 +22,7 @@ Select execution mode deterministically, then generate FAILING API and E2E tests
 - ❌ Do NOT generate passing tests (this is red phase)
 - ❌ Do NOT proceed until required worker steps finish
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -37,7 +37,7 @@ ______________________________________________________________________
 - Limits: do not generate tests directly (delegate to worker steps)
 - Dependencies: Steps 1-3 outputs
 
-______________________________________________________________________
+---
 
 ## MANDATORY SEQUENCE
 
@@ -82,7 +82,7 @@ const subagentContext = {
 };
 ```
 
-______________________________________________________________________
+---
 
 ### 2. Resolve Execution Mode with Capability Probe
 
@@ -160,7 +160,7 @@ Resolution precedence:
 
 If probing is disabled, honor the requested mode strictly. If that mode cannot be executed at runtime, fail with explicit error instead of silent fallback.
 
-______________________________________________________________________
+---
 
 ### 3. Dispatch Worker A: Failing API Test Generation
 
@@ -184,7 +184,7 @@ ______________________________________________________________________
 ⏳ Status: Running...
 ```
 
-______________________________________________________________________
+---
 
 ### 4. Dispatch Worker B: Failing E2E Test Generation
 
@@ -208,7 +208,7 @@ ______________________________________________________________________
 ⏳ Status: Running...
 ```
 
-______________________________________________________________________
+---
 
 ### 5. Wait for Required Worker Completion
 
@@ -244,7 +244,7 @@ if (!apiOutputExists || !e2eOutputExists) {
 }
 ```
 
-______________________________________________________________________
+---
 
 ### 6. TDD Red Phase Report
 
@@ -264,7 +264,7 @@ ______________________________________________________________________
 Next: Aggregation will verify TDD compliance
 ```
 
-______________________________________________________________________
+---
 
 ### 7. Execution Report
 
@@ -279,7 +279,7 @@ ______________________________________________________________________
 - Parallel Gain: ~50% faster when mode is subagent/agent-team
 ```
 
-______________________________________________________________________
+---
 
 ### 8. Proceed to Aggregation
 
@@ -294,7 +294,7 @@ The aggregation step (4C) will:
 - Generate ATDD checklist
 - Calculate summary statistics
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 
@@ -311,7 +311,7 @@ Proceed to Step 4C (Aggregation) when:
 - ❌ Output files missing or corrupted
 - ❌ Subagent generated passing tests (wrong - must be failing)
 
-______________________________________________________________________
+---
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS:
 

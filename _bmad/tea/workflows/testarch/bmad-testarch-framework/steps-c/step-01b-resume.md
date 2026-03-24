@@ -1,6 +1,6 @@
 ---
-name: step-01b-resume
-description: Resume interrupted workflow from last completed step
+name: 'step-01b-resume'
+description: 'Resume interrupted workflow from last completed step'
 outputFile: '{test_artifacts}/framework-setup-progress.md'
 ---
 
@@ -15,7 +15,7 @@ Resume an interrupted workflow by loading the existing progress document, verify
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -47,7 +47,7 @@ Read `{outputFile}` and parse YAML frontmatter for:
 
 **THEN:** Halt. Do not proceed.
 
-______________________________________________________________________
+---
 
 ### 2. Verify Previously Created Artifacts
 
@@ -59,7 +59,7 @@ Since this workflow creates code files, verify that artifacts from completed ste
 
 If any expected artifacts are missing, warn the user and suggest re-running from the step that created them.
 
-______________________________________________________________________
+---
 
 ### 3. Display Progress Dashboard
 
@@ -76,7 +76,7 @@ Display:
 4. ✅/⬜ Docs & Scripts (step-04-docs-and-scripts)
 5. ✅/⬜ Validate & Summary (step-05-validate-and-summary)"
 
-______________________________________________________________________
+---
 
 ### 4. Route to Next Step
 
@@ -94,7 +94,7 @@ Based on `lastStep`, load the next incomplete step:
 
 The existing content in `{outputFile}` provides context from previously completed steps.
 
-______________________________________________________________________
+---
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

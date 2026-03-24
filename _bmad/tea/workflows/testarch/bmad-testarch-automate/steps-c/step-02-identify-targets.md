@@ -1,8 +1,8 @@
 ---
-name: step-02-identify-targets
-description: Identify automation targets and create coverage plan
+name: 'step-02-identify-targets'
+description: 'Identify automation targets and create coverage plan'
 outputFile: '{test_artifacts}/automation-summary.md'
-nextStepFile: ./step-03-generate-tests.md
+nextStepFile: './step-03-generate-tests.md'
 ---
 
 # Step 2: Identify Automation Targets
@@ -17,7 +17,7 @@ Determine what needs to be tested and select appropriate test levels and priorit
 - ✅ Speak in `{communication_language}`
 - 🚫 Avoid duplicate coverage across test levels
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -75,7 +75,7 @@ Use CLI to explore the application and identify testable pages/flows:
 - Map service-to-service integrations and message queue consumers/producers
 - Check for existing contract tests (Pact, etc.)
 
-______________________________________________________________________
+---
 
 **If `use_pactjs_utils` is enabled — Provider Endpoint Mapping (all stacks):**
 
@@ -99,7 +99,7 @@ When consumer-driven contract tests will be generated, build a Provider Endpoint
 
 4. **If provider source not accessible**: Mark entries with `TODO — provider source not accessible` and note in coverage plan that provider scrutiny will use graceful degradation (see `contract-testing.md` Provider Scrutiny Protocol)
 
-______________________________________________________________________
+---
 
 ## 2. Choose Test Levels
 
@@ -110,7 +110,7 @@ Use `test-levels-framework.md` to select:
 - **Component** for UI behavior
 - **Unit** for pure logic and edge cases
 
-______________________________________________________________________
+---
 
 ## 3. Assign Priorities
 
@@ -121,7 +121,7 @@ Use `test-priorities-matrix.md`:
 - P2: Secondary + edge cases
 - P3: Optional/rare scenarios
 
-______________________________________________________________________
+---
 
 ## 4. Coverage Plan
 
@@ -131,7 +131,7 @@ Produce a concise coverage plan:
 - Priority assignments
 - Justification for coverage scope (critical-paths/comprehensive/selective)
 
-______________________________________________________________________
+---
 
 ## 5. Save Progress
 
@@ -150,7 +150,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-02-identify-targets'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-identify-targets'`
   - Set `lastSaved: '{date}'`

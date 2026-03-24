@@ -1,8 +1,8 @@
 ---
-name: step-e-02-apply-edits
-description: Apply modifications to the teaching workflow based on edit plan
+name: 'step-e-02-apply-edits'
+description: 'Apply modifications to the teaching workflow based on edit plan'
 
-workflowPath: ../
+workflowPath: '../'
 ---
 
 # Edit Step 2: Apply Edits
@@ -113,7 +113,7 @@ The teach-me-testing workflow has been updated.
 
 **This is the final edit step - workflow ends here.**
 
-______________________________________________________________________
+---
 
 ## 🚨 SUCCESS METRICS
 

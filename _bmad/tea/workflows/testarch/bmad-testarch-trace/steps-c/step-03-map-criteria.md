@@ -1,7 +1,7 @@
 ---
-name: step-03-map-criteria
-description: Map acceptance criteria to tests and build traceability matrix
-nextStepFile: ./step-04-analyze-gaps.md
+name: 'step-03-map-criteria'
+description: 'Map acceptance criteria to tests and build traceability matrix'
+nextStepFile: './step-04-analyze-gaps.md'
 outputFile: '{test_artifacts}/traceability-report.md'
 ---
 
@@ -16,7 +16,7 @@ Create the traceability matrix linking requirements to tests.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -47,7 +47,7 @@ For each acceptance criterion:
   - Auth/authz coverage present/missing (positive and negative paths)
   - Error-path coverage present/missing (validation, timeout, network/server failures)
 
-______________________________________________________________________
+---
 
 ## 2. Validate Coverage Logic
 
@@ -59,7 +59,7 @@ Ensure:
 - API criteria are not marked FULL if endpoint-level checks are missing
 - Auth/authz criteria include at least one denied/invalid-path test where applicable
 
-______________________________________________________________________
+---
 
 ### 3. Save Progress
 
@@ -78,7 +78,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-03-map-criteria'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03-map-criteria'`
   - Set `lastSaved: '{date}'`

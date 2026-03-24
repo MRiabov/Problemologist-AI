@@ -1,8 +1,8 @@
 ---
-name: step-03b-subagent-e2e
+name: 'step-03b-subagent-e2e'
 description: 'Subagent: Generate E2E tests only'
 subagent: true
-outputFile: /tmp/tea-automate-e2e-tests-{{timestamp}}.json
+outputFile: '/tmp/tea-automate-e2e-tests-{{timestamp}}.json'
 ---
 
 # Subagent 3B: Generate E2E Tests
@@ -20,7 +20,7 @@ This is an **isolated subagent** running in parallel with API test generation.
 
 **Your task:** Generate E2E tests ONLY (not API, not fixtures, not other test types).
 
-______________________________________________________________________
+---
 
 ## MANDATORY EXECUTION RULES
 
@@ -32,7 +32,7 @@ ______________________________________________________________________
 - ❌ Do NOT run tests (that's step 4)
 - ❌ Do NOT generate fixtures yet (that's step 3C aggregation)
 
-______________________________________________________________________
+---
 
 ## SUBAGENT TASK
 
@@ -125,7 +125,7 @@ Identify fixtures needed for E2E tests:
 
 **Do NOT create fixtures yet** - just track what's needed for aggregation step.
 
-______________________________________________________________________
+---
 
 ## OUTPUT FORMAT
 
@@ -179,7 +179,7 @@ Write JSON to temp file: `/tmp/tea-automate-e2e-tests-{{timestamp}}.json`
 }
 ```
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 
@@ -192,7 +192,7 @@ Subagent completes when:
 
 **Subagent terminates here.** Parent workflow will read output and proceed to aggregation.
 
-______________________________________________________________________
+---
 
 ## 🚨 SUBAGENT SUCCESS METRICS
 

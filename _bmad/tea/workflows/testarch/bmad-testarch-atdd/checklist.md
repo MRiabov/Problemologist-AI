@@ -14,7 +14,7 @@ Before starting this workflow, verify:
 
 **Halt if missing:** Framework scaffolding or story acceptance criteria
 
-______________________________________________________________________
+---
 
 ## Step 1: Story Context and Requirements
 
@@ -33,7 +33,7 @@ ______________________________________________________________________
   - [ ] `network-first.md`
   - [ ] `test-quality.md`
 
-______________________________________________________________________
+---
 
 ## Step 2: Test Level Selection and Strategy
 
@@ -48,7 +48,7 @@ ______________________________________________________________________
 - [ ] Primary test level set in `primary_level` variable (typically E2E or API)
 - [ ] Test levels documented in ATDD checklist
 
-______________________________________________________________________
+---
 
 ## Step 3: Failing Tests Generated
 
@@ -100,7 +100,7 @@ ______________________________________________________________________
 - [ ] No test interdependencies (tests can run in any order)
 - [ ] Tests are deterministic (same input always produces same result)
 
-______________________________________________________________________
+---
 
 ## Step 4: Data Infrastructure Built
 
@@ -139,7 +139,7 @@ ______________________________________________________________________
 - [ ] Each data-testid has clear description of element it targets
 - [ ] data-testid list included in ATDD checklist for DEV team
 
-______________________________________________________________________
+---
 
 ## Step 5: Implementation Checklist Created
 
@@ -164,7 +164,7 @@ ______________________________________________________________________
   - [ ] Debug specific test
 - [ ] Estimated effort included (hours or story points)
 
-______________________________________________________________________
+---
 
 ## Step 6: Deliverables Generated
 
@@ -212,7 +212,7 @@ ______________________________________________________________________
   - [ ] Output file path
   - [ ] Knowledge base references applied
 
-______________________________________________________________________
+---
 
 ## Quality Checks
 
@@ -241,7 +241,7 @@ ______________________________________________________________________
 - [ ] Imports are organized and correct
 - [ ] Code follows project style guide
 
-______________________________________________________________________
+---
 
 ## Integration Points
 
@@ -272,7 +272,7 @@ ______________________________________________________________________
 - [ ] Risk assessment from test-design considered in test coverage
 - [ ] Coverage strategy from test-design aligned with ATDD tests
 
-______________________________________________________________________
+---
 
 ## Completion Criteria
 
@@ -295,7 +295,7 @@ All of the following must be true before marking this workflow as complete:
 - [ ] **Knowledge base references applied** and documented in summary
 - [ ] **No test quality issues** (flaky patterns, race conditions, hardcoded data)
 
-______________________________________________________________________
+---
 
 ## Common Issues and Resolutions
 
@@ -361,7 +361,7 @@ ______________________________________________________________________
 - Use fixtures for consistent setup across tests
 - Verify tests can run with `.only` flag
 
-______________________________________________________________________
+---
 
 ## Notes for TEA Agent
 

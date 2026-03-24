@@ -1,7 +1,7 @@
 ---
-name: step-03-risk-and-testability
-description: Perform testability review (system-level) and risk assessment
-nextStepFile: ./step-04-coverage-plan.md
+name: 'step-03-risk-and-testability'
+description: 'Perform testability review (system-level) and risk assessment'
+nextStepFile: './step-04-coverage-plan.md'
 outputFile: '{test_artifacts}/test-design-progress.md'
 ---
 
@@ -17,7 +17,7 @@ Produce a defensible testability review (system-level) and a risk assessment mat
 - ✅ Speak in `{communication_language}`
 - 🎯 Base conclusions on evidence from loaded artifacts
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -53,7 +53,7 @@ Also identify **ASRs** (Architecturally Significant Requirements):
 
 - Mark each as **ACTIONABLE** or **FYI**
 
-______________________________________________________________________
+---
 
 ## 2. All Modes: Risk Assessment
 
@@ -66,13 +66,13 @@ Using `risk-governance.md` and `probability-impact.md` (if loaded):
 - Flag high risks (score ≥ 6)
 - Define mitigation, owner, and timeline
 
-______________________________________________________________________
+---
 
 ## 3. Summarize Risk Findings
 
 Summarize the highest risks and their mitigation priorities.
 
-______________________________________________________________________
+---
 
 ### 4. Save Progress
 
@@ -91,7 +91,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-03-risk-and-testability'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03-risk-and-testability'`
   - Set `lastSaved: '{date}'`

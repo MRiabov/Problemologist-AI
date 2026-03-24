@@ -1,6 +1,6 @@
 ---
-name: step-04-validate-and-summary
-description: Validate pipeline and summarize
+name: 'step-04-validate-and-summary'
+description: 'Validate pipeline and summarize'
 outputFile: '{test_artifacts}/ci-pipeline-progress.md'
 ---
 
@@ -15,7 +15,7 @@ Validate CI configuration and report completion details.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -45,7 +45,7 @@ Validate against `checklist.md`:
 
 Fix gaps before completion.
 
-______________________________________________________________________
+---
 
 ## 2. Completion Summary
 
@@ -56,7 +56,7 @@ Report:
 - Artifacts and notifications
 - Next steps (set secrets, run pipeline)
 
-______________________________________________________________________
+---
 
 ### 3. Save Progress
 
@@ -75,7 +75,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-04-validate-and-summary'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04-validate-and-summary'`
   - Set `lastSaved: '{date}'`

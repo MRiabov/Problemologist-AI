@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: testarch-atdd
+workflowType: 'testarch-atdd'
 inputDocuments: []
 ---
 
@@ -12,7 +12,7 @@ inputDocuments: []
 **Author:** {user_name}
 **Primary Test Level:** {primary_level}
 
-______________________________________________________________________
+---
 
 ## Story Summary
 
@@ -22,7 +22,7 @@ ______________________________________________________________________
 **I want** {feature_description}
 **So that** {business_value}
 
-______________________________________________________________________
+---
 
 ## Acceptance Criteria
 
@@ -32,7 +32,7 @@ ______________________________________________________________________
 2. {Acceptance criterion 2}
 3. {Acceptance criterion 3}
 
-______________________________________________________________________
+---
 
 ## Failing Tests Created (RED Phase)
 
@@ -66,7 +66,7 @@ ______________________________________________________________________
   - **Status:** RED - {failure_reason}
   - **Verifies:** {what_this_test_validates}
 
-______________________________________________________________________
+---
 
 ## Data Factories Created
 
@@ -88,7 +88,7 @@ const user = createUser({ email: 'specific@example.com' });
 const users = createUsers(5); // Generate 5 random users
 ```
 
-______________________________________________________________________
+---
 
 ## Fixtures Created
 
@@ -115,7 +115,7 @@ test('should do something', async ({ {fixtureName} }) => {
 });
 ```
 
-______________________________________________________________________
+---
 
 ## Mock Requirements
 
@@ -143,7 +143,7 @@ ______________________________________________________________________
 
 **Notes:** {any_special_mock_requirements}
 
-______________________________________________________________________
+---
 
 ## Required data-testid Attributes
 
@@ -162,7 +162,7 @@ ______________________________________________________________________
 <div data-testid="error-message">{errorText}</div>
 ```
 
-______________________________________________________________________
+---
 
 ## Implementation Checklist
 
@@ -183,7 +183,7 @@ ______________________________________________________________________
 
 **Estimated Effort:** {effort_estimate} hours
 
-______________________________________________________________________
+---
 
 ### Test: {test_name_2}
 
@@ -200,7 +200,7 @@ ______________________________________________________________________
 
 **Estimated Effort:** {effort_estimate} hours
 
-______________________________________________________________________
+---
 
 ## Running Tests
 
@@ -221,7 +221,7 @@ ______________________________________________________________________
 {test_command_coverage}
 ```
 
-______________________________________________________________________
+---
 
 ## Red-Green-Refactor Workflow
 
@@ -241,7 +241,7 @@ ______________________________________________________________________
 - Failure messages are clear and actionable
 - Tests fail due to missing implementation, not test bugs
 
-______________________________________________________________________
+---
 
 ### GREEN Phase (DEV Team - Next Steps)
 
@@ -266,7 +266,7 @@ ______________________________________________________________________
 - Check off tasks as you complete them
 - Share progress in daily standup
 
-______________________________________________________________________
+---
 
 ### REFACTOR Phase (DEV Team - After All Tests Pass)
 
@@ -293,7 +293,7 @@ ______________________________________________________________________
 - No duplications or code smells
 - Ready for code review and story approval
 
-______________________________________________________________________
+---
 
 ## Next Steps
 
@@ -306,7 +306,7 @@ ______________________________________________________________________
 7. **When all tests pass**, refactor code for quality
 8. **When refactoring complete**, manually update story status to 'done' in sprint-status.yaml
 
-______________________________________________________________________
+---
 
 ## Knowledge Base References Applied
 
@@ -321,7 +321,7 @@ This ATDD workflow consulted the following knowledge fragments:
 
 See `tea-index.csv` for complete knowledge fragment mapping.
 
-______________________________________________________________________
+---
 
 ## Test Execution Evidence
 
@@ -345,7 +345,7 @@ ______________________________________________________________________
 **Expected Failure Messages:**
 {list_expected_failure_messages_for_each_test}
 
-______________________________________________________________________
+---
 
 ## Notes
 
@@ -355,7 +355,7 @@ ______________________________________________________________________
 - {Note 2}
 - {Note 3}
 
-______________________________________________________________________
+---
 
 ## Contact
 
@@ -366,6 +366,6 @@ ______________________________________________________________________
 - Refer to `./bmm/docs/tea-README.md` for workflow documentation
 - Consult `./bmm/testarch/knowledge` for testing best practices
 
-______________________________________________________________________
+---
 
 **Generated by BMad TEA Agent** - {date}

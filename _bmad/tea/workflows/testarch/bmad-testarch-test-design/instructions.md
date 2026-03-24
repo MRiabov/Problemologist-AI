@@ -5,7 +5,7 @@
 **Workflow ID**: `_bmad/tea/testarch/bmad-testarch-test-design`
 **Version**: 5.0 (Step-File Architecture)
 
-______________________________________________________________________
+---
 
 ## Overview
 
@@ -16,7 +16,7 @@ Plans comprehensive test coverage strategy with risk assessment, priority classi
 
 The workflow auto-detects which mode to use based on project phase and user intent.
 
-______________________________________________________________________
+---
 
 ## WORKFLOW ARCHITECTURE
 
@@ -36,7 +36,7 @@ This workflow uses **step-file architecture** for disciplined execution:
 3. **WAIT FOR INPUT**: Halt when user input is required
 4. **LOAD NEXT**: Only load the next step file when directed
 
-______________________________________________________________________
+---
 
 ## INITIALIZATION SEQUENCE
 
@@ -58,7 +58,7 @@ If the user selects **Resume** mode, load, read completely, and execute:
 
 This checks the output document for progress tracking frontmatter and routes to the next incomplete step.
 
-______________________________________________________________________
+---
 
 ## OUTPUT GENERATION GUIDANCE
 

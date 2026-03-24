@@ -1,6 +1,6 @@
 ---
 name: bmad-teach-me-testing
-description: Teach testing progressively through structured sessions. Use when user says "lets learn testing" or "I want to study test practices"
+description: 'Teach testing progressively through structured sessions. Use when user says "lets learn testing" or "I want to study test practices"'
 web_bundle: true
 ---
 
@@ -12,7 +12,7 @@ web_bundle: true
 
 **Meta-Context:** This workflow uses continuable architecture with state persistence across sessions. Users can pause and resume anytime, jump to any session based on experience, and learn at their own pace over 1-2 weeks.
 
-______________________________________________________________________
+---
 
 ## WORKFLOW ARCHITECTURE
 
@@ -47,7 +47,7 @@ This uses **step-file architecture** for disciplined execution:
 - 📋 **NEVER** create mental todo lists from future steps
 - ✅ **ALWAYS** communicate in {communication_language}
 
-______________________________________________________________________
+---
 
 ## INITIALIZATION SEQUENCE
 

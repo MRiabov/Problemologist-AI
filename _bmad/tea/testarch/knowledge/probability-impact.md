@@ -128,7 +128,7 @@ export function generateRiskMatrix(): string {
 - Risk score formula: `probability * impact` (max = 9)
 - Threshold-based decision rules (6-8 = MITIGATE, 9 = BLOCK)
 
-______________________________________________________________________
+---
 
 ### Example 2: Risk Assessment Workflow (Test Planning Integration)
 
@@ -284,7 +284,7 @@ ${scenarios
 - Visual matrix included in reports
 - Reusable across projects (extract to shared library)
 
-______________________________________________________________________
+---
 
 ### Example 3: Dynamic Risk Re-Assessment (Continuous Evaluation)
 
@@ -462,7 +462,7 @@ ${risk.history
 - Trend reports (show risk evolution over time)
 - Re-assessment triggers (requirements change, new info)
 
-______________________________________________________________________
+---
 
 ### Example 4: Risk Matrix in Gate Decision (Integration with Trace Workflow)
 
@@ -568,7 +568,7 @@ function generateGateSummary(result: Omit<GateResult, 'summary'>): string {
 - Actionable summary with next steps
 - Integration with trace workflow (Phase 2)
 
-______________________________________________________________________
+---
 
 ## Probability-Impact Threshold Summary
 

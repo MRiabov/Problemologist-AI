@@ -110,7 +110,7 @@ test.describe('Selector Hierarchy Best Practices', () => {
 - Text content is user-centric (but breaks with copy changes)
 - CSS/ID are brittle (break with styling refactoring)
 
-______________________________________________________________________
+---
 
 ### Example 2: Dynamic Selector Patterns (Lists, Filters, Regex)
 
@@ -198,7 +198,7 @@ test.describe('Dynamic Selector Patterns', () => {
 - `nth(0)` acceptable for "first item", avoid arbitrary indexes
 - Combine locators to narrow scope (prevent ambiguity)
 
-______________________________________________________________________
+---
 
 ### Example 3: Selector Anti-Patterns (What NOT to Do)
 
@@ -276,7 +276,7 @@ test.describe('Selector Anti-Patterns to Avoid', () => {
 
 **Better Approach**: Use selector hierarchy (testid > ARIA > text)
 
-______________________________________________________________________
+---
 
 ### Example 4: Selector Debugging Techniques (Inspector, DevTools, MCP)
 
@@ -362,7 +362,7 @@ test.describe('Selector Debugging Techniques', () => {
 - MCP browser_generate_locator: Auto-generate optimal selectors (if MCP available)
 - Always validate selectors work before committing
 
-______________________________________________________________________
+---
 
 ### Example 2: Selector Refactoring Guide (Before/After Patterns)
 
@@ -439,7 +439,7 @@ test.describe('Selector Refactoring Patterns', () => {
 - ID → data-testid (decouples from HTML structure)
 - Deep nesting → scoped locators (modular, maintainable)
 
-______________________________________________________________________
+---
 
 ### Example 3: Selector Best Practices Checklist
 
@@ -503,7 +503,7 @@ test.describe('Selector Best Practices Validation', () => {
 4. **Lists** → filter() over nth() (content-based selection)
 5. **Readability** → Selectors document user intent (clear, semantic)
 
-______________________________________________________________________
+---
 
 ## Selector Resilience Checklist
 

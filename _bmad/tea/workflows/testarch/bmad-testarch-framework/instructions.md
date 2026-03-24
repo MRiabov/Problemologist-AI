@@ -5,13 +5,13 @@
 **Workflow ID**: `_bmad/tea/testarch/bmad-testarch-framework`
 **Version**: 5.0 (Step-File Architecture)
 
-______________________________________________________________________
+---
 
 ## Overview
 
 Initialize a production-ready test framework (Playwright or Cypress) with fixtures, helpers, configuration, and best practices.
 
-______________________________________________________________________
+---
 
 ## WORKFLOW ARCHITECTURE
 
@@ -21,7 +21,7 @@ This workflow uses **step-file architecture**:
 - **JIT Loading**: Only the current step file is in memory
 - **Sequential Enforcement**: Execute steps in order without skipping
 
-______________________________________________________________________
+---
 
 ## INITIALIZATION SEQUENCE
 

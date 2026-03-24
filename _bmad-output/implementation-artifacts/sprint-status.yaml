@@ -1,5 +1,5 @@
 generated: 2026-03-22 06:26:07+00:00
-last_updated: 2026-03-24 08:12:31+00:00
+last_updated: 2026-03-24 07:22:47+00:00
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -19,10 +19,10 @@ development_status:
   2-4-review-peer-solutions-for-stability: review
   epic-2-retrospective: optional
   epic-3: in-progress
-  3-1-configure-real-cost-inputs: ready-for-dev
+  3-1-configure-real-cost-inputs: review
   3-2-evaluate-manufacturability-at-the-requested-quantity: done
   3-3-evaluate-weight-size-form-factor-and-cots: ready-for-dev
-  3-4-prefer-the-simpler-valid-solution: ready-for-dev
+  3-4-prefer-the-simpler-valid-solution: review
   3-5-represent-allowed-attachment-and-drilling-points: ready-for-dev
   epic-3-retrospective: optional
   epic-4: in-progress
@@ -32,15 +32,15 @@ development_status:
   4-4-curate-seed-coverage-and-exclude-corrupted-data: ready-for-dev
   epic-4-retrospective: optional
   epic-5: in-progress
-  5-1-inspect-session-history-and-run-timeline: ready-for-dev
-  5-2-visualize-cad-and-simulation-evidence: review
+  5-1-inspect-session-history-and-run-timeline: review
+  5-2-visualize-cad-and-simulation-evidence: in-progress
   5-3-view-code-and-artifacts: ready-for-dev
   5-4-collect-feedback-and-present-demos: ready-for-dev
   5-5-inspect-live-agent-output-and-interrupt-execution: ready-for-dev
   5-6-create-benchmarks-and-review-simple-plans: ready-for-dev
   epic-5-retrospective: optional
   epic-6: in-progress
-  6-1-generate-simple-rigid-body-benchmarks: ready-for-dev
+  6-1-generate-simple-rigid-body-benchmarks: in-progress
   6-2-produce-a-representative-simple-rigid-body-validation-set: ready-for-dev
   6-3-refine-simple-rigid-body-benchmark-quality: ready-for-dev
   6-4-reliable-simple-rigid-body-benchmark-output-and-reviews: backlog

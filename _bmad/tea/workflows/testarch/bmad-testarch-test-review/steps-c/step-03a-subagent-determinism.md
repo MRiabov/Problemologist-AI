@@ -1,8 +1,8 @@
 ---
-name: step-03a-subagent-determinism
+name: 'step-03a-subagent-determinism'
 description: 'Subagent: Check test determinism (no random/time dependencies)'
 subagent: true
-outputFile: /tmp/tea-test-review-determinism-{{timestamp}}.json
+outputFile: '/tmp/tea-test-review-determinism-{{timestamp}}.json'
 ---
 
 # Subagent 3A: Determinism Quality Check
@@ -19,7 +19,7 @@ This is an **isolated subagent** running in parallel with other quality dimensio
 
 **Your task:** Analyze test files for DETERMINISM violations only.
 
-______________________________________________________________________
+---
 
 ## MANDATORY EXECUTION RULES
 
@@ -30,7 +30,7 @@ ______________________________________________________________________
 - ❌ Do NOT modify test files (read-only analysis)
 - ❌ Do NOT run tests (just analyze code)
 
-______________________________________________________________________
+---
 
 ## SUBAGENT TASK
 
@@ -122,7 +122,7 @@ const totalPenalty = violations.reduce((sum, v) => sum + severityWeights[v.sever
 const score = Math.max(0, 100 - totalPenalty);
 ```
 
-______________________________________________________________________
+---
 
 ## OUTPUT FORMAT
 
@@ -181,7 +181,7 @@ Write JSON to temp file: `/tmp/tea-test-review-determinism-{{timestamp}}.json`
 }
 ```
 
-______________________________________________________________________
+---
 
 ## EXIT CONDITION
 
@@ -195,7 +195,7 @@ Subagent completes when:
 
 **Subagent terminates here.** Parent workflow will read output and aggregate with other quality dimensions.
 
-______________________________________________________________________
+---
 
 ## 🚨 SUBAGENT SUCCESS METRICS
 

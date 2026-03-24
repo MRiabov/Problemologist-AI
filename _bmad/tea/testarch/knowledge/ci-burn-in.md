@@ -48,7 +48,7 @@ When CI templates are extended into reusable workflows (`on: workflow_call`), ma
 
 > **Note:** "Safe from expression injection" means these values cannot be manipulated by external actors to break out of `${{ }}` interpolation. Standard shell quoting practices still apply — always double-quote variable references in `run:` blocks.
 
-______________________________________________________________________
+---
 
 ## Pattern Examples
 
@@ -255,7 +255,7 @@ jobs:
 - **Parallel execution**: 4 shards cut execution time by ~75%
 - **Artifact retention**: 30 days for reports, 7 days for failure debugging
 
-______________________________________________________________________
+---
 
 ### Example 2: Burn-In Loop Pattern (Standalone Script)
 
@@ -369,7 +369,7 @@ exit 0
 - **CI/local parity**: Same script runs in both environments
 - **Clear output**: Visual feedback on progress and results
 
-______________________________________________________________________
+---
 
 ### Example 3: Shard Orchestration with Result Aggregation
 
@@ -564,7 +564,7 @@ main().catch((error) => {
 - **Artifact preservation**: Individual shard results saved for debugging
 - **CI/local compatibility**: Same script works in both environments
 
-______________________________________________________________________
+---
 
 ### Example 4: Selective Test Execution (Changed Files + Tags)
 
@@ -693,7 +693,7 @@ jobs:
 - **Safety net**: Critical changes trigger full suite
 - **Component mapping**: UI changes run related component tests
 
-______________________________________________________________________
+---
 
 ## CI Configuration Checklist
 

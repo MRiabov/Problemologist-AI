@@ -1,7 +1,7 @@
 ---
-name: step-04-docs-and-scripts
-description: Document setup and add package.json scripts
-nextStepFile: ./step-05-validate-and-summary.md
+name: 'step-04-docs-and-scripts'
+description: 'Document setup and add package.json scripts'
+nextStepFile: './step-05-validate-and-summary.md'
 outputFile: '{test_dir}/README.md'
 progressFile: '{test_artifacts}/framework-setup-progress.md'
 ---
@@ -17,7 +17,7 @@ Create test documentation and add build/test scripts appropriate for `{detected_
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -47,7 +47,7 @@ Create `{outputFile}` and include:
 - CI integration notes
 - Knowledge base references
 
-______________________________________________________________________
+---
 
 ## 2. Build & Test Scripts
 
@@ -67,7 +67,7 @@ Add the idiomatic test commands for the detected framework:
 - **C#/.NET**: Add to CI scripts or `Makefile`: `dotnet test`, `dotnet test --collect:"XPlat Code Coverage"`
 - **Ruby (RSpec)**: Add to `Gemfile` binstubs or `Makefile`: `bundle exec rspec`, `bundle exec rspec spec/integration`
 
-______________________________________________________________________
+---
 
 ### 3. Save Progress
 
@@ -86,7 +86,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{progressFile}` already exists**, update:
-
   - Add `'step-04-docs-and-scripts'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-04-docs-and-scripts'`
   - Set `lastSaved: '{date}'`

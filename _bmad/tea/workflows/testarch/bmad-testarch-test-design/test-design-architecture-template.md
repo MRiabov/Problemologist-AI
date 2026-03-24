@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: testarch-test-design
+workflowType: 'testarch-test-design'
 inputDocuments: []
 ---
 
@@ -17,7 +17,7 @@ inputDocuments: []
 **PRD Reference:** {prd_link}
 **ADR Reference:** {adr_link}
 
-______________________________________________________________________
+---
 
 ## Executive Summary
 
@@ -45,7 +45,7 @@ ______________________________________________________________________
 - **High-priority (≥6)**: {N} risks requiring immediate mitigation
 - **Test effort**: ~{N} tests (~{X} weeks for 1 QA, ~{Y} weeks for 2 QAs)
 
-______________________________________________________________________
+---
 
 ## Quick Guide
 
@@ -59,7 +59,7 @@ ______________________________________________________________________
 
 **What we need from team:** Complete these {N} items pre-implementation or test development is blocked.
 
-______________________________________________________________________
+---
 
 ### ⚠️ HIGH PRIORITY - Team Should Validate (We Provide Recommendation, You Approve)
 
@@ -69,7 +69,7 @@ ______________________________________________________________________
 
 **What we need from team:** Review recommendations and approve (or suggest changes).
 
-______________________________________________________________________
+---
 
 ### 📋 INFO ONLY - Solutions Provided (Review, No Decisions Needed)
 
@@ -81,7 +81,7 @@ ______________________________________________________________________
 
 **What we need from team:** Just review and acknowledge (we already have the solution).
 
-______________________________________________________________________
+---
 
 ## For Architects and Devs - Open Topics 👷
 
@@ -116,7 +116,7 @@ ______________________________________________________________________
 - **BUS**: Business Impact (UX harm, logic errors, revenue)
 - **OPS**: Operations (deployment, config, monitoring)
 
-______________________________________________________________________
+---
 
 ### Testability Concerns and Architectural Gaps
 
@@ -145,7 +145,7 @@ ______________________________________________________________________
    - **Owner**: {Team}
    - **Timeline**: {Milestone}
 
-______________________________________________________________________
+---
 
 ### Testability Assessment Summary
 
@@ -168,7 +168,7 @@ For {Feature} Phase 1, the following trade-offs are acceptable:
 
 {This is technical debt OR acceptable for Phase 1} that {should be revisited post-GA OR maintained as-is}
 
-______________________________________________________________________
+---
 
 ### Risk Mitigation Plans (High-Priority Risks ≥6)
 
@@ -187,11 +187,11 @@ ______________________________________________________________________
 **Status:** Planned / In Progress / Complete
 **Verification:** {How to verify mitigation is effective}
 
-______________________________________________________________________
+---
 
 {Repeat for all high-priority risks}
 
-______________________________________________________________________
+---
 
 ### Assumptions and Dependencies
 
@@ -212,7 +212,7 @@ ______________________________________________________________________
   - **Impact**: {How it affects testing}
   - **Contingency**: {Backup plan}
 
-______________________________________________________________________
+---
 
 **End of Architecture Document**
 

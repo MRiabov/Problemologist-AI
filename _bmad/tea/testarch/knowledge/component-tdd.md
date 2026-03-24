@@ -459,7 +459,7 @@ export default defineConfig({
 
 - **Used in workflows**: `*atdd` (component test generation), `*automate` (component test expansion), `*framework` (component testing setup)
 - **Related fragments**:
-  - `test-quality.md` - Keep component tests \<100 lines, isolated, focused
+  - `test-quality.md` - Keep component tests <100 lines, isolated, focused
   - `fixture-architecture.md` - Provider wrapping patterns, custom mount commands
   - `data-factories.md` - Factory functions for component props
   - `test-levels-framework.md` - When to use component tests vs E2E tests
@@ -481,6 +481,6 @@ export default defineConfig({
 - [ ] Test accessibility (ARIA, keyboard navigation)
 - [ ] Test visual regression (snapshots)
 - [ ] Isolate with fresh providers (no state bleed)
-- [ ] Keep tests \<100 lines (split by intent)
+- [ ] Keep tests <100 lines (split by intent)
 
 _Source: CCTDD repository, Murat component testing talks, Playwright/Cypress component testing docs._

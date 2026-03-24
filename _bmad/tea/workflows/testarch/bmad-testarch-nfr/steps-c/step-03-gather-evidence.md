@@ -1,7 +1,7 @@
 ---
-name: step-03-gather-evidence
-description: Collect evidence for each NFR category
-nextStepFile: ./step-04-evaluate-and-score.md
+name: 'step-03-gather-evidence'
+description: 'Collect evidence for each NFR category'
+nextStepFile: './step-04-evaluate-and-score.md'
 outputFile: '{test_artifacts}/nfr-assessment.md'
 ---
 
@@ -16,7 +16,7 @@ Collect measurable evidence to evaluate each NFR category.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -45,7 +45,7 @@ Collect evidence for:
 - **Maintainability**: test quality, code health signals
 - **Other categories**: logs, monitoring, DR drills, deployability checks
 
-______________________________________________________________________
+---
 
 ## 2. Browser-Based Evidence Collection (if `tea_browser_automation` is `cli` or `auto`)
 
@@ -64,13 +64,13 @@ For performance and security categories, CLI can gather live evidence:
 
 Store artifacts under `{test_artifacts}/nfr/`
 
-______________________________________________________________________
+---
 
 ## 3. Evidence Gaps
 
 If evidence is missing for a category, mark that category as **CONCERNS**.
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -89,7 +89,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-03-gather-evidence'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03-gather-evidence'`
   - Set `lastSaved: '{date}'`

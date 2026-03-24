@@ -15,7 +15,7 @@ Before starting this workflow, verify:
 **Note:** BMad artifacts (story, tech-spec, PRD) are OPTIONAL - workflow can run without them
 **Note:** `automate` generates tests; it does not run `*atdd` or `*test-review`. If ATDD outputs exist, use them as input and avoid duplicate coverage.
 
-______________________________________________________________________
+---
 
 ## Step 1: Execution Mode Determination and Context Loading
 
@@ -59,7 +59,7 @@ ______________________________________________________________________
 - [ ] `ci-burn-in.md` - Flaky test detection patterns
 - [ ] `test-quality.md` - Test design principles
 
-______________________________________________________________________
+---
 
 ## Step 2: Automation Targets Identification
 
@@ -119,7 +119,7 @@ ______________________________________________________________________
 - [ ] Priorities assigned to each test
 - [ ] Coverage strategy clear (critical-paths, comprehensive, or selective)
 
-______________________________________________________________________
+---
 
 ## Step 3: Test Infrastructure Generated
 
@@ -156,7 +156,7 @@ ______________________________________________________________________
   - [ ] testData (test data generation)
   - [ ] assertions (custom assertion helpers)
 
-______________________________________________________________________
+---
 
 ## Step 4: Test Files Generated
 
@@ -259,7 +259,7 @@ ______________________________________________________________________
 - [ ] `page.route()` called before `page.goto()` to prevent race conditions
 - [ ] Network-first pattern verified in all E2E tests that make API calls
 
-______________________________________________________________________
+---
 
 ## Step 5: Test Validation and Healing (NEW - Phase 2.5)
 
@@ -323,7 +323,7 @@ ______________________________________________________________________
   - [ ] Healing patterns applied (selector fixes, timing fixes, data fixes)
   - [ ] Knowledge base references used
 
-______________________________________________________________________
+---
 
 ## Step 6: Documentation and Scripts Updated
 
@@ -357,7 +357,7 @@ ______________________________________________________________________
 - [ ] Setup requirements documented (if any)
 - [ ] Known issues documented (if any)
 
-______________________________________________________________________
+---
 
 ## Step 6: Automation Summary Generated
 
@@ -389,7 +389,7 @@ ______________________________________________________________________
 - [ ] Output file path provided
 - [ ] Next steps listed
 
-______________________________________________________________________
+---
 
 ## Quality Checks
 
@@ -422,7 +422,7 @@ ______________________________________________________________________
 - [ ] Code follows project style guide
 - [ ] No console.log or debug statements in test code
 
-______________________________________________________________________
+---
 
 ## Integration Points
 
@@ -461,7 +461,7 @@ ______________________________________________________________________
 - [ ] Tests have appropriate timeouts
 - [ ] Tests clean up their data (no CI environment pollution)
 
-______________________________________________________________________
+---
 
 ## Completion Criteria
 
@@ -497,7 +497,7 @@ All of the following must be true before marking this workflow as complete:
 - [ ] **Provider scrutiny completed or gracefully degraded** for all CDC interactions — each interaction either has scrutiny evidence or a TODO marker (if `use_pactjs_utils` enabled)
 - [ ] **Provider endpoint comments present** on every Pact interaction (if `use_pactjs_utils` enabled)
 
-______________________________________________________________________
+---
 
 ## Common Issues and Resolutions
 
@@ -592,7 +592,7 @@ ______________________________________________________________________
 - Use API tests instead of E2E for business logic
 - Optimize test data creation (use in-memory database, etc.)
 
-______________________________________________________________________
+---
 
 ## Notes for TEA Agent
 

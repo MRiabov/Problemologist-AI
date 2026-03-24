@@ -142,7 +142,7 @@ export function Checkout() {
 - **Expiry alerts**: Automated detection of stale flags
 - **Single source of truth**: All flags defined in one place
 
-______________________________________________________________________
+---
 
 ### Example 2: Feature Flag Testing Pattern (Both States)
 
@@ -346,7 +346,7 @@ describe('Checkout Flow - Feature Flag Variations', () => {
 - **Telemetry validation**: Verify analytics events fire correctly
 - **Graceful degradation**: Test fallback behavior on errors
 
-______________________________________________________________________
+---
 
 ### Example 3: Feature Flag Targeting Helper Pattern
 
@@ -521,7 +521,7 @@ export const test = base.extend<FeatureFlagFixture>({
 - **Stubbing option**: Local development without LaunchDarkly
 - **Type-safe**: FlagKey prevents typos
 
-______________________________________________________________________
+---
 
 ### Example 4: Feature Flag Lifecycle Checklist & Cleanup Strategy
 
@@ -726,7 +726,7 @@ if (audit.expiredFlags.length > 0) {
 - **CI integration**: Audit runs in pipeline, warns on expiry
 - **Ownership clarity**: Every flag has assigned owner
 
-______________________________________________________________________
+---
 
 ## Feature Flag Testing Checklist
 

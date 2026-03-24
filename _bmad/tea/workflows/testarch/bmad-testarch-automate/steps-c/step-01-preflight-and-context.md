@@ -1,8 +1,8 @@
 ---
-name: step-01-preflight-and-context
-description: Determine mode, verify framework, and load context and knowledge
+name: 'step-01-preflight-and-context'
+description: 'Determine mode, verify framework, and load context and knowledge'
 outputFile: '{test_artifacts}/automation-summary.md'
-nextStepFile: ./step-02-identify-targets.md
+nextStepFile: './step-02-identify-targets.md'
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 ---
 
@@ -18,7 +18,7 @@ Determine execution mode, verify framework readiness, and load the necessary art
 - ✅ Speak in `{communication_language}`
 - 🚫 Halt if framework scaffolding is missing
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -65,7 +65,7 @@ Store result as `{detected_stack}` = `frontend` | `backend` | `fullstack`
 
 If missing: **HALT** with message "Run `framework` workflow first."
 
-______________________________________________________________________
+---
 
 ## 2. Determine Execution Mode
 
@@ -73,7 +73,7 @@ ______________________________________________________________________
 - **Standalone** if only source code is available
 - If unclear, ask the user which mode to use
 
-______________________________________________________________________
+---
 
 ## 3. Load Context
 
@@ -101,7 +101,7 @@ ______________________________________________________________________
 - From `{config_source}` read `tea_browser_automation`
 - From `{config_source}` read `test_stack_type`
 
-______________________________________________________________________
+---
 
 ### Tiered Knowledge Loading
 
@@ -191,13 +191,13 @@ Use `{knowledgeIndex}` and load only what is required.
 
 - (existing MCP-related fragments, if any are added in future)
 
-______________________________________________________________________
+---
 
 ## 5. Confirm Inputs
 
 Summarize loaded artifacts, framework, and knowledge fragments, then proceed.
 
-______________________________________________________________________
+---
 
 ## 6. Save Progress
 
@@ -216,7 +216,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-01-preflight-and-context'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-preflight-and-context'`
   - Set `lastSaved: '{date}'`

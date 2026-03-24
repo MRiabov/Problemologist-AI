@@ -1,6 +1,6 @@
 ---
-name: step-05-validate-and-summary
-description: Validate against checklist and summarize
+name: 'step-05-validate-and-summary'
+description: 'Validate against checklist and summarize'
 outputFile: '{test_artifacts}/framework-setup-progress.md'
 ---
 
@@ -15,7 +15,7 @@ Validate framework setup and provide a completion summary.
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -46,7 +46,7 @@ Validate against `checklist.md`:
 
 Fix any gaps before completion.
 
-______________________________________________________________________
+---
 
 ## 2. Completion Summary
 
@@ -57,7 +57,7 @@ Report:
 - Next steps (install deps, run tests)
 - Knowledge fragments applied
 
-______________________________________________________________________
+---
 
 ### 3. Save Progress
 
@@ -76,7 +76,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-05-validate-and-summary'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-05-validate-and-summary'`
   - Set `lastSaved: '{date}'`

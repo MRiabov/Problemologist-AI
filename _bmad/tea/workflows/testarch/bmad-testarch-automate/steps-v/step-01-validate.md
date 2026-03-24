@@ -1,8 +1,8 @@
 ---
-name: step-01-validate
-description: Validate workflow outputs against checklist
+name: 'step-01-validate'
+description: 'Validate workflow outputs against checklist'
 outputFile: '{test_artifacts}/automate-validation-report.md'
-validationChecklist: ../checklist.md
+validationChecklist: '../checklist.md'
 ---
 
 # Step 1: Validate Outputs

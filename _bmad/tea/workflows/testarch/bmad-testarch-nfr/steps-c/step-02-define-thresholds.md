@@ -1,7 +1,7 @@
 ---
-name: step-02-define-thresholds
-description: Identify NFR categories and thresholds
-nextStepFile: ./step-03-gather-evidence.md
+name: 'step-02-define-thresholds'
+description: 'Identify NFR categories and thresholds'
+nextStepFile: './step-03-gather-evidence.md'
 outputFile: '{test_artifacts}/nfr-assessment.md'
 ---
 
@@ -17,7 +17,7 @@ Establish the NFR categories to assess and the thresholds used for validation.
 - ✅ Speak in `{communication_language}`
 - 🚫 Never guess thresholds
 
-______________________________________________________________________
+---
 
 ## EXECUTION PROTOCOLS:
 
@@ -51,7 +51,7 @@ Use the ADR Quality Readiness Checklist (8 categories):
 
 Add any `custom_nfr_categories` if provided.
 
-______________________________________________________________________
+---
 
 ## 2. Define Thresholds
 
@@ -63,13 +63,13 @@ For each category, extract thresholds from:
 
 If a threshold is unknown, mark it **UNKNOWN** and plan to report **CONCERNS**.
 
-______________________________________________________________________
+---
 
 ## 3. Confirm NFR Matrix
 
 List each NFR category with its threshold or UNKNOWN status.
 
-______________________________________________________________________
+---
 
 ## 4. Save Progress
 
@@ -88,7 +88,6 @@ ______________________________________________________________________
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
-
   - Add `'step-02-define-thresholds'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-define-thresholds'`
   - Set `lastSaved: '{date}'`
