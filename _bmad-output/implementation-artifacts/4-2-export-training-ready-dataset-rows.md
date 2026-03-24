@@ -1,6 +1,6 @@
 # Story 4.2: Export Training-Ready Dataset Rows
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,27 +17,27 @@ As a dataset operator, I want completed benchmark and solution episodes exported
 
 ## Tasks / Subtasks
 
-- [ ] Define the dataset export schema and controller response models. (AC: 1, 3, 5)
-  - [ ] Add strict Pydantic models for dataset-row metadata, artifact references, and export response payloads.
-  - [ ] Carry `episode_type`, `benchmark_id`, `seed_id`, `seed_dataset`, `seed_match_method`, `generation_kind`, `parent_seed_id`, `is_integration_test`, `integration_test_id`, and joinable trace IDs (`simulation_run_id`, `cots_query_id`, `review_id`) plus source IDs and revision/artifact hashes from the persisted episode metadata.
-  - [ ] Reuse the existing `EpisodeMetadata`, `TraceMetadata`, and asset reference patterns instead of inventing a second provenance model.
-  - [ ] Add a typed persistence model and migration for dataset-row archive metadata and object-storage pointers rather than storing the row payload in a second relational blob.
-- [ ] Implement export materialization from persisted benchmark and episode records. (AC: 1, 2, 3, 4, 5)
-  - [ ] Add a dedicated controller export route/service in `controller/api/routes/datasets.py` and register it in `controller/api/main.py`.
-  - [ ] Read raw persisted assets, traces, benchmark assets, and review manifests from DB and object storage.
-  - [ ] Exclude any row that lacks the required schema/completeness/lineage fields instead of backfilling missing data.
-  - [ ] Keep the exported row payload archive in object storage/S3 with DB metadata only if persistence is added; do not create a second relational payload store.
-  - [ ] Do not source export content from `list_episodes()` normalization or any other UI convenience projection.
-- [ ] Preserve benchmark-vs-solution bundle boundaries and latest-revision-only selection. (AC: 1, 3, 5)
-  - [ ] Ensure benchmark rows retain benchmark-owned bundle references and reviewer manifests.
-  - [ ] Ensure solution rows retain solution-owned bundle references, validation/simulation proof, and reviewer manifests.
-  - [ ] Reject stale or cross-revision artifacts rather than silently falling back to older files.
-  - [ ] Preserve the exact latest-revision media and manifest paths in the exported archive.
-- [ ] Add integration coverage for export, exclusion, and round-trip inspectability. (AC: 1-5)
-  - [ ] Seed the export path with the smallest real completed benchmark and solution episodes available, reusing the live completion flows from `test_handover.py` and `test_engineering_loop.py` instead of mocking episode state.
-  - [ ] Add a dedicated `tests/integration/architecture_p1/test_dataset_export.py` slice, or extend `test_observability_extended.py` only if the new route intentionally lives there.
-  - [ ] Assert the exported row can be traced back to the source benchmark, solution, review artifacts, and joinable IDs from persisted metadata alone.
-  - [ ] Cover at least one fail-closed exclusion case for missing metadata or invalid lineage.
+- [x] Define the dataset export schema and controller response models. (AC: 1, 3, 5)
+  - [x] Add strict Pydantic models for dataset-row metadata, artifact references, and export response payloads.
+  - [x] Carry `episode_type`, `benchmark_id`, `seed_id`, `seed_dataset`, `seed_match_method`, `generation_kind`, `parent_seed_id`, `is_integration_test`, `integration_test_id`, and joinable trace IDs (`simulation_run_id`, `cots_query_id`, `review_id`) plus source IDs and revision/artifact hashes from the persisted episode metadata.
+  - [x] Reuse the existing `EpisodeMetadata`, `TraceMetadata`, and asset reference patterns instead of inventing a second provenance model.
+  - [x] Add a typed persistence model and migration for dataset-row archive metadata and object-storage pointers rather than storing the row payload in a second relational blob.
+- [x] Implement export materialization from persisted benchmark and episode records. (AC: 1, 2, 3, 4, 5)
+  - [x] Add a dedicated controller export route/service in `controller/api/routes/datasets.py` and register it in `controller/api/main.py`.
+  - [x] Read raw persisted assets, traces, benchmark assets, and review manifests from DB and object storage.
+  - [x] Exclude any row that lacks the required schema/completeness/lineage fields instead of backfilling missing data.
+  - [x] Keep the exported row payload archive in object storage/S3 with DB metadata only if persistence is added; do not create a second relational payload store.
+  - [x] Do not source export content from `list_episodes()` normalization or any other UI convenience projection.
+- [x] Preserve benchmark-vs-solution bundle boundaries and latest-revision-only selection. (AC: 1, 3, 5)
+  - [x] Ensure benchmark rows retain benchmark-owned bundle references and reviewer manifests.
+  - [x] Ensure solution rows retain solution-owned bundle references, validation/simulation proof, and reviewer manifests.
+  - [x] Reject stale or cross-revision artifacts rather than silently falling back to older files.
+  - [x] Preserve the exact latest-revision media and manifest paths in the exported archive.
+- [x] Add integration coverage for export, exclusion, and round-trip inspectability. (AC: 1-5)
+  - [x] Seed the export path with the smallest real completed benchmark and solution episodes available, reusing the live completion flows from `test_handover.py` and `test_engineering_loop.py` instead of mocking episode state.
+  - [x] Add a dedicated `tests/integration/architecture_p1/test_dataset_export.py` slice, or extend `test_observability_extended.py` only if the new route intentionally lives there.
+  - [x] Assert the exported row can be traced back to the source benchmark, solution, review artifacts, and joinable IDs from persisted metadata alone.
+  - [x] Cover at least one fail-closed exclusion case for missing metadata or invalid lineage.
 
 ## Dev Notes
 
@@ -116,10 +116,24 @@ As a dataset operator, I want completed benchmark and solution episodes exported
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- Reviewed the existing dataset export controller, typed schemas, persistence model, migration, and integration coverage against the story acceptance criteria.
+- Confirmed the export path materializes from persisted episode/benchmark records and object storage metadata rather than the UI-normalized episode projection.
+- Deferred integration test execution per user instruction.
+
 ### Completion Notes List
 
+- Dataset export story is now marked review-ready.
+- The tracked export surface already satisfies the story contract on inspection, so this session only updated story tracking metadata.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/4-2-export-training-ready-dataset-rows.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### Change Log
+
+- 2026-03-24: Moved story to `review`, checked all tasks/subtasks complete, and documented the dataset export implementation review state.
