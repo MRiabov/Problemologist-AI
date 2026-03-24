@@ -11,6 +11,7 @@ from pathlib import Path
 import structlog
 from pydantic import BaseModel, StrictBool, StrictInt, StrictStr
 
+from shared.git_utils import repo_revision
 from shared.type_checking import type_check
 
 logger = structlog.get_logger(__name__)
@@ -61,6 +62,11 @@ def _prepared_execution(
         actual_env["PATH"] = f"{python_bin}:{current_path}"
     else:
         actual_env["PATH"] = python_bin
+
+    repo_root = Path(__file__).resolve().parents[2]
+    current_revision = repo_revision(repo_root)
+    if current_revision:
+        actual_env.setdefault("REPO_REVISION", current_revision)
 
     actual_env.setdefault("PYTHONEXECUTABLE", sys.executable)
     if sys.prefix != sys.base_prefix:

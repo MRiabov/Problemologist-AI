@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from shared.models.simulation import SimulationResult
 from shared.workers.schema import (
     BenchmarkToolResponse,
     HeavyPreviewParams,
@@ -17,7 +16,7 @@ from shared.workers.schema import (
 @workflow.defn
 class HeavySimulationWorkflow:
     @workflow.run
-    async def run(self, params: HeavySimulationParams) -> SimulationResult:
+    async def run(self, params: HeavySimulationParams) -> BenchmarkToolResponse:
         """Run physics simulation on a heavy worker."""
         return await workflow.execute_activity(
             "worker_run_simulation",

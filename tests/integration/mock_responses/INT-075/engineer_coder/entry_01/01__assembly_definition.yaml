@@ -11,6 +11,6 @@ totals:
 manufactured_parts: []
 cots_parts: []
 final_assembly:
-  - name: coder_link
+  - name: planner_link
     config:
       dofs: [tx, ty, tz, rx]

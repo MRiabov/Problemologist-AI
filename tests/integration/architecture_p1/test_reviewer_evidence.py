@@ -20,9 +20,51 @@ from shared.workers.schema import PlanReviewManifest, RenderManifest
 from tests.integration.agent.helpers import (
     repo_git_revision,
     seed_benchmark_assembly_definition,
+    seed_execution_reviewer_handover,
 )
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
+
+
+def _has_review_artifacts(
+    episode: EpisodeResponse, *, required_checklist_pairs: tuple[tuple[str, str], ...]
+) -> bool:
+    traces = episode.traces or []
+    review_traces = [
+        trace
+        for trace in traces
+        if trace.name == "review_decision" and trace.metadata_vars is not None
+    ]
+    return all(
+        any(
+            trace.metadata_vars.checklist.get(checklist_key) == expected_value
+            for trace in review_traces
+        )
+        for checklist_key, expected_value in required_checklist_pairs
+    )
+
+
+async def _wait_for_review_evidence(
+    client: AsyncClient,
+    *,
+    episode_id: str,
+    required_checklist_pairs: tuple[tuple[str, str], ...],
+    attempts: int = 10,
+) -> EpisodeResponse:
+    episode: EpisodeResponse | None = None
+    for _ in range(attempts):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        if _has_review_artifacts(
+            episode,
+            required_checklist_pairs=required_checklist_pairs,
+        ):
+            return episode
+        await asyncio.sleep(1.0)
+
+    assert episode is not None
+    return episode
 
 
 @pytest.mark.integration_p1
@@ -222,6 +264,132 @@ async def test_reviewer_evidence_completeness():
 
         for trace in [*media_events, *attachment_events]:
             assert trace.user_session_id == ep_data.user_session_id
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_engineering_dof_review_evidence_uses_canonical_keys():
+    """
+    INT-074/INT-075: canonical DOF checklist keys must persist through both
+    the plan-review minimality path and the execution-review justification path.
+    """
+
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        session_id = f"INT-075-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(
+            client,
+            session_id,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-075",
+        )
+        request = AgentRunRequest(
+            task="INT-074 canonical DOF review evidence gate",
+            session_id=session_id,
+            agent_name=AgentName.ENGINEER_CODER,
+        )
+        run_resp = await client.post(
+            f"{CONTROLLER_URL}/api/agent/run",
+            json=request.model_dump(mode="json"),
+        )
+        assert run_resp.status_code == 202, run_resp.text
+        run = AgentRunResponse.model_validate(run_resp.json())
+
+        episode: EpisodeResponse | None = None
+        for _ in range(180):
+            await asyncio.sleep(1.0)
+            ep_resp = await client.get(
+                f"{CONTROLLER_URL}/api/episodes/{run.episode_id}"
+            )
+            assert ep_resp.status_code == 200, ep_resp.text
+            episode = EpisodeResponse.model_validate(ep_resp.json())
+            if episode.status in {
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+                EpisodeStatus.PLANNED,
+            } or _has_review_artifacts(
+                episode,
+                required_checklist_pairs=(
+                    ("dof_minimality", "pass"),
+                    ("dof_deviation_justified", "pass"),
+                ),
+            ):
+                break
+        assert episode is not None
+        if not _has_review_artifacts(
+            episode,
+            required_checklist_pairs=(
+                ("dof_minimality", "pass"),
+                ("dof_deviation_justified", "pass"),
+            ),
+        ):
+            episode = await _wait_for_review_evidence(
+                client,
+                episode_id=str(run.episode_id),
+                required_checklist_pairs=(
+                    ("dof_minimality", "pass"),
+                    ("dof_deviation_justified", "pass"),
+                ),
+            )
+
+        assert episode.status in {
+            EpisodeStatus.COMPLETED,
+            EpisodeStatus.FAILED,
+            EpisodeStatus.CANCELLED,
+            EpisodeStatus.PLANNED,
+        } or _has_review_artifacts(
+            episode,
+            required_checklist_pairs=(
+                ("dof_minimality", "pass"),
+                ("dof_deviation_justified", "pass"),
+            ),
+        )
+
+        plan_comments_path = "reviews/engineering-plan-review-comments-round-1.yaml"
+        execution_comments_path = (
+            "reviews/engineering-execution-review-comments-round-1.yaml"
+        )
+
+        plan_comments_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode.id}/assets/{plan_comments_path}"
+        )
+        assert plan_comments_resp.status_code == 200, plan_comments_resp.text
+        plan_comments = yaml.safe_load(plan_comments_resp.text)
+        assert plan_comments["checklist"]["dof_minimality"] == "pass", plan_comments
+
+        execution_comments_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode.id}/assets/{execution_comments_path}"
+        )
+        assert execution_comments_resp.status_code == 200, execution_comments_resp.text
+        execution_comments = yaml.safe_load(execution_comments_resp.text)
+        assert execution_comments["checklist"]["dof_deviation_justified"] == "pass", (
+            execution_comments
+        )
+
+        review_traces = [
+            trace for trace in (episode.traces or []) if trace.name == "review_decision"
+        ]
+        execution_review_traces = [
+            trace
+            for trace in review_traces
+            if trace.metadata_vars is not None
+            and trace.metadata_vars.checklist.get("dof_deviation_justified") == "pass"
+        ]
+        assert execution_review_traces, review_traces
+        plan_review_traces = [
+            trace
+            for trace in review_traces
+            if trace.metadata_vars is not None
+            and trace.metadata_vars.checklist.get("dof_minimality") == "pass"
+        ]
+        assert plan_review_traces, review_traces
 
 
 @pytest.mark.integration_p1

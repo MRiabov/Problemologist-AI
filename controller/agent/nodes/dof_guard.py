@@ -4,7 +4,18 @@ from dataclasses import dataclass
 
 import yaml
 
-from shared.models.schemas import AssemblyDefinition, PartConfig, SubassemblyEstimate
+from shared.enums import ReviewDecision
+from shared.models.schemas import (
+    AssemblyDefinition,
+    PartConfig,
+    ReviewResult,
+    SubassemblyEstimate,
+)
+
+CANONICAL_DOF_CHECKLIST_KEYS = {
+    "engineering_plan_reviewer": "dof_minimality",
+    "engineering_execution_reviewer": "dof_deviation_justified",
+}
 
 
 @dataclass(frozen=True)
@@ -46,6 +57,34 @@ def has_accepted_dof_justification(plan_markdown: str, *, part_id: str) -> bool:
         return True
     token = f"dof_justification:{part_id.lower()}"
     return token in lowered
+
+
+def canonical_dof_checklist_key(reviewer_stage: str) -> str:
+    try:
+        return CANONICAL_DOF_CHECKLIST_KEYS[reviewer_stage]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unsupported reviewer_stage for canonical DOF checklist: {reviewer_stage}"
+        ) from exc
+
+
+def apply_canonical_dof_checklist(
+    review: ReviewResult, *, reviewer_stage: str
+) -> ReviewResult:
+    """
+    Ensure review traces and persisted comments use the canonical DOF checklist key.
+
+    The key is stage-specific so downstream evals can distinguish minimality
+    checks from justified deviation checks without relying on freeform prose.
+    """
+
+    checklist = dict(review.checklist)
+    key = canonical_dof_checklist_key(reviewer_stage)
+    checklist.setdefault(
+        key,
+        "pass" if review.decision == ReviewDecision.APPROVED else "fail",
+    )
+    return review.model_copy(update={"checklist": checklist})
 
 
 def _append_if_excessive(

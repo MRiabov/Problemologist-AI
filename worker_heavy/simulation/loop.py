@@ -385,6 +385,7 @@ class SimulationLoop:
 
         # 3. Apply initial controls
         self._apply_gated_controls(control_inputs)
+        media_recorder.update(0, self.backend)
 
         # 4. Determine timestep and steps
         dt = self._get_simulation_timestep()

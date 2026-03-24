@@ -26,6 +26,8 @@ class MediaRecorder:
         """Capture a frame if at the right interval."""
         if not self.video_renderer or step_idx % self.capture_interval != 0:
             return
+        if step_idx == 0 and self.video_renderer.frames:
+            return
 
         try:
             # Setup a reasonable camera for video if not already set

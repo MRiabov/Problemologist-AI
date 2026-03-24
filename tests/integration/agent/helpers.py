@@ -14,7 +14,7 @@ from controller.agent.mock_scenarios import load_integration_mock_scenarios
 from shared.enums import AgentName
 from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
-from shared.models.simulation import SimulationResult
+from shared.models.simulation import MultiRunResult, SimulationMetrics, SimulationResult
 from shared.workers.schema import (
     ReviewManifest,
     ValidationResultRecord,
@@ -221,6 +221,17 @@ async def seed_execution_reviewer_handover(
         timestamp=seed_ts,
         script_path="script.py",
         script_sha256=script_sha256,
+        verification_result=MultiRunResult(
+            num_scenes=1,
+            success_count=1,
+            success_rate=1.0,
+            is_consistent=True,
+            individual_results=[SimulationMetrics(success=True)],
+            fail_reasons=[],
+            scene_build_count=1,
+            backend_run_count=1,
+            batched_execution=True,
+        ),
     )
     simulation_result = SimulationResult(
         success=True,

@@ -124,8 +124,68 @@ def _collect_submission_artifacts(
     return artifacts
 
 
+def _collect_simulation_artifacts(
+    root: Path, result: SimulationResult, *, session_id: str | None = None
+) -> SimulationArtifacts:
+    artifacts = SimulationArtifacts(
+        render_paths=list(result.render_paths),
+        mjcf_content=result.mjcf_content,
+        stress_summaries=list(result.stress_summaries),
+        fluid_metrics=list(result.fluid_metrics),
+        failure=result.failure,
+        total_cost=result.total_cost,
+        total_weight_g=result.total_weight_g,
+    )
+
+    sim_result_path = root / "simulation_result.json"
+    if sim_result_path.exists():
+        artifacts.simulation_result_json = sim_result_path.read_text(encoding="utf-8")
+
+    render_blobs_base64: dict[str, str] = {}
+    render_image_paths: list[str] = []
+    for raw_path in artifacts.render_paths:
+        render_path = root / raw_path
+        if not render_path.exists() or not render_path.is_file():
+            continue
+        suffix = render_path.suffix.lower()
+        if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
+            continue
+        rel_path = str(Path(raw_path))
+        render_blobs_base64[rel_path] = base64.b64encode(
+            render_path.read_bytes()
+        ).decode("ascii")
+        if suffix in {".png", ".jpg", ".jpeg"}:
+            render_image_paths.append(rel_path)
+
+    render_manifest_path = root / "renders" / "render_manifest.json"
+    if render_manifest_path.exists():
+        render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
+            base64.b64encode(render_manifest_path.read_bytes()).decode("ascii")
+        )
+    elif render_image_paths:
+        synthesized_manifest = build_render_manifest(
+            {
+                f"/{path.lstrip('/')}": RenderArtifactMetadata(modality="rgb")
+                for path in sorted(dict.fromkeys(render_image_paths))
+            },
+            workspace_root=root,
+            episode_id=session_id,
+            worker_session_id=session_id,
+        )
+        render_blobs_base64[str(Path("renders") / "render_manifest.json")] = (
+            base64.b64encode(
+                synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
+            ).decode("ascii")
+        )
+
+    artifacts.render_blobs_base64 = render_blobs_base64
+    return artifacts
+
+
 @activity.defn(name="worker_run_simulation")
-async def run_simulation_activity(params: HeavySimulationParams) -> SimulationResult:
+async def run_simulation_activity(
+    params: HeavySimulationParams,
+) -> BenchmarkToolResponse:
     """Execute physics simulation from a session bundle."""
     bundle_bytes = _decode_bundle(params.bundle_base64)
     script_path = params.script_path
@@ -140,7 +200,7 @@ async def run_simulation_activity(params: HeavySimulationParams) -> SimulationRe
         # backend might be a string from temporal, convert to enum
         backend_type = SimulatorBackendType(backend)
 
-        return await run_simulation_in_isolated_process(
+        result = await run_simulation_in_isolated_process(
             script_path=str(root / script_path),
             session_root=str(root),
             script_content=None,
@@ -149,6 +209,13 @@ async def run_simulation_activity(params: HeavySimulationParams) -> SimulationRe
             backend=backend_type,
             session_id=session_id or "",
             particle_budget=None,
+        )
+        artifacts = _collect_simulation_artifacts(root, result, session_id=session_id)
+        return BenchmarkToolResponse(
+            success=result.success,
+            message=result.summary,
+            confidence=result.confidence,
+            artifacts=artifacts,
         )
 
 

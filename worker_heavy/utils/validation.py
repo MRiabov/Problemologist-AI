@@ -112,6 +112,25 @@ def _sanitize_stress_summaries(
     return safe
 
 
+def _workspace_relative_render_paths(
+    render_paths: list[str], workspace_root: Path
+) -> list[str]:
+    """Normalize render paths so serialized artifacts stay workspace-relative."""
+    resolved_root = workspace_root.resolve()
+    normalized: list[str] = []
+    for raw_path in render_paths:
+        candidate = Path(raw_path)
+        if candidate.is_absolute():
+            try:
+                normalized.append(str(candidate.resolve().relative_to(resolved_root)))
+                continue
+            except Exception:
+                normalized.append(str(candidate))
+                continue
+        normalized.append(str(candidate))
+    return normalized
+
+
 def _benchmark_refusal_error(reason: BenchmarkRefusalReason, message: str) -> str:
     return f"{reason.value}: {message}"
 
@@ -1320,6 +1339,7 @@ def simulate(
         )
         if video_path and video_path.exists():
             render_paths.append(str(video_path))
+        render_paths = _workspace_relative_render_paths(render_paths, working_dir)
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
 
@@ -1364,6 +1384,9 @@ def simulate(
                 )
 
             stress_renders = preview_stress(component, output_dir=working_dir)
+            stress_renders = _workspace_relative_render_paths(
+                stress_renders, working_dir
+            )
             result.render_paths.extend(stress_renders)
 
         try:

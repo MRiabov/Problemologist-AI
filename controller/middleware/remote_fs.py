@@ -26,7 +26,6 @@ from controller.workflows.heavy import (
 )
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
-from shared.models.simulation import SimulationResult
 from shared.observability.schemas import (
     EditFileToolEvent,
     GrepToolEvent,
@@ -578,7 +577,7 @@ class RemoteFilesystemMiddleware:
         script_path: str | Path,
         backend: SimulatorBackendType | None = None,
         smoke_test_mode: bool | None = None,
-    ) -> BenchmarkToolResponse | SimulationResult:
+    ) -> BenchmarkToolResponse:
         """Trigger physics simulation via worker client (with bundling)."""
         p_str = str(script_path)
         resolved_backend = backend or get_default_simulator_backend()
@@ -602,7 +601,7 @@ class RemoteFilesystemMiddleware:
                     smoke_test_mode=smoke_test_mode,
                     session_id=self.client.session_id,
                 ),
-                result_type=SimulationResult,
+                result_type=BenchmarkToolResponse,
             )
             await record_simulation_result(self.episode_id, res)
             return res

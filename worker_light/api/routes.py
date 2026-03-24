@@ -355,8 +355,9 @@ async def bundle_session(fs_router=Depends(get_router)):
 
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        # Exclude large artifacts and internal git state
-        exclude = {"renders", ".git", "__pycache__", "assets"}
+        # Exclude internal state and large asset caches, but keep renders because
+        # the reviewer handoff depends on the preview/simulation media.
+        exclude = {".git", "__pycache__", "assets"}
 
         for path in root.rglob("*"):
             rel_p = path.relative_to(root)
