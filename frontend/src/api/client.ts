@@ -80,7 +80,7 @@ export async function checkConnection(): Promise<{ connected: boolean; isMockMod
         const health = await DefaultService.healthCheckApiHealthGet();
         return { 
             connected: true, 
-            isMockMode: !!health.is_integration_test 
+            isMockMode: !!health?.is_integration_test 
         };
     } catch (e) {
         console.error("Connection check failed:", e);

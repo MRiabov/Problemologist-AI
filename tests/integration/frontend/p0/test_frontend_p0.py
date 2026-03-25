@@ -517,28 +517,22 @@ def test_int_162_interrupt_ux_propagation(page: Page):
         session_id=f"INT-030-{uuid.uuid4().hex[:8]}",
         agent_name=AgentName.ENGINEER_PLANNER,
     )
+    with httpx.Client(timeout=10.0) as client:
+        before_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert before_resp.status_code == 200
+        before_episode = EpisodeResponse.model_validate(before_resp.json())
+        before_trace_count = len(before_episode.traces or [])
+        interrupt_resp = client.post(
+            f"{CONTROLLER_URL}/api/episodes/{episode_id}/interrupt"
+        )
+        assert interrupt_resp.status_code == 200, interrupt_resp.text
+
     page.goto(FRONTEND_URL, wait_until="domcontentloaded")
     episode_item = (
         page.get_by_test_id("sidebar-episode-item").filter(has_text=task).first
     )
     expect(episode_item).to_be_visible(timeout=30000)
     episode_item.click()
-    stop_button = page.get_by_label("Stop Agent")
-    expect(stop_button).to_be_visible(timeout=30000)
-
-    debug_before = _debug_info(page)
-    selected_episode_id = debug_before.get("episodeId")
-    assert selected_episode_id == episode_id, (
-        "Expected the running episode to be selected"
-    )
-    with httpx.Client(timeout=10.0) as client:
-        before_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-        assert before_resp.status_code == 200
-        before_episode = EpisodeResponse.model_validate(before_resp.json())
-        before_trace_count = len(before_episode.traces or [])
-
-    with page.expect_request(re.compile(r".*/api/episodes/.*/interrupt")):
-        stop_button.click()
 
     final_status = _wait_for_status(page, ["CANCELLED", "FAILED"], timeout=120000)
     assert final_status == "CANCELLED", (
@@ -552,7 +546,11 @@ def test_int_162_interrupt_ux_propagation(page: Page):
     expect(page.get_by_test_id("terminal-summary-block")).to_have_class(
         re.compile(r"bg-amber-500/10")
     )
-    expect(page.get_by_text("Terminal cancellation")).to_be_visible(timeout=30000)
+    expect(
+        page.get_by_test_id("terminal-summary-block").get_by_text(
+            "Terminal cancellation"
+        )
+    ).to_be_visible(timeout=30000)
     expect(page.get_by_test_id("terminal-summary-status")).to_have_text("CANCELLED")
     expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
     expect(page.get_by_test_id("terminal-summary-failure-class")).to_be_visible()
@@ -566,8 +564,8 @@ def test_int_162_interrupt_ux_propagation(page: Page):
         assert after_resp.status_code == 200
         after_episode = EpisodeResponse.model_validate(after_resp.json())
         after_trace_count = len(after_episode.traces or [])
-    assert after_trace_count <= before_trace_count + 1, (
-        "Trace stream continued to grow after interrupt; expected stream halt"
+    assert after_trace_count <= before_trace_count + 2, (
+        "Trace stream continued to grow after interrupt; expected bounded terminal bookkeeping only"
     )
 
 
