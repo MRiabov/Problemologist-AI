@@ -108,6 +108,7 @@ GPT-5.4
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py::test_int_160_reasoning_default_hidden_and_expandable` (skipped in the live backend run because no persisted reasoning traces were available)
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py::test_int_157_session_history tests/integration/frontend/p1/test_int_178.py::test_int_178_session_restore_continuity`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py::test_int_160_reasoning_default_hidden_and_expandable` (live backend emitted a fail-fast node-entry validation error, so the test was skipped by the backend-error gate on the rerun)
+- Integration: `uv run pytest -n0 -m integration_p1 .autopilot/tests/integration/architecture_p1/test_bmad_autopilot_story_statuses.py::test_int_autopilot_story_worktree_restore_reuses_branch_and_location`
 
 ### Completion Notes List
 
@@ -124,6 +125,9 @@ GPT-5.4
 - Added a selection-intent/request guard in `EpisodeContext` so late episode hydration responses can no longer overwrite a newer selection, and removed the fallback that cleared the persisted selection id on transient restore failures.
 - Coalesced same-target episode hydrate requests so the refresh loop cannot invalidate an in-flight restore or selection load, then verified the updated behavior with the session-history and session-restore live-browser slices.
 - Seeded the INT-160 reasoning-visibility regression through the API with a deterministic mock scenario so the live-browser check now verifies persisted reasoning traces instead of timing out on backend setup.
+- Normalized story worktree `sprint-status.yaml` materialization so reopened story worktrees validate their persisted `story_location` against the active checkout instead of the original repo path.
+- Switched story worktree restoration to reuse an existing branch with `git worktree add -f`, which keeps interrupted-session recovery working even after the temp directory is removed.
+- Added a focused architecture-p1 regression that proves a deleted story worktree can be recreated, revalidated, and reopened with the normalized story-location contract intact.
 
 ### File List
 
@@ -142,6 +146,9 @@ GPT-5.4
 - `tests/integration/frontend/p1/test_int_178.py`
 - `tests/integration/frontend/p1/test_int_160.py`
 - `tests/integration/mock_responses/INT-160.yaml`
+- `.autopilot/scripts/internal/runner_environment.py`
+- `.autopilot/scripts/internal/runner_state_worktree.py`
+- `.autopilot/tests/integration/architecture_p1/test_bmad_autopilot_story_statuses.py`
 
 ## Change Log
 
@@ -151,3 +158,4 @@ GPT-5.4
 - 2026-03-25: Added request-guarded episode hydration in `EpisodeContext` so stale restore/select responses cannot overwrite a newer session and transient restore failures keep the persisted episode pointer intact.
 - 2026-03-25: Revalidated the story with the live-browser session-history and session-restore slices after the context fix; INT-160 was still backend-gated by a fail-fast node-entry validation error and was skipped by the backend-error fixture on rerun.
 - 2026-03-25: Reworked INT-160 into an API-seeded reasoning-visibility regression, added the deterministic mock scenario needed for the engineer flow, and verified the live-browser coverage passed end to end.
+- 2026-03-25: Normalized story-worktree sprint-status materialization, enabled existing-branch reuse for deleted story worktrees, and added a regression covering reopen/resume of interrupted story sessions.
