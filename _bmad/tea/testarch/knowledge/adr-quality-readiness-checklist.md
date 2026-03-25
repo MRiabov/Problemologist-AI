@@ -15,18 +15,18 @@
 3. Describe risk if criterion unmet
 4. Map to test scenarios (what tests validate this criterion)
 
----
+______________________________________________________________________
 
 ## 1. Testability & Automation
 
 **Question:** Can we verify this effectively without manual toil?
 
-| #   | Criterion                                                                                                                                  | Risk if Unmet                                  | Typical Test Scenarios (P0-P2)                                                                          |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1.1 | **Isolation:** Can the service be tested with all downstream dependencies (DBs, APIs, Queues) mocked or stubbed?                           | Flaky tests; inability to test in isolation    | P1: Service runs with mocked DB, P1: Service runs with mocked API, P2: Integration tests with real deps |
-| 1.2 | **Headless Interaction:** Is 100% of the business logic accessible via API (REST/gRPC) to bypass the UI for testing?                       | Slow, brittle UI-based automation              | P0: All core logic callable via API, P1: No UI dependency for critical paths                            |
-| 1.3 | **State Control:** Do we have "Seeding APIs" or scripts to inject specific data states (e.g., "User with expired subscription") instantly? | Long setup times; inability to test edge cases | P0: Seed baseline data, P0: Inject edge case data states, P1: Cleanup after tests                       |
-| 1.4 | **Sample Requests:** Are there valid and invalid cURL/JSON sample requests provided in the design doc for QA to build upon?                | Ambiguity on how to consume the service        | P1: Valid request succeeds, P1: Invalid request fails with clear error                                  |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 1.1 | **Isolation:** Can the service be tested with all downstream dependencies (DBs, APIs, Queues) mocked or stubbed? | Flaky tests; inability to test in isolation | P1: Service runs with mocked DB, P1: Service runs with mocked API, P2: Integration tests with real deps |
+| 1.2 | **Headless Interaction:** Is 100% of the business logic accessible via API (REST/gRPC) to bypass the UI for testing? | Slow, brittle UI-based automation | P0: All core logic callable via API, P1: No UI dependency for critical paths |
+| 1.3 | **State Control:** Do we have "Seeding APIs" or scripts to inject specific data states (e.g., "User with expired subscription") instantly? | Long setup times; inability to test edge cases | P0: Seed baseline data, P0: Inject edge case data states, P1: Cleanup after tests |
+| 1.4 | **Sample Requests:** Are there valid and invalid cURL/JSON sample requests provided in the design doc for QA to build upon? | Ambiguity on how to consume the service | P1: Valid request succeeds, P1: Invalid request fails with clear error |
 
 **Common Gaps:**
 
@@ -42,17 +42,17 @@
 - 1.3 (State Control): Implement `/api/test-data` seeding endpoints (dev/staging only)
 - 1.4 (Sample Requests): Add "Example API Calls" section to ADR with cURL commands
 
----
+______________________________________________________________________
 
 ## 2. Test Data Strategy
 
 **Question:** How do we fuel our tests safely?
 
-| #   | Criterion                                                                                                                             | Risk if Unmet                                | Typical Test Scenarios (P0-P2)                                                                 |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 2.1 | **Segregation:** Does the design support multi-tenancy or specific headers (e.g., x-test-user) to keep test data out of prod metrics? | Skewed business analytics; data pollution    | P0: Multi-tenant isolation (customer A ≠ customer B), P1: Test data excluded from prod metrics |
-| 2.2 | **Generation:** Can we use synthetic data, or do we rely on scrubbing production data (GDPR/PII risk)?                                | Privacy violations; dependency on stale data | P0: Faker-based synthetic data, P1: No production data in tests                                |
-| 2.3 | **Teardown:** Is there a mechanism to "reset" the environment or clean up data after destructive tests?                               | Environment rot; subsequent test failures    | P0: Automated cleanup after tests, P2: Environment reset script                                |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 2.1 | **Segregation:** Does the design support multi-tenancy or specific headers (e.g., x-test-user) to keep test data out of prod metrics? | Skewed business analytics; data pollution | P0: Multi-tenant isolation (customer A ≠ customer B), P1: Test data excluded from prod metrics |
+| 2.2 | **Generation:** Can we use synthetic data, or do we rely on scrubbing production data (GDPR/PII risk)? | Privacy violations; dependency on stale data | P0: Faker-based synthetic data, P1: No production data in tests |
+| 2.3 | **Teardown:** Is there a mechanism to "reset" the environment or clean up data after destructive tests? | Environment rot; subsequent test failures | P0: Automated cleanup after tests, P2: Environment reset script |
 
 **Common Gaps:**
 
@@ -66,18 +66,18 @@
 - 2.2 (Generation): Use Faker library, create synthetic data generators, prohibit prod dumps
 - 2.3 (Teardown): Auto-cleanup hooks in test framework, isolated test customer IDs
 
----
+______________________________________________________________________
 
 ## 3. Scalability & Availability
 
 **Question:** Can it grow, and will it stay up?
 
-| #   | Criterion                                                                                                                   | Risk if Unmet                                     | Typical Test Scenarios (P0-P2)                                                                       |
-| --- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| 3.1 | **Statelessness:** Is the service stateless? If not, how is session state replicated across instances?                      | Inability to auto-scale horizontally              | P1: Service restart mid-request → no data loss, P2: Horizontal scaling under load                    |
-| 3.2 | **Bottlenecks:** Have we identified the weakest link (e.g., database connections, API rate limits) under load?              | System crash during peak traffic                  | P2: Load test identifies bottleneck, P2: Connection pool exhaustion handled                          |
-| 3.3 | **SLA Definitions:** What is the target Availability (e.g., 99.9%) and does the architecture support redundancy to meet it? | Breach of contract; customer churn                | P1: Availability target defined, P2: Redundancy validated (multi-region/zone)                        |
-| 3.4 | **Circuit Breakers:** If a dependency fails, does this service fail fast or hang?                                           | Cascading failures taking down the whole platform | P1: Circuit breaker opens on 5 failures, P1: Auto-reset after recovery, P2: Timeout prevents hanging |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 3.1 | **Statelessness:** Is the service stateless? If not, how is session state replicated across instances? | Inability to auto-scale horizontally | P1: Service restart mid-request → no data loss, P2: Horizontal scaling under load |
+| 3.2 | **Bottlenecks:** Have we identified the weakest link (e.g., database connections, API rate limits) under load? | System crash during peak traffic | P2: Load test identifies bottleneck, P2: Connection pool exhaustion handled |
+| 3.3 | **SLA Definitions:** What is the target Availability (e.g., 99.9%) and does the architecture support redundancy to meet it? | Breach of contract; customer churn | P1: Availability target defined, P2: Redundancy validated (multi-region/zone) |
+| 3.4 | **Circuit Breakers:** If a dependency fails, does this service fail fast or hang? | Cascading failures taking down the whole platform | P1: Circuit breaker opens on 5 failures, P1: Auto-reset after recovery, P2: Timeout prevents hanging |
 
 **Common Gaps:**
 
@@ -93,17 +93,17 @@
 - 3.3 (SLA): Define realistic SLA (99.9% = 43 min/month downtime), add redundancy
 - 3.4 (Circuit Breakers): Implement circuit breakers (Hystrix pattern), fail fast on errors
 
----
+______________________________________________________________________
 
 ## 4. Disaster Recovery (DR)
 
 **Question:** What happens when the worst-case scenario occurs?
 
-| #   | Criterion                                                                                                            | Risk if Unmet                                  | Typical Test Scenarios (P0-P2)                                          |
-| --- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
-| 4.1 | **RTO/RPO:** What is the Recovery Time Objective (how long to restore) and Recovery Point Objective (max data loss)? | Extended outages; data loss liability          | P2: RTO defined and tested, P2: RPO validated (backup frequency)        |
-| 4.2 | **Failover:** Is region/zone failover automated or manual? Has it been practiced?                                    | "Heroics" required during outages; human error | P2: Automated failover works, P2: Manual failover documented and tested |
-| 4.3 | **Backups:** Are backups immutable and tested for restoration integrity?                                             | Ransomware vulnerability; corrupted backups    | P2: Backup restore succeeds, P2: Backup immutability validated          |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 4.1 | **RTO/RPO:** What is the Recovery Time Objective (how long to restore) and Recovery Point Objective (max data loss)? | Extended outages; data loss liability | P2: RTO defined and tested, P2: RPO validated (backup frequency) |
+| 4.2 | **Failover:** Is region/zone failover automated or manual? Has it been practiced? | "Heroics" required during outages; human error | P2: Automated failover works, P2: Manual failover documented and tested |
+| 4.3 | **Backups:** Are backups immutable and tested for restoration integrity? | Ransomware vulnerability; corrupted backups | P2: Backup restore succeeds, P2: Backup immutability validated |
 
 **Common Gaps:**
 
@@ -117,18 +117,18 @@
 - 4.2 (Failover): Automate multi-region failover, practice failover drills quarterly
 - 4.3 (Backups): Implement immutable backups (S3 versioning), test restore monthly
 
----
+______________________________________________________________________
 
 ## 5. Security
 
 **Question:** Is the design safe by default?
 
-| #   | Criterion                                                                                                        | Risk if Unmet                            | Typical Test Scenarios (P0-P2)                                                                                   |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 5.1 | **AuthN/AuthZ:** Does it implement standard protocols (OAuth2/OIDC)? Are permissions granular (Least Privilege)? | Unauthorized access; data leaks          | P0: OAuth flow works, P0: Expired token rejected, P0: Insufficient permissions return 403, P1: Scope enforcement |
-| 5.2 | **Encryption:** Is data encrypted at rest (DB) and in transit (TLS)?                                             | Compliance violations; data theft        | P1: Milvus data-at-rest encrypted, P1: TLS 1.2+ enforced, P2: Certificate rotation works                         |
-| 5.3 | **Secrets:** Are API keys/passwords stored in a Vault (not in code or config files)?                             | Credentials leaked in git history        | P1: No hardcoded secrets in code, P1: Secrets loaded from AWS Secrets Manager                                    |
-| 5.4 | **Input Validation:** Are inputs sanitized against Injection attacks (SQLi, XSS)?                                | System compromise via malicious payloads | P1: SQL injection sanitized, P1: XSS escaped, P2: Command injection prevented                                    |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 5.1 | **AuthN/AuthZ:** Does it implement standard protocols (OAuth2/OIDC)? Are permissions granular (Least Privilege)? | Unauthorized access; data leaks | P0: OAuth flow works, P0: Expired token rejected, P0: Insufficient permissions return 403, P1: Scope enforcement |
+| 5.2 | **Encryption:** Is data encrypted at rest (DB) and in transit (TLS)? | Compliance violations; data theft | P1: Milvus data-at-rest encrypted, P1: TLS 1.2+ enforced, P2: Certificate rotation works |
+| 5.3 | **Secrets:** Are API keys/passwords stored in a Vault (not in code or config files)? | Credentials leaked in git history | P1: No hardcoded secrets in code, P1: Secrets loaded from AWS Secrets Manager |
+| 5.4 | **Input Validation:** Are inputs sanitized against Injection attacks (SQLi, XSS)? | System compromise via malicious payloads | P1: SQL injection sanitized, P1: XSS escaped, P2: Command injection prevented |
 
 **Common Gaps:**
 
@@ -144,18 +144,18 @@
 - 5.3 (Secrets): Migrate to AWS Secrets Manager/Vault, scan git history for leaks
 - 5.4 (Input Validation): Sanitize all inputs, use parameterized queries, escape outputs
 
----
+______________________________________________________________________
 
 ## 6. Monitorability, Debuggability & Manageability
 
 **Question:** Can we operate and fix this in production?
 
-| #   | Criterion                                                                                            | Risk if Unmet                                      | Typical Test Scenarios (P0-P2)                                                                    |
-| --- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 6.1 | **Tracing:** Does the service propagate W3C Trace Context / Correlation IDs for distributed tracing? | Impossible to debug errors across microservices    | P2: W3C Trace Context propagated (EventBridge → Lambda → Service), P2: Correlation ID in all logs |
-| 6.2 | **Logs:** Can log levels (INFO vs DEBUG) be toggled dynamically without a redeploy?                  | Inability to diagnose issues in real-time          | P2: Log level toggle works without redeploy, P2: Logs structured (JSON format)                    |
-| 6.3 | **Metrics:** Does it expose RED metrics (Rate, Errors, Duration) for Prometheus/Datadog?             | Flying blind regarding system health               | P2: /metrics endpoint exposes RED metrics, P2: Prometheus/Datadog scrapes successfully            |
-| 6.4 | **Config:** Is configuration externalized? Can we change behavior without a code build?              | Rigid system; full deploys needed for minor tweaks | P2: Config change without code build, P2: Feature flags toggle behavior                           |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 6.1 | **Tracing:** Does the service propagate W3C Trace Context / Correlation IDs for distributed tracing? | Impossible to debug errors across microservices | P2: W3C Trace Context propagated (EventBridge → Lambda → Service), P2: Correlation ID in all logs |
+| 6.2 | **Logs:** Can log levels (INFO vs DEBUG) be toggled dynamically without a redeploy? | Inability to diagnose issues in real-time | P2: Log level toggle works without redeploy, P2: Logs structured (JSON format) |
+| 6.3 | **Metrics:** Does it expose RED metrics (Rate, Errors, Duration) for Prometheus/Datadog? | Flying blind regarding system health | P2: /metrics endpoint exposes RED metrics, P2: Prometheus/Datadog scrapes successfully |
+| 6.4 | **Config:** Is configuration externalized? Can we change behavior without a code build? | Rigid system; full deploys needed for minor tweaks | P2: Config change without code build, P2: Feature flags toggle behavior |
 
 **Common Gaps:**
 
@@ -171,18 +171,18 @@
 - 6.3 (Metrics): Expose /metrics endpoint, track RED metrics (Rate, Errors, Duration)
 - 6.4 (Config): Externalize config (AWS SSM/AppConfig), use feature flags (LaunchDarkly)
 
----
+______________________________________________________________________
 
 ## 7. QoS (Quality of Service) & QoE (Quality of Experience)
 
 **Question:** How does it perform, and how does it feel?
 
-| #   | Criterion                                                                                            | Risk if Unmet                                          | Typical Test Scenarios (P0-P2)                                                                  |
-| --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| 7.1 | **Latency (QoS):** What are the P95 and P99 latency targets?                                         | Slow API responses affecting throughput                | P3: P95 latency <Xs (load test), P3: P99 latency <Ys (load test)                                |
-| 7.2 | **Throttling (QoS):** Is there Rate Limiting to prevent "noisy neighbors" or DDoS?                   | Service degradation for all users due to one bad actor | P2: Rate limiting enforced, P2: 429 returned when limit exceeded                                |
-| 7.3 | **Perceived Performance (QoE):** Does the UI show optimistic updates or skeletons while loading?     | App feels sluggish to the user                         | P2: Skeleton/spinner shown while loading (E2E), P2: Optimistic updates (E2E)                    |
-| 7.4 | **Degradation (QoE):** If the service is slow, does it show a friendly message or a raw stack trace? | Poor user trust; frustration                           | P2: Friendly error message shown (not stack trace), P1: Error boundary catches exceptions (E2E) |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 7.1 | **Latency (QoS):** What are the P95 and P99 latency targets? | Slow API responses affecting throughput | P3: P95 latency \<Xs (load test), P3: P99 latency \<Ys (load test) |
+| 7.2 | **Throttling (QoS):** Is there Rate Limiting to prevent "noisy neighbors" or DDoS? | Service degradation for all users due to one bad actor | P2: Rate limiting enforced, P2: 429 returned when limit exceeded |
+| 7.3 | **Perceived Performance (QoE):** Does the UI show optimistic updates or skeletons while loading? | App feels sluggish to the user | P2: Skeleton/spinner shown while loading (E2E), P2: Optimistic updates (E2E) |
+| 7.4 | **Degradation (QoE):** If the service is slow, does it show a friendly message or a raw stack trace? | Poor user trust; frustration | P2: Friendly error message shown (not stack trace), P1: Error boundary catches exceptions (E2E) |
 
 **Common Gaps:**
 
@@ -193,22 +193,22 @@
 
 **Mitigation Examples:**
 
-- 7.1 (Latency): Define SLOs (P95 <2s, P99 <5s), load test to validate
+- 7.1 (Latency): Define SLOs (P95 \<2s, P99 \<5s), load test to validate
 - 7.2 (Throttling): Implement rate limiting (per-user, per-IP), return 429 with Retry-After
 - 7.3 (Perceived Performance): Add skeleton screens, optimistic updates, progressive loading
 - 7.4 (Degradation): Implement error boundaries, show friendly messages, log stack traces server-side
 
----
+______________________________________________________________________
 
 ## 8. Deployability
 
 **Question:** How easily can we ship this?
 
-| #   | Criterion                                                                                  | Risk if Unmet                                          | Typical Test Scenarios (P0-P2)                                                 |
-| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| 8.1 | **Zero Downtime:** Does the design support Blue/Green or Canary deployments?               | Maintenance windows required (downtime)                | P2: Blue/Green deployment works, P2: Canary deployment gradual rollout         |
-| 8.2 | **Backward Compatibility:** Can we deploy the DB changes separately from the Code changes? | "Lock-step" deployments; high risk of breaking changes | P2: DB migration before code deploy, P2: Code handles old and new schema       |
-| 8.3 | **Rollback:** Is there an automated rollback trigger if Health Checks fail post-deploy?    | Prolonged outages after a bad deploy                   | P2: Health check fails → automated rollback, P2: Rollback completes within RTO |
+| # | Criterion | Risk if Unmet | Typical Test Scenarios (P0-P2) |
+| -- | -- | -- | -- |
+| 8.1 | **Zero Downtime:** Does the design support Blue/Green or Canary deployments? | Maintenance windows required (downtime) | P2: Blue/Green deployment works, P2: Canary deployment gradual rollout |
+| 8.2 | **Backward Compatibility:** Can we deploy the DB changes separately from the Code changes? | "Lock-step" deployments; high risk of breaking changes | P2: DB migration before code deploy, P2: Code handles old and new schema |
+| 8.3 | **Rollback:** Is there an automated rollback trigger if Health Checks fail post-deploy? | Prolonged outages after a bad deploy | P2: Health check fails → automated rollback, P2: Rollback completes within RTO |
 
 **Common Gaps:**
 
@@ -222,7 +222,7 @@
 - 8.2 (Backward Compatibility): Separate DB migrations from code deploys, support N-1 schema
 - 8.3 (Rollback): Automate rollback on health check failures, test rollback procedures
 
----
+______________________________________________________________________
 
 ## Usage in Test Design Workflow
 
@@ -292,7 +292,7 @@ Can we verify this effectively without manual toil?
 - [ ] State Control: Inject edge case (expired subscription user)
 ```
 
----
+______________________________________________________________________
 
 ## Usage in NFR Assessment Workflow
 
@@ -346,7 +346,7 @@ Can we verify this effectively without manual toil?
 {Repeat for all 8 categories}
 ```
 
----
+______________________________________________________________________
 
 ## Benefits
 

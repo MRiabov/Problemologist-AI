@@ -1,8 +1,8 @@
 ---
-name: 'step-04d-subagent-scalability'
+name: step-04d-subagent-scalability
 description: 'Subagent: Scalability NFR assessment'
 subagent: true
-outputFile: '/tmp/tea-nfr-scalability-{{timestamp}}.json'
+outputFile: /tmp/tea-nfr-scalability-{{timestamp}}.json
 ---
 
 # Subagent 4D: Scalability NFR Assessment
@@ -13,7 +13,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 
 **Your task:** Assess SCALABILITY NFR domain only.
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -47,7 +47,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 - Queue systems for async work
 - WebSocket scaling
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -81,7 +81,7 @@ This is an **isolated subagent** running in parallel with other NFR domain asses
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 

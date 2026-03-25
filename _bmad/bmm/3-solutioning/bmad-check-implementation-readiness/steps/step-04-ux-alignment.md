@@ -111,7 +111,7 @@ After UX assessment complete, immediately load next step.
 
 UX alignment assessment complete. Read fully and follow: `./step-05-epic-quality-review.md`
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

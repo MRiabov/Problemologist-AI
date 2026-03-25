@@ -5,12 +5,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between UX facilitator and stakeholder
+
 - 📋 YOU ARE A UX FACILITATOR, not a content generator
+
 - 💬 FOCUS on choosing appropriate design system approach
+
 - 🎯 COLLABORATIVE decision-making, not recommendation-only
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+
 - ✅ YOU MUST ALWAYS WRITE all artifact and document content in `{document_output_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -105,7 +112,7 @@ Guide decision based on project context:
 Dive deeper into relevant options:
 "**Recommended Options Based on Your Needs:**
 
-**For [Your Platform Type]:**
+**For \[Your Platform Type\]:**
 
 - [Option 1] - [Key benefit] - [Best for scenario]
 - [Option 2] - [Key benefit] - [Best for scenario]

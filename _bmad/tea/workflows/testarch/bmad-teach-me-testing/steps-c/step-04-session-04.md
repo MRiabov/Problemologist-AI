@@ -1,11 +1,11 @@
 ---
-name: 'step-04-session-04'
+name: step-04-session-04
 description: 'Session 4: Test Design - Risk assessment, test design workflow (60 min)'
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-sessionNotesTemplate: '../templates/session-notes-template.md'
+sessionNotesTemplate: ../templates/session-notes-template.md
 sessionNotesFile: '{test_artifacts}/tea-academy/{user_name}/session-04-notes.md'
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
@@ -162,11 +162,11 @@ Set session-04-test-design `status: 'in-progress'`, `started_date`.
 **P0-P3 Coverage Targets:**
 
 | Priority | Unit | Integration | E2E | Manual |
-| -------- | ---- | ----------- | --- | ------ |
-| P0       | ✅   | ✅          | ✅  | ✅     |
-| P1       | ✅   | ✅          | ✅  | -      |
-| P2       | -    | ✅          | -   | ✅     |
-| P3       | -    | -           | -   | ✅     |
+| -- | -- | -- | -- | -- |
+| P0 | ✅ | ✅ | ✅ | ✅ |
+| P1 | ✅ | ✅ | ✅ | - |
+| P2 | - | ✅ | - | ✅ |
+| P3 | - | - | - | ✅ |
 
 **Goal:** 100% P0, 80% P1, 50% P2, 20% P3
 
@@ -200,7 +200,7 @@ D) Manual testing only"
 
 Correct: C
 
-Calculate score, handle <70% retry.
+Calculate score, handle \<70% retry.
 
 ### 8. Generate Session Notes
 
@@ -225,7 +225,7 @@ Progress: {completion_percentage}%"
 
 Return to {nextStepFile}.
 
----
+______________________________________________________________________
 
 ## 🚨 SUCCESS METRICS
 

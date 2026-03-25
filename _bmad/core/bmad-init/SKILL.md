@@ -1,7 +1,7 @@
 ---
 name: bmad-init
-description: "Initialize BMad project configuration and load config variables. Use when any skill needs module-specific configuration values, or when setting up a new BMad project."
-argument-hint: "[--module=module_code] [--vars=var1:default1,var2] [--skill-path=/path/to/calling/skill]"
+description: Initialize BMad project configuration and load config variables. Use when any skill needs module-specific configuration values, or when setting up a new BMad project.
+argument-hint: '[--module=module_code] [--vars=var1:default1,var2] [--skill-path=/path/to/calling/skill]'
 ---
 
 ## Overview
@@ -44,6 +44,7 @@ The response tells you what's needed:
 - `"status": "module_missing"` — Core exists but module config doesn't. Ask module questions.
 
 The response includes:
+
 - `core_module` — Core module.yaml questions (when core setup needed)
 - `target_module` — Target module.yaml questions (when module setup needed, discovered from `--skill-path` or `_bmad/{module}/`)
 - `core_vars` — Existing core config values (when core exists but module doesn't)
@@ -91,6 +92,7 @@ The `--answers` JSON format:
 Note: Pass the **raw user answers** (before result template expansion). The script applies result templates and `{project-root}` expansion when writing.
 
 The script:
+
 - Creates `_bmad/core/config.yaml` with core values (if core answers provided)
 - Creates `_bmad/{module}/config.yaml` with core values + module values (result-expanded)
 - Creates any directories listed in the module.yaml `directories` array

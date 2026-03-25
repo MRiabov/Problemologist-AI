@@ -355,24 +355,24 @@ log.errorSync('Setup failed');
 
 ## Log Levels Guide
 
-| Level     | When to Use                         | Shows in Report   | Shows in Console |
-| --------- | ----------------------------------- | ----------------- | ---------------- |
-| `step`    | Test organization, major actions    | Collapsible steps | Yes              |
-| `info`    | General information, state changes  | Yes               | Yes              |
-| `success` | Successful operations               | Yes               | Yes              |
-| `warning` | Non-critical issues, skipped checks | Yes               | Yes              |
-| `error`   | Failures, exceptions                | Yes               | Configurable     |
-| `debug`   | Detailed data, objects              | Yes (attached)    | Configurable     |
+| Level | When to Use | Shows in Report | Shows in Console |
+| -- | -- | -- | -- |
+| `step` | Test organization, major actions | Collapsible steps | Yes |
+| `info` | General information, state changes | Yes | Yes |
+| `success` | Successful operations | Yes | Yes |
+| `warning` | Non-critical issues, skipped checks | Yes | Yes |
+| `error` | Failures, exceptions | Yes | Configurable |
+| `debug` | Detailed data, objects | Yes (attached) | Configurable |
 
 ## Comparison with console.log
 
-| console.log             | log Utility               |
-| ----------------------- | ------------------------- |
-| Not in reports          | Appears in reports        |
-| No test steps           | Creates collapsible steps |
-| Manual JSON.stringify() | Auto-formats objects      |
-| No log levels           | 6 log levels              |
-| Lost in CI output       | Preserved in artifacts    |
+| console.log | log Utility |
+| -- | -- |
+| Not in reports | Appears in reports |
+| No test steps | Creates collapsible steps |
+| Manual JSON.stringify() | Auto-formats objects |
+| No log levels | 6 log levels |
+| Lost in CI output | Preserved in artifacts |
 
 ## Related Fragments
 

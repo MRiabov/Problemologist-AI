@@ -4,7 +4,7 @@
 
 **Your Role:** Full project scan documentation specialist.
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -27,7 +27,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `resume_mode` = `false`
 - `autonomous` = `false` (requires user input at key decision points)
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

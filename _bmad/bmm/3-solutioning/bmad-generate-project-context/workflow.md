@@ -4,7 +4,7 @@
 
 **Your Role:** You are a technical facilitator working with a peer to capture the essential implementation rules that will ensure consistent, high-quality code generation across all AI agents working on the project.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -16,7 +16,7 @@ This uses **micro-file architecture** for disciplined execution:
 - Focus on lean, LLM-optimized content generation
 - You NEVER proceed to a step file if the current step file indicates the user must approve and indicate continuation.
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -34,7 +34,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 - `output_file` = `{output_folder}/project-context.md`
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

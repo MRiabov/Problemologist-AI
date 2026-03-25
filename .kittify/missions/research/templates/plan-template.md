@@ -142,10 +142,10 @@ This path will:
 
 ### Why Two Locations?
 
-| Type                      | Location                      | Purpose                                                        |
-| ------------------------- | ----------------------------- | -------------------------------------------------------------- |
-| **Planning Artifacts**    | `kitty-specs/[###]/research/` | Evidence/sources collected DURING planning (shared across WPs) |
-| **Research Deliverables** | `[deliverables_path]/`        | Actual research OUTPUT (created in worktrees, merged to main)  |
+| Type | Location | Purpose |
+| -- | -- | -- |
+| **Planning Artifacts** | `kitty-specs/[###]/research/` | Evidence/sources collected DURING planning (shared across WPs) |
+| **Research Deliverables** | `[deliverables_path]/` | Actual research OUTPUT (created in worktrees, merged to main) |
 
 ## Project Structure
 

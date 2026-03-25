@@ -1,6 +1,6 @@
 ---
 # File references (ONLY variables used in this step)
-nextStepFile: './step-v-04-brief-coverage-validation.md'
+nextStepFile: ./step-v-04-brief-coverage-validation.md
 prdFile: '{prd_file_path}'
 validationReportPath: '{validation_report_path}'
 ---
@@ -66,7 +66,7 @@ Validate PRD meets BMAD information density standards by scanning for conversati
    - Wordy phrases (examples: 'Due to the fact that', 'In the event of', 'For the purpose of')
    - Redundant phrases (examples: 'Future plans', 'Absolutely essential', 'Past history')
 3. Count violations by category with line numbers
-4. Classify severity: Critical (>10 violations), Warning (5-10), Pass (<5)
+4. Classify severity: Critical (>10 violations), Warning (5-10), Pass (\<5)
 
 Return structured findings with counts and examples."
 
@@ -75,6 +75,7 @@ Return structured findings with counts and examples."
 If Task tool unavailable, perform analysis directly:
 
 **Scan for conversational filler patterns:**
+
 - "The system will allow users to..."
 - "It is important to note that..."
 - "In order to"
@@ -83,6 +84,7 @@ If Task tool unavailable, perform analysis directly:
 - Count occurrences and note line numbers
 
 **Scan for wordy phrases:**
+
 - "Due to the fact that" (use "because")
 - "In the event of" (use "if")
 - "At this point in time" (use "now")
@@ -90,6 +92,7 @@ If Task tool unavailable, perform analysis directly:
 - Count occurrences and note line numbers
 
 **Scan for redundant phrases:**
+
 - "Future plans" (just "plans")
 - "Past history" (just "history")
 - "Absolutely essential" (just "essential")
@@ -99,12 +102,14 @@ If Task tool unavailable, perform analysis directly:
 ### 3. Classify Severity
 
 **Calculate total violations:**
+
 - Conversational filler count
 - Wordy phrases count
 - Redundant phrases count
 - Total = sum of all categories
 
 **Determine severity:**
+
 - **Critical:** Total > 10 violations
 - **Warning:** Total 5-10 violations
 - **Pass:** Total < 5 violations
@@ -147,7 +152,7 @@ Severity: {Critical/Warning/Pass}
 
 Without delay, read fully and follow: {nextStepFile} (step-v-04-brief-coverage-validation.md)
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

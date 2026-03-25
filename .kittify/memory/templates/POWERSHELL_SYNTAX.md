@@ -8,17 +8,17 @@ ______________________________________________________________________
 
 ## Quick Reference: Bash vs PowerShell
 
-| Task                     | ❌ Bash (WRONG)            | ✅ PowerShell (CORRECT)            |
-| ------------------------ | -------------------------- | ---------------------------------- |
-| **Command chaining**     | `cmd1 && cmd2`             | `cmd1; cmd2`                       |
-| **Parameter flags**      | `--json --paths-only`      | `-Json -PathsOnly`                 |
-| **Script path**          | `./scripts/bash/script.sh` | `..\scripts\powershell\Script.ps1` |
-| **Environment variable** | `$VAR_NAME`                | `$env:VAR_NAME`                    |
-| **Current directory**    | `pwd`                      | `Get-Location` (or `pwd` alias)    |
-| **List files**           | `ls -la`                   | `Get-ChildItem` (or `ls` alias)    |
-| **File exists check**    | `[ -f file.txt ]`          | `Test-Path file.txt`               |
-| **Directory separator**  | `/path/to/file`            | `\path\to\file`                    |
-| **Home directory**       | `~/projects`               | `$HOME\projects`                   |
+| Task | ❌ Bash (WRONG) | ✅ PowerShell (CORRECT) |
+| -- | -- | -- |
+| **Command chaining** | `cmd1 && cmd2` | `cmd1; cmd2` |
+| **Parameter flags** | `--json --paths-only` | `-Json -PathsOnly` |
+| **Script path** | `./scripts/bash/script.sh` | `..\scripts\powershell\Script.ps1` |
+| **Environment variable** | `$VAR_NAME` | `$env:VAR_NAME` |
+| **Current directory** | `pwd` | `Get-Location` (or `pwd` alias) |
+| **List files** | `ls -la` | `Get-ChildItem` (or `ls` alias) |
+| **File exists check** | `[ -f file.txt ]` | `Test-Path file.txt` |
+| **Directory separator** | `/path/to/file` | `\path\to\file` |
+| **Home directory** | `~/projects` | `$HOME\projects` |
 
 ______________________________________________________________________
 

@@ -21,13 +21,13 @@ ______________________________________________________________________
 
 ## ⚠️ Inconsistencies Found
 
-| Issue                              | Architecture Says                                                                     | Prompts.yaml Says                                                                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Benchmark coder output file**    | `output.py` (line 245)                                                                | `result.py` (line 254)                                                                                                                       |
-| **Engineer script name**           | `script.py` (line 212) or custom                                                      | `solution.py` (line 69)                                                                                                                      |
-| **Refuse plan function**           | `refuse_plan` is a script that sends a request to an endpoint (lines 251, 265-266)    | `refuse_plan(reason)` as a callable (line 96) - **not listed in utils imports**                                                              |
+| Issue | Architecture Says | Prompts.yaml Says |
+| -- | -- | -- |
+| **Benchmark coder output file** | `output.py` (line 245) | `result.py` (line 254) |
+| **Engineer script name** | `script.py` (line 212) or custom | `solution.py` (line 69) |
+| **Refuse plan function** | `refuse_plan` is a script that sends a request to an endpoint (lines 251, 265-266) | `refuse_plan(reason)` as a callable (line 96) - **not listed in utils imports** |
 | **Validate vs validate_and_price** | Benchmark has `validate(Compound)` only (line 762), Engineer has `validate_and_price` | Benchmark coder prompt lists only `validate(compound)` ✓, but **template imports `validate_and_price`** in `common.code_template` (line 374) |
-| **preview_design**                 | Only for Engineer (line 756)                                                          | Listed in Engineer prompt ✓, but benchmark coder doesn't have it (correct)                                                                   |
+| **preview_design** | Only for Engineer (line 756) | Listed in Engineer prompt ✓, but benchmark coder doesn't have it (correct) |
 
 ______________________________________________________________________
 

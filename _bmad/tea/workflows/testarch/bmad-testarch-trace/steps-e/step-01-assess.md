@@ -1,7 +1,7 @@
 ---
-name: 'step-01-assess'
-description: 'Load an existing output for editing'
-nextStepFile: './step-02-apply-edit.md'
+name: step-01-assess
+description: Load an existing output for editing
+nextStepFile: ./step-02-apply-edit.md
 ---
 
 # Step 1: Assess Edit Target

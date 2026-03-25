@@ -264,18 +264,18 @@ ______________________________________________________________________
 
 ## 5. Summary of Highest-Priority Items
 
-| Priority  | Issue                                                                              | Section |
-| --------- | ---------------------------------------------------------------------------------- | ------- |
-| 🔴 High   | `SimulationResult` schema undefined                                                | §2.9    |
-| 🔴 High   | Benchmark→Engineer handover mechanism undefined                                    | §2.5    |
-| 🔴 High   | `capabilities.md` undefined (agents plan with non-existent parts)                  | §2.2    |
-| 🔴 High   | Coordinate system origin undefined (author's own FIXME)                            | §3.2    |
-| 🟡 Medium | Skill safety line threshold contradicts itself (15 vs 5)                           | §1.4    |
-| 🟡 Medium | Script naming inconsistency (`validate_costing_and_price` vs `validate_and_price`) | §1.5    |
-| 🟡 Medium | Review YAML enum has duplicate value                                               | §1.2    |
-| 🟡 Medium | Token compression completely unspecified                                           | §2.3    |
-| 🟡 Medium | Episode lifecycle never defined                                                    | §2.10   |
-| 🟡 Medium | Reviewer image/video access mechanism unspecified                                  | §2.7    |
-| 🟢 Low    | Podman vs Docker inconsistency                                                     | §1.7    |
-| 🟢 Low    | Empty headings and sentence fragments                                              | §4.2    |
-| 🟢 Low    | ~40 inline HTML comment TODOs                                                      | §4.1    |
+| Priority | Issue | Section |
+| -- | -- | -- |
+| 🔴 High | `SimulationResult` schema undefined | §2.9 |
+| 🔴 High | Benchmark→Engineer handover mechanism undefined | §2.5 |
+| 🔴 High | `capabilities.md` undefined (agents plan with non-existent parts) | §2.2 |
+| 🔴 High | Coordinate system origin undefined (author's own FIXME) | §3.2 |
+| 🟡 Medium | Skill safety line threshold contradicts itself (15 vs 5) | §1.4 |
+| 🟡 Medium | Script naming inconsistency (`validate_costing_and_price` vs `validate_and_price`) | §1.5 |
+| 🟡 Medium | Review YAML enum has duplicate value | §1.2 |
+| 🟡 Medium | Token compression completely unspecified | §2.3 |
+| 🟡 Medium | Episode lifecycle never defined | §2.10 |
+| 🟡 Medium | Reviewer image/video access mechanism unspecified | §2.7 |
+| 🟢 Low | Podman vs Docker inconsistency | §1.7 |
+| 🟢 Low | Empty headings and sentence fragments | §4.2 |
+| 🟢 Low | ~40 inline HTML comment TODOs | §4.1 |

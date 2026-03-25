@@ -170,11 +170,11 @@ ______________________________________________________________________
 ## Subtask Index (Reference)
 
 | Subtask ID | Summary | Work Package | Priority | Parallel? |
-| ---------- | ------- | ------------ | -------- | --------- |
-| T001       | Example | WP01         | P0       | No        |
-| T002       | Example | WP01         | P0       | Yes       |
-| T010       | Example | WP03         | P1       | Yes       |
-| T014       | Example | WP03         | P1       | No        |
+| -- | -- | -- | -- | -- |
+| T001 | Example | WP01 | P0 | No |
+| T002 | Example | WP01 | P0 | Yes |
+| T010 | Example | WP03 | P1 | Yes |
+| T014 | Example | WP03 | P1 | No |
 
 ______________________________________________________________________
 

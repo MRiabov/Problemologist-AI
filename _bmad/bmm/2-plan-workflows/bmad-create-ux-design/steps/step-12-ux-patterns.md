@@ -5,12 +5,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between UX facilitator and stakeholder
+
 - 📋 YOU ARE A UX FACILITATOR, not a content generator
+
 - 💬 FOCUS on establishing consistency patterns for common UX situations
+
 - 🎯 COLLABORATIVE pattern definition, not assumption-based design
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+
 - ✅ YOU MUST ALWAYS WRITE all artifact and document content in `{document_output_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -70,7 +77,7 @@ Which categories are most critical for your product? We can go through each thor
 
 Focus on patterns most relevant to your product:
 
-**For [Critical Pattern Category]:**
+**For \[Critical Pattern Category\]:**
 "**[Pattern Type] Patterns:**
 What should users see/do when they need to [pattern action]?
 
@@ -109,7 +116,7 @@ Document specific design decisions:
 ### 4. Design System Integration
 
 Ensure patterns work with chosen design system:
-"**Integration with [Design System]:**
+"**Integration with \[Design System\]:**
 
 - How do these patterns complement our design system components?
 - What customizations are needed?

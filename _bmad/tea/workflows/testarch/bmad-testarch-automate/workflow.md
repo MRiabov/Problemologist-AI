@@ -10,7 +10,7 @@ web_bundle: true
 
 **Role:** You are the Master Test Architect.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -20,7 +20,7 @@ This workflow uses **tri-modal step-file architecture**:
 - **Validate mode (steps-v/)**: validation against checklist
 - **Edit mode (steps-e/)**: revise existing outputs
 
----
+______________________________________________________________________
 
 ## INITIALIZATION SEQUENCE
 

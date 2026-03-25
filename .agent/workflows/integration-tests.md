@@ -90,19 +90,19 @@ This document is the **central LLM reference** for debugging and implementing in
 
 ### Environment variables set by the runner
 
-| Variable                          | Value                                                             | Purpose                     |
-| --------------------------------- | ----------------------------------------------------------------- | --------------------------- |
-| `IS_INTEGRATION_TEST`             | `true`                                                            | Signals integration mode    |
-| `POSTGRES_URL`                    | `postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres` | DB                          |
-| `TEMPORAL_URL`                    | `127.0.0.1:17233`                                                 | Temporal                    |
-| `S3_ENDPOINT`                     | `http://127.0.0.1:19000`                                          | MinIO                       |
-| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `minioadmin`                                                      | MinIO auth                  |
-| `WORKER_URL`                      | `http://127.0.0.1:18001`                                          | Worker Light                |
-| `WORKER_HEAVY_URL`                | `http://127.0.0.1:18002`                                          | Worker Heavy                |
-| `WORKER_SESSIONS_DIR`             | temp dir                                                          | Shared session filesystem   |
-| `GENESIS_FORCE_CPU`               | `1`                                                               | Avoid GPU flakiness         |
-| `DISPLAY`                         | `:99`                                                             | Xvfb for headless rendering |
-| `VITE_API_URL`                    | `http://localhost:18000`                                          | Frontend → Controller       |
+| Variable | Value | Purpose |
+| -- | -- | -- |
+| `IS_INTEGRATION_TEST` | `true` | Signals integration mode |
+| `POSTGRES_URL` | `postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/postgres` | DB |
+| `TEMPORAL_URL` | `127.0.0.1:17233` | Temporal |
+| `S3_ENDPOINT` | `http://127.0.0.1:19000` | MinIO |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `minioadmin` | MinIO auth |
+| `WORKER_URL` | `http://127.0.0.1:18001` | Worker Light |
+| `WORKER_HEAVY_URL` | `http://127.0.0.1:18002` | Worker Heavy |
+| `WORKER_SESSIONS_DIR` | temp dir | Shared session filesystem |
+| `GENESIS_FORCE_CPU` | `1` | Avoid GPU flakiness |
+| `DISPLAY` | `:99` | Xvfb for headless rendering |
+| `VITE_API_URL` | `http://localhost:18000` | Frontend → Controller |
 
 ## 4. Test Organization & Markers
 
@@ -125,12 +125,12 @@ tests/e2e/               # Playwright frontend tests
 
 ### Pytest markers
 
-| Marker                              | Scope                             | CI Gate       |
-| ----------------------------------- | --------------------------------- | ------------- |
-| `@pytest.mark.integration_p0`       | Must pass before merge to `main`  | PR gate       |
-| `@pytest.mark.integration_p1`       | Must pass nightly/pre-release     | Nightly       |
-| `@pytest.mark.integration_p2`       | Extended production-quality suite | Weekly        |
-| `@pytest.mark.integration_frontend` | Playwright browser tests          | With frontend |
+| Marker | Scope | CI Gate |
+| -- | -- | -- |
+| `@pytest.mark.integration_p0` | Must pass before merge to `main` | PR gate |
+| `@pytest.mark.integration_p1` | Must pass nightly/pre-release | Nightly |
+| `@pytest.mark.integration_p2` | Extended production-quality suite | Weekly |
+| `@pytest.mark.integration_frontend` | Playwright browser tests | With frontend |
 
 Default `pyproject.toml` excludes all integration markers from normal `pytest` runs via `addopts`.
 
@@ -243,16 +243,16 @@ Default `pyproject.toml` excludes all integration markers from normal `pytest` r
 
 ### Common failure categories
 
-| Symptom                                    | Likely cause                                             | Fix                                                                     |
-| ------------------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `Connection refused` on :18000/18001/18002 | Server crashed on startup                                | Check respective log; often a missing migration or import error         |
-| `Temporal failed to start`                 | Temporal auto-setup migrations still running             | Increase settle time or check Docker logs                               |
-| Port clash (address already in use)        | Stale processes from previous run                        | `pkill -f "uvicorn.*18000"` etc., or the script does this automatically |
-| `422 Unprocessable Entity`                 | Schema mismatch — request body doesn't match current API | Run `alembic upgrade head`; check if models changed                     |
-| Simulation timeout                         | Genesis/MuJoCo taking too long                           | Check `GENESIS_FORCE_CPU=1` is set; use `smoke_test_mode: True`         |
-| Frontend test flaky / timeout              | Build stale or serve not ready                           | Re-run; check `logs/frontend.log`; ensure `npm run build:fast` succeeds |
-| `ModuleNotFoundError`                      | Missing dependency or wrong venv                         | `source .venv/bin/activate` before running, or use `uv run`             |
-| `alembic` migration error                  | DB schema doesn't match models                           | `uv run alembic upgrade head` or check for conflicting migrations       |
+| Symptom | Likely cause | Fix |
+| -- | -- | -- |
+| `Connection refused` on :18000/18001/18002 | Server crashed on startup | Check respective log; often a missing migration or import error |
+| `Temporal failed to start` | Temporal auto-setup migrations still running | Increase settle time or check Docker logs |
+| Port clash (address already in use) | Stale processes from previous run | `pkill -f "uvicorn.*18000"` etc., or the script does this automatically |
+| `422 Unprocessable Entity` | Schema mismatch — request body doesn't match current API | Run `alembic upgrade head`; check if models changed |
+| Simulation timeout | Genesis/MuJoCo taking too long | Check `GENESIS_FORCE_CPU=1` is set; use `smoke_test_mode: True` |
+| Frontend test flaky / timeout | Build stale or serve not ready | Re-run; check `logs/frontend.log`; ensure `npm run build:fast` succeeds |
+| `ModuleNotFoundError` | Missing dependency or wrong venv | `source .venv/bin/activate` before running, or use `uv run` |
+| `alembic` migration error | DB schema doesn't match models | `uv run alembic upgrade head` or check for conflicting migrations |
 
 ### Debugging tools
 
@@ -263,13 +263,13 @@ Default `pyproject.toml` excludes all integration markers from normal `pytest` r
 
 ## 7. Reference Documents
 
-| Document                                                                                                 | Purpose                                                                             |
-| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| \[specs/integration-tests.md\](file:///specs/integration-tests.md)                                       | Full `INT-xxx` catalog, required assertions, unit-vs-integration map                |
-| \[specs/frontend-specs.md\](file:///specs/frontend-specs.md)                                             | Frontend architecture, UI components, Playwright test targets                       |
-| \[kitty-specs/desired_architecture.md\](file:///kitty-specs/desired_architecture.md)                     | Central source of truth for the entire system                                       |
-| \[scripts/run_integration_tests.sh\](file:///scripts/run_integration_tests.sh)                           | Test runner script (always run through this)                                        |
-| \[docker-compose.test.yaml\](file:///docker-compose.test.yaml)                                           | Infra services definitions                                                          |
+| Document | Purpose |
+| -- | -- |
+| \[specs/integration-tests.md\](file:///specs/integration-tests.md) | Full `INT-xxx` catalog, required assertions, unit-vs-integration map |
+| \[specs/frontend-specs.md\](file:///specs/frontend-specs.md) | Frontend architecture, UI components, Playwright test targets |
+| \[kitty-specs/desired_architecture.md\](file:///kitty-specs/desired_architecture.md) | Central source of truth for the entire system |
+| \[scripts/run_integration_tests.sh\](file:///scripts/run_integration_tests.sh) | Test runner script (always run through this) |
+| \[docker-compose.test.yaml\](file:///docker-compose.test.yaml) | Infra services definitions |
 | \[tests/integration/architecture_p0/conftest.py\](file:///tests/integration/architecture_p0/conftest.py) | Shared fixtures (`controller_client`, `worker_light_client`, `worker_heavy_client`) |
 
 ## 8. Frontend-Specific Testing

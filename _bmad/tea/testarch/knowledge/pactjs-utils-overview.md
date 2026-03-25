@@ -42,18 +42,18 @@ npm install -D @pact-foundation/pact
 
 ## Available Utilities
 
-| Category          | Function                          | Description                                          | Use Case                                                         |
-| ----------------- | --------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| Consumer Helpers  | `createProviderState`             | Builds `[stateName, JsonMap]` tuple from typed input | Consumer tests: `.given(...createProviderState(input))`          |
-| Consumer Helpers  | `toJsonMap`                       | Converts any object to Pact-compatible `JsonMap`     | Explicit type coercion for provider state params                 |
-| Consumer Helpers  | `setJsonContent`                  | Curried request/response JSON callback helper        | PactV4 `.withRequest(...)` and `.willRespondWith(...)` builders  |
-| Consumer Helpers  | `setJsonBody`                     | Body-only alias of `setJsonContent`                  | Body-only `.willRespondWith(...)` responses                      |
-| Provider Verifier | `buildVerifierOptions`            | Assembles complete HTTP `VerifierOptions`            | Provider verification: `new Verifier(buildVerifierOptions(...))` |
-| Provider Verifier | `buildMessageVerifierOptions`     | Assembles message `VerifierOptions`                  | Kafka/async provider verification                                |
-| Provider Verifier | `handlePactBrokerUrlAndSelectors` | Resolves broker URL + selectors from env vars        | Env-aware broker configuration                                   |
-| Provider Verifier | `getProviderVersionTags`          | CI-aware version tag extraction                      | Provider version tagging in CI                                   |
-| Request Filter    | `createRequestFilter`             | Express middleware with pluggable token generator    | Auth injection for provider verification                         |
-| Request Filter    | `noOpRequestFilter`               | Pass-through filter (no-op)                          | Providers without auth requirements                              |
+| Category | Function | Description | Use Case |
+| -- | -- | -- | -- |
+| Consumer Helpers | `createProviderState` | Builds `[stateName, JsonMap]` tuple from typed input | Consumer tests: `.given(...createProviderState(input))` |
+| Consumer Helpers | `toJsonMap` | Converts any object to Pact-compatible `JsonMap` | Explicit type coercion for provider state params |
+| Consumer Helpers | `setJsonContent` | Curried request/response JSON callback helper | PactV4 `.withRequest(...)` and `.willRespondWith(...)` builders |
+| Consumer Helpers | `setJsonBody` | Body-only alias of `setJsonContent` | Body-only `.willRespondWith(...)` responses |
+| Provider Verifier | `buildVerifierOptions` | Assembles complete HTTP `VerifierOptions` | Provider verification: `new Verifier(buildVerifierOptions(...))` |
+| Provider Verifier | `buildMessageVerifierOptions` | Assembles message `VerifierOptions` | Kafka/async provider verification |
+| Provider Verifier | `handlePactBrokerUrlAndSelectors` | Resolves broker URL + selectors from env vars | Env-aware broker configuration |
+| Provider Verifier | `getProviderVersionTags` | CI-aware version tag extraction | Provider version tagging in CI |
+| Request Filter | `createRequestFilter` | Express middleware with pluggable token generator | Auth injection for provider verification |
+| Request Filter | `noOpRequestFilter` | Pass-through filter (no-op) | Providers without auth requirements |
 
 ## Decision Tree: Which Flow?
 

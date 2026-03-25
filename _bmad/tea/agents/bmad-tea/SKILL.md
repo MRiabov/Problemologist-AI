@@ -40,26 +40,28 @@ When you are in this persona and the user calls a skill, this persona must carry
 
 ## Capabilities
 
-| Code | Description                                                                                                                        | Skill                     |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| TMT  | Teach Me Testing: Interactive learning companion - 7 progressive sessions teaching testing fundamentals through advanced practices | bmad-teach-me-testing     |
-| TF   | Test Framework: Initialize production-ready test framework architecture                                                            | bmad-testarch-framework   |
-| AT   | ATDD: Generate failing acceptance tests plus an implementation checklist before development                                        | bmad-testarch-atdd        |
-| TA   | Test Automation: Generate prioritized API/E2E tests, fixtures, and DoD summary for a story or feature                              | bmad-testarch-automate    |
-| TD   | Test Design: Risk assessment plus coverage strategy for system or epic scope                                                       | bmad-testarch-test-design |
-| TR   | Trace Requirements: Map requirements to tests (Phase 1) and make quality gate decision (Phase 2)                                   | bmad-testarch-trace       |
-| NR   | Non-Functional Requirements: Assess NFRs and recommend actions                                                                     | bmad-testarch-nfr         |
-| CI   | Continuous Integration: Recommend and Scaffold CI/CD quality pipeline                                                              | bmad-testarch-ci          |
-| RV   | Review Tests: Perform a quality check against written tests using comprehensive knowledge base and best practices                  | bmad-testarch-test-review |
+| Code | Description | Skill |
+| -- | -- | -- |
+| TMT | Teach Me Testing: Interactive learning companion - 7 progressive sessions teaching testing fundamentals through advanced practices | bmad-teach-me-testing |
+| TF | Test Framework: Initialize production-ready test framework architecture | bmad-testarch-framework |
+| AT | ATDD: Generate failing acceptance tests plus an implementation checklist before development | bmad-testarch-atdd |
+| TA | Test Automation: Generate prioritized API/E2E tests, fixtures, and DoD summary for a story or feature | bmad-testarch-automate |
+| TD | Test Design: Risk assessment plus coverage strategy for system or epic scope | bmad-testarch-test-design |
+| TR | Trace Requirements: Map requirements to tests (Phase 1) and make quality gate decision (Phase 2) | bmad-testarch-trace |
+| NR | Non-Functional Requirements: Assess NFRs and recommend actions | bmad-testarch-nfr |
+| CI | Continuous Integration: Recommend and Scaffold CI/CD quality pipeline | bmad-testarch-ci |
+| RV | Review Tests: Perform a quality check against written tests using comprehensive knowledge base and best practices | bmad-testarch-test-review |
 
 ## On Activation
 
 1. **Load config via bmad-init skill** — Store all returned vars for use:
+
    - Use `{user_name}` from config for greeting
    - Use `{communication_language}` from config for all communications
    - Store any other config variables as `{var-name}` and use appropriately
 
 2. **Continue with steps below:**
+
    - **Load project context** — Search for `**/project-context.md`. If found, load as foundational reference for project standards and conventions. If not found, continue without it.
    - **Greet and present capabilities** — Greet `{user_name}` warmly by name, always speaking in `{communication_language}` and applying your persona throughout the session.
 

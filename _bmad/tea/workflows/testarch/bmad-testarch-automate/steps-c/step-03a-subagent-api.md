@@ -1,8 +1,8 @@
 ---
-name: 'step-03a-subagent-api'
+name: step-03a-subagent-api
 description: 'Subagent: Generate API tests only'
 subagent: true
-outputFile: '/tmp/tea-automate-api-tests-{{timestamp}}.json'
+outputFile: /tmp/tea-automate-api-tests-{{timestamp}}.json
 ---
 
 # Subagent 3A: Generate API Tests
@@ -22,7 +22,7 @@ This is an **isolated subagent** running in parallel with E2E test generation.
 
 **If `use_pactjs_utils` is enabled:** Also generate consumer contract tests and provider verification tests alongside API tests. Use the loaded pactjs-utils fragments (`pactjs-utils-overview`, `pactjs-utils-consumer-helpers`, `pactjs-utils-provider-verifier`, `pactjs-utils-request-filter`) for patterns. If `pact_mcp` is `"mcp"`, use SmartBear MCP tools (Fetch Provider States, Generate Pact Tests) to inform test generation.
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -34,7 +34,7 @@ This is an **isolated subagent** running in parallel with E2E test generation.
 - ❌ Do NOT run tests (that's step 4)
 - ❌ Do NOT generate fixtures yet (that's step 3C aggregation)
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -119,22 +119,26 @@ The seven points to verify for each interaction:
 **Scrutiny Sequence** (for each endpoint in the coverage plan):
 
 1. **READ provider route handler and/or OpenAPI spec**: Find the handler file from `subagentContext.config.provider_endpoint_map` or by scanning the provider codebase. Also check for OpenAPI/Swagger spec files. Extract:
+
    - Exact status codes returned (`res.status(201)` / OpenAPI `responses` keys)
    - Response construction (`res.json({ data: ... })` / OpenAPI `schema`)
    - Error handling paths (what status codes for what conditions)
 
 2. **READ provider type/model/DTO definitions**: Find the response type referenced by the handler or OpenAPI `$ref` schemas. Extract:
+
    - Exact field names (`transaction_id` not `transactionId`)
    - Field types (`string` ID vs `number` ID / OpenAPI `type` + `format`)
    - Optional vs required fields (OpenAPI `required` array)
    - Nested object structures (OpenAPI `$ref`, `allOf`, `oneOf`)
 
 3. **READ provider validation schemas**: Find Joi/Zod/class-validator schemas or OpenAPI request body `schema.required`. Extract:
+
    - Required request fields and headers
    - Enum/union type allowed values (`"active" | "inactive"` / OpenAPI `enum`)
    - Request body constraints
 
 4. **Cross-reference findings** against consumer expectations:
+
    - Does the consumer expect the same field names the provider sends?
    - Does the consumer expect the same status codes the provider returns?
    - Does the consumer expect the same nesting the provider produces?
@@ -171,7 +175,7 @@ Identify fixtures needed for API tests:
 
 **Do NOT create fixtures yet** - just track what's needed for aggregation step.
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -227,7 +231,7 @@ Write JSON to temp file: `/tmp/tea-automate-api-tests-{{timestamp}}.json`
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -240,7 +244,7 @@ Subagent completes when:
 
 **Subagent terminates here.** Parent workflow will read output and proceed to aggregation.
 
----
+______________________________________________________________________
 
 ## 🚨 SUBAGENT SUCCESS METRICS
 

@@ -1,6 +1,6 @@
 ---
 # File references (ONLY variables used in this step)
-nextStepFile: './step-v-12-completeness-validation.md'
+nextStepFile: ./step-v-12-completeness-validation.md
 prdFile: '{prd_file_path}'
 validationReportPath: '{validation_report_path}'
 ---
@@ -69,6 +69,7 @@ Invoke the `bmad-advanced-elicitation` skill
 **Evaluate the PRD from these perspectives:**
 
 **1. Document Flow & Coherence:**
+
 - Read entire PRD
 - Evaluate narrative flow - does it tell a cohesive story?
 - Check transitions between sections
@@ -78,18 +79,21 @@ Invoke the `bmad-advanced-elicitation` skill
 **2. Dual Audience Effectiveness:**
 
 **For Humans:**
+
 - Executive-friendly: Can executives understand vision and goals quickly?
 - Developer clarity: Do developers have clear requirements to build from?
 - Designer clarity: Do designers understand user needs and flows?
 - Stakeholder decision-making: Can stakeholders make informed decisions?
 
 **For LLMs:**
+
 - Machine-readable structure: Is the PRD structured for LLM consumption?
 - UX readiness: Can an LLM generate UX designs from this?
 - Architecture readiness: Can an LLM generate architecture from this?
 - Epic/Story readiness: Can an LLM break down into epics and stories?
 
 **3. BMAD PRD Principles Compliance:**
+
 - Information density: Every sentence carries weight?
 - Measurability: Requirements testable?
 - Traceability: Requirements trace to sources?
@@ -100,6 +104,7 @@ Invoke the `bmad-advanced-elicitation` skill
 
 **4. Overall Quality Rating:**
 Rate the PRD on 5-point scale:
+
 - Excellent (5/5): Exemplary, ready for production use
 - Good (4/5): Strong with minor improvements needed
 - Adequate (3/5): Acceptable but needs refinement
@@ -112,6 +117,7 @@ Identify the 3 most impactful improvements to make this a great PRD
 Return comprehensive assessment with all perspectives, rating, and top 3 improvements."
 
 **Graceful degradation (if no Task tool or Advanced Elicitation unavailable):**
+
 - Perform holistic assessment directly in current context
 - Read complete PRD
 - Evaluate document flow, coherence, transitions
@@ -125,22 +131,26 @@ Return comprehensive assessment with all perspectives, rating, and top 3 improve
 **Compile findings from multi-perspective evaluation:**
 
 **Document Flow & Coherence:**
+
 - Overall assessment: [Excellent/Good/Adequate/Needs Work/Problematic]
 - Key strengths: [list]
 - Key weaknesses: [list]
 
 **Dual Audience Effectiveness:**
+
 - For Humans: [assessment]
 - For LLMs: [assessment]
 - Overall dual audience score: [1-5]
 
 **BMAD Principles Compliance:**
+
 - Principles met: [count]/7
 - Principles with issues: [list]
 
 **Overall Quality Rating:** [1-5 with label]
 
 **Top 3 Improvements:**
+
 1. [Improvement 1]
 2. [Improvement 2]
 3. [Improvement 3]
@@ -231,7 +241,7 @@ Overall Rating: {rating}/5 - {label}
 
 Without delay, read fully and follow: {nextStepFile} (step-v-12-completeness-validation.md)
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

@@ -3,7 +3,7 @@
 **Workflow:** `testarch-nfr`
 **Purpose:** Ensure comprehensive and evidence-based NFR assessment with actionable recommendations
 
----
+______________________________________________________________________
 
 Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI workflows.
 
@@ -15,7 +15,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Evidence directories exist and are accessible (`test_results_dir`, `metrics_dir`, `logs_dir`)
 - [ ] Knowledge base is loaded (nfr-criteria, ci-burn-in, test-quality)
 
----
+______________________________________________________________________
 
 ## Context Loading
 
@@ -28,7 +28,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
   - [ ] `test-quality.md`
   - [ ] `playwright-config.md` (if using Playwright)
 
----
+______________________________________________________________________
 
 ## NFR Categories and Thresholds
 
@@ -68,7 +68,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Custom NFR category 2: Thresholds defined or marked as UNKNOWN
 - [ ] Custom NFR category 3: Thresholds defined or marked as UNKNOWN
 
----
+______________________________________________________________________
 
 ## Evidence Gathering
 
@@ -108,7 +108,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Test review report collected (from test-review workflow, if available)
 - [ ] Git metrics collected (code churn, commit frequency, etc.)
 
----
+______________________________________________________________________
 
 ## NFR Assessment with Deterministic Rules
 
@@ -158,7 +158,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Custom NFR 2 assessed against threshold with justification
 - [ ] Custom NFR 3 assessed against threshold with justification
 
----
+______________________________________________________________________
 
 ## Status Classification Validation
 
@@ -189,7 +189,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] No thresholds were guessed or inferred
 - [ ] All UNKNOWN thresholds result in CONCERNS status
 
----
+______________________________________________________________________
 
 ## Quick Wins and Recommended Actions
 
@@ -221,7 +221,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Validation gates suggested for security
 - [ ] Smoke tests suggested for maintainability
 
----
+______________________________________________________________________
 
 ## Deliverables Generated
 
@@ -262,7 +262,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Overall status and critical issues included
 - [ ] Gate status included
 
----
+______________________________________________________________________
 
 ## Quality Assurance
 
@@ -291,7 +291,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Effort estimates are provided (hours, days)
 - [ ] Owners are suggested (dev, ops, security)
 
----
+______________________________________________________________________
 
 ## Integration with BMad Artifacts
 
@@ -316,7 +316,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Unstated requirements checked
 - [ ] Product-level SLAs referenced
 
----
+______________________________________________________________________
 
 ## Quality Gates Validation
 
@@ -344,7 +344,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] No blockers or concerns exist
 - [ ] Ready for release confirmed
 
----
+______________________________________________________________________
 
 ## Non-Prescriptive Validation
 
@@ -354,7 +354,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Teams can extend with custom NFR categories
 - [ ] Integration with external tools supported (New Relic, Datadog, SonarQube, JIRA)
 
----
+______________________________________________________________________
 
 ## Documentation and Communication
 
@@ -366,7 +366,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Overall status is prominent and unambiguous
 - [ ] Executive summary provides quick understanding
 
----
+______________________________________________________________________
 
 ## Final Validation
 
@@ -382,7 +382,7 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 - [ ] Evidence checklist generated (if enabled)
 - [ ] Workflow completed successfully
 
----
+______________________________________________________________________
 
 ## Sign-Off
 
@@ -402,6 +402,6 @@ Note: `nfr-assess` evaluates existing evidence; it does not run tests or CI work
 **High Priority Issues:** {COUNT}
 **Concerns:** {COUNT}
 
----
+______________________________________________________________________
 
 <!-- Powered by BMAD-CORE™ -->

@@ -31,7 +31,7 @@ When you are in this persona and the user calls a skill, this persona must carry
 ## Capabilities
 
 | Code | Description | Skill |
-|------|-------------|-------|
+| -- | -- | -- |
 | CP | Expert led facilitation to produce your Product Requirements Document | bmad-create-prd |
 | VP | Validate a PRD is comprehensive, lean, well organized and cohesive | bmad-validate-prd |
 | EP | Update an existing Product Requirements Document | bmad-edit-prd |
@@ -42,11 +42,13 @@ When you are in this persona and the user calls a skill, this persona must carry
 ## On Activation
 
 1. **Load config via bmad-init skill** — Store all returned vars for use:
+
    - Use `{user_name}` from config for greeting
    - Use `{communication_language}` from config for all communications
    - Store any other config variables as `{var-name}` and use appropriately
 
 2. **Continue with steps below:**
+
    - **Load project context** — Search for `**/project-context.md`. If found, load as foundational reference for project standards and conventions. If not found, continue without it.
    - **Greet and present capabilities** — Greet `{user_name}` warmly by name, always speaking in `{communication_language}` and applying your persona throughout the session.
 

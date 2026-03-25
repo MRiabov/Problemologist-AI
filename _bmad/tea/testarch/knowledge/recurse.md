@@ -329,31 +329,31 @@ test('end-to-end polling', async ({ apiRequest, recurse }) => {
 
 ### RecurseOptions
 
-| Option     | Type               | Default     | Description                          |
-| ---------- | ------------------ | ----------- | ------------------------------------ |
-| `timeout`  | `number`           | `30000`     | Maximum time to wait (ms)            |
-| `interval` | `number`           | `1000`      | Time between polls (ms)              |
-| `log`      | `string`           | `undefined` | Message logged on each poll          |
-| `error`    | `string`           | `undefined` | Custom error message for timeout     |
-| `post`     | `(result: T) => R` | `undefined` | Callback after successful poll       |
-| `delay`    | `number`           | `0`         | Initial delay before first poll (ms) |
+| Option | Type | Default | Description |
+| -- | -- | -- | -- |
+| `timeout` | `number` | `30000` | Maximum time to wait (ms) |
+| `interval` | `number` | `1000` | Time between polls (ms) |
+| `log` | `string` | `undefined` | Message logged on each poll |
+| `error` | `string` | `undefined` | Custom error message for timeout |
+| `post` | `(result: T) => R` | `undefined` | Callback after successful poll |
+| `delay` | `number` | `0` | Initial delay before first poll (ms) |
 
 ### Error Types
 
-| Error Type              | When Thrown                             | Properties                               |
-| ----------------------- | --------------------------------------- | ---------------------------------------- |
-| `RecurseTimeoutError`   | Predicate never passed within timeout   | `lastCommandValue`, `lastPredicateError` |
-| `RecurseCommandError`   | Command function threw an error         | `cause` (original error)                 |
-| `RecursePredicateError` | Predicate threw (not assertion failure) | `cause` (original error)                 |
+| Error Type | When Thrown | Properties |
+| -- | -- | -- |
+| `RecurseTimeoutError` | Predicate never passed within timeout | `lastCommandValue`, `lastPredicateError` |
+| `RecurseCommandError` | Command function threw an error | `cause` (original error) |
+| `RecursePredicateError` | Predicate threw (not assertion failure) | `cause` (original error) |
 
 ## Comparison with Vanilla Playwright
 
-| Vanilla Playwright                                                | recurse Utility                                                           |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Vanilla Playwright | recurse Utility |
+| -- | -- |
 | `await expect.poll(() => { ... }, { timeout: 30000 }).toBe(true)` | `await recurse(() => { ... }, (val) => val === true, { timeout: 30000 })` |
-| No logging                                                        | Built-in log option                                                       |
-| Generic timeout errors                                            | Categorized errors (timeout/command/predicate)                            |
-| No post-poll hooks                                                | `post` callback support                                                   |
+| No logging | Built-in log option |
+| Generic timeout errors | Categorized errors (timeout/command/predicate) |
+| No post-poll hooks | `post` callback support |
 
 ## When to Use
 

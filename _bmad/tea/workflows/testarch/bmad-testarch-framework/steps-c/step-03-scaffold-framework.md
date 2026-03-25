@@ -1,7 +1,7 @@
 ---
-name: 'step-03-scaffold-framework'
-description: 'Create framework scaffold with adaptive orchestration (agent-team, subagent, or sequential)'
-nextStepFile: './step-04-docs-and-scripts.md'
+name: step-03-scaffold-framework
+description: Create framework scaffold with adaptive orchestration (agent-team, subagent, or sequential)
+nextStepFile: ./step-04-docs-and-scripts.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 outputFile: '{test_artifacts}/framework-setup-progress.md'
 ---
@@ -20,7 +20,7 @@ Generate the test directory structure, configuration files, fixtures, factories,
 - ✅ Resolve execution mode from explicit user request first, then config
 - ✅ Apply fallback rules deterministically when requested mode is unsupported
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -146,7 +146,7 @@ Create Node.js/TypeScript contract testing directory structure per `pact-consume
 - `.github/actions/detect-breaking-change/` — PR checkbox-driven breaking change detection
 - `.github/workflows/contract-test-consumer.yml` — consumer CDC CI workflow
 
----
+______________________________________________________________________
 
 ## 2. Generate Framework Config
 
@@ -172,7 +172,7 @@ Create the idiomatic test config for the detected framework:
 - **xUnit**: `.csproj` test project with xUnit and coverlet dependencies
 - **RSpec**: `.rspec` config file with `spec_helper.rb` and `rails_helper.rb` (if Rails)
 
----
+______________________________________________________________________
 
 ## 3. Environment Setup
 
@@ -194,7 +194,7 @@ Create the idiomatic version file for the detected language:
 - **C#/.NET**: `global.json` with SDK version if not already present
 - **Ruby**: `.ruby-version` with current stable Ruby
 
----
+______________________________________________________________________
 
 ## 4. Fixtures & Factories
 
@@ -230,7 +230,7 @@ Implement:
 - Auto-cleanup hooks
 - Faker-based data factories with overrides
 
----
+______________________________________________________________________
 
 ## 5. Sample Tests & Helpers
 
@@ -272,7 +272,7 @@ Create Node.js/TypeScript contract test samples per `pact-consumer-framework-set
 - **package.json scripts**: `test:pact:consumer`, `publish:pact`, `can:i:deploy:consumer`, `record:consumer:deployment`
 - **.gitignore**: Add `/pacts/` and `pact-logs/`
 
----
+______________________________________________________________________
 
 ### 6. Orchestration Notes for This Step
 
@@ -305,6 +305,7 @@ Regardless of mode, outputs must be identical in structure and quality.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-03-scaffold-framework'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-03-scaffold-framework'`
   - Set `lastSaved: '{date}'`

@@ -18,19 +18,23 @@ The user is the domain expert. You bring structured thinking, facilitation, mark
 Check activation context immediately:
 
 1. **Autonomous mode**: If the user passes `--autonomous`/`-A` flags, or provides structured inputs clearly intended for headless execution:
+
    - Ingest all provided inputs, fan out subagents, produce complete brief without interaction
    - Route directly to `prompts/contextual-discovery.md` with `{mode}=autonomous`
 
 2. **Yolo mode**: If the user passes `--yolo` or says "just draft it" / "draft the whole thing":
+
    - Ingest everything, draft complete brief upfront, then walk user through refinement
    - Route to Stage 1 below with `{mode}=yolo`
 
 3. **Guided mode** (default): Conversational discovery with soft gates
+
    - Route to Stage 1 below with `{mode}=guided`
 
 ## On Activation
 
 1. Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve::
+
    - Use `{user_name}` for greeting
    - Use `{communication_language}` for all communications
    - Use `{document_output_language}` for output documents
@@ -50,17 +54,20 @@ Check activation context immediately:
 **Multi-idea disambiguation:** If the user presents multiple competing ideas or directions, help them pick one focus for this brief session. Note that others can be briefed separately.
 
 **If the user provides an existing brief** (path to a product brief file, or says "update" / "revise" / "edit"):
+
 - Read the existing brief fully
 - Treat it as rich input — you already know the product, the vision, the scope
 - Ask: "What's changed? What do you want to update or improve?"
 - The rest of the workflow proceeds normally — contextual discovery may pull in new research, elicitation focuses on gaps or changes, and draft-and-review produces an updated version
 
 **If the user already provided context** when launching the skill (description, docs, brain dump):
+
 - Acknowledge what you received — but **DO NOT read document files yet**. Note their paths for Stage 2's subagents to scan contextually. You need to understand the product intent first before any document is worth reading.
 - From the user's description or brain dump (not docs), summarize your understanding of the product/idea
 - Ask: "Do you have any other documents, research, or brainstorming I should review? Anything else to add before I dig in?"
 
 **If the user provided nothing beyond invoking the skill:**
+
 - Ask what their product or project idea is about
 - Ask if they have any existing documents, research, brainstorming reports, or other materials
 - Let them brain dump — capture everything
@@ -74,7 +81,7 @@ Check activation context immediately:
 ## Stages
 
 | # | Stage | Purpose | Prompt |
-|---|-------|---------|--------|
+| -- | -- | -- | -- |
 | 1 | Understand Intent | Know what the brief is about | SKILL.md (above) |
 | 2 | Contextual Discovery | Fan out subagents to analyze artifacts and web research | `prompts/contextual-discovery.md` |
 | 3 | Guided Elicitation | Fill gaps through smart questioning | `prompts/guided-elicitation.md` |
@@ -84,4 +91,5 @@ Check activation context immediately:
 ## External Skills
 
 This workflow uses:
+
 - `bmad-init` — Configuration loading (module: bmm)

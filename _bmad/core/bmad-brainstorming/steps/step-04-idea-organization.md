@@ -75,9 +75,9 @@ _Focus: [Description of what this theme covers]_
 
 **Additional Categories:**
 
-- **[Cross-cutting Ideas]:** [Ideas that span multiple themes]
-- **[Breakthrough Concepts]:** [Particularly innovative or surprising ideas]
-- **[Implementation-Ready Ideas]:** [Ideas that seem immediately actionable]"
+- **\[Cross-cutting Ideas\]:** [Ideas that span multiple themes]
+- **\[Breakthrough Concepts\]:** [Particularly innovative or surprising ideas]
+- **\[Implementation-Ready Ideas\]:** [Ideas that seem immediately actionable]"
 
 ### 3. Present Organized Idea Themes
 
@@ -87,26 +87,26 @@ Display systematically organized ideas for user review:
 
 "**Your Brainstorming Results - Organized by Theme:**
 
-**[Theme 1]: [Theme Description]**
+**\[Theme 1\]: [Theme Description]**
 
-- **[Idea 1]:** [Development potential and unique insight]
-- **[Idea 2]:** [Development potential and unique insight]
-- **[Idea 3]:** [Development potential and unique insight]
+- **\[Idea 1\]:** [Development potential and unique insight]
+- **\[Idea 2\]:** [Development potential and unique insight]
+- **\[Idea 3\]:** [Development potential and unique insight]
 
-**[Theme 2]: [Theme Description]**
+**\[Theme 2\]: [Theme Description]**
 
-- **[Idea 1]:** [Development potential and unique insight]
-- **[Idea 2]:** [Development potential and unique insight]
+- **\[Idea 1\]:** [Development potential and unique insight]
+- **\[Idea 2\]:** [Development potential and unique insight]
 
-**[Theme 3]: [Theme Description]**
+**\[Theme 3\]: [Theme Description]**
 
-- **[Idea 1]:** [Development potential and unique insight]
-- **[Idea 2]:** [Development potential and unique insight]
+- **\[Idea 1\]:** [Development potential and unique insight]
+- **\[Idea 2\]:** [Development potential and unique insight]
 
 **Breakthrough Concepts:**
 
-- **[Innovative Idea]:** [Why this represents a significant breakthrough]
-- **[Unexpected Connection]:** [How this creates new possibilities]
+- **\[Innovative Idea\]:** [Why this represents a significant breakthrough]
+- **\[Unexpected Connection\]:** [How this creates new possibilities]
 
 **Which themes or specific ideas stand out to you as most valuable?**"
 
@@ -150,7 +150,7 @@ Create concrete next steps for prioritized ideas:
 - **Potential Obstacles:** What challenges might arise?
 - **Success Metrics:** How will you know it's working?
 
-**Idea [Priority Number]: [Idea Name]**
+**Idea \[Priority Number\]: [Idea Name]**
 **Why This Matters:** [Connection to user's goals]
 **Next Steps:**
 
@@ -223,7 +223,7 @@ Provide final session wrap-up and forward guidance:
 
 - **[Number]** breakthrough ideas generated for **[session_topic]**
 - **[Number]** organized themes identifying key opportunity areas
-- **[Number prioritized concepts** with concrete action plans
+- **\[Number prioritized concepts** with concrete action plans
 - **Clear pathway** from creative ideas to practical implementation
 
 **Key Session Insights:**

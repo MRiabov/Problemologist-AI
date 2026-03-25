@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: 'testarch-trace'
+workflowType: testarch-trace
 inputDocuments: []
 ---
 
@@ -12,7 +12,7 @@ inputDocuments: []
 **Date:** {DATE}
 **Evaluator:** {user_name or TEA Agent}
 
----
+______________________________________________________________________
 
 Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*automate` to create coverage.
 
@@ -20,13 +20,13 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 ### Coverage Summary
 
-| Priority  | Total Criteria | FULL Coverage | Coverage % | Status       |
-| --------- | -------------- | ------------- | ---------- | ------------ |
-| P0        | {P0_TOTAL}     | {P0_FULL}     | {P0_PCT}%  | {P0_STATUS}  |
-| P1        | {P1_TOTAL}     | {P1_FULL}     | {P1_PCT}%  | {P1_STATUS}  |
-| P2        | {P2_TOTAL}     | {P2_FULL}     | {P2_PCT}%  | {P2_STATUS}  |
-| P3        | {P3_TOTAL}     | {P3_FULL}     | {P3_PCT}%  | {P3_STATUS}  |
-| **Total** | **{TOTAL}**    | **{FULL}**    | **{PCT}%** | **{STATUS}** |
+| Priority | Total Criteria | FULL Coverage | Coverage % | Status |
+| -- | -- | -- | -- | -- |
+| P0 | {P0_TOTAL} | {P0_FULL} | {P0_PCT}% | {P0_STATUS} |
+| P1 | {P1_TOTAL} | {P1_FULL} | {P1_PCT}% | {P1_STATUS} |
+| P2 | {P2_TOTAL} | {P2_FULL} | {P2_PCT}% | {P2_STATUS} |
+| P3 | {P3_TOTAL} | {P3_FULL} | {P3_PCT}% | {P3_STATUS} |
+| **Total** | **{TOTAL}** | **{FULL}** | **{PCT}%** | **{STATUS}** |
 
 **Legend:**
 
@@ -34,14 +34,16 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 - ⚠️ WARN - Coverage below threshold but not critical
 - ❌ FAIL - Coverage below minimum threshold (blocker)
 
----
+______________________________________________________________________
 
 ### Detailed Mapping
 
 #### {CRITERION_ID}: {CRITERION_DESCRIPTION} ({PRIORITY})
 
 - **Coverage:** {COVERAGE_STATUS} {STATUS_ICON}
+
 - **Tests:**
+
   - `{TEST_ID}` - {TEST_FILE}:{LINE}
     - **Given:** {GIVEN}
     - **When:** {WHEN}
@@ -52,12 +54,13 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
     - **Then:** {THEN_2}
 
 - **Gaps:** (if PARTIAL or UNIT-ONLY or INTEGRATION-ONLY)
+
   - Missing: {MISSING_SCENARIO_1}
   - Missing: {MISSING_SCENARIO_2}
 
 - **Recommendation:** {RECOMMENDATION_TEXT}
 
----
+______________________________________________________________________
 
 #### Example: AC-1: User can login with email and password (P0)
 
@@ -72,18 +75,21 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
     - **When:** validateCredentials is called
     - **Then:** Returns user object
 
----
+______________________________________________________________________
 
 #### Example: AC-3: User can reset password via email (P1)
 
 - **Coverage:** PARTIAL ⚠️
+
 - **Tests:**
+
   - `1.3-E2E-003` - tests/e2e/auth.spec.ts:44
     - **Given:** User requests password reset
     - **When:** User clicks reset link in email
     - **Then:** User can set new password
 
 - **Gaps:**
+
   - Missing: Email delivery validation
   - Missing: Expired token handling (error path)
   - Missing: Invalid token handling (security test)
@@ -91,7 +97,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 - **Recommendation:** Add `1.3-API-001` for email service integration testing and `1.3-UNIT-003` for token generation logic. Add `1.3-E2E-004` for error path validation (expired/invalid tokens).
 
----
+______________________________________________________________________
 
 ### Gap Analysis
 
@@ -105,7 +111,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
    - Recommend: {RECOMMENDED_TEST_ID} ({RECOMMENDED_TEST_LEVEL})
    - Impact: {IMPACT_DESCRIPTION}
 
----
+______________________________________________________________________
 
 #### High Priority Gaps (PR BLOCKER) ⚠️
 
@@ -117,7 +123,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
    - Recommend: {RECOMMENDED_TEST_ID} ({RECOMMENDED_TEST_LEVEL})
    - Impact: {IMPACT_DESCRIPTION}
 
----
+______________________________________________________________________
 
 #### Medium Priority Gaps (Nightly) ⚠️
 
@@ -127,7 +133,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
    - Current Coverage: {COVERAGE_STATUS}
    - Recommend: {RECOMMENDED_TEST_ID} ({RECOMMENDED_TEST_LEVEL})
 
----
+______________________________________________________________________
 
 #### Low Priority Gaps (Optional) ℹ️
 
@@ -136,7 +142,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 1. **{CRITERION_ID}: {CRITERION_DESCRIPTION}** (P3)
    - Current Coverage: {COVERAGE_STATUS}
 
----
+______________________________________________________________________
 
 ### Coverage Heuristics Findings
 
@@ -161,7 +167,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
   - {happy_path_gap_1}
   - {happy_path_gap_2}
 
----
+______________________________________________________________________
 
 ### Quality Assessment
 
@@ -179,7 +185,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 - `{TEST_ID}` - {ISSUE_DESCRIPTION} - {REMEDIATION}
 
----
+______________________________________________________________________
 
 #### Example Quality Issues
 
@@ -192,13 +198,13 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 - `1.3-E2E-002` - Missing Given-When-Then structure - Refactor describe block to use BDD format
 
----
+______________________________________________________________________
 
 #### Tests Passing Quality Gates
 
 **{PASSING_TEST_COUNT}/{TOTAL_TEST_COUNT} tests ({PASSING_PCT}%) meet all quality criteria** ✅
 
----
+______________________________________________________________________
 
 ### Duplicate Coverage Analysis
 
@@ -211,19 +217,19 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 - {CRITERION_ID}: Same validation at E2E and Component level
   - Recommendation: Remove {TEST_ID} or consolidate with {OTHER_TEST_ID}
 
----
+______________________________________________________________________
 
 ### Coverage by Test Level
 
-| Test Level | Tests             | Criteria Covered     | Coverage %       |
-| ---------- | ----------------- | -------------------- | ---------------- |
-| E2E        | {E2E_COUNT}       | {E2E_CRITERIA}       | {E2E_PCT}%       |
-| API        | {API_COUNT}       | {API_CRITERIA}       | {API_PCT}%       |
-| Component  | {COMP_COUNT}      | {COMP_CRITERIA}      | {COMP_PCT}%      |
-| Unit       | {UNIT_COUNT}      | {UNIT_CRITERIA}      | {UNIT_PCT}%      |
-| **Total**  | **{TOTAL_TESTS}** | **{TOTAL_CRITERIA}** | **{TOTAL_PCT}%** |
+| Test Level | Tests | Criteria Covered | Coverage % |
+| -- | -- | -- | -- |
+| E2E | {E2E_COUNT} | {E2E_CRITERIA} | {E2E_PCT}% |
+| API | {API_COUNT} | {API_CRITERIA} | {API_PCT}% |
+| Component | {COMP_COUNT} | {COMP_CRITERIA} | {COMP_PCT}% |
+| Unit | {UNIT_COUNT} | {UNIT_CRITERIA} | {UNIT_PCT}% |
+| **Total** | **{TOTAL_TESTS}** | **{TOTAL_CRITERIA}** | **{TOTAL_PCT}%** |
 
----
+______________________________________________________________________
 
 ### Traceability Recommendations
 
@@ -241,32 +247,32 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 1. **{ACTION_1}** - {DESCRIPTION}
 
----
+______________________________________________________________________
 
 #### Example Recommendations
 
 **Immediate Actions (Before PR Merge)**
 
 1. **Add P1 Password Reset Tests** - Implement `1.3-API-001` for email service integration and `1.3-E2E-004` for error path validation. P1 coverage currently at 80%, target is 90%.
-2. **Optimize Slow E2E Test** - Refactor `1.3-E2E-001` to use faster fixture setup. Currently 145s, target is <90s.
+2. **Optimize Slow E2E Test** - Refactor `1.3-E2E-001` to use faster fixture setup. Currently 145s, target is \<90s.
 
 **Short-term Actions (This Milestone)**
 
 1. **Enhance P2 Coverage** - Add E2E validation for session timeout (`1.3-E2E-005`). Currently UNIT-ONLY coverage.
-2. **Split Large Test File** - Break `1.3-UNIT-005` (320 lines) into multiple focused test files (<300 lines each).
+2. **Split Large Test File** - Break `1.3-UNIT-005` (320 lines) into multiple focused test files (\<300 lines each).
 
 **Long-term Actions (Backlog)**
 
 1. **Enrich P3 Coverage** - Add tests for edge cases in P3 criteria if time permits.
 
----
+______________________________________________________________________
 
 ## PHASE 2: QUALITY GATE DECISION
 
 **Gate Type:** {story | epic | release | hotfix}
 **Decision Mode:** {deterministic | manual}
 
----
+______________________________________________________________________
 
 ### Evidence Summary
 
@@ -289,7 +295,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 **Test Results Source**: {CI_run_id | test_report_url | local_run}
 
----
+______________________________________________________________________
 
 #### Coverage Summary (from Phase 1)
 
@@ -308,7 +314,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 **Coverage Source**: {coverage_report_url | coverage_file_path}
 
----
+______________________________________________________________________
 
 #### Non-Functional Requirements (NFRs)
 
@@ -331,7 +337,7 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 **NFR Source**: {nfr_assessment_file_path | not_assessed}
 
----
+______________________________________________________________________
 
 #### Flakiness Validation
 
@@ -348,49 +354,49 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 **Burn-in Source**: {CI_burn_in_run_id | not_available}
 
----
+______________________________________________________________________
 
 ### Decision Criteria Evaluation
 
 #### P0 Criteria (Must ALL Pass)
 
-| Criterion             | Threshold | Actual                    | Status   |
-| --------------------- | --------- | ------------------------- | -------- | -------- |
-| P0 Coverage           | 100%      | {p0_coverage}%            | {✅ PASS | ❌ FAIL} |
-| P0 Test Pass Rate     | 100%      | {p0_pass_rate}%           | {✅ PASS | ❌ FAIL} |
-| Security Issues       | 0         | {security_issue_count}    | {✅ PASS | ❌ FAIL} |
-| Critical NFR Failures | 0         | {critical_nfr_fail_count} | {✅ PASS | ❌ FAIL} |
-| Flaky Tests           | 0         | {flaky_test_count}        | {✅ PASS | ❌ FAIL} |
+| Criterion | Threshold | Actual | Status |
+| \--------------------- | --------- | ------------------------- | -------- | -------- |
+| P0 Coverage | 100% | {p0_coverage}% | {✅ PASS | ❌ FAIL} |
+| P0 Test Pass Rate | 100% | {p0_pass_rate}% | {✅ PASS | ❌ FAIL} |
+| Security Issues | 0 | {security_issue_count} | {✅ PASS | ❌ FAIL} |
+| Critical NFR Failures | 0 | {critical_nfr_fail_count} | {✅ PASS | ❌ FAIL} |
+| Flaky Tests | 0 | {flaky_test_count} | {✅ PASS | ❌ FAIL} |
 
 **P0 Evaluation**: {✅ ALL PASS | ❌ ONE OR MORE FAILED}
 
----
+______________________________________________________________________
 
 #### P1 Criteria (Required for PASS, May Accept for CONCERNS)
 
-| Criterion              | Threshold                 | Actual               | Status   |
-| ---------------------- | ------------------------- | -------------------- | -------- | ----------- | -------- |
-| P1 Coverage            | ≥{min_p1_coverage}%       | {p1_coverage}%       | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
-| P1 Test Pass Rate      | ≥{min_p1_pass_rate}%      | {p1_pass_rate}%      | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
+| Criterion | Threshold | Actual | Status |
+| \---------------------- | ------------------------- | -------------------- | -------- | ----------- | -------- |
+| P1 Coverage | ≥{min_p1_coverage}% | {p1_coverage}% | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
+| P1 Test Pass Rate | ≥{min_p1_pass_rate}% | {p1_pass_rate}% | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
 | Overall Test Pass Rate | ≥{min_overall_pass_rate}% | {overall_pass_rate}% | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
-| Overall Coverage       | ≥{min_coverage}%          | {overall_coverage}%  | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
+| Overall Coverage | ≥{min_coverage}% | {overall_coverage}% | {✅ PASS | ⚠️ CONCERNS | ❌ FAIL} |
 
 **P1 Evaluation**: {✅ ALL PASS | ⚠️ SOME CONCERNS | ❌ FAILED}
 
----
+______________________________________________________________________
 
 #### P2/P3 Criteria (Informational, Don't Block)
 
-| Criterion         | Actual          | Notes                                                        |
-| ----------------- | --------------- | ------------------------------------------------------------ |
+| Criterion | Actual | Notes |
+| -- | -- | -- |
 | P2 Test Pass Rate | {p2_pass_rate}% | {allow_p2_failures ? "Tracked, doesn't block" : "Evaluated"} |
 | P3 Test Pass Rate | {p3_pass_rate}% | {allow_p3_failures ? "Tracked, doesn't block" : "Evaluated"} |
 
----
+______________________________________________________________________
 
 ### GATE DECISION: {PASS | CONCERNS | FAIL | WAIVED}
 
----
+______________________________________________________________________
 
 ### Rationale
 
@@ -420,14 +426,14 @@ Note: This workflow does not generate tests. If gaps exist, run `*atdd` or `*aut
 
 **Example (WAIVED):**
 
-> Original decision was FAIL due to P0 test failure in legacy Excel 2007 export module (affects <1% of users). However, release contains critical GDPR compliance features required by regulatory deadline (Oct 15). Business has approved waiver given:
+> Original decision was FAIL due to P0 test failure in legacy Excel 2007 export module (affects \<1% of users). However, release contains critical GDPR compliance features required by regulatory deadline (Oct 15). Business has approved waiver given:
 >
 > - Regulatory priority overrides legacy module risk
 > - Workaround available (use Excel 2010+)
 > - Issue will be fixed in v2.4.1 hotfix (due Oct 20)
 > - Enhanced monitoring in place
 
----
+______________________________________________________________________
 
 ### {Section: Delete if not applicable}
 
@@ -445,7 +451,7 @@ List unresolved P1/P2 issues that don't block release but should be tracked:
 
 **Overall Residual Risk**: {LOW | MEDIUM | HIGH}
 
----
+______________________________________________________________________
 
 #### Waiver Details (For WAIVED only)
 
@@ -478,46 +484,50 @@ List unresolved P1/P2 issues that don't block release but should be tracked:
 **Business Justification**:
 {detailed_explanation_of_why_waiver_is_acceptable}
 
----
+______________________________________________________________________
 
 #### Critical Issues (For FAIL or CONCERNS)
 
 Top blockers requiring immediate attention:
 
-| Priority | Issue         | Description         | Owner        | Due Date     | Status             |
-| -------- | ------------- | ------------------- | ------------ | ------------ | ------------------ |
-| P0       | {issue_title} | {brief_description} | {owner_name} | {YYYY-MM-DD} | {OPEN/IN_PROGRESS} |
-| P0       | {issue_title} | {brief_description} | {owner_name} | {YYYY-MM-DD} | {OPEN/IN_PROGRESS} |
-| P1       | {issue_title} | {brief_description} | {owner_name} | {YYYY-MM-DD} | {OPEN/IN_PROGRESS} |
+| Priority | Issue | Description | Owner | Due Date | Status |
+| -- | -- | -- | -- | -- | -- |
+| P0 | {issue_title} | {brief_description} | {owner_name} | {YYYY-MM-DD} | {OPEN/IN_PROGRESS} |
+| P0 | {issue_title} | {brief_description} | {owner_name} | {YYYY-MM-DD} | {OPEN/IN_PROGRESS} |
+| P1 | {issue_title} | {brief_description} | {owner_name} | {YYYY-MM-DD} | {OPEN/IN_PROGRESS} |
 
 **Blocking Issues Count**: {p0_blocker_count} P0 blockers, {p1_blocker_count} P1 issues
 
----
+______________________________________________________________________
 
 ### Gate Recommendations
 
 #### For PASS Decision ✅
 
 1. **Proceed to deployment**
+
    - Deploy to staging environment
    - Validate with smoke tests
    - Monitor key metrics for 24-48 hours
    - Deploy to production with standard monitoring
 
 2. **Post-Deployment Monitoring**
+
    - {metric_1_to_monitor}
    - {metric_2_to_monitor}
    - {alert_thresholds}
 
 3. **Success Criteria**
+
    - {success_criterion_1}
    - {success_criterion_2}
 
----
+______________________________________________________________________
 
 #### For CONCERNS Decision ⚠️
 
 1. **Deploy with Enhanced Monitoring**
+
    - Deploy to staging with extended validation period
    - Enable enhanced logging/monitoring for known risk areas:
      - {risk_area_1}
@@ -526,56 +536,64 @@ Top blockers requiring immediate attention:
    - Deploy to production with caution
 
 2. **Create Remediation Backlog**
+
    - Create story: "{fix_title_1}" (Priority: {priority})
    - Create story: "{fix_title_2}" (Priority: {priority})
    - Target milestone: {next_milestone}
 
 3. **Post-Deployment Actions**
+
    - Monitor {specific_areas} closely for {time_period}
    - Weekly status updates on remediation progress
    - Re-assess after fixes deployed
 
----
+______________________________________________________________________
 
 #### For FAIL Decision ❌
 
 1. **Block Deployment Immediately**
+
    - Do NOT deploy to any environment
    - Notify stakeholders of blocking issues
    - Escalate to tech lead and PM
 
 2. **Fix Critical Issues**
+
    - Address P0 blockers listed in Critical Issues section
    - Owner assignments confirmed
    - Due dates agreed upon
    - Daily standup on blocker resolution
 
 3. **Re-Run Gate After Fixes**
+
    - Re-run full test suite after fixes
    - Re-run `bmad tea *trace` workflow
    - Verify decision is PASS before deploying
 
----
+______________________________________________________________________
 
 #### For WAIVED Decision 🔓
 
 1. **Deploy with Business Approval**
+
    - Confirm waiver approver has signed off
    - Document waiver in release notes
    - Notify all stakeholders of waived risks
 
 2. **Aggressive Monitoring**
+
    - {enhanced_monitoring_plan}
    - {escalation_procedures}
    - Daily checks on waived risk areas
 
 3. **Mandatory Remediation**
+
    - Fix MUST be completed by {due_date}
    - Issue CANNOT be waived in next release
    - Track remediation progress weekly
    - Verify fix in next gate
 
----
+______________________________________________________________________
 
 ### Next Steps
 
@@ -597,7 +615,7 @@ Top blockers requiring immediate attention:
 - Notify SM: {decision_summary}
 - Notify DEV lead: {decision_summary}
 
----
+______________________________________________________________________
 
 ## Integrated YAML Snippet (CI/CD)
 
@@ -662,7 +680,7 @@ traceability_and_gate:
       remediation_due: "{YYYY-MM-DD}"
 ```
 
----
+______________________________________________________________________
 
 ## Related Artifacts
 
@@ -673,7 +691,7 @@ traceability_and_gate:
 - **NFR Assessment:** {NFR_FILE_PATH} (if available)
 - **Test Files:** {TEST_DIR_PATH}
 
----
+______________________________________________________________________
 
 ## Sign-Off
 
@@ -703,6 +721,6 @@ traceability_and_gate:
 **Generated:** {DATE}
 **Workflow:** testarch-trace v4.0 (Enhanced with Gate Decision)
 
----
+______________________________________________________________________
 
 <!-- Powered by BMAD-CORE™ -->

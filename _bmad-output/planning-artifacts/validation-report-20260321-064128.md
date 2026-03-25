@@ -217,13 +217,13 @@ Requirements demonstrate good measurability with minimal issues.
 
 ### Traceability Matrix
 
-| Source                                                            | Coverage                      |
-| ----------------------------------------------------------------- | ----------------------------- |
-| Journey 1: Mechanical engineer receives a design they can trust   | FR1-FR24                      |
+| Source | Coverage |
+| -- | -- |
+| Journey 1: Mechanical engineer receives a design they can trust | FR1-FR24 |
 | Journey 2: Mechanical engineer inspects validation and simulation | FR3-FR6, FR12-FR15, FR31-FR35 |
-| Journey 3: Researcher or company reuses the dataset               | FR25-FR30, FR31-FR35          |
-| Journey 4: Dataset operator or curator keeps the corpus usable    | FR28-FR35                     |
-| Journey 5: Human engineer steers a live run                       | FR36-FR38                     |
+| Journey 3: Researcher or company reuses the dataset | FR25-FR30, FR31-FR35 |
+| Journey 4: Dataset operator or curator keeps the corpus usable | FR28-FR35 |
+| Journey 5: Human engineer steers a live run | FR36-FR38 |
 
 **Total Traceability Issues:** 0
 
@@ -307,46 +307,46 @@ PRD uses a custom hybrid project type that is not represented in the validator C
 
 ### Scoring Table
 
-| FR #   | Specific | Measurable | Attainable | Relevant | Traceable | Average | Flag |
-| ------ | -------- | ---------- | ---------- | -------- | --------- | ------- | ---- |
-| FR-001 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-002 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-003 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-004 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-005 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-006 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-007 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-008 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-009 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-010 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-011 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-012 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-013 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-014 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-015 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-016 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-017 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-018 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-019 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-020 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-021 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-022 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-023 | 3        | 3          | 5          | 5        | 5         | 4.2     |      |
-| FR-024 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-025 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-026 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-027 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-028 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-029 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-030 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-031 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-032 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-033 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-034 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-035 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-036 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-037 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-038 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR # | Specific | Measurable | Attainable | Relevant | Traceable | Average | Flag |
+| -- | -- | -- | -- | -- | -- | -- | -- |
+| FR-001 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-002 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-003 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-004 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-005 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-006 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-007 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-008 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-009 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-010 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-011 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-012 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-013 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-014 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-015 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-016 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-017 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-018 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-019 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-020 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-021 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-022 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-023 | 3 | 3 | 5 | 5 | 5 | 4.2 |  |
+| FR-024 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-025 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-026 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-027 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-028 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-029 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-030 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-031 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-032 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-033 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-034 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-035 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-036 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-037 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-038 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
 
 **Legend:** 1=Poor, 3=Acceptable, 5=Excellent
 **Flag:** X = Score < 3 in one or more categories
@@ -403,15 +403,15 @@ Functional Requirements demonstrate good SMART quality overall.
 
 ### BMAD PRD Principles Compliance
 
-| Principle           | Status | Notes                                                                                          |
-| ------------------- | ------ | ---------------------------------------------------------------------------------------------- |
-| Information Density | Met    | Step 3 passed cleanly; the PRD is concise and low on filler.                                   |
-| Measurability       | Met    | FRs and NFRs are testable; only a minor FR nuance remains.                                     |
-| Traceability        | Met    | Step 6 found intact chains from vision to journeys to FRs.                                     |
-| Domain Awareness    | Met    | Mechanical/electromechanical, manufacturability, simulation, and dataset concerns are present. |
-| Zero Anti-Patterns  | Met    | No meaningful implementation leakage or filler remains in FR/NFR text.                         |
-| Dual Audience       | Met    | The document works for both human readers and downstream LLM consumption.                      |
-| Markdown Format     | Met    | Clear headings and consistent structure throughout.                                            |
+| Principle | Status | Notes |
+| -- | -- | -- |
+| Information Density | Met | Step 3 passed cleanly; the PRD is concise and low on filler. |
+| Measurability | Met | FRs and NFRs are testable; only a minor FR nuance remains. |
+| Traceability | Met | Step 6 found intact chains from vision to journeys to FRs. |
+| Domain Awareness | Met | Mechanical/electromechanical, manufacturability, simulation, and dataset concerns are present. |
+| Zero Anti-Patterns | Met | No meaningful implementation leakage or filler remains in FR/NFR text. |
+| Dual Audience | Met | The document works for both human readers and downstream LLM consumption. |
+| Markdown Format | Met | Clear headings and consistent structure throughout. |
 
 **Principles Met:** 7/7
 
@@ -507,18 +507,18 @@ PRD has minor completeness gaps. Address minor gaps for complete documentation.
 
 ### Quick Results
 
-| Check                   | Result                      |
-| ----------------------- | --------------------------- |
-| Format                  | BMAD Standard               |
-| Information Density     | Pass                        |
-| Measurability           | Pass                        |
-| Traceability            | Pass                        |
-| Implementation Leakage  | Pass                        |
-| Domain Compliance       | N/A                         |
+| Check | Result |
+| -- | -- |
+| Format | BMAD Standard |
+| Information Density | Pass |
+| Measurability | Pass |
+| Traceability | Pass |
+| Implementation Leakage | Pass |
+| Domain Compliance | N/A |
 | Project-Type Compliance | N/A (custom hybrid warning) |
-| SMART Quality           | 100.0%                      |
-| Holistic Quality        | 4/5                         |
-| Completeness            | 100%                        |
+| SMART Quality | 100.0% |
+| Holistic Quality | 4/5 |
+| Completeness | 100% |
 
 **Critical Issues:** None
 

@@ -37,11 +37,11 @@ outcome: user-knows-what-exists
 
 ### Parameters
 
-| Parameter  | Type     | Required | Default     | Description   |
-| ---------- | -------- | -------- | ----------- | ------------- |
-| `{param1}` | `{type}` | Yes      | -           | {Description} |
-| `{param2}` | `{type}` | No       | `{default}` | {Description} |
-| `{param3}` | `{type}` | No       | `{default}` | {Description} |
+| Parameter | Type | Required | Default | Description |
+| -- | -- | -- | -- | -- |
+| `{param1}` | `{type}` | Yes | - | {Description} |
+| `{param2}` | `{type}` | No | `{default}` | {Description} |
+| `{param3}` | `{type}` | No | `{default}` | {Description} |
 
 ### Return Value
 
@@ -56,8 +56,8 @@ outcome: user-knows-what-exists
 
 ### Exceptions / Errors
 
-| Error         | Condition        | Resolution      |
-| ------------- | ---------------- | --------------- |
+| Error | Condition | Resolution |
+| -- | -- | -- |
 | `{ErrorType}` | {When it occurs} | {How to handle} |
 | `{ErrorType}` | {When it occurs} | {How to handle} |
 
@@ -126,8 +126,8 @@ ______________________________________________________________________
 
 **Properties**:
 
-| Property  | Type     | Description   |
-| --------- | -------- | ------------- |
+| Property | Type | Description |
+| -- | -- | -- |
 | `{prop1}` | `{type}` | {Description} |
 | `{prop2}` | `{type}` | {Description} |
 

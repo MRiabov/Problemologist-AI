@@ -16,59 +16,64 @@
 
 <ask>I found an in-progress workflow state from {{last_updated}}.
 
-    **Current Progress:**
+```
+**Current Progress:**
 
-    - Mode: {{mode}}
-    - Scan Level: {{scan_level}}
-    - Completed Steps: {{completed_steps_count}}/{{total_steps}}
-    - Last Step: {{current_step}}
-    - Project Type(s): {{cached_project_types}}
+- Mode: {{mode}}
+- Scan Level: {{scan_level}}
+- Completed Steps: {{completed_steps_count}}/{{total_steps}}
+- Last Step: {{current_step}}
+- Project Type(s): {{cached_project_types}}
 
-    Would you like to:
+Would you like to:
 
-    1. **Resume from where we left off** - Continue from step {{current_step}}
-    2. **Start fresh** - Archive old state and begin new scan
-    3. **Cancel** - Exit without changes
+1. **Resume from where we left off** - Continue from step {{current_step}}
+2. **Start fresh** - Archive old state and begin new scan
+3. **Cancel** - Exit without changes
 
-    Your choice [1/2/3]:
+Your choice [1/2/3]:
+```
+
 </ask>
 
-  <check if="user selects 1">
+<check if="user selects 1">
     <action>Set resume_mode = true</action>
     <action>Set workflow_mode = {{mode}}</action>
     <action>Load findings summaries from state file</action>
     <action>Load cached project_type_id(s) from state file</action>
 
-    <critical>CONDITIONAL CSV LOADING FOR RESUME:</critical>
-    <action>For each cached project_type_id, load ONLY the corresponding row from: ./documentation-requirements.csv</action>
-    <action>Skip loading project-types.csv and architecture_registry.csv (not needed on resume)</action>
-    <action>Store loaded doc requirements for use in remaining steps</action>
+```
+<critical>CONDITIONAL CSV LOADING FOR RESUME:</critical>
+<action>For each cached project_type_id, load ONLY the corresponding row from: ./documentation-requirements.csv</action>
+<action>Skip loading project-types.csv and architecture_registry.csv (not needed on resume)</action>
+<action>Store loaded doc requirements for use in remaining steps</action>
 
-    <action>Display: "Resuming {{workflow_mode}} from {{current_step}} with cached project type(s): {{cached_project_types}}"</action>
+<action>Display: "Resuming {{workflow_mode}} from {{current_step}} with cached project type(s): {{cached_project_types}}"</action>
 
-    <check if="workflow_mode == deep_dive">
-      <action>Read fully and follow: ./workflows/deep-dive-workflow.md with resume context</action>
-    </check>
+<check if="workflow_mode == deep_dive">
+  <action>Read fully and follow: ./workflows/deep-dive-workflow.md with resume context</action>
+</check>
 
-    <check if="workflow_mode == initial_scan OR workflow_mode == full_rescan">
-      <action>Read fully and follow: ./workflows/full-scan-workflow.md with resume context</action>
-    </check>
+<check if="workflow_mode == initial_scan OR workflow_mode == full_rescan">
+  <action>Read fully and follow: ./workflows/full-scan-workflow.md with resume context</action>
+</check>
+```
 
-  </check>
+</check>
 
-  <check if="user selects 2">
+<check if="user selects 2">
     <action>Create archive directory: {project_knowledge}/.archive/</action>
     <action>Move old state file to: {project_knowledge}/.archive/project-scan-report-{{timestamp}}.json</action>
     <action>Set resume_mode = false</action>
     <action>Continue to Step 0.5</action>
   </check>
 
-  <check if="user selects 3">
+<check if="user selects 3">
     <action>Display: "Exiting workflow without changes."</action>
     <action>Exit workflow</action>
   </check>
 
-  <check if="state file age >= 24 hours">
+<check if="state file age >= 24 hours">
     <action>Display: "Found old state file (>24 hours). Starting fresh scan."</action>
     <action>Archive old state file to: {project_knowledge}/.archive/project-scan-report-{{timestamp}}.json</action>
     <action>Set resume_mode = false</action>
@@ -92,17 +97,17 @@ What would you like to do?
 2. **Deep-dive into specific area** - Generate detailed documentation for a particular feature/module/folder
 3. **Cancel** - Keep existing documentation as-is
 
-Your choice [1/2/3]:
+Your choice \[1/2/3\]:
 </ask>
 
-  <check if="user selects 1">
+<check if="user selects 1">
     <action>Set workflow_mode = "full_rescan"</action>
     <action>Display: "Starting full project rescan..."</action>
     <action>Read fully and follow: ./workflows/full-scan-workflow.md</action>
     <action>After sub-workflow completes, continue to Step 4</action>
   </check>
 
-  <check if="user selects 2">
+<check if="user selects 2">
     <action>Set workflow_mode = "deep_dive"</action>
     <action>Set scan_level = "exhaustive"</action>
     <action>Display: "Starting deep-dive documentation mode..."</action>
@@ -110,7 +115,7 @@ Your choice [1/2/3]:
     <action>After sub-workflow completes, continue to Step 4</action>
   </check>
 
-  <check if="user selects 3">
+<check if="user selects 3">
     <action>Display message: "Keeping existing documentation. Exiting workflow."</action>
     <action>Exit workflow</action>
   </check>

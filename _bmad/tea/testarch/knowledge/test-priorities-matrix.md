@@ -126,12 +126,12 @@ Guide for prioritizing test scenarios based on risk, criticality, and business i
 
 ## Test Coverage by Priority
 
-| Priority | Unit Coverage | Integration Coverage | E2E Coverage       |
-| -------- | ------------- | -------------------- | ------------------ |
-| P0       | >90%          | >80%                 | All critical paths |
-| P1       | >80%          | >60%                 | Main happy paths   |
-| P2       | >60%          | >40%                 | Smoke tests        |
-| P3       | Best effort   | Best effort          | Manual only        |
+| Priority | Unit Coverage | Integration Coverage | E2E Coverage |
+| -- | -- | -- | -- |
+| P0 | >90% | >80% | All critical paths |
+| P1 | >80% | >60% | Main happy paths |
+| P2 | >60% | >40% | Smoke tests |
+| P3 | Best effort | Best effort | Manual only |
 
 ## Priority Assignment Rules
 
@@ -173,7 +173,7 @@ Review and adjust priorities based on:
 - Test failure history
 - Business priority changes
 
----
+______________________________________________________________________
 
 ## Automated Priority Classification
 
@@ -332,22 +332,22 @@ npx playwright test --grep "@p0|@p1"
 npx playwright test
 ```
 
----
+______________________________________________________________________
 
 ## Integration with Risk Scoring
 
 Priority should align with risk score from `probability-impact.md`:
 
-| Risk Score | Typical Priority | Rationale                                  |
-| ---------- | ---------------- | ------------------------------------------ |
-| 9          | P0               | Critical blocker (probability=3, impact=3) |
-| 6-8        | P0 or P1         | High risk (requires mitigation)            |
-| 4-5        | P1 or P2         | Medium risk (monitor closely)              |
-| 1-3        | P2 or P3         | Low risk (document and defer)              |
+| Risk Score | Typical Priority | Rationale |
+| -- | -- | -- |
+| 9 | P0 | Critical blocker (probability=3, impact=3) |
+| 6-8 | P0 or P1 | High risk (requires mitigation) |
+| 4-5 | P1 or P2 | Medium risk (monitor closely) |
+| 1-3 | P2 or P3 | Low risk (document and defer) |
 
 **Example**: Risk score 9 (checkout API failure) → P0 priority → comprehensive coverage required.
 
----
+______________________________________________________________________
 
 ## Priority Checklist
 
@@ -356,7 +356,7 @@ Before finalizing test priorities:
 - [ ] **Revenue impact assessed**: Payment, subscription, billing features → P0
 - [ ] **Security risks identified**: Auth, data exposure, injection attacks → P0
 - [ ] **Compliance requirements documented**: GDPR, PCI-DSS, SOC2 → P0
-- [ ] **User impact quantified**: >50% users → P0/P1, <10% → P2/P3
+- [ ] **User impact quantified**: >50% users → P0/P1, \<10% → P2/P3
 - [ ] **Previous failures reviewed**: Regression prevention → increase priority
 - [ ] **Complexity evaluated**: >500 LOC or multiple dependencies → increase priority
 - [ ] **Usage metrics consulted**: Frequent use → P0/P1, rare use → P2/P3

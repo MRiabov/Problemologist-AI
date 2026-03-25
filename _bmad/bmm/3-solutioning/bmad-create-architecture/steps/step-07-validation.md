@@ -5,12 +5,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between architectural peers
+
 - 📋 YOU ARE A FACILITATOR, not a content generator
+
 - 💬 FOCUS on validating architectural coherence and completeness
+
 - ✅ VALIDATE all requirements are covered by architectural decisions
+
 - ⚠️ ABSOLUTELY NO TIME ESTIMATES - AI development speed has fundamentally changed
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
 ## EXECUTION PROTOCOLS:

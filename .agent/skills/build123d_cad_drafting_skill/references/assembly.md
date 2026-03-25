@@ -10,10 +10,10 @@ The physics compiler detects specific strings in the `.label` attribute of solid
 
 To define a motor, group your motor parts into a `Compound` and label the inner solids as follows:
 
-| Label    | MuJoCo Translation                                         |
-| :------- | :--------------------------------------------------------- |
+| Label | MuJoCo Translation |
+| :- | :- |
 | `stator` | Remains in the parent `<body>` (static relative to motor). |
-| `rotor`  | Moved to a child `<body>` connected by a `hinge` joint.    |
+| `rotor` | Moved to a child `<body>` connected by a `hinge` joint. |
 
 **Automatic Behavior:**
 
@@ -72,12 +72,12 @@ Screws and nuts are typically fused (rigid) unless specifically being simulated 
 
 Labeling volumes in the environment `Compound` triggers special physics logic:
 
-| Label Pattern | Visual | Physics Effect                   |
-| :------------ | :----- | :------------------------------- |
-| `zone_goal`   | Green  | Success trigger (Target enters). |
-| `zone_forbid` | Red    | Failure trigger (Any collision). |
-| `zone_start`  | Blue   | Agent spawn point marker.        |
-| `obstacle_*`  | Gray   | Standard static collider.        |
+| Label Pattern | Visual | Physics Effect |
+| :- | :- | :- |
+| `zone_goal` | Green | Success trigger (Target enters). |
+| `zone_forbid` | Red | Failure trigger (Any collision). |
+| `zone_start` | Blue | Agent spawn point marker. |
+| `obstacle_*` | Gray | Standard static collider. |
 
 ## 5. Collision Best Practices
 

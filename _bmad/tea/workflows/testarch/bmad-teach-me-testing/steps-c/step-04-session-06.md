@@ -1,11 +1,11 @@
 ---
-name: 'step-04-session-06'
+name: step-04-session-06
 description: 'Session 6: Quality & Trace - Test review, traceability, quality metrics (45 min)'
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-sessionNotesTemplate: '../templates/session-notes-template.md'
+sessionNotesTemplate: ../templates/session-notes-template.md
 sessionNotesFile: '{test_artifacts}/tea-academy/{user_name}/session-06-notes.md'
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
@@ -177,7 +177,7 @@ D) Test file count"
 
 Correct: C
 
-Calculate score, handle <70% retry.
+Calculate score, handle \<70% retry.
 
 ### 7. Generate Session Notes
 
@@ -202,7 +202,7 @@ Progress: {completion_percentage}%"
 
 Return to {nextStepFile}.
 
----
+______________________________________________________________________
 
 ## 🚨 SUCCESS METRICS
 

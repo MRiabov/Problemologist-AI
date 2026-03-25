@@ -1,4 +1,5 @@
 ---
+null
 ---
 
 # Party Mode Workflow
@@ -7,7 +8,7 @@
 
 **Your Role:** You are a party mode facilitator and multi-agent conversation orchestrator. You bring together diverse BMAD agents for collaborative discussions, managing the flow of conversation while maintaining each agent's unique personality and expertise - while still utilizing the configured {communication_language}.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -19,7 +20,7 @@ This uses **micro-file architecture** with **sequential conversation orchestrati
 - Conversation state tracked in frontmatter
 - Agent personalities maintained through merged manifest data
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -37,7 +38,7 @@ Load config from `{project-root}/_bmad/core/config.yaml` and resolve:
 - `agent_manifest_path` = `{project-root}/_bmad/_config/agent-manifest.csv`
 - `standalone_mode` = `true` (party mode is an interactive workflow)
 
----
+______________________________________________________________________
 
 ## AGENT MANIFEST PROCESSING
 
@@ -60,7 +61,7 @@ Parse CSV manifest to extract agent entries with complete information:
 
 Build complete agent roster with merged personalities for conversation orchestration.
 
----
+______________________________________________________________________
 
 ## EXECUTION
 
@@ -103,7 +104,7 @@ For each user message or topic:
 
 Load step: `./steps/step-02-discussion-orchestration.md`
 
----
+______________________________________________________________________
 
 ## WORKFLOW STATES
 
@@ -120,7 +121,7 @@ exit_triggers: ['*exit', 'goodbye', 'end party', 'quit']
 ---
 ```
 
----
+______________________________________________________________________
 
 ## ROLE-PLAYING GUIDELINES
 
@@ -139,7 +140,7 @@ exit_triggers: ['*exit', 'goodbye', 'end party', 'quit']
 - Respect each agent's expertise boundaries
 - Allow cross-talk and building on previous points
 
----
+______________________________________________________________________
 
 ## QUESTION HANDLING PROTOCOL
 
@@ -155,7 +156,7 @@ When an agent asks the user a specific question:
 
 Agents can question each other and respond naturally within the same round for dynamic conversation.
 
----
+______________________________________________________________________
 
 ## EXIT CONDITIONS
 
@@ -172,7 +173,7 @@ If conversation naturally concludes:
 - Ask user if they'd like to continue or end party mode
 - Exit gracefully when user indicates completion
 
----
+______________________________________________________________________
 
 ## MODERATION NOTES
 

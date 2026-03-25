@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: 'testarch-test-design'
+workflowType: testarch-test-design
 inputDocuments: []
 ---
 
@@ -17,7 +17,7 @@ inputDocuments: []
 **PRD Reference:** {prd_link}
 **ADR Reference:** {adr_link}
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -45,7 +45,7 @@ inputDocuments: []
 - **High-priority (≥6)**: {N} risks requiring immediate mitigation
 - **Test effort**: ~{N} tests (~{X} weeks for 1 QA, ~{Y} weeks for 2 QAs)
 
----
+______________________________________________________________________
 
 ## Quick Guide
 
@@ -59,7 +59,7 @@ inputDocuments: []
 
 **What we need from team:** Complete these {N} items pre-implementation or test development is blocked.
 
----
+______________________________________________________________________
 
 ### ⚠️ HIGH PRIORITY - Team Should Validate (We Provide Recommendation, You Approve)
 
@@ -69,7 +69,7 @@ inputDocuments: []
 
 **What we need from team:** Review recommendations and approve (or suggest changes).
 
----
+______________________________________________________________________
 
 ### 📋 INFO ONLY - Solutions Provided (Review, No Decisions Needed)
 
@@ -81,7 +81,7 @@ inputDocuments: []
 
 **What we need from team:** Just review and acknowledge (we already have the solution).
 
----
+______________________________________________________________________
 
 ## For Architects and Devs - Open Topics 👷
 
@@ -91,21 +91,21 @@ inputDocuments: []
 
 #### High-Priority Risks (Score ≥6) - IMMEDIATE ATTENTION
 
-| Risk ID    | Category  | Description   | Probability | Impact | Score       | Mitigation            | Owner   | Timeline |
-| ---------- | --------- | ------------- | ----------- | ------ | ----------- | --------------------- | ------- | -------- |
-| **{R-ID}** | **{CAT}** | {Description} | {1-3}       | {1-3}  | **{Score}** | {Mitigation strategy} | {Owner} | {Date}   |
+| Risk ID | Category | Description | Probability | Impact | Score | Mitigation | Owner | Timeline |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| **{R-ID}** | **{CAT}** | {Description} | {1-3} | {1-3} | **{Score}** | {Mitigation strategy} | {Owner} | {Date} |
 
 #### Medium-Priority Risks (Score 3-5)
 
-| Risk ID | Category | Description   | Probability | Impact | Score   | Mitigation   | Owner   |
-| ------- | -------- | ------------- | ----------- | ------ | ------- | ------------ | ------- |
-| {R-ID}  | {CAT}    | {Description} | {1-3}       | {1-3}  | {Score} | {Mitigation} | {Owner} |
+| Risk ID | Category | Description | Probability | Impact | Score | Mitigation | Owner |
+| -- | -- | -- | -- | -- | -- | -- | -- |
+| {R-ID} | {CAT} | {Description} | {1-3} | {1-3} | {Score} | {Mitigation} | {Owner} |
 
 #### Low-Priority Risks (Score 1-2)
 
-| Risk ID | Category | Description   | Probability | Impact | Score   | Action  |
-| ------- | -------- | ------------- | ----------- | ------ | ------- | ------- |
-| {R-ID}  | {CAT}    | {Description} | {1-3}       | {1-3}  | {Score} | Monitor |
+| Risk ID | Category | Description | Probability | Impact | Score | Action |
+| -- | -- | -- | -- | -- | -- | -- |
+| {R-ID} | {CAT} | {Description} | {1-3} | {1-3} | {Score} | Monitor |
 
 #### Risk Category Legend
 
@@ -116,7 +116,7 @@ inputDocuments: []
 - **BUS**: Business Impact (UX harm, logic errors, revenue)
 - **OPS**: Operations (deployment, config, monitoring)
 
----
+______________________________________________________________________
 
 ### Testability Concerns and Architectural Gaps
 
@@ -126,8 +126,8 @@ inputDocuments: []
 
 #### 1. Blockers to Fast Feedback (WHAT WE NEED FROM ARCHITECTURE)
 
-| Concern            | Impact              | What Architecture Must Provide         | Owner  | Timeline    |
-| ------------------ | ------------------- | -------------------------------------- | ------ | ----------- |
+| Concern | Impact | What Architecture Must Provide | Owner | Timeline |
+| -- | -- | -- | -- | -- |
 | **{Concern name}** | {Impact on testing} | {Specific architectural change needed} | {Team} | {Milestone} |
 
 **Example:**
@@ -145,7 +145,7 @@ inputDocuments: []
    - **Owner**: {Team}
    - **Timeline**: {Milestone}
 
----
+______________________________________________________________________
 
 ### Testability Assessment Summary
 
@@ -168,7 +168,7 @@ For {Feature} Phase 1, the following trade-offs are acceptable:
 
 {This is technical debt OR acceptable for Phase 1} that {should be revisited post-GA OR maintained as-is}
 
----
+______________________________________________________________________
 
 ### Risk Mitigation Plans (High-Priority Risks ≥6)
 
@@ -187,11 +187,11 @@ For {Feature} Phase 1, the following trade-offs are acceptable:
 **Status:** Planned / In Progress / Complete
 **Verification:** {How to verify mitigation is effective}
 
----
+______________________________________________________________________
 
 {Repeat for all high-priority risks}
 
----
+______________________________________________________________________
 
 ### Assumptions and Dependencies
 
@@ -212,7 +212,7 @@ For {Feature} Phase 1, the following trade-offs are acceptable:
   - **Impact**: {How it affects testing}
   - **Contingency**: {Backup plan}
 
----
+______________________________________________________________________
 
 **End of Architecture Document**
 

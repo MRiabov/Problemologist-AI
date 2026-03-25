@@ -21,6 +21,7 @@ Before listing artifacts or prompting the user, check whether you already know t
 
 1. Explicit argument
    Did the user pass a specific file path, spec name, or clear instruction this message?
+
    - If it points to a file that matches the spec template (has `status` frontmatter with a recognized value: ready-for-dev, in-progress, or in-review) → set `spec_file` and **EARLY EXIT** to the appropriate step (step-03 for ready/in-progress, step-04 for review).
    - Anything else (intent files, external docs, plans, descriptions) → ingest it as starting intent and proceed to INSTRUCTIONS. Do not attempt to infer a workflow state from it.
 
@@ -29,6 +30,7 @@ Before listing artifacts or prompting the user, check whether you already know t
    Use the same routing as above.
 
 3. Otherwise — scan artifacts and ask
+
    - `{wipFile}` exists? → Offer resume or archive.
    - Active specs (`ready-for-dev`, `in-progress`, `in-review`) in `{implementation_artifacts}`? → List them and HALT. Ask user which to resume (or `[N]` for new).
      - If `ready-for-dev` or `in-progress` selected: Set `spec_file`. **EARLY EXIT** → `./step-03-implement.md`
@@ -40,24 +42,30 @@ Never ask extra questions if you already understand what the user intends.
 ## INSTRUCTIONS
 
 1. Load context.
+
    - List files in `{planning_artifacts}` and `{implementation_artifacts}`.
    - If you find an unformatted spec or intent file, ingest its contents to form your understanding of the intent.
+
 2. Clarify intent. Do not fantasize, do not leave open questions. If you must ask questions, ask them as a numbered list. When the human replies, verify that every single numbered question was answered. If any were ignored, HALT and re-ask only the missing questions before proceeding. Keep looping until intent is clear enough to implement.
+
 3. Version control sanity check. Is the working tree clean? Does the current branch make sense for this intent — considering its name and recent history? If the tree is dirty or the branch is an obvious mismatch, HALT and ask the human before proceeding. If version control is unavailable, skip this check.
+
 4. Multi-goal check (see SCOPE STANDARD). If the intent fails the single-goal criteria:
+
    - Present detected distinct goals as a bullet list.
    - Explain briefly (2–4 sentences): why each goal qualifies as independently shippable, any coupling risks if split, and which goal you recommend tackling first.
    - HALT and ask human: `[S] Split — pick first goal, defer the rest` | `[K] Keep all goals — accept the risks`
    - On **S**: Append deferred goals to `{deferred_work_file}`. Narrow scope to the first-mentioned goal. Continue routing.
    - On **K**: Proceed as-is.
+
 5. Route — choose exactly one:
 
    **a) One-shot** — zero blast radius: no plausible path by which this change causes unintended consequences elsewhere. Clear intent, no architectural decisions.
    **EARLY EXIT** → `./step-oneshot.md`
 
    **b) Plan-code-review** — everything else. When uncertain whether blast radius is truly zero, choose this path.
-   1. Derive a valid kebab-case slug from the clarified intent. If the intent references a tracking identifier (story number, issue number, ticket ID), lead the slug with it (e.g. `3-2-digest-delivery`, `gh-47-fix-auth`). If `{implementation_artifacts}/spec-{slug}.md` already exists, append `-2`, `-3`, etc. Set `spec_file` = `{implementation_artifacts}/spec-{slug}.md`.
 
+   1. Derive a valid kebab-case slug from the clarified intent. If the intent references a tracking identifier (story number, issue number, ticket ID), lead the slug with it (e.g. `3-2-digest-delivery`, `gh-47-fix-auth`). If `{implementation_artifacts}/spec-{slug}.md` already exists, append `-2`, `-3`, etc. Set `spec_file` = `{implementation_artifacts}/spec-{slug}.md`.
 
 ## NEXT
 

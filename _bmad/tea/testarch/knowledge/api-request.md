@@ -462,14 +462,14 @@ test('should create movie with schema validation', async ({ apiRequest }) => {
 
 ## Comparison with Vanilla Playwright
 
-| Vanilla Playwright                             | playwright-utils apiRequest                                                        |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Vanilla Playwright | playwright-utils apiRequest |
+| -- | -- |
 | `const resp = await request.get('/api/users')` | `const { status, body } = await apiRequest({ method: 'GET', path: '/api/users' })` |
-| `const body = await resp.json()`               | Response already parsed                                                            |
-| `expect(resp.ok()).toBeTruthy()`               | Status code directly accessible                                                    |
-| No retry logic                                 | Auto-retry 5xx errors with backoff                                                 |
-| No schema validation                           | Built-in multi-format validation                                                   |
-| Manual error handling                          | Descriptive error messages                                                         |
+| `const body = await resp.json()` | Response already parsed |
+| `expect(resp.ok()).toBeTruthy()` | Status code directly accessible |
+| No retry logic | Auto-retry 5xx errors with backoff |
+| No schema validation | Built-in multi-format validation |
+| Manual error handling | Descriptive error messages |
 
 ## When to Use
 

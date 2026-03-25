@@ -1,9 +1,9 @@
 ---
-name: 'step-01b-continue'
-description: 'Resume TEA Academy learning - load progress and display dashboard'
+name: step-01b-continue
+description: Resume TEA Academy learning - load progress and display dashboard
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 ---
 
 # Step 1b: Continue TEA Academy
@@ -87,7 +87,7 @@ Display:
 **Started:** {started_date}
 **Progress:** {completion_percentage}% ({sessions_completed} of 7 sessions completed)
 
----
+______________________________________________________________________
 
 ### 📊 Session Progress
 
@@ -101,13 +101,13 @@ Display:
 {If status == 'not-started':}
 ⬜ **Session {N}:** {name} - Not Started
 
----
+______________________________________________________________________
 
 ### 🎯 Next Recommended
 
 {next_recommended}
 
----
+______________________________________________________________________
 
 **Let's continue your learning journey!**
 
@@ -121,7 +121,7 @@ Display:
 
 **THEN:** Immediately load, read entire file, then execute {nextStepFile}
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

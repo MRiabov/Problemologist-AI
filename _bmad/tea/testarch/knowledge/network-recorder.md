@@ -241,12 +241,12 @@ await networkRecorder.setup(context, {
 
 **When to Use Each:**
 
-| Use `embed` (default) when          | Use `attach` when               |
-| ----------------------------------- | ------------------------------- |
-| Recording API responses (JSON, XML) | Recording large images, videos  |
-| Small to medium HTML pages          | HAR file size >50MB             |
-| You want a single, portable file    | Maximum disk efficiency needed  |
-| Sharing HAR files with team         | Working with ZIP archive output |
+| Use `embed` (default) when | Use `attach` when |
+| -- | -- |
+| Recording API responses (JSON, XML) | Recording large images, videos |
+| Small to medium HTML pages | HAR file size >50MB |
+| You want a single, portable file | Maximum disk efficiency needed |
+| Sharing HAR files with team | Working with ZIP archive output |
 
 ### Example 5: Cross-Environment Compatibility (URL Mapping)
 
@@ -325,14 +325,14 @@ await networkRecorder.setup(context, {
 
 ## Why Use This Instead of Native Playwright?
 
-| Native Playwright (`routeFromHAR`) | network-recorder Utility       |
-| ---------------------------------- | ------------------------------ |
-| ~80 lines setup boilerplate        | ~5 lines total                 |
-| Manual HAR file management         | Automatic file organization    |
-| Complex setup/teardown             | Automatic cleanup via fixtures |
-| **Read-only tests only**           | **Full CRUD support**          |
-| **Stateless**                      | **Stateful mocking**           |
-| Manual URL mapping                 | Automatic environment mapping  |
+| Native Playwright (`routeFromHAR`) | network-recorder Utility |
+| -- | -- |
+| ~80 lines setup boilerplate | ~5 lines total |
+| Manual HAR file management | Automatic file organization |
+| Complex setup/teardown | Automatic cleanup via fixtures |
+| **Read-only tests only** | **Full CRUD support** |
+| **Stateless** | **Stateful mocking** |
+| Manual URL mapping | Automatic environment mapping |
 
 **The game-changer: Stateful CRUD detection**
 
@@ -359,13 +359,13 @@ It automatically switches from static HAR playback to an intelligent stateful mo
 
 ### NetworkRecorder Methods
 
-| Method               | Return Type              | Description                                   |
-| -------------------- | ------------------------ | --------------------------------------------- |
-| `setup(context)`     | `Promise<void>`          | Sets up recording/playback on browser context |
-| `cleanup()`          | `Promise<void>`          | Flushes data to disk and cleans up memory     |
-| `getContext()`       | `NetworkRecorderContext` | Gets current recorder context information     |
-| `getStatusMessage()` | `string`                 | Gets human-readable status message            |
-| `getHarStats()`      | `Promise<HarFileStats>`  | Gets HAR file statistics and metadata         |
+| Method | Return Type | Description |
+| -- | -- | -- |
+| `setup(context)` | `Promise<void>` | Sets up recording/playback on browser context |
+| `cleanup()` | `Promise<void>` | Flushes data to disk and cleans up memory |
+| `getContext()` | `NetworkRecorderContext` | Gets current recorder context information |
+| `getStatusMessage()` | `string` | Gets human-readable status message |
+| `getHarStats()` | `Promise<HarFileStats>` | Gets HAR file statistics and metadata |
 
 ### Understanding `cleanup()`
 

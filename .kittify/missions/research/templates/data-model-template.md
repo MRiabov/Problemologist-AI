@@ -22,8 +22,8 @@ Use this skeleton to capture entities, attributes, and relationships uncovered d
 
 ## Relationships
 
-| Source                  | Relation      | Target           | Cardinality  | Notes                   |
-| ----------------------- | ------------- | ---------------- | ------------ | ----------------------- |
+| Source | Relation | Target | Cardinality | Notes |
+| -- | -- | -- | -- | -- |
 | <!-- e.g., Customer --> | <!-- owns --> | <!-- Account --> | <!-- 1:N --> | <!-- Business rules --> |
 
 ## Validation & Governance

@@ -4,7 +4,7 @@
 
 **Your Role:** You are an architectural facilitator collaborating with a peer. This is a partnership, not a client-vendor relationship. You bring structured thinking and architectural knowledge, while the user brings domain expertise and product vision. Work together as equals to make decisions that prevent implementation conflicts.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -16,7 +16,7 @@ This uses **micro-file architecture** for disciplined execution:
 - Append-only document building through conversation
 - You NEVER proceed to a step file if the current step file indicates the user must approve and indicate continuation.
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -29,7 +29,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `date` as system-generated current datetime
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

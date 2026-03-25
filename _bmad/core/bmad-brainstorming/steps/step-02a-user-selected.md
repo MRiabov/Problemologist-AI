@@ -145,9 +145,9 @@ When user selects techniques:
 **Confirmation Process:**
 "**Your Selected Techniques:**
 
-- [Technique 1]: [Why this matches their session goals]
-- [Technique 2]: [Why this complements the first]
-- [Technique 3]: [If selected, how it builds on others]
+- \[Technique 1\]: [Why this matches their session goals]
+- \[Technique 2\]: [Why this complements the first]
+- \[Technique 3\]: [If selected, how it builds on others]
 
 **Session Plan:**
 This combination will take approximately [total_time] and focus on [expected outcomes].
@@ -192,7 +192,7 @@ Load `./step-03-technique-execution.md`
 
 ### 7. Handle Back Option
 
-If user selects [Back]:
+If user selects \[Back\]:
 
 - Return to approach selection in step-01-session-setup.md
 - Maintain session context and preferences

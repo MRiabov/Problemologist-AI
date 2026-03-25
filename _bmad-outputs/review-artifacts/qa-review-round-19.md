@@ -10,8 +10,8 @@ review_status: fail
 - Source output: /home/maksym/Work/proj/Problemologist/Problemologist-AI/.autopilot/tmp/qa-story-output.txt
 - Context:
   - Story: 5-2-visualize-cad-and-simulation-evidence
-  - Story file: /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts/5-2-visualize-cad-and-simulation-evidence.md
-  - Sprint status: /home/maksym/Work/proj/Problemologist/Problemologist-AI/_bmad-output/implementation-artifacts/sprint-status.yaml
+  - Story file: /home/maksym/Work/proj/Problemologist/Problemologist-AI/\_bmad-output/implementation-artifacts/5-2-visualize-cad-and-simulation-evidence.md
+  - Sprint status: /home/maksym/Work/proj/Problemologist/Problemologist-AI/\_bmad-output/implementation-artifacts/sprint-status.yaml
 
 Story slice validation through `./scripts/run_integration_tests.sh` was not fully green.
 

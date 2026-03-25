@@ -1,11 +1,11 @@
 ---
-name: 'step-04-session-02'
+name: step-04-session-02
 description: 'Session 2: Core Concepts - Risk-based testing, DoD, testing philosophy (45 min)'
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-sessionNotesTemplate: '../templates/session-notes-template.md'
+sessionNotesTemplate: ../templates/session-notes-template.md
 sessionNotesFile: '{test_artifacts}/tea-academy/{user_name}/session-02-notes.md'
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
@@ -357,7 +357,7 @@ Your answer (A, B, C, or D):"
 
 **Calculate score:**
 
-- Total points / 3 \* 100 = score (0-100)
+- Total points / 3 * 100 = score (0-100)
 
 **Display results:**
 
@@ -439,7 +439,7 @@ Display: **Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Conti
 - IF C: Progress file already updated, then load, read entire file, then execute {nextStepFile}
 - IF Any other: help user, then redisplay menu
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

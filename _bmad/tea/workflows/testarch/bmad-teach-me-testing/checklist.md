@@ -4,7 +4,7 @@
 
 Use this checklist to validate the teaching workflow meets quality standards.
 
----
+______________________________________________________________________
 
 ## Foundation Quality
 
@@ -14,7 +14,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] First step path correct (`./steps-c/step-01-init.md`)
 - [ ] Folder structure complete (steps-c/, steps-e/, steps-v/, data/, templates/)
 
----
+______________________________________________________________________
 
 ## Template Quality
 
@@ -25,7 +25,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] **session-notes-template.md** has all required sections
 - [ ] **certificate-template.md** includes all 7 sessions
 
----
+______________________________________________________________________
 
 ## Step File Quality (CREATE mode)
 
@@ -66,7 +66,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Final progress file update (certificate_generated: true)
 - [ ] Congratulations message shown
 
----
+______________________________________________________________________
 
 ## Data File Quality
 
@@ -76,7 +76,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] **quiz-questions.yaml** has questions for all sessions
 - [ ] **tea-resources-index.yaml** has complete documentation index
 
----
+______________________________________________________________________
 
 ## Content Quality
 
@@ -101,7 +101,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Mix of difficulty levels
 - [ ] Clear correct answers with explanations
 
----
+______________________________________________________________________
 
 ## Error Handling
 
@@ -111,7 +111,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Quiz failure recovery (review or continue)
 - [ ] Session interruption handling (auto-save)
 
----
+______________________________________________________________________
 
 ## User Experience
 
@@ -121,7 +121,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Resume capability works seamlessly
 - [ ] Exit options clear at all decision points
 
----
+______________________________________________________________________
 
 ## State Management
 
@@ -131,7 +131,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Next recommended session logic works
 - [ ] lastStep and lastContinued timestamps updated
 
----
+______________________________________________________________________
 
 ## Validation Mode
 
@@ -140,7 +140,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Identifies issues clearly
 - [ ] Provides remediation suggestions
 
----
+______________________________________________________________________
 
 ## Edit Mode
 
@@ -148,7 +148,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] **step-e-02-apply-edits.md** applies modifications safely
 - [ ] Preserves workflow integrity during edits
 
----
+______________________________________________________________________
 
 ## Documentation
 
@@ -157,16 +157,16 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] README (if present) accurate
 - [ ] Inline comments in complex logic
 
----
+______________________________________________________________________
 
 ## Performance
 
 - [ ] Just-in-time loading (not loading all docs upfront)
-- [ ] Session steps complete in reasonable time (<5 min)
-- [ ] Quiz validation fast (<1 min)
+- [ ] Session steps complete in reasonable time (\<5 min)
+- [ ] Quiz validation fast (\<1 min)
 - [ ] Progress file writes efficient
 
----
+______________________________________________________________________
 
 ## Security
 
@@ -175,7 +175,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - [ ] Progress files private to user
 - [ ] No sensitive data in session notes
 
----
+______________________________________________________________________
 
 ## Completion Criteria
 
@@ -189,7 +189,7 @@ Use this checklist to validate the teaching workflow meets quality standards.
 - User experience smooth
 - Documentation complete
 
----
+______________________________________________________________________
 
 **Validation Date:** **\*\***\_\_\_**\*\***
 **Validated By:** **\*\***\_\_\_**\*\***

@@ -134,13 +134,13 @@ You're about to experience brainstorming in a completely new way. These unexpect
 - Append random selection story to document
 - Route to technique execution
 
-#### If [Shuffle]:
+#### If \[Shuffle\]:
 
 - Generate new random selection
 - Present as a "different creative adventure"
 - Compare to previous selection if user wants
 
-#### If [Details] or [Back]:
+#### If [Details] or \[Back\]:
 
 - Provide additional information or return to approach selection
 - Maintain excitement about random discovery process

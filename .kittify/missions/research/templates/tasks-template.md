@@ -110,12 +110,12 @@ ______________________________________________________________________
 
 ## Subtask Index (Reference)
 
-| Subtask ID | Summary                       | Work Package | Priority | Parallel? |
-| ---------- | ----------------------------- | ------------ | -------- | --------- |
-| T001       | Define search parameters      | WP01         | P1       | No        |
-| T002       | Search academic database 1    | WP01         | P1       | Yes       |
-| T008       | Review high-relevance sources | WP02         | P1       | Yes       |
-| T013       | Code findings by theme        | WP03         | P1       | No        |
+| Subtask ID | Summary | Work Package | Priority | Parallel? |
+| -- | -- | -- | -- | -- |
+| T001 | Define search parameters | WP01 | P1 | No |
+| T002 | Search academic database 1 | WP01 | P1 | Yes |
+| T008 | Review high-relevance sources | WP02 | P1 | Yes |
+| T013 | Code findings by theme | WP03 | P1 | No |
 
 ______________________________________________________________________
 

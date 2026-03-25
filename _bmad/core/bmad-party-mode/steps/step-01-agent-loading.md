@@ -78,7 +78,7 @@ Welcome {{user_name}}! I'm excited to facilitate an incredible multi-agent discu
 
 **Our Collaborating Agents Include:**
 
-[Display 3-4 diverse agents to showcase variety]:
+\[Display 3-4 diverse agents to showcase variety\]:
 
 - [Icon Emoji] **[Agent Name]** ([Title]): [Brief role description]
 - [Icon Emoji] **[Agent Name]** ([Title]): [Brief role description]

@@ -4,7 +4,7 @@
 
 **Your Role:** You are a Scrum Master generating and maintaining sprint tracking. Parse epic files, detect story statuses, and produce a structured sprint-status.yaml.
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -32,14 +32,14 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 ### Input Files
 
 | Input | Path | Load Strategy |
-|-------|------|---------------|
+| -- | -- | -- |
 | Epics | `{planning_artifacts}/*epic*.md` (whole) or `{planning_artifacts}/*epic*/*.md` (sharded) | FULL_LOAD |
 
 ### Context
 
 - `project_context` = `**/project-context.md` (load if exists)
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

@@ -6,15 +6,15 @@ The "Engineering Plan Reviewer" (EPR) node is functional within the LangGraph or
 
 ## Implementation Status vs. Desired Architecture
 
-| Feature Area           | Status              | Gaps / Observations                                                                                                                                               |
-| :--------------------- | :------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Handoff Artifacts**  | Partial (80%)       | Correctly requires `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`. Missing - `manifests/engineering_plan_review_manifest.json` |
-| **Manifest System**    | **Missing (0%)**    | Spec requires `.manifests/engineering_plan_review_manifest.json`. Currently non-existent.                                                                         |
-| **Review Persistence** | **Missing (0%)**    | Spec requires reviews to be persisted in `reviews/review-round-*/` for long-term agent memory.                                                                    |
-| **Node Entry Gates**   | Partial (70%)       | Artifact checks are in place, but manifest validation and stale-revision checks are missing.                                                                      |
-| **Refusal Handling**   | **Complete (100%)** | Correctly reads `plan_refusal.md` and routes back to Planner or Coder based on decision.                                                                          |
-| **Cost/Weight Gates**  | Partial (50%)       | `validate_and_price.py` exists but is not explicitly called by the Reviewer for verification.                                                                     |
-| **DOF Minimization**   | Partial (20%)       | Requirement is in the prompt, but no explicit/tool-assisted validation is implemented.                                                                            |
+| Feature Area | Status | Gaps / Observations |
+| :- | :- | :- |
+| **Handoff Artifacts** | Partial (80%) | Correctly requires `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml`. Missing - `manifests/engineering_plan_review_manifest.json` |
+| **Manifest System** | **Missing (0%)** | Spec requires `.manifests/engineering_plan_review_manifest.json`. Currently non-existent. |
+| **Review Persistence** | **Missing (0%)** | Spec requires reviews to be persisted in `reviews/review-round-*/` for long-term agent memory. |
+| **Node Entry Gates** | Partial (70%) | Artifact checks are in place, but manifest validation and stale-revision checks are missing. |
+| **Refusal Handling** | **Complete (100%)** | Correctly reads `plan_refusal.md` and routes back to Planner or Coder based on decision. |
+| **Cost/Weight Gates** | Partial (50%) | `validate_and_price.py` exists but is not explicitly called by the Reviewer for verification. |
+| **DOF Minimization** | Partial (20%) | Requirement is in the prompt, but no explicit/tool-assisted validation is implemented. |
 
 <!--I'm reviewing the analysis-->
 

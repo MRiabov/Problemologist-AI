@@ -9,10 +9,10 @@ ______________________________________________________________________
 
 The recently added motor controller specifications are not yet implemented.
 
-| Component          | Description                                                 | Missing                      |
-| ------------------ | ----------------------------------------------------------- | ---------------------------- |
-| **Time-based**     | `constant`, `sinusoidal`, `square`, `trapezoidal` functions | Entire `controllers` package |
-| **Position-based** | Inverse kinematics (rotate to 45deg, etc.)                  | Implementation & logic       |
+| Component | Description | Missing |
+| -- | -- | -- |
+| **Time-based** | `constant`, `sinusoidal`, `square`, `trapezoidal` functions | Entire `controllers` package |
+| **Position-based** | Inverse kinematics (rotate to 45deg, etc.) | Implementation & logic |
 
 > [!IMPORTANT]
 > A new utility package `worker/utils/controllers` (or similar) is required to house these functions.

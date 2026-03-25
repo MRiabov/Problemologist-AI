@@ -67,7 +67,7 @@ Review the frontmatter to understand:
 Use the following ordered sequence to determine the next step from the last completed step:
 
 | Last Completed | Next Step |
-|---|---|
+| -- | -- |
 | step-01-init.md | step-02-discovery.md |
 | step-02-discovery.md | step-02b-vision.md |
 | step-02b-vision.md | step-02c-executive-summary.md |
@@ -87,6 +87,7 @@ Use the following ordered sequence to determine the next step from the last comp
 3. That's the next step to load!
 
 **Example:**
+
 - If `stepsCompleted = ["step-01-init.md", "step-02-discovery.md", "step-03-success.md"]`
 - Last element is `"step-03-success.md"`
 - Table lookup → next step is `./step-04-journeys.md`
@@ -112,11 +113,13 @@ What would be most helpful?"
 "Welcome back {{user_name}}! I'm resuming our PRD collaboration for {{project_name}}.
 
 **Current Progress:**
+
 - Last completed: {last step filename from stepsCompleted array}
 - Next up: {next step from lookup table}
 - Context documents available: {len(inputDocuments)} files
 
 **Document Status:**
+
 - Current PRD document is ready with all completed sections
 - Ready to continue from where we left off
 
@@ -140,7 +143,7 @@ Display: "**Select an Option:** [C] Continue to {next step name}"
 
 ONLY WHEN [C continue option] is selected and [current state confirmed], will you then read fully and follow the next step (from the lookup table) to resume the workflow.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

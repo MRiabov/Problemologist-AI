@@ -1,8 +1,8 @@
 ---
-name: 'step-04a-subagent-api-failing'
+name: step-04a-subagent-api-failing
 description: 'Subagent: Generate FAILING API tests (TDD red phase)'
 subagent: true
-outputFile: '/tmp/tea-atdd-api-tests-{{timestamp}}.json'
+outputFile: /tmp/tea-atdd-api-tests-{{timestamp}}.json
 ---
 
 # Subagent 4A: Generate Failing API Tests (TDD Red Phase)
@@ -21,7 +21,7 @@ This is an **isolated subagent** running in parallel with E2E failing test gener
 
 **Your task:** Generate API tests that will FAIL because the feature is not implemented yet (TDD RED PHASE).
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES
 
@@ -34,7 +34,7 @@ This is an **isolated subagent** running in parallel with E2E failing test gener
 - ❌ Do NOT generate passing tests (this is TDD red phase)
 - ❌ Do NOT run tests (that's step 5)
 
----
+______________________________________________________________________
 
 ## SUBAGENT TASK
 
@@ -197,7 +197,7 @@ Identify fixtures needed for API tests:
 
 **Do NOT create fixtures yet** - just track what's needed for aggregation step.
 
----
+______________________________________________________________________
 
 ## OUTPUT FORMAT
 
@@ -248,7 +248,7 @@ Write JSON to temp file: `/tmp/tea-atdd-api-tests-{{timestamp}}.json`
 }
 ```
 
----
+______________________________________________________________________
 
 ## EXIT CONDITION
 
@@ -262,7 +262,7 @@ Subagent completes when:
 
 **Subagent terminates here.** Parent workflow will read output and proceed to aggregation.
 
----
+______________________________________________________________________
 
 ## 🚨 SUBAGENT SUCCESS METRICS
 

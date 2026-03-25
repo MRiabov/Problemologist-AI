@@ -1,7 +1,7 @@
 ---
-name: 'step-02-load-context'
-description: 'Load documents, configuration, and knowledge fragments for the chosen mode'
-nextStepFile: './step-03-risk-and-testability.md'
+name: step-02-load-context
+description: Load documents, configuration, and knowledge fragments for the chosen mode
+nextStepFile: ./step-03-risk-and-testability.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 outputFile: '{test_artifacts}/test-design-progress.md'
 ---
@@ -18,7 +18,7 @@ Load the required documents, config flags, and knowledge fragments needed to pro
 - ✅ Speak in `{communication_language}`
 - 🎯 Only load artifacts required for the selected mode
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -57,7 +57,7 @@ If `test_stack_type` is `"auto"` or not configured, infer `{detected_stack}` by 
 - **Both present** → `fullstack`; only frontend → `frontend`; only backend → `backend`
 - Explicit `test_stack_type` overrides auto-detection
 
----
+______________________________________________________________________
 
 ## 2. Load Project Artifacts (Mode-Specific)
 
@@ -91,7 +91,7 @@ Extract:
 - Integration points
 - Known coverage gaps
 
----
+______________________________________________________________________
 
 ## 3. Analyze Existing Test Coverage (Epic-Level)
 
@@ -118,7 +118,7 @@ Store artifacts under `{test_artifacts}/exploration/`
 
 > **Session Hygiene:** Always close sessions using `playwright-cli -s=tea-explore close`. Do NOT use `close-all` — it kills every session on the machine and breaks parallel execution.
 
----
+______________________________________________________________________
 
 ### Tiered Knowledge Loading
 
@@ -196,13 +196,13 @@ Use `{knowledgeIndex}` to select and load only relevant fragments.
 
 - `pact-mcp.md`
 
----
+______________________________________________________________________
 
 ## 5. Confirm Loaded Inputs
 
 Summarize what was loaded and confirm with the user if anything is missing.
 
----
+______________________________________________________________________
 
 ### 6. Save Progress
 
@@ -221,6 +221,7 @@ Summarize what was loaded and confirm with the user if anything is missing.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-02-load-context'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-02-load-context'`
   - Set `lastSaved: '{date}'`

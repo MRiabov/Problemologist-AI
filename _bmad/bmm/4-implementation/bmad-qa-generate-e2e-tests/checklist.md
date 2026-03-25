@@ -28,6 +28,6 @@ Run the tests using your project's test command.
 
 **Expected**: All tests pass ✅
 
----
+______________________________________________________________________
 
 **Need more comprehensive testing?** Install [Test Architect (TEA)](https://bmad-code-org.github.io/bmad-method-test-architecture-enterprise/) for advanced workflows.

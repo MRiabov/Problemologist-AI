@@ -1,6 +1,6 @@
 ---
 name: bmad-advanced-elicitation
-description: 'Push the LLM to reconsider, refine, and improve its recent output. Use when user asks for deeper critique or mentions a known deeper critique method, e.g. socratic, first principles, pre-mortem, red team.'
+description: Push the LLM to reconsider, refine, and improve its recent output. Use when user asks for deeper critique or mentions a known deeper critique method, e.g. socratic, first principles, pre-mortem, red team.
 agent_party: '{project-root}/_bmad/_config/agent-manifest.csv'
 ---
 
@@ -8,7 +8,7 @@ agent_party: '{project-root}/_bmad/_config/agent-manifest.csv'
 
 **Goal:** Push the LLM to reconsider, refine, and improve its recent output.
 
----
+______________________________________________________________________
 
 ## CRITICAL LLM INSTRUCTIONS
 
@@ -19,7 +19,7 @@ agent_party: '{project-root}/_bmad/_config/agent-manifest.csv'
 - Sections outside flow (validation, output, critical-context) provide essential context - review and apply throughout execution
 - **YOU MUST ALWAYS SPEAK OUTPUT in your Agent communication style with the `communication_language`**
 
----
+______________________________________________________________________
 
 ## INTEGRATION (When Invoked Indirectly)
 
@@ -30,7 +30,7 @@ When invoked from another prompt or process:
 3. Return the enhanced version back when user selects 'x' to proceed and return back
 4. The enhanced content replaces the original section content in the output document
 
----
+______________________________________________________________________
 
 ## FLOW
 
@@ -57,7 +57,7 @@ When invoked from another prompt or process:
 3. Select 5 methods: Choose methods that best match the context based on their descriptions
 4. Balance approach: Include mix of foundational and specialized techniques as appropriate
 
----
+______________________________________________________________________
 
 ### Step 2: Present Options and Handle Responses
 
@@ -116,7 +116,7 @@ x. Proceed / No Further Actions
 
 - Execute methods in sequence on the content, then re-offer choices
 
----
+______________________________________________________________________
 
 ### Step 3: Execution Guidelines
 

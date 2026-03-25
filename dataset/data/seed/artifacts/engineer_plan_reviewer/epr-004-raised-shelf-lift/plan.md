@@ -6,14 +6,14 @@ Use a compact single-motor incline lift that captures the projectile ball near f
 
 ## 2. Parts List
 
-| Part        | Dimensions (mm)   | Material      | Purpose                                                 |
-| ----------- | ----------------- | ------------- | ------------------------------------------------------- |
-| lift_base   | 280 x 150 x 10    | aluminum_6061 | Freestanding base for the incline frame and motor mount |
-| left_frame  | 360 x 18 x 120    | aluminum_6061 | Left structural side of the lift                        |
-| right_frame | 360 x 18 x 120    | aluminum_6061 | Right structural side of the lift                       |
-| belt_bed    | 300 x 95 x 18     | hdpe          | Low-friction bed supporting the cleated belt path       |
-| upper_tray  | 160 x 120 x 24    | hdpe          | Shelf-height handoff tray into the goal zone            |
-| drive_motor | catalog gearmotor | cots          | Single motorized DOF driving the lift                   |
+| Part | Dimensions (mm) | Material | Purpose |
+| -- | -- | -- | -- |
+| lift_base | 280 x 150 x 10 | aluminum_6061 | Freestanding base for the incline frame and motor mount |
+| left_frame | 360 x 18 x 120 | aluminum_6061 | Left structural side of the lift |
+| right_frame | 360 x 18 x 120 | aluminum_6061 | Right structural side of the lift |
+| belt_bed | 300 x 95 x 18 | hdpe | Low-friction bed supporting the cleated belt path |
+| upper_tray | 160 x 120 x 24 | hdpe | Shelf-height handoff tray into the goal zone |
+| drive_motor | catalog gearmotor | cots | Single motorized DOF driving the lift |
 
 **Estimated Total Weight**: 1490 g
 **Estimated Total Cost**: $69.00
@@ -26,22 +26,22 @@ Use a compact single-motor incline lift that captures the projectile ball near f
 
 ## 4. Cost & Weight Budget
 
-| Item        | Weight (g) | Cost ($) |
-| ----------- | ---------- | -------- |
-| lift_base   | 420        | 14.0     |
-| left_frame  | 220        | 11.0     |
-| right_frame | 220        | 11.0     |
-| belt_bed    | 55         | 7.5      |
-| upper_tray  | 38         | 7.0      |
-| drive_motor | 85         | 18.5     |
-| **TOTAL**   | **1038**   | **69.0** |
+| Item | Weight (g) | Cost ($) |
+| -- | -- | -- |
+| lift_base | 420 | 14.0 |
+| left_frame | 220 | 11.0 |
+| right_frame | 220 | 11.0 |
+| belt_bed | 55 | 7.5 |
+| upper_tray | 38 | 7.0 |
+| drive_motor | 85 | 18.5 |
+| **TOTAL** | **1038** | **69.0** |
 
 **Budget Margin**: 27% remaining versus the planner target.
 
 ## 5. Risk Assessment
 
-| Risk                                                   | Likelihood | Impact | Mitigation                                                                                  |
-| ------------------------------------------------------ | ---------- | ------ | ------------------------------------------------------------------------------------------- |
-| Ball rolls backward on the incline                     | Medium     | High   | Keep the incline moderate and include shallow retaining features on the moving path         |
-| Lift top misses the shelf opening                      | Low        | High   | Align the upper tray directly to the seeded goal-zone centerline and shelf edge             |
-| Motor or cable intrudes into the shelf-support keepout | Low        | Medium | Reserve the outer-left cable corridor and keep the motor below the support-clearance volume |
+| Risk | Likelihood | Impact | Mitigation |
+| -- | -- | -- | -- |
+| Ball rolls backward on the incline | Medium | High | Keep the incline moderate and include shallow retaining features on the moving path |
+| Lift top misses the shelf opening | Low | High | Align the upper tray directly to the seeded goal-zone centerline and shelf edge |
+| Motor or cable intrudes into the shelf-support keepout | Low | Medium | Reserve the outer-left cable corridor and keep the motor below the support-clearance volume |

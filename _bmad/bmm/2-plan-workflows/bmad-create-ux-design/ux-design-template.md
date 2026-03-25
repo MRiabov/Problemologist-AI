@@ -8,6 +8,6 @@ inputDocuments: []
 **Author:** {{user_name}}
 **Date:** {{date}}
 
----
+______________________________________________________________________
 
 <!-- UX design content will be appended sequentially through collaborative workflow steps -->

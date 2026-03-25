@@ -1,7 +1,7 @@
 ---
-name: 'step-01-load-context'
-description: 'Load requirements, knowledge base, and related artifacts'
-nextStepFile: './step-02-discover-tests.md'
+name: step-01-load-context
+description: Load requirements, knowledge base, and related artifacts
+nextStepFile: ./step-02-discover-tests.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 outputFile: '{test_artifacts}/traceability-report.md'
 ---
@@ -17,7 +17,7 @@ Gather acceptance criteria, priorities, and supporting artifacts for traceabilit
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -43,7 +43,7 @@ Gather acceptance criteria, priorities, and supporting artifacts for traceabilit
 
 If acceptance criteria are missing, **HALT** and request them.
 
----
+______________________________________________________________________
 
 ## 2. Load Knowledge Base
 
@@ -55,7 +55,7 @@ From `{knowledgeIndex}` load:
 - `test-quality.md`
 - `selective-testing.md`
 
----
+______________________________________________________________________
 
 ## 3. Load Artifacts
 
@@ -67,7 +67,7 @@ If available:
 
 Summarize what was found.
 
----
+______________________________________________________________________
 
 ### 4. Save Progress
 
@@ -86,6 +86,7 @@ Summarize what was found.
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-01-load-context'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-load-context'`
   - Set `lastSaved: '{date}'`

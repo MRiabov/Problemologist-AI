@@ -24,12 +24,12 @@ The `file-utils` module provides:
 
 ## Why Use This Instead of Vanilla Playwright?
 
-| Vanilla Playwright                          | File Utils                                       |
-| ------------------------------------------- | ------------------------------------------------ |
-| ~80 lines per CSV flow (download + parse)   | ~10 lines end-to-end                             |
-| Manual event orchestration for downloads    | Encapsulated in `handleDownload()`               |
-| Manual path handling and `saveAs`           | Returns a ready-to-use file path                 |
-| Manual existence checks and error handling  | Centralized in one place via utility patterns    |
+| Vanilla Playwright | File Utils |
+| -- | -- |
+| ~80 lines per CSV flow (download + parse) | ~10 lines end-to-end |
+| Manual event orchestration for downloads | Encapsulated in `handleDownload()` |
+| Manual path handling and `saveAs` | Returns a ready-to-use file path |
+| Manual existence checks and error handling | Centralized in one place via utility patterns |
 | Manual CSV parsing config (headers, typing) | `readCSV()` returns `{ data, headers }` directly |
 
 ## Pattern Examples
@@ -275,36 +275,36 @@ expect(headers).toContain('age');
 
 ### CSV Reader Options
 
-| Option         | Type               | Default  | Description                            |
-| -------------- | ------------------ | -------- | -------------------------------------- |
-| `filePath`     | `string`           | -        | Path to CSV file (mutually exclusive)  |
-| `content`      | `string \| Buffer` | -        | Direct content (mutually exclusive)    |
-| `delimiter`    | `string \| 'auto'` | `','`    | Value separator, auto-detect if 'auto' |
-| `encoding`     | `string`           | `'utf8'` | File encoding                          |
-| `parseHeaders` | `boolean`          | `true`   | Use first row as headers               |
-| `trim`         | `boolean`          | `true`   | Trim whitespace from values            |
+| Option | Type | Default | Description |
+| -- | -- | -- | -- |
+| `filePath` | `string` | - | Path to CSV file (mutually exclusive) |
+| `content` | `string \| Buffer` | - | Direct content (mutually exclusive) |
+| `delimiter` | `string \| 'auto'` | `','` | Value separator, auto-detect if 'auto' |
+| `encoding` | `string` | `'utf8'` | File encoding |
+| `parseHeaders` | `boolean` | `true` | Use first row as headers |
+| `trim` | `boolean` | `true` | Trim whitespace from values |
 
 ### XLSX Reader Options
 
-| Option      | Type     | Description                    |
-| ----------- | -------- | ------------------------------ |
-| `filePath`  | `string` | Path to XLSX file              |
+| Option | Type | Description |
+| -- | -- | -- |
+| `filePath` | `string` | Path to XLSX file |
 | `sheetName` | `string` | Name of sheet to set as active |
 
 ### PDF Reader Options
 
-| Option       | Type      | Default | Description                 |
-| ------------ | --------- | ------- | --------------------------- |
-| `filePath`   | `string`  | -       | Path to PDF file (required) |
-| `mergePages` | `boolean` | `true`  | Merge text from all pages   |
-| `maxPages`   | `number`  | -       | Maximum pages to extract    |
-| `debug`      | `boolean` | `false` | Enable debug logging        |
+| Option | Type | Default | Description |
+| -- | -- | -- | -- |
+| `filePath` | `string` | - | Path to PDF file (required) |
+| `mergePages` | `boolean` | `true` | Merge text from all pages |
+| `maxPages` | `number` | - | Maximum pages to extract |
+| `debug` | `boolean` | `false` | Enable debug logging |
 
 ### ZIP Reader Options
 
-| Option          | Type     | Description                        |
-| --------------- | -------- | ---------------------------------- |
-| `filePath`      | `string` | Path to ZIP file                   |
+| Option | Type | Description |
+| -- | -- | -- |
+| `filePath` | `string` | Path to ZIP file |
 | `fileToExtract` | `string` | Specific file to extract to Buffer |
 
 ### Return Values

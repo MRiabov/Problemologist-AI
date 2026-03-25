@@ -23,16 +23,16 @@ API-first testing provides:
 
 ## When to Use API Tests vs E2E Tests
 
-| Scenario                  | API Test      | E2E Test      |
-| ------------------------- | ------------- | ------------- |
-| CRUD operations           | ✅ Primary    | ❌ Overkill   |
-| Business logic validation | ✅ Primary    | ❌ Overkill   |
-| Error handling (4xx, 5xx) | ✅ Primary    | ⚠️ Supplement |
-| Authentication flows      | ✅ Primary    | ⚠️ Supplement |
-| Data transformation       | ✅ Primary    | ❌ Overkill   |
-| User journeys             | ❌ Can't test | ✅ Primary    |
-| Visual regression         | ❌ Can't test | ✅ Primary    |
-| Cross-browser issues      | ❌ Can't test | ✅ Primary    |
+| Scenario | API Test | E2E Test |
+| -- | -- | -- |
+| CRUD operations | ✅ Primary | ❌ Overkill |
+| Business logic validation | ✅ Primary | ❌ Overkill |
+| Error handling (4xx, 5xx) | ✅ Primary | ⚠️ Supplement |
+| Authentication flows | ✅ Primary | ⚠️ Supplement |
+| Data transformation | ✅ Primary | ❌ Overkill |
+| User journeys | ❌ Can't test | ✅ Primary |
+| Visual regression | ❌ Can't test | ✅ Primary |
+| Cross-browser issues | ❌ Can't test | ✅ Primary |
 
 **Rule of thumb**: If you're testing what the server returns (not how it looks), use API tests.
 
@@ -836,15 +836,15 @@ export default defineConfig({
 
 ## Comparison: API Tests vs E2E Tests
 
-| Aspect              | API Test               | E2E Test                    |
-| ------------------- | ---------------------- | --------------------------- |
-| **Speed**           | ~50-100ms per test     | ~2-10s per test             |
-| **Stability**       | Very stable            | More flaky (UI timing)      |
-| **Setup**           | Minimal                | Browser, context, page      |
-| **Debugging**       | Clear request/response | DOM, screenshots, traces    |
-| **Coverage**        | Service logic          | User experience             |
-| **Parallelization** | Easy (stateless)       | Complex (browser resources) |
-| **CI Cost**         | Low (no browser)       | High (browser containers)   |
+| Aspect | API Test | E2E Test |
+| -- | -- | -- |
+| **Speed** | ~50-100ms per test | ~2-10s per test |
+| **Stability** | Very stable | More flaky (UI timing) |
+| **Setup** | Minimal | Browser, context, page |
+| **Debugging** | Clear request/response | DOM, screenshots, traces |
+| **Coverage** | Service logic | User experience |
+| **Parallelization** | Easy (stateless) | Complex (browser resources) |
+| **CI Cost** | Low (no browser) | High (browser containers) |
 
 ## Related Fragments
 

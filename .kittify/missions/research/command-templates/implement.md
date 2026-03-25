@@ -8,10 +8,10 @@ description: Implement a research work package by conducting research and docume
 
 ### Two Types of Artifacts (IMPORTANT)
 
-| Type                      | Location                                 | Edited Where | Purpose                                     |
-| ------------------------- | ---------------------------------------- | ------------ | ------------------------------------------- |
-| **Sprint Planning**       | `kitty-specs/{{feature_slug}}/research/` | Main repo    | Evidence/sources for planning THIS sprint   |
-| **Research Deliverables** | `{{deliverables_path}}`                  | Worktree     | Actual research outputs (your work product) |
+| Type | Location | Edited Where | Purpose |
+| -- | -- | -- | -- |
+| **Sprint Planning** | `kitty-specs/{{feature_slug}}/research/` | Main repo | Evidence/sources for planning THIS sprint |
+| **Research Deliverables** | `{{deliverables_path}}` | Worktree | Actual research outputs (your work product) |
 
 ### Where to Put Your Research
 
@@ -125,14 +125,14 @@ ______________________________________________________________________
 timestamp,source_type,citation,key_finding,confidence,notes
 ```
 
-| Column        | Type         | Description             | Valid Values                                               |
-| ------------- | ------------ | ----------------------- | ---------------------------------------------------------- |
-| `timestamp`   | ISO datetime | When evidence collected | `YYYY-MM-DDTHH:MM:SS`                                      |
-| `source_type` | Enum         | Type of source          | `journal` \| `conference` \| `book` \| `web` \| `preprint` |
-| `citation`    | Text         | Full citation           | BibTeX, APA, or Simple format                              |
-| `key_finding` | Text         | Main takeaway           | 1-2 sentences                                              |
-| `confidence`  | Enum         | Source quality          | `high` \| `medium` \| `low`                                |
-| `notes`       | Text         | Additional context      | Free text                                                  |
+| Column | Type | Description | Valid Values |
+| -- | -- | -- | -- |
+| `timestamp` | ISO datetime | When evidence collected | `YYYY-MM-DDTHH:MM:SS` |
+| `source_type` | Enum | Type of source | `journal` \| `conference` \| `book` \| `web` \| `preprint` |
+| `citation` | Text | Full citation | BibTeX, APA, or Simple format |
+| `key_finding` | Text | Main takeaway | 1-2 sentences |
+| `confidence` | Enum | Source quality | `high` \| `medium` \| `low` |
+| `notes` | Text | Additional context | Free text |
 
 **To add evidence (append only, never edit headers):**
 
@@ -150,14 +150,14 @@ echo '2025-01-25T14:00:00,journal,"Smith, J. (2024). AI Tools. Nature, 10(2), 12
 source_id,citation,url,accessed_date,relevance,status
 ```
 
-| Column          | Type     | Description        | Valid Values                          |
-| --------------- | -------- | ------------------ | ------------------------------------- |
-| `source_id`     | Text     | Unique ID          | Must be unique (e.g., S001, S002)     |
-| `citation`      | Text     | Full citation      | Same format as evidence-log           |
-| `url`           | URL      | Source location    | Valid URL or "N/A"                    |
-| `accessed_date` | ISO date | When accessed      | `YYYY-MM-DD`                          |
-| `relevance`     | Enum     | Research relevance | `high` \| `medium` \| `low`           |
-| `status`        | Enum     | Processing status  | `reviewed` \| `pending` \| `archived` |
+| Column | Type | Description | Valid Values |
+| -- | -- | -- | -- |
+| `source_id` | Text | Unique ID | Must be unique (e.g., S001, S002) |
+| `citation` | Text | Full citation | Same format as evidence-log |
+| `url` | URL | Source location | Valid URL or "N/A" |
+| `accessed_date` | ISO date | When accessed | `YYYY-MM-DD` |
+| `relevance` | Enum | Research relevance | `high` \| `medium` \| `low` |
+| `status` | Enum | Processing status | `reviewed` \| `pending` \| `archived` |
 
 **To add source (append only, never edit headers):**
 
@@ -178,12 +178,12 @@ ______________________________________________________________________
 
 ## Key Differences from Software-Dev
 
-| Aspect                 | Software-Dev              | Research                              |
-| ---------------------- | ------------------------- | ------------------------------------- |
-| **Primary output**     | Source code in worktree   | Research docs in `deliverables_path`  |
-| **Commit location**    | Worktree branch           | Worktree branch (same!)               |
-| **Merges to main**     | Yes, via spec-kitty merge | Yes, via spec-kitty merge             |
-| **Planning artifacts** | N/A                       | `kitty-specs/.../research/` (in main) |
+| Aspect | Software-Dev | Research |
+| -- | -- | -- |
+| **Primary output** | Source code in worktree | Research docs in `deliverables_path` |
+| **Commit location** | Worktree branch | Worktree branch (same!) |
+| **Merges to main** | Yes, via spec-kitty merge | Yes, via spec-kitty merge |
+| **Planning artifacts** | N/A | `kitty-specs/.../research/` (in main) |
 
 ### Why This Changed
 

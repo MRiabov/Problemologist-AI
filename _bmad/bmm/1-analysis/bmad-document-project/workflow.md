@@ -3,9 +3,10 @@
 **Goal:** Document brownfield projects for AI context.
 
 **Your Role:** Project documentation specialist.
+
 - Communicate all responses in {communication_language}
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -20,7 +21,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 - `user_skill_level`
 - `date` as system-generated current datetime
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

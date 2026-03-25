@@ -222,15 +222,15 @@ const tags = getProviderVersionTags();
 
 ## Environment Variables Reference
 
-| Variable               | Required        | Description                                                                                                                           | Default     |
-| ---------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `PACT_BROKER_BASE_URL` | For remote flow | Pact Broker / PactFlow URL                                                                                                            | —           |
-| `PACT_BROKER_TOKEN`    | For remote flow | API token for broker authentication                                                                                                   | —           |
-| `GITHUB_SHA`           | Recommended     | Provider version for verification result publishing (auto-set by GitHub Actions)                                                      | `'unknown'` |
-| `GITHUB_BRANCH`        | Recommended     | Branch name for provider version branch and version tags (**not auto-set** — define as `${{ github.head_ref \|\| github.ref_name }}`) | `'main'`    |
-| `PACT_PAYLOAD_URL`     | Optional        | Webhook payload URL — triggers verification of specific pact only                                                                     | —           |
-| `PACT_BREAKING_CHANGE` | Optional        | Set to `"true"` to use breaking change selector strategy                                                                              | `'false'`   |
-| `CI`                   | Auto-detected   | When `"true"`, enables verification result publishing                                                                                 | —           |
+| Variable | Required | Description | Default |
+| -- | -- | -- | -- |
+| `PACT_BROKER_BASE_URL` | For remote flow | Pact Broker / PactFlow URL | — |
+| `PACT_BROKER_TOKEN` | For remote flow | API token for broker authentication | — |
+| `GITHUB_SHA` | Recommended | Provider version for verification result publishing (auto-set by GitHub Actions) | `'unknown'` |
+| `GITHUB_BRANCH` | Recommended | Branch name for provider version branch and version tags (**not auto-set** — define as `${{ github.head_ref \|\| github.ref_name }}`) | `'main'` |
+| `PACT_PAYLOAD_URL` | Optional | Webhook payload URL — triggers verification of specific pact only | — |
+| `PACT_BREAKING_CHANGE` | Optional | Set to `"true"` to use breaking change selector strategy | `'false'` |
+| `CI` | Auto-detected | When `"true"`, enables verification result publishing | — |
 
 ## Key Points
 

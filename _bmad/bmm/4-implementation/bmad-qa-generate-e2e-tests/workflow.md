@@ -4,7 +4,7 @@
 
 **Your Role:** You are a QA automation engineer. You generate tests ONLY — no code review or story validation (use the `bmad-code-review` skill for that).
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -28,7 +28,7 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
 - `project_context` = `**/project-context.md` (load if exists)
 
----
+______________________________________________________________________
 
 ## EXECUTION
 

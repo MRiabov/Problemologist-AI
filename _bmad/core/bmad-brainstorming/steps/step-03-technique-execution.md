@@ -1,8 +1,8 @@
 # Step 3: Interactive Technique Execution and Facilitation
 
----
+______________________________________________________________________
 
----
+______________________________________________________________________
 
 ## MANDATORY EXECUTION RULES (READ FIRST):
 
@@ -88,7 +88,7 @@ I'm not just looking for a quick answer - I want to explore this together. What 
 
 **For Structured Techniques (SCAMPER, Six Thinking Hats, etc.):**
 
-"**Let's explore [Specific letter/perspective]: [Prompt]**
+"**Let's explore \[Specific letter/perspective\]: [Prompt]**
 
 Instead of just listing possibilities, let's really dive into one promising direction. What's the most exciting or surprising thought you have about this?"
 
@@ -186,7 +186,7 @@ Remember: The goal is quantity first - we can organize later. What feels right?"
 **Immediate Response:**
 "**Got it! Let's transition to the next technique.**
 
-**Documenting our progress with [Current Technique]:**
+**Documenting our progress with \[Current Technique\]:**
 
 **What we've discovered so far:**
 
@@ -217,15 +217,15 @@ If multiple techniques selected:
 
 "**Fantastic work with [Previous Technique]!** We've uncovered some incredible insights, especially [highlight key discovery].
 
-**Now let's transition to [Next Technique]:**
+**Now let's transition to \[Next Technique\]:**
 
 This technique will help us [what this technique adds]. I'm particularly excited to see how it builds on what we discovered about [key insight from previous technique].
 
 **Building on Previous Insights:**
 
-- [Connection 1]: How [Previous Technique insight] connects to [Next Technique approach]
-- [Development Opportunity]: How we can develop [specific idea] further
-- [New Perspective]: How [Next Technique] will give us fresh eyes on [topic]
+- \[Connection 1\]: How [Previous Technique insight] connects to [Next Technique approach]
+- \[Development Opportunity\]: How we can develop [specific idea] further
+- \[New Perspective\]: How [Next Technique] will give us fresh eyes on [topic]
 
 **Ready to continue our creative journey with this new approach?**
 
@@ -375,7 +375,7 @@ When user selects 'C', append the content directly to `{brainstorming_session_ou
 
 ## FAILURE MODES:
 
-❌ Offering organization after only one technique or <20 ideas
+❌ Offering organization after only one technique or \<20 ideas
 ❌ AI initiating conclusion without user explicitly requesting it
 ❌ Treating technique completion as session completion signal
 ❌ Rushing to document rather than staying in generative mode

@@ -1,16 +1,16 @@
 ---
-name: 'step-03-session-menu'
-description: 'Session selection hub - display all 7 sessions with completion status and route to selected session or completion'
+name: step-03-session-menu
+description: Session selection hub - display all 7 sessions with completion status and route to selected session or completion
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-session01File: './step-04-session-01.md'
-session02File: './step-04-session-02.md'
-session03File: './step-04-session-03.md'
-session04File: './step-04-session-04.md'
-session05File: './step-04-session-05.md'
-session06File: './step-04-session-06.md'
-session07File: './step-04-session-07.md'
-completionFile: './step-05-completion.md'
+session01File: ./step-04-session-01.md
+session02File: ./step-04-session-02.md
+session03File: ./step-04-session-03.md
+session04File: ./step-04-session-04.md
+session05File: ./step-04-session-05.md
+session06File: ./step-04-session-06.md
+session07File: ./step-04-session-07.md
+completionFile: ./step-05-completion.md
 ---
 
 # Step 3: Session Menu (Hub)
@@ -83,7 +83,7 @@ Display:
 
 **Progress:** {completion_percentage}% ({sessions_completed} of 7 sessions completed)
 
----
+______________________________________________________________________
 
 ### 📚 Available Sessions
 
@@ -124,7 +124,7 @@ Display:
 {if completed: Score: {score}/100 | Completed: {completed_date}}
 {if in-progress: Started: {started_date}}
 
----
+______________________________________________________________________
 
 **Status Indicators:**
 
@@ -132,7 +132,7 @@ Display:
 - 🔄 = In Progress
 - ⬜ = Not Started
 
----
+______________________________________________________________________
 
 {If next_recommended exists:}
 💡 **Recommended Next:** {next_recommended}
@@ -189,7 +189,7 @@ Display:
 
 Load, read entire file, then execute {completionFile}
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

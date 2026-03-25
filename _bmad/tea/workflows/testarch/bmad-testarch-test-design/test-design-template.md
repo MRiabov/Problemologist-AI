@@ -10,7 +10,7 @@ lastSaved: ''
 **Author:** {user_name}
 **Status:** Draft / Approved
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -29,38 +29,38 @@ lastSaved: ''
 - P2/P3 scenarios: {p2p3_count} ({p2p3_hours} hours)
 - **Total effort**: {total_hours} hours (~{total_days} days)
 
----
+______________________________________________________________________
 
 ## Not in Scope
 
-| Item       | Reasoning      | Mitigation            |
-| ---------- | -------------- | --------------------- |
+| Item | Reasoning | Mitigation |
+| -- | -- | -- |
 | **{Item}** | {Why excluded} | {How risk is handled} |
 
----
+______________________________________________________________________
 
 ## Risk Assessment
 
 ### High-Priority Risks (Score ≥6)
 
-| Risk ID | Category | Description   | Probability | Impact | Score | Mitigation   | Owner   | Timeline |
-| ------- | -------- | ------------- | ----------- | ------ | ----- | ------------ | ------- | -------- |
-| R-001   | SEC      | {description} | 2           | 3      | 6     | {mitigation} | {owner} | {date}   |
-| R-002   | PERF     | {description} | 3           | 2      | 6     | {mitigation} | {owner} | {date}   |
+| Risk ID | Category | Description | Probability | Impact | Score | Mitigation | Owner | Timeline |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| R-001 | SEC | {description} | 2 | 3 | 6 | {mitigation} | {owner} | {date} |
+| R-002 | PERF | {description} | 3 | 2 | 6 | {mitigation} | {owner} | {date} |
 
 ### Medium-Priority Risks (Score 3-4)
 
-| Risk ID | Category | Description   | Probability | Impact | Score | Mitigation   | Owner   |
-| ------- | -------- | ------------- | ----------- | ------ | ----- | ------------ | ------- |
-| R-003   | TECH     | {description} | 2           | 2      | 4     | {mitigation} | {owner} |
-| R-004   | DATA     | {description} | 1           | 3      | 3     | {mitigation} | {owner} |
+| Risk ID | Category | Description | Probability | Impact | Score | Mitigation | Owner |
+| -- | -- | -- | -- | -- | -- | -- | -- |
+| R-003 | TECH | {description} | 2 | 2 | 4 | {mitigation} | {owner} |
+| R-004 | DATA | {description} | 1 | 3 | 3 | {mitigation} | {owner} |
 
 ### Low-Priority Risks (Score 1-2)
 
-| Risk ID | Category | Description   | Probability | Impact | Score | Action  |
-| ------- | -------- | ------------- | ----------- | ------ | ----- | ------- |
-| R-005   | OPS      | {description} | 1           | 2      | 2     | Monitor |
-| R-006   | BUS      | {description} | 1           | 1      | 1     | Monitor |
+| Risk ID | Category | Description | Probability | Impact | Score | Action |
+| -- | -- | -- | -- | -- | -- | -- |
+| R-005 | OPS | {description} | 1 | 2 | 2 | Monitor |
+| R-006 | BUS | {description} | 1 | 1 | 1 | Monitor |
 
 ### Risk Category Legend
 
@@ -71,7 +71,7 @@ lastSaved: ''
 - **BUS**: Business Impact (UX harm, logic errors, revenue)
 - **OPS**: Operations (deployment, config, monitoring)
 
----
+______________________________________________________________________
 
 ## Entry Criteria
 
@@ -93,13 +93,13 @@ lastSaved: ''
 
 **Include only if roles/names are known or responsibility mapping is needed; otherwise omit.**
 
-| Name   | Role     | Testing Responsibilities |
-| ------ | -------- | ------------------------ |
-| {Name} | QA Lead  | {Responsibilities}       |
-| {Name} | Dev Lead | {Responsibilities}       |
-| {Name} | PM       | {Responsibilities}       |
+| Name | Role | Testing Responsibilities |
+| -- | -- | -- |
+| {Name} | QA Lead | {Responsibilities} |
+| {Name} | Dev Lead | {Responsibilities} |
+| {Name} | PM | {Responsibilities} |
 
----
+______________________________________________________________________
 
 ## Test Coverage Plan
 
@@ -107,10 +107,10 @@ lastSaved: ''
 
 **Criteria**: Blocks core journey + High risk (≥6) + No workaround
 
-| Requirement   | Test Level | Risk Link | Test Count | Owner | Notes   |
-| ------------- | ---------- | --------- | ---------- | ----- | ------- |
-| {requirement} | E2E        | R-001     | 3          | QA    | {notes} |
-| {requirement} | API        | R-002     | 5          | QA    | {notes} |
+| Requirement | Test Level | Risk Link | Test Count | Owner | Notes |
+| -- | -- | -- | -- | -- | -- |
+| {requirement} | E2E | R-001 | 3 | QA | {notes} |
+| {requirement} | API | R-002 | 5 | QA | {notes} |
 
 **Total P0**: {p0_count} tests, {p0_hours} hours
 
@@ -118,10 +118,10 @@ lastSaved: ''
 
 **Criteria**: Important features + Medium risk (3-4) + Common workflows
 
-| Requirement   | Test Level | Risk Link | Test Count | Owner | Notes   |
-| ------------- | ---------- | --------- | ---------- | ----- | ------- |
-| {requirement} | API        | R-003     | 4          | QA    | {notes} |
-| {requirement} | Component  | -         | 6          | DEV   | {notes} |
+| Requirement | Test Level | Risk Link | Test Count | Owner | Notes |
+| -- | -- | -- | -- | -- | -- |
+| {requirement} | API | R-003 | 4 | QA | {notes} |
+| {requirement} | Component | - | 6 | DEV | {notes} |
 
 **Total P1**: {p1_count} tests, {p1_hours} hours
 
@@ -129,10 +129,10 @@ lastSaved: ''
 
 **Criteria**: Secondary features + Low risk (1-2) + Edge cases
 
-| Requirement   | Test Level | Risk Link | Test Count | Owner | Notes   |
-| ------------- | ---------- | --------- | ---------- | ----- | ------- |
-| {requirement} | API        | R-004     | 8          | QA    | {notes} |
-| {requirement} | Unit       | -         | 15         | DEV   | {notes} |
+| Requirement | Test Level | Risk Link | Test Count | Owner | Notes |
+| -- | -- | -- | -- | -- | -- |
+| {requirement} | API | R-004 | 8 | QA | {notes} |
+| {requirement} | Unit | - | 15 | DEV | {notes} |
 
 **Total P2**: {p2_count} tests, {p2_hours} hours
 
@@ -140,18 +140,18 @@ lastSaved: ''
 
 **Criteria**: Nice-to-have + Exploratory + Performance benchmarks
 
-| Requirement   | Test Level | Test Count | Owner | Notes   |
-| ------------- | ---------- | ---------- | ----- | ------- |
-| {requirement} | E2E        | 2          | QA    | {notes} |
-| {requirement} | Unit       | 8          | DEV   | {notes} |
+| Requirement | Test Level | Test Count | Owner | Notes |
+| -- | -- | -- | -- | -- |
+| {requirement} | E2E | 2 | QA | {notes} |
+| {requirement} | Unit | 8 | DEV | {notes} |
 
 **Total P3**: {p3_count} tests, {p3_hours} hours
 
----
+______________________________________________________________________
 
 ## Execution Order
 
-### Smoke Tests (<5 min)
+### Smoke Tests (\<5 min)
 
 **Purpose**: Fast feedback, catch build-breaking issues
 
@@ -161,7 +161,7 @@ lastSaved: ''
 
 **Total**: {smoke_count} scenarios
 
-### P0 Tests (<10 min)
+### P0 Tests (\<10 min)
 
 **Purpose**: Critical path validation
 
@@ -171,7 +171,7 @@ lastSaved: ''
 
 **Total**: {p0_count} scenarios
 
-### P1 Tests (<30 min)
+### P1 Tests (\<30 min)
 
 **Purpose**: Important feature coverage
 
@@ -180,7 +180,7 @@ lastSaved: ''
 
 **Total**: {p1_count} scenarios
 
-### P2/P3 Tests (<60 min)
+### P2/P3 Tests (\<60 min)
 
 **Purpose**: Full regression coverage
 
@@ -189,19 +189,19 @@ lastSaved: ''
 
 **Total**: {p2p3_count} scenarios
 
----
+______________________________________________________________________
 
 ## Resource Estimates
 
 ### Test Development Effort
 
-| Priority  | Count             | Hours/Test | Total Hours       | Notes                   |
-| --------- | ----------------- | ---------- | ----------------- | ----------------------- |
-| P0        | {p0_count}        | 2.0        | {p0_hours}        | Complex setup, security |
-| P1        | {p1_count}        | 1.0        | {p1_hours}        | Standard coverage       |
-| P2        | {p2_count}        | 0.5        | {p2_hours}        | Simple scenarios        |
-| P3        | {p3_count}        | 0.25       | {p3_hours}        | Exploratory             |
-| **Total** | **{total_count}** | **-**      | **{total_hours}** | **~{total_days} days**  |
+| Priority | Count | Hours/Test | Total Hours | Notes |
+| -- | -- | -- | -- | -- |
+| P0 | {p0_count} | 2.0 | {p0_hours} | Complex setup, security |
+| P1 | {p1_count} | 1.0 | {p1_hours} | Standard coverage |
+| P2 | {p2_count} | 0.5 | {p2_hours} | Simple scenarios |
+| P3 | {p3_count} | 0.25 | {p3_hours} | Exploratory |
+| **Total** | **{total_count}** | **-** | **{total_hours}** | **~{total_days} days** |
 
 ### Prerequisites
 
@@ -220,7 +220,7 @@ lastSaved: ''
 - {env_requirement}
 - {env_requirement}
 
----
+______________________________________________________________________
 
 ## Quality Gate Criteria
 
@@ -245,7 +245,7 @@ lastSaved: ''
 - [ ] Security tests (SEC category) pass 100%
 - [ ] Performance targets met (PERF category)
 
----
+______________________________________________________________________
 
 ## Mitigation Plans
 
@@ -265,7 +265,7 @@ lastSaved: ''
 **Status:** Planned / In Progress / Complete
 **Verification:** {how_to_verify}
 
----
+______________________________________________________________________
 
 ## Assumptions and Dependencies
 
@@ -286,16 +286,16 @@ lastSaved: ''
   - **Impact**: {impact}
   - **Contingency**: {contingency}
 
----
+______________________________________________________________________
 
----
+______________________________________________________________________
 
 ## Follow-on Workflows (Manual)
 
 - Run `*atdd` to generate failing P0 tests (separate workflow; not auto-run).
 - Run `*automate` for broader coverage once implementation exists.
 
----
+______________________________________________________________________
 
 ## Approval
 
@@ -307,19 +307,19 @@ lastSaved: ''
 
 **Comments:**
 
----
+______________________________________________________________________
 
----
+______________________________________________________________________
 
----
+______________________________________________________________________
 
 ## Interworking & Regression
 
-| Service/Component | Impact         | Regression Scope                |
-| ----------------- | -------------- | ------------------------------- |
-| **{Service}**     | {How affected} | {Existing tests that must pass} |
+| Service/Component | Impact | Regression Scope |
+| -- | -- | -- |
+| **{Service}** | {How affected} | {Existing tests that must pass} |
 
----
+______________________________________________________________________
 
 ## Appendix
 
@@ -337,7 +337,7 @@ lastSaved: ''
 - Architecture: {arch_link}
 - Tech Spec: {tech_spec_link}
 
----
+______________________________________________________________________
 
 **Generated by**: BMad TEA Agent - Test Architect Module
 **Workflow**: `_bmad/tea/testarch/bmad-testarch-test-design`

@@ -1,11 +1,11 @@
 ---
-name: 'step-01-init'
-description: 'Initialize TEA Academy - check for existing progress and route to continuation or new assessment'
+name: step-01-init
+description: Initialize TEA Academy - check for existing progress and route to continuation or new assessment
 
-nextStepFile: './step-02-assess.md'
-continueFile: './step-01b-continue.md'
+nextStepFile: ./step-02-assess.md
+continueFile: ./step-01b-continue.md
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-progressTemplate: '../templates/progress-template.yaml'
+progressTemplate: ../templates/progress-template.yaml
 ---
 
 # Step 1: Initialize TEA Academy
@@ -89,7 +89,7 @@ Let me load where you left off..."
 
 **THEN:** Immediately load, read entire file, then execute {continueFile}
 
----
+______________________________________________________________________
 
 **IF progress file DOES NOT EXIST:**
 
@@ -210,7 +210,7 @@ This helps me customize examples and recommendations for you.
 
 **THEN:** Immediately load, read entire file, then execute {nextStepFile}
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

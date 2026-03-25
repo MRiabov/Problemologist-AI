@@ -108,8 +108,8 @@ ______________________________________________________________________
 
 **Key Configuration Locations**:
 
-| File            | Purpose     | Location       |
-| --------------- | ----------- | -------------- |
+| File | Purpose | Location |
+| -- | -- | -- |
 | {config_file_1} | {purpose_1} | `{location_1}` |
 | {config_file_2} | {purpose_2} | `{location_2}` |
 

@@ -2,7 +2,7 @@
 stepsCompleted: []
 lastStep: ''
 lastSaved: ''
-workflowType: 'testarch-test-design'
+workflowType: testarch-test-design
 inputDocuments: []
 ---
 
@@ -17,7 +17,7 @@ inputDocuments: []
 
 **Related:** See Architecture doc (test-design-architecture.md) for testability concerns and architectural blockers.
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -36,19 +36,19 @@ inputDocuments: []
 - P3 tests: ~{N} (exploratory, benchmarks)
 - **Total**: ~{N} tests (~{X}-{Y} weeks with 1 QA)
 
----
+______________________________________________________________________
 
 ## Not in Scope
 
 **Components or systems explicitly excluded from this test plan:**
 
-| Item       | Reasoning                   | Mitigation                                                                      |
-| ---------- | --------------------------- | ------------------------------------------------------------------------------- |
+| Item | Reasoning | Mitigation |
+| -- | -- | -- |
 | **{Item}** | {Why excluded from testing} | {How risk is mitigated, e.g., "validated manually", "covered by upstream team"} |
 
 **Note:** Items listed here have been reviewed and accepted as out-of-scope by QA, Dev, and PM.
 
----
+______________________________________________________________________
 
 ## Dependencies & Test Blockers
 
@@ -59,20 +59,24 @@ inputDocuments: []
 **Source:** See Architecture doc "Quick Guide" for detailed mitigation plans
 
 1. **{Dependency 1}** - {Team} - {Timeline}
+
    - {What QA needs}
    - {Why it blocks testing}
 
 2. **{Dependency 2}** - {Team} - {Timeline}
+
    - {What QA needs}
    - {Why it blocks testing}
 
 ### QA Infrastructure Setup (Pre-Implementation)
 
 1. **Test Data Factories** - QA
+
    - {Entity} factory with faker-based randomization
    - Auto-cleanup fixtures for parallel safety
 
 2. **Test Environments** - QA
+
    - Local: {Setup details}
    - CI/CD: {Setup details}
    - Staging: {Setup details}
@@ -100,7 +104,7 @@ test('example test @p0', async ({ apiRequest }) => {
 });
 ```
 
----
+______________________________________________________________________
 
 ## Risk Assessment
 
@@ -108,17 +112,17 @@ test('example test @p0', async ({ apiRequest }) => {
 
 ### High-Priority Risks (Score ≥6)
 
-| Risk ID    | Category | Description         | Score       | QA Test Coverage             |
-| ---------- | -------- | ------------------- | ----------- | ---------------------------- |
-| **{R-ID}** | {CAT}    | {Brief description} | **{Score}** | {How QA validates this risk} |
+| Risk ID | Category | Description | Score | QA Test Coverage |
+| -- | -- | -- | -- | -- |
+| **{R-ID}** | {CAT} | {Brief description} | **{Score}** | {How QA validates this risk} |
 
 ### Medium/Low-Priority Risks
 
-| Risk ID | Category | Description         | Score   | QA Test Coverage             |
-| ------- | -------- | ------------------- | ------- | ---------------------------- |
-| {R-ID}  | {CAT}    | {Brief description} | {Score} | {How QA validates this risk} |
+| Risk ID | Category | Description | Score | QA Test Coverage |
+| -- | -- | -- | -- | -- |
+| {R-ID} | {CAT} | {Brief description} | {Score} | {How QA validates this risk} |
 
----
+______________________________________________________________________
 
 ## Entry Criteria
 
@@ -142,20 +146,20 @@ test('example test @p0', async ({ apiRequest }) => {
 - [ ] Performance baselines met (if applicable)
 - [ ] {Additional project-specific exit criteria}
 
----
+______________________________________________________________________
 
 ## Project Team (Optional)
 
 **Include only if roles/names are known or responsibility mapping is needed; otherwise omit.**
 
-| Name   | Role      | Testing Responsibilities                                      |
-| ------ | --------- | ------------------------------------------------------------- |
-| {Name} | QA Lead   | Test strategy, E2E/API test implementation, test review       |
-| {Name} | Dev Lead  | Unit tests, integration test support, testability hooks       |
-| {Name} | PM        | Requirements clarification, acceptance criteria, UAT sign-off |
-| {Name} | Architect | Testability review, NFR guidance, environment provisioning    |
+| Name | Role | Testing Responsibilities |
+| -- | -- | -- |
+| {Name} | QA Lead | Test strategy, E2E/API test implementation, test review |
+| {Name} | Dev Lead | Unit tests, integration test support, testability hooks |
+| {Name} | PM | Requirements clarification, acceptance criteria, UAT sign-off |
+| {Name} | Architect | Testability review, NFR guidance, environment provisioning |
 
----
+______________________________________________________________________
 
 ## Test Coverage Plan
 
@@ -165,51 +169,51 @@ test('example test @p0', async ({ apiRequest }) => {
 
 **Criteria:** Blocks core functionality + High risk (≥6) + No workaround + Affects majority of users
 
-| Test ID    | Requirement   | Test Level | Risk Link | Notes   |
-| ---------- | ------------- | ---------- | --------- | ------- |
-| **P0-001** | {Requirement} | {Level}    | {R-ID}    | {Notes} |
-| **P0-002** | {Requirement} | {Level}    | {R-ID}    | {Notes} |
+| Test ID | Requirement | Test Level | Risk Link | Notes |
+| -- | -- | -- | -- | -- |
+| **P0-001** | {Requirement} | {Level} | {R-ID} | {Notes} |
+| **P0-002** | {Requirement} | {Level} | {R-ID} | {Notes} |
 
 **Total P0:** ~{N} tests
 
----
+______________________________________________________________________
 
 ### P1 (High)
 
 **Criteria:** Important features + Medium risk (3-4) + Common workflows + Workaround exists but difficult
 
-| Test ID    | Requirement   | Test Level | Risk Link | Notes   |
-| ---------- | ------------- | ---------- | --------- | ------- |
-| **P1-001** | {Requirement} | {Level}    | {R-ID}    | {Notes} |
-| **P1-002** | {Requirement} | {Level}    | {R-ID}    | {Notes} |
+| Test ID | Requirement | Test Level | Risk Link | Notes |
+| -- | -- | -- | -- | -- |
+| **P1-001** | {Requirement} | {Level} | {R-ID} | {Notes} |
+| **P1-002** | {Requirement} | {Level} | {R-ID} | {Notes} |
 
 **Total P1:** ~{N} tests
 
----
+______________________________________________________________________
 
 ### P2 (Medium)
 
 **Criteria:** Secondary features + Low risk (1-2) + Edge cases + Regression prevention
 
-| Test ID    | Requirement   | Test Level | Risk Link | Notes   |
-| ---------- | ------------- | ---------- | --------- | ------- |
-| **P2-001** | {Requirement} | {Level}    | {R-ID}    | {Notes} |
+| Test ID | Requirement | Test Level | Risk Link | Notes |
+| -- | -- | -- | -- | -- |
+| **P2-001** | {Requirement} | {Level} | {R-ID} | {Notes} |
 
 **Total P2:** ~{N} tests
 
----
+______________________________________________________________________
 
 ### P3 (Low)
 
 **Criteria:** Nice-to-have + Exploratory + Performance benchmarks + Documentation validation
 
-| Test ID    | Requirement   | Test Level | Notes   |
-| ---------- | ------------- | ---------- | ------- |
-| **P3-001** | {Requirement} | {Level}    | {Notes} |
+| Test ID | Requirement | Test Level | Notes |
+| -- | -- | -- | -- |
+| **P3-001** | {Requirement} | {Level} | {Notes} |
 
 **Total P3:** ~{N} tests
 
----
+______________________________________________________________________
 
 ## Execution Strategy
 
@@ -252,19 +256,19 @@ test('example test @p0', async ({ apiRequest }) => {
 - Finance validation (cost alerts)
 - Documentation validation
 
----
+______________________________________________________________________
 
 ## QA Effort Estimate
 
 **QA test development effort only** (excludes DevOps, Backend, Data Eng, Finance work):
 
-| Priority  | Count | Effort Range       | Notes                                             |
-| --------- | ----- | ------------------ | ------------------------------------------------- |
-| P0        | ~{N}  | ~{X}-{Y} weeks     | Complex setup (security, performance, multi-step) |
-| P1        | ~{N}  | ~{X}-{Y} weeks     | Standard coverage (integration, API tests)        |
-| P2        | ~{N}  | ~{X}-{Y} days      | Edge cases, simple validation                     |
-| P3        | ~{N}  | ~{X}-{Y} days      | Exploratory, benchmarks                           |
-| **Total** | ~{N}  | **~{X}-{Y} weeks** | **1 QA engineer, full-time**                      |
+| Priority | Count | Effort Range | Notes |
+| -- | -- | -- | -- |
+| P0 | ~{N} | ~{X}-{Y} weeks | Complex setup (security, performance, multi-step) |
+| P1 | ~{N} | ~{X}-{Y} weeks | Standard coverage (integration, API tests) |
+| P2 | ~{N} | ~{X}-{Y} days | Edge cases, simple validation |
+| P3 | ~{N} | ~{X}-{Y} days | Exploratory, benchmarks |
+| **Total** | ~{N} | **~{X}-{Y} weeks** | **1 QA engineer, full-time** |
 
 **Assumptions:**
 
@@ -276,7 +280,7 @@ test('example test @p0', async ({ apiRequest }) => {
 
 - See "Dependencies & Test Blockers" section for what QA needs from Backend, DevOps, Data Eng
 
----
+______________________________________________________________________
 
 ## Implementation Planning Handoff (Optional)
 
@@ -284,19 +288,19 @@ test('example test @p0', async ({ apiRequest }) => {
 
 **Use this to inform implementation planning; if no dedicated QA, assign to Dev owners.**
 
-| Work Item   | Owner        | Target Milestone (Optional) | Dependencies/Notes |
-| ----------- | ------------ | --------------------------- | ------------------ |
-| {Work item} | {QA/Dev/etc} | {Milestone or date}         | {Notes}            |
-| {Work item} | {QA/Dev/etc} | {Milestone or date}         | {Notes}            |
+| Work Item | Owner | Target Milestone (Optional) | Dependencies/Notes |
+| -- | -- | -- | -- |
+| {Work item} | {QA/Dev/etc} | {Milestone or date} | {Notes} |
+| {Work item} | {QA/Dev/etc} | {Milestone or date} | {Notes} |
 
----
+______________________________________________________________________
 
 ## Tooling & Access
 
 **Include only if non-standard tools or access requests are required.**
 
-| Tool or Service   | Purpose   | Access Required | Status            |
-| ----------------- | --------- | --------------- | ----------------- |
+| Tool or Service | Purpose | Access Required | Status |
+| -- | -- | -- | -- |
 | {Tool or Service} | {Purpose} | {Access needed} | {Ready / Pending} |
 | {Tool or Service} | {Purpose} | {Access needed} | {Ready / Pending} |
 
@@ -304,22 +308,22 @@ test('example test @p0', async ({ apiRequest }) => {
 
 - [ ] {Access to request}
 
----
+______________________________________________________________________
 
 ## Interworking & Regression
 
 **Services and components impacted by this feature:**
 
-| Service/Component | Impact              | Regression Scope                | Validation Steps              |
-| ----------------- | ------------------- | ------------------------------- | ----------------------------- |
-| **{Service}**     | {How it's affected} | {What existing tests must pass} | {How to verify no regression} |
+| Service/Component | Impact | Regression Scope | Validation Steps |
+| -- | -- | -- | -- |
+| **{Service}** | {How it's affected} | {What existing tests must pass} | {How to verify no regression} |
 
 **Regression test strategy:**
 
 - {Describe which existing test suites must pass before release}
 - {Note any cross-team coordination needed for regression validation}
 
----
+______________________________________________________________________
 
 ## Appendix A: Code Examples & Tagging
 
@@ -380,16 +384,16 @@ npx playwright test --grep @Security
 npx playwright test
 ```
 
----
+______________________________________________________________________
 
 ## Appendix B: Knowledge Base References
 
 - **Risk Governance**: `risk-governance.md` - Risk scoring methodology
 - **Test Priorities Matrix**: `test-priorities-matrix.md` - P0-P3 criteria
 - **Test Levels Framework**: `test-levels-framework.md` - E2E vs API vs Unit selection
-- **Test Quality**: `test-quality.md` - Definition of Done (no hard waits, <300 lines, <1.5 min)
+- **Test Quality**: `test-quality.md` - Definition of Done (no hard waits, \<300 lines, \<1.5 min)
 
----
+______________________________________________________________________
 
 **Generated by:** BMad TEA Agent
 **Workflow:** `_bmad/tea/testarch/bmad-testarch-test-design`

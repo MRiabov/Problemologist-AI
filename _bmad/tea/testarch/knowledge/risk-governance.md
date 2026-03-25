@@ -116,7 +116,7 @@ export function assessTestFailureRisk(failure: {
 - **Business context**: Revenue, users, security drive impact calculation
 - **Status tracking**: OPEN → MITIGATED → WAIVED → ACCEPTED lifecycle
 
----
+______________________________________________________________________
 
 ### Example 2: Gate Decision Engine with Traceability Validation
 
@@ -261,7 +261,7 @@ console.log(gateResult.recommendations);
 - **Actionable output**: Recommendations drive next steps
 - **Audit trail**: Timestamp, decision, and context for compliance
 
----
+______________________________________________________________________
 
 ### Example 3: Risk Mitigation Workflow with Owner Tracking
 
@@ -448,7 +448,7 @@ console.log(tracker.getHistory('risk-001'));
 - **Audit trail**: Complete history of risk lifecycle (registered → mitigated)
 - **Automated reports**: Markdown output for Confluence/GitHub wikis
 
----
+______________________________________________________________________
 
 ### Example 4: Coverage Traceability Matrix (Test-to-Requirement Mapping)
 
@@ -591,7 +591,7 @@ console.log(report);
 - **Priority awareness**: P0 gaps are critical blockers
 - **Waiver support**: Allow explicit waivers for low-priority gaps
 
----
+______________________________________________________________________
 
 ## Risk Governance Checklist
 

@@ -345,44 +345,44 @@ interceptNetworkCall({ url: '/api/users/**' }); // Match all
 
 ### `interceptNetworkCall(options)`
 
-| Parameter         | Type       | Description                                                           |
-| ----------------- | ---------- | --------------------------------------------------------------------- |
-| `page`            | `Page`     | Required when using direct import (not needed with fixture)           |
-| `method`          | `string`   | Optional: HTTP method to match (e.g., 'GET', 'POST')                  |
-| `url`             | `string`   | Optional: URL pattern to match (supports glob patterns via picomatch) |
-| `fulfillResponse` | `object`   | Optional: Response to use when mocking                                |
-| `handler`         | `function` | Optional: Custom handler function for the route                       |
-| `timeout`         | `number`   | Optional: Timeout in milliseconds for the network request             |
+| Parameter | Type | Description |
+| -- | -- | -- |
+| `page` | `Page` | Required when using direct import (not needed with fixture) |
+| `method` | `string` | Optional: HTTP method to match (e.g., 'GET', 'POST') |
+| `url` | `string` | Optional: URL pattern to match (supports glob patterns via picomatch) |
+| `fulfillResponse` | `object` | Optional: Response to use when mocking |
+| `handler` | `function` | Optional: Custom handler function for the route |
+| `timeout` | `number` | Optional: Timeout in milliseconds for the network request |
 
 ### `fulfillResponse` Object
 
-| Property  | Type                     | Description                                           |
-| --------- | ------------------------ | ----------------------------------------------------- |
-| `status`  | `number`                 | HTTP status code (default: 200)                       |
-| `headers` | `Record<string, string>` | Response headers                                      |
-| `body`    | `any`                    | Response body (will be JSON.stringified if an object) |
+| Property | Type | Description |
+| -- | -- | -- |
+| `status` | `number` | HTTP status code (default: 200) |
+| `headers` | `Record<string, string>` | Response headers |
+| `body` | `any` | Response body (will be JSON.stringified if an object) |
 
 ### Return Value
 
 Returns a `Promise<NetworkCallResult>` with:
 
-| Property       | Type       | Description                             |
-| -------------- | ---------- | --------------------------------------- |
-| `request`      | `Request`  | The intercepted request                 |
-| `response`     | `Response` | The response (null if mocked)           |
-| `responseJson` | `any`      | Parsed JSON response (if available)     |
-| `status`       | `number`   | HTTP status code                        |
-| `requestJson`  | `any`      | Parsed JSON request body (if available) |
+| Property | Type | Description |
+| -- | -- | -- |
+| `request` | `Request` | The intercepted request |
+| `response` | `Response` | The response (null if mocked) |
+| `responseJson` | `any` | Parsed JSON response (if available) |
+| `status` | `number` | HTTP status code |
+| `requestJson` | `any` | Parsed JSON request body (if available) |
 
 ## Comparison with Vanilla Playwright
 
-| Vanilla Playwright                                          | intercept-network-call                                       |
-| ----------------------------------------------------------- | ------------------------------------------------------------ |
+| Vanilla Playwright | intercept-network-call |
+| -- | -- |
 | `await page.route('/api/users', route => route.continue())` | `const call = interceptNetworkCall({ url: '**/api/users' })` |
-| `const resp = await page.waitForResponse('/api/users')`     | (Combined in single statement)                               |
-| `const json = await resp.json()`                            | `const { responseJson } = await call`                        |
-| `const status = resp.status()`                              | `const { status } = await call`                              |
-| Complex filter predicates                                   | Simple glob patterns                                         |
+| `const resp = await page.waitForResponse('/api/users')` | (Combined in single statement) |
+| `const json = await resp.json()` | `const { responseJson } = await call` |
+| `const status = resp.status()` | `const { status } = await call` |
+| Complex filter predicates | Simple glob patterns |
 
 **Reduction:** ~5-7 lines -> ~2-3 lines per interception
 

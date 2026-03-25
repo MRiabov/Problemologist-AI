@@ -10,7 +10,7 @@
 - [ ] State file (project-scan-report.json) created at workflow start
 - [ ] State file updated after each step completion
 - [ ] State file contains all required fields per schema
-- [ ] Resumability prompt shown if state file exists and is <24 hours old
+- [ ] Resumability prompt shown if state file exists and is \<24 hours old
 - [ ] Old state files (>24 hours) automatically archived
 - [ ] Resume functionality loads previous state correctly
 - [ ] Workflow can jump to correct step when resuming
@@ -207,7 +207,7 @@
 - [ ] Index.md updated with deep-dive link
 - [ ] Deep-dive documentation is immediately useful for implementation
 
----
+______________________________________________________________________
 
 ## State File Quality
 

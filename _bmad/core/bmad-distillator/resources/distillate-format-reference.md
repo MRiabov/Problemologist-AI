@@ -24,6 +24,7 @@ parts: 1
 ### Prose Paragraph to Dense Bullet
 
 **Before** (human-readable brief excerpt):
+
 ```
 ## What Makes This Different
 
@@ -38,6 +39,7 @@ itself.
 ```
 
 **After** (distillate):
+
 ```
 ## Differentiation
 - Anti-fragmentation positioning: BMAD = cross-platform constant across 40+ fragmenting AI tools; no competitor provides shared methodology layer
@@ -47,6 +49,7 @@ itself.
 ### Technical Details to Compressed Facts
 
 **Before** (discovery notes excerpt):
+
 ```
 ## Competitive Landscape
 
@@ -66,6 +69,7 @@ itself.
 ```
 
 **After** (distillate):
+
 ```
 ## Competitive Landscape
 - No competitor combines structured methodology + plugin marketplace (whitespace)
@@ -80,17 +84,20 @@ itself.
 When the same fact appears in both a brief and discovery notes:
 
 **Brief says:**
+
 ```
 bmad-init must always be included as a base skill in every bundle
 ```
 
 **Discovery notes say:**
+
 ```
 bmad-init must always be included as a base skill in every bundle/install
 (solves bootstrapping problem)
 ```
 
 **Distillate keeps the more contextual version:**
+
 ```
 - bmad-init: always included as base skill in every bundle (solves bootstrapping)
 ```
@@ -98,6 +105,7 @@ bmad-init must always be included as a base skill in every bundle/install
 ### Decision/Rationale Compression
 
 **Before:**
+
 ```
 We decided not to build our own platform support matrix going forward, instead
 delegating to the Vercel skills CLI ecosystem. The rationale is that maintaining
@@ -106,6 +114,7 @@ at 40+ platforms.
 ```
 
 **After:**
+
 ```
 - Rejected: own platform support matrix. Reason: unsustainable at 40+ platforms; delegate to Vercel CLI ecosystem
 ```

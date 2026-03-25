@@ -130,6 +130,6 @@ This project is organized into {{parts_count}} distinct parts:
 
 {{development_notes}}
 
----
+______________________________________________________________________
 
 _Generated using BMAD Method `document-project` workflow_

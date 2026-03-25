@@ -1,6 +1,6 @@
 ---
-name: 'step-01b-resume'
-description: 'Resume interrupted workflow from last completed step'
+name: step-01b-resume
+description: Resume interrupted workflow from last completed step
 outputFile: '{test_artifacts}/test-design-progress.md'
 ---
 
@@ -15,7 +15,7 @@ Resume an interrupted workflow by loading the existing output document, displayi
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -47,7 +47,7 @@ Read `{outputFile}` and parse YAML frontmatter for:
 
 **THEN:** Halt. Do not proceed.
 
----
+______________________________________________________________________
 
 ### 2. Display Progress Dashboard
 
@@ -64,7 +64,7 @@ Display:
 4. ✅/⬜ Coverage Plan (step-04-coverage-plan)
 5. ✅/⬜ Generate Output (step-05-generate-output)"
 
----
+______________________________________________________________________
 
 ### 3. Route to Next Step
 
@@ -82,7 +82,7 @@ Based on `lastStep`, load the next incomplete step:
 
 The existing content in `{outputFile}` provides context from previously completed steps.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

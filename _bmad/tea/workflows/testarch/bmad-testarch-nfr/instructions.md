@@ -3,13 +3,13 @@
 **Workflow:** `bmad-testarch-nfr`
 **Version:** 5.0 (Step-File Architecture)
 
----
+______________________________________________________________________
 
 ## Overview
 
 Assess non-functional requirements (performance, security, reliability, maintainability) with evidence-based validation and deterministic PASS/CONCERNS/FAIL outcomes.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -19,7 +19,7 @@ This workflow uses **step-file architecture**:
 - **JIT Loading**: Only the current step file is in memory
 - **Sequential Enforcement**: Execute steps in order
 
----
+______________________________________________________________________
 
 ## INITIALIZATION SEQUENCE
 

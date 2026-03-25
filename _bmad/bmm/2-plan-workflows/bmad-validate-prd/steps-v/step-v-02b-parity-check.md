@@ -1,6 +1,6 @@
 ---
 # File references (ONLY variables used in this step)
-nextStepFile: './step-v-03-density-validation.md'
+nextStepFile: ./step-v-03-density-validation.md
 prdFile: '{prd_file_path}'
 validationReportPath: '{validation_report_path}'
 ---
@@ -59,33 +59,39 @@ Analyze non-standard PRD and identify gaps to achieve BMAD PRD parity, presentin
 For each of the 6 BMAD PRD core sections, analyze:
 
 **Executive Summary:**
+
 - Does PRD have vision/overview?
 - Is problem statement clear?
 - Are target users identified?
 - Gap: [What's missing or incomplete]
 
 **Success Criteria:**
+
 - Are measurable goals defined?
 - Is success clearly defined?
 - Gap: [What's missing or incomplete]
 
 **Product Scope:**
+
 - Is scope clearly defined?
 - Are in-scope items listed?
 - Are out-of-scope items listed?
 - Gap: [What's missing or incomplete]
 
 **User Journeys:**
+
 - Are user types/personas identified?
 - Are user flows documented?
 - Gap: [What's missing or incomplete]
 
 **Functional Requirements:**
+
 - Are features/capabilities listed?
 - Are requirements structured?
 - Gap: [What's missing or incomplete]
 
 **Non-Functional Requirements:**
+
 - Are quality attributes defined?
 - Are performance/security/etc. requirements documented?
 - Gap: [What's missing or incomplete]
@@ -95,11 +101,13 @@ For each of the 6 BMAD PRD core sections, analyze:
 For each missing or incomplete section, estimate:
 
 **Effort Level:**
+
 - Minimal - Section exists but needs minor enhancements
 - Moderate - Section missing but content exists elsewhere in PRD
 - Significant - Section missing, requires new content creation
 
 **Total Parity Effort:**
+
 - Based on individual section estimates
 - Classify overall: Quick / Moderate / Substantial effort
 
@@ -182,7 +190,7 @@ Your PRD is missing {count} of 6 core BMAD PRD sections. The overall effort to r
 - IF S (Save): Confirm saved, display summary, exit
 - IF Any other: help user respond, then redisplay menu
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

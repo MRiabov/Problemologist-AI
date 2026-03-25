@@ -217,16 +217,16 @@ spec-kitty merge --strategy rebase
 
 ## Options
 
-| Option                                  | Description                                    | Default |
-| --------------------------------------- | ---------------------------------------------- | ------- |
-| `--strategy`                            | Merge strategy: `merge`, `squash`, or `rebase` | `merge` |
-| `--delete-branch` / `--keep-branch`     | Delete feature branch after merge              | delete  |
-| `--remove-worktree` / `--keep-worktree` | Remove feature worktree after merge            | remove  |
-| `--push`                                | Push to origin after merge                     | no push |
-| `--target`                              | Target branch to merge into                    | `main`  |
-| `--dry-run`                             | Show what would be done without executing      | off     |
-| `--feature`                             | Feature slug when merging from main branch     | none    |
-| `--resume`                              | Resume an interrupted merge                    | off     |
+| Option | Description | Default |
+| -- | -- | -- |
+| `--strategy` | Merge strategy: `merge`, `squash`, or `rebase` | `merge` |
+| `--delete-branch` / `--keep-branch` | Delete feature branch after merge | delete |
+| `--remove-worktree` / `--keep-worktree` | Remove feature worktree after merge | remove |
+| `--push` | Push to origin after merge | no push |
+| `--target` | Target branch to merge into | `main` |
+| `--dry-run` | Show what would be done without executing | off |
+| `--feature` | Feature slug when merging from main branch | none |
+| `--resume` | Resume an interrupted merge | off |
 
 ## Worktree Strategy
 

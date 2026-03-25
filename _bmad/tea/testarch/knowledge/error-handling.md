@@ -155,7 +155,7 @@ describe('API Error Handling', () => {
 - **Error UI validation**: Assert user sees error message
 - **Logging**: Capture errors for debugging, don't swallow silently
 
----
+______________________________________________________________________
 
 ### Example 2: Retry Validation Pattern (Network Resilience)
 
@@ -328,7 +328,7 @@ describe('Network Retry Logic', () => {
 - **Non-retryable errors**: 404s don't trigger retries
 - **Telemetry**: Log retry attempts for monitoring
 
----
+______________________________________________________________________
 
 ### Example 3: Telemetry Logging with Context (Sentry Integration)
 
@@ -569,7 +569,7 @@ export function logError(error: Error, context?: ErrorContext) {
 - **Structured logs**: JSON format for easy parsing
 - **Test validation**: Assert logs contain context but not secrets
 
----
+______________________________________________________________________
 
 ### Example 4: Graceful Degradation Tests (Fallback Behavior)
 
@@ -701,7 +701,7 @@ test.describe('Service Unavailability', () => {
 - **Third-party resilience**: App works without external scripts
 - **User transparency**: Stale data warnings displayed
 
----
+______________________________________________________________________
 
 ## Error Handling Testing Checklist
 

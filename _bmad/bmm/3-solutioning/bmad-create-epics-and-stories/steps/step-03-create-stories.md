@@ -230,7 +230,7 @@ Display: "**Select an Option:** [A] Advanced Elicitation [P] Party Mode [C] Cont
 
 ONLY WHEN [C continue option] is selected and [all epics and stories saved to document following the template structure exactly], will you then read fully and follow: `./step-04-final-validation.md` to begin final validation phase.
 
----
+______________________________________________________________________
 
 ## 🚨 SYSTEM SUCCESS/FAILURE METRICS
 

@@ -10,20 +10,20 @@ Several critical "code smells" and blockers were identified in the `controller` 
 
 ### 1. Benchmark Generation Flow Blockers
 
-| Component            | Issue                                                                                                                                                             | Fix Applied                                                                                                               | User Review |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `BenchmarkCoderNode` | **Validation Failure:** Node failed handoff because it only verified `script.py` and ignored mandatory files (`plan.md`, `todo.md`, `benchmark_definition.yaml`). | Updated node to read and validate all required files before handoff.                                                      | [Pending]   |
-| `BenchmarkStorage`   | **Infrastructure Mismatch:** Final asset persistence failed because `benchmarks-source` and `benchmarks-assets` S3 buckets were not created by the infra setup.   | Added missing buckets to `docker-compose.test.yaml`.                                                                      | [Pending]   |
-| `BenchmarkGraph`     | **Environment Inconsistency:** Hardcoded URLs for workers were used in some cleanup/persistence paths instead of following the global settings.                   | Refactored `graph.py` to use `global_settings` consistently.                                                              | [Pending]   |
-| `MockDSPyLM`         | **ReAct Loop Protection:** The mock LM was hitting loop protection because it didn't provide the expected fields for the final turn of `dspy.ReAct` programs.     | Refined the mock to correctly provide `next_thought`, `next_tool_name`, and `next_tool_args` along with signature fields. | [Pending]   |
+| Component | Issue | Fix Applied | User Review |
+| -- | -- | -- | -- |
+| `BenchmarkCoderNode` | **Validation Failure:** Node failed handoff because it only verified `script.py` and ignored mandatory files (`plan.md`, `todo.md`, `benchmark_definition.yaml`). | Updated node to read and validate all required files before handoff. | [Pending] |
+| `BenchmarkStorage` | **Infrastructure Mismatch:** Final asset persistence failed because `benchmarks-source` and `benchmarks-assets` S3 buckets were not created by the infra setup. | Added missing buckets to `docker-compose.test.yaml`. | [Pending] |
+| `BenchmarkGraph` | **Environment Inconsistency:** Hardcoded URLs for workers were used in some cleanup/persistence paths instead of following the global settings. | Refactored `graph.py` to use `global_settings` consistently. | [Pending] |
+| `MockDSPyLM` | **ReAct Loop Protection:** The mock LM was hitting loop protection because it didn't provide the expected fields for the final turn of `dspy.ReAct` programs. | Refined the mock to correctly provide `next_thought`, `next_tool_name`, and `next_tool_args` along with signature fields. | [Pending] |
 
 ### 2. Frontend Integration (INT-164-166)
 
-| ID      | Title                 | Status          | Observation                                                                                                                                                  | User Review |
-| ------- | --------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| INT-164 | Code viewer mentions  | **Failing**     | The test times out waiting for generation to complete. Even with backend fixes, the E2E flow is too slow or fragile for a 120s timeout in some environments. | [Pending]   |
-| INT-165 | CAD Topology          | **Implemented** | Skeleton implemented. Depends on successful model loading which in turn depends on benchmark completion.                                                     | [Pending]   |
-| INT-166 | Simulation Navigation | **Implemented** | Skeleton implemented. Depends on successful simulation artifact generation.                                                                                  | [Pending]   |
+| ID | Title | Status | Observation | User Review |
+| -- | -- | -- | -- | -- |
+| INT-164 | Code viewer mentions | **Failing** | The test times out waiting for generation to complete. Even with backend fixes, the E2E flow is too slow or fragile for a 120s timeout in some environments. | [Pending] |
+| INT-165 | CAD Topology | **Implemented** | Skeleton implemented. Depends on successful model loading which in turn depends on benchmark completion. | [Pending] |
+| INT-166 | Simulation Navigation | **Implemented** | Skeleton implemented. Depends on successful simulation artifact generation. | [Pending] |
 
 ## Technical Debt & Recommendations
 

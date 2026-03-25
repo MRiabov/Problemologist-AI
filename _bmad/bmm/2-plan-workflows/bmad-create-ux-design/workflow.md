@@ -2,7 +2,7 @@
 
 **Goal:** Create comprehensive UX design specifications through collaborative visual exploration and informed decision-making where you act as a UX facilitator working with a product stakeholder.
 
----
+______________________________________________________________________
 
 ## WORKFLOW ARCHITECTURE
 
@@ -13,7 +13,7 @@ This uses **micro-file architecture** for disciplined execution:
 - Document state tracked in frontmatter
 - Append-only document building through conversation
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 

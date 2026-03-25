@@ -8,10 +8,10 @@ Research WPs produce deliverables in a **worktree**, which merge to main like co
 
 ### Two Types of Artifacts
 
-| Type                      | Location                                           | Review Focus                         |
-| ------------------------- | -------------------------------------------------- | ------------------------------------ |
-| **Research Deliverables** | `{{deliverables_path}}` (in worktree)              | PRIMARY - Your main review target    |
-| **Planning Artifacts**    | `kitty-specs/{{feature_slug}}/research/` (in main) | SECONDARY - Citation validation only |
+| Type | Location | Review Focus |
+| -- | -- | -- |
+| **Research Deliverables** | `{{deliverables_path}}` (in worktree) | PRIMARY - Your main review target |
+| **Planning Artifacts** | `kitty-specs/{{feature_slug}}/research/` (in main) | SECONDARY - Citation validation only |
 
 ### Review Checklist
 

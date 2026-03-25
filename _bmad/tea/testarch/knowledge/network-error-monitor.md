@@ -317,14 +317,14 @@ The monitor has minimal performance impact:
 
 ## Comparison with Alternatives
 
-| Approach                    | Network Error Monitor | Manual afterEach      |
-| --------------------------- | --------------------- | --------------------- |
-| **Setup Required**          | Zero (auto-enabled)   | Every test file       |
-| **Catches Silent Failures** | Yes                   | Yes (if configured)   |
-| **Structured Artifacts**    | JSON attached         | Custom impl           |
-| **Test Failure Safety**     | Try/finally           | afterEach may not run |
-| **Opt-Out Mechanism**       | Annotation            | Custom logic          |
-| **Status Aware**            | Respects skip/failed  | No                    |
+| Approach | Network Error Monitor | Manual afterEach |
+| -- | -- | -- |
+| **Setup Required** | Zero (auto-enabled) | Every test file |
+| **Catches Silent Failures** | Yes | Yes (if configured) |
+| **Structured Artifacts** | JSON attached | Custom impl |
+| **Test Failure Safety** | Try/finally | afterEach may not run |
+| **Opt-Out Mechanism** | Annotation | Custom logic |
+| **Status Aware** | Respects skip/failed | No |
 
 ## When to Use
 

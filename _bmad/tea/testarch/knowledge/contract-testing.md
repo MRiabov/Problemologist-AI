@@ -181,7 +181,7 @@ describe('User API Contract', () => {
 - **Isolation**: No real backend needed, runs fast
 - **Pact generation**: Automatically creates JSON pact files
 
----
+______________________________________________________________________
 
 ### Example 2: Pact Provider Verification (Backend validates contracts)
 
@@ -328,7 +328,7 @@ jobs:
 - **can-i-deploy**: Safety check before production deployment
 - **Database isolation**: Reset between state handlers
 
----
+______________________________________________________________________
 
 ### Example 3: Contract CI Integration (Consumer & Provider Workflow)
 
@@ -456,7 +456,7 @@ jobs:
 - **Record deployment**: Track which version is in each environment
 - **Parallel dev**: Consumer and provider teams work independently
 
----
+______________________________________________________________________
 
 ### Example 4: Resilience Coverage (Testing Fallback Behavior)
 
@@ -695,7 +695,7 @@ export async function getUserById(
 - **Retry logic**: Exponential backoff tested
 - **Optional fields**: Consumer handles partial responses
 
----
+______________________________________________________________________
 
 ### Example 5: Pact Broker Housekeeping & Lifecycle Management
 
@@ -942,7 +942,7 @@ jobs:
 - **Retention policy**: Keep recent, production, and branch-latest pacts
 - **Webhook triggers**: Provider verification runs on consumer changes
 
----
+______________________________________________________________________
 
 ## Provider Scrutiny Protocol
 
@@ -967,15 +967,15 @@ If the provider source is not accessible, use: `// Provider endpoint: TODO — p
 
 Before generating each Pact interaction, read the provider route handler and/or OpenAPI spec and verify:
 
-| #   | Check                 | What to Read (source code / OpenAPI spec)                         | Common Mismatch                                               |
-| --- | --------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1   | **Response shape**    | Handler's `res.json()` calls / OpenAPI `responses.content.schema` | Nested object vs flat; array wrapper vs direct                |
-| 2   | **Status codes**      | Handler's `res.status()` calls / OpenAPI `responses` keys         | 200 vs 201 for creation; 204 vs 200 for delete                |
-| 3   | **Field names**       | Response type/DTO definitions / OpenAPI `schema.properties`       | `transaction_id` vs `transactionId`; `fraud_score` vs `score` |
-| 4   | **Enum values**       | Validation schemas, constants / OpenAPI `schema.enum`             | `"active"` vs `"ACTIVE"`; `"pending"` vs `"in_progress"`      |
-| 5   | **Required fields**   | Request validation (Joi, Zod) / OpenAPI `schema.required`         | Missing required header; optional field assumed required      |
-| 6   | **Data types**        | TypeScript types, DB models / OpenAPI `schema.type` + `format`    | `string` ID vs `number` ID; ISO date vs Unix timestamp        |
-| 7   | **Nested structures** | Response builder, serializer / OpenAPI `$ref` + `allOf`/`oneOf`   | `{ data: { items: [] } }` vs `{ items: [] }`                  |
+| # | Check | What to Read (source code / OpenAPI spec) | Common Mismatch |
+| -- | -- | -- | -- |
+| 1 | **Response shape** | Handler's `res.json()` calls / OpenAPI `responses.content.schema` | Nested object vs flat; array wrapper vs direct |
+| 2 | **Status codes** | Handler's `res.status()` calls / OpenAPI `responses` keys | 200 vs 201 for creation; 204 vs 200 for delete |
+| 3 | **Field names** | Response type/DTO definitions / OpenAPI `schema.properties` | `transaction_id` vs `transactionId`; `fraud_score` vs `score` |
+| 4 | **Enum values** | Validation schemas, constants / OpenAPI `schema.enum` | `"active"` vs `"ACTIVE"`; `"pending"` vs `"in_progress"` |
+| 5 | **Required fields** | Request validation (Joi, Zod) / OpenAPI `schema.required` | Missing required header; optional field assumed required |
+| 6 | **Data types** | TypeScript types, DB models / OpenAPI `schema.type` + `format` | `string` ID vs `number` ID; ISO date vs Unix timestamp |
+| 7 | **Nested structures** | Response builder, serializer / OpenAPI `$ref` + `allOf`/`oneOf` | `{ data: { items: [] } }` vs `{ items: [] }` |
 
 ### Scrutiny Evidence Block
 
@@ -1003,7 +1003,7 @@ When provider source code is not accessible (different repo, no access, closed s
 3. **Neither available**: Generate contracts from consumer-side types but use the TODO form of the mandatory comment: `// Provider endpoint: TODO — provider source not accessible, verify manually` and add a `provider_scrutiny: "pending"` field to the output JSON
 4. **Never silently guess**: If you cannot verify, document what you assumed and why
 
----
+______________________________________________________________________
 
 ## Contract Testing Checklist
 
@@ -1027,23 +1027,23 @@ Before implementing contract testing, verify:
 - Related fragments: `test-levels-framework.md`, `ci-burn-in.md`, `pact-consumer-framework-setup.md`
 - Tools: Pact.js, Pact Broker (Pactflow or self-hosted), Pact CLI
 
----
+______________________________________________________________________
 
 ## Pact.js Utils Accelerator
 
 When `tea_use_pactjs_utils` is enabled, the following utilities replace manual boilerplate:
 
-| Manual Pattern (raw Pact.js)                             | Pact.js Utils Equivalent                                                          | Benefit                                                               |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Manual `JsonMap` casting for `.given()` params           | `createProviderState({ name, params })`                                           | Type-safe, auto-conversion of Date/null/nested objects                |
-| Repeated builder callbacks for query/header/body         | `setJsonContent({ query, headers, body })`                                        | Reusable callback for `.withRequest(...)` and `.willRespondWith(...)` |
-| Inline body lambda `(builder) => builder.jsonBody(body)` | `setJsonBody(body)`                                                               | Body-only shorthand for cleaner response builders                     |
-| 30+ lines of `VerifierOptions` assembly                  | `buildVerifierOptions({ provider, port, includeMainAndDeployed, stateHandlers })` | One-call setup, env-aware, flow auto-detection                        |
-| Manual broker URL + selector logic from env vars         | `handlePactBrokerUrlAndSelectors({ ..., options })`                               | Mutates options in-place with broker URL and selectors                |
-| DIY Express middleware for auth injection                | `createRequestFilter({ tokenGenerator })`                                         | Bearer prefix contract prevents double-prefix bugs                    |
-| Manual CI branch/tag extraction                          | `getProviderVersionTags()`                                                        | CI-aware (GitHub Actions, GitLab CI, etc.)                            |
-| Message verifier config assembly                         | `buildMessageVerifierOptions({ provider, messageProviders })`                     | Same one-call pattern for Kafka/async contracts                       |
-| Inline no-op filter `(req, res, next) => next()`         | `noOpRequestFilter`                                                               | Pre-built pass-through for no-auth providers                          |
+| Manual Pattern (raw Pact.js) | Pact.js Utils Equivalent | Benefit |
+| -- | -- | -- |
+| Manual `JsonMap` casting for `.given()` params | `createProviderState({ name, params })` | Type-safe, auto-conversion of Date/null/nested objects |
+| Repeated builder callbacks for query/header/body | `setJsonContent({ query, headers, body })` | Reusable callback for `.withRequest(...)` and `.willRespondWith(...)` |
+| Inline body lambda `(builder) => builder.jsonBody(body)` | `setJsonBody(body)` | Body-only shorthand for cleaner response builders |
+| 30+ lines of `VerifierOptions` assembly | `buildVerifierOptions({ provider, port, includeMainAndDeployed, stateHandlers })` | One-call setup, env-aware, flow auto-detection |
+| Manual broker URL + selector logic from env vars | `handlePactBrokerUrlAndSelectors({ ..., options })` | Mutates options in-place with broker URL and selectors |
+| DIY Express middleware for auth injection | `createRequestFilter({ tokenGenerator })` | Bearer prefix contract prevents double-prefix bugs |
+| Manual CI branch/tag extraction | `getProviderVersionTags()` | CI-aware (GitHub Actions, GitLab CI, etc.) |
+| Message verifier config assembly | `buildMessageVerifierOptions({ provider, messageProviders })` | Same one-call pattern for Kafka/async contracts |
+| Inline no-op filter `(req, res, next) => next()` | `noOpRequestFilter` | Pre-built pass-through for no-auth providers |
 
 See the `pactjs-utils-*.md` knowledge fragments for complete examples and anti-patterns.
 

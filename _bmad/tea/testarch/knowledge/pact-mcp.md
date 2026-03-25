@@ -22,29 +22,29 @@ Use the SmartBear MCP server to enable AI agent interaction with PactFlow/Pact B
 
 ## Available Tools
 
-| #   | Tool                      | Description                                                             | When Used             |
-| --- | ------------------------- | ----------------------------------------------------------------------- | --------------------- |
-| 1   | **Generate Pact Tests**   | Create consumer/provider tests from code, OpenAPI, or templates         | automate workflow     |
-| 2   | **Fetch Provider States** | List all provider states from broker for a given consumer-provider pair | test-design, automate |
-| 3   | **Review Pact Tests**     | Analyze tests against contract testing best practices                   | test-review           |
-| 4   | **Can I Deploy**          | Check deployment safety via broker verification matrix                  | ci workflow           |
-| 5   | **Matrix**                | Query consumer-provider verification matrix                             | ci, test-design       |
-| 6   | **PactFlow AI Status**    | Check AI credits and permissions (PactFlow Cloud only)                  | diagnostics           |
-| 7   | **Metrics - All**         | Workspace-wide contract testing metrics                                 | reporting             |
-| 8   | **Metrics - Team**        | Team-level adoption statistics (PactFlow Cloud only)                    | reporting             |
+| # | Tool | Description | When Used |
+| -- | -- | -- | -- |
+| 1 | **Generate Pact Tests** | Create consumer/provider tests from code, OpenAPI, or templates | automate workflow |
+| 2 | **Fetch Provider States** | List all provider states from broker for a given consumer-provider pair | test-design, automate |
+| 3 | **Review Pact Tests** | Analyze tests against contract testing best practices | test-review |
+| 4 | **Can I Deploy** | Check deployment safety via broker verification matrix | ci workflow |
+| 5 | **Matrix** | Query consumer-provider verification matrix | ci, test-design |
+| 6 | **PactFlow AI Status** | Check AI credits and permissions (PactFlow Cloud only) | diagnostics |
+| 7 | **Metrics - All** | Workspace-wide contract testing metrics | reporting |
+| 8 | **Metrics - Team** | Team-level adoption statistics (PactFlow Cloud only) | reporting |
 
 ## Installation
 
 ### Config file locations
 
-| Tool              | Global Config File                    | Format                 |
-| ----------------- | ------------------------------------- | ---------------------- |
-| Claude Code       | `~/.claude.json`                      | JSON (`mcpServers`)    |
-| Codex             | `~/.codex/config.toml`                | TOML (`[mcp_servers]`) |
-| Gemini CLI        | `~/.gemini/settings.json`             | JSON (`mcpServers`)    |
-| Cursor            | `~/.cursor/mcp.json`                  | JSON (`mcpServers`)    |
-| Windsurf          | `~/.codeium/windsurf/mcp_config.json` | JSON (`mcpServers`)    |
-| VS Code (Copilot) | `.vscode/mcp.json`                    | JSON (`servers`)       |
+| Tool | Global Config File | Format |
+| -- | -- | -- |
+| Claude Code | `~/.claude.json` | JSON (`mcpServers`) |
+| Codex | `~/.codex/config.toml` | TOML (`[mcp_servers]`) |
+| Gemini CLI | `~/.gemini/settings.json` | JSON (`mcpServers`) |
+| Cursor | `~/.cursor/mcp.json` | JSON (`mcpServers`) |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` | JSON (`mcpServers`) |
+| VS Code (Copilot) | `.vscode/mcp.json` | JSON (`servers`) |
 
 > **Claude Code tip**: Prefer the `claude mcp add` CLI over manual JSON editing. Use `-s user` for global (all projects) or omit for per-project (default).
 
@@ -119,12 +119,12 @@ Add to `.vscode/mcp.json` (note: uses `servers` key, not `mcpServers`):
 
 ## Required Environment Variables
 
-| Variable               | Required                     | Description                             |
-| ---------------------- | ---------------------------- | --------------------------------------- |
-| `PACT_BROKER_BASE_URL` | Yes (for Pact features)      | PactFlow or self-hosted Pact Broker URL |
-| `PACT_BROKER_TOKEN`    | For PactFlow / token auth    | API token for broker authentication     |
-| `PACT_BROKER_USERNAME` | For basic auth (self-hosted) | Username for basic authentication       |
-| `PACT_BROKER_PASSWORD` | For basic auth (self-hosted) | Password for basic authentication       |
+| Variable | Required | Description |
+| -- | -- | -- |
+| `PACT_BROKER_BASE_URL` | Yes (for Pact features) | PactFlow or self-hosted Pact Broker URL |
+| `PACT_BROKER_TOKEN` | For PactFlow / token auth | API token for broker authentication |
+| `PACT_BROKER_USERNAME` | For basic auth (self-hosted) | Username for basic authentication |
+| `PACT_BROKER_PASSWORD` | For basic auth (self-hosted) | Password for basic authentication |
 
 **Authentication**: Use token auth (`PACT_BROKER_TOKEN`) for PactFlow. Use basic auth (`PACT_BROKER_USERNAME` + `PACT_BROKER_PASSWORD`) for self-hosted Pact Broker instances. Only one auth method is needed.
 

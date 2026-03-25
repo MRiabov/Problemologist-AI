@@ -119,14 +119,14 @@ ______________________________________________________________________
 
 ## Summary
 
-| Issue                           | Severity    | Effort  |
-| ------------------------------- | ----------- | ------- |
-| 1. Mixed Concerns in Tracing    | 🔴 Critical | Medium  |
-| 2. Manual Retry Loops (Planner) | 🔴 Critical | Medium  |
-| 3. Redundant Pydantic Coercion  | 🟠 Moderate | Low     |
-| 4. Magical Input Cleaning       | 🟠 Moderate | Low     |
-| 5. Redundant Imports            | 🟡 Minor    | Trivial |
-| 6. Inconsistent Config          | 🟡 Minor    | Trivial |
+| Issue | Severity | Effort |
+| -- | -- | -- |
+| 1. Mixed Concerns in Tracing | 🔴 Critical | Medium |
+| 2. Manual Retry Loops (Planner) | 🔴 Critical | Medium |
+| 3. Redundant Pydantic Coercion | 🟠 Moderate | Low |
+| 4. Magical Input Cleaning | 🟠 Moderate | Low |
+| 5. Redundant Imports | 🟡 Minor | Trivial |
+| 6. Inconsistent Config | 🟡 Minor | Trivial |
 
 ______________________________________________________________________
 

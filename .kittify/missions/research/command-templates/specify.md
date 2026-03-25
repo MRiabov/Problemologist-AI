@@ -60,10 +60,10 @@ For research missions, focus on:
 
 **IMPORTANT**: Research missions have TWO types of artifacts:
 
-| Type                      | Location                    | Purpose                                    |
-| ------------------------- | --------------------------- | ------------------------------------------ |
-| **Planning Artifacts**    | `kitty-specs/###/research/` | Evidence/sources for PLANNING this sprint  |
-| **Research Deliverables** | `deliverables_path`         | Actual research OUTPUT (your work product) |
+| Type | Location | Purpose |
+| -- | -- | -- |
+| **Planning Artifacts** | `kitty-specs/###/research/` | Evidence/sources for PLANNING this sprint |
+| **Research Deliverables** | `deliverables_path` | Actual research OUTPUT (your work product) |
 
 ### Determining deliverables_path
 

@@ -69,11 +69,11 @@ User prompt →
 
 ### 2.3 Engineer Planner → CAD Agent Files
 
-| File                        | Contents                                                                                |
-| --------------------------- | --------------------------------------------------------------------------------------- |
-| `plan.md`                   | Solution overview, parts list, assembly strategy, cost/weight budget, risk assessment   |
+| File | Contents |
+| -- | -- |
+| `plan.md` | Solution overview, parts list, assembly strategy, cost/weight budget, risk assessment |
 | `benchmark_definition.yaml` | Stripped-down version with planner's **own** max price/weight (under benchmark ceiling) |
-| `todo.md`                   | TODO list                                                                               |
+| `todo.md` | TODO list |
 
 **Critical clarification**: The benchmark generator sets **ceiling** price/weight. The engineering planner sets operating constraints **under** that ceiling.
 
@@ -324,18 +324,18 @@ ______________________________________________________________________
 
 *MOSTLY DONE*
 
-| Before        | After          |
-| ------------- | -------------- |
-| `paralel`     | `parallel`     |
-| `outweights`  | `outweighs`    |
-| `probaly`     | `probably`     |
+| Before | After |
+| -- | -- |
+| `paralel` | `parallel` |
+| `outweights` | `outweighs` |
+| `probaly` | `probably` |
 | `asyncronous` | `asynchronous` |
-| `separte`     | `separate`     |
-| `Mulitple`    | `Multiple`     |
-| `throught`    | `through`      |
-| `continous`   | `continuous`   |
-| `prerender`   | `pre-render`   |
-| `Norably`     | `Notably`      |
+| `separte` | `separate` |
+| `Mulitple` | `Multiple` |
+| `throught` | `through` |
+| `continous` | `continuous` |
+| `prerender` | `pre-render` |
+| `Norably` | `Notably` |
 
 ______________________________________________________________________
 
@@ -377,11 +377,11 @@ ______________________________________________________________________
 
 ## Files Affected by These Changes
 
-| Area           | Files to Create/Modify                                  |
-| -------------- | ------------------------------------------------------- |
-| Schema         | `benchmark_definition.yaml` schema, `plan.md` templates |
-| Validation     | Markdown validators, Python linting integration         |
-| Tools          | `preview_design` implementation                         |
-| Frontend       | Benchmark creation flow, 3-column layout, CAD viewer    |
-| Worker         | GLB endpoint, simulation semaphore                      |
-| Infrastructure | Repo restructure, type enforcement                      |
+| Area | Files to Create/Modify |
+| -- | -- |
+| Schema | `benchmark_definition.yaml` schema, `plan.md` templates |
+| Validation | Markdown validators, Python linting integration |
+| Tools | `preview_design` implementation |
+| Frontend | Benchmark creation flow, 3-column layout, CAD viewer |
+| Worker | GLB endpoint, simulation semaphore |
+| Infrastructure | Repo restructure, type enforcement |

@@ -66,21 +66,21 @@ Review the frontmatter to understand:
 
 Use the following ordered sequence to determine the next step from the last completed step:
 
-| Last Completed                | Next Step                     |
-| ----------------------------- | ----------------------------- |
-| step-01-init.md               | step-02-discovery.md          |
-| step-02-discovery.md          | step-02b-vision.md            |
-| step-02b-vision.md            | step-02c-executive-summary.md |
-| step-02c-executive-summary.md | step-03-success.md            |
-| step-03-success.md            | step-04-journeys.md           |
-| step-04-journeys.md           | step-05-domain.md             |
-| step-05-domain.md             | step-06-innovation.md         |
-| step-06-innovation.md         | step-07-project-type.md       |
-| step-07-project-type.md       | step-08-scoping.md            |
-| step-08-scoping.md            | step-09-functional.md         |
-| step-09-functional.md         | step-10-nonfunctional.md      |
-| step-10-nonfunctional.md      | step-11-polish.md             |
-| step-11-polish.md             | step-12-complete.md           |
+| Last Completed | Next Step |
+| -- | -- |
+| step-01-init.md | step-02-discovery.md |
+| step-02-discovery.md | step-02b-vision.md |
+| step-02b-vision.md | step-02c-executive-summary.md |
+| step-02c-executive-summary.md | step-03-success.md |
+| step-03-success.md | step-04-journeys.md |
+| step-04-journeys.md | step-05-domain.md |
+| step-05-domain.md | step-06-innovation.md |
+| step-06-innovation.md | step-07-project-type.md |
+| step-07-project-type.md | step-08-scoping.md |
+| step-08-scoping.md | step-09-functional.md |
+| step-09-functional.md | step-10-nonfunctional.md |
+| step-10-nonfunctional.md | step-11-polish.md |
+| step-11-polish.md | step-12-complete.md |
 
 1. Get the last element from the `stepsCompleted` array
 2. Look it up in the table above to find the next step

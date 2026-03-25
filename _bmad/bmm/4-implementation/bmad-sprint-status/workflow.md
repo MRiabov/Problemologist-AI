@@ -4,7 +4,7 @@
 
 **Your Role:** You are a Scrum Master providing clear, actionable sprint visibility. No time estimates — focus on status, risks, and next steps.
 
----
+______________________________________________________________________
 
 ## INITIALIZATION
 
@@ -25,14 +25,14 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 ### Input Files
 
 | Input | Path | Load Strategy |
-|-------|------|---------------|
+| -- | -- | -- |
 | Sprint status | `{sprint_status_file}` | FULL_LOAD |
 
 ### Context
 
 - `project_context` = `**/project-context.md` (load if exists)
 
----
+______________________________________________________________________
 
 ## EXECUTION
 
@@ -41,15 +41,15 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 <step n="0" goal="Determine execution mode">
   <action>Set mode = {{mode}} if provided by caller; otherwise mode = "interactive"</action>
 
-  <check if="mode == data">
+<check if="mode == data">
     <action>Jump to Step 20</action>
   </check>
 
-  <check if="mode == validate">
+<check if="mode == validate">
     <action>Jump to Step 30</action>
   </check>
 
-  <check if="mode == interactive">
+<check if="mode == interactive">
     <action>Continue to Step 1</action>
   </check>
 </step>
@@ -81,11 +81,14 @@ Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-stat
 <action>Validate all statuses against known values:</action>
 
 - Valid story statuses: backlog, ready-for-dev, in-progress, review, done, drafted (legacy)
+
 - Valid epic statuses: backlog, in-progress, done, contexted (legacy)
+
 - Valid retrospective statuses: optional, done
 
   <check if="any status is unrecognized">
     <output>
+
 ⚠️ **Unknown status detected:**
 {{#each invalid_entries}}
 
@@ -165,12 +168,12 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 4) Exit
 Choice:</ask>
 
-  <check if="choice == 1">
+<check if="choice == 1">
     <output>Run `/bmad:bmm:workflows:{{next_workflow_id}}`.
 If the command targets a story, set `story_key={{next_story_id}}` when prompted.</output>
   </check>
 
-  <check if="choice == 2">
+<check if="choice == 2">
     <output>
 ### Stories by Status
 - In Progress: {{stories_in_progress}}
@@ -181,17 +184,19 @@ If the command targets a story, set `story_key={{next_story_id}}` when prompted.
     </output>
   </check>
 
-  <check if="choice == 3">
+<check if="choice == 3">
     <action>Display the full contents of {sprint_status_file}</action>
   </check>
 
-  <check if="choice == 4">
+<check if="choice == 4">
     <action>Exit workflow</action>
   </check>
 </step>
 
 <!-- ========================= -->
+
 <!-- Data mode for other flows -->
+
 <!-- ========================= -->
 
 <step n="20" goal="Data mode output">
@@ -212,7 +217,9 @@ If the command targets a story, set `story_key={{next_story_id}}` when prompted.
 </step>
 
 <!-- ========================= -->
+
 <!-- Validate mode -->
+
 <!-- ========================= -->
 
 <step n="30" goal="Validate sprint-status file">

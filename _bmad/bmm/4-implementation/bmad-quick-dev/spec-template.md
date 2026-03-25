@@ -1,8 +1,8 @@
 ---
 title: '{title}'
-type: 'feature' # feature | bugfix | refactor | chore
+type: feature   # feature | bugfix | refactor | chore
 created: '{date}'
-status: 'draft' # draft | ready-for-dev | in-progress | in-review | done
+status: draft   # draft | ready-for-dev | in-progress | in-review | done
 context: [] # optional: max 3 project-wide standards/docs. NO source code files.
 ---
 
@@ -28,6 +28,7 @@ context: [] # optional: max 3 project-wide standards/docs. NO source code files.
 **Always:** INVARIANT_RULES
 
 **Ask First:** DECISIONS_REQUIRING_HUMAN_APPROVAL
+
 <!-- Agent: if any of these trigger during execution, HALT and ask the user before proceeding. -->
 
 **Never:** NON_GOALS_AND_FORBIDDEN_APPROACHES
@@ -37,7 +38,7 @@ context: [] # optional: max 3 project-wide standards/docs. NO source code files.
 <!-- If no meaningful I/O scenarios exist, DELETE THIS ENTIRE SECTION. Do not write "N/A" or "None". -->
 
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
-|----------|--------------|---------------------------|----------------|
+| -- | -- | -- | -- |
 | HAPPY_PATH | INPUT | OUTCOME | N/A |
 | ERROR_CASE | INPUT | OUTCOME | ERROR_HANDLING |
 
@@ -53,13 +54,17 @@ context: [] # optional: max 3 project-wide standards/docs. NO source code files.
 ## Tasks & Acceptance
 
 <!-- Tasks: backtick-quoted file path -- action -- rationale. Prefer one task per file; group tightly-coupled changes when splitting would be artificial. -->
+
 <!-- If an I/O Matrix is present, include a task to unit-test its edge cases. -->
+
 <!-- AC covers system-level behaviors not captured by the I/O Matrix. Do not duplicate I/O scenarios here. -->
 
 **Execution:**
+
 - [ ] `FILE` -- ACTION -- RATIONALE
 
 **Acceptance Criteria:**
+
 - Given PRECONDITION, when ACTION, then EXPECTED_RESULT
 
 ## Spec Change Log
@@ -72,6 +77,7 @@ context: [] # optional: max 3 project-wide standards/docs. NO source code files.
 ## Design Notes
 
 <!-- If the approach is straightforward, DELETE THIS ENTIRE SECTION. Do not write "N/A" or "None". -->
+
 <!-- Design rationale and golden examples only when non-obvious. Keep examples to 5–10 lines. -->
 
 DESIGN_RATIONALE_AND_EXAMPLES
@@ -79,10 +85,13 @@ DESIGN_RATIONALE_AND_EXAMPLES
 ## Verification
 
 <!-- If no build, test, or lint commands apply, DELETE THIS ENTIRE SECTION. Do not write "N/A" or "None". -->
+
 <!-- How the agent confirms its own work. Prefer CLI commands. When no CLI check applies, state what to inspect manually. -->
 
 **Commands:**
+
 - `COMMAND` -- expected: SUCCESS_CRITERIA
 
 **Manual checks (if no CLI):**
+
 - WHAT_TO_INSPECT_AND_EXPECTED_STATE

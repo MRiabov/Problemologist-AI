@@ -76,17 +76,17 @@ It is measurable, has a coherent scope boundary, and matches the architecture di
 
 ### Coverage Matrix
 
-| FR Range    | Coverage                                    |
-| ----------- | ------------------------------------------- |
-| `FR1-FR5`   | Epic 1: Benchmark Creation & Validation     |
-| `FR6-FR11`  | Epic 2: Human Solution Workflow             |
-| `FR12`      | Epic 11: FEM Simulation                     |
-| `FR13`      | Epic 17: Electronics Simulation             |
-| `FR14`      | Epics 11 and 14                             |
-| `FR15`      | Epic 4: Dataset Export & Replay             |
+| FR Range | Coverage |
+| -- | -- |
+| `FR1-FR5` | Epic 1: Benchmark Creation & Validation |
+| `FR6-FR11` | Epic 2: Human Solution Workflow |
+| `FR12` | Epic 11: FEM Simulation |
+| `FR13` | Epic 17: Electronics Simulation |
+| `FR14` | Epics 11 and 14 |
+| `FR15` | Epic 4: Dataset Export & Replay |
 | `FR16-FR24` | Epic 3: Cost, Weight, and Manufacturability |
-| `FR25-FR35` | Epic 4: Dataset Export & Replay             |
-| `FR36-FR38` | Epic 20: Steering & Control                 |
+| `FR25-FR35` | Epic 4: Dataset Export & Replay |
+| `FR36-FR38` | Epic 20: Steering & Control |
 
 ### Coverage Statistics
 

@@ -239,12 +239,12 @@ Many requirements are not measurable or testable. Requirements must be revised t
 
 ### Traceability Matrix
 
-| Source                                                            | Coverage                      |
-| ----------------------------------------------------------------- | ----------------------------- |
-| Journey 1: Mechanical engineer receives a design they can trust   | FR1-FR24                      |
+| Source | Coverage |
+| -- | -- |
+| Journey 1: Mechanical engineer receives a design they can trust | FR1-FR24 |
 | Journey 2: Mechanical engineer inspects validation and simulation | FR3-FR6, FR12-FR15, FR31-FR35 |
-| Journey 3: Researcher or company reuses the dataset               | FR25-FR30, FR31-FR35          |
-| Journey 4: Dataset operator or curator keeps the corpus usable    | FR28-FR35                     |
+| Journey 3: Researcher or company reuses the dataset | FR25-FR30, FR31-FR35 |
+| Journey 4: Dataset operator or curator keeps the corpus usable | FR28-FR35 |
 
 **Total Traceability Issues:** 0
 
@@ -335,43 +335,43 @@ PRD uses a custom hybrid project type that is not represented in the validator C
 
 ### Scoring Table
 
-| FR #   | Specific | Measurable | Attainable | Relevant | Traceable | Average | Flag |
-| ------ | -------- | ---------- | ---------- | -------- | --------- | ------- | ---- |
-| FR-001 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-002 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-003 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-004 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-005 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-006 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-007 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-008 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-009 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-010 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-011 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-012 | 4        | 3          | 5          | 5        | 5         | 4.4     |      |
-| FR-013 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-014 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-015 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-016 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-017 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-018 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-019 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-020 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-021 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-022 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-023 | 2        | 2          | 5          | 5        | 5         | 3.8     | X    |
-| FR-024 | 3        | 3          | 5          | 5        | 5         | 4.2     |      |
-| FR-025 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-026 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-027 | 5        | 4          | 5          | 5        | 5         | 4.8     |      |
-| FR-028 | 2        | 2          | 5          | 5        | 5         | 3.8     | X    |
-| FR-029 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-030 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-031 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-032 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
-| FR-033 | 4        | 4          | 5          | 5        | 5         | 4.6     |      |
-| FR-034 | 2        | 2          | 5          | 5        | 5         | 3.8     | X    |
-| FR-035 | 5        | 5          | 5          | 5        | 5         | 5.0     |      |
+| FR # | Specific | Measurable | Attainable | Relevant | Traceable | Average | Flag |
+| -- | -- | -- | -- | -- | -- | -- | -- |
+| FR-001 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-002 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-003 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-004 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-005 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-006 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-007 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-008 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-009 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-010 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-011 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-012 | 4 | 3 | 5 | 5 | 5 | 4.4 |  |
+| FR-013 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-014 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-015 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-016 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-017 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-018 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-019 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-020 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-021 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-022 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-023 | 2 | 2 | 5 | 5 | 5 | 3.8 | X |
+| FR-024 | 3 | 3 | 5 | 5 | 5 | 4.2 |  |
+| FR-025 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-026 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-027 | 5 | 4 | 5 | 5 | 5 | 4.8 |  |
+| FR-028 | 2 | 2 | 5 | 5 | 5 | 3.8 | X |
+| FR-029 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-030 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-031 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-032 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
+| FR-033 | 4 | 4 | 5 | 5 | 5 | 4.6 |  |
+| FR-034 | 2 | 2 | 5 | 5 | 5 | 3.8 | X |
+| FR-035 | 5 | 5 | 5 | 5 | 5 | 5.0 |  |
 
 **Legend:** 1=Poor, 3=Acceptable, 5=Excellent
 **Flag:** X = Score < 3 in one or more categories
@@ -430,15 +430,15 @@ Functional Requirements demonstrate good SMART quality overall.
 
 ### BMAD PRD Principles Compliance
 
-| Principle           | Status  | Notes                                                                                          |
-| ------------------- | ------- | ---------------------------------------------------------------------------------------------- |
-| Information Density | Met     | Step 3 passed cleanly; the PRD is concise and low on filler.                                   |
-| Measurability       | Partial | FRs are mostly strong, but the NFR section lacks explicit metrics and measurement methods.     |
-| Traceability        | Met     | Step 6 found intact chains from vision to journeys to FRs.                                     |
-| Domain Awareness    | Met     | Mechanical/electromechanical, manufacturability, simulation, and dataset concerns are present. |
-| Zero Anti-Patterns  | Partial | A few vague FRs remain, and the NFR section includes implementation leakage.                   |
-| Dual Audience       | Met     | The document works for human readers and downstream LLM consumption.                           |
-| Markdown Format     | Met     | Clear headings and consistent structure throughout.                                            |
+| Principle | Status | Notes |
+| -- | -- | -- |
+| Information Density | Met | Step 3 passed cleanly; the PRD is concise and low on filler. |
+| Measurability | Partial | FRs are mostly strong, but the NFR section lacks explicit metrics and measurement methods. |
+| Traceability | Met | Step 6 found intact chains from vision to journeys to FRs. |
+| Domain Awareness | Met | Mechanical/electromechanical, manufacturability, simulation, and dataset concerns are present. |
+| Zero Anti-Patterns | Partial | A few vague FRs remain, and the NFR section includes implementation leakage. |
+| Dual Audience | Met | The document works for human readers and downstream LLM consumption. |
+| Markdown Format | Met | Clear headings and consistent structure throughout. |
 
 **Principles Met:** 5/7
 

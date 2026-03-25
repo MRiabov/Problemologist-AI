@@ -1,7 +1,7 @@
 ---
-name: 'step-01-load-context'
-description: 'Load knowledge base, determine scope, and gather context'
-nextStepFile: './step-02-discover-tests.md'
+name: step-01-load-context
+description: Load knowledge base, determine scope, and gather context
+nextStepFile: ./step-02-discover-tests.md
 knowledgeIndex: '{project-root}/_bmad/tea/testarch/tea-index.csv'
 outputFile: '{test_artifacts}/test-review.md'
 ---
@@ -17,7 +17,7 @@ Determine review scope, load required knowledge fragments, and gather related ar
 - 📖 Read the entire step file before acting
 - ✅ Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -55,7 +55,7 @@ Read `test_stack_type` from `{config_source}`. If `"auto"` or not configured, in
 - **Both present** → `fullstack`; only frontend → `frontend`; only backend → `backend`
 - Explicit `test_stack_type` overrides auto-detection
 
----
+______________________________________________________________________
 
 ### Tiered Knowledge Loading
 
@@ -143,7 +143,7 @@ Read `{config_source}` and check `tea_use_playwright_utils`, `tea_use_pactjs_uti
 
 - `pact-mcp.md`
 
----
+______________________________________________________________________
 
 ## 3. Gather Context Artifacts
 
@@ -157,7 +157,7 @@ Summarize what was found.
 
 Coverage mapping and coverage gates are out of scope in `test-review`. Route those concerns to `trace`.
 
----
+______________________________________________________________________
 
 ## 4. Save Progress
 
@@ -176,6 +176,7 @@ Coverage mapping and coverage gates are out of scope in `test-review`. Route tho
   Then write this step's output below the frontmatter.
 
 - **If `{outputFile}` already exists**, update:
+
   - Add `'step-01-load-context'` to `stepsCompleted` array (only if not already present)
   - Set `lastStep: 'step-01-load-context'`
   - Set `lastSaved: '{date}'`

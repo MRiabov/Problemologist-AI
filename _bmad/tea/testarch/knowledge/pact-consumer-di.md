@@ -18,11 +18,11 @@ Raw `fetch()` in `executeTest()` only proves that Pact returns what you told it 
 
 ### Comparison
 
-| Approach     | Production code change | Mock complexity            | Exercises real client | Contract accuracy           |
-| ------------ | ---------------------- | -------------------------- | --------------------- | --------------------------- |
-| Raw fetch    | None                   | None                       | No                    | Low — hand-crafted requests |
-| vi.mock      | None                   | High — ESM hoisting issues | Yes                   | Medium — fragile setup      |
-| DI (baseUrl) | 2 lines                | None                       | Yes                   | High — real requests        |
+| Approach | Production code change | Mock complexity | Exercises real client | Contract accuracy |
+| -- | -- | -- | -- | -- |
+| Raw fetch | None | None | No | Low — hand-crafted requests |
+| vi.mock | None | High — ESM hoisting issues | Yes | Medium — fragile setup |
+| DI (baseUrl) | 2 lines | None | Yes | High — real requests |
 
 ## Pattern Examples
 

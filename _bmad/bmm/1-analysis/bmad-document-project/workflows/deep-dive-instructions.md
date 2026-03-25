@@ -86,7 +86,7 @@ This will read EVERY file in this area. Proceed? [y/n]
   <action>Initialize file_inventory = []</action>
   <critical>You must read every line of every file in scope and capture a plain-language explanation (what the file does, side effects, why it matters) that future developer agents can act on. No shortcuts.</critical>
 
-  <check if="target_type == folder">
+<check if="target_type == folder">
     <action>Get complete recursive file list from {{target_path}}</action>
     <action>Filter out: node_modules/, .git/, dist/, build/, coverage/, *.min.js, *.map</action>
     <action>For EVERY remaining file in folder:
@@ -103,7 +103,7 @@ This will read EVERY file in this area. Proceed? [y/n]
     </action>
   </check>
 
-  <check if="target_type == file">
+<check if="target_type == file">
     <action>Read complete file at {{target_path}}</action>
     <action>Extract all information as above</action>
     <action>Read all files it imports (follow import chain 1 level deep)</action>
@@ -111,7 +111,7 @@ This will read EVERY file in this area. Proceed? [y/n]
     <action>Store all in file_inventory</action>
   </check>
 
-  <check if="target_type == api_group">
+<check if="target_type == api_group">
     <action>Identify all route/controller files in API group</action>
     <action>Read all route handlers completely</action>
     <action>Read associated middleware, controllers, services</action>
@@ -121,14 +121,14 @@ This will read EVERY file in this area. Proceed? [y/n]
     <action>Store all in file_inventory</action>
   </check>
 
-  <check if="target_type == feature">
+<check if="target_type == feature">
     <action>Search codebase for all files related to feature name</action>
     <action>Include: UI components, API endpoints, models, services, tests</action>
     <action>Read each file completely</action>
     <action>Store all in file_inventory</action>
   </check>
 
-  <check if="target_type == component_group">
+<check if="target_type == component_group">
     <action>Get all component files in group</action>
     <action>Read each component completely</action>
     <action>Extract: Props interfaces, hooks used, child components, state management</action>
@@ -209,20 +209,22 @@ This will read EVERY file in this area. Proceed? [y/n]
 
 <action>Check if "Deep-Dive Documentation" section exists</action>
 
-  <check if="section does not exist">
+<check if="section does not exist">
     <action>Add new section after "Generated Documentation":
 
 ## Deep-Dive Documentation
 
 Detailed exhaustive analysis of specific areas:
 
-    </action>
+```
+</action>
+```
 
-  </check>
+</check>
 
 <action>Add link to new deep-dive doc:
 
-- [{{target_name}} Deep-Dive](./deep-dive-{{sanitized_target_name}}.md) - Comprehensive analysis of {{target_description}} ({{file_count}} files, {{total_loc}} LOC) - Generated {{date}}
+- [{{target_name}} Deep-Dive](./deep-dive-%7B%7Bsanitized_target_name%7D%7D.md) - Comprehensive analysis of {{target_description}} ({{file_count}} files, {{total_loc}} LOC) - Generated {{date}}
   </action>
 
   <action>Update index metadata:
@@ -266,15 +268,15 @@ Detailed exhaustive analysis of specific areas:
 1. **Deep-dive another area** - Analyze another feature/module/folder
 2. **Finish** - Complete workflow
 
-Your choice [1/2]:
+Your choice \[1/2\]:
 </ask>
 
-  <action if="user selects 1">
+<action if="user selects 1">
     <action>Clear current deep_dive_target</action>
     <action>Go to Step 13a (select new area)</action>
   </action>
 
-  <action if="user selects 2">
+<action if="user selects 2">
     <action>Display final message:
 
 All deep-dive documentation complete!

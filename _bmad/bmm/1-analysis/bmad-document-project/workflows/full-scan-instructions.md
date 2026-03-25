@@ -58,22 +58,22 @@ What would you like to do?
 2. **Deep-dive into specific area** - Generate detailed documentation for a particular feature/module/folder
 3. **Cancel** - Keep existing documentation as-is
 
-Your choice [1/2/3]:
+Your choice \[1/2/3\]:
 </ask>
 
-  <check if="user selects 1">
+<check if="user selects 1">
     <action>Set workflow_mode = "full_rescan"</action>
     <action>Continue to scan level selection below</action>
   </check>
 
-  <check if="user selects 2">
+<check if="user selects 2">
     <action>Set workflow_mode = "deep_dive"</action>
     <action>Set scan_level = "exhaustive"</action>
     <action>Initialize state file with mode=deep_dive, scan_level=exhaustive</action>
     <action>Jump to Step 13</action>
   </check>
 
-  <check if="user selects 3">
+<check if="user selects 3">
     <action>Display message: "Keeping existing documentation. Exiting workflow."</action>
     <action>Exit workflow</action>
   </check>
@@ -113,17 +113,17 @@ Your choice [1/2/3]:
 Your choice [1/2/3] (default: 1):
 </ask>
 
-  <action if="user selects 1 OR user presses enter">
+<action if="user selects 1 OR user presses enter">
     <action>Set scan_level = "quick"</action>
     <action>Display: "Using Quick Scan (pattern-based, no source file reading)"</action>
   </action>
 
-  <action if="user selects 2">
+<action if="user selects 2">
     <action>Set scan_level = "deep"</action>
     <action>Display: "Using Deep Scan (reading critical files per project type)"</action>
   </action>
 
-  <action if="user selects 3">
+<action if="user selects 3">
     <action>Set scan_level = "exhaustive"</action>
     <action>Display: "Using Exhaustive Scan (reading all source files)"</action>
   </action>
@@ -298,9 +298,9 @@ Are there any other important documents or key areas I should focus on while ana
 </action>
 
 <action>Track batches in state file:
-findings.batches_completed: [
+findings.batches_completed: \[
 {"path": "{{subfolder_path}}", "files_scanned": {{count}}, "summary": "{{brief_summary}}"}
-]
+\]
 </action>
 </check>
 
@@ -316,11 +316,11 @@ findings.batches_completed: [
   <action>Scan for API routes and endpoints using integration_scan_patterns</action>
   <action>Look for: controllers/, routes/, api/, handlers/, endpoints/</action>
 
-  <check if="scan_level == quick">
+<check if="scan_level == quick">
     <action>Use glob to find route files, extract patterns from filenames and folder structure</action>
   </check>
 
-  <check if="scan_level == deep OR scan_level == exhaustive">
+<check if="scan_level == deep OR scan_level == exhaustive">
     <action>Read files in batches (one subfolder at a time)</action>
     <action>Extract: HTTP methods, paths, request/response types from actual code</action>
   </check>
@@ -337,11 +337,11 @@ findings.batches_completed: [
   <action>Scan for data models using schema_migration_patterns</action>
   <action>Look for: models/, schemas/, entities/, migrations/, prisma/, ORM configs</action>
 
-  <check if="scan_level == quick">
+<check if="scan_level == quick">
     <action>Identify schema files via glob, parse migration file names for table discovery</action>
   </check>
 
-  <check if="scan_level == deep OR scan_level == exhaustive">
+<check if="scan_level == deep OR scan_level == exhaustive">
     <action>Read model files in batches (one subfolder at a time)</action>
     <action>Extract: table names, fields, relationships, constraints from actual code</action>
   </check>
@@ -670,13 +670,7 @@ project-root/
   <action>IMMEDIATELY write to disk and validate</action>
 
 <action>Generate project-parts.json metadata file:
-`json
-    {
-      "repository_type": "monorepo",
-      "parts": [ ... ],
-      "integration_points": [ ... ]
-    }
-    `
+`json     {       "repository_type": "monorepo",       "parts": [ ... ],       "integration_points": [ ... ]     }     `
 </action>
 <action>IMMEDIATELY write to disk</action>
 </action>
@@ -759,21 +753,21 @@ When a document SHOULD be generated but wasn't (due to quick scan, missing data,
 ### Generated Documentation
 
 - [Project Overview](./project-overview.md)
-- [Architecture](./architecture{{#if multi-part}}-{part\*id}{{/if}}.md){{#unless architecture_file_exists}} (To be generated) {{/unless}}
+- \[Architecture\](./architecture{{#if multi-part}}-{part\*id}{{/if}}.md){{#unless architecture_file_exists}} (To be generated) {{/unless}}
 - [Source Tree Analysis](./source-tree-analysis.md)
-- [Component Inventory](./component-inventory{{#if multi-part}}-{part\*id}{{/if}}.md){{#unless component_inventory_exists}} (To be generated) {{/unless}}
-- [Development Guide](./development-guide{{#if multi-part}}-{part\*id}{{/if}}.md){{#unless dev_guide_exists}} (To be generated) {{/unless}}
+- \[Component Inventory\](./component-inventory{{#if multi-part}}-{part\*id}{{/if}}.md){{#unless component_inventory_exists}} (To be generated) {{/unless}}
+- \[Development Guide\](./development-guide{{#if multi-part}}-{part\*id}{{/if}}.md){{#unless dev_guide_exists}} (To be generated) {{/unless}}
   {{#if deployment_found}}- [Deployment Guide](./deployment-guide.md){{#unless deployment_guide_exists}} (To be generated) {{/unless}}{{/if}}
   {{#if contribution_found}}- [Contribution Guide](./contribution-guide.md){{/if}}
-  {{#if api_documented}}- [API Contracts](./api-contracts{{#if multi-part}}-{part_id}{{/if}}.md){{#unless api_contracts_exists}} (To be generated) {{/unless}}{{/if}}
-  {{#if data_models_documented}}- [Data Models](./data-models{{#if multi-part}}-{part_id}{{/if}}.md){{#unless data_models_exists}} (To be generated) {{/unless}}{{/if}}
+  {{#if api_documented}}- \[API Contracts\](./api-contracts{{#if multi-part}}-{part_id}{{/if}}.md){{#unless api_contracts_exists}} (To be generated) {{/unless}}{{/if}}
+  {{#if data_models_documented}}- \[Data Models\](./data-models{{#if multi-part}}-{part_id}{{/if}}.md){{#unless data_models_exists}} (To be generated) {{/unless}}{{/if}}
   {{#if multi-part}}- [Integration Architecture](./integration-architecture.md){{#unless integration_arch_exists}} (To be generated) {{/unless}}{{/if}}
 
 ### Existing Documentation
 
 {{#each existing_docs}}
 
-- [{{title}}]({{relative_path}}) - {{description}}
+- [{{title}}](%7B%7Brelative_path%7D%7D) - {{description}}
   {{/each}}
 
 ### Getting Started
@@ -912,7 +906,9 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
 <action>Parse user selection:
 
 - If "all", set {{selected_items}} = all items in {{incomplete_docs_list}}
+
 - If comma-separated numbers, extract selected items by index
+
 - Store result in {{selected_items}} array
   </action>
 
@@ -921,6 +917,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
   <action>For each item in {{selected_items}}:
 
 1. **Identify the part and requirements:**
+
    - Extract part_id from item (if exists)
    - Look up part data in project_parts array from state file
    - Load documentation_requirements for that part's project_type_id
@@ -928,6 +925,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
 2. **Route to appropriate generation substep based on doc_type:**
 
    **If doc_type == "architecture":**
+
    - Display: "Generating architecture documentation for {{part_id}}..."
    - Load architecture_match for this part from state file (Step 3 cache)
    - Re-run Step 8 architecture generation logic ONLY for this specific part
@@ -936,6 +934,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
    - Validate completeness
 
    **If doc_type == "api-contracts":**
+
    - Display: "Generating API contracts for {{part_id}}..."
    - Load part data and documentation_requirements
    - Re-run Step 4 API scan substep targeting ONLY this part
@@ -944,6 +943,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
    - Validate document structure
 
    **If doc_type == "data-models":**
+
    - Display: "Generating data models documentation for {{part_id}}..."
    - Re-run Step 4 data models scan substep targeting ONLY this part
    - Use schema_migration_patterns from documentation_requirements
@@ -951,6 +951,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
    - Validate completeness
 
    **If doc_type == "component-inventory":**
+
    - Display: "Generating component inventory for {{part_id}}..."
    - Re-run Step 9 component inventory generation for this specific part
    - Scan components/, ui/, widgets/ folders
@@ -958,6 +959,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
    - Validate structure
 
    **If doc_type == "development-guide":**
+
    - Display: "Generating development guide for {{part_id}}..."
    - Re-run Step 9 development guide generation for this specific part
    - Use key_file_patterns and test_file_patterns from documentation_requirements
@@ -965,6 +967,7 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
    - Validate completeness
 
    **If doc_type == "deployment-guide":**
+
    - Display: "Generating deployment guide..."
    - Re-run Step 6 deployment configuration scan
    - Re-run Step 9 deployment guide generation
@@ -972,18 +975,21 @@ Enter number(s) separated by commas (e.g., "1,3,5"), or type 'all':
    - Validate structure
 
    **If doc_type == "integration-architecture":**
+
    - Display: "Generating integration architecture..."
    - Re-run Step 7 integration analysis for all parts
    - Generate integration-architecture.md
    - Validate completeness
 
 3. **Post-generation actions:**
+
    - Confirm file was written successfully
    - Update state file with newly generated output
    - Add to {{newly_generated_docs}} tracking list
    - Display: "✓ Generated: {{file_path}}"
 
 4. **Handle errors:**
+
    - If generation fails, log error and continue with next item
    - Track failed items in {{failed_generations}} list
      </action>

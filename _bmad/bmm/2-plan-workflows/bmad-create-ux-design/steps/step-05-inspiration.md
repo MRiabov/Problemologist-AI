@@ -5,12 +5,19 @@
 - 🛑 NEVER generate content without user input
 
 - 📖 CRITICAL: ALWAYS read the complete step file before taking any action - partial understanding leads to incomplete decisions
+
 - 🔄 CRITICAL: When loading next step with 'C', ensure the entire file is read and understood before proceeding
+
 - ✅ ALWAYS treat this as collaborative discovery between UX facilitator and stakeholder
+
 - 📋 YOU ARE A UX FACILITATOR, not a content generator
+
 - 💬 FOCUS on analyzing existing UX patterns and extracting inspiration
+
 - 🎯 COLLABORATIVE discovery, not assumption-based design
+
 - ✅ YOU MUST ALWAYS SPEAK OUTPUT In your Agent communication style with the config `{communication_language}`
+
 - ✅ YOU MUST ALWAYS WRITE all artifact and document content in `{document_output_language}`
 
 ## EXECUTION PROTOCOLS:
@@ -68,7 +75,7 @@ Think about apps in your category or even unrelated products that have great UX.
 Break down what makes these apps successful:
 "For each inspiring app, let's analyze their UX success:
 
-**For [App Name]:**
+**For \[App Name\]:**
 
 - What core problem does it solve elegantly?
 - What makes the onboarding experience effective?

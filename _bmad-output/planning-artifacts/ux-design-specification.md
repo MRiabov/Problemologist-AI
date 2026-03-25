@@ -24,25 +24,25 @@ It must not become a general-purpose CAD editor or an alternate backend console.
 
 ## 2. Primary Routes
 
-| Route        | Surface            | Purpose                                                                                                     |
-| ------------ | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `/`          | Engineer Workspace | Inspect and steer engineering episodes, review CAD and simulation outputs, and monitor cost/weight context. |
-| `/benchmark` | Benchmark Pipeline | Author benchmark prompts, inspect benchmark artifacts, and explicitly confirm plans before execution.       |
-| `/settings`  | Settings           | Switch theme and reasoning visibility preferences.                                                          |
+| Route | Surface | Purpose |
+| -- | -- | -- |
+| `/` | Engineer Workspace | Inspect and steer engineering episodes, review CAD and simulation outputs, and monitor cost/weight context. |
+| `/benchmark` | Benchmark Pipeline | Author benchmark prompts, inspect benchmark artifacts, and explicitly confirm plans before execution. |
+| `/settings` | Settings | Switch theme and reasoning visibility preferences. |
 
 The sidebar keeps navigation, episode history, and creation controls stable across routes.
 
 ## 3. Implementation Anchors
 
-| Surface         | Component anchors                                                  | Responsibility                                                                |
-| --------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| App shell       | `AppLayout`, `Sidebar`                                             | Fixed sidebar, route outlet, global feedback modal, mock-mode banner.         |
-| Workspace shell | `UnifiedGeneratorView`                                             | Shared split-panel layout for engineer and benchmark workspaces.              |
-| Chat and traces | `ChatWindow`, `TraceList`, `ChatInput`, `ContextCards`             | Episode timeline, composer, context steering, and trace feedback affordances. |
-| Artifacts       | `ArtifactView`, `HighlightedContent`, `ObjectivesForm`             | File tree, syntax-highlighted viewer, plan/objective controls.                |
-| Visualization   | `DesignViewer`, `ModelViewer`, `ModelBrowser`, `SimulationResults` | 3D model, simulation, heatmap, and electronics viewing.                       |
-| Feedback        | `FeedbackSystem`                                                   | Trace-scoped thumbs up/down with topic and comment capture.                   |
-| Preferences     | `Settings`, `ThemeContext`, `UISettingsContext`                    | Theme selection and reasoning visibility.                                     |
+| Surface | Component anchors | Responsibility |
+| -- | -- | -- |
+| App shell | `AppLayout`, `Sidebar` | Fixed sidebar, route outlet, global feedback modal, mock-mode banner. |
+| Workspace shell | `UnifiedGeneratorView` | Shared split-panel layout for engineer and benchmark workspaces. |
+| Chat and traces | `ChatWindow`, `TraceList`, `ChatInput`, `ContextCards` | Episode timeline, composer, context steering, and trace feedback affordances. |
+| Artifacts | `ArtifactView`, `HighlightedContent`, `ObjectivesForm` | File tree, syntax-highlighted viewer, plan/objective controls. |
+| Visualization | `DesignViewer`, `ModelViewer`, `ModelBrowser`, `SimulationResults` | 3D model, simulation, heatmap, and electronics viewing. |
+| Feedback | `FeedbackSystem` | Trace-scoped thumbs up/down with topic and comment capture. |
+| Preferences | `Settings`, `ThemeContext`, `UISettingsContext` | Theme selection and reasoning visibility. |
 
 ## 4. Shared Shell
 

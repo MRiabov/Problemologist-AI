@@ -71,11 +71,11 @@ snapshot ref {role: "button", name: "Sign In"}
 
 CLI and playwright-utils are **complementary tools that work at different layers**:
 
-|              | Playwright CLI                               | Playwright Utils                                 |
-| ------------ | -------------------------------------------- | ------------------------------------------------ |
-| **When**     | During test _generation_ (the agent uses it) | During test _execution_ (your test code uses it) |
-| **What**     | Shell commands to observe your app           | Fixtures and helpers imported in test files      |
-| **Examples** | `snapshot`, `screenshot`, `network`          | `apiRequest`, `auth-session`, `network-recorder` |
+|  | Playwright CLI | Playwright Utils |
+| -- | -- | -- |
+| **When** | During test _generation_ (the agent uses it) | During test _execution_ (your test code uses it) |
+| **What** | Shell commands to observe your app | Fixtures and helpers imported in test files |
+| **Examples** | `snapshot`, `screenshot`, `network` | `apiRequest`, `auth-session`, `network-recorder` |
 
 They work together naturally. The agent uses CLI to _understand_ your app, then generates test code that _imports_ playwright-utils:
 
@@ -127,33 +127,33 @@ playwright-cli -s=tea-explore-<timestamp> open https://app.com
 
 ## Command Quick Reference
 
-| What you want to do       | Command                                          |
-| ------------------------- | ------------------------------------------------ |
-| Open a page               | `open <url>`                                     |
-| See what's on the page    | `snapshot`                                       |
-| Take a screenshot         | `screenshot [--filename=path]`                   |
-| Click something           | `click <ref>`                                    |
-| Type into a field         | `fill <ref> <text>`                              |
-| Navigate                  | `goto <url>`, `go-back`, `reload`                |
-| Mock a network request    | `route <pattern> --status=200 --body='...'`      |
-| Start recording a trace   | `tracing-start`                                  |
-| Stop and save the trace   | `tracing-stop`                                   |
-| Save auth state for reuse | `state-save auth.json`                           |
-| Load saved auth state     | `state-load auth.json`                           |
-| See network requests      | `network`                                        |
-| Manage tabs               | `tab-list`, `tab-new`, `tab-close`, `tab-select` |
-| Close the session         | `close`                                          |
+| What you want to do | Command |
+| -- | -- |
+| Open a page | `open <url>` |
+| See what's on the page | `snapshot` |
+| Take a screenshot | `screenshot [--filename=path]` |
+| Click something | `click <ref>` |
+| Type into a field | `fill <ref> <text>` |
+| Navigate | `goto <url>`, `go-back`, `reload` |
+| Mock a network request | `route <pattern> --status=200 --body='...'` |
+| Start recording a trace | `tracing-start` |
+| Stop and save the trace | `tracing-stop` |
+| Save auth state for reuse | `state-save auth.json` |
+| Load saved auth state | `state-load auth.json` |
+| See network requests | `network` |
+| Manage tabs | `tab-list`, `tab-new`, `tab-close`, `tab-select` |
+| Close the session | `close` |
 
 ## When CLI vs MCP (Auto Mode Decision)
 
-| Situation                             | Tool | Why                                |
-| ------------------------------------- | ---- | ---------------------------------- |
-| "What's on this page?"                | CLI  | One-shot snapshot, no state needed |
-| "Verify this selector exists"         | CLI  | Single check, minimal tokens       |
-| "Capture a screenshot for evidence"   | CLI  | Stateless capture                  |
-| "Walk through a multi-step wizard"    | MCP  | State carries across steps         |
-| "Debug why this test fails" (healing) | MCP  | Needs rich DOM introspection       |
-| "Record a drag-and-drop flow"         | MCP  | Complex interaction semantics      |
+| Situation | Tool | Why |
+| -- | -- | -- |
+| "What's on this page?" | CLI | One-shot snapshot, no state needed |
+| "Verify this selector exists" | CLI | Single check, minimal tokens |
+| "Capture a screenshot for evidence" | CLI | Stateless capture |
+| "Walk through a multi-step wizard" | MCP | State carries across steps |
+| "Debug why this test fails" (healing) | MCP | Needs rich DOM introspection |
+| "Record a drag-and-drop flow" | MCP | Complex interaction semantics |
 
 ## Related Fragments
 

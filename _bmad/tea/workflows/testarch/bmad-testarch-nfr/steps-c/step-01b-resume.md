@@ -1,6 +1,6 @@
 ---
-name: 'step-01b-resume'
-description: 'Resume interrupted workflow from last completed step'
+name: step-01b-resume
+description: Resume interrupted workflow from last completed step
 outputFile: '{test_artifacts}/nfr-assessment.md'
 ---
 
@@ -15,7 +15,7 @@ Resume an interrupted workflow by loading the existing output document, displayi
 - Read the entire step file before acting
 - Speak in `{communication_language}`
 
----
+______________________________________________________________________
 
 ## EXECUTION PROTOCOLS:
 
@@ -47,7 +47,7 @@ Read `{outputFile}` and parse YAML frontmatter for:
 
 **THEN:** Halt. Do not proceed.
 
----
+______________________________________________________________________
 
 ### 2. Display Progress Dashboard
 
@@ -65,19 +65,19 @@ NFR Assessment - Resume Progress:
 Last saved: {lastSaved}
 ```
 
----
+______________________________________________________________________
 
 ### 3. Route to Next Step
 
 Based on `lastStep`, load the next incomplete step:
 
-| lastStep                    | Next Step File                    |
-| --------------------------- | --------------------------------- |
-| `step-01-load-context`      | `./step-02-define-thresholds.md`  |
-| `step-02-define-thresholds` | `./step-03-gather-evidence.md`    |
-| `step-03-gather-evidence`   | `./step-04-evaluate-and-score.md` |
-| `step-04e-aggregate-nfr`    | `./step-05-generate-report.md`    |
-| `step-05-generate-report`   | **Workflow already complete.**    |
+| lastStep | Next Step File |
+| -- | -- |
+| `step-01-load-context` | `./step-02-define-thresholds.md` |
+| `step-02-define-thresholds` | `./step-03-gather-evidence.md` |
+| `step-03-gather-evidence` | `./step-04-evaluate-and-score.md` |
+| `step-04e-aggregate-nfr` | `./step-05-generate-report.md` |
+| `step-05-generate-report` | **Workflow already complete.** |
 
 **If `lastStep` is the final step** (`step-05-generate-report`), display: "All steps completed. Use **[C] Create** to start fresh, **[V] Validate** to review outputs, or **[E] Edit** to make revisions." Then halt.
 
@@ -87,7 +87,7 @@ Based on `lastStep`, load the next incomplete step:
 
 The existing content in `{outputFile}` provides context from previously completed steps.
 
----
+______________________________________________________________________
 
 ## SYSTEM SUCCESS/FAILURE METRICS
 

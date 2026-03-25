@@ -1,11 +1,11 @@
 ---
-name: 'step-04-session-07'
+name: step-04-session-07
 description: 'Session 7: Advanced Patterns - Menu-driven knowledge fragment exploration (ongoing)'
 
 progressFile: '{test_artifacts}/teaching-progress/{user_name}-tea-progress.yaml'
-sessionNotesTemplate: '../templates/session-notes-template.md'
+sessionNotesTemplate: ../templates/session-notes-template.md
 sessionNotesFile: '{test_artifacts}/tea-academy/{user_name}/session-07-notes.md'
-nextStepFile: './step-03-session-menu.md'
+nextStepFile: ./step-03-session-menu.md
 advancedElicitationTask: '{project-root}/_bmad/core/workflows/advanced-elicitation/workflow.xml'
 partyModeWorkflow: '{project-root}/_bmad/core/workflows/party-mode/workflow.md'
 ---
@@ -203,7 +203,7 @@ You can return to Session 7 anytime to explore more fragments!"
 
 Return to {nextStepFile}.
 
----
+______________________________________________________________________
 
 ## 🚨 SUCCESS METRICS
 

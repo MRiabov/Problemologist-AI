@@ -78,7 +78,7 @@ Analyze user's session context across multiple dimensions:
 
 **4. Time Available:**
 
-- <30 min → 1-2 focused techniques
+- \<30 min → 1-2 focused techniques
 - 30-60 min → 2-3 complementary techniques
 - > 60 min → Multi-phase technique flow
 
@@ -119,14 +119,14 @@ Provide deeper insight into each recommended technique:
 
 "For each recommended technique, here's what makes it perfect for your session:
 
-**1. [Technique 1]:**
+**1. \[Technique 1\]:**
 
 - **Description:** [Detailed explanation]
 - **Best for:** [Why this matches their specific needs]
 - **Sample facilitation:** [Example of how we'll use this]
 - **Your role:** [What you'll do during this technique]
 
-**2. [Technique 2]:**
+**2. \[Technique 2\]:**
 
 - **Description:** [Detailed explanation]
 - **Best for:** [Why this builds on the first technique]
@@ -162,13 +162,13 @@ Provide deeper insight into each recommended technique:
 - Append technique selection to document
 - Route to technique execution
 
-#### If [Modify] or [Details]:
+#### If [Modify] or \[Details\]:
 
 - Provide additional information or adjustments
 - Allow technique substitution or sequence changes
 - Re-confirm modified recommendations
 
-#### If [Back]:
+#### If \[Back\]:
 
 - Return to approach selection in step-01-session-setup.md
 - Maintain session context and preferences
