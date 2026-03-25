@@ -259,7 +259,7 @@ def build():
     ]
 )
 @pytest.mark.asyncio
-async def test_int_008_objectives_semantic_validation_rejects_runtime_envelope_forbid_collision():
+async def test_int_008_objectives_semantic_validation_rejects_runtime_envelope_forbid_zone_collision():
     """
     INT-008: benchmark_definition.yaml validation must fail closed when the
     moved-object runtime envelope intersects a forbid zone.
@@ -1504,3 +1504,416 @@ def build():
         assert not data.success
         assert "INVALID_OBJECTIVES" in data.message
         assert "static_randomization.radius" in data.message
+
+
+def _drillable_benchmark_parts(
+    *,
+    max_hole_count: int = 4,
+    diameter_range_mm: list[float] | None = None,
+    max_depth_mm: float = 10.0,
+):
+    """Benchmark parts with an interactable fixture that permits drilling."""
+    return [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {
+                "fixed": True,
+                "allows_engineer_interaction": True,
+                "material_id": "aluminum_6061",
+                "attachment_policy": {
+                    "attachment_methods": ["fastener"],
+                    "drill_policy": {
+                        "allowed": True,
+                        "max_hole_count": max_hole_count,
+                        "diameter_range_mm": diameter_range_mm or [3.0, 6.0],
+                        "max_depth_mm": max_depth_mm,
+                    },
+                },
+            },
+        }
+    ]
+
+
+def _drillable_benchmark_definition(benchmark_parts: list[dict]) -> dict:
+    """Build a valid benchmark_definition.yaml payload with configurable parts."""
+    return {
+        "objectives": {
+            "goal_zone": {"min": [1.0, -1.0, 0.0], "max": [2.0, 1.0, 1.0]},
+            "forbid_zones": [],
+            "build_zone": {"min": [-5.0, -5.0, 0.0], "max": [5.0, 5.0, 15.0]},
+            "fluid_objectives": [],
+            "stress_objectives": [],
+        },
+        "benchmark_parts": benchmark_parts,
+        "physics": {"backend": "GENESIS", "fem_enabled": False},
+        "fluids": [],
+        "simulation_bounds": {
+            "min": [-30.0, -30.0, -10.0],
+            "max": [30.0, 30.0, 30.0],
+        },
+        "moved_object": {
+            "label": "projectile_ball",
+            "shape": "sphere",
+            "material_id": "abs",
+            "static_randomization": {"radius": [0.25, 0.25]},
+            "start_position": [-4.0, 0.0, 0.5],
+            "runtime_jitter": [0.1, 0.1, 0.1],
+        },
+        "constraints": {"max_unit_cost": 50.0, "max_weight_g": 1200.0},
+        "randomization": {
+            "static_variation_id": "v1.0",
+            "runtime_jitter_enabled": True,
+        },
+    }
+
+
+def _assembly_with_drill_ops(drill_operations: list[dict]) -> str:
+    """Assembly definition YAML with specified environment_drill_operations."""
+    return yaml.dump(
+        {
+            "version": "1.0",
+            "units": {"length": "mm", "volume": "mm3", "mass": "g", "currency": "USD"},
+            "constraints": {
+                "benchmark_max_unit_cost_usd": 50.0,
+                "benchmark_max_weight_g": 1200.0,
+                "planner_target_max_unit_cost_usd": 45.0,
+                "planner_target_max_weight_g": 1000.0,
+            },
+            "manufactured_parts": [],
+            "cots_parts": [],
+            "environment_drill_operations": drill_operations,
+            "final_assembly": [],
+            "totals": {
+                "estimated_unit_cost_usd": 10.0,
+                "estimated_weight_g": 100.0,
+                "estimate_confidence": "medium",
+            },
+            "dfm_suggestions": [],
+        }
+    )
+
+
+_DRILL_TEST_PLAN = """## 1. Learning Objective
+
+Move the projectile into the goal zone.
+
+## 2. Geometry
+
+- Ground plane
+- Guide rails
+
+## 3. Objectives
+
+- Reach the goal zone
+"""
+_DRILL_TEST_TODO = "# TODO\n\n- [x] Planner handoff seeded\n"
+_DRILL_TEST_SCRIPT = """
+from build123d import Box, Location
+from shared.models.schemas import PartMetadata
+from shared.workers.workbench_models import ManufacturingMethod
+
+def build():
+    p = Box(10, 10, 10)
+    p = p.move(Location((0, 0, 5)))
+    p.label = "test_part"
+    p.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC,
+        material_id="aluminum-6061",
+    )
+    return p
+"""
+
+
+async def _setup_drill_workspace(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    *,
+    benchmark_definition: dict,
+    assembly_definition_yaml: str,
+) -> None:
+    """Write the common workspace files for drilling contract tests."""
+    await _write_workspace_file(client, headers, "plan.md", _DRILL_TEST_PLAN)
+    await _write_workspace_file(client, headers, "todo.md", _DRILL_TEST_TODO)
+    await _write_workspace_file(client, headers, "script.py", _DRILL_TEST_SCRIPT)
+    await _write_workspace_file(
+        client, headers, "benchmark_definition.yaml", benchmark_definition
+    )
+    await _write_workspace_file(
+        client,
+        headers,
+        "benchmark_assembly_definition.yaml",
+        assembly_definition_yaml,
+    )
+
+
+async def _validate_and_simulate(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+) -> None:
+    """Run /benchmark/validate and /benchmark/simulate so submit prerequisites pass."""
+    benchmark_request = BenchmarkToolRequest(
+        script_path="script.py",
+        reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+    )
+    validate_resp = await client.post(
+        f"{WORKER_HEAVY_URL}/benchmark/validate",
+        json=benchmark_request.model_dump(mode="json"),
+        headers=headers,
+    )
+    assert validate_resp.status_code == 200, validate_resp.text
+    validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+    assert validate_data.success, validate_data.message
+
+    simulate_resp = await client.post(
+        f"{WORKER_HEAVY_URL}/benchmark/simulate",
+        json=benchmark_request.model_dump(mode="json"),
+        headers=headers,
+    )
+    assert simulate_resp.status_code == 200, simulate_resp.text
+    simulate_data = BenchmarkToolResponse.model_validate(simulate_resp.json())
+    assert simulate_data.success, simulate_data.message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "environment_attachment_contract_invalid",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_008_drilling_contract_rejects_exceeding_hole_count():
+    """
+    INT-008: drilling operations that exceed drill_policy.max_hole_count must
+    fail closed at benchmark submission.
+    """
+    session_id = f"INT-008-HOLES-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    benchmark_def = _drillable_benchmark_definition(
+        _drillable_benchmark_parts(max_hole_count=1)
+    )
+
+    # Declare 2 holes but policy allows only 1.
+    assembly_yaml = _assembly_with_drill_ops(
+        [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_left",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 1,
+            },
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_right",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 1,
+            },
+        ]
+    )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _setup_drill_workspace(
+            client,
+            headers,
+            benchmark_definition=benchmark_def,
+            assembly_definition_yaml=assembly_yaml,
+        )
+        await _validate_and_simulate(client, headers)
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not data.success
+        assert "max_hole_count" in data.message
+        assert "environment_fixture" in data.message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "environment_attachment_contract_invalid",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_008_drilling_contract_rejects_diameter_out_of_range():
+    """
+    INT-008: drilling operations with diameter_mm outside the declared
+    drill_policy.diameter_range_mm must fail closed at benchmark submission.
+    """
+    session_id = f"INT-008-DIAM-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    # Policy allows [3.0, 6.0] mm diameter.
+    benchmark_def = _drillable_benchmark_definition(
+        _drillable_benchmark_parts(diameter_range_mm=[3.0, 6.0])
+    )
+
+    # Declare a hole with 8.0mm diameter — outside the allowed range.
+    assembly_yaml = _assembly_with_drill_ops(
+        [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_oversize",
+                "diameter_mm": 8.0,
+                "depth_mm": 5.0,
+                "quantity": 1,
+            }
+        ]
+    )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _setup_drill_workspace(
+            client,
+            headers,
+            benchmark_definition=benchmark_def,
+            assembly_definition_yaml=assembly_yaml,
+        )
+        await _validate_and_simulate(client, headers)
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not data.success
+        assert "diameter_mm" in data.message
+        assert "mount_oversize" in data.message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "environment_attachment_contract_invalid",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_008_drilling_contract_rejects_depth_exceeding_max():
+    """
+    INT-008: drilling operations with depth_mm exceeding drill_policy.max_depth_mm
+    must fail closed at benchmark submission.
+    """
+    session_id = f"INT-008-DEPTH-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    # Policy allows max 10.0mm depth.
+    benchmark_def = _drillable_benchmark_definition(
+        _drillable_benchmark_parts(max_depth_mm=10.0)
+    )
+
+    # Declare a hole with 15.0mm depth — exceeds the limit.
+    assembly_yaml = _assembly_with_drill_ops(
+        [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_deep",
+                "diameter_mm": 4.0,
+                "depth_mm": 15.0,
+                "quantity": 1,
+            }
+        ]
+    )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _setup_drill_workspace(
+            client,
+            headers,
+            benchmark_definition=benchmark_def,
+            assembly_definition_yaml=assembly_yaml,
+        )
+        await _validate_and_simulate(client, headers)
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not data.success
+        assert "depth_mm" in data.message
+        assert "max_depth_mm" in data.message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "environment_attachment_contract_invalid",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_008_no_attachment_policy_defaults_to_non_drillable():
+    """
+    INT-008: a benchmark fixture with no attachment_policy must cause drill
+    operations to fail closed with an explicit 'non-drillable by default'
+    message at benchmark submission.
+    """
+    session_id = f"INT-008-NOATT-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    # Fixture allows interaction but has NO attachment_policy.
+    benchmark_parts = [
+        {
+            "part_id": "environment_fixture",
+            "label": "environment_fixture",
+            "metadata": {
+                "fixed": True,
+                "allows_engineer_interaction": True,
+                "material_id": "aluminum_6061",
+            },
+        }
+    ]
+    benchmark_def = _drillable_benchmark_definition(benchmark_parts)
+
+    # Attempt to drill into the fixture that has no policy.
+    assembly_yaml = _assembly_with_drill_ops(
+        [
+            {
+                "target_part_id": "environment_fixture",
+                "hole_id": "mount_attempt",
+                "diameter_mm": 4.0,
+                "depth_mm": 8.0,
+                "quantity": 1,
+            }
+        ]
+    )
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _setup_drill_workspace(
+            client,
+            headers,
+            benchmark_definition=benchmark_def,
+            assembly_definition_yaml=assembly_yaml,
+        )
+        await _validate_and_simulate(client, headers)
+
+        submit_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                reviewer_stage=AgentName.BENCHMARK_REVIEWER,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert submit_resp.status_code == 200, submit_resp.text
+        data = BenchmarkToolResponse.model_validate(submit_resp.json())
+        assert not data.success
+        assert "non-drillable by default" in data.message
+        assert "environment_fixture" in data.message
