@@ -201,7 +201,9 @@ async def test_benchmark_planner_cad_reviewer_path():
             p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
         ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"
         assembly_paths = [
-            p for p in artifact_paths if p.endswith("benchmark_assembly_definition.yaml")
+            p
+            for p in artifact_paths
+            if p.endswith("benchmark_assembly_definition.yaml")
         ]
         assembly_resp = await client.get(
             f"/episodes/{session_id}/assets/{assembly_paths[0]}"

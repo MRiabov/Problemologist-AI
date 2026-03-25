@@ -52,7 +52,9 @@ def get_catalog_metadata(db_path: str = DEFAULT_DB_PATH) -> dict[str, str | None
         "catalog_snapshot_id": getattr(meta_result, "catalog_snapshot_id", None)
         or _catalog_snapshot_id(db_path),
         "generated_at": (
-            meta_result.generated_at.isoformat() if meta_result.generated_at else "unknown"
+            meta_result.generated_at.isoformat()
+            if meta_result.generated_at
+            else "unknown"
         ),
     }
 

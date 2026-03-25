@@ -118,12 +118,12 @@ class LocalWorkspaceClient:
 
     async def exists(
         self, path: str, *, bypass_agent_permissions: bool = False
-    ) -> bool:  # noqa: ARG002
+    ) -> bool:
         return self._resolve(path).exists()
 
     async def read_file(
         self, path: str, *, bypass_agent_permissions: bool = False
-    ) -> str:  # noqa: ARG002
+    ) -> str:
         resolved = self._resolve(path)
         if not resolved.exists():
             return f"Error: File '{path}' not found."
@@ -136,7 +136,7 @@ class LocalWorkspaceClient:
         overwrite: bool = True,
         *,
         bypass_agent_permissions: bool = False,
-    ) -> bool:  # noqa: ARG002
+    ) -> bool:
         resolved = self._resolve(path)
         if resolved.exists() and not overwrite:
             return False
@@ -146,7 +146,7 @@ class LocalWorkspaceClient:
 
     async def list_files(
         self, path: str = "/", *, bypass_agent_permissions: bool = False
-    ) -> list[FileInfo]:  # noqa: ARG002
+    ) -> list[FileInfo]:
         resolved = self._resolve(path)
         if not resolved.exists():
             raise FileNotFoundError(f"Directory not found: {path}")

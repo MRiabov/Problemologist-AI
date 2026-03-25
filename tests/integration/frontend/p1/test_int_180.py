@@ -4,7 +4,7 @@ import json
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -265,7 +265,7 @@ def _seed_peer_review_episode() -> tuple[
         if insert_error:
             raise insert_error[0]
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         episode = EpisodeResponse.model_validate(
             {
                 "id": str(episode_id),

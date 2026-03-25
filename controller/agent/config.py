@@ -2,7 +2,7 @@ import threading
 import time
 from collections import deque
 from functools import lru_cache
-from typing import Any, Deque, Literal
+from typing import Any, Literal
 
 import dspy
 import structlog
@@ -157,7 +157,7 @@ class _SlidingWindowRateLimiter:
     def __init__(self, requests_per_minute: int):
         self._rpm = max(1, int(requests_per_minute))
         self._window_seconds = 60.0
-        self._timestamps: Deque[float] = deque()
+        self._timestamps: deque[float] = deque()
         self._lock = threading.Lock()
 
     def acquire(self) -> float:

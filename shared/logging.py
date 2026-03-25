@@ -87,7 +87,7 @@ def _normalize_context_value(value):
         return None
     if isinstance(value, AgentName):
         return value.value
-    if hasattr(value, "value") and isinstance(getattr(value, "value"), str):
+    if hasattr(value, "value") and isinstance(value.value, str):
         return value.value
     return str(value)
 

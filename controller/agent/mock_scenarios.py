@@ -28,7 +28,7 @@ class TranscriptStepSpec(BaseModel):
     plan: dict[str, Any] | None = None
 
     @model_validator(mode="after")
-    def validate_step(self) -> "TranscriptStepSpec":
+    def validate_step(self) -> TranscriptStepSpec:
         has_tool = self.tool_name is not None
         is_finished = bool(self.finished)
         if has_tool and is_finished:

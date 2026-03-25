@@ -1505,12 +1505,12 @@ def validate(
             for child in children:
                 child_bbox = child.bounding_box()
                 if (
-                    child_bbox.min.X < b_min[0]
-                    or child_bbox.min.Y < b_min[1]
-                    or child_bbox.min.Z < b_min[2]
-                    or child_bbox.max.X > b_max[0]
-                    or child_bbox.max.Y > b_max[1]
-                    or child_bbox.max.Z > b_max[2]
+                    b_min[0] > child_bbox.min.X
+                    or b_min[1] > child_bbox.min.Y
+                    or b_min[2] > child_bbox.min.Z
+                    or b_max[0] < child_bbox.max.X
+                    or b_max[1] < child_bbox.max.Y
+                    or b_max[2] < child_bbox.max.Z
                 ):
                     label = getattr(child, "label", None) or "<unlabeled>"
                     offenders.append(f"{label}: {child_bbox}")

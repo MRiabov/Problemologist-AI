@@ -96,5 +96,7 @@ def get_catalog_metadata(db: Session = Depends(get_db)):
     return CotsMetadataResponse(
         catalog_version=result.catalog_version,
         bd_warehouse_commit=result.bd_warehouse_commit,
-        generated_at=result.generated_at.isoformat() if result.generated_at else "unknown",
+        generated_at=result.generated_at.isoformat()
+        if result.generated_at
+        else "unknown",
     )

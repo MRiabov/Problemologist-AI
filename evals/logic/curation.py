@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from shared.enums import DatasetCurationReasonCode, GenerationKind, SeedMatchMethod
@@ -60,7 +61,7 @@ def _parse_datetime(value: Any) -> tuple[datetime | None, bool]:
         return None, False
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc), False
+            return value.replace(tzinfo=UTC), False
         return value, False
     if not isinstance(value, str) or not value.strip():
         return None, True
@@ -75,7 +76,7 @@ def _parse_datetime(value: Any) -> tuple[datetime | None, bool]:
         return None, True
 
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc), False
+        return parsed.replace(tzinfo=UTC), False
     return parsed, False
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
@@ -74,7 +74,7 @@ def main() -> int:
         "branch": branch,
         "head_commit": head_commit,
         "origin_url": _sanitize_remote_url(remote),
-        "recorded_at_utc": datetime.now(timezone.utc)
+        "recorded_at_utc": datetime.now(UTC)
         .replace(microsecond=0)
         .isoformat()
         .replace("+00:00", "Z"),

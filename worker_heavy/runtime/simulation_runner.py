@@ -239,7 +239,7 @@ class SimulationExecutorManager:
             if timeout_seconds is None:
                 return await future
             return await asyncio.wait_for(future, timeout=timeout_seconds)
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             with self._lock:
                 broken_executor, broken_generation = self._mark_broken_locked()
             if broken_executor is not None:

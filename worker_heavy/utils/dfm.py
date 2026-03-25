@@ -7,9 +7,9 @@ from build123d import Compound, Part
 
 from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition, BoundingBox
 from shared.workers.workbench_models import (
+    CostBreakdown,
     ManufacturingConfig,
     ManufacturingMethod,
-    CostBreakdown,
     WorkbenchMetadata,
     WorkbenchResult,
 )

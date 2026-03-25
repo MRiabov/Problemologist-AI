@@ -1069,7 +1069,7 @@ def _wait_for_temporal_stable_tcp(
 def _integration_infra_reachable_without_docker() -> bool:
     minio_ok = False
     try:
-        with urllib.request.urlopen(  # noqa: S310
+        with urllib.request.urlopen(
             "http://127.0.0.1:19000/minio/health/live", timeout=1.0
         ) as response:
             minio_ok = response.status == 200
