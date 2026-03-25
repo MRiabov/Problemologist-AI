@@ -69,6 +69,9 @@ The integration suite is designed for high-velocity local execution and CI parit
 # Run with high-fidelity simulation (disable smoke mode)
 ./scripts/run_integration_tests.sh --no-smoke
 
+# Force MuJoCo/fast simulation explicitly
+./scripts/run_integration_tests.sh --fast-sim
+
 # Flip to Genesis/full-fidelity simulation
 ./scripts/run_integration_tests.sh --full-sim
 
@@ -76,9 +79,10 @@ The integration suite is designed for high-velocity local execution and CI parit
 ./scripts/run_integration_tests.sh tests/integration/test_full_workflow.py
 ```
 
-The integration and eval entrypoints default to MuJoCo. Passing `--full-sim`
-flips the simulation backend to Genesis/full-fidelity behavior; that is the
-contract switch, not `--no-full-sim`.
+The integration and eval entrypoints default to MuJoCo. Passing `--fast-sim`
+keeps the fast rigid-body backend explicit, while `--full-sim` flips the
+simulation backend to Genesis/full-fidelity behavior. `--no-full-sim` remains a
+legacy alias for `--fast-sim`.
 
 ### Simulation Backend Matrix Execution Contract
 

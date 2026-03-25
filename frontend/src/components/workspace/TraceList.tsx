@@ -23,6 +23,58 @@ interface TraceListProps {
   onShowFeedback: (traceId: number, score: number) => void;
 }
 
+function formatTraceLogLabel(trace: TraceResponse): string {
+  const meta = (trace.metadata_vars || {}) as Record<string, unknown>;
+  const label = trace.name?.trim();
+  if (label) {
+    return label;
+  }
+
+  const toolName = meta.tool_name;
+  if (typeof toolName === "string" && toolName.trim()) {
+    return toolName.trim();
+  }
+
+  const eventName = meta.event;
+  if (typeof eventName === "string" && eventName.trim()) {
+    return eventName.trim();
+  }
+
+  return "LOG";
+}
+
+function formatTraceLogBody(trace: TraceResponse): string | null {
+  const meta = (trace.metadata_vars || {}) as Record<string, unknown>;
+  const content = trace.content?.trim();
+  if (content) {
+    return content;
+  }
+
+  const candidates = [
+    meta.message,
+    meta.output,
+    meta.observation,
+    meta.error,
+    meta.status,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  const metaKeys = Object.keys(meta);
+  if (metaKeys.length > 0) {
+    try {
+      return JSON.stringify(meta, null, 2);
+    } catch {
+      return metaKeys.join(", ");
+    }
+  }
+
+  return null;
+}
+
 export const TraceList = memo(({
   traces,
   assets,
@@ -151,10 +203,6 @@ export const TraceList = memo(({
           if (trace.trace_type === TraceType.LOG) {
               const meta = (trace.metadata_vars || {}) as any;
               const content = trace.content || "";
-              const hasRenderableLogText = !!content.trim() || !!trace.name?.trim();
-              if (!hasRenderableLogText) {
-                return null;
-              }
               if (meta.role === 'user' || content.startsWith('User message:')) {
                   const displayContent = meta.message || content.replace('User message: ', '');
                   return (
@@ -176,10 +224,10 @@ export const TraceList = memo(({
                 >
                   <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                     <Terminal className="h-3.5 w-3.5 shrink-0" />
-                    <span data-testid="run-log-row-label">{trace.name || "LOG"}</span>
+                    <span data-testid="run-log-row-label">{formatTraceLogLabel(trace)}</span>
                   </div>
                   <div className="mt-1 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
-                    {content || trace.name}
+                    {formatTraceLogBody(trace) || formatTraceLogLabel(trace)}
                   </div>
                 </div>
               );

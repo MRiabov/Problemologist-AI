@@ -164,13 +164,16 @@ export default function ChatWindow({
     selectedEpisode.metadata_vars?.episode_type === EpisodeType.ENGINEER &&
     !!selectedEpisode.metadata_vars?.benchmark_id;
   const terminalMetadata = selectedEpisode?.metadata_vars ?? null;
-  const terminalDetailedStatus =
-    terminalMetadata?.detailed_status ?? selectedEpisode?.status ?? null;
+  const terminalDetailedStatus = terminalMetadata?.detailed_status ?? null;
+  const terminalStatus = selectedEpisode?.status ?? null;
   const hasStructuredTerminalMetadata =
     !!terminalMetadata?.detailed_status &&
     !!terminalMetadata?.terminal_reason &&
     (selectedEpisode?.status !== EpisodeStatus.FAILED ||
       !!terminalMetadata?.failure_class);
+  const hasTerminalIssue =
+    !!selectedEpisode &&
+    [EpisodeStatus.FAILED, EpisodeStatus.CANCELLED].includes(selectedEpisode.status);
   const shouldShowFallbackLogs =
     selectedEpisode?.status === EpisodeStatus.FAILED &&
     !hasStructuredTerminalMetadata;
@@ -181,24 +184,44 @@ export default function ChatWindow({
       EpisodeStatus.FAILED,
       EpisodeStatus.CANCELLED,
     ].includes(selectedEpisode.status);
-  const terminalBannerClass =
+  const terminalSeverity =
     selectedEpisode?.status === EpisodeStatus.FAILED
-      ? "mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm"
+      ? "failure"
       : selectedEpisode?.status === EpisodeStatus.CANCELLED
+        ? "cancellation"
+        : "success";
+  const terminalBannerClass =
+    terminalSeverity === "failure"
+      ? "mt-6 p-3 bg-red-500/10 rounded-lg border border-red-500/20 shadow-sm"
+      : terminalSeverity === "cancellation"
         ? "mt-6 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20 shadow-sm"
         : "mt-6 p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 shadow-sm";
   const terminalIconClass =
-    selectedEpisode?.status === EpisodeStatus.FAILED
+    terminalSeverity === "failure"
       ? "text-red-500"
-      : selectedEpisode?.status === EpisodeStatus.CANCELLED
+      : terminalSeverity === "cancellation"
         ? "text-amber-500"
         : "text-emerald-500";
+  const terminalRowClass =
+    terminalSeverity === "failure"
+      ? "text-red-400"
+      : terminalSeverity === "cancellation"
+        ? "text-amber-400"
+        : "text-emerald-700 dark:text-emerald-300";
+  const terminalIssueBannerClass =
+    terminalSeverity === "failure"
+      ? "mt-6 p-4 rounded-xl border border-red-500/20 bg-red-500/10 shadow-sm"
+      : terminalSeverity === "cancellation"
+        ? "mt-6 p-4 rounded-xl border border-amber-500/20 bg-amber-500/10 shadow-sm"
+        : "mt-6 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 shadow-sm";
   const terminalHeading =
     selectedEpisode?.status === EpisodeStatus.FAILED
       ? "Terminal failure"
       : selectedEpisode?.status === EpisodeStatus.CANCELLED
         ? "Terminal cancellation"
-      : "Terminal outcome";
+        : "Terminal outcome";
+  const showTerminalIssueSummary =
+    !!selectedEpisode && hasTerminalIssue;
   const isReviewableEngineerEpisode =
     !!selectedEpisode &&
     selectedEpisode.metadata_vars?.episode_type === EpisodeType.ENGINEER &&
@@ -458,18 +481,26 @@ export default function ChatWindow({
                     </div>
                 )}
 
-                {isFailedEngineerEpisode && (
+                {showTerminalIssueSummary && (
                     <div
                       data-testid="failure-summary-container"
-                      className="mt-6 p-4 rounded-xl border border-red-500/20 bg-red-500/10 shadow-sm"
+                      className={terminalIssueBannerClass}
                     >
-                        <div className="flex items-center gap-2 mb-3 text-red-500">
+                        <div className={`flex items-center gap-2 mb-3 ${terminalIconClass}`}>
                             <AlertCircle className="h-4 w-4" />
                             <span className="text-[9px] font-black uppercase tracking-widest">
-                                Failed engineer episode
+                                {selectedEpisode?.status === EpisodeStatus.CANCELLED
+                                  ? "Terminal cancellation"
+                                  : "Terminal failure"}
                             </span>
                         </div>
-                        <div className="grid grid-cols-1 gap-2 text-[11px] font-mono text-red-400">
+                        <div className={`grid grid-cols-1 gap-2 text-[11px] font-mono ${terminalRowClass}`}>
+                            <div>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Episode status:</span>{' '}
+                                <span data-testid="failure-summary-raw-status">
+                                  {terminalStatus ?? "unavailable"}
+                                </span>
+                            </div>
                             <div>
                                 <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Benchmark:</span>{' '}
                                 <span data-testid="failure-summary-benchmark-id">
@@ -489,7 +520,7 @@ export default function ChatWindow({
                                 </span>
                             </div>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-red-400">
+                        <div className={`mt-3 flex flex-wrap items-center gap-2 text-[10px] ${terminalRowClass}`}>
                             <span>
                                 Terminal reason:{" "}
                                 <span data-testid="failure-summary-terminal-reason">
@@ -529,6 +560,8 @@ export default function ChatWindow({
                         <div className={`flex items-center gap-2 mb-2 ${terminalIconClass}`}>
                             {selectedEpisode.status === EpisodeStatus.FAILED ? (
                                 <AlertCircle className="h-4 w-4" />
+                            ) : selectedEpisode.status === EpisodeStatus.CANCELLED ? (
+                                <CircleAlert className="h-4 w-4" />
                             ) : (
                                 <Check className="h-4 w-4" />
                             )}
@@ -540,19 +573,25 @@ export default function ChatWindow({
                           data-testid="terminal-summary-fields"
                           className="grid grid-cols-1 gap-2 text-[11px] font-mono"
                         >
-                            <div className={selectedEpisode.status === EpisodeStatus.FAILED ? "text-red-400" : "text-emerald-700 dark:text-emerald-300"}>
+                            <div className={terminalRowClass}>
+                                <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Episode status:</span>{' '}
+                                <span data-testid="terminal-summary-status">
+                                  {terminalStatus ?? "unavailable"}
+                                </span>
+                            </div>
+                            <div className={terminalRowClass}>
                                 <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Detailed status:</span>{' '}
                                 <span data-testid="terminal-summary-detailed-status">
                                   {terminalDetailedStatus ?? "unavailable"}
                                 </span>
                             </div>
-                            <div className={selectedEpisode.status === EpisodeStatus.FAILED ? "text-red-400" : "text-emerald-700 dark:text-emerald-300"}>
+                            <div className={terminalRowClass}>
                                 <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Terminal reason:</span>{' '}
                                 <span data-testid="terminal-summary-terminal-reason">
                                   {terminalMetadata?.terminal_reason ?? "unavailable"}
                                 </span>
                             </div>
-                            <div className={selectedEpisode.status === EpisodeStatus.FAILED ? "text-red-400" : "text-emerald-700 dark:text-emerald-300"}>
+                            <div className={terminalRowClass}>
                                 <span className="font-semibold uppercase tracking-widest text-[10px] opacity-70">Failure class:</span>{' '}
                                 <span data-testid="terminal-summary-failure-class">
                                   {terminalMetadata?.failure_class ?? "none"}

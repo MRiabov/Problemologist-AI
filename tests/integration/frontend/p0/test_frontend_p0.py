@@ -517,8 +517,7 @@ def test_int_162_interrupt_ux_propagation(page: Page):
         session_id=f"INT-030-{uuid.uuid4().hex[:8]}",
         agent_name=AgentName.ENGINEER_PLANNER,
     )
-    page.goto(FRONTEND_URL)
-    page.wait_for_load_state("networkidle")
+    page.goto(FRONTEND_URL, wait_until="domcontentloaded")
     episode_item = (
         page.get_by_test_id("sidebar-episode-item").filter(has_text=task).first
     )
@@ -545,8 +544,16 @@ def test_int_162_interrupt_ux_propagation(page: Page):
     assert final_status == "CANCELLED", (
         f"Expected cancelled status after interrupt, got {final_status}"
     )
+    expect(page.get_by_test_id("failure-summary-container")).to_be_visible(
+        timeout=30000
+    )
+    expect(page.get_by_test_id("failure-summary-raw-status")).to_have_text("CANCELLED")
     expect(page.get_by_test_id("terminal-summary-block")).to_be_visible(timeout=30000)
+    expect(page.get_by_test_id("terminal-summary-block")).to_have_class(
+        re.compile(r"bg-amber-500/10")
+    )
     expect(page.get_by_text("Terminal cancellation")).to_be_visible(timeout=30000)
+    expect(page.get_by_test_id("terminal-summary-status")).to_have_text("CANCELLED")
     expect(page.get_by_test_id("terminal-summary-terminal-reason")).to_be_visible()
     expect(page.get_by_test_id("terminal-summary-failure-class")).to_be_visible()
     expect(page.get_by_label("Send Message")).to_be_visible(timeout=30000)

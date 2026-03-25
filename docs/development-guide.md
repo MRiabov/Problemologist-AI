@@ -45,7 +45,7 @@
 | Frontend slice | `./scripts/run_integration_tests.sh -m integration_frontend` | Builds and serves the frontend only when browser tests are selected |
 | Queue behind active run | `./scripts/run_integration_tests.sh --queue ...` | Waits on the shared `/tmp` integration lock instead of clobbering an active run |
 | High-fidelity smoke-off run | `./scripts/run_integration_tests.sh --no-smoke ...` | Disables smoke-test shortcuts for longer simulation checks |
-| MuJoCo-focused run | `./scripts/run_integration_tests.sh --no-full-sim ...` | Forces the faster rigid-body backend for backend-portable debugging |
+| MuJoCo/default run | `./scripts/run_integration_tests.sh ...` or `./scripts/run_integration_tests.sh --fast-sim ...` | Uses the default rigid-body backend for backend-portable debugging |
 | Genesis/full-fidelity run | `./scripts/run_integration_tests.sh --full-sim ...` | Opts into the full simulation backend for Genesis-specific coverage |
 | Frontend tests | `cd frontend && npm run test` | Optional Vitest-based UI checks |
 | Frontend build check | `cd frontend && npm run build` | Only needed when changing shared UI contracts |

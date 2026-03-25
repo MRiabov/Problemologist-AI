@@ -1701,11 +1701,8 @@ def _run_integration_command(
     _run(["bash", "scripts/env_down.sh"])
 
     if args.full_sim:
-        os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
-        print(
-            "Integration default simulation backend: "
-            f"{os.environ['SIMULATION_DEFAULT_BACKEND']}"
-        )
+        os.environ["SIMULATION_DEFAULT_BACKEND"] = "GENESIS"
+        print("Full-fidelity simulation backend selected: Genesis")
     else:
         os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
         print("Fast simulation backend selected: MuJoCo")
@@ -2077,12 +2074,26 @@ def _build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--reverse", action="store_true")
     run_parser.add_argument("--down", action="store_true")
     run_parser.add_argument("--no-smoke", action="store_true")
-    run_parser.add_argument(
+    sim_mode_group = run_parser.add_mutually_exclusive_group()
+    sim_mode_group.add_argument(
         "--full-sim",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Use the full-fidelity simulation backend for this run (default: enabled).",
+        dest="full_sim",
+        action="store_true",
+        help="Use the full-fidelity simulation backend for this run.",
     )
+    sim_mode_group.add_argument(
+        "--fast-sim",
+        dest="full_sim",
+        action="store_false",
+        help="Use the faster MuJoCo backend for this run (default).",
+    )
+    sim_mode_group.add_argument(
+        "--no-full-sim",
+        dest="full_sim",
+        action="store_false",
+        help=argparse.SUPPRESS,
+    )
+    run_parser.set_defaults(full_sim=False)
     run_parser.add_argument(
         "--wait-cleanup",
         action="store_true",
