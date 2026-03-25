@@ -76,6 +76,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const isCreationModeRef = useRef(false);
   const isBenchmarkCreationRef = useRef(false);
   const benchmarkCreationModeStorageKey = "benchmarkCreationMode";
+  const syncRunningState = useCallback((episode: Pick<Episode, "status"> | null | undefined) => {
+    setRunning(episode?.status === EpisodeStatus.RUNNING);
+  }, []);
 
   const hydrateEpisodeAssets = useCallback(async (episode: Episode): Promise<Episode> => {
     const assets = episode.assets ?? [];
@@ -140,7 +143,9 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     const savedId = localStorage.getItem("selectedEpisodeId");
     if (savedId && !selectedEpisode) {
         fetchEpisode(savedId).then(async data => {
-            setSelectedEpisode(await hydrateEpisodeAssets(data));
+            const hydratedEpisode = await hydrateEpisodeAssets(data);
+            setSelectedEpisode(hydratedEpisode);
+            syncRunningState(hydratedEpisode);
         }).catch(err => {
             console.error("Failed to restore episode from localStorage:", err);
             localStorage.removeItem("selectedEpisodeId");
@@ -159,6 +164,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       if (selectedEpisode) {
           const detailed = await fetchEpisode(selectedEpisode.id);
           const hydratedDetailed = await hydrateEpisodeAssets(detailed);
+          syncRunningState(hydratedDetailed);
           setSelectedEpisode(prev => {
             if (!prev) return hydratedDetailed;
             return {
@@ -179,7 +185,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     selectedEpisode?.status,
     selectedEpisode?.metadata_vars?.detailed_status,
     selectedEpisode?.traces?.length,
-    selectedEpisode?.assets?.length
+    selectedEpisode?.assets?.length,
+    syncRunningState,
   ]);
 
   const selectEpisode = useCallback(async (id: string) => {
@@ -192,17 +199,21 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     setRunning(false);
     try {
       const fullEp = await fetchEpisode(id);
-      setSelectedEpisode(await hydrateEpisodeAssets(fullEp));
+      const hydratedEpisode = await hydrateEpisodeAssets(fullEp);
+      setSelectedEpisode(hydratedEpisode);
+      syncRunningState(hydratedEpisode);
       localStorage.setItem("selectedEpisodeId", id);
     } catch (e) {
       console.error("Failed to fetch episode details", e);
       const ep = episodes.find(e => e.id === id);
       if (ep) {
-          setSelectedEpisode(await hydrateEpisodeAssets(ep));
+          const hydratedEpisode = await hydrateEpisodeAssets(ep);
+          setSelectedEpisode(hydratedEpisode);
+          syncRunningState(hydratedEpisode);
           localStorage.setItem("selectedEpisodeId", id);
       }
     }
-  }, [episodes]);
+  }, [episodes, syncRunningState]);
 
   const clearSelection = useCallback(() => {
     setSelectedEpisode(null);
@@ -444,8 +455,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
             });
             // Only set running state if this update is for the ACTIVE episode
             if (connectionEpisodeId === selectedEpisodeIdRef.current) {
+                syncRunningState({ status: message.status });
                 if (message.status !== EpisodeStatus.RUNNING) {
-                  setRunning(false);
                   // Hydrate full episode payload to avoid missing traces/assets after completion.
                   fetchEpisode(connectionEpisodeId)
                     .then(async (fullEp) => {
@@ -538,7 +549,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       }
       clearTimeout(reconnectTimeout);
     };
-  }, [selectedEpisode?.id]);
+  }, [selectedEpisode?.id, syncRunningState]);
 
   // Fallback polling for active episode details (slower than before)
   useEffect(() => {
@@ -573,6 +584,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
           if (hydratedCurrentEp.status !== EpisodeStatus.RUNNING) {
             setRunning(false);
+          } else {
+            setRunning(true);
           }
         } catch (e) {
           console.error("Polling failed", e);

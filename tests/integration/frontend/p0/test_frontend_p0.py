@@ -268,11 +268,11 @@ def test_int_157_session_history(page: Page):
     )
 
     # 6. Click engineer session and verify navigation to /
-    page.get_by_text(engineer_name).click()
+    page.get_by_test_id("sidebar-episode-item").filter(
+        has_text=engineer_name
+    ).first.click()
     expect(page).to_have_url(FRONTEND_URL + "/", timeout=15000)
-    expect(page.locator("h2", has_text="Engineer Workspace")).to_be_visible(
-        timeout=15000
-    )
+    expect(page.get_by_text("Agentic CAD Design")).to_be_visible(timeout=15000)
 
 
 @pytest.mark.integration_frontend

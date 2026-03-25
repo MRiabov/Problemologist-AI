@@ -52,6 +52,7 @@ import {
 interface ArtifactViewProps {
   plan?: string | null;
   assets?: AssetResponse[];
+  traces?: TraceResponse[];
   isConnected?: boolean;
   episodeId?: string | null;
 }
@@ -59,6 +60,7 @@ interface ArtifactViewProps {
 export default function ArtifactView({
   plan,
   assets = [],
+  traces,
   isConnected = true,
   episodeId = null,
 }: ArtifactViewProps) {
@@ -116,6 +118,7 @@ export default function ArtifactView({
     [assets]
   );
   const validationResultsMessage = validationResultsRecord?.message ?? null;
+  const resolvedTraces = traces ?? selectedEpisode?.traces ?? [];
 
   const getAssetUrl = (assetPath: string | undefined) => {
     const resolvedEpisodeId = episodeId ?? selectedEpisode?.id ?? null;
@@ -268,7 +271,7 @@ export default function ArtifactView({
             const data = yaml.load(activeAsset.content) as any;
             if (data && data.electronics) {
                 // Extract timeline events from traces
-                const timelineEvents = (selectedEpisode?.traces || [])
+                const timelineEvents = resolvedTraces
                     .filter((t: TraceResponse) => t.trace_type === TraceType.EVENT && t.name === 'circuit_simulation')
                     .map((t: TraceResponse) => ({
                         timestamp: new Date(t.created_at).getTime() / 1000,
@@ -649,6 +652,8 @@ export default function ArtifactView({
                             latestMediaBundle.solutionEvidenceAsset
                         ),
                     },
+                    traceEpisodeId: episodeId ?? selectedEpisode?.id ?? null,
+                    traceCount: resolvedTraces.length,
                 })}
             </div>
             {renderContent()}

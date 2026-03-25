@@ -391,6 +391,10 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     assert artifact_state["latestMediaBundle"]["solutionEvidence"]["path"].endswith(
         "simulation_result.json"
     )
+    assert artifact_state["traceEpisodeId"] == viewport_state["mediaEpisodeId"], (
+        artifact_state
+    )
+    assert artifact_state["traceCount"] > 0, artifact_state
 
     expect(page.get_by_test_id("design-viewer-video")).to_have_attribute(
         "aria-hidden",

@@ -102,6 +102,10 @@ GPT-5.4
 - Frontend client regeneration: `npm run gen:api` in `frontend/`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_205.py -k test_int_205_failed_engineer_retry_revises_same_benchmark`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py tests/integration/frontend/p1/test_int_161.py tests/integration/frontend/p1/test_int_178.py tests/integration/frontend/p1/test_int_160.py -k 'test_int_189_engineer_run_defaults_to_solution_evidence or test_int_161_tool_activity_and_reasoning_visibility or test_int_178_session_restore_continuity or test_int_160_reasoning_default_hidden_and_expandable'`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py::test_int_157_session_history`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_178.py::test_int_178_session_restore_continuity`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py::test_int_160_reasoning_default_hidden_and_expandable` (skipped in the live backend run because no persisted reasoning traces were available)
 
 ### Completion Notes List
 
@@ -111,6 +115,10 @@ GPT-5.4
 - Fixed the circuit timeline data path so it reads persisted motor states from trace metadata and backed that contract with regenerated OpenAPI/client artifacts.
 - Extended live-browser coverage for session history, retry lineage failure handling, persisted trace events, context usage telemetry, reasoning visibility, and reload continuity.
 - Verified the frontend bundle and the targeted live-browser slices after the schema and render updates.
+- Restored persisted `running` state from the selected episode on reload, selection changes, websocket updates, and poll hydration so reopened active runs stay in stop/steer mode.
+- Aligned the artifact timeline to the same resolved media episode that supplies the asset bundle, and exposed that episode id in the artifact debug payload for regression coverage.
+- Tightened the live-browser regression coverage so INT-178 asserts the restored active-run affordance and INT-189 asserts the artifact timeline source matches the resolved media episode.
+- Verified the frontend build and the targeted live-browser slices after the state-restoration and artifact-source fixes.
 
 ### File List
 
@@ -119,11 +127,17 @@ GPT-5.4
 - `frontend/src/api/generated/models/TraceMetadata.ts`
 - `frontend/src/components/workspace/ChatWindow.tsx`
 - `frontend/src/components/workspace/ArtifactView.tsx`
+- `frontend/src/components/workspace/UnifiedGeneratorView.tsx`
+- `frontend/src/context/EpisodeContext.tsx`
 - `frontend/src/components/workspace/TraceList.tsx`
 - `frontend/src/components/visualization/CircuitTimeline.tsx`
 - `tests/integration/frontend/p0/test_int_205.py`
+- `tests/integration/frontend/p0/test_frontend_p0.py`
+- `tests/integration/frontend/p0/test_solution_evidence.py`
+- `tests/integration/frontend/p1/test_int_178.py`
 
 ## Change Log
 
 - 2026-03-25: Restored persisted event rows in the timeline, added failure-log rendering alongside terminal metadata, wired circuit-timeline motor states to the trace contract, and regenerated the OpenAPI/client artifacts.
 - 2026-03-25: Verified the updated frontend bundle and reran the targeted live-browser slices for session history, retry lineage, reasoning visibility, solution evidence, and reload continuity.
+- 2026-03-25: Restored selected-episode running state on reload and aligned the artifact timeline with the resolved media episode, then reran the live-browser session-history, restore, and solution-evidence regressions.

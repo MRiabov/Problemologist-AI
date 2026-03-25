@@ -473,6 +473,7 @@ const UnifiedGeneratorView: React.FC<UnifiedGeneratorViewProps> = ({
                   <ArtifactView 
                     plan={resolvedMediaEpisode?.plan || selectedEpisode?.plan || ""}
                     assets={resolvedMediaAssets}
+                    traces={resolvedMediaEpisode?.traces || selectedEpisode?.traces || []}
                     episodeId={resolvedMediaEpisode?.id ?? selectedEpisode?.id ?? null}
                     isConnected={isConnected}
                   />
