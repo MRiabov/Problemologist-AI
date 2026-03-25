@@ -106,6 +106,8 @@ GPT-5.4
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_178.py::test_int_178_session_restore_continuity`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py::test_int_160_reasoning_default_hidden_and_expandable` (skipped in the live backend run because no persisted reasoning traces were available)
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py::test_int_157_session_history tests/integration/frontend/p1/test_int_178.py::test_int_178_session_restore_continuity`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py::test_int_160_reasoning_default_hidden_and_expandable` (live backend emitted a fail-fast node-entry validation error, so the test was skipped by the backend-error gate on the rerun)
 
 ### Completion Notes List
 
@@ -119,16 +121,18 @@ GPT-5.4
 - Aligned the artifact timeline to the same resolved media episode that supplies the asset bundle, and exposed that episode id in the artifact debug payload for regression coverage.
 - Tightened the live-browser regression coverage so INT-178 asserts the restored active-run affordance and INT-189 asserts the artifact timeline source matches the resolved media episode.
 - Verified the frontend build and the targeted live-browser slices after the state-restoration and artifact-source fixes.
+- Added a selection-intent/request guard in `EpisodeContext` so late episode hydration responses can no longer overwrite a newer selection, and removed the fallback that cleared the persisted selection id on transient restore failures.
+- Coalesced same-target episode hydrate requests so the refresh loop cannot invalidate an in-flight restore or selection load, then verified the updated behavior with the session-history and session-restore live-browser slices.
 
 ### File List
 
 - `shared/models/schemas.py`
 - `controller_openapi.json`
 - `frontend/src/api/generated/models/TraceMetadata.ts`
+- `frontend/src/context/EpisodeContext.tsx`
 - `frontend/src/components/workspace/ChatWindow.tsx`
 - `frontend/src/components/workspace/ArtifactView.tsx`
 - `frontend/src/components/workspace/UnifiedGeneratorView.tsx`
-- `frontend/src/context/EpisodeContext.tsx`
 - `frontend/src/components/workspace/TraceList.tsx`
 - `frontend/src/components/visualization/CircuitTimeline.tsx`
 - `tests/integration/frontend/p0/test_int_205.py`
@@ -141,3 +145,5 @@ GPT-5.4
 - 2026-03-25: Restored persisted event rows in the timeline, added failure-log rendering alongside terminal metadata, wired circuit-timeline motor states to the trace contract, and regenerated the OpenAPI/client artifacts.
 - 2026-03-25: Verified the updated frontend bundle and reran the targeted live-browser slices for session history, retry lineage, reasoning visibility, solution evidence, and reload continuity.
 - 2026-03-25: Restored selected-episode running state on reload and aligned the artifact timeline with the resolved media episode, then reran the live-browser session-history, restore, and solution-evidence regressions.
+- 2026-03-25: Added request-guarded episode hydration in `EpisodeContext` so stale restore/select responses cannot overwrite a newer session and transient restore failures keep the persisted episode pointer intact.
+- 2026-03-25: Revalidated the story with the live-browser session-history and session-restore slices after the context fix; INT-160 was still backend-gated by a fail-fast node-entry validation error and was skipped by the backend-error fixture on rerun.

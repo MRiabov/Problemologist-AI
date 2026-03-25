@@ -73,11 +73,20 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   const [activeArtifactId, setActiveArtifactId] = useState<string | null>(null);
   const [topologyNodes, setTopologyNodes] = useState<TopologyNode[]>([]);
   const [feedbackState, setFeedbackState] = useState<{ traceId: number; score: number } | null>(null);
+  const selectedEpisodeIdRef = useRef<string | null>(null);
+  const selectedEpisodeIntentIdRef = useRef<string | null>(null);
+  const selectedEpisodeRequestRef = useRef(0);
+  const selectedEpisodeLoadInFlightRef = useRef<string | null>(null);
   const isCreationModeRef = useRef(false);
   const isBenchmarkCreationRef = useRef(false);
   const benchmarkCreationModeStorageKey = "benchmarkCreationMode";
   const syncRunningState = useCallback((episode: Pick<Episode, "status"> | null | undefined) => {
     setRunning(episode?.status === EpisodeStatus.RUNNING);
+  }, []);
+
+  const setSelectedEpisodeIntent = useCallback((episodeId: string | null) => {
+    selectedEpisodeRequestRef.current += 1;
+    selectedEpisodeIntentIdRef.current = episodeId;
   }, []);
 
   const hydrateEpisodeAssets = useCallback(async (episode: Episode): Promise<Episode> => {
@@ -138,18 +147,47 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const hydrateAndSelectEpisode = useCallback(async (episodeId: string) => {
+    if (selectedEpisodeLoadInFlightRef.current === episodeId) {
+      return false;
+    }
+
+    selectedEpisodeLoadInFlightRef.current = episodeId;
+    const requestId = selectedEpisodeRequestRef.current + 1;
+    setSelectedEpisodeIntent(episodeId);
+    selectedEpisodeRequestRef.current = requestId;
+    localStorage.setItem("selectedEpisodeId", episodeId);
+
+    try {
+      const data = await fetchEpisode(episodeId);
+      const hydratedEpisode = await hydrateEpisodeAssets(data);
+
+      if (
+        requestId !== selectedEpisodeRequestRef.current ||
+        selectedEpisodeIntentIdRef.current !== episodeId
+      ) {
+        return false;
+      }
+
+      selectedEpisodeIdRef.current = episodeId;
+      setSelectedEpisode(hydratedEpisode);
+      syncRunningState(hydratedEpisode);
+      return true;
+    } catch (err) {
+      console.error("Failed to fetch episode details", err);
+      return false;
+    } finally {
+      if (selectedEpisodeLoadInFlightRef.current === episodeId) {
+        selectedEpisodeLoadInFlightRef.current = null;
+      }
+    }
+  }, [hydrateEpisodeAssets, setSelectedEpisodeIntent, syncRunningState]);
+
   // WP10: Restore selected episode from localStorage on mount
   useEffect(() => {
     const savedId = localStorage.getItem("selectedEpisodeId");
     if (savedId && !selectedEpisode) {
-        fetchEpisode(savedId).then(async data => {
-            const hydratedEpisode = await hydrateEpisodeAssets(data);
-            setSelectedEpisode(hydratedEpisode);
-            syncRunningState(hydratedEpisode);
-        }).catch(err => {
-            console.error("Failed to restore episode from localStorage:", err);
-            localStorage.removeItem("selectedEpisodeId");
-        });
+      void hydrateAndSelectEpisode(savedId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -158,36 +196,21 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await fetchEpisodes();
       setEpisodes(data);
-      
-      // Always refresh selected episode from the detail endpoint because
-      // listEpisodes intentionally omits traces/assets for payload size.
-      if (selectedEpisode) {
-          const detailed = await fetchEpisode(selectedEpisode.id);
-          const hydratedDetailed = await hydrateEpisodeAssets(detailed);
-          syncRunningState(hydratedDetailed);
-          setSelectedEpisode(prev => {
-            if (!prev) return hydratedDetailed;
-            return {
-              ...prev,
-              ...hydratedDetailed,
-              traces: hydratedDetailed.traces || [],
-              assets: hydratedDetailed.assets || [],
-            };
-          });
+
+      const selectedEpisodeId =
+        selectedEpisodeIntentIdRef.current ??
+        selectedEpisodeIdRef.current ??
+        localStorage.getItem("selectedEpisodeId");
+
+      if (selectedEpisodeId) {
+        await hydrateAndSelectEpisode(selectedEpisodeId);
       }
     } catch (e) {
       console.error("Failed to fetch episodes", e);
     } finally {
       setLoading(false);
     }
-  }, [
-    selectedEpisode?.id,
-    selectedEpisode?.status,
-    selectedEpisode?.metadata_vars?.detailed_status,
-    selectedEpisode?.traces?.length,
-    selectedEpisode?.assets?.length,
-    syncRunningState,
-  ]);
+  }, [hydrateAndSelectEpisode]);
 
   const selectEpisode = useCallback(async (id: string) => {
     setIsCreationMode(false);
@@ -197,25 +220,12 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(benchmarkCreationModeStorageKey);
     setBenchmarkPlanComment("");
     setRunning(false);
-    try {
-      const fullEp = await fetchEpisode(id);
-      const hydratedEpisode = await hydrateEpisodeAssets(fullEp);
-      setSelectedEpisode(hydratedEpisode);
-      syncRunningState(hydratedEpisode);
-      localStorage.setItem("selectedEpisodeId", id);
-    } catch (e) {
-      console.error("Failed to fetch episode details", e);
-      const ep = episodes.find(e => e.id === id);
-      if (ep) {
-          const hydratedEpisode = await hydrateEpisodeAssets(ep);
-          setSelectedEpisode(hydratedEpisode);
-          syncRunningState(hydratedEpisode);
-          localStorage.setItem("selectedEpisodeId", id);
-      }
-    }
-  }, [episodes, syncRunningState]);
+    await hydrateAndSelectEpisode(id);
+  }, [hydrateAndSelectEpisode]);
 
   const clearSelection = useCallback(() => {
+    setSelectedEpisodeIntent(null);
+    selectedEpisodeIdRef.current = null;
     setSelectedEpisode(null);
     localStorage.removeItem("selectedEpisodeId");
     localStorage.removeItem(benchmarkCreationModeStorageKey);
@@ -229,6 +239,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createNewBenchmark = useCallback((isBenchmark: boolean = false) => {
+    setSelectedEpisodeIntent(null);
+    selectedEpisodeIdRef.current = null;
     setSelectedEpisode(null);
     localStorage.removeItem("selectedEpisodeId");
     setIsCreationMode(true);
@@ -283,6 +295,8 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       
       if (response.episode_id) {
         console.log("Agent started, episode_id:", response.episode_id);
+        setSelectedEpisodeIntent(response.episode_id);
+        selectedEpisodeIdRef.current = response.episode_id;
         // Create a minimal episode object to start polling
         const newEpisode: Episode = {
           id: response.episode_id,
@@ -381,9 +395,11 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(listInterval);
   }, [refreshEpisodes]);
 
-  const selectedEpisodeIdRef = useRef<string | null>(null);
   useEffect(() => {
     selectedEpisodeIdRef.current = selectedEpisode?.id || null;
+    if (selectedEpisode?.id) {
+      selectedEpisodeIntentIdRef.current = selectedEpisode.id;
+    }
   }, [selectedEpisode?.id]);
 
   // WebSocket subscription for real-time updates
