@@ -1,6 +1,6 @@
 # Story 5.1: Inspect Session History and Run Timeline
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -93,27 +93,31 @@ GPT-5.4
 
 - Frontend build: `npm run build` in `frontend/`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py -k test_int_157_session_history`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py -k test_int_162_interrupt_ux_propagation`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py`
-- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_178.py`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py tests/integration/frontend/p1/test_int_178.py`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py tests/integration/frontend/p1/test_int_161.py tests/integration/frontend/p1/test_int_178.py`
 - Prior validation from this work session also covered `tests/integration/frontend/p1/test_int_160.py` with a skip when the live backend did not persist reasoning traces.
 
 ### Completion Notes List
 
 - Added persisted session-history metadata to the sidebar: raw status, detailed status, episode phase, terminal reason, failure class, and a derived progress indicator.
-- Kept the run summary and reasoning surfaces aligned with persisted metadata and trace-driven rendering.
-- Extended live-browser coverage for session history, terminal metadata, context usage telemetry, and reload continuity.
-- Tightened the `INT-178` demo-mode assertion to use an exact text match so the reload continuity check targets the status badge instead of colliding with the exit button.
+- Kept the run summary aligned with persisted metadata by showing raw status separately from detailed status, and by distinguishing cancelled and failed terminal tones in the summary banners.
+- Preserved trace-driven rendering while making persisted `LOG` rows more resilient when the backend only supplies metadata fields.
+- Extended live-browser coverage for session history, cancellation handling, context usage telemetry, reasoning visibility, and reload continuity.
+- Hardened the frontend connection probe so a missing health payload no longer throws during browser polling.
 
 ### File List
 
 - `frontend/src/components/layout/Sidebar.tsx`
 - `frontend/src/components/workspace/ChatWindow.tsx`
 - `frontend/src/components/workspace/TraceList.tsx`
+- `frontend/src/api/client.ts`
 - `frontend/src/components/workspace/__tests__/ChatWindow.test.tsx`
 - `frontend/src/components/workspace/__tests__/FeedbackSystem.test.tsx`
 - `specs/frontend-specs.md`
 - `tests/integration/frontend/p0/test_frontend_p0.py`
 - `tests/integration/frontend/p0/test_solution_evidence.py`
 - `tests/integration/frontend/p1/test_int_160.py`
+- `tests/integration/frontend/p1/test_int_161.py`
 - `tests/integration/frontend/p1/test_int_178.py`
