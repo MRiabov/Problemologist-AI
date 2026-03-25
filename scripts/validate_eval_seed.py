@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from controller.clients.worker import WorkerClient  # noqa: E402
+from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
 from evals.logic.models import EvalDatasetItem  # noqa: E402
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
@@ -237,6 +238,23 @@ def _refresh_plan_review_manifest_hashes(
     return updated_manifests
 
 
+def _validate_generated_curation_manifests() -> list[Path]:
+    manifest_paths = sorted(ROOT.glob("dataset/data/generated/*/v0.0.1/manifest.json"))
+    validated: list[Path] = []
+    for manifest_path in manifest_paths:
+        manifest = load_dataset_curation_manifest(manifest_path)
+        logger.info(
+            "generated_curation_manifest_validated",
+            path=str(manifest_path),
+            family=manifest.family,
+            agent_target=manifest.agent_target,
+            accepted=manifest.counts.accepted_after_pending_filter,
+            rejected=manifest.counts.rejected,
+        )
+        validated.append(manifest_path)
+    return validated
+
+
 async def _validate_item(agent: AgentName, item: EvalDatasetItem) -> tuple[bool, str]:
     session_id = _build_session_id(agent, item.id)
     spec = AGENT_SPECS[agent]
@@ -297,6 +315,13 @@ async def _async_main(args: argparse.Namespace) -> int:
         raise SystemExit("--concurrency must be >= 1")
 
     agents = _resolve_agents(args.agent)
+
+    try:
+        _validate_generated_curation_manifests()
+    except Exception as exc:
+        print("Generated curation manifest validation failed.", file=sys.stderr)
+        print(str(exc), file=sys.stderr)
+        return 1
 
     if not args.skip_env_up:
         _run_env_up()
