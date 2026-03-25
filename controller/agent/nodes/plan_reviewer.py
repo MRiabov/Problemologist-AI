@@ -77,9 +77,34 @@ class PlanReviewerNode(BaseNode):
             if await self.ctx.worker_client.exists("plan.md"):
                 plan_markdown = await self.ctx.worker_client.read_file("plan.md")
 
-        findings = []
-        with suppress(Exception):
+        try:
             findings = collect_excessive_dof_findings(assembly_definition)
+        except Exception as exc:
+            error_msg = f"Plan reviewer DOF validation failed: {exc}"
+            await record_worker_events(
+                episode_id=state.episode_id,
+                events=[
+                    {
+                        "event_type": "plan_review_validation_run",
+                        "data": {
+                            "reviewer_stage": "engineering_plan_reviewer",
+                            "validator_status": "invalid_assembly_definition",
+                            "validator_error": str(exc),
+                        },
+                        "reviewer_stage": "engineering_plan_reviewer",
+                        "validator_status": "invalid_assembly_definition",
+                        "validator_error": str(exc),
+                    }
+                ],
+            )
+            return state.model_copy(
+                update={
+                    "status": AgentStatus.FAILED,
+                    "feedback": error_msg,
+                    "journal": state.journal + f"\n[Plan Reviewer] {error_msg}",
+                    "turn_count": state.turn_count + 1,
+                }
+            )
         for finding in findings:
             payload = build_excessive_dof_event_payload(
                 finding, reviewer_stage="engineering_plan_reviewer"

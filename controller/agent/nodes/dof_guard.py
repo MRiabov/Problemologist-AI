@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 import yaml
@@ -17,6 +18,11 @@ CANONICAL_DOF_CHECKLIST_KEYS = {
     "engineering_execution_reviewer": "dof_deviation_justified",
 }
 DOF_MINIMALITY_THRESHOLD = 3
+_DOF_JUSTIFICATION_LINE_RE = re.compile(
+    r"^\s*(?:[-*+]\s+|\d+\.\s+)?"
+    r"(?P<marker>DOF_JUSTIFICATION_ACCEPTED|DOF_JUSTIFICATION:(?P<part_id>[^\s]+))"
+    r"\s*$"
+)
 
 
 @dataclass(frozen=True)
@@ -85,11 +91,21 @@ def has_accepted_dof_justification(plan_markdown: str, *, part_id: str) -> bool:
     - `DOF_JUSTIFICATION_ACCEPTED` (global)
     - `DOF_JUSTIFICATION:<part_id>` (part-specific)
     """
-    lowered = plan_markdown.lower()
-    if "dof_justification_accepted" in lowered:
-        return True
-    token = f"dof_justification:{part_id.lower()}"
-    return token in lowered
+    normalized_part_id = part_id.strip().lower()
+    if not normalized_part_id:
+        return False
+
+    for line in plan_markdown.splitlines():
+        match = _DOF_JUSTIFICATION_LINE_RE.match(line)
+        if not match:
+            continue
+        marker = match.group("marker")
+        if marker == "DOF_JUSTIFICATION_ACCEPTED":
+            return True
+        line_part_id = (match.group("part_id") or "").lower()
+        if line_part_id == normalized_part_id:
+            return True
+    return False
 
 
 def canonical_dof_checklist_key(reviewer_stage: str) -> str:

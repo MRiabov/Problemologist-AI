@@ -137,7 +137,70 @@ class ExecutionReviewerNode(BaseNode):
             plan_markdown = state.plan or ""
             if await self.ctx.worker_client.exists("plan.md"):
                 plan_markdown = await self.ctx.worker_client.read_file("plan.md")
-            findings = collect_excessive_dof_findings(assembly_definition)
+            try:
+                findings = collect_excessive_dof_findings(assembly_definition)
+            except Exception as exc:
+                feedback = f"Execution reviewer DOF validation failed: {exc}"
+                review = apply_canonical_dof_checklist(
+                    ReviewResult(
+                        decision=ReviewDecision.REJECTED,
+                        reason=feedback,
+                        required_fixes=[
+                            "Repair assembly_definition.yaml so the DOF validator can "
+                            "parse the latest revision before review."
+                        ],
+                        checklist={"dof_deviation_justified": "fail"},
+                    ),
+                    reviewer_stage="engineering_execution_reviewer",
+                )
+                try:
+                    (
+                        review_decision_path,
+                        review_comments_path,
+                    ) = await self._persist_review_result(
+                        review, "engineering-execution-review"
+                    )
+                except Exception as persist_exc:
+                    node_output_data = (
+                        "Execution Reviewer failed to persist review file: "
+                        f"{persist_exc}"
+                    )
+                    return state.model_copy(
+                        update={
+                            "status": AgentStatus.FAILED,
+                            "feedback": node_output_data,
+                            "journal": (
+                                state.journal
+                                + f"\n[Execution Reviewer] Review persistence failed: {persist_exc}"
+                            ),
+                            "turn_count": state.turn_count + 1,
+                        }
+                    )
+                review_id = uuid.uuid4().hex
+                await record_worker_events(
+                    episode_id=state.episode_id,
+                    events=[
+                        ReviewDecisionEvent(
+                            decision=review.decision,
+                            reason=review.reason,
+                            review_id=review_id,
+                            evidence_stats={
+                                "review_decision_path": review_decision_path,
+                                "review_comments_path": review_comments_path,
+                            },
+                            checklist=review.checklist,
+                        )
+                    ],
+                )
+                node_output_data = feedback
+                return state.model_copy(
+                    update={
+                        "status": AgentStatus.FAILED,
+                        "feedback": feedback,
+                        "journal": state.journal + f"\n[Execution Reviewer] {feedback}",
+                        "turn_count": state.turn_count + 1,
+                    }
+                )
             for finding in findings:
                 payload = build_excessive_dof_event_payload(
                     finding, reviewer_stage="engineering_execution_reviewer"

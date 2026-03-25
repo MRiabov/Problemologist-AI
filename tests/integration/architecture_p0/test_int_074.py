@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import hashlib
 import os
 import uuid
 from pathlib import Path
@@ -10,6 +11,7 @@ import yaml
 
 from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeResponse
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision
+from shared.workers.schema import PlanReviewManifest
 from tests.integration.agent.helpers import (
     seed_benchmark_assembly_definition,
     seed_current_revision_render_preview,
@@ -104,15 +106,17 @@ async def _run_and_wait(
     session_id: str,
     task: str,
     start_node: AgentName | None = None,
+    seed_benchmark_assembly: bool = True,
 ) -> EpisodeResponse:
-    await seed_benchmark_assembly_definition(
-        client,
-        session_id,
-        benchmark_max_unit_cost_usd=250.0,
-        benchmark_max_weight_g=2500.0,
-        planner_target_max_unit_cost_usd=250.0,
-        planner_target_max_weight_g=2500.0,
-    )
+    if seed_benchmark_assembly:
+        await seed_benchmark_assembly_definition(
+            client,
+            session_id,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
     req = AgentRunRequest(
         task=task,
         session_id=session_id,
@@ -174,6 +178,46 @@ async def _seed_plan_reviewer_handoff(
             },
             headers={"X-Session-ID": session_id},
         )
+
+
+async def _seed_engineer_plan_review_manifest(
+    client: httpx.AsyncClient,
+    session_id: str,
+    *,
+    artifact_hashes: dict[str, str],
+) -> None:
+    manifest = PlanReviewManifest(
+        status="ready_for_review",
+        reviewer_stage=AgentName.ENGINEER_PLAN_REVIEWER,
+        session_id=session_id,
+        planner_node_type=AgentName.ENGINEER_PLANNER,
+        artifact_hashes=artifact_hashes,
+    )
+    response = await client.post(
+        "http://127.0.0.1:18001/fs/write",
+        json={
+            "path": ".manifests/engineering_plan_review_manifest.json",
+            "content": manifest.model_dump_json(indent=2),
+            "overwrite": True,
+            "bypass_agent_permissions": True,
+        },
+        headers={"X-Session-ID": session_id, "X-System-FS-Bypass": "1"},
+    )
+    assert response.status_code == 200, response.text
+
+
+async def _read_session_file(
+    client: httpx.AsyncClient, session_id: str, path: str
+) -> str:
+    response = await client.post(
+        "http://127.0.0.1:18001/fs/read",
+        json={"path": path, "bypass_agent_permissions": False},
+        headers={"X-Session-ID": session_id},
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert "content" in payload, payload
+    return payload["content"]
 
 
 async def _wait_for_review_evidence(
@@ -363,3 +407,234 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         assert execution_comments["checklist"]["dof_deviation_justified"] == "pass", (
             execution_comments
         )
+
+        # Regression: the justification marker must be explicit and standalone.
+        strict_marker_session = f"INT-075-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(
+            client,
+            strict_marker_session,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await seed_current_revision_render_preview(
+            client, session_id=strict_marker_session
+        )
+        benchmark_definition_content = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/04__benchmark_definition.yaml"
+        ).read_text(encoding="utf-8")
+        todo_content = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/02__todo.md"
+        ).read_text(encoding="utf-8")
+        assembly_definition_content = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_coder/entry_01/01__assembly_definition.yaml"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "benchmark_definition.yaml",
+                "content": benchmark_definition_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": strict_marker_session},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "todo.md",
+                "content": todo_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": strict_marker_session},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "assembly_definition.yaml",
+                "content": assembly_definition_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": strict_marker_session},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "plan.md",
+                "content": (
+                    "## 1. Solution Overview\n\n"
+                    "INT-075 strict-marker regression. This prose mentions "
+                    "DOF_JUSTIFICATION:planner_link only as a token example and "
+                    "does not include a standalone justification marker.\n\n"
+                    "## 2. Parts List\n\n"
+                    "- planner_link\n\n"
+                    "## 3. Assembly Strategy\n\n"
+                    "1. Baseline assembly.\n\n"
+                    "## 4. Cost & Weight Budget\n\n"
+                    "- Within planner caps.\n\n"
+                    "## 5. Risk Assessment\n\n"
+                    "- Over-actuation drift risk.\n"
+                ),
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": strict_marker_session},
+        )
+        benchmark_assembly_content = await _read_session_file(
+            client, strict_marker_session, "benchmark_assembly_definition.yaml"
+        )
+        await _seed_engineer_plan_review_manifest(
+            client,
+            strict_marker_session,
+            artifact_hashes={
+                "plan.md": hashlib.sha256(
+                    (
+                        "## 1. Solution Overview\n\n"
+                        "INT-075 strict-marker regression. This prose mentions "
+                        "DOF_JUSTIFICATION:planner_link only as a token example "
+                        "and does not include a standalone justification marker.\n\n"
+                        "## 2. Parts List\n\n"
+                        "- planner_link\n\n"
+                        "## 3. Assembly Strategy\n\n"
+                        "1. Baseline assembly.\n\n"
+                        "## 4. Cost & Weight Budget\n\n"
+                        "- Within planner caps.\n\n"
+                        "## 5. Risk Assessment\n\n"
+                        "- Over-actuation drift risk.\n"
+                    ).encode("utf-8")
+                ).hexdigest(),
+                "todo.md": hashlib.sha256(todo_content.encode("utf-8")).hexdigest(),
+                "benchmark_definition.yaml": hashlib.sha256(
+                    benchmark_definition_content.encode("utf-8")
+                ).hexdigest(),
+                "assembly_definition.yaml": hashlib.sha256(
+                    assembly_definition_content.encode("utf-8")
+                ).hexdigest(),
+                "benchmark_assembly_definition.yaml": hashlib.sha256(
+                    benchmark_assembly_content.encode("utf-8")
+                ).hexdigest(),
+            },
+        )
+        strict_marker_episode = await _run_and_wait(
+            client,
+            agent_name=AgentName.ENGINEER_PLAN_REVIEWER,
+            session_id=strict_marker_session,
+            task="INT-075 strict marker regression",
+            start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+            seed_benchmark_assembly=False,
+        )
+        assert _has_expected_review_evidence(
+            strict_marker_episode,
+            required_checklist_pairs=(("dof_minimality", "fail"),),
+        ), strict_marker_episode
+        strict_marker_review_traces = [
+            trace
+            for trace in strict_marker_episode.traces
+            if trace.name == "review_decision" and trace.metadata_vars is not None
+        ]
+        assert strict_marker_review_traces, "Expected strict-marker review_decision"
+        strict_marker_decision = max(
+            strict_marker_review_traces, key=lambda trace: trace.id
+        )
+        assert (
+            strict_marker_decision.metadata_vars.checklist.get("dof_minimality")
+            == "fail"
+        ), strict_marker_decision.metadata_vars.checklist
+
+        # Regression: malformed assembly YAML must fail closed instead of
+        # falling through to the LLM path.
+        malformed_session = f"INT-075-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(
+            client,
+            malformed_session,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await seed_current_revision_render_preview(client, session_id=malformed_session)
+        benchmark_definition_content = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/04__benchmark_definition.yaml"
+        ).read_text(encoding="utf-8")
+        todo_content = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/02__todo.md"
+        ).read_text(encoding="utf-8")
+        plan_content = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/01__plan.md"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "benchmark_definition.yaml",
+                "content": benchmark_definition_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": malformed_session},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "todo.md",
+                "content": todo_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": malformed_session},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "plan.md",
+                "content": plan_content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": malformed_session},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "assembly_definition.yaml",
+                "content": "version: '1.0'\nconstraints: [\n",
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": malformed_session},
+        )
+        benchmark_assembly_content = await _read_session_file(
+            client, malformed_session, "benchmark_assembly_definition.yaml"
+        )
+        await _seed_engineer_plan_review_manifest(
+            client,
+            malformed_session,
+            artifact_hashes={
+                "plan.md": hashlib.sha256(plan_content.encode("utf-8")).hexdigest(),
+                "todo.md": hashlib.sha256(todo_content.encode("utf-8")).hexdigest(),
+                "benchmark_definition.yaml": hashlib.sha256(
+                    benchmark_definition_content.encode("utf-8")
+                ).hexdigest(),
+                "assembly_definition.yaml": hashlib.sha256(
+                    "version: '1.0'\nconstraints: [\n".encode("utf-8")
+                ).hexdigest(),
+                "benchmark_assembly_definition.yaml": hashlib.sha256(
+                    benchmark_assembly_content.encode("utf-8")
+                ).hexdigest(),
+            },
+        )
+        malformed_episode = await _run_and_wait(
+            client,
+            agent_name=AgentName.ENGINEER_PLAN_REVIEWER,
+            session_id=malformed_session,
+            task="INT-075 malformed assembly regression",
+            start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+            seed_benchmark_assembly=False,
+        )
+        assert malformed_episode.status == EpisodeStatus.FAILED, malformed_episode
+        assert any(
+            trace.name == "node_entry_validation_failed"
+            and "planner handoff cross-validation parse failure"
+            in (trace.content or "")
+            for trace in (malformed_episode.traces or [])
+        ), malformed_episode.traces

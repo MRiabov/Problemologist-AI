@@ -83,6 +83,11 @@ GPT-5.4
 
 ### Debug Log References
 
+- Tightened `controller/agent/nodes/dof_guard.py` to require standalone `DOF_JUSTIFICATION_ACCEPTED` and `DOF_JUSTIFICATION:<part_id>` marker lines instead of free substring matches.
+- Made `controller/agent/nodes/plan_reviewer.py` fail closed when deterministic DOF validation cannot parse the handoff, instead of falling through to the LLM review path.
+- Made `controller/agent/nodes/execution_reviewer.py` fail closed when deterministic DOF validation errors during execution review, preserving rejected review persistence.
+- Extended `tests/integration/architecture_p0/test_int_074.py` with strict-marker and malformed-assembly regression coverage for the simpler-valid-solution gate.
+- Verified with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_074.py::test_int_074_engineering_dof_minimization_review_gate`.
 - Fixed worker-light execution env to expose `REPO_REVISION` for seeded mock scripts.
 - Fixed INT-075 execution seed to use the justified `planner_link` label for the over-actuated part so the canonical DOF marker matches the reviewed part id.
 - Added `seed_execution_reviewer_handover` import to `tests/integration/architecture_p1/test_reviewer_evidence.py`.
@@ -98,6 +103,9 @@ GPT-5.4
 
 ### Completion Notes List
 
+- The simpler-valid-solution gate now uses explicit marker-line parsing for accepted DOF justifications, so prose mentions no longer satisfy the bypass.
+- Plan review and execution review now fail closed when deterministic DOF validation cannot parse the handoff, which keeps malformed assemblies out of the fallback path.
+- The INT-074 regression slice now covers unjustified rejection, justified motion, strict-marker parsing, and malformed-assembly fail-closed behavior.
 - Comprehensive story context assembled from epic, PRD, architecture, reviewer gate code, reward config, and seeded DOF regression coverage.
 - Canonical DOF checklist keys now persist through review events and review artifacts for both the rejection and justified-motion paths.
 - Reviewer-stage visual inspection now emits persisted tool traces even when the gate exits early on DOF policy checks.
@@ -109,6 +117,11 @@ GPT-5.4
 ### File List
 
 - \_bmad-output/implementation-artifacts/3-4-prefer-the-simpler-valid-solution.md
+- `controller/agent/nodes/dof_guard.py`
+- `controller/agent/nodes/plan_reviewer.py`
+- `controller/agent/nodes/execution_reviewer.py`
+- `config/prompts.yaml`
+- `tests/integration/architecture_p0/test_int_074.py`
 - `controller/migrations/versions/b0f5e3c1d2a4_add_dataset_row_archives.py`
 - `worker_light/runtime/executor.py`
 - `tests/integration/mock_responses/INT-075.yaml`
