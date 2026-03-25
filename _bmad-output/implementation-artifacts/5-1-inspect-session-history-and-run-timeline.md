@@ -98,26 +98,32 @@ GPT-5.4
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py tests/integration/frontend/p1/test_int_178.py`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p1/test_int_160.py tests/integration/frontend/p1/test_int_161.py tests/integration/frontend/p1/test_int_178.py`
 - Prior validation from this work session also covered `tests/integration/frontend/p1/test_int_160.py` with a skip when the live backend did not persist reasoning traces.
+- OpenAPI/client regeneration: `uv run python scripts/generate_openapi.py`
+- Frontend client regeneration: `npm run gen:api` in `frontend/`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_int_205.py -k test_int_205_failed_engineer_retry_revises_same_benchmark`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py tests/integration/frontend/p1/test_int_161.py tests/integration/frontend/p1/test_int_178.py tests/integration/frontend/p1/test_int_160.py -k 'test_int_189_engineer_run_defaults_to_solution_evidence or test_int_161_tool_activity_and_reasoning_visibility or test_int_178_session_restore_continuity or test_int_160_reasoning_default_hidden_and_expandable'`
 
 ### Completion Notes List
 
 - Added persisted session-history metadata to the sidebar: raw status, detailed status, episode phase, terminal reason, failure class, and a derived progress indicator.
-- Kept the run summary aligned with persisted metadata by showing raw status separately from detailed status, and by distinguishing cancelled and failed terminal tones in the summary banners.
-- Preserved trace-driven rendering while making persisted `LOG` rows more resilient when the backend only supplies metadata fields.
-- Extended live-browser coverage for session history, cancellation handling, context usage telemetry, reasoning visibility, and reload continuity.
-- Hardened the frontend connection probe so a missing health payload no longer throws during browser polling.
+- Kept the run summary aligned with persisted metadata by showing raw status separately from detailed status, and by showing validation logs alongside persisted terminal metadata for failed sessions.
+- Restored trace-driven rendering for persisted `EVENT` rows so backend review, validation, and simulation records appear in the run timeline instead of disappearing.
+- Fixed the circuit timeline data path so it reads persisted motor states from trace metadata and backed that contract with regenerated OpenAPI/client artifacts.
+- Extended live-browser coverage for session history, retry lineage failure handling, persisted trace events, context usage telemetry, reasoning visibility, and reload continuity.
+- Verified the frontend bundle and the targeted live-browser slices after the schema and render updates.
 
 ### File List
 
-- `frontend/src/components/layout/Sidebar.tsx`
+- `shared/models/schemas.py`
+- `controller_openapi.json`
+- `frontend/src/api/generated/models/TraceMetadata.ts`
 - `frontend/src/components/workspace/ChatWindow.tsx`
+- `frontend/src/components/workspace/ArtifactView.tsx`
 - `frontend/src/components/workspace/TraceList.tsx`
-- `frontend/src/api/client.ts`
-- `frontend/src/components/workspace/__tests__/ChatWindow.test.tsx`
-- `frontend/src/components/workspace/__tests__/FeedbackSystem.test.tsx`
-- `specs/frontend-specs.md`
-- `tests/integration/frontend/p0/test_frontend_p0.py`
-- `tests/integration/frontend/p0/test_solution_evidence.py`
-- `tests/integration/frontend/p1/test_int_160.py`
-- `tests/integration/frontend/p1/test_int_161.py`
-- `tests/integration/frontend/p1/test_int_178.py`
+- `frontend/src/components/visualization/CircuitTimeline.tsx`
+- `tests/integration/frontend/p0/test_int_205.py`
+
+## Change Log
+
+- 2026-03-25: Restored persisted event rows in the timeline, added failure-log rendering alongside terminal metadata, wired circuit-timeline motor states to the trace contract, and regenerated the OpenAPI/client artifacts.
+- 2026-03-25: Verified the updated frontend bundle and reran the targeted live-browser slices for session history, retry lineage, reasoning visibility, solution evidence, and reload continuity.
