@@ -123,6 +123,7 @@ GPT-5.4
 - Verified the frontend build and the targeted live-browser slices after the state-restoration and artifact-source fixes.
 - Added a selection-intent/request guard in `EpisodeContext` so late episode hydration responses can no longer overwrite a newer selection, and removed the fallback that cleared the persisted selection id on transient restore failures.
 - Coalesced same-target episode hydrate requests so the refresh loop cannot invalidate an in-flight restore or selection load, then verified the updated behavior with the session-history and session-restore live-browser slices.
+- Seeded the INT-160 reasoning-visibility regression through the API with a deterministic mock scenario so the live-browser check now verifies persisted reasoning traces instead of timing out on backend setup.
 
 ### File List
 
@@ -139,6 +140,8 @@ GPT-5.4
 - `tests/integration/frontend/p0/test_frontend_p0.py`
 - `tests/integration/frontend/p0/test_solution_evidence.py`
 - `tests/integration/frontend/p1/test_int_178.py`
+- `tests/integration/frontend/p1/test_int_160.py`
+- `tests/integration/mock_responses/INT-160.yaml`
 
 ## Change Log
 
@@ -147,3 +150,4 @@ GPT-5.4
 - 2026-03-25: Restored selected-episode running state on reload and aligned the artifact timeline with the resolved media episode, then reran the live-browser session-history, restore, and solution-evidence regressions.
 - 2026-03-25: Added request-guarded episode hydration in `EpisodeContext` so stale restore/select responses cannot overwrite a newer session and transient restore failures keep the persisted episode pointer intact.
 - 2026-03-25: Revalidated the story with the live-browser session-history and session-restore slices after the context fix; INT-160 was still backend-gated by a fail-fast node-entry validation error and was skipped by the backend-error fixture on rerun.
+- 2026-03-25: Reworked INT-160 into an API-seeded reasoning-visibility regression, added the deterministic mock scenario needed for the engineer flow, and verified the live-browser coverage passed end to end.
