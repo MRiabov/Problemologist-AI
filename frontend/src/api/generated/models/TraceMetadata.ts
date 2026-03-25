@@ -15,6 +15,7 @@ export type TraceMetadata = {
     error?: (string | null);
     simulation_run_id?: (string | null);
     backend?: (SimulatorBackendType | null);
+    motor_states?: Record<string, string>;
     cots_query_id?: (string | null);
     review_id?: (string | null);
     decision?: (ReviewDecision | null);

@@ -626,6 +626,7 @@ class TraceMetadata(BaseModel):
     # Simulation specific
     simulation_run_id: str | None = None
     backend: SimulatorBackendType | None = None
+    motor_states: dict[str, str] = Field(default_factory=dict)
 
     # COTS specific
     cots_query_id: str | None = None

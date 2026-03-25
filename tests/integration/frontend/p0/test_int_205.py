@@ -4,6 +4,7 @@ import uuid
 
 import httpx
 import pytest
+import yaml
 from playwright.sync_api import Page, expect
 
 from controller.api.schemas import (
@@ -49,14 +50,38 @@ def _wait_for_episode_terminal(
 
 
 def _reject_episode(client: httpx.Client, episode_id: str) -> EpisodeResponse:
-    review_content = """---
-decision: rejected
-comments: ["Retry lineage test rejection"]
-evidence:
-  files_checked: ["plan.md"]
----
-Rejecting the episode for deterministic retry coverage.
-"""
+    review_frontmatter = {
+        "decision": "rejected",
+        "comments": ["Retry lineage test rejection"],
+        "evidence": {
+            "stability_summary": {
+                "batchWidth": 1,
+                "successCount": 0,
+                "successRate": 0.0,
+                "isConsistent": False,
+                "sceneBuildCount": 1,
+                "backendRunCount": 1,
+                "batchedExecution": False,
+                "sceneSummaries": [
+                    {
+                        "sceneIndex": 1,
+                        "success": False,
+                        "summary": "Scene 1: failed validation.",
+                        "failReason": "Deterministic retry lineage rejection.",
+                        "failureMode": "STABILITY_ISSUE",
+                    }
+                ],
+            },
+            "stability_summary_source": "validation_results.json",
+            "files_checked": ["plan.md", "validation_results.json"],
+        },
+    }
+    review_content = (
+        "---\n"
+        + yaml.safe_dump(review_frontmatter, sort_keys=False).strip()
+        + "\n---\n"
+        + "Rejecting the episode for deterministic retry coverage.\n"
+    )
     response = client.post(
         f"/episodes/{episode_id}/review",
         json={"review_content": review_content},
@@ -117,6 +142,7 @@ def _seed_failed_engineer_episode(
     session_id: str,
     prior_episode_id: str | None = None,
     is_reused: bool | None = None,
+    validation_logs: list[str] | None = None,
 ) -> str:
     metadata: dict[str, object] = {
         "benchmark_id": benchmark_session_id,
@@ -126,6 +152,8 @@ def _seed_failed_engineer_episode(
         metadata["prior_episode_id"] = prior_episode_id
     if is_reused is not None:
         metadata["is_reused"] = is_reused
+    if validation_logs is not None:
+        metadata["validation_logs"] = validation_logs
 
     request = AgentRunRequest(
         task=task,
@@ -151,6 +179,7 @@ def _seed_failed_engineer_episode(
 def _prepare_failed_engineer_run(
     benchmark_prompt: str,
     engineer_task: str,
+    validation_logs: list[str] | None = None,
 ) -> tuple[str, str]:
     with httpx.Client(base_url=CONTROLLER_URL, timeout=300.0) as client:
         benchmark_session_id = _create_benchmark(client, benchmark_prompt)
@@ -160,6 +189,7 @@ def _prepare_failed_engineer_run(
             benchmark_session_id=benchmark_session_id,
             task=engineer_task,
             session_id=first_session_id,
+            validation_logs=validation_logs,
         )
         return benchmark_session_id, first_episode_id
 
@@ -182,9 +212,12 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
         f"Create a simple benchmark setup for retry lineage testing {marker}"
     )
     engineer_task = f"Create an engineer handoff for retry lineage testing {marker}"
+    validation_log = f"Validation log INT-205 {uuid.uuid4()}"
 
     benchmark_session_id, first_episode_id = _prepare_failed_engineer_run(
-        benchmark_prompt, engineer_task
+        benchmark_prompt,
+        engineer_task,
+        validation_logs=[validation_log],
     )
 
     page.add_init_script("localStorage.clear()")
@@ -216,6 +249,17 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
         timeout=15000
     )
     expect(page.get_by_test_id("retry-failed-episode-button")).to_be_visible(
+        timeout=15000
+    )
+    expect(page.get_by_test_id("failure-summary-validation-logs")).to_contain_text(
+        validation_log
+    )
+    expect(page.get_by_test_id("terminal-summary-validation-logs")).to_contain_text(
+        validation_log
+    )
+    event_rows = page.get_by_test_id("run-event-row")
+    expect(event_rows.first).to_be_visible(timeout=15000)
+    expect(event_rows.filter(has_text="review_decision").first).to_be_visible(
         timeout=15000
     )
 
@@ -267,6 +311,7 @@ def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
             session_id=retry_session_id,
             prior_episode_id=first_episode_id,
             is_reused=True,
+            validation_logs=[validation_log],
         )
         assert second_episode_id != first_episode_id
 

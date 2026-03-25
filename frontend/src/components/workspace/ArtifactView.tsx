@@ -128,6 +128,24 @@ export default function ArtifactView({
     return getSharedIconInfo(name, type);
   };
 
+  const getTraceMotorStates = (trace: TraceResponse): Record<string, 'on' | 'off'> => {
+    const metadata = trace.metadata_vars as Record<string, any> | null | undefined;
+    const additionalInfo = metadata?.additional_info as Record<string, any> | undefined;
+    const candidates = [
+      metadata?.motor_states,
+      additionalInfo?.motor_states,
+      metadata?.data?.motor_states,
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate && typeof candidate === 'object') {
+        return candidate as Record<string, 'on' | 'off'>;
+      }
+    }
+
+    return {};
+  };
+
   // Group assets into a tree structure
   const fileTree = useMemo(() => {
     const tree: any[] = [];
@@ -254,7 +272,7 @@ export default function ArtifactView({
                     .filter((t: TraceResponse) => t.trace_type === TraceType.EVENT && t.name === 'circuit_simulation')
                     .map((t: TraceResponse) => ({
                         timestamp: new Date(t.created_at).getTime() / 1000,
-                        motor_states: (t as any).metadata?.motor_states || {}
+                        motor_states: getTraceMotorStates(t),
                     }))
                     .sort((a: any, b: any) => a.timestamp - b.timestamp);
 

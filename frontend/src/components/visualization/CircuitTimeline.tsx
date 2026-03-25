@@ -15,6 +15,7 @@ const CircuitTimeline: React.FC<Props> = ({ events, className }) => {
 
   const motors = Object.keys(events[0].motor_states);
   const totalDuration = events[events.length - 1].timestamp - events[0].timestamp;
+  const safeTotalDuration = totalDuration > 0 ? totalDuration : 1;
 
   return (
     <div className={`bg-slate-900 rounded-lg p-4 ${className}`}>
@@ -27,8 +28,8 @@ const CircuitTimeline: React.FC<Props> = ({ events, className }) => {
               {events.map((event, i) => {
                 if (i === events.length - 1) return null;
                 const nextEvent = events[i + 1];
-                const start = ((event.timestamp - events[0].timestamp) / totalDuration) * 100;
-                const width = ((nextEvent.timestamp - event.timestamp) / totalDuration) * 100;
+                const start = ((event.timestamp - events[0].timestamp) / safeTotalDuration) * 100;
+                const width = ((nextEvent.timestamp - event.timestamp) / safeTotalDuration) * 100;
                 const isOn = event.motor_states[motorId] === 'on';
 
                 return (

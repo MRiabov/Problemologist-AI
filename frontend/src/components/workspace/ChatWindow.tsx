@@ -166,17 +166,13 @@ export default function ChatWindow({
   const terminalMetadata = selectedEpisode?.metadata_vars ?? null;
   const terminalDetailedStatus = terminalMetadata?.detailed_status ?? null;
   const terminalStatus = selectedEpisode?.status ?? null;
-  const hasStructuredTerminalMetadata =
-    !!terminalMetadata?.detailed_status &&
-    !!terminalMetadata?.terminal_reason &&
-    (selectedEpisode?.status !== EpisodeStatus.FAILED ||
-      !!terminalMetadata?.failure_class);
+  const persistedValidationLogs =
+    (selectedEpisode?.validation_logs?.length
+      ? selectedEpisode.validation_logs
+      : terminalMetadata?.validation_logs) ?? [];
   const hasTerminalIssue =
     !!selectedEpisode &&
     [EpisodeStatus.FAILED, EpisodeStatus.CANCELLED].includes(selectedEpisode.status);
-  const shouldShowFallbackLogs =
-    selectedEpisode?.status === EpisodeStatus.FAILED &&
-    !hasStructuredTerminalMetadata;
   const isTerminalEpisode =
     !!selectedEpisode &&
     [
@@ -548,6 +544,19 @@ export default function ChatWindow({
                                 Launches a fresh engineer episode against the same benchmark package.
                             </span>
                         </div>
+                        <div className="mt-4 rounded-lg border border-red-500/20 bg-background/70 p-3">
+                            <div className="text-[9px] font-black uppercase tracking-widest text-red-400">
+                                Validation logs
+                            </div>
+                            <div
+                              data-testid="failure-summary-validation-logs"
+                              className="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90"
+                            >
+                                {persistedValidationLogs.length > 0
+                                  ? persistedValidationLogs.join('\n')
+                                  : "No validation logs recorded."}
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -598,16 +607,21 @@ export default function ChatWindow({
                                 </span>
                             </div>
                         </div>
-                        {shouldShowFallbackLogs && (
-                            <div
-                              data-testid="terminal-summary-fallback"
-                              className="mt-3 text-[11px] text-red-400 font-mono whitespace-pre-wrap"
-                            >
-                                {selectedEpisode.validation_logs && selectedEpisode.validation_logs.length > 0
-                                  ? selectedEpisode.validation_logs.join('\n')
-                                  : "The agent encountered an unrecoverable error during execution."}
+                        {hasTerminalIssue || persistedValidationLogs.length > 0 ? (
+                            <div className="mt-3 rounded-lg border border-border/60 bg-background/70 p-3">
+                                <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                                    Validation logs
+                                </div>
+                                <div
+                                  data-testid="terminal-summary-validation-logs"
+                                  className="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90"
+                                >
+                                    {persistedValidationLogs.length > 0
+                                      ? persistedValidationLogs.join('\n')
+                                      : "No validation logs recorded."}
+                                </div>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 )}
 

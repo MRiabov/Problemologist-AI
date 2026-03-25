@@ -75,6 +75,78 @@ function formatTraceLogBody(trace: TraceResponse): string | null {
   return null;
 }
 
+function formatTraceEventLabel(trace: TraceResponse): string {
+  const meta = (trace.metadata_vars || {}) as Record<string, unknown>;
+  const label = trace.name?.trim();
+  if (label) {
+    return label;
+  }
+
+  const eventName = meta.event_type;
+  if (typeof eventName === "string" && eventName.trim()) {
+    return eventName.trim();
+  }
+
+  const event = meta.event;
+  if (typeof event === "string" && event.trim()) {
+    return event.trim();
+  }
+
+  return "EVENT";
+}
+
+function formatTraceEventBody(trace: TraceResponse): string | null {
+  const meta = (trace.metadata_vars || {}) as Record<string, unknown>;
+  const content = trace.content?.trim();
+  if (content) {
+    return content;
+  }
+
+  const candidates = [
+    meta.message,
+    meta.output,
+    meta.observation,
+    meta.error,
+    meta.status,
+    meta.data,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+    if (candidate && typeof candidate === "object") {
+      try {
+        return JSON.stringify(candidate, null, 2);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  const additionalInfo = meta.additional_info;
+  if (additionalInfo && typeof additionalInfo === "object") {
+    const keys = Object.keys(additionalInfo);
+    if (keys.length > 0) {
+      try {
+        return JSON.stringify(additionalInfo, null, 2);
+      } catch {
+        return keys.join(", ");
+      }
+    }
+  }
+
+  const metaKeys = Object.keys(meta);
+  if (metaKeys.length > 0) {
+    try {
+      return JSON.stringify(meta, null, 2);
+    } catch {
+      return metaKeys.join(", ");
+    }
+  }
+
+  return null;
+}
+
 export const TraceList = memo(({
   traces,
   assets,
@@ -196,6 +268,24 @@ export const TraceList = memo(({
                     {Number.isFinite(previousLength) && hasCompactedLength
                       ? ` from ${previousLength} to ${compactedLength} characters.`
                       : "."}
+                  </div>
+                </div>
+              );
+          }
+          if (trace.trace_type === TraceType.EVENT) {
+              return (
+                <div
+                  key={trace.id}
+                  data-testid="run-event-row"
+                  data-event-name={trace.name || ""}
+                  className="my-2 rounded-lg border border-border/60 bg-emerald-500/5 px-3 py-2 shadow-sm"
+                >
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <Terminal className="h-3.5 w-3.5 shrink-0" />
+                    <span data-testid="run-event-row-label">{formatTraceEventLabel(trace)}</span>
+                  </div>
+                  <div className="mt-1 whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground/90">
+                    {formatTraceEventBody(trace) || formatTraceEventLabel(trace)}
                   </div>
                 </div>
               );
