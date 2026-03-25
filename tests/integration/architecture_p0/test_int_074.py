@@ -1,6 +1,8 @@
+import ast
 import asyncio
 import os
 import uuid
+from pathlib import Path
 
 import httpx
 import pytest
@@ -10,6 +12,7 @@ from controller.api.schemas import AgentRunRequest, AgentRunResponse, EpisodeRes
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision
 from tests.integration.agent.helpers import (
     seed_benchmark_assembly_definition,
+    seed_current_revision_render_preview,
     seed_execution_reviewer_handover,
 )
 
@@ -34,8 +37,73 @@ def _has_expected_review_evidence(
     )
 
 
+def _parse_event_payload(trace) -> dict:
+    if not trace.content:
+        return {}
+    try:
+        payload = ast.literal_eval(trace.content)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _is_inspect_media_trace(trace) -> bool:
+    return (
+        trace.name in {"inspect_media", "inspect_media_tool"}
+        and getattr(trace.trace_type, "value", str(trace.trace_type)) == "TOOL_START"
+    )
+
+
+def _expected_minimal_dofs_payload(trace) -> dict[str, object]:
+    payload = _parse_event_payload(trace)
+    assert payload, f"Expected event payload for trace {trace}"
+    assert payload.get("dof_count_gt_3") is True, payload
+    assert isinstance(payload.get("expected_minimal_engineering_dofs"), list), payload
+    assert isinstance(payload.get("expected_minimal_dofs"), list), payload
+    assert (
+        payload["expected_minimal_engineering_dofs"] == payload["expected_minimal_dofs"]
+    ), payload
+    assert len(payload["expected_minimal_engineering_dofs"]) == 3, payload
+    assert len(payload["expected_minimal_dofs"]) == 3, payload
+    return payload
+
+
+async def _wait_for_trace(
+    episode_id: str,
+    *,
+    trace_name: str,
+    predicate,
+    attempts: int = 10,
+) -> list:
+    episode: EpisodeResponse | None = None
+    for _ in range(attempts):
+        await asyncio.sleep(1.0)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+            assert ep_resp.status_code == 200, ep_resp.text
+            episode = EpisodeResponse.model_validate(ep_resp.json())
+        traces = [
+            trace
+            for trace in (episode.traces or [])
+            if trace.name == trace_name and predicate(trace)
+        ]
+        if traces:
+            return traces
+    assert episode is not None
+    return [
+        trace
+        for trace in (episode.traces or [])
+        if trace.name == trace_name and predicate(trace)
+    ]
+
+
 async def _run_and_wait(
-    client: httpx.AsyncClient, *, agent_name: AgentName, session_id: str, task: str
+    client: httpx.AsyncClient,
+    *,
+    agent_name: AgentName,
+    session_id: str,
+    task: str,
+    start_node: AgentName | None = None,
 ) -> EpisodeResponse:
     await seed_benchmark_assembly_definition(
         client,
@@ -45,7 +113,12 @@ async def _run_and_wait(
         planner_target_max_unit_cost_usd=250.0,
         planner_target_max_weight_g=2500.0,
     )
-    req = AgentRunRequest(task=task, session_id=session_id, agent_name=agent_name)
+    req = AgentRunRequest(
+        task=task,
+        session_id=session_id,
+        agent_name=agent_name,
+        start_node=start_node,
+    )
     run_resp = await client.post(
         f"{CONTROLLER_URL}/api/agent/run",
         json=req.model_dump(mode="json"),
@@ -72,6 +145,35 @@ async def _run_and_wait(
     pytest.fail(
         f"Episode {run.episode_id} did not surface the expected review evidence in time"
     )
+
+
+async def _seed_plan_reviewer_handoff(
+    client: httpx.AsyncClient, session_id: str
+) -> None:
+    for relative_path in (
+        "plan.md",
+        "todo.md",
+        "assembly_definition.yaml",
+        "benchmark_definition.yaml",
+    ):
+        content = Path(
+            "tests/integration/mock_responses/INT-074/engineer_planner/entry_01/"
+            + {
+                "plan.md": "01__plan.md",
+                "todo.md": "02__todo.md",
+                "assembly_definition.yaml": "03__assembly_definition.yaml",
+                "benchmark_definition.yaml": "04__benchmark_definition.yaml",
+            }[relative_path]
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": relative_path,
+                "content": content,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
 
 
 async def _wait_for_review_evidence(
@@ -105,22 +207,79 @@ async def test_int_074_engineering_dof_minimization_review_gate():
     unless explicit accepted justification is present.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Plan reviewer stage gate
         plan_session = f"INT-074-{uuid.uuid4().hex[:8]}"
-        plan_episode = await _run_and_wait(
+        await seed_benchmark_assembly_definition(
             client,
-            agent_name=AgentName.ENGINEER_CODER,
+            plan_session,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await _seed_plan_reviewer_handoff(client, plan_session)
+        await seed_current_revision_render_preview(client, session_id=plan_session)
+        planner_episode = await _run_and_wait(
+            client,
+            agent_name=AgentName.ENGINEER_PLANNER,
             session_id=plan_session,
             task="INT-074 plan reviewer DOF minimization gate",
         )
-        plan_dof_events = [
-            t
-            for t in plan_episode.traces
-            if t.name == "excessive_dof_detected"
-            and "engineering_plan_reviewer" in str(t.content or "")
+        assert planner_episode.status in {
+            EpisodeStatus.COMPLETED,
+            EpisodeStatus.FAILED,
+            EpisodeStatus.CANCELLED,
+            EpisodeStatus.PLANNED,
+        }, planner_episode
+
+        await seed_current_revision_render_preview(client, session_id=plan_session)
+        plan_episode = await _run_and_wait(
+            client,
+            agent_name=AgentName.ENGINEER_PLAN_REVIEWER,
+            session_id=plan_session,
+            task="INT-074 plan reviewer DOF minimization gate",
+            start_node=AgentName.ENGINEER_PLAN_REVIEWER,
+        )
+        assert _has_expected_review_evidence(
+            plan_episode,
+            required_checklist_pairs=(("dof_minimality", "fail"),),
+        ), plan_episode
+        plan_review_traces = [
+            trace
+            for trace in plan_episode.traces
+            if trace.name == "review_decision" and trace.metadata_vars is not None
         ]
-        assert plan_dof_events, (
-            "Expected excessive_dof_detected event from plan reviewer stage"
+        assert plan_review_traces, "Expected plan review_decision trace"
+        latest_plan_review_trace = max(plan_review_traces, key=lambda trace: trace.id)
+        inspect_media_traces = [
+            trace for trace in plan_episode.traces if _is_inspect_media_trace(trace)
+        ]
+        assert inspect_media_traces, (
+            "Plan reviewer rejection must call inspect_media()."
+        )
+        assert any(
+            trace.id < latest_plan_review_trace.id for trace in inspect_media_traces
+        ), "inspect_media must occur before the final plan review decision."
+        plan_dof_event_traces = [
+            trace
+            for trace in plan_episode.traces
+            if trace.name == "excessive_dof_detected"
+        ]
+        assert plan_dof_event_traces, "Expected excessive_dof_detected trace"
+        plan_dof_event = next(
+            trace
+            for trace in plan_dof_event_traces
+            if _parse_event_payload(trace).get("reviewer_stage")
+            == "engineering_plan_reviewer"
+        )
+        plan_dof_payload = _expected_minimal_dofs_payload(plan_dof_event)
+        assert plan_dof_payload["part_id"] == "over_actuated_link", plan_dof_payload
+        assert plan_dof_payload["expected_minimal_engineering_dofs"] == [
+            "tx",
+            "ty",
+            "tz",
+        ], plan_dof_payload
+        assert any(trace.id < plan_dof_event.id for trace in inspect_media_traces), (
+            "inspect_media must occur before the excessive_dof_detected decision."
         )
         assert plan_episode.status != EpisodeStatus.COMPLETED
         plan_decision_path = "reviews/engineering-plan-review-decision-round-1.yaml"
@@ -143,7 +302,7 @@ async def test_int_074_engineering_dof_minimization_review_gate():
         await seed_execution_reviewer_handover(
             client,
             session_id=justified_session,
-            int_id="INT-075",
+            int_id="INT-181",
         )
         justified_episode = await _run_and_wait(
             client,

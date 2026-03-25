@@ -1,7 +1,6 @@
 import json
 import uuid
 from contextlib import suppress
-from pathlib import Path
 from typing import Literal
 
 import dspy
@@ -15,17 +14,16 @@ from controller.agent.state import AgentState, AgentStatus
 from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
-from shared.git_utils import repo_revision
 from shared.models.schemas import ReviewResult
 from shared.models.simulation import SimulationResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
-from shared.workers.schema import RenderManifest
 
 from ..review_handover import validate_reviewer_handover
 from .base import BaseNode, SharedNodeContext
 from .dof_guard import (
     apply_canonical_dof_checklist,
+    build_excessive_dof_event_payload,
     collect_excessive_dof_findings,
     has_accepted_dof_justification,
 )
@@ -67,40 +65,6 @@ class ExecutionReviewerNode(BaseNode):
     """
     Engineer Execution Reviewer node: Evaluates the implementation after simulation.
     """
-
-    async def _list_current_revision_render_paths(self) -> list[str]:
-        render_manifest_path = "renders/render_manifest.json"
-        if not await self.ctx.worker_client.exists(render_manifest_path):
-            return []
-
-        try:
-            manifest_raw = await self.ctx.worker_client.read_file(render_manifest_path)
-            render_manifest = RenderManifest.model_validate_json(manifest_raw)
-        except Exception:
-            return []
-
-        current_revision = repo_revision(Path(__file__).resolve().parents[2])
-        if not current_revision:
-            return []
-        if not render_manifest.revision:
-            return []
-        if render_manifest.revision.strip().lower() != current_revision.lower():
-            return []
-
-        preview_paths = [
-            path.lstrip("/")
-            for path in render_manifest.preview_evidence_paths
-            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
-        ]
-        if preview_paths:
-            return sorted(dict.fromkeys(preview_paths))
-
-        artifact_paths = [
-            path.lstrip("/")
-            for path in render_manifest.artifacts.keys()
-            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
-        ]
-        return sorted(dict.fromkeys(artifact_paths))
 
     async def _enforce_render_inspection_gate(
         self, review: ReviewResult
@@ -169,10 +133,25 @@ class ExecutionReviewerNode(BaseNode):
             benchmark_assembly_definition = await self._read_required_workspace_file(
                 "benchmark_assembly_definition.yaml"
             )
+            await self._ensure_current_revision_render_inspection()
             plan_markdown = state.plan or ""
             if await self.ctx.worker_client.exists("plan.md"):
                 plan_markdown = await self.ctx.worker_client.read_file("plan.md")
             findings = collect_excessive_dof_findings(assembly_definition)
+            for finding in findings:
+                payload = build_excessive_dof_event_payload(
+                    finding, reviewer_stage="engineering_execution_reviewer"
+                )
+                await record_worker_events(
+                    episode_id=state.episode_id,
+                    events=[
+                        {
+                            "event_type": "excessive_dof_detected",
+                            "data": payload,
+                            **payload,
+                        }
+                    ],
+                )
             unjustified = [
                 finding
                 for finding in findings
@@ -181,31 +160,15 @@ class ExecutionReviewerNode(BaseNode):
                 )
             ]
             if unjustified:
-                for finding in unjustified:
-                    payload = {
-                        "reviewer_stage": "engineering_execution_reviewer",
-                        "part_id": finding.part_id,
-                        "proposed_dofs": finding.dofs,
-                        "dof_count": finding.dof_count,
-                        "expected_minimal_dofs": 3,
-                        "dof_count_gt_3": True,
-                    }
-                    await record_worker_events(
-                        episode_id=state.episode_id,
-                        events=[
-                            {
-                                "event_type": "excessive_dof_detected",
-                                "data": payload,
-                                **payload,
-                            }
-                        ],
-                    )
                 summary = ", ".join(
                     f"{item.part_id}({item.dof_count})" for item in unjustified
                 )
+                expected_minimal_dofs = ", ".join(unjustified[0].dofs[:3])
                 feedback = (
                     "Execution reviewer flagged over-actuated deviation: "
-                    f"{summary}. This is a dof_deviation_justified failure. "
+                    f"{summary}. Expected minimal engineering DOFs: "
+                    f"{expected_minimal_dofs}. "
+                    "This is a dof_deviation_justified failure. "
                     "Add explicit DOF_JUSTIFICATION markers in plan.md."
                 )
                 review = apply_canonical_dof_checklist(

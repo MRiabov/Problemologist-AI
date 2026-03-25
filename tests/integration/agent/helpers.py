@@ -16,6 +16,8 @@ from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
 from shared.models.simulation import MultiRunResult, SimulationMetrics, SimulationResult
 from shared.workers.schema import (
+    RenderArtifactMetadata,
+    RenderManifest,
     ReviewManifest,
     ValidationResultRecord,
     WriteFileRequest,
@@ -208,9 +210,10 @@ async def seed_execution_reviewer_handover(
     *,
     session_id: str,
     int_id: str,
+    script_content: str | None = None,
 ) -> None:
     """Seed deterministic reviewer handoff artifacts for execution-reviewer runs."""
-    script_content = _fixture_script_content(int_id)
+    script_content = script_content or _fixture_script_content(int_id)
     script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     seed_ts = time.time()
     revision = repo_git_revision()
@@ -262,6 +265,13 @@ async def seed_execution_reviewer_handover(
     await _seed_workspace_file(
         client,
         session_id=session_id,
+        path="script.py",
+        content=script_content,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
         path="validation_results.json",
         content=validation_record.model_dump_json(indent=2),
         bypass_agent_permissions=True,
@@ -280,6 +290,52 @@ async def seed_execution_reviewer_handover(
         content=review_manifest.model_dump_json(indent=2),
         bypass_agent_permissions=True,
     )
+
+
+async def seed_current_revision_render_preview(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    render_path: str = "renders/dof_review_preview.png",
+) -> None:
+    """Seed a current-revision render preview image and manifest for reviewer tests."""
+
+    revision = repo_git_revision()
+    image_name = Path(render_path).name
+    manifest = RenderManifest(
+        version="1.0",
+        episode_id=session_id,
+        worker_session_id=session_id,
+        revision=revision,
+        environment_version="integration-test",
+        preview_evidence_paths=[render_path],
+        artifacts={
+            render_path: RenderArtifactMetadata(modality="rgb", group_key="dof"),
+        },
+    )
+    code = f"""
+python3 - <<'PY'
+from pathlib import Path
+
+from PIL import Image
+
+root = Path("renders")
+root.mkdir(parents=True, exist_ok=True)
+image_path = root / {image_name!r}
+Image.new("RGB", (1, 1), (255, 0, 0)).save(image_path)
+(root / "render_manifest.json").write_text({manifest.model_dump_json(indent=2)!r}, encoding="utf-8")
+PY
+"""
+    resp = await client.post(
+        f"{WORKER_LIGHT_URL}/runtime/execute",
+        json={
+            "code": code,
+            "timeout": 30,
+            "episode_id": session_id,
+        },
+        headers={"X-Session-ID": session_id},
+    )
+    assert resp.status_code == 200, resp.text
 
 
 async def run_agent_episode(

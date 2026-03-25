@@ -41,10 +41,11 @@ from controller.observability.tracing import record_worker_events
 from controller.persistence.models import Trace
 from shared.agents.config import load_agents_config
 from shared.enums import AgentName, TraceType
+from shared.git_utils import repo_revision
 from shared.models.schemas import CodeReference, ReviewResult, TraceMetadata
 from shared.observability.schemas import LlmMediaAttachedEvent
 from shared.workers.filesystem.policy import VisualInspectionPolicy
-from shared.workers.schema import MediaInspectionResult
+from shared.workers.schema import MediaInspectionResult, RenderManifest
 
 if TYPE_CHECKING:
     from controller.agent.state import AgentState
@@ -194,6 +195,100 @@ class BaseNode:
             if self._is_image_media_path(path)
         }
         return len(inspected_paths.intersection(current_render_paths))
+
+    async def _list_current_revision_render_paths(self) -> list[str]:
+        manifest_candidates = (
+            "renders/render_manifest.json",
+            "workspace/renders/render_manifest.json",
+        )
+        render_manifest_path = ""
+        manifest_raw = ""
+        for candidate in manifest_candidates:
+            if await self.ctx.worker_client.exists(
+                candidate, bypass_agent_permissions=True
+            ):
+                try:
+                    manifest_raw = await self.ctx.worker_client.read_file(
+                        candidate, bypass_agent_permissions=True
+                    )
+                    render_manifest_path = candidate
+                    break
+                except Exception:
+                    continue
+
+        if not render_manifest_path:
+            return []
+
+        try:
+            render_manifest = RenderManifest.model_validate_json(manifest_raw)
+        except Exception:
+            return []
+
+        current_revision = repo_revision(Path(__file__).resolve().parents[2])
+        if not current_revision:
+            return []
+        if not render_manifest.revision:
+            return []
+        if render_manifest.revision.strip().lower() != current_revision.lower():
+            return []
+
+        preview_paths = [
+            path.lstrip("/")
+            for path in render_manifest.preview_evidence_paths
+            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+        if preview_paths:
+            return sorted(dict.fromkeys(preview_paths))
+
+        artifact_paths = [
+            path.lstrip("/")
+            for path in render_manifest.artifacts.keys()
+            if path and path.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+        return sorted(dict.fromkeys(artifact_paths))
+
+    async def _ensure_current_revision_render_inspection(self) -> list[str]:
+        """
+        Deterministically inspect at least one current-revision render when present.
+
+        Reviewer roles must not short-circuit around visual inspection simply
+        because they are about to reject on another gate.
+        """
+
+        render_paths = await self._list_current_revision_render_paths()
+        if not render_paths:
+            if await self.ctx.worker_client.exists("renders/dof_review_preview.png"):
+                db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
+                input_data = '{"args": ["renders/dof_review_preview.png"]}'
+                trace_id = db_callback.record_tool_start_sync(
+                    "inspect_media", input_data
+                )
+                try:
+                    result = await self.ctx.fs.inspect_media(
+                        "renders/dof_review_preview.png"
+                    )
+                except Exception as exc:
+                    db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
+                    raise
+                db_callback.record_tool_end_sync(
+                    trace_id, self._serialize_tool_observation(result)
+                )
+                return ["renders/dof_review_preview.png"]
+            return []
+        # Inspect the first current-revision render every time so reviewer-stage
+        # rejection paths always emit their own multimodal evidence.
+        db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
+        input_data = json.dumps({"args": [render_paths[0]]})
+        trace_id = db_callback.record_tool_start_sync("inspect_media", input_data)
+        try:
+            result = await self.ctx.fs.inspect_media(render_paths[0])
+        except Exception as exc:
+            db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
+            raise
+        db_callback.record_tool_end_sync(
+            trace_id, self._serialize_tool_observation(result)
+        )
+        return render_paths
 
     def _get_visual_inspection_policy(
         self, node_type: AgentName

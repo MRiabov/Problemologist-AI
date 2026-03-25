@@ -16,6 +16,7 @@ CANONICAL_DOF_CHECKLIST_KEYS = {
     "engineering_plan_reviewer": "dof_minimality",
     "engineering_execution_reviewer": "dof_deviation_justified",
 }
+DOF_MINIMALITY_THRESHOLD = 3
 
 
 @dataclass(frozen=True)
@@ -25,8 +26,40 @@ class ExcessiveDofFinding:
     dof_count: int
 
 
+def expected_minimal_dofs(finding: ExcessiveDofFinding) -> list[str]:
+    """Return the canonical minimal DOF set expected by the reviewer gate."""
+    return finding.dofs[:DOF_MINIMALITY_THRESHOLD]
+
+
+def expected_minimal_engineering_dofs(finding: ExcessiveDofFinding) -> list[str]:
+    """
+    Return the canonical engineering DOF set used in observability payloads.
+
+    Keep the alias separate so downstream consumers can key off a stable,
+    explicit field name while the legacy `expected_minimal_dofs` field remains
+    available for compatibility.
+    """
+
+    return expected_minimal_dofs(finding)
+
+
+def build_excessive_dof_event_payload(
+    finding: ExcessiveDofFinding, *, reviewer_stage: str
+) -> dict[str, object]:
+    """Build the canonical excessive-DOF observability payload."""
+    return {
+        "reviewer_stage": reviewer_stage,
+        "part_id": finding.part_id,
+        "proposed_dofs": finding.dofs,
+        "expected_minimal_engineering_dofs": expected_minimal_engineering_dofs(finding),
+        "expected_minimal_dofs": expected_minimal_dofs(finding),
+        "dof_count": finding.dof_count,
+        "dof_count_gt_3": finding.dof_count > DOF_MINIMALITY_THRESHOLD,
+    }
+
+
 def collect_excessive_dof_findings(
-    assembly_definition_content: str, *, threshold: int = 3
+    assembly_definition_content: str, *, threshold: int = DOF_MINIMALITY_THRESHOLD
 ) -> list[ExcessiveDofFinding]:
     """Return parts whose DOF count exceeds deterministic reviewer threshold."""
     raw = yaml.safe_load(assembly_definition_content) or {}

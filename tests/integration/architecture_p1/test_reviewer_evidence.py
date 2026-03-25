@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import hashlib
 import uuid
@@ -20,6 +21,7 @@ from shared.workers.schema import PlanReviewManifest, RenderManifest
 from tests.integration.agent.helpers import (
     repo_git_revision,
     seed_benchmark_assembly_definition,
+    seed_current_revision_render_preview,
     seed_execution_reviewer_handover,
 )
 
@@ -44,6 +46,23 @@ def _has_review_artifacts(
     )
 
 
+def _parse_event_payload(trace) -> dict:
+    if not trace.content:
+        return {}
+    try:
+        payload = ast.literal_eval(trace.content)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _is_inspect_media_trace(trace) -> bool:
+    return (
+        trace.name in {"inspect_media", "inspect_media_tool"}
+        and getattr(trace.trace_type, "value", str(trace.trace_type)) == "TOOL_START"
+    )
+
+
 async def _wait_for_review_evidence(
     client: AsyncClient,
     *,
@@ -65,6 +84,36 @@ async def _wait_for_review_evidence(
 
     assert episode is not None
     return episode
+
+
+async def _wait_for_trace_name(
+    client: AsyncClient,
+    *,
+    episode_id: str,
+    trace_name: str,
+    predicate,
+    attempts: int = 15,
+) -> list:
+    episode: EpisodeResponse | None = None
+    for _ in range(attempts):
+        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert ep_resp.status_code == 200, ep_resp.text
+        episode = EpisodeResponse.model_validate(ep_resp.json())
+        traces = [
+            trace
+            for trace in (episode.traces or [])
+            if trace.name == trace_name and predicate(trace)
+        ]
+        if traces:
+            return traces
+        await asyncio.sleep(1.0)
+
+    assert episode is not None
+    return [
+        trace
+        for trace in (episode.traces or [])
+        if trace.name == trace_name and predicate(trace)
+    ]
 
 
 @pytest.mark.integration_p1
@@ -119,11 +168,7 @@ async def test_reviewer_evidence_completeness():
                 )
             ]
             inspect_media_traces = [
-                trace
-                for trace in traces
-                if trace.name == "inspect_media"
-                and getattr(trace.trace_type, "value", str(trace.trace_type))
-                == "TOOL_START"
+                trace for trace in traces if _is_inspect_media_trace(trace)
             ]
             media_events = [
                 trace for trace in traces if trace.name == "media_inspection"
@@ -231,11 +276,7 @@ async def test_reviewer_evidence_completeness():
                 )
 
         inspect_media_traces = [
-            trace
-            for trace in traces
-            if trace.name == "inspect_media"
-            and getattr(trace.trace_type, "value", str(trace.trace_type))
-            == "TOOL_START"
+            trace for trace in traces if _is_inspect_media_trace(trace)
         ]
         assert inspect_media_traces, "Reviewer approval must call inspect_media()."
 
@@ -289,6 +330,58 @@ async def test_engineering_dof_review_evidence_uses_canonical_keys():
             client,
             session_id=session_id,
             int_id="INT-075",
+        )
+        over_actuated_benchmark_definition = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/04__benchmark_definition.yaml"
+        ).read_text(encoding="utf-8")
+        over_actuated_plan = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/01__plan.md"
+        ).read_text(encoding="utf-8")
+        over_actuated_todo = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/02__todo.md"
+        ).read_text(encoding="utf-8")
+        over_actuated_assembly = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_coder/entry_01/01__assembly_definition.yaml"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "benchmark_definition.yaml",
+                "content": over_actuated_benchmark_definition,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "plan.md",
+                "content": over_actuated_plan,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "todo.md",
+                "content": over_actuated_todo,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "assembly_definition.yaml",
+                "content": over_actuated_assembly,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
         )
         request = AgentRunRequest(
             task="INT-074 canonical DOF review evidence gate",
@@ -392,6 +485,203 @@ async def test_engineering_dof_review_evidence_uses_canonical_keys():
         ]
         assert plan_review_traces, review_traces
 
+        dof_event_traces = [
+            trace
+            for trace in (episode.traces or [])
+            if trace.name == "excessive_dof_detected"
+        ]
+        assert dof_event_traces, "Expected excessive_dof_detected trace"
+        dof_event_payloads = [_parse_event_payload(trace) for trace in dof_event_traces]
+        plan_dof_payload = next(
+            payload
+            for payload in dof_event_payloads
+            if payload.get("reviewer_stage") == "engineering_plan_reviewer"
+        )
+        execution_dof_payload = next(
+            payload
+            for payload in dof_event_payloads
+            if payload.get("reviewer_stage") == "engineering_execution_reviewer"
+        )
+        for payload in (plan_dof_payload, execution_dof_payload):
+            assert payload["expected_minimal_engineering_dofs"] == [
+                "tx",
+                "ty",
+                "tz",
+            ], payload
+            assert (
+                payload["expected_minimal_engineering_dofs"]
+                == payload["expected_minimal_dofs"]
+            ), payload
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_render_inspection():
+    """
+    INT-074: execution reviewer rejection path must inspect current-revision
+    renders before rejecting on excessive DOFs.
+    """
+
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        session_id = f"INT-074-{uuid.uuid4().hex[:8]}"
+        await seed_benchmark_assembly_definition(
+            client,
+            session_id,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        # Use the INT-075 handoff pair so the reviewer entry check reaches the
+        # over-actuated DOF rejection branch with a verifiable workspace state.
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-075",
+        )
+        over_actuated_benchmark_definition = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/04__benchmark_definition.yaml"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "benchmark_definition.yaml",
+                "content": over_actuated_benchmark_definition,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+        over_actuated_todo = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_planner/entry_01/02__todo.md"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "todo.md",
+                "content": over_actuated_todo,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+        await seed_current_revision_render_preview(client, session_id=session_id)
+
+        over_actuated_assembly = Path(
+            "tests/integration/mock_responses/INT-075/"
+            "engineer_coder/entry_01/01__assembly_definition.yaml"
+        ).read_text(encoding="utf-8")
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "assembly_definition.yaml",
+                "content": over_actuated_assembly,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+        await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": "plan.md",
+                "content": (
+                    "## 1. Solution Overview\n\n"
+                    "INT-074 execution reviewer over-actuation deviation scenario.\n\n"
+                    "## 2. Parts List\n\n"
+                    "- planner_link\n\n"
+                    "## 3. Assembly Strategy\n\n"
+                    "1. Baseline assembly.\n\n"
+                    "## 4. Cost & Weight Budget\n\n"
+                    "- Within planner caps.\n\n"
+                    "## 5. Risk Assessment\n\n"
+                    "- Over-actuation drift risk.\n"
+                ),
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id},
+        )
+
+        request = AgentRunRequest(
+            task="INT-074 execution reviewer DOF rejection gate",
+            session_id=session_id,
+            agent_name=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        )
+        run_resp = await client.post(
+            f"{CONTROLLER_URL}/api/agent/run",
+            json=request.model_dump(mode="json"),
+        )
+        assert run_resp.status_code == 202, run_resp.text
+        run = AgentRunResponse.model_validate(run_resp.json())
+
+        episode: EpisodeResponse | None = None
+        for _ in range(180):
+            await asyncio.sleep(1.0)
+            ep_resp = await client.get(
+                f"{CONTROLLER_URL}/api/episodes/{run.episode_id}"
+            )
+            assert ep_resp.status_code == 200, ep_resp.text
+            episode = EpisodeResponse.model_validate(ep_resp.json())
+            if _has_review_artifacts(
+                episode,
+                required_checklist_pairs=(("dof_deviation_justified", "fail"),),
+            ):
+                break
+        assert episode is not None
+        assert _has_review_artifacts(
+            episode,
+            required_checklist_pairs=(("dof_deviation_justified", "fail"),),
+        ), episode
+
+        review_traces = [
+            trace for trace in (episode.traces or []) if trace.name == "review_decision"
+        ]
+        assert review_traces, "Expected review_decision trace for execution reviewer"
+        latest_review_trace = max(review_traces, key=lambda trace: trace.id)
+
+        inspect_media_traces = [
+            trace for trace in (episode.traces or []) if _is_inspect_media_trace(trace)
+        ]
+        assert inspect_media_traces, (
+            "Execution reviewer rejection must call inspect_media()."
+        )
+        dof_event_traces = [
+            trace
+            for trace in (episode.traces or [])
+            if trace.name == "excessive_dof_detected"
+        ]
+        assert dof_event_traces, "Expected excessive_dof_detected trace"
+        dof_event = next(
+            trace
+            for trace in dof_event_traces
+            if _parse_event_payload(trace).get("reviewer_stage")
+            == "engineering_execution_reviewer"
+        )
+        dof_payload = _parse_event_payload(dof_event)
+        assert dof_payload["expected_minimal_engineering_dofs"] == [
+            "tx",
+            "ty",
+            "tz",
+        ], dof_payload
+        assert (
+            dof_payload["expected_minimal_engineering_dofs"]
+            == dof_payload["expected_minimal_dofs"]
+        ), dof_payload
+        assert any(trace.id < dof_event.id for trace in inspect_media_traces), (
+            "inspect_media must occur before the excessive_dof_detected event."
+        )
+        assert any(
+            trace.id < latest_review_trace.id for trace in inspect_media_traces
+        ), "inspect_media must occur before the final execution review decision."
+
+        comments_path = "reviews/engineering-execution-review-comments-round-1.yaml"
+        comments_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{episode.id}/assets/{comments_path}"
+        )
+        assert comments_resp.status_code == 200, comments_resp.text
+        comments = yaml.safe_load(comments_resp.text)
+        assert comments["checklist"]["dof_deviation_justified"] == "fail", comments
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
@@ -457,11 +747,7 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         assert latest_episode is not None
         traces = latest_episode.traces or []
         inspect_media_traces = [
-            trace
-            for trace in traces
-            if trace.name == "inspect_media"
-            and getattr(trace.trace_type, "value", str(trace.trace_type))
-            == "TOOL_START"
+            trace for trace in traces if _is_inspect_media_trace(trace)
         ]
         assert len(inspect_media_traces) >= 2, (
             "Benchmark plan reviewer rejection must inspect the latest revision "

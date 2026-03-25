@@ -17,6 +17,7 @@ from shared.type_checking import type_check
 from .base import BaseNode, SharedNodeContext
 from .dof_guard import (
     apply_canonical_dof_checklist,
+    build_excessive_dof_event_payload,
     collect_excessive_dof_findings,
     has_accepted_dof_justification,
 )
@@ -69,6 +70,8 @@ class PlanReviewerNode(BaseNode):
             "benchmark_assembly_definition.yaml"
         )
 
+        await self._ensure_current_revision_render_inspection()
+
         plan_markdown = state.plan or ""
         with suppress(Exception):
             if await self.ctx.worker_client.exists("plan.md"):
@@ -77,6 +80,20 @@ class PlanReviewerNode(BaseNode):
         findings = []
         with suppress(Exception):
             findings = collect_excessive_dof_findings(assembly_definition)
+        for finding in findings:
+            payload = build_excessive_dof_event_payload(
+                finding, reviewer_stage="engineering_plan_reviewer"
+            )
+            await record_worker_events(
+                episode_id=state.episode_id,
+                events=[
+                    {
+                        "event_type": "excessive_dof_detected",
+                        "data": payload,
+                        **payload,
+                    }
+                ],
+            )
         unjustified = [
             finding
             for finding in findings
@@ -85,25 +102,6 @@ class PlanReviewerNode(BaseNode):
             )
         ]
         if unjustified:
-            for finding in unjustified:
-                payload = {
-                    "reviewer_stage": "engineering_plan_reviewer",
-                    "part_id": finding.part_id,
-                    "proposed_dofs": finding.dofs,
-                    "dof_count": finding.dof_count,
-                    "expected_minimal_dofs": 3,
-                    "dof_count_gt_3": True,
-                }
-                await record_worker_events(
-                    episode_id=state.episode_id,
-                    events=[
-                        {
-                            "event_type": "excessive_dof_detected",
-                            "data": payload,
-                            **payload,
-                        }
-                    ],
-                )
             await record_worker_events(
                 episode_id=state.episode_id,
                 events=[
@@ -121,9 +119,12 @@ class PlanReviewerNode(BaseNode):
             summary = ", ".join(
                 f"{item.part_id}({item.dof_count})" for item in unjustified
             )
+            expected_minimal_dofs = ", ".join(unjustified[0].dofs[:3])
             feedback = (
                 "Plan reviewer rejected excessive DOFs: "
-                f"{summary}. This is a dof_minimality failure. "
+                f"{summary}. Expected minimal engineering DOFs: "
+                f"{expected_minimal_dofs}. "
+                "This is a dof_minimality failure. "
                 "Add explicit DOF_JUSTIFICATION markers in plan.md."
             )
             review = apply_canonical_dof_checklist(

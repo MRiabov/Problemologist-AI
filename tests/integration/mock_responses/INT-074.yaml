@@ -26,6 +26,11 @@ transcript:
       overwrite: true
       content_file: INT-074/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
+  - thought: Inspect the current revision render before submitting the handoff.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/dof_review_preview.png
+    expected_observation: attached_to_model
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true

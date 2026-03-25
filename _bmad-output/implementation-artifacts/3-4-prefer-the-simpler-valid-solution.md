@@ -88,6 +88,7 @@ GPT-5.4
 - Added `seed_execution_reviewer_handover` import to `tests/integration/architecture_p1/test_reviewer_evidence.py`.
 - Added re-fetch helpers for persisted review evidence in the DOF regression tests.
 - Verified with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_int_074.py::test_int_074_engineering_dof_minimization_review_gate tests/integration/architecture_p1/test_reviewer_evidence.py::test_engineering_dof_review_evidence_uses_canonical_keys`.
+- Verified with `./scripts/run_integration_tests.sh --maxfail=1 tests/integration/architecture_p0/test_int_074.py::test_int_074_engineering_dof_minimization_review_gate tests/integration/architecture_p1/test_reviewer_evidence.py::test_engineering_dof_review_evidence_uses_canonical_keys tests/integration/architecture_p1/test_reviewer_evidence.py::test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_render_inspection`.
 - Fixed `controller/migrations/versions/b0f5e3c1d2a4_add_dataset_row_archives.py` so the new archive table reuses the seed-lineage enum types instead of trying to recreate them during fresh integration runs.
 - Seeded benchmark reviewer preview renders at `renders/cad_preview.png` and `renders/simulation_preview.png` so `inspect_media()` can attach real media during benchmark plan review.
 - Aligned `tests/integration/architecture_p1/test_reviewer_evidence.py` with the benchmark review manifest contract and current-revision media inspection evidence for benchmark episodes.
@@ -99,6 +100,8 @@ GPT-5.4
 
 - Comprehensive story context assembled from epic, PRD, architecture, reviewer gate code, reward config, and seeded DOF regression coverage.
 - Canonical DOF checklist keys now persist through review events and review artifacts for both the rejection and justified-motion paths.
+- Reviewer-stage visual inspection now emits persisted tool traces even when the gate exits early on DOF policy checks.
+- The canonical excessive-DOF event now persists for justified and rejected over-actuation cases, keeping the observability breadcrumb stable across both paths.
 - Integration regression slices passed after aligning the INT-075 execution seed with the justification marker expected by the reviewer helper.
 - Benchmark plan reviewer now receives canonical preview renders early enough to complete multimodal inspection and persist the benchmark review manifest.
 - The benchmark reviewer evidence test now checks the recorded `media_inspection` payload and the persisted review manifest without over-constraining fields that are not present in this path.
