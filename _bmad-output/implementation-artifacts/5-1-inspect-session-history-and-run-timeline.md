@@ -92,6 +92,8 @@ GPT-5.4
 ### Debug Log References
 
 - Frontend build: `npm run build` in `frontend/`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_persisted_event_metadata_renders_when_content_is_empty_json`
+- Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py::test_int_189_engineer_run_defaults_to_solution_evidence tests/integration/frontend/p0/test_int_205.py::test_int_205_failed_engineer_retry_revises_same_benchmark`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py -k test_int_157_session_history`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_frontend_p0.py -k test_int_162_interrupt_ux_propagation`
 - Integration: `./scripts/run_integration_tests.sh tests/integration/frontend/p0/test_solution_evidence.py`
@@ -112,6 +114,9 @@ GPT-5.4
 
 ### Completion Notes List
 
+- Resolved the remaining review finding by treating empty JSON `EVENT` bodies as absent in `TraceList` so the renderer falls back to persisted metadata instead of showing `{}`.
+- Added a deterministic browser regression that injects a generic `EVENT` row with empty content and persisted motor-state metadata, then verifies the row renders the metadata payload in the browser.
+- Revalidated the solution-evidence flow and the retry-lineage event-row path with live-browser integration tests after the trace renderer change.
 - Added persisted session-history metadata to the sidebar: raw status, detailed status, episode phase, terminal reason, failure class, and a derived progress indicator.
 - Kept the run summary aligned with persisted metadata by showing raw status separately from detailed status, and by showing validation logs alongside persisted terminal metadata for failed sessions.
 - Restored trace-driven rendering for persisted `EVENT` rows so backend review, validation, and simulation records appear in the run timeline instead of disappearing.
@@ -152,6 +157,7 @@ GPT-5.4
 
 ## Change Log
 
+- 2026-03-25: Treated empty JSON event bodies as absent in the timeline renderer, added a deterministic browser regression for metadata-backed event rows, and reran the live-browser solution-evidence and retry-lineage slices.
 - 2026-03-25: Restored persisted event rows in the timeline, added failure-log rendering alongside terminal metadata, wired circuit-timeline motor states to the trace contract, and regenerated the OpenAPI/client artifacts.
 - 2026-03-25: Verified the updated frontend bundle and reran the targeted live-browser slices for session history, retry lineage, reasoning visibility, solution evidence, and reload continuity.
 - 2026-03-25: Restored selected-episode running state on reload and aligned the artifact timeline with the resolved media episode, then reran the live-browser session-history, restore, and solution-evidence regressions.

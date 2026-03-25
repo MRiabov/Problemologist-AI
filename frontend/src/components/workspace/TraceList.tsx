@@ -75,6 +75,59 @@ function formatTraceLogBody(trace: TraceResponse): string | null {
   return null;
 }
 
+function isEmptyStructuredContent(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed.length === 0;
+    }
+    if (parsed && typeof parsed === "object") {
+      return Object.keys(parsed).length === 0;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
+}
+
+function formatStructuredCandidate(candidate: unknown): string | null {
+  if (typeof candidate === "string") {
+    const trimmed = candidate.trim();
+    if (!trimmed || isEmptyStructuredContent(trimmed)) {
+      return null;
+    }
+    return trimmed;
+  }
+
+  if (candidate && typeof candidate === "object") {
+    if (Array.isArray(candidate) && candidate.length === 0) {
+      return null;
+    }
+
+    if (!Array.isArray(candidate) && Object.keys(candidate).length === 0) {
+      return null;
+    }
+
+    try {
+      return JSON.stringify(candidate, null, 2);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
 function formatTraceEventLabel(trace: TraceResponse): string {
   const meta = (trace.metadata_vars || {}) as Record<string, unknown>;
   const label = trace.name?.trim();
@@ -97,7 +150,7 @@ function formatTraceEventLabel(trace: TraceResponse): string {
 
 function formatTraceEventBody(trace: TraceResponse): string | null {
   const meta = (trace.metadata_vars || {}) as Record<string, unknown>;
-  const content = trace.content?.trim();
+  const content = formatStructuredCandidate(trace.content);
   if (content) {
     return content;
   }
@@ -109,17 +162,15 @@ function formatTraceEventBody(trace: TraceResponse): string | null {
     meta.error,
     meta.status,
     meta.data,
+    meta.motor_states,
+    meta.checklist,
+    meta.tool_args,
+    meta.additional_info,
   ];
   for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate.trim();
-    }
-    if (candidate && typeof candidate === "object") {
-      try {
-        return JSON.stringify(candidate, null, 2);
-      } catch {
-        return null;
-      }
+    const formatted = formatStructuredCandidate(candidate);
+    if (formatted) {
+      return formatted;
     }
   }
 

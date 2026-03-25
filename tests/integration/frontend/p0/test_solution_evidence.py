@@ -11,7 +11,7 @@ import yaml
 from playwright.sync_api import Page, expect
 
 from controller.api.schemas import AgentRunRequest, EpisodeResponse
-from shared.enums import EpisodeStatus
+from shared.enums import EpisodeStatus, TraceType
 from shared.git_utils import repo_revision
 from shared.models.schemas import (
     AssemblyConstraints,
@@ -449,3 +449,98 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
         "data-artifact-path",
         image_asset.s3_path,
     )
+
+
+@pytest.mark.integration_frontend
+def test_int_189_persisted_event_metadata_renders_when_content_is_empty_json(
+    page: Page,
+):
+    """
+    INT-189 regression: generic EVENT rows should prefer persisted metadata when
+    the stored event body is just empty JSON.
+    """
+    episode_task = f"INT-189 empty event body {uuid.uuid4()}"
+    session_id = f"INT-189-EVENT-{uuid.uuid4().hex[:8]}"
+
+    with httpx.Client(timeout=120.0) as client:
+        create_resp = client.post(
+            f"{CONTROLLER_URL}/api/test/episodes",
+            json=AgentRunRequest(
+                task=episode_task,
+                session_id=session_id,
+            ).model_dump(mode="json"),
+        )
+        assert create_resp.status_code == 201, create_resp.text
+        episode_id = create_resp.json()["episode_id"]
+
+        detail_resp = client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+        assert detail_resp.status_code == 200, detail_resp.text
+        episode = EpisodeResponse.model_validate(detail_resp.json())
+
+    payload = episode.model_dump(mode="json")
+    payload["status"] = EpisodeStatus.COMPLETED.value
+    payload["traces"] = [
+        {
+            "id": 910000,
+            "user_session_id": None,
+            "langfuse_trace_id": None,
+            "simulation_run_id": None,
+            "cots_query_id": None,
+            "review_id": None,
+            "trace_type": TraceType.EVENT.value,
+            "name": "circuit_simulation",
+            "content": "{}",
+            "metadata_vars": {
+                "event_type": "circuit_simulation",
+                "motor_states": {
+                    "motor_alpha": "on",
+                    "motor_beta": "off",
+                },
+                "additional_info": {
+                    "motor_states": {
+                        "motor_alpha": "on",
+                        "motor_beta": "off",
+                    }
+                },
+            },
+            "feedback_score": None,
+            "feedback_comment": None,
+            "created_at": episode.created_at.isoformat(),
+        }
+    ]
+
+    def _mock_episode_detail(route):
+        route.fulfill(status=200, json=payload)
+
+    page.route(f"**/api/episodes/{episode_id}", _mock_episode_detail)
+    try:
+        page.goto(FRONTEND_URL, timeout=60000)
+        page.evaluate(
+            "(selectedEpisodeId) => localStorage.setItem('selectedEpisodeId', selectedEpisodeId)",
+            episode_id,
+        )
+        page.reload()
+        page.wait_for_function(
+            """(expectedEpisodeId) => {
+                const el = document.querySelector('[data-testid="unified-debug-info"]');
+                if (!el) return false;
+                try {
+                    const data = JSON.parse(el.textContent);
+                    return data.episodeId === expectedEpisodeId;
+                } catch (e) { return false; }
+            }""",
+            arg=episode_id,
+            timeout=60000,
+        )
+
+        event_row = (
+            page.get_by_test_id("run-event-row")
+            .filter(has_text="circuit_simulation")
+            .first
+        )
+        expect(event_row).to_be_visible(timeout=30000)
+        expect(event_row).to_contain_text("motor_alpha")
+        expect(event_row).to_contain_text("motor_beta")
+        expect(event_row).not_to_contain_text("{}")
+    finally:
+        page.unroute(f"**/api/episodes/{episode_id}", _mock_episode_detail)
