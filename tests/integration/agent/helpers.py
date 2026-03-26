@@ -347,7 +347,7 @@ async def run_agent_episode(
 ) -> tuple[str, str]:
     session_id = f"{int_id}-{uuid.uuid4().hex[:8]}"
 
-    if int_id in {"INT-181", "INT-182", "INT-183"}:
+    if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_benchmark_assembly_definition(client, session_id)
     if int_id in {"INT-181", "INT-182", "INT-183"}:
         await seed_execution_reviewer_handover(
