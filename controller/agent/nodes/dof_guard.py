@@ -118,7 +118,11 @@ def canonical_dof_checklist_key(reviewer_stage: str) -> str:
 
 
 def apply_canonical_dof_checklist(
-    review: ReviewResult, *, reviewer_stage: str
+    review: ReviewResult,
+    *,
+    reviewer_stage: str,
+    checklist_value: str | None = None,
+    overwrite: bool = False,
 ) -> ReviewResult:
     """
     Ensure review traces and persisted comments use the canonical DOF checklist key.
@@ -129,7 +133,14 @@ def apply_canonical_dof_checklist(
 
     checklist = dict(review.checklist)
     key = canonical_dof_checklist_key(reviewer_stage)
-    checklist[key] = "pass" if review.decision == ReviewDecision.APPROVED else "fail"
+    if overwrite or key not in checklist:
+        if checklist_value is None:
+            checklist_value = (
+                "pass"
+                if review.decision == ReviewDecision.APPROVED
+                else "not_applicable"
+            )
+        checklist[key] = checklist_value
     return review.model_copy(update={"checklist": checklist})
 
 

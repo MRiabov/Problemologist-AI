@@ -682,6 +682,85 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
         comments = yaml.safe_load(comments_resp.text)
         assert comments["checklist"]["dof_deviation_justified"] == "fail", comments
 
+        # Regression: a non-DOF rejection must preserve the canonical key
+        # without rewriting it to fail.
+        render_gate_session = f"INT-210-{uuid.uuid4().hex[:8]}"
+        render_gate_script = Path(
+            "tests/integration/mock_responses/"
+            "INT-182/engineer_coder/entry_01/01__script.py"
+        ).read_text(encoding="utf-8")
+        await seed_benchmark_assembly_definition(
+            client,
+            render_gate_session,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=render_gate_session,
+            int_id="INT-210",
+            script_content=render_gate_script,
+        )
+        await seed_current_revision_render_preview(client, session_id=render_gate_session)
+
+        render_gate_request = AgentRunRequest(
+            task="INT-074 non-DOF rejection checklist preservation",
+            session_id=render_gate_session,
+            agent_name=AgentName.ENGINEER_EXECUTION_REVIEWER,
+            start_node=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        )
+        render_gate_run_resp = await client.post(
+            f"{CONTROLLER_URL}/api/agent/run",
+            json=render_gate_request.model_dump(mode="json"),
+        )
+        assert render_gate_run_resp.status_code == 202, render_gate_run_resp.text
+        render_gate_run = AgentRunResponse.model_validate(
+            render_gate_run_resp.json()
+        )
+
+        render_gate_episode: EpisodeResponse | None = None
+        for _ in range(180):
+            await asyncio.sleep(1.0)
+            ep_resp = await client.get(
+                f"{CONTROLLER_URL}/api/episodes/{render_gate_run.episode_id}"
+            )
+            assert ep_resp.status_code == 200, ep_resp.text
+            render_gate_episode = EpisodeResponse.model_validate(ep_resp.json())
+            if _has_review_artifacts(
+                render_gate_episode,
+                required_checklist_pairs=(("dof_deviation_justified", "not_applicable"),),
+            ):
+                break
+
+        assert render_gate_episode is not None
+        assert _has_review_artifacts(
+            render_gate_episode,
+            required_checklist_pairs=(("dof_deviation_justified", "not_applicable"),),
+        ), render_gate_episode
+
+        render_gate_review_traces = [
+            trace
+            for trace in (render_gate_episode.traces or [])
+            if trace.name == "review_decision"
+        ]
+        assert render_gate_review_traces, "Expected review_decision trace"
+        render_gate_comments_path = (
+            "reviews/engineering-execution-review-comments-round-1.yaml"
+        )
+        render_gate_comments_resp = await client.get(
+            f"{CONTROLLER_URL}/episodes/{render_gate_episode.id}/assets/"
+            f"{render_gate_comments_path}"
+        )
+        assert render_gate_comments_resp.status_code == 200, render_gate_comments_resp.text
+        render_gate_comments = yaml.safe_load(render_gate_comments_resp.text)
+        assert "black/empty" in render_gate_comments["summary"], render_gate_comments
+        assert (
+            render_gate_comments["checklist"]["dof_deviation_justified"]
+            == "not_applicable"
+        ), render_gate_comments
+
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio

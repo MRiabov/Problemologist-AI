@@ -1,0 +1,10 @@
+transcript:
+- node: engineer_execution_reviewer
+  steps:
+  - finished: true
+    review:
+      decision: REJECTED
+      reason: Execution evidence is incomplete for this non-DOF rejection scenario.
+      required_fixes:
+      - Repair the non-DOF issue before resubmitting.
+      checklist: {}

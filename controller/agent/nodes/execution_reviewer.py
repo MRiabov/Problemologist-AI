@@ -152,6 +152,8 @@ class ExecutionReviewerNode(BaseNode):
                         checklist={"dof_deviation_justified": "fail"},
                     ),
                     reviewer_stage="engineering_execution_reviewer",
+                    checklist_value="fail",
+                    overwrite=True,
                 )
                 try:
                     (
@@ -245,6 +247,8 @@ class ExecutionReviewerNode(BaseNode):
                         checklist={"dof_deviation_justified": "fail"},
                     ),
                     reviewer_stage="engineering_execution_reviewer",
+                    checklist_value="fail",
+                    overwrite=True,
                 )
                 try:
                     (

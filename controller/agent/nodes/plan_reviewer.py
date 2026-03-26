@@ -163,6 +163,8 @@ class PlanReviewerNode(BaseNode):
                     checklist={"dof_minimality": "fail"},
                 ),
                 reviewer_stage="engineering_plan_reviewer",
+                checklist_value="fail",
+                overwrite=True,
             )
             try:
                 (
