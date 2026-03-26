@@ -21,7 +21,7 @@ As a human operator, I want benchmark generator output to improve based on revie
   - [ ] If the current benchmark pipeline drops or overwrites rejected attempts, fix the persistence/export path so rejected rows remain visible in the generated manifest/provenance output instead of being replaced by the later accepted revision.
   - [ ] Keep rejected-example provenance keyed by source episode and reason list, using the existing manifest style (`rejected`, `dropped_lineage`, `bucket_counts`, `counts`) instead of inventing a second taxonomy.
 - [ ] Extend integration coverage for reject/retry quality-loop behavior. (AC: 1-3)
-  - [ ] Refresh `tests/integration/mock_responses/INT-203.yaml` and add a separate quality-only poor-benchmark fixture if needed, so the suite covers both unsolvable and technically valid-but-unsuitable simple rigid-body cases.
+  - [ ] Refresh `tests/integration/mock_responses/INT-203.yaml` and add a separate quality-only technically valid but unsuitable benchmark fixture if needed, so the suite covers both unsolvable and technically valid but unsuitable simple rigid-body cases.
   - [ ] Update `tests/integration/architecture_p1/test_benchmark_workflow.py` and `tests/integration/architecture_p1/test_reviewer_evidence.py` to assert the rejection reason, required fixes, latest-revision evidence, and preserved retry lineage remain inspectable after regeneration.
   - [ ] Keep `INT-200`, `INT-201`, `INT-202`, and `INT-204` as regression anchors for hidden motion, underbounded motion, unsupported motion, and render-inspection gating.
 

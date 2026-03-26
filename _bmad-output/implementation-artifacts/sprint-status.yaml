@@ -1,5 +1,5 @@
 generated: 2026-03-22 06:26:07+00:00
-last_updated: 2026-03-25 14:38:19+00:00
+last_updated: 2026-03-26 07:14:44+00:00
 project: Problemologist-AI
 project_key: NOKEY
 tracking_system: file-system
@@ -28,7 +28,7 @@ development_status:
   epic-4: in-progress
   4-1-persist-immutable-run-and-release-bundles: review
   4-2-export-training-ready-dataset-rows: review
-  4-3-replay-failed-episodes-and-surface-deterministic-failures: ready-for-dev
+  4-3-replay-failed-episodes-and-surface-deterministic-failures: review
   4-4-curate-seed-coverage-and-exclude-corrupted-data: ready-for-dev
   epic-4-retrospective: optional
   epic-5: in-progress
@@ -41,7 +41,7 @@ development_status:
   epic-5-retrospective: optional
   epic-6: in-progress
   6-1-generate-simple-rigid-body-benchmarks: in-progress
-  6-2-produce-a-representative-simple-rigid-body-validation-set: ready-for-dev
+  6-2-produce-a-representative-simple-rigid-body-validation-set: review
   6-3-refine-simple-rigid-body-benchmark-quality: ready-for-dev
   6-4-reliable-simple-rigid-body-benchmark-output-and-reviews: backlog
   epic-6-retrospective: optional

@@ -1,6 +1,6 @@
 # Story 6.2: Produce a Representative Simple Rigid-Body Validation Set
 
-Status: ready-for-dev
+Status: ready-for-review
 
 ## Story
 
@@ -14,22 +14,23 @@ As a human operator, I want a representative simple rigid-body validation set so
 
 ## Tasks / Subtasks
 
-- [ ] Curate the canonical simple rigid-body seed corpus in `dataset/data/seed/role_based/benchmark_planner.json` and the paired benchmark review/coder/reviewer seed bundles so the set spans the required coverage axes. (AC: 1, 2)
-  - [ ] Keep the current coverage families explicit: shape, placement, size, and objective arrangement.
-  - [ ] Preserve the existing simple rigid-body / gravity-only contract from Story 6.1; do not widen the set into actuators, FEM, or fluids.
-  - [ ] Treat the current baseline rows as intentional coverage anchors, including the `bp-001` through `bp-010` benchmark-planner variants and the paired benchmark-plan-reviewer approved/reject fixtures.
-- [ ] Add or refresh the matching seed artifact bundles under `dataset/data/seed/artifacts/benchmark_plan_reviewer/`, `dataset/data/seed/artifacts/benchmark_coder/`, and `dataset/data/seed/artifacts/benchmark_reviewer/` so each curated row has deterministic, reusable evidence. (AC: 1, 2)
-  - [ ] Keep the artifact directories aligned with the role-based JSON rows and avoid introducing a separate seed loader or a second dataset format.
-  - [ ] If a new row is added, keep its `plan.md`, `todo.md`, and YAML artifacts internally consistent with the simple rigid-body gravity-only family.
-  - [ ] Reuse the existing approved and rejected simple rigid-body edge cases instead of inventing a new prompt taxonomy.
-- [ ] Introduce or preserve deterministic redundancy handling for near-duplicate seeds. (AC: 3)
-  - [ ] Prefer stable row IDs, artifact-dir identity, and manifest/provenance output over ad hoc duplicate flags.
-  - [ ] If a row is excluded as redundant, keep the reason explainable in the curation/validation output instead of silently mutating the row text.
-  - [ ] Reuse the existing manifest/provenance pattern seen in generated dataset manifests when you need to record drops or redundant groups.
-- [ ] Extend integration coverage for the curated simple rigid-body seed set and seed-workspace materialization. (AC: 1-3)
-  - [ ] Update `tests/integration/architecture_p0/test_codex_runner_mode.py` to materialize representative benchmark-planner and benchmark-plan-reviewer rows from the curated set and assert that the workspace contents stay workspace-relative and deterministic.
-  - [ ] Add or refresh a seed-validation integration slice around `scripts/validate_eval_seed.py` and/or `dataset/evals/materialize_seed_workspace.py` so duplicate or near-duplicate rows fail closed or are marked redundant deterministically.
-  - [ ] Keep all assertions integration-only and artifact-based; do not add unit-test-only coverage for the seed set.
+- [x] Curate the canonical simple rigid-body seed corpus in `dataset/data/seed/role_based/benchmark_planner.json` and the paired benchmark review/coder/reviewer seed bundles so the set spans the required coverage axes. (AC: 1, 2)
+  - [x] Keep the current coverage families explicit: shape, placement, size, and objective arrangement.
+  - [x] Keep the seed phrasing close to the way a human operator would describe a benchmark request, so the validation set reflects real intake rather than only taxonomy labels.
+  - [x] Preserve the existing simple rigid-body / gravity-only contract from Story 6.1; do not widen the set into actuators, FEM, or fluids.
+  - [x] Treat the current baseline rows as intentional coverage anchors, including the `bp-001` through `bp-010` benchmark-planner variants and the paired benchmark-plan-reviewer approved/reject fixtures.
+- [x] Add or refresh the matching seed artifact bundles under `dataset/data/seed/artifacts/benchmark_plan_reviewer/`, `dataset/data/seed/artifacts/benchmark_coder/`, and `dataset/data/seed/artifacts/benchmark_reviewer/` so each curated row has deterministic, reusable evidence. (AC: 1, 2)
+  - [x] Keep the artifact directories aligned with the role-based JSON rows and avoid introducing a separate seed loader or a second dataset format.
+  - [x] If a new row is added, keep its `plan.md`, `todo.md`, and YAML artifacts internally consistent with the simple rigid-body gravity-only family.
+  - [x] Reuse the existing approved and rejected simple rigid-body edge cases instead of inventing a new prompt taxonomy.
+- [x] Introduce or preserve deterministic redundancy handling for near-duplicate seeds. (AC: 3)
+  - [x] Prefer stable row IDs, artifact-dir identity, and manifest/provenance output over ad hoc duplicate flags.
+  - [x] If a row is excluded as redundant, keep the reason explainable in the curation/validation output instead of silently mutating the row text.
+  - [x] Reuse the existing manifest/provenance pattern seen in generated dataset manifests when you need to record drops or redundant groups.
+- [x] Extend integration coverage for the curated simple rigid-body seed set and seed-workspace materialization. (AC: 1-3)
+  - [x] Update `tests/integration/architecture_p0/test_codex_runner_mode.py` to materialize representative benchmark-planner and benchmark-plan-reviewer rows from the curated set and assert that the workspace contents stay workspace-relative and deterministic.
+  - [x] Add or refresh a seed-validation integration slice around `scripts/validate_eval_seed.py` and/or `dataset/evals/materialize_seed_workspace.py` so duplicate or near-duplicate rows fail closed or are marked redundant deterministically.
+  - [x] Keep all assertions integration-only and artifact-based; do not add unit-test-only coverage for the seed set.
 
 ## Dev Notes
 
@@ -82,10 +83,47 @@ As a human operator, I want a representative simple rigid-body validation set so
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_codex_runner_mode.py::test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metadata`
+- `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_codex_runner_mode.py`
+
 ### Completion Notes List
 
+- Added fail-closed seed validation support for the curated benchmark-reviewer row by restoring a feasible benchmark geometry and copied planner caps in `benchmark_definition.yaml`.
+- Stabilized the seed validator path for temporary workspaces by setting `COTS_DB_PATH` in the Codex workspace environment.
+- Kept duplicate-reason normalization deterministic by deduping normalized rejection reasons instead of failing on repeated variants.
+- Extended integration coverage for representative benchmark planner, coder, and reviewer seed rows plus seed-validation/redundancy checks.
+- Normalized generated curation-manifest `dropped_lineage` ordering so the redundancy provenance assertion stays deterministic.
+- Verified the story with `./scripts/run_integration_tests.sh tests/integration/architecture_p0/test_codex_runner_mode.py`.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/6-2-produce-a-representative-simple-rigid-body-validation-set.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `shared/models/schemas.py`
+- `evals/logic/codex_workspace.py`
+- `tests/integration/architecture_p0/test_codex_runner_mode.py`
+- `dataset/data/seed/artifacts/benchmark_plan_reviewer/bpr-001-raised-shelf/benchmark_assembly_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_plan_reviewer/bpr-012-gap-bridge-hidden-dof/.manifests/benchmark_plan_review_manifest.json`
+- `dataset/data/seed/artifacts/benchmark_plan_reviewer/bpr-012-gap-bridge-hidden-dof/benchmark_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_plan_reviewer/bpr-012-gap-bridge-hidden-dof/benchmark_assembly_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball/benchmark_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball/benchmark_assembly_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-011-sideways-ball-review/benchmark.xml`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-012-sideways-ball-infeasible-goal/.manifests/benchmark_review_manifest.json`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-012-sideways-ball-infeasible-goal/assembly_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-012-sideways-ball-infeasible-goal/benchmark_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-012-sideways-ball-infeasible-goal/benchmark_assembly_definition.yaml`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-012-sideways-ball-infeasible-goal/benchmark.xml`
+- `dataset/data/seed/artifacts/benchmark_reviewer/br-013-sideways-ball-overlapping-goal-forbid/benchmark.xml`
+- `dataset/data/seed/artifacts/engineer_plan_reviewer/epr-001-sideways-transfer/assembly_definition.yaml`
+- `dataset/data/seed/artifacts/engineer_plan_reviewer/epr-001-sideways-transfer/plan.md`
+- `dataset/data/generated/component_seeded/v0.0.1/manifest.json`
+- `dataset/data/generated/workflow/v0.0.1/manifest.json`
+
+## Change Log
+
+- 2026-03-26: Validated the curated seed set with the integration runner, fixed reviewer-seed contract gaps, and normalized redundant lineage ordering.

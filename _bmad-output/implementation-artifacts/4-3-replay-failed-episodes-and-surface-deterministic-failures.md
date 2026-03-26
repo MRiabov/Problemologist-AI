@@ -1,6 +1,6 @@
 # Story 4.3: Replay Failed Episodes and Surface Deterministic Failures
 
-Status: ready-for-dev
+Status: ready-for-review
 
 ## Story
 
@@ -16,24 +16,24 @@ As a maintainer, I want failed episodes to replay from persisted artifacts and t
 
 ## Tasks / Subtasks
 
-- [ ] Define the replay response contract and strict schema models. (AC: 1-5)
-  - [ ] Add typed replay bundle models in `shared/models/schemas.py` and `controller/api/schemas.py` instead of using ad hoc dict payloads.
-  - [ ] Carry `user_session_id`, `episode_id`, `simulation_run_id`, `cots_query_id`, `review_id`, `terminal_reason`, `failure_class`, `detailed_status`, `validation_logs`, and `additional_info.entry_validation` through the replay response.
-  - [ ] Reuse `EpisodeMetadata`, `TraceMetadata`, `EntryValidationContext`, `ValidationResultRecord`, `SimulationResult`, `ReviewManifest`, and `ReviewDecisionEvent` where those structures already exist.
-- [ ] Implement the backend replay surface from persisted state. (AC: 1-4)
-  - [ ] Extend `controller/api/routes/episodes.py` with a read-only `GET /episodes/{episode_id}/replay` endpoint, or extract a tiny dedicated replay route only if separation materially improves clarity.
-  - [ ] Load the `Episode` row, trace rows, and worker-session artifacts from the persisted workspace/object-storage boundary rather than from live solver state.
-  - [ ] Fail closed when `validation_results.json`, `simulation_result.json`, required review manifests, or required evidence files are missing, invalid, stale, or not aligned to the latest revision.
-  - [ ] Do not assemble replay data from `list_episodes()` normalization, `EpisodeListItem`, or other UI/read-model projections.
-- [ ] Surface deterministic failure classification and replay diagnostics. (AC: 2-4)
-  - [ ] Map `EpisodeMetadata.terminal_reason`, `failure_class`, `detailed_status`, `validation_logs`, and `additional_info.entry_validation` into the replay payload.
-  - [ ] Preserve explicit fallback or unsupported-feature mismatch signals as machine-readable fields or reason strings.
-  - [ ] Keep replay read-only; do not mutate episode state or create a new episode/revision while reconstructing the bundle.
-- [ ] Add integration coverage for replay reconstruction and fail-closed behavior. (AC: 1-5)
-  - [ ] Add a dedicated `tests/integration/architecture_p1/test_episode_replay.py` slice, or extend the nearest episode/observability integration file only if that keeps the coverage focused.
-  - [ ] Cover a successful reconstruction of a known failed episode from persisted artifacts and traces.
-  - [ ] Cover fail-closed paths for missing artifacts, stale manifests, unsupported mechanisms, and missing review evidence.
-  - [ ] Assert against HTTP responses, persisted episode metadata, traces, and artifact contents only.
+- [x] Define the replay response contract and strict schema models. (AC: 1-5)
+  - [x] Add typed replay bundle models in `shared/models/schemas.py` and `controller/api/schemas.py` instead of using ad hoc dict payloads.
+  - [x] Carry `user_session_id`, `episode_id`, `simulation_run_id`, `cots_query_id`, `review_id`, `terminal_reason`, `failure_class`, `detailed_status`, `validation_logs`, and `additional_info.entry_validation` through the replay response.
+  - [x] Reuse `EpisodeMetadata`, `TraceMetadata`, `EntryValidationContext`, `ValidationResultRecord`, `SimulationResult`, `ReviewManifest`, and `ReviewDecisionEvent` where those structures already exist.
+- [x] Implement the backend replay surface from persisted state. (AC: 1-4)
+  - [x] Extend `controller/api/routes/episodes.py` with a read-only `GET /episodes/{episode_id}/replay` endpoint, or extract a tiny dedicated replay route only if separation materially improves clarity.
+  - [x] Load the `Episode` row, trace rows, and worker-session artifacts from the persisted workspace/object-storage boundary rather than from live solver state.
+  - [x] Fail closed when `validation_results.json`, `simulation_result.json`, required review manifests, or required evidence files are missing, invalid, stale, or not aligned to the latest revision.
+  - [x] Do not assemble replay data from `list_episodes()` normalization, `EpisodeListItem`, or other UI/read-model projections.
+- [x] Surface deterministic failure classification and replay diagnostics. (AC: 2-4)
+  - [x] Map `EpisodeMetadata.terminal_reason`, `failure_class`, `detailed_status`, `validation_logs`, and `additional_info.entry_validation` into the replay payload.
+  - [x] Preserve explicit fallback or unsupported-feature mismatch signals as machine-readable fields or reason strings.
+  - [x] Keep replay read-only; do not mutate episode state or create a new episode/revision while reconstructing the bundle.
+- [x] Add integration coverage for replay reconstruction and fail-closed behavior. (AC: 1-5)
+  - [x] Add a dedicated `tests/integration/architecture_p1/test_episode_replay.py` slice, or extend the nearest episode/observability integration file only if that keeps the coverage focused.
+  - [x] Cover a successful reconstruction of a known failed episode from persisted artifacts and traces.
+  - [x] Cover fail-closed paths for missing artifacts, stale manifests, unsupported mechanisms, and missing review evidence.
+  - [x] Assert against HTTP responses, persisted episode metadata, traces, and artifact contents only.
 
 ## Dev Notes
 
@@ -111,10 +111,61 @@ As a maintainer, I want failed episodes to replay from persisted artifacts and t
 
 ### Agent Model Used
 
-TBD
+GPT-5.4
 
 ### Debug Log References
 
+- Implemented replay schema and response models in `shared/models/schemas.py` and `controller/api/schemas.py`.
+- Added `GET /api/episodes/{episode_id}/replay` in `controller/api/routes/episodes.py` with fail-closed reconstruction from persisted artifacts and traces.
+- Added `INT-206` coverage in `specs/integration-tests.md` and `tests/integration/architecture_p1/test_episode_replay.py`.
+- Regenerated `controller_openapi.json` and frontend API client artifacts after the controller schema change.
+- Verified with `uv run python -m py_compile shared/models/schemas.py controller/api/schemas.py controller/api/routes/episodes.py tests/integration/architecture_p1/test_episode_replay.py`.
+- Verified with `./scripts/run_integration_tests.sh tests/integration/architecture_p1/test_episode_replay.py`.
+
 ### Completion Notes List
 
+- Added strict replay artifact, trace-ID, and failure-signal models to keep replay payloads typed instead of dict-shaped.
+- Replayed failed episodes from persisted `Episode`, `Trace`, and artifact records only, with fail-closed checks for missing artifacts, stale manifests, unsupported metadata, and missing review evidence.
+- Surfaced terminal failure metadata and entry-validation context directly in the replay response.
+- Added deterministic integration coverage that exercises success, repeatability, and fail-closed replay paths against the live controller and worker boundary.
+
 ### File List
+
+- `_bmad-output/implementation-artifacts/4-3-replay-failed-episodes-and-surface-deterministic-failures.md`
+- `controller/api/routes/episodes.py`
+- `controller/api/schemas.py`
+- `shared/models/schemas.py`
+- `specs/integration-tests.md`
+- `tests/integration/architecture_p1/test_episode_replay.py`
+- `controller_openapi.json`
+- `frontend/src/api/generated/index.ts`
+- `frontend/src/api/generated/services/EpisodesService.ts`
+- `frontend/src/api/generated/models/EpisodeReplayResponse.ts`
+- `frontend/src/api/generated/models/ReplayArtifactRecord.ts`
+- `frontend/src/api/generated/models/ReplayTraceIds.ts`
+- `frontend/src/api/generated/models/ReplayFailureSignal.ts`
+- `frontend/src/api/generated/models/ReplayReviewManifestResponse.ts`
+- `frontend/src/api/generated/models/ReviewManifest.ts`
+- `frontend/src/api/generated/models/PlanReviewManifest.ts`
+- `frontend/src/api/generated/models/ValidationResultRecord.ts`
+- `frontend/src/api/generated/models/SimulationResult.ts`
+- `frontend/src/api/generated/models/ReviewDecisionEvent.ts`
+- `frontend/src/api/generated/models/EntryValidationContext.ts`
+- `frontend/src/api/generated/models/EntryValidationError.ts`
+- `frontend/src/api/generated/models/EntryFailureDisposition.ts`
+- `frontend/src/api/generated/models/BenchmarkAttachmentMethod.ts`
+- `frontend/src/api/generated/models/BenchmarkAttachmentPolicySummary.ts`
+- `frontend/src/api/generated/models/BenchmarkPartAttachmentPolicy.ts`
+- `frontend/src/api/generated/models/BenchmarkPartDrillPolicy.ts`
+- `frontend/src/api/generated/models/ReviewEvidenceStats.ts`
+
+## Change Log
+
+- Added replay response schemas and strict replay artifact models.
+- Implemented fail-closed episode replay reconstruction from persisted artifacts and traces.
+- Added integration coverage for replay success, stability, and failure cases.
+- Regenerated controller OpenAPI and frontend API client artifacts.
+
+## Status
+
+ready-for-review

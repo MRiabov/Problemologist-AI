@@ -10,13 +10,14 @@ As a human operator, I want benchmark generator agents to produce simple rigid-b
 
 1. Given a simple rigid-body benchmark seed or prompt, when generation runs, then the candidate remains within the simple rigid-body, gravity-enabled scope and does not introduce actuators, FEM, or fluids.
 2. Given an unsupported mechanism or modality, when generation runs, then the candidate is rejected rather than silently adapted.
-3. Given a generated benchmark candidate, when it is reviewed, then its objective, zones, and motion assumptions are explicit enough for a human engineer to work against it.
+3. Given a generated benchmark candidate, when it is reviewed, then its objective, zones, and motion assumptions are explicit enough for a human operator to use without cleanup.
 
 ## Tasks / Subtasks
 
 - [ ] Tighten the benchmark-generator prompt and starter templates so the simple rigid-body, gravity-only family is explicit in the planner output shape and examples.
   - [ ] Keep the existing benchmark planner file contract intact: `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` at the workspace root.
   - [ ] Make the template language favor passive gravity-driven puzzle geometry and reject any accidental drift toward actuators, FEM, or fluids.
+  - [ ] Make the generated candidate descriptions explicit enough for a human operator to use without cleanup and unambiguous enough for downstream engineering workflows.
 - [x] Reuse the existing fail-closed benchmark validation and handoff gates to keep unsupported modalities out of the simple rigid-body family.
   - [x] Preserve the current benchmark planner canonicalization and cross-contract checks instead of introducing a parallel validator path.
   - [x] If a new rejection case is needed, make it explicit and deterministic rather than silently converting the candidate into another benchmark family.
