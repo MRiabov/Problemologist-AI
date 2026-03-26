@@ -81,8 +81,8 @@ Problemologist-AI differs from these lines of work by combining adversarial benc
 
 Similarly to present systems evaluating coding capabilities in greenfield repositories, we need to define a set of problems to be solved by the engineering system.
 
-\hypertarget{types-of-problems-to-be-solved-are-solving}{%
-\paragraph{Types of problems to solve}\label{types-of-problems-to-be-solved-are-solving}}
+\hypertarget{types-of-problems-to-solve}{%
+\paragraph{Types of problems to solve}\label{types-of-problems-to-solve}}
 
 As this class of problems is readily solvable by major simulation pipelines such as MuJoCo, we first aim to solve multibody dynamics problems. The objective is to: given a predefined starting position of an object, create such a system that would:
 
@@ -173,7 +173,7 @@ We separate agents into:
   \item
     Engineering Coder - An agent that implements the system. Generates geometric CAD (build123d) code, which is verified for manufacturability, cost, weight, and other invalid CAD issues (e.g.~intersecting parts in an assembly); if CAD is valid, it is translated into simulation artifacts (MuJoCo and Genesis), which can later be simulated to achieve the goal.
   \item
-    Engineering Solution Reviewer - An agent that works in case the Engineering Coder is incapable.
+    Engineering Execution Reviewer - the final reviewer for the latest validated implementation; it checks static and dynamic evidence, verifies manufacturability, cost, and weight compliance, confirms plan fidelity or justified deviations, and approves the handoff only when the simulation-backed solution is robust.
   \end{itemize}
 \item
   Other/infrastructure agents
@@ -206,10 +206,7 @@ During simulation, we assert that an object has moved into a position as said by
 \hypertarget{computer-assisted-design}{%
 \subparagraph{Computer assisted design}\label{computer-assisted-design}}
 
-We define \texttt{build123d} framework as a framework on enabling 3d CAD construction. While other CodeCAD solutions exist, for example OpenSCAD {[}5{]} or CadQuery {[}6{]}, \texttt{build123d} importantly allows interoperability with real-world manufacturing solutions, such as STEP file export (a file used by engineers to send manufacturing data to manufacturing companies); while being modern in syntax, having a robust geometry engine under it and having a significant adoption. Critically, the framework is open-source unlike other closed-source solutions, such as SolidWorks.
-
-\hypertarget{electronics}{%
-\paragraph{Electronics}\label{electronics}}
+We define the \texttt{build123d} framework as a framework for enabling 3D CAD construction. While other CodeCAD solutions exist, for example OpenSCAD {[}5{]} or CadQuery {[}6{]}, \texttt{build123d} importantly allows interoperability with real-world manufacturing solutions, such as STEP file export (a file used by engineers to send manufacturing data to manufacturing companies); while being modern in syntax, having a robust geometry engine under it, and having significant adoption. Critically, the framework is open-source unlike other closed-source solutions, such as SolidWorks.
 
 \hypertarget{reward-architecture}{%
 \subsubsection{Reward architecture}\label{reward-architecture}}
@@ -268,7 +265,7 @@ Feedback / Formula
 \hypertarget{observability}{%
 \paragraph{Observability}\label{observability}}
 
-We store over 60 different event types into our database - events primarily tied to reward signals, as well as tool calls, persisted files/success and failure events. Such a granular evaluation and observability pipeline allows for debugging and monitoring of post-training of models.
+We store over 60 different event types in our database, primarily tied to reward signals, tool calls, and persisted file, success, and failure events. Such a granular evaluation and observability pipeline allows for debugging and monitoring model post-training.
 
 \hypertarget{optimizing-the-solution-by-llms}{%
 \subsubsection{Optimizing the solution by LLMs}\label{optimizing-the-solution-by-llms}}
@@ -290,7 +287,7 @@ A recent introduction of agent skills allows for tuning skills instead of prompt
 \begin{itemize}
 \tightlist
 \item
-  How to properly write build123d 3d models (something that models are confused at)
+  How to properly write build123d 3D models (something that models are confused by)
 \item
   How to search for off-the-shelf components such as actuators and fasteners, structural beams.
 \item
@@ -307,8 +304,8 @@ The main advantage is that Skills allow for offloading knowledge from the main p
 
 We update skills during rollouts, self-reflectively. We use an agent going through a \texttt{journal.md} file - a compressed history of all reasoning actions of agents with agents.
 
-\hypertarget{scalabiity-and-adaptibility}{%
-\subsubsection{Scalability and adaptability}\label{scalabiity-and-adaptibility}}
+\hypertarget{scalability-and-adaptability}{%
+\subsubsection{Scalability and adaptability}\label{scalability-and-adaptability}}
 
 We engineered our solution with extensibility and training scalability in mind.
 
@@ -317,8 +314,8 @@ We engineered our solution with extensibility and training scalability in mind.
 
 First and foremost, we employ a distributed architecture, where the simulators such as MuJoCo and Genesis run on the ``heavy'' worker, with the ``controller'' serving as the ``brain'' application and ``worker-light'' serving as a support system. This is important to mention because a naive implementation of the system would block LLMs from running if a heavy worker were in place. We may expect our solution to handle 100-1000 requests per single controller and worker-light node, with more nodes devoted to computing the simulation and rendering.
 
-\hypertarget{adaptibility-and-expensibility}{%
-\paragraph{Adaptability and extensibility}\label{adaptibility-and-expensibility}}
+\hypertarget{adaptability-and-extensibility}{%
+\paragraph{Adaptability and extensibility}\label{adaptability-and-extensibility}}
 
 The system is made with extensibility in mind. Researchers and practitioners can readily swap our physics simulation backends, agent tools, and add more multiphysics simulation.
 
