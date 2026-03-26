@@ -1,51 +1,9 @@
-# Agent Evaluations
-
-## Scope summary
-
-- Primary focus: evaluation architecture and quality gates for agent behavior.
-- Defines fast/medium/slow evaluation tiers and measurable acceptance thresholds.
-- Specifies terminal-state/failure classification requirements and fail-closed gating behavior.
-- Use this file when adding or modifying eval criteria, gate logic, or episode terminalization policy.
-
-Evaluations are treated as a first-class architecture in this application. In fact our work on manufacturability validation, code linting, simulation is just a tool for evaluation.
-
-Seeded-eval preflight contract:
-
-1. Seeded node-entry preflight is not allowed to be file-presence-only.
-2. Preflight must schema-validate every present schema-backed handoff artifact before execution continues.
-3. This includes all typed YAML/JSON handoff artifacts relevant to the current seed workspace (for example `benchmark_definition.yaml`, `assembly_definition.yaml`, `benchmark_assembly_definition.yaml`, `validation_results.json`, `simulation_result.json`, and reviewer/plan-review manifests under `.manifests/`).
-4. Shared template files from `shared/agent_templates/common/` are expanded before validation and count as seed material, not as prompt-only rows.
-5. For planner handoff artifacts, preflight must additionally run cross-contract semantic checks (engineering attachment/cost checks and benchmark planner semantic checks) equivalent to the runtime handoff gates.
-6. If any schema-backed handoff artifact, shared-template materialization, or cross-contract check is invalid, preflight must fail closed and the eval run must not proceed into node execution.
-7. Validation ownership remains in controller node-entry validation; evals are orchestration callers and must not duplicate artifact-schema or handoff-semantic validators locally.
-
-<!-- To build great agents, we need agent needs a great evaluation pipelines.
-We need 10 at least test prompts for each agent (primary) agent subtype - 3 for benchmark (Planner, CAD_agent, Reviewer), 3 for engineering (Planner, CAD_agent, Reviewer).
-
-We will also need evaluations for an agent. -->
-
 ## Evaluations architecture
 
 We need evaluation criteria that would be not only functional, but tied to numbers and count of tool calls/reviews from LLM-as-judge.
 
 Bad example: specific as "Markdown would be valid."
 Good example: Testing of markdown for structural validity be successful in 95% of cases.
-
-## Reward config structure
-
-`config/reward_config.yaml` is split into three metric classes per agent when reward shaping is used:
-
-1. `hard_checks`: deterministic or directly computed checks such as artifact presence, schema validity, geometry validity, pricing caps, manufacturability, and simulation outcomes that do not require an LLM judge.
-2. `judge_evaluation`: reviewer-driven or seeded-rubric metrics such as reviewer acceptance, decision correctness, actionability, and feedback-response quality.
-3. `judge_evaluation.checklist`: weighted per-checklist-item reward terms that deliberately duplicate the canonical reviewer checklist. Each checklist key is rewarded individually rather than via one aggregate checklist score.
-4. `milestones`: remaining non-review objective rewards that are neither pure fail-closed gates nor LLM-as-a-judge outputs. This bucket is allowed for backward compatibility and for downstream objective outcomes such as "planner led to successful implementation".
-
-Rules:
-
-1. Weights across `hard_checks`, `judge_evaluation`, `judge_evaluation.checklist`, and `milestones` sum to `1.0` per agent.
-2. Reviewer-heavy agents should score canonical checklist keys individually rather than hiding checklist quality behind one aggregate checklist scalar.
-3. Planner and coder agents may intentionally duplicate reviewer checklist keys in reward config when those keys represent the real quality gates for acceptance.
-4. Coder agents should carry explicit reward for handling reviewer feedback, including partial credit for fixing valid failed checklist items and resisting incorrect reviewer requests in mixed-quality feedback evals.
 
 ## Multi-level evaluations architecture
 

@@ -56,7 +56,7 @@ The final priority group is:
 
 #### Why this matters
 
-`evals-and-gates.md` is an internal agent-quality document. It does not yet define the external benchmark contract that makes model comparisons fair and reproducible.
+`evals-architecture.md` is an internal agent-quality document. It does not yet define the external benchmark contract that makes model comparisons fair and reproducible.
 
 Without a benchmark protocol, it is unclear:
 
@@ -72,7 +72,7 @@ That ambiguity is acceptable during internal prototyping, but it is a blocker fo
 
 #### Current evidence in the architecture
 
-- `specs/architecture/evals-and-gates.md` defines internal fast, medium, and slow evals for agents.
+- `specs/architecture/evals-architecture.md` defines internal fast, medium, and slow evals for agents.
 - The architecture does not currently define a frozen benchmark execution contract for external reporting.
 - Budget-related concepts appear in scattered places (`OUT_OF_TURN_BUDGET`, `OUT_OF_TOKEN_BUDGET`, tool-call limits), but not as a single benchmark protocol.
 
@@ -120,7 +120,7 @@ That document should define:
 
 - A single benchmark protocol document exists and is linked from `specs/desired_architecture.md`.
 - The protocol defines frozen prompts, allowed tools, budgets, seed policy, and official metrics.
-- `evals-and-gates.md` cross-references the benchmark protocol instead of implicitly serving as one.
+- `evals-architecture.md` cross-references the benchmark protocol instead of implicitly serving as one.
 - `observability.md` is updated so every official benchmark run records the protocol version and budget counters required by that document.
 
 ### 2. No train/dev/test split and contamination policy

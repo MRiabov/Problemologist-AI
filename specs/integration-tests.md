@@ -14,13 +14,13 @@ Do not mock project/runtime boundaries in integration tests; only unavoidable th
 
 Additionally:
 
-1. `kitty-specs/desired_architecture.md` is the central source of truth for the application; all integration tests should be relevant to it and reviewed against it before implementation. Every added test must map to an INT-xxx ID from `kitty-specs/integration-tests.md`.
+1. `kitty-specs/desired_architecture.md` is the central source of truth for the application; all integration tests should be relevant to it and reviewed against it before implementation. Every added test must map to an `INT-xxx` or `INT-NEG-###` ID from `kitty-specs/integration-tests.md`.
 2. Prefer black-box integration (compose services + real boundaries); avoid heavy mocks except where unavoidable.
 3. Include both happy-path and required fail-path assertions (especially gating/validation/refusal/event emission).
 4. Do not silently drop existing integration coverage; replacements must preserve or improve mapped coverage.
 5. Mark unimplemented IDs explicitly as deferred (P1/P2) instead of omitting them.
 
-## Non-negotiable Integration Execution Contract (applies to every `INT-xxx`)
+## Non-negotiable Integration Execution Contract (applies to every `INT-xxx` and `INT-NEG-###`)
 
 01. Test target is a running compose stack (`controller`, `worker`, `controller-worker`, infra services), not imported Python functions.
 02. Test traffic goes through HTTP APIs only.
@@ -33,7 +33,7 @@ Additionally:
 09. Every `build123d` script used in tests must ensure every part has a `.metadata` attribute initialized with a `PartMetadata` or `CompoundMetadata` instance (imported from `shared.models.schemas`), following strict typing rules.
 10. Every JSON, YAML, XML is converted to models e.g. Pydantic models and only then assertions are happening against them (for test maintainability and explainability). If there is no model for a JSON or similar schema, add it.
 11. Tests must utilize state-based polling (e.g., waiting for specific API responses, DB states, or UI elements) rather than hardcoded sleeps or generic timeouts. This ensures tests are deterministic and fail-fast.
-12. Each `INT-xxx` ID must map to **exactly one** test function. Creating multiple test functions for the same `INT-xxx` ID is forbidden. If a single ID requires multiple sub-assertions, they must be consolidated into one test.
+12. Each `INT-xxx` or `INT-NEG-###` ID must map to **exactly one** test function. Creating multiple test functions for the same ID is forbidden. If a single ID requires multiple sub-assertions, they must be consolidated into one test.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
@@ -43,17 +43,17 @@ Commonly, these models and enums would be in `shared/` folder.
 The integration suite is designed for high-velocity local execution and CI parity.
 
 - **`IS_INTEGRATION_TEST=true`**: This environment variable is automatically exported by the runner. It enables "smoke test mode" in simulation kernels, significantly reducing particle counts and simulation time for faster feedback.
-- **`INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS`**: Defaults to `1` in `scripts/run_integration_tests.sh`. When enabled, the runner monitors machine-readable backend error JSON (`logs/integration_tests/current/json/*_errors.json`, with compatibility symlinks at `logs/integration_tests/json/*_errors.json`) for the first **non-allowlisted** error event and reports it; pytest then fails the active test through the backend-error fixture (no runner SIGINT injection). Matching uses global `BACKEND_ERROR_ALLOWLIST_REGEXES` and per-test `@pytest.mark.allow_backend_errors` patterns keyed by `session_id` `INT-xxx` prefixes. Set to `0` to disable this detector and keep full-duration runs.
-- **`tests/integration/mock_responses/`**: Integration mode uses `MockDSPyLM` for agent-node LLM responses, and scenarios are loaded from this directory. Each scenario file must use strict `INT-###.yaml` naming (for example `INT-074.yaml`), and any other naming convention is rejected by a one-time integration startup assertion. Large `write_file` payloads may be extracted into adjacent fixture files via `content_file` references, or referenced by `tool_args.template_file` when the same payload should be shared from `shared/agent_templates/common/`. When `INT-xxx` behavior depends on deterministic mock outputs, keep the corresponding scenario entries current.
+- **`INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS`**: Defaults to `1` in `scripts/run_integration_tests.sh`. When enabled, the runner monitors machine-readable backend error JSON (`logs/integration_tests/current/json/*_errors.json`, with compatibility symlinks at `logs/integration_tests/json/*_errors.json`) for the first **non-allowlisted** error event and reports it; pytest then fails the active test through the backend-error fixture (no runner SIGINT injection). Matching uses global `BACKEND_ERROR_ALLOWLIST_REGEXES` and per-test `@pytest.mark.allow_backend_errors` patterns keyed by `session_id` prefixes (`INT-xxx` and `INT-NEG-###`). Set to `0` to disable this detector and keep full-duration runs.
+- **`tests/integration/mock_responses/`**: Integration mode uses `MockDSPyLM` for agent-node LLM responses, and scenarios are loaded from this directory. Each scenario file must use strict test-ID naming (`INT-###.yaml` or `INT-NEG-###.yaml`; for example `INT-074.yaml` or `INT-NEG-001.yaml`), and any other naming convention is rejected by a one-time integration startup assertion. Each `INT-xxx` or `INT-NEG-###` test owns exactly one scenario file in this directory, and that scenario is permanently tied to that test: it may only consume the mock responses defined for that same test ID, and it may not call, reference, or reuse another test's scenario (for example, `INT-031` cannot call `INT-089`, and `INT-NEG-001` cannot call `INT-074`). Large `write_file` payloads may be extracted into adjacent fixture files via `content_file` references, or referenced by `tool_args.template_file` when the same payload should be shared from `shared/agent_templates/common/`. When `INT-xxx` or `INT-NEG-###` behavior depends on deterministic mock outputs, keep the corresponding scenario entries current.
 - **`scripts/run_integration_tests.sh`**: The central entry point for the integration suite. It manages infrastructure spin-up (Docker), local service lifecycle, and `pytest` execution.
-- **Integration-run lock / queue**: The runner acquires an exclusive host-level lock at `/tmp/problemologist-integration.lock` before it tears down or starts services. If the lock is already held, the runner fails closed with a message that includes the active `INT-xxx` ids when known; passing `--queue` waits for the lock instead of exiting. The companion run-state file at `/tmp/problemologist-integration.run.json` records the requested test selection so callers can decide whether to reuse `logs/integration_tests/current/` rather than start a duplicate run.
+- **Integration-run lock / queue**: The runner acquires an exclusive host-level lock at `/tmp/problemologist-integration.lock` before it tears down or starts services. If the lock is already held, the runner fails closed with a message that includes the active `INT-xxx` or `INT-NEG-###` ids when known; passing `--queue` waits for the lock instead of exiting. The companion run-state file at `/tmp/problemologist-integration.run.json` records the requested test selection so callers can decide whether to reuse `logs/integration_tests/current/` rather than start a duplicate run.
 - **`logs/integration_tests/runs/run_<timestamp>/`**: canonical per-run log root. `logs/integration_tests/current/` points to the active/latest run, and compatibility symlinks remain at `logs/integration_tests/*.log`.
 - **`logs/integration_tests/current/json/`**: machine-readable backend error files emitted as JSON Lines from native structlog event dicts (also reachable via compatibility symlinks in `logs/integration_tests/json/`):
   - `controller_errors.json`
   - `worker_light_errors.json`
   - `worker_heavy_errors.json`
   - `temporal_worker_errors.json`
-  - `backend_error_allowlisted_prefixes.json` (auto-generated/cache file containing per-`INT-xxx` backend-error allowlist rules derived from test markers; consumed by integration-runner early-stop filtering)
+  - `backend_error_allowlisted_prefixes.json` (auto-generated/cache file containing per-`INT-xxx` and `INT-NEG-###` backend-error allowlist rules derived from test markers; consumed by integration-runner early-stop filtering)
 - **Backend error-log attribution contract**: Structured `ERROR` lines written to dedicated backend error logs must include `session_id` or `episode_id` (ideally both) so strict integration teardown can attribute failures to the owning test context and avoid cross-session leakage.
 - **`test_output/`**: Stores JUnit XML results and the persisted test history used for trend analysis.
 - **Worker FS read/write permissions bypass mechanism (`agents_config.yaml` enforcement tests)**: privileged bypass of per-agent filesystem policy is enabled only when both are present in the same HTTP request: request payload flag `bypass_agent_permissions=true` and header `X-System-FS-Bypass: 1`. Header-only and payload-only requests must remain policy-enforced (no bypass).
@@ -307,6 +307,13 @@ Priorities:
 | INT-155 | Wire routing survival under jitter | Wire routing survives runtime jitter (no tears across 5 seeds) in 70% of successful solutions. |
 | INT-156 | Circuit-gates-motor correctness | Circuit state correctly gates motor behaviour in 95% of simulations — motors don't spin without power. |
 
+### Negative integration tests (`INT-NEG-###`)
+
+- `INT-NEG-###` is reserved for explicitly negative integration tests whose correct outcome is rejection, denial, or another fail-closed result.
+- These tests still run against the real compose stack and HTTP boundaries, and they follow the same observable-boundary rules as positive integration tests.
+- Keep negative coverage in this namespace so the positive `INT-xxx` lists stay focused on success-oriented architecture coverage.
+- When a negative test uses `MockDSPyLM`, its scenario file must use the matching `INT-NEG-###.yaml` name and remain one-to-one with that test.
+
 ### Agent category: orchestration/trace contract (overlay suite)
 
 These tests verify agent behavior contracts (turn handling, tool-loop semantics, and session isolation) while still running as true integration tests over HTTP boundaries.
@@ -316,6 +323,7 @@ Tag these tests with both a priority marker and `integration_agent`.
 Determinism rule for this category:
 
 - Use `tests/integration/mock_responses/` scenarios to force multi-turn/tool-call paths.
+- Each integration test must load only its own scenario and scenario-local fixtures; that scenario is test-owned and may not call, reference, or reuse mock responses from any other test's scenario.
 - Assertions must target HTTP responses, persisted traces/events/assets, and service logs only.
 - Do not assert by importing agent internals.
 
@@ -564,4 +572,4 @@ CI gates recommendation:
 
 - This spec intentionally treats architecture statements as test requirements, including expected fail paths.
 - Existing unit tests for observability/workbench/COTS are useful, but they do not replace integration-level verification across controller-worker-db-storage boundaries.
-- If an implementation PR adds or changes integration tests, it should include the mapped `INT-xxx` IDs in test names or docstrings.
+- If an implementation PR adds or changes integration tests, it should include the mapped `INT-xxx` or `INT-NEG-###` IDs in test names or docstrings.

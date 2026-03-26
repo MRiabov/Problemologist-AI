@@ -13,7 +13,9 @@ To save me refactors and to speed up debugging, please read these architecture s
 - @specs/architecture/agents/tools.md - ReAct-callable tool surface, Python utility functions, and planner/reviewer submission gates.
 - @specs/architecture/distributed-execution.md - controller/light/heavy worker topology, routing, persistence, and Temporal boundaries.
 - @specs/architecture/CAD-and-other-infra.md - CAD metadata, rendering direction, schema contracts, and supporting infra assumptions.
-- @specs/architecture/evals-and-gates.md - fast/medium/slow eval tiers, quality gates, terminal states, and fail-closed requirements.
+- @specs/architecture/application-acceptance-criteria.md - legacy application acceptance surface and seeded-eval preflight contract.
+- @specs/architecture/evals-architecture.md - fast/medium/slow eval tiers, quality gates, terminal states, and fail-closed requirements.
+- @specs/architecture/agent/reward-architecture.md - reward shaping used for downstream training and optimization.
 - @specs/architecture/simulation-and-dod.md - physics assumptions, allowed mechanisms, constraints, and simulation definition-of-done logic.
 - @specs/architecture/observability.md - telemetry schema, event catalog, metrics, lineage IDs, and debugging/backups/review tracking.
 

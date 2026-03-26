@@ -32,7 +32,9 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Evaluation and quality gates
 
-- [Agent evaluations and gates](./architecture/evals-and-gates.md): quality tiers, pass criteria, terminalization, and fail-closed gates.
+- [Application acceptance criteria](./architecture/application-acceptance-criteria.md): legacy application acceptance surface; the current product acceptance criteria live in `_bmad-output/planning-artifacts/prd.md` and `_bmad-output/planning-artifacts/epics.md`.
+- [Eval architecture](./architecture/evals-architecture.md): how eval tiers, pass criteria, terminalization, and fail-closed gates work.
+- [Agent reward architecture](./architecture/agent/reward-architecture.md): reward shaping used for downstream training and optimization.
 
 ### Simulation
 

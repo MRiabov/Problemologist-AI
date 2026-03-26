@@ -23,7 +23,9 @@ inputDocuments:
   - specs/architecture/agents/tools.md
   - specs/architecture/distributed-execution.md
   - specs/architecture/CAD-and-other-infra.md
-  - specs/architecture/evals-and-gates.md
+  - specs/architecture/application-acceptance-criteria.md
+  - specs/architecture/evals-architecture.md
+  - specs/architecture/agent/reward-architecture.md
   - specs/architecture/simulation-and-dod.md
   - specs/architecture/observability.md
   - specs/architecture/fluids-and-deformables.md
@@ -130,6 +132,8 @@ This is not a generic agent, not a benchmark-only project, and not a design sand
 ### MVP Strategy & Philosophy
 
 Phase 1 should launch as a problem-solving MVP with debugging-first instrumentation. The first useful outcome is a verified episode that solves a bounded pure-mechanics task, produces a dataset row, and can be diagnosed when it fails. Phase 1 should optimize for correctness, replayability, and triage speed rather than platform breadth.
+
+Benchmark difficulty is tiered by complexity level. Level 0 smoke tests exist only to verify baseline solve capability, and the Phase 1/MVP target is up to about 5 meaningful, manufacturable, realistic parts. The detailed ladder lives in `specs/architecture/evals-architecture.md`.
 
 Phase 1 stays in rigid-body mechanics. Electromechanical and fluids capabilities are deferred until the mechanics eval gate is met and reproducible, so the team does not widen scope before the core solver is credible. The Phase 1 user interface is intentionally simple: it supports benchmark draft creation, plan accept/reject, preview inspection, and stop/interrupt controls, but not the later in-browser multiphysics visualization or advanced prompt steering.
 

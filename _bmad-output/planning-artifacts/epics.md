@@ -215,6 +215,8 @@ Researchers and companies can export completed runs as inspectable, reproducible
 
 Human operators can inspect runs, visualize CAD and simulation evidence, create benchmark drafts, accept or reject simple plan artifacts, resume sessions, and present the system through a browser UI. This is the simple workflow and evidence surface, not the advanced steerability surface.
 
+The benchmark and engineering stories below target the MVP difficulty band: up to about 5 meaningful, manufacturable, realistic parts. More complex cases belong to later complexity levels and later epics.
+
 ### Epic 6: Gravity: Benchmarks
 
 Benchmark generator agents can reliably ship simple rigid-body benchmark packages with gravity enabled that a human operator can use without cleanup, and the packages are explicit enough for an engineering agent to solve them without modifying them. Invalid or unsupported benchmark requests are rejected before generation starts, and invalid artifacts or handoffs are rejected during the pipeline instead of being silently adapted.
