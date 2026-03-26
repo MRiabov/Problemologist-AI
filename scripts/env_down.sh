@@ -61,12 +61,6 @@ pkill -9 -f "uv run python -m controller.temporal_worker" || true
 pkill -9 -f "uv run python -m worker_heavy.temporal_worker" || true
 
 echo "Bringing down infrastructure containers..."
-docker compose -f docker-compose.test.yaml down
-
-echo "Removing local Minio volume to clear object-store state..."
-MINIO_VOLUMES=$(docker volume ls -q --filter label=com.docker.compose.volume=minio_test_data)
-if [ -n "$MINIO_VOLUMES" ]; then
-  docker volume rm $MINIO_VOLUMES >/dev/null 2>&1 || true
-fi
+docker compose -f docker-compose.test.yaml down -v --remove-orphans
 
 echo "Environment is DOWN."

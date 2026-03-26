@@ -1474,7 +1474,7 @@ def _run_cleanup_command(args: argparse.Namespace) -> int:
     compose_cmd = ["docker", "compose", "-f", "docker-compose.test.yaml"]
     if args.down:
         print("Bringing down infrastructure containers (--down flag provided)...")
-        _run([*compose_cmd, "down", "--remove-orphans"], check=False)
+        _run([*compose_cmd, "down", "-v", "--remove-orphans"], check=False)
     else:
         print("Stopping infrastructure containers...")
         _run([*compose_cmd, "stop"], check=False)
