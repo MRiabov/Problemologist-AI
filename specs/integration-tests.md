@@ -323,6 +323,13 @@ Priorities:
 | ID | Test | Required assertions |
 | -- | -- | -- |
 
+### Negative integration tests (`INT-NEG-###`)
+
+- `INT-NEG-###` is reserved for explicitly negative integration tests whose correct outcome is rejection, denial, or another fail-closed result.
+- These tests still run against the real compose stack and HTTP boundaries, and they follow the same observable-boundary rules as positive integration tests.
+- Keep negative coverage in this namespace so the positive `INT-xxx` lists stay focused on success-oriented architecture coverage.
+- When a negative test uses `MockDSPyLM`, its scenario file must use the matching `INT-NEG-###.yaml` name and remain one-to-one with that test.
+
 ### Agent category: orchestration/trace contract (overlay suite)
 
 These tests verify agent behavior contracts (turn handling, tool-loop semantics, and session isolation) while still running as true integration tests over HTTP boundaries.
