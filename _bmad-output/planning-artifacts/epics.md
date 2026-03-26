@@ -217,59 +217,61 @@ Human operators can inspect runs, visualize CAD and simulation evidence, create 
 
 ### Epic 6: Gravity: Benchmarks
 
-Benchmark generator agents can reliably ship valid simple rigid-body benchmarks with gravity enabled that human engineers can work against.
+Benchmark generator agents can reliably ship simple rigid-body benchmark packages with gravity enabled that a human operator can use without cleanup, and the packages are explicit enough for an engineering agent to solve them without modifying them. Invalid or unsupported benchmark requests are rejected before generation starts, and invalid artifacts or handoffs are rejected during the pipeline instead of being silently adapted.
+
+The Epic 6 reliability target is end-to-end: given a realistic benchmark request, Codex-backed benchmark generation should produce a valid benchmark package that a human operator can use without manual cleanup in most cases, with the evaluation set tracking that rate explicitly.
 
 ### Epic 7: Gravity: Engineering
 
-Engineering agents can solve simple rigid-body benchmarks with verified solutions.
+Engineering agents can solve the simple rigid-body benchmark packages produced by Epic 6 with verified solutions. The engineering flow uses the benchmark package as provided; it does not edit the benchmark package, and if the package is unsuitable the engineering run fails. A human can rerun benchmark generation separately.
 
 ### Epic 8: Actuators: Simulation
 
-Upgrade simulation fidelity for powered motion, actuators, and motion limits, and emit preview video and still-frame artifacts for inspection.
+Upgrade simulation fidelity for powered motion, actuators, and motion limits so that actuator benchmark packages can be validated for human review and solved by engineering agents against a concrete powered-motion contract, and emit preview video and still-frame artifacts for inspection.
 
 ### Epic 9: Actuators: Benchmarks
 
-Benchmark generator agents can ship valid actuator-capable benchmark sets with enough validation coverage for engineering intake.
+Benchmark generator agents can ship actuator benchmark packages that a human operator can use without cleanup, and the packages describe powered motion explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Epic 10: Actuators: Engineering
 
-Engineering agents can solve actuator benchmarks with verified solutions.
+Engineering agents can solve the actuator benchmark packages produced by Epic 9 without modifying the benchmark package, with verified solutions that respect powered motion limits and remain stable under review.
 
 ### Epic 11: FEM: Simulation
 
-Upgrade simulation fidelity for deformables, stress, and breakage, and emit mesh preview images and stress/strain field artifacts for inspection.
+Upgrade simulation fidelity for deformables, stress, and breakage so that FEM benchmark packages can be validated for human review and solved by engineering agents against a concrete stress-aware contract, and emit mesh preview images and stress/strain field artifacts for inspection.
 
 ### Epic 12: FEM: Benchmarks
 
-Benchmark generator agents can ship FEM benchmark sets with stress-aware objectives and sufficient validation coverage.
+Benchmark generator agents can ship FEM benchmark packages that a human operator can use without cleanup, and the packages describe deformable behavior explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Epic 13: FEM: Engineering
 
-Engineering agents can solve FEM benchmarks with verified, stress-aware solutions.
+Engineering agents can solve the FEM benchmark packages produced by Epic 12 without modifying the benchmark package, with verified, stress-aware solutions that remain stable under review and produce acceptable structural outcomes.
 
 ### Epic 14: Fluids: Simulation
 
-Upgrade simulation fidelity for fluid containment, flow, and fluid-solid interaction, and emit preview video and still-frame artifacts for inspection.
+Upgrade simulation fidelity for fluid containment, flow, and fluid-solid interaction so that fluid benchmark packages can be validated for human review and solved by engineering agents against a concrete containment and flow contract, and emit preview video and still-frame artifacts for inspection.
 
 ### Epic 15: Fluids: Benchmarks
 
-Benchmark generator agents can ship fluid benchmark sets with containment and flow objectives.
+Benchmark generator agents can ship fluid benchmark packages that a human operator can use without cleanup, and the packages describe fluid behavior explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Epic 16: Fluids: Engineering
 
-Engineering agents can solve fluid benchmarks with verified solutions.
+Engineering agents can solve the fluid benchmark packages produced by Epic 15 without modifying the benchmark package, with verified solutions that respect containment, flow, and stability requirements.
 
 ### Epic 17: Electronics: Simulation
 
-Upgrade simulation fidelity for circuit validity, wire routing, and power-gated actuation, and emit a netlist, schematic image, and preview artifacts for inspection.
+Upgrade simulation fidelity for circuit validity, wire routing, and power-gated actuation so that electromechanical benchmark packages can be validated for human review and solved by engineering agents against a concrete electrical contract, and emit a netlist, schematic image, and preview artifacts for inspection.
 
 ### Epic 18: Electronics: Benchmarks
 
-Benchmark generator agents can ship electromechanical benchmark sets with valid circuit and wiring requirements.
+Benchmark generator agents can ship electromechanical benchmark packages that a human operator can use without cleanup, and the packages describe powered behavior explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Epic 19: Electronics: Engineering
 
-Engineering agents can solve electromechanical benchmarks with verified circuit, wiring, and motion behavior.
+Engineering agents can solve the electromechanical benchmark packages produced by Epic 18 without modifying the benchmark package, with verified circuit, wiring, and motion behavior.
 
 ### Epic 20: Steering & Control
 
@@ -806,7 +808,7 @@ As a human operator, I want simple rigid-body benchmark output and benchmark rev
 
 **Given** 10 simple rigid-body benchmark generation attempts
 **When** I review the outputs
-**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+**Then** at least 8 of the benchmarks are usable by a human operator without me correcting the benchmark definition
 
 **Given** an AI-generated simple rigid-body benchmark review
 **When** I inspect it
@@ -956,17 +958,17 @@ As a human operator, I want actuator motion and controller evidence to be visibl
 
 ## Epic 9: Actuators: Benchmarks
 
-Benchmark generator agents can ship valid actuator-capable benchmark sets with enough validation coverage for engineering intake, and the benchmarks describe powered motion explicitly enough for engineers to work against them.
+Benchmark generator agents can ship actuator benchmark packages that a human operator can use without cleanup, and the packages describe powered motion explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Story 9.1: Generate Benchmarks Involving Actuators
 
-As a human operator, I want benchmark generator agents to produce benchmark candidates involving actuators so that the benchmark family includes powered motion instead of only passive gravity cases.
+As a human operator, I want benchmark generator agents to produce actuator benchmark candidates so that the benchmark family includes solvable powered-motion problems instead of only simulation setups.
 
 **Acceptance Criteria:**
 
 **Given** a prompt or seed involving actuators
 **When** generation runs
-**Then** the candidate declares the actuator type, motion kind, axis or path, and operating envelope explicitly
+**Then** the candidate declares the actuator type, motion kind, axis or path, and operating envelope explicitly enough for an engineering agent to solve the benchmark package
 
 **Given** an unsupported actuator or motion type
 **When** generation runs
@@ -974,7 +976,7 @@ As a human operator, I want benchmark generator agents to produce benchmark cand
 
 **Given** a generated benchmark candidate
 **When** it is reviewed
-**Then** the powered motion is explicit enough for a human engineer to work against it
+**Then** the powered motion is explicit enough for an engineering agent to solve the benchmark package
 
 ### Story 9.2: Produce a Representative Actuator Validation Set
 
@@ -1020,7 +1022,7 @@ As a human operator, I want actuator benchmark output and benchmark reviews to b
 
 **Given** 10 actuator benchmark generation attempts
 **When** I review the outputs
-**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+**Then** at least 8 of the benchmarks are usable by a human operator without me correcting the benchmark definition
 
 **Given** an AI-generated actuator benchmark review
 **When** I inspect it
@@ -1032,17 +1034,17 @@ As a human operator, I want actuator benchmark output and benchmark reviews to b
 
 ## Epic 10: Actuators: Engineering
 
-Engineering agents can solve actuator-capable benchmarks with verified solutions that respect powered motion limits and remain stable under review.
+Engineering agents can solve actuator benchmark packages without modifying the benchmark package, with verified solutions that respect powered motion limits and remain stable under review.
 
 ### Story 10.1: Solve Benchmarks Involving Actuators
 
-As a human operator, I want engineering agents to solve benchmarks involving actuators so that the system can produce a working solution for a powered-motion problem.
+As a human operator, I want engineering agents to solve actuator benchmarks so that the system can produce a working solution for a powered-motion problem from the package as provided.
 
 **Acceptance Criteria:**
 
 **Given** an approved benchmark involving actuators
 **When** engineering runs
-**Then** the agent produces a candidate solution against the same benchmark contract
+**Then** the agent produces a candidate solution against the same benchmark contract without modifying the benchmark package
 
 **Given** an actuator-enabled solution attempt
 **When** it is evaluated
@@ -1166,17 +1168,17 @@ As a human operator, I want stress summaries and heatmaps visible in review so t
 
 ## Epic 12: FEM: Benchmarks
 
-Benchmark generator agents can ship FEM benchmark sets with stress-aware objectives and enough validation coverage for engineering intake, and the benchmarks describe deformable behavior explicitly enough for engineers to work against them.
+Benchmark generator agents can ship FEM benchmark packages that a human operator can use without cleanup, and the packages describe deformable behavior explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Story 12.1: Generate FEM Benchmarks
 
-As a human operator, I want benchmark generator agents to produce FEM benchmark candidates so that the benchmark family includes deformable and stress-aware problems instead of only rigid-body cases.
+As a human operator, I want benchmark generator agents to produce FEM benchmark candidates so that the benchmark family includes solvable deformable and stress-aware problems instead of only rigid-body cases.
 
 **Acceptance Criteria:**
 
 **Given** an FEM benchmark seed or prompt
 **When** generation runs
-**Then** the candidate declares `physics.fem_enabled`, the relevant material classes, and the stress objectives explicitly
+**Then** the candidate declares `physics.fem_enabled`, the relevant material classes, and the stress objectives explicitly enough for an engineering agent to solve the benchmark package
 
 **Given** an unsupported deformable or stress scenario
 **When** generation runs
@@ -1184,7 +1186,7 @@ As a human operator, I want benchmark generator agents to produce FEM benchmark 
 
 **Given** a generated benchmark candidate
 **When** it is reviewed
-**Then** the deformable or stress-aware behavior is explicit enough for a human engineer to work against it
+**Then** the deformable or stress-aware behavior is explicit enough for an engineering agent to solve the benchmark package
 
 ### Story 12.2: Produce a Representative FEM Validation Set
 
@@ -1230,7 +1232,7 @@ As a human operator, I want FEM benchmark output and benchmark reviews to be rel
 
 **Given** 10 FEM benchmark generation attempts
 **When** I review the outputs
-**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+**Then** at least 8 of the benchmarks are usable by a human operator without me correcting the benchmark definition
 
 **Given** an AI-generated FEM benchmark review
 **When** I inspect it
@@ -1246,13 +1248,13 @@ Engineering agents can solve FEM benchmarks with verified, stress-aware solution
 
 ### Story 13.1: Solve FEM Benchmarks
 
-As a human operator, I want engineering agents to solve FEM benchmarks so that the system can produce a working solution for a deformable or stress-aware problem.
+As a human operator, I want engineering agents to solve FEM benchmarks so that the system can produce a working solution for a deformable or stress-aware problem from the package as provided.
 
 **Acceptance Criteria:**
 
 **Given** an approved FEM benchmark
 **When** engineering runs
-**Then** the agent produces a candidate solution against the same benchmark contract
+**Then** the agent produces a candidate solution against the same benchmark contract without modifying the benchmark package
 
 **Given** a FEM-enabled solution attempt
 **When** it is evaluated
@@ -1376,17 +1378,17 @@ As a human operator, I want fluid metrics and dynamic evidence visible in review
 
 ## Epic 15: Fluids: Benchmarks
 
-Benchmark generator agents can ship fluid benchmark sets with containment and flow objectives and enough validation coverage for engineering intake, and the benchmarks describe fluid behavior explicitly enough for engineers to work against them.
+Benchmark generator agents can ship fluid benchmark packages that a human operator can use without cleanup, and the packages describe fluid behavior explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Story 15.1: Generate Fluid Benchmarks
 
-As a human operator, I want benchmark generator agents to produce fluid benchmark candidates so that the benchmark family includes containment and flow problems instead of only rigid-body cases.
+As a human operator, I want benchmark generator agents to produce fluid benchmark candidates so that the benchmark family includes solvable containment and flow problems instead of only rigid-body cases.
 
 **Acceptance Criteria:**
 
 **Given** a fluid benchmark seed or prompt
 **When** generation runs
-**Then** the candidate declares the fluid body, initial volume, containment objective, and flow objective explicitly
+**Then** the candidate declares the fluid body, initial volume, containment objective, and flow objective explicitly enough for an engineering agent to solve the benchmark package
 
 **Given** an unsupported fluid or containment scenario
 **When** generation runs
@@ -1394,7 +1396,7 @@ As a human operator, I want benchmark generator agents to produce fluid benchmar
 
 **Given** a generated benchmark candidate
 **When** it is reviewed
-**Then** the fluid behavior is explicit enough for a human engineer to work against it
+**Then** the fluid behavior is explicit enough for an engineering agent to solve the benchmark package
 
 ### Story 15.2: Produce a Representative Fluid Validation Set
 
@@ -1440,7 +1442,7 @@ As a human operator, I want fluid benchmark output and benchmark reviews to be r
 
 **Given** 10 fluid benchmark generation attempts
 **When** I review the outputs
-**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+**Then** at least 8 of the benchmarks are usable by a human operator without me correcting the benchmark definition
 
 **Given** an AI-generated fluid benchmark review
 **When** I inspect it
@@ -1456,13 +1458,13 @@ Engineering agents can solve fluid benchmarks with verified solutions that respe
 
 ### Story 16.1: Solve Fluid Benchmarks
 
-As a human operator, I want engineering agents to solve fluid benchmarks so that the system can produce a working solution for a containment or flow problem.
+As a human operator, I want engineering agents to solve fluid benchmarks so that the system can produce a working solution for a containment or flow problem from the package as provided.
 
 **Acceptance Criteria:**
 
 **Given** an approved fluid benchmark
 **When** engineering runs
-**Then** the agent produces a candidate solution against the same benchmark contract
+**Then** the agent produces a candidate solution against the same benchmark contract without modifying the benchmark package
 
 **Given** a fluid-enabled solution attempt
 **When** it is evaluated
@@ -1586,7 +1588,7 @@ As a human operator, I want schematic and wire-route evidence visible in review 
 
 ## Epic 18: Electronics: Benchmarks
 
-Benchmark generator agents can ship electromechanical benchmark sets with valid circuit and wiring requirements and enough validation coverage for engineering intake, and the benchmarks describe powered behavior explicitly enough for engineers to work against them.
+Benchmark generator agents can ship electromechanical benchmark packages that a human operator can use without cleanup, and the packages describe powered behavior explicitly enough for an engineering agent to solve them without modifying them.
 
 ### Story 18.1: Generate Benchmarks Involving Electronics
 
@@ -1596,7 +1598,7 @@ As a human operator, I want benchmark generator agents to produce benchmark cand
 
 **Given** a prompt or seed involving electronics
 **When** generation runs
-**Then** the candidate declares the power supply, components, wire route, and powered motion contract explicitly
+**Then** the candidate declares the power supply, components, wire route, and powered motion contract explicitly enough for an engineering agent to solve the benchmark package
 
 **Given** an unsupported circuit or wiring scenario
 **When** generation runs
@@ -1604,7 +1606,7 @@ As a human operator, I want benchmark generator agents to produce benchmark cand
 
 **Given** a generated benchmark candidate
 **When** it is reviewed
-**Then** the electrical behavior is explicit enough for a human engineer to work against it
+**Then** the electrical behavior is explicit enough for an engineering agent to solve the benchmark package
 
 ### Story 18.2: Produce a Representative Electronics Validation Set
 
@@ -1650,7 +1652,7 @@ As a human operator, I want electronics benchmark output and benchmark reviews t
 
 **Given** 10 electronics benchmark generation attempts
 **When** I review the outputs
-**Then** at least 8 of the benchmarks are usable without me correcting the benchmark definition
+**Then** at least 8 of the benchmarks are usable by a human operator without me correcting the benchmark definition
 
 **Given** an AI-generated electronics benchmark review
 **When** I inspect it
@@ -1666,13 +1668,13 @@ Engineering agents can solve electromechanical benchmarks with verified solution
 
 ### Story 19.1: Solve Benchmarks Involving Electronics
 
-As a human operator, I want engineering agents to solve benchmarks involving electronics so that the system can produce a working solution for a powered mechanism.
+As a human operator, I want engineering agents to solve benchmarks involving electronics so that the system can produce a working solution for a powered mechanism from the package as provided.
 
 **Acceptance Criteria:**
 
 **Given** an approved benchmark involving electronics
 **When** engineering runs
-**Then** the agent produces a candidate solution against the same benchmark contract
+**Then** the agent produces a candidate solution against the same benchmark contract without modifying the benchmark package
 
 **Given** an electromechanical solution attempt
 **When** it is evaluated
