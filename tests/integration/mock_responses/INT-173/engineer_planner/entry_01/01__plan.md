@@ -1,11 +1,21 @@
-## Learning Objective
+## 1. Solution Overview
 
-- Test payload with cube.
+Use a minimal cube-based engineering fixture to exercise the planner handoff.
 
-## Geometry
+## 2. Parts List
 
-- Simple cube.
+- Cube body
 
-## Objectives
+## 3. Assembly Strategy
 
-- Validate payload.
+1. Create the cube body.
+2. Keep the geometry simple and deterministic.
+
+## 4. Cost & Weight Budget
+
+- Estimated unit cost: $10
+- Estimated weight: 50g
+
+## 5. Risk Assessment
+
+- The fixture should stay trivial so the execution stage can remain stable.

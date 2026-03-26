@@ -28,6 +28,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 import httpx
@@ -427,7 +428,7 @@ async def _validate_scenario(
     for agent_name, entry_dir in node_entry_dirs:
         node_entry_lookup.setdefault(agent_name.value, []).append(entry_dir)
 
-    session_id = f"mock-preflight-{scenario_id}"
+    session_id = f"mock-preflight-{scenario_id}-{uuid.uuid4().hex}"
     warnings: list[str] = []
     errors: list[str] = []
 

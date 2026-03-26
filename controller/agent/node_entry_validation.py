@@ -996,18 +996,6 @@ async def validate_seeded_workspace_handoff_artifacts(
                 )
             )
 
-    if set(BENCHMARK_PLANNER_HANDOFF_ARTIFACTS).issubset(present_paths):
-        benchmark_errors = await validate_benchmark_planner_handoff_artifacts(
-            worker_client
-        )
-        errors.extend(
-            _seeded_schema_error(
-                message=f"benchmark planner handoff: {message}",
-                artifact_path="benchmark_assembly_definition.yaml",
-            )
-            for message in benchmark_errors
-        )
-
     if target_node in _VISUAL_REVIEWER_TARGET_NODES:
         render_error = await validate_render_images_non_black(worker_client)
         if render_error is not None:

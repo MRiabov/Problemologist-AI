@@ -52,6 +52,33 @@ def _parse_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _benchmark_caps_from_sibling_definition(path: Path) -> tuple[float, float] | None:
+    benchmark_definition_path = next(
+        (
+            candidate
+            for candidate in sorted(path.parent.glob("*benchmark_definition.yaml"))
+        ),
+        None,
+    )
+    if benchmark_definition_path is None:
+        return None
+
+    data = _load_yaml(benchmark_definition_path)
+    if not isinstance(data, dict):
+        return None
+
+    constraints = data.get("constraints")
+    if not isinstance(constraints, dict):
+        return None
+
+    max_unit_cost = constraints.get("max_unit_cost")
+    max_weight_g = constraints.get("max_weight_g")
+    if max_unit_cost is None or max_weight_g is None:
+        return None
+
+    return _parse_float(max_unit_cost), _parse_float(max_weight_g)
+
+
 def _declared_assembly_cost(data: dict[str, Any]) -> float:
     manufactured_cost = 0.0
     for part in data.get("manufactured_parts") or []:
@@ -116,9 +143,35 @@ def _normalize_assembly_file(path: Path, *, fix: bool) -> tuple[bool, list[str]]
         return False, [f"{path}: YAML root must be a mapping"]
 
     changed = _normalize_manufactured_parts(data)
+    benchmark_caps = _benchmark_caps_from_sibling_definition(path)
     totals = data.get("totals")
     if not isinstance(totals, dict):
         return False, [f"{path}: totals must be a mapping"]
+
+    constraints = data.get("constraints")
+    if not isinstance(constraints, dict):
+        return False, [f"{path}: constraints must be a mapping"]
+
+    if benchmark_caps is not None:
+        benchmark_max_unit_cost, benchmark_max_weight_g = benchmark_caps
+        if constraints.get("benchmark_max_unit_cost_usd") != benchmark_max_unit_cost:
+            constraints["benchmark_max_unit_cost_usd"] = benchmark_max_unit_cost
+            changed = True
+        if constraints.get("benchmark_max_weight_g") != benchmark_max_weight_g:
+            constraints["benchmark_max_weight_g"] = benchmark_max_weight_g
+            changed = True
+        if (
+            _parse_float(constraints.get("planner_target_max_unit_cost_usd"))
+            > benchmark_max_unit_cost
+        ):
+            constraints["planner_target_max_unit_cost_usd"] = benchmark_max_unit_cost
+            changed = True
+        if (
+            _parse_float(constraints.get("planner_target_max_weight_g"))
+            > benchmark_max_weight_g
+        ):
+            constraints["planner_target_max_weight_g"] = benchmark_max_weight_g
+            changed = True
 
     expected_cost = _declared_assembly_cost(data)
     if totals.get("estimated_unit_cost_usd") != expected_cost:

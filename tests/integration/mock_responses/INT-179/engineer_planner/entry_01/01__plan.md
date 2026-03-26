@@ -1,11 +1,22 @@
-## Learning Objective
+## 1. Solution Overview
 
-- Test mentions.
+Use a minimal engineering fixture so mention parsing can be evaluated without
+extra geometry noise.
 
-## Geometry
+## 2. Parts List
 
-- Test geometry.
+- Single rigid part
 
-## Objectives
+## 3. Assembly Strategy
 
-- Validate mentions.
+1. Create the rigid part.
+2. Keep the solution deterministic and easy to validate.
+
+## 4. Cost & Weight Budget
+
+- Estimated unit cost: $8
+- Estimated weight: 40g
+
+## 5. Risk Assessment
+
+- The main risk is overcomplicating the fixture and obscuring the core check.

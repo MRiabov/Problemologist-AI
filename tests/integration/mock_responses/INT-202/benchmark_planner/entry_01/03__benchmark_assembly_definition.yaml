@@ -22,7 +22,7 @@ final_assembly:
   - name: bridge_reference_table
     config:
       dofs:
-        - sway_y
+        - slide_y
       control:
         mode: ON_OFF
         speed: 0.15

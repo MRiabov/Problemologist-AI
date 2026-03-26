@@ -8,33 +8,39 @@ transcript:
     expected_observation: success
   - tool_name: write_file
     tool_args:
-      path: journal.md
+      path: plan.md
       overwrite: true
-      content_file: INT-181/engineer_planner/entry_01/02__journal.md
+      content_file: INT-189/engineer_planner/entry_01/01__plan.md
     expected_observation: success
   - tool_name: write_file
     tool_args:
-      path: plan.md
+      path: journal.md
       overwrite: true
-      content_file: INT-185/engineer_planner/entry_01/01__plan.md
+      content_file: INT-189/engineer_planner/entry_01/02__journal.md
     expected_observation: success
   - tool_name: write_file
     tool_args:
       path: todo.md
       overwrite: true
-      content_file: INT-185/engineer_planner/entry_01/02__todo.md
+      content_file: INT-189/engineer_planner/entry_01/02__todo.md
     expected_observation: success
   - tool_name: write_file
     tool_args:
       path: assembly_definition.yaml
       overwrite: true
-      content_file: INT-185/engineer_planner/entry_01/03__assembly_definition.yaml
+      content_file: INT-189/engineer_planner/entry_01/03__assembly_definition.yaml
     expected_observation: success
   - tool_name: write_file
     tool_args:
       path: benchmark_definition.yaml
       overwrite: true
-      content_file: INT-185/engineer_planner/entry_01/04__benchmark_definition.yaml
+      content_file: INT-189/engineer_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-189/engineer_planner/entry_01/05__benchmark_assembly_definition.yaml
     expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
@@ -47,7 +53,7 @@ transcript:
     tool_args:
       path: todo.md
       overwrite: true
-      content_file: INT-185/electronics_planner/entry_01/01__todo.md
+      content_file: INT-189/electronics_planner/entry_01/01__todo.md
     expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
@@ -67,7 +73,7 @@ transcript:
     tool_args:
       path: script.py
       overwrite: true
-      content_file: INT-185/engineer_coder/entry_01/02__script.py
+      content_file: INT-189/engineer_coder/entry_01/02__script.py
     expected_observation: success
   - finished: true
     journal: INT-189 coder output generated.

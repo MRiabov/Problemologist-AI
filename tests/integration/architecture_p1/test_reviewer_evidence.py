@@ -703,7 +703,9 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             int_id="INT-210",
             script_content=render_gate_script,
         )
-        await seed_current_revision_render_preview(client, session_id=render_gate_session)
+        await seed_current_revision_render_preview(
+            client, session_id=render_gate_session
+        )
 
         render_gate_request = AgentRunRequest(
             task="INT-074 non-DOF rejection checklist preservation",
@@ -716,9 +718,7 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             json=render_gate_request.model_dump(mode="json"),
         )
         assert render_gate_run_resp.status_code == 202, render_gate_run_resp.text
-        render_gate_run = AgentRunResponse.model_validate(
-            render_gate_run_resp.json()
-        )
+        render_gate_run = AgentRunResponse.model_validate(render_gate_run_resp.json())
 
         render_gate_episode: EpisodeResponse | None = None
         for _ in range(180):
@@ -730,7 +730,9 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             render_gate_episode = EpisodeResponse.model_validate(ep_resp.json())
             if _has_review_artifacts(
                 render_gate_episode,
-                required_checklist_pairs=(("dof_deviation_justified", "not_applicable"),),
+                required_checklist_pairs=(
+                    ("dof_deviation_justified", "not_applicable"),
+                ),
             ):
                 break
 
@@ -753,7 +755,9 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             f"{CONTROLLER_URL}/episodes/{render_gate_episode.id}/assets/"
             f"{render_gate_comments_path}"
         )
-        assert render_gate_comments_resp.status_code == 200, render_gate_comments_resp.text
+        assert render_gate_comments_resp.status_code == 200, (
+            render_gate_comments_resp.text
+        )
         render_gate_comments = yaml.safe_load(render_gate_comments_resp.text)
         assert "black/empty" in render_gate_comments["summary"], render_gate_comments
         assert (

@@ -20,6 +20,18 @@ transcript:
       overwrite: true
       content_file: INT-184/engineer_planner/entry_01/03__assembly_definition.yaml
     expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-184/engineer_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-184/engineer_planner/entry_01/05__benchmark_assembly_definition.yaml
+    expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true
@@ -48,6 +60,12 @@ transcript:
       path: script.py
       overwrite: true
       content_file: INT-184/engineer_coder/entry_01/01__script.py
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-184/engineer_planner/entry_01/05__benchmark_assembly_definition.yaml
     expected_observation: success
   - finished: true
     journal: INT-184 coder produced baseline script.
