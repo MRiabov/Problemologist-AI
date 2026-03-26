@@ -6,3 +6,4 @@ Integration mock scenarios live here as one file per `INT-###` case.
 - `content_file` paths resolve relative to this directory.
 - The loader fails closed on invalid IDs, duplicate IDs, missing fixture files, or invalid transcript schema.
 - Use `scripts/normalize_integration_mock_responses.py` to normalize deterministic derived fields in fixture YAMLs before editing them by hand.
+- Use `scripts/validate_integration_mock_response_preflight.py` to run transcript/schema validation plus node-entry preflight over the mock-response corpus.
