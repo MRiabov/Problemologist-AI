@@ -79,144 +79,29 @@ To optimize a model in a reinfocement learning environment a reward signal is ne
 
 We split reward by their functional definition - fast, synctatic checks for file presence and synctatic validity, then "milestones" - actions requiring complex solution, and judge evaluation rewards. For example, the below table describes a reward system for a Engineering Coder agent.
 
-<!--TODO: make a table-->
-
-```yaml
-  engineer_coder:
-    description: >
-      Scores the CAD engineer's ability to produce a manufacturable,
-      cost-compliant solution that passes simulation.
-    hard_checks:
-      # Gate 1 — script compiles
-      script_compiles:
-        weight: 0.05
-        description: >
-          script.py executes without Python syntax or import errors.
-        minimum_score: 0.02
-        success_feedback: "The CAD script compiled and executed without syntax or import errors."
-        failure_feedback: "The CAD script failed to compile or encountered a runtime error. Check for syntax errors or missing imports."
-
-      # Gate 2 — CAD geometry valid (no self-intersections, valid mesh)
-      cad_geometry_valid:
-        weight: 0.08
-        description: >
-          All parts export to valid OBJ meshes.
-        success_feedback: "CAD geometry is valid and successfully exported."
-        failure_feedback: "CAD geometry is invalid, has self-intersections, or failed to export."
-
-      # Gate 3 — manufacturability passes
-      manufacturability_valid:
-        weight: 0.07
-        description: >
-          All parts pass workbench manufacturability checks (e.g. no CNC
-          undercuts, wall thickness >= minimum for injection molding).
-        success_feedback: "The design passed all manufacturability constraints (CNC/Injection Molding)."
-        failure_feedback: "The design has manufacturability issues (e.g. undercuts, thin walls). Review manufacturing constraints."
-
-      # Gate 4 — parts within build zone
-      parts_within_build_zone:
-        weight: 0.05
-        description: >
-          All custom-built parts are fully within the build_zone AABB.
-        success_feedback: "All parts are correctly positioned within the designated build zone."
-        failure_feedback: "Some parts are outside the build zone. Adjust part placement or scaling."
-
-      # Gate 5 — actual cost within cap (continuous penalty)
-      cost_within_cap:
-        weight: 0.10
-        description: >
-          Validated unit cost (from validate_and_price) <= max_unit_cost.
-        partial: true
-        penalty_formula: "max(0.0, 1.0 - max(0.0, actual_cost / max_unit_cost - 1.0))"
-        success_feedback: "Manufacturing cost is within the target budget."
-        failure_feedback: "Manufacturing cost exceeds the budget. Try using cheaper materials or reducing part volume."
-
-      # Gate 6 — actual weight within cap (continuous penalty)
-      weight_within_cap:
-        weight: 0.05
-        description: >
-          Validated assembly weight <= max_weight_g.
-        partial: true
-        penalty_formula: "max(0.0, 1.0 - max(0.0, actual_weight / max_weight_g - 1.0))"
-        success_feedback: "Assembly weight is within the maximum limit."
-        failure_feedback: "Assembly weight exceeds the limit. Use lighter materials or hollow out solid regions."
-
-    milestones:
-      # Gate 7 — simulation result (dominant term)
-      simulation_result:
-        weight: 0.45
-        description: >
-          Simulation outcome. Full credit for success. Partial credit for
-          failure proportional to progress toward goal:
-            partial_score = 1.0 - (min_distance_achieved / initial_distance)
-          Partial credit is discounted by 0.4 to incentivise full success:
-            score = 0.45 * partial_score * 0.4  (if failed)
-            score = 0.45                         (if success)
-        partial: true
-        success_formula: "0.45"
-        failure_formula: "0.45 * (1.0 - min_distance_achieved / initial_distance) * 0.4"
-        success_feedback: "The solution successfully solved the problem in simulation."
-        failure_feedback: "The simulation failed to reach the goal. Re-examine mechanical stability, component placement, or movement range."
-
-    judge_evaluation:
-      reviewer_accepted:
-        weight: 0.02
-        description: >
-          The execution reviewer accepted the implementation.
-      checklist:
-        latest_revision_verified:
-          weight: 0.005
-          description: >
-            Latest implementation revision was the one evaluated for submission.
-        validation_success:
-          weight: 0.01
-          description: >
-            Validation success is satisfied at review time.
-        simulation_success:
-          weight: 0.015
-          description: >
-            Simulation success is satisfied at review time.
-        visual_evidence_checked:
-          weight: 0.005
-          description: >
-            Required static evidence has been inspected.
-        dynamic_evidence_checked:
-          weight: 0.005
-          description: >
-            Required dynamic evidence has been inspected.
-        plan_fidelity:
-          weight: 0.01
-          description: >
-            Implementation stays aligned with the approved plan.
-        robustness:
-          weight: 0.01
-          description: >
-            Solution is robust rather than passing a single lucky run.
-        cost_weight_compliance:
-          weight: 0.005
-          description: >
-            Final solution stays within cost and weight targets.
-        manufacturability_compliance:
-          weight: 0.01
-          description: >
-            Final solution remains manufacturable under the chosen process.
-        dof_deviation_justified:
-          weight: 0.005
-          description: >
-            Any DOF deviation from the approved plan is justified and reviewable.
-      feedback_response_score:
-        weight: 0.03
-        description: >
-          Fraction of valid failed reviewer checklist items addressed on the
-          next coding revision without introducing new blocker regressions.
-        partial: true
-      bad_feedback_resistance_score:
-        weight: 0.02
-        description: >
-          Score for following valid reviewer feedback while resisting incorrect
-          or non-applicable requests in mixed-quality review seeds.
-        partial: true
-```
+| Section | Key | Weight | Type | Description | Feedback / Formula |
+| -- | -- | -: | -- | -- | -- |
+| `engineer_coder` | overall objective | - | - | Scores the CAD engineer's ability to produce a manufacturable, cost-compliant solution that passes simulation. | - |
+| `hard_checks` | `script_compiles` | 0.05 | hard check | `script.py` executes without Python syntax or import errors. | Minimum score: `0.02`. Success: the script compiled and executed without syntax or import errors. Failure: the script failed to compile or encountered a runtime error. |
+| `hard_checks` | `cad_geometry_valid` | 0.08 | hard check | All parts export to valid OBJ meshes. | Success: CAD geometry is valid and successfully exported. Failure: geometry is invalid, has self-intersections, or failed to export. |
+| `hard_checks` | `manufacturability_valid` | 0.07 | hard check | All parts pass workbench manufacturability checks, such as no CNC undercuts and wall thickness above the injection molding minimum. | Success: the design passed all manufacturability constraints. Failure: the design has manufacturability issues, such as undercuts or thin walls. |
+| `hard_checks` | `parts_within_build_zone` | 0.05 | hard check | All custom-built parts are fully within the `build_zone` AABB. | Success: all parts are correctly positioned within the designated build zone. Failure: some parts are outside the build zone. |
+| `hard_checks` | `cost_within_cap` | 0.10 | partial hard check | Validated unit cost from `validate_and_price` is less than or equal to `max_unit_cost`. | Penalty formula: `max(0.0, 1.0 - max(0.0, actual_cost / max_unit_cost - 1.0))`. Success: manufacturing cost is within budget. Failure: manufacturing cost exceeds the budget. |
+| `hard_checks` | `weight_within_cap` | 0.05 | partial hard check | Validated assembly weight is less than or equal to `max_weight_g`. | Penalty formula: `max(0.0, 1.0 - max(0.0, actual_weight / max_weight_g - 1.0))`. Success: assembly weight is within the maximum limit. Failure: assembly weight exceeds the limit. |
+| `milestones` | `simulation_result` | 0.45 | partial milestone | Simulation outcome. Full credit is awarded for success; failed runs receive partial credit proportional to progress toward the goal. | Success formula: `0.45`. Failure formula: `0.45 * (1.0 - min_distance_achieved / initial_distance) * 0.4`. Success: the solution solved the problem in simulation. Failure: re-examine mechanical stability, component placement, or movement range. |
+| `judge_evaluation` | `reviewer_accepted` | 0.02 | judge signal | The execution reviewer accepted the implementation. | - |
+| `judge_evaluation` | `latest_revision_verified` | 0.005 | checklist item | Latest implementation revision was the one evaluated for submission. | - |
+| `judge_evaluation` | `validation_success` | 0.01 | checklist item | Validation success is satisfied at review time. | - |
+| `judge_evaluation` | `simulation_success` | 0.015 | checklist item | Simulation success is satisfied at review time. | - |
+| `judge_evaluation` | `visual_evidence_checked` | 0.005 | checklist item | Required static evidence has been inspected. | - |
+| `judge_evaluation` | `dynamic_evidence_checked` | 0.005 | checklist item | Required dynamic evidence has been inspected. | - |
+| `judge_evaluation` | `plan_fidelity` | 0.01 | checklist item | Implementation stays aligned with the approved plan. | - |
+| `judge_evaluation` | `robustness` | 0.01 | checklist item | Solution is robust rather than passing a single lucky run. | - |
+| `judge_evaluation` | `cost_weight_compliance` | 0.005 | checklist item | Final solution stays within cost and weight targets. | - |
+| `judge_evaluation` | `manufacturability_compliance` | 0.01 | checklist item | Final solution remains manufacturable under the chosen process. | - |
+| `judge_evaluation` | `dof_deviation_justified` | 0.005 | checklist item | Any DOF deviation from the approved plan is justified and reviewable. | - |
+| `judge_evaluation` | `feedback_response_score` | 0.03 | partial score | Fraction of valid failed reviewer checklist items addressed on the next coding revision without introducing new blocker regressions. | Partial score. |
+| `judge_evaluation` | `bad_feedback_resistance_score` | 0.02 | partial score | Score for following valid reviewer feedback while resisting incorrect or non-applicable requests in mixed-quality review seeds. | Partial score. |
 
 ### Optimizing the solution by LLMs
 
