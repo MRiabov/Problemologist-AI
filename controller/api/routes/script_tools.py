@@ -1,8 +1,10 @@
 import asyncio
+import base64
 import hashlib
 import os
 import time
 from contextlib import asynccontextmanager, contextmanager
+from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Header, Request
@@ -19,10 +21,12 @@ from shared.simulation.schemas import (
 )
 from shared.workers.schema import (
     BenchmarkToolResponse,
+    RenderArtifactMetadata,
     ReviewerStage,
     SimulationArtifacts,
     ValidationResultRecord,
 )
+from worker_heavy.utils.rendering import build_render_manifest
 
 router = APIRouter(prefix="/script-tools", tags=["script-tools"])
 
@@ -85,6 +89,54 @@ async def _retry_busy(callable_):
                 raise
             await asyncio.sleep(delay)
             delay = min(delay * 1.5, 5.0)
+
+
+async def _collect_render_blobs(
+    middleware: RemoteFilesystemMiddleware, render_paths: list[str]
+) -> dict[str, str]:
+    render_blobs_base64: dict[str, str] = {}
+    render_image_paths: list[str] = []
+
+    for raw_path in render_paths:
+        rel_path = str(Path(raw_path))
+        suffix = Path(rel_path).suffix.lower()
+        if suffix not in {".png", ".jpg", ".jpeg", ".mp4"}:
+            continue
+
+        try:
+            if not await middleware.client.exists(rel_path):
+                continue
+            render_blobs_base64[rel_path] = base64.b64encode(
+                await middleware.client.read_file_binary(rel_path)
+            ).decode("ascii")
+            if suffix in {".png", ".jpg", ".jpeg"}:
+                render_image_paths.append(rel_path)
+        except Exception:
+            continue
+
+    manifest_path = "renders/render_manifest.json"
+    try:
+        if await middleware.client.exists(manifest_path):
+            render_blobs_base64[manifest_path] = base64.b64encode(
+                await middleware.client.read_file_binary(manifest_path)
+            ).decode("ascii")
+        elif render_image_paths:
+            synthesized_manifest = build_render_manifest(
+                {
+                    f"/{path.lstrip('/')}": RenderArtifactMetadata(modality="rgb")
+                    for path in sorted(dict.fromkeys(render_image_paths))
+                },
+                workspace_root=None,
+                episode_id=middleware.episode_id,
+                worker_session_id=middleware.client.session_id,
+            )
+            render_blobs_base64[manifest_path] = base64.b64encode(
+                synthesized_manifest.model_dump_json(indent=2).encode("utf-8")
+            ).decode("ascii")
+    except Exception:
+        pass
+
+    return render_blobs_base64
 
 
 @router.post("/validate", response_model=BenchmarkToolResponse)
@@ -157,6 +209,11 @@ async def simulate_script(
                     total_weight_g=getattr(result, "total_weight_g", None),
                 ),
             )
+            if response.artifacts:
+                response.artifacts.render_blobs_base64 = await _collect_render_blobs(
+                    middleware,
+                    response.artifacts.render_paths,
+                )
             await middleware.client._sync_handover_artifacts_to_light(response)
             return response
 

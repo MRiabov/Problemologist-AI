@@ -37,7 +37,12 @@ class _SceneOutcome:
     done: bool = False
 
 
-def _identify_target_body_name(body_names: list[str]) -> str | None:
+def _identify_target_body_name(
+    body_names: list[str], explicit_target_body_name: str | None = None
+) -> str | None:
+    if explicit_target_body_name and explicit_target_body_name in body_names:
+        return explicit_target_body_name
+
     preferred = ("target_box", "projectile_ball")
     for name in preferred:
         if name in body_names:
@@ -47,6 +52,7 @@ def _identify_target_body_name(body_names: list[str]) -> str | None:
         lowered = name.lower()
         if "target" in lowered or "projectile" in lowered or "ball" in lowered:
             return name
+
     return None
 
 
@@ -217,6 +223,7 @@ def _verify_mujoco_batched(
     num_scenes: int,
     duration: float,
     seed: int,
+    explicit_target_body_name: str | None = None,
 ) -> MultiRunResult:
     import mujoco
 
@@ -225,7 +232,9 @@ def _verify_mujoco_batched(
     body_names = _mujoco_body_names(model)
     goal_sites = _mujoco_site_names(model, "zone_goal")
     forbid_sites = _mujoco_site_names(model, "zone_forbid")
-    target_body_name = _identify_target_body_name(body_names)
+    target_body_name = _identify_target_body_name(
+        body_names, explicit_target_body_name=explicit_target_body_name
+    )
     outcomes = [_SceneOutcome() for _ in range(num_scenes)]
     evaluators = [
         SuccessEvaluator(max_simulation_time=duration) for _ in range(num_scenes)
@@ -330,6 +339,7 @@ def _verify_genesis_batched(
     seed: int,
     smoke_test_mode: bool | None,
     session_id: str | None,
+    explicit_target_body_name: str | None = None,
 ) -> MultiRunResult:
     from worker_heavy.simulation.genesis_backend import GenesisBackend
 
@@ -348,7 +358,9 @@ def _verify_genesis_batched(
     forbid_sites = [
         name for name in backend.get_all_site_names() if name.startswith("zone_forbid")
     ]
-    target_body_name = _identify_target_body_name(body_names)
+    target_body_name = _identify_target_body_name(
+        body_names, explicit_target_body_name=explicit_target_body_name
+    )
     outcomes = [_SceneOutcome() for _ in range(num_scenes)]
     evaluators = [
         SuccessEvaluator(max_simulation_time=duration, session_id=session_id)
@@ -469,6 +481,7 @@ def verify_with_jitter(
     backend_type: SimulatorBackendType = SimulatorBackendType.MUJOCO,
     session_id: str | None = None,
     smoke_test_mode: bool | None = None,
+    explicit_target_body_name: str | None = None,
 ) -> MultiRunResult:
     """Run one batched verification over multiple jittered scene instances."""
     if dynamic_controllers:
@@ -497,6 +510,7 @@ def verify_with_jitter(
             seed=seed,
             smoke_test_mode=smoke_test_mode,
             session_id=session_id,
+            explicit_target_body_name=explicit_target_body_name,
         )
 
     if backend_type == SimulatorBackendType.MUJOCO:
@@ -507,6 +521,7 @@ def verify_with_jitter(
             num_scenes=num_scenes,
             duration=duration,
             seed=seed,
+            explicit_target_body_name=explicit_target_body_name,
         )
 
     raise ValueError(f"Unsupported backend for verification: {backend_type}")

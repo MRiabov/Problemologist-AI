@@ -53,6 +53,7 @@ async def main() -> None:
             preview_design_activity,
             submit_for_review_activity,
         ],
+        max_concurrent_activities=1,
     )
     logger.info("temporal_worker_started", queue="heavy-tasks-queue")
     await worker.run()

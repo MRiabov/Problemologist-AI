@@ -11,6 +11,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 from opentelemetry import trace
 from pydantic import BaseModel
 
+from controller.config.settings import settings
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Trace
@@ -20,6 +21,10 @@ from shared.models.schemas import TraceMetadata
 
 logger = structlog.get_logger(__name__)
 _SYNC_TRACE_TIMEOUT_SECONDS = 0.25
+
+
+def _should_block_for_sync_trace() -> bool:
+    return not settings.is_integration_test
 
 
 class TraceBroadcast(BaseModel):
@@ -403,14 +408,22 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         except Exception as e:
             logger.warning("database_tool_end_failed", error=str(e))
 
-    def record_tool_start_sync(self, tool_name: str, input_data: str) -> int:
+    def record_tool_start_sync(
+        self,
+        tool_name: str,
+        input_data: str,
+        *,
+        force_block: bool = False,
+    ) -> int:
         """Synchronous wrapper for record_tool_start."""
         try:
             if self.loop and self.loop.is_running():
                 future = asyncio.run_coroutine_threadsafe(
                     self.record_tool_start(tool_name, input_data), self.loop
                 )
-                return future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
+                if force_block or _should_block_for_sync_trace():
+                    return future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
+                return 0
             return asyncio.run(self.record_tool_start(tool_name, input_data))
         except Exception as e:
             logger.warning(
@@ -439,7 +452,8 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                     ),
                     self.loop,
                 )
-                future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
+                if _should_block_for_sync_trace():
+                    future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
             else:
                 asyncio.run(
                     self.record_reasoning_text(
@@ -457,7 +471,12 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
             )
 
     def record_tool_end_sync(
-        self, trace_id: int, output_data: str, is_error: bool = False
+        self,
+        trace_id: int,
+        output_data: str,
+        is_error: bool = False,
+        *,
+        force_block: bool = False,
     ) -> None:
         """Synchronous wrapper for record_tool_end."""
         if not trace_id:
@@ -467,7 +486,8 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
                 future = asyncio.run_coroutine_threadsafe(
                     self.record_tool_end(trace_id, output_data, is_error), self.loop
                 )
-                future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
+                if force_block or _should_block_for_sync_trace():
+                    future.result(timeout=_SYNC_TRACE_TIMEOUT_SECONDS)
             else:
                 asyncio.run(self.record_tool_end(trace_id, output_data, is_error))
         except Exception as e:

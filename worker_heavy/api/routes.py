@@ -303,6 +303,9 @@ async def api_verify(
                     smoke_test_mode=request.smoke_test_mode,
                     backend_type=backend_type.value,
                     session_id=x_session_id,
+                    explicit_target_body_name=(
+                        objectives.moved_object.label if objectives else None
+                    ),
                 )
 
                 events = _collect_events(fs_router, root=root, session_id=x_session_id)

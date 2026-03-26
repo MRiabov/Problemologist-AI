@@ -27,6 +27,7 @@ from controller.agent.execution_limits import (
     AgentHardFailError,
     accumulate_episode_credit_usage,
     evaluate_agent_hard_fail,
+    mark_episode_execution_window_start,
 )
 from controller.agent.prompt_manager import PromptManager
 from controller.agent.provider_tool_call_adapters import extract_tool_calls
@@ -1467,7 +1468,9 @@ class BaseNode:
                         try:
                             # WP10: Use synchronous wrapper which handles loop isolation
                             trace_id = db_callback.record_tool_start_sync(
-                                tool_name, input_str
+                                tool_name,
+                                input_str,
+                                force_block=tool_name.startswith("submit_"),
                             )
                         except Exception as e:
                             logger.warning("tool_start_trace_failed", error=str(e))
@@ -1494,7 +1497,9 @@ class BaseNode:
                         # WP10: Explicitly record tool success
                         if db_callback and trace_id:
                             db_callback.record_tool_end_sync(
-                                trace_id, self._serialize_tool_observation(result)
+                                trace_id,
+                                self._serialize_tool_observation(result),
+                                force_block=tool_name.startswith("submit_"),
                             )
 
                         return result
@@ -1502,7 +1507,10 @@ class BaseNode:
                         # WP10: Explicitly record tool error
                         if db_callback and trace_id:
                             db_callback.record_tool_end_sync(
-                                trace_id, str(e), is_error=True
+                                trace_id,
+                                str(e),
+                                is_error=True,
+                                force_block=tool_name.startswith("submit_"),
                             )
                         raise e
 
@@ -2219,6 +2227,8 @@ class BaseNode:
         dspy_timeout = self._dspy_timeout_for_node(node_type)
 
         try:
+            if episode_id:
+                await mark_episode_execution_window_start(episode_id)
             while retry_count < max_retries:
                 try:
                     hard_fail = await evaluate_agent_hard_fail(
