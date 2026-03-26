@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { controller__api__routes__episodes__EpisodeResponse } from '../models/controller__api__routes__episodes__EpisodeResponse';
+import type { EpisodeReplayResponse } from '../models/EpisodeReplayResponse';
 import type { FeedbackRequest } from '../models/FeedbackRequest';
 import type { MessageRequest } from '../models/MessageRequest';
 import type { ReviewRequest } from '../models/ReviewRequest';
@@ -191,6 +192,27 @@ export class EpisodesService {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/episodes/{episode_id}',
+            path: {
+                'episode_id': episodeId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Replay Episode
+     * Reconstruct a failed episode from persisted artifacts and traces.
+     * @param episodeId
+     * @returns EpisodeReplayResponse Successful Response
+     * @throws ApiError
+     */
+    public static replayEpisodeApiEpisodesEpisodeIdReplayGet(
+        episodeId: string,
+    ): CancelablePromise<EpisodeReplayResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/episodes/{episode_id}/replay',
             path: {
                 'episode_id': episodeId,
             },
@@ -401,6 +423,27 @@ export class EpisodesService {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/episodes/{episode_id}',
+            path: {
+                'episode_id': episodeId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Replay Episode
+     * Reconstruct a failed episode from persisted artifacts and traces.
+     * @param episodeId
+     * @returns EpisodeReplayResponse Successful Response
+     * @throws ApiError
+     */
+    public static replayEpisodeEpisodesEpisodeIdReplayGet(
+        episodeId: string,
+    ): CancelablePromise<EpisodeReplayResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/episodes/{episode_id}/replay',
             path: {
                 'episode_id': episodeId,
             },

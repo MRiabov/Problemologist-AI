@@ -671,6 +671,32 @@ class EntryValidationContext(BaseModel):
     errors: list[EntryValidationError] = Field(default_factory=list)
 
 
+class ReplayArtifactRecord(StrictContractModel):
+    """A persisted artifact included in a replay bundle."""
+
+    path: str
+    sha256: str
+    size_bytes: int
+    asset_type: AssetType | None = None
+
+
+class ReplayTraceIds(StrictContractModel):
+    """Trace ID groups surfaced by the replay surface."""
+
+    simulation_trace_ids: list[int] = Field(default_factory=list)
+    review_trace_ids: list[int] = Field(default_factory=list)
+    entry_validation_trace_ids: list[int] = Field(default_factory=list)
+
+
+class ReplayFailureSignal(StrictContractModel):
+    """Machine-readable replay diagnostic or failure signal."""
+
+    kind: str
+    message: str
+    source: str
+    artifact_path: str | None = None
+
+
 class DatasetRowArtifactReference(StrictContractModel):
     """Reference to a persisted artifact included in a dataset row archive."""
 

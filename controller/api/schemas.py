@@ -8,19 +8,32 @@ from shared.enums import (
     AgentName,
     AssetType,
     EpisodeStatus,
+    FailureClass,
     ResponseStatus,
     ReviewDecision,
+    TerminalReason,
     TraceType,
 )
 from shared.models.schemas import (
     DatasetRowArchiveManifest,
+    EntryValidationContext,
     EpisodeMetadata,
+    ReplayArtifactRecord,
+    ReplayFailureSignal,
+    ReplayTraceIds,
     TraceMetadata,
 )
+from shared.models.simulation import SimulationResult
 from shared.models.steerability import CodeReference, GeometricSelection
+from shared.observability.schemas import ReviewDecisionEvent
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
+)
+from shared.workers.schema import (
+    PlanReviewManifest,
+    ReviewManifest,
+    ValidationResultRecord,
 )
 
 
@@ -122,6 +135,33 @@ class EpisodeResponse(BaseModel):
     def metadata(self) -> EpisodeMetadata | None:
         """Backward-compatible alias for clients using `metadata`."""
         return self.metadata_vars
+
+
+class ReplayReviewManifestResponse(BaseModel):
+    path: str
+    manifest: ReviewManifest | PlanReviewManifest
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class EpisodeReplayResponse(EpisodeResponse):
+    worker_session_id: str | None = None
+    simulation_run_id: str | None = None
+    cots_query_id: str | None = None
+    review_id: str | None = None
+    terminal_reason: TerminalReason | None = None
+    failure_class: FailureClass | None = None
+    detailed_status: str | None = None
+    entry_validation: EntryValidationContext | None = None
+    replay_artifacts: list[ReplayArtifactRecord] = Field(default_factory=list)
+    trace_ids: ReplayTraceIds = Field(default_factory=ReplayTraceIds)
+    validation_result: ValidationResultRecord | None = None
+    simulation_result: SimulationResult | None = None
+    review_manifests: list[ReplayReviewManifestResponse] = Field(default_factory=list)
+    review_decision_events: list[ReviewDecisionEvent] = Field(default_factory=list)
+    failure_signals: list[ReplayFailureSignal] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class ArtifactEntry(BaseModel):

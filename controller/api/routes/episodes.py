@@ -1,6 +1,9 @@
 import asyncio
+import hashlib
+import re
 import uuid
 from datetime import datetime
+from pathlib import Path as FilePath
 from typing import Annotated, Literal
 
 import httpx
@@ -9,11 +12,13 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Path,
     Query,
     Response,
     WebSocket,
     WebSocketDisconnect,
+)
+from fastapi import (
+    Path as FastAPIPath,
 )
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 from sqlalchemy import select
@@ -21,6 +26,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from controller.api.manager import manager, task_tracker
+from controller.api.schemas import (
+    EpisodeReplayResponse,
+    ReplayReviewManifestResponse,
+)
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
@@ -34,7 +43,22 @@ from shared.enums import (
     ReviewDecision,
     TraceType,
 )
-from shared.models.schemas import EpisodeMetadata, TraceMetadata
+from shared.git_utils import repo_revision
+from shared.models.schemas import (
+    EntryValidationContext,
+    EpisodeMetadata,
+    ReplayArtifactRecord,
+    ReplayFailureSignal,
+    ReplayTraceIds,
+    TraceMetadata,
+)
+from shared.models.simulation import SimulationResult
+from shared.observability.schemas import ReviewDecisionEvent
+from shared.workers.schema import (
+    PlanReviewManifest,
+    ReviewManifest,
+    ValidationResultRecord,
+)
 
 logger = structlog.get_logger(__name__)
 _MESSAGE_LOG_PREVIEW_LIMIT = 500
@@ -76,6 +100,501 @@ def _normalize_plan_markdown(plan_content: str | None) -> str | None:
     )
 
 
+_REVIEW_ROUND_RE = re.compile(
+    r"^(?P<prefix>reviews/.+-round-)(?P<round>\d+)(?P<suffix>\.yaml)$"
+)
+_REPLAY_REQUIRED_TEXT_ARTIFACTS = {
+    "validation_results.json",
+    "simulation_result.json",
+}
+_REPLAY_REVIEW_MANIFEST_SUFFIXES = (
+    "benchmark_plan_review_manifest.json",
+    "benchmark_review_manifest.json",
+    "engineering_plan_review_manifest.json",
+    "engineering_execution_review_manifest.json",
+    "electronics_review_manifest.json",
+)
+
+
+def _normalize_artifact_path(path: str) -> str:
+    return FilePath(path).as_posix().lstrip("/")
+
+
+def _select_latest_replay_assets(assets: list[Asset]) -> list[Asset]:
+    latest_by_path: dict[str, Asset] = {}
+    latest_round_by_family: dict[str, tuple[int, Asset]] = {}
+
+    for asset in sorted(assets, key=lambda item: (item.created_at, item.id)):
+        path = _normalize_artifact_path(asset.s3_path)
+        match = _REVIEW_ROUND_RE.match(path)
+        if match:
+            family = match.group("prefix").removeprefix("reviews/")
+            round_index = int(match.group("round"))
+            current = latest_round_by_family.get(family)
+            if current is None or round_index >= current[0]:
+                latest_round_by_family[family] = (round_index, asset)
+            continue
+
+        latest_by_path[path] = asset
+
+    selected: list[Asset] = list(latest_by_path.values())
+    selected.extend(asset for _, asset in latest_round_by_family.values())
+    selected.sort(key=lambda item: (_normalize_artifact_path(item.s3_path), item.id))
+    return selected
+
+
+def _asset_looks_like_review_manifest(path: str) -> bool:
+    normalized = _normalize_artifact_path(path)
+    return normalized.endswith(_REPLAY_REVIEW_MANIFEST_SUFFIXES)
+
+
+def _artifact_kind_from_path(path: str) -> str:
+    normalized = _normalize_artifact_path(path)
+    if normalized.endswith("validation_results.json"):
+        return "validation_results"
+    if normalized.endswith("simulation_result.json"):
+        return "simulation_result"
+    if normalized.endswith(_REPLAY_REVIEW_MANIFEST_SUFFIXES):
+        return "review_manifest"
+    if normalized.startswith("reviews/"):
+        return "review_evidence"
+    return "artifact"
+
+
+def _artifact_path_matches(path: str, target: str) -> bool:
+    normalized = _normalize_artifact_path(path)
+    return (
+        normalized == target
+        or normalized.endswith(f"/{target}")
+        or normalized.endswith(target)
+    )
+
+
+async def _load_text_artifact(
+    *,
+    asset: Asset,
+    worker_client: WorkerClient,
+) -> str:
+    if asset.content is not None:
+        return asset.content
+
+    path = _normalize_artifact_path(asset.s3_path)
+    for candidate in (
+        path,
+        path.removeprefix("workspace/"),
+        f"workspace/{path}",
+    ):
+        if not candidate:
+            continue
+        if await worker_client.exists(candidate, bypass_agent_permissions=True):
+            return await worker_client.read_file(
+                candidate, bypass_agent_permissions=True
+            )
+
+    raise FileNotFoundError(f"Persisted artifact not found: {path}")
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _failure_signals_from_metadata(
+    metadata: EpisodeMetadata,
+) -> list[ReplayFailureSignal]:
+    signals: list[ReplayFailureSignal] = []
+    additional = metadata.additional_info or {}
+    for key in ("unsupported_mechanism", "unsupported_feature_mismatch"):
+        if additional.get(key):
+            signals.append(
+                ReplayFailureSignal(
+                    kind=key,
+                    message=str(additional.get(key)),
+                    source="metadata.additional_info",
+                )
+            )
+
+    for log in metadata.validation_logs:
+        normalized = log.lower()
+        if any(
+            token in normalized for token in ("fallback", "unsupported", "mismatch")
+        ):
+            signals.append(
+                ReplayFailureSignal(
+                    kind="validation_log",
+                    message=log,
+                    source="metadata.validation_logs",
+                )
+            )
+
+    entry_validation = additional.get("entry_validation")
+    if isinstance(entry_validation, dict):
+        errors = entry_validation.get("errors") or []
+        for error in errors:
+            if isinstance(error, dict):
+                signals.append(
+                    ReplayFailureSignal(
+                        kind=error.get("code") or "entry_validation_error",
+                        message=str(error.get("message") or ""),
+                        source=str(error.get("source") or "entry_validation"),
+                        artifact_path=(
+                            str(error.get("artifact_path"))
+                            if error.get("artifact_path")
+                            else None
+                        ),
+                    )
+                )
+
+    return signals
+
+
+def _trace_ids_from_episode(
+    episode: Episode,
+) -> tuple[ReplayTraceIds, str | None, str | None, str | None]:
+    simulation_run_id: str | None = None
+    cots_query_id: str | None = None
+    review_id: str | None = None
+    trace_ids = ReplayTraceIds()
+
+    for trace in episode.traces:
+        trace_metadata = TraceMetadata.model_validate(trace.metadata_vars or {})
+        if simulation_run_id is None:
+            simulation_run_id = (
+                trace.simulation_run_id or trace_metadata.simulation_run_id
+            )
+        if cots_query_id is None:
+            cots_query_id = trace.cots_query_id or trace_metadata.cots_query_id
+        if review_id is None:
+            review_id = trace.review_id or trace_metadata.review_id
+
+        if trace.name == "simulation_result" or (
+            simulation_run_id
+            and (
+                trace.simulation_run_id == simulation_run_id
+                or trace_metadata.simulation_run_id == simulation_run_id
+            )
+        ):
+            trace_ids.simulation_trace_ids.append(trace.id)
+
+        if trace.name == "review_decision" or (
+            review_id
+            and (trace.review_id == review_id or trace_metadata.review_id == review_id)
+        ):
+            trace_ids.review_trace_ids.append(trace.id)
+
+        if trace.name == "node_entry_validation_failed":
+            trace_ids.entry_validation_trace_ids.append(trace.id)
+
+    return trace_ids, simulation_run_id, cots_query_id, review_id
+
+
+def _review_decision_events_from_episode(
+    episode: Episode,
+) -> list[ReviewDecisionEvent]:
+    events: list[ReviewDecisionEvent] = []
+    for trace in sorted(episode.traces, key=lambda trace: trace.id):
+        if trace.name != "review_decision":
+            continue
+        metadata = TraceMetadata.model_validate(trace.metadata_vars or {})
+        if metadata.decision is None:
+            continue
+
+        events.append(
+            ReviewDecisionEvent(
+                episode_id=str(episode.id),
+                user_session_id=str(trace.user_session_id)
+                if trace.user_session_id
+                else (
+                    str(episode.user_session_id) if episode.user_session_id else None
+                ),
+                agent_id=trace.name,
+                decision=metadata.decision,
+                reason=str(trace.content or metadata.observation or "Persisted review"),
+                review_id=metadata.review_id or trace.review_id,
+                checklist=dict(metadata.checklist or {}),
+            )
+        )
+    return events
+
+
+def _manifest_expected_revision(
+    manifest: ReviewManifest | PlanReviewManifest,
+) -> str | None:
+    for attr in ("revision", "benchmark_revision", "solution_revision"):
+        value = getattr(manifest, attr, None)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _validate_manifest_session(
+    *,
+    manifest: ReviewManifest | PlanReviewManifest,
+    episode_id: str,
+    worker_session_id: str,
+) -> None:
+    for field_name, expected in (
+        ("session_id", worker_session_id),
+        ("episode_id", episode_id),
+        ("worker_session_id", worker_session_id),
+    ):
+        actual = getattr(manifest, field_name, None)
+        if actual and actual != expected:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"stale_manifest: {field_name} mismatch on "
+                    f"{type(manifest).__name__}"
+                ),
+            )
+
+
+async def _build_episode_replay_response(
+    *,
+    episode: Episode,
+    worker_client: WorkerClient,
+) -> EpisodeReplayResponse:
+    if not episode.metadata_vars:
+        raise HTTPException(status_code=422, detail="missing_metadata: episode")
+
+    metadata = EpisodeMetadata.model_validate(episode.metadata_vars)
+    worker_session_id = metadata.worker_session_id or str(episode.id)
+    if not worker_session_id:
+        raise HTTPException(status_code=422, detail="missing_worker_session_id")
+
+    additional = metadata.additional_info or {}
+    if additional.get("unsupported_mechanism") or additional.get(
+        "unsupported_feature_mismatch"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="unsupported_mechanism: replay cannot reconstruct unsupported path",
+        )
+
+    selected_assets = _select_latest_replay_assets(list(episode.assets))
+
+    missing_required = [
+        path
+        for path in sorted(_REPLAY_REQUIRED_TEXT_ARTIFACTS)
+        if not any(
+            _artifact_path_matches(asset.s3_path, path) for asset in selected_assets
+        )
+    ]
+    if missing_required:
+        raise HTTPException(
+            status_code=422,
+            detail=f"missing_artifact: {missing_required[0]}",
+        )
+
+    review_manifest_assets = [
+        asset
+        for asset in selected_assets
+        if _asset_looks_like_review_manifest(asset.s3_path)
+    ]
+    if not review_manifest_assets:
+        raise HTTPException(
+            status_code=422,
+            detail="missing_review_evidence: review manifest missing",
+        )
+
+    replay_artifacts: list[ReplayArtifactRecord] = []
+    artifact_contents: dict[str, str] = {}
+    for asset in selected_assets:
+        path = _normalize_artifact_path(asset.s3_path)
+        if not (
+            any(
+                _artifact_path_matches(path, required)
+                for required in _REPLAY_REQUIRED_TEXT_ARTIFACTS
+            )
+            or _asset_looks_like_review_manifest(path)
+            or path.startswith("reviews/")
+            or path in {"plan.md", "todo.md", "journal.md", "script.py"}
+        ):
+            continue
+
+        content = await _load_text_artifact(asset=asset, worker_client=worker_client)
+        replay_artifacts.append(
+            ReplayArtifactRecord(
+                path=path,
+                sha256=_sha256_text(content),
+                size_bytes=len(content.encode("utf-8")),
+                asset_type=asset.asset_type,
+            )
+        )
+        artifact_contents[path] = content
+
+    validation_asset = next(
+        asset
+        for asset in selected_assets
+        if _artifact_path_matches(asset.s3_path, "validation_results.json")
+    )
+    validation_text = artifact_contents.get("validation_results.json")
+    if validation_text is None:
+        validation_text = await _load_text_artifact(
+            asset=validation_asset, worker_client=worker_client
+        )
+    try:
+        validation_result = ValidationResultRecord.model_validate_json(validation_text)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid_artifact: validation_results.json ({exc!s})",
+        ) from exc
+
+    simulation_asset = next(
+        asset
+        for asset in selected_assets
+        if _artifact_path_matches(asset.s3_path, "simulation_result.json")
+    )
+    simulation_text = artifact_contents.get("simulation_result.json")
+    if simulation_text is None:
+        simulation_text = await _load_text_artifact(
+            asset=simulation_asset, worker_client=worker_client
+        )
+    try:
+        simulation_result = SimulationResult.model_validate_json(simulation_text)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid_artifact: simulation_result.json ({exc!s})",
+        ) from exc
+
+    if validation_result.script_path:
+        script_path = _normalize_artifact_path(validation_result.script_path)
+        script_asset = next(
+            (
+                asset
+                for asset in selected_assets
+                if _artifact_path_matches(asset.s3_path, script_path)
+            ),
+            None,
+        )
+        if script_asset is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"missing_artifact: {script_path}",
+            )
+        script_text = await _load_text_artifact(
+            asset=script_asset, worker_client=worker_client
+        )
+        script_hash = _sha256_text(script_text)
+        if (
+            validation_result.script_sha256
+            and script_hash != validation_result.script_sha256
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"stale_manifest: script hash mismatch for {script_path}",
+            )
+
+    review_manifests: list[ReplayReviewManifestResponse] = []
+    current_revision = repo_revision(FilePath(__file__).resolve().parents[3])
+    if current_revision is None:
+        raise HTTPException(
+            status_code=422,
+            detail="stale_manifest: unable to determine current repository revision",
+        )
+
+    for asset in review_manifest_assets:
+        path = _normalize_artifact_path(asset.s3_path)
+        manifest_text = artifact_contents.get(path)
+        if manifest_text is None:
+            manifest_text = await _load_text_artifact(
+                asset=asset, worker_client=worker_client
+            )
+        try:
+            if path.endswith("benchmark_plan_review_manifest.json") or path.endswith(
+                "engineering_plan_review_manifest.json"
+            ):
+                manifest = PlanReviewManifest.model_validate_json(manifest_text)
+            else:
+                manifest = ReviewManifest.model_validate_json(manifest_text)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"invalid_artifact: {path} ({exc!s})",
+            ) from exc
+
+        expected_revision = _manifest_expected_revision(manifest)
+        if expected_revision is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"stale_manifest: missing revision in {path}",
+            )
+        if expected_revision != current_revision:
+            raise HTTPException(
+                status_code=422,
+                detail=f"stale_manifest: revision mismatch in {path}",
+            )
+        _validate_manifest_session(
+            manifest=manifest,
+            episode_id=str(episode.id),
+            worker_session_id=worker_session_id,
+        )
+        review_manifests.append(
+            ReplayReviewManifestResponse(path=path, manifest=manifest)
+        )
+
+    trace_ids, simulation_run_id, cots_query_id, review_id = _trace_ids_from_episode(
+        episode
+    )
+    review_decision_events = _review_decision_events_from_episode(episode)
+    if not review_decision_events:
+        raise HTTPException(
+            status_code=422,
+            detail="missing_review_evidence: review_decision trace missing",
+        )
+
+    entry_validation = None
+    raw_entry_validation = (metadata.additional_info or {}).get("entry_validation")
+    if raw_entry_validation is not None:
+        try:
+            entry_validation = EntryValidationContext.model_validate(
+                raw_entry_validation
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"invalid_artifact: entry_validation ({exc!s})",
+            ) from exc
+
+    return EpisodeReplayResponse(
+        id=episode.id,
+        user_session_id=episode.user_session_id,
+        task=episode.task,
+        status=episode.status,
+        created_at=episode.created_at,
+        updated_at=episode.updated_at,
+        skill_git_hash=episode.skill_git_hash,
+        template_versions=episode.template_versions,
+        metadata_vars=metadata,
+        todo_list=episode.todo_list,
+        journal=episode.journal,
+        plan=episode.plan,
+        validation_logs=metadata.validation_logs,
+        last_trace_id=max((trace.id for trace in episode.traces), default=None),
+        traces=[
+            TraceResponse.model_validate(t)
+            for t in sorted(episode.traces, key=lambda t: t.id)
+        ],
+        assets=[AssetResponse.model_validate(a) for a in selected_assets],
+        worker_session_id=worker_session_id,
+        simulation_run_id=simulation_run_id,
+        cots_query_id=cots_query_id,
+        review_id=review_id,
+        terminal_reason=metadata.terminal_reason,
+        failure_class=metadata.failure_class,
+        detailed_status=metadata.detailed_status,
+        entry_validation=entry_validation,
+        replay_artifacts=replay_artifacts,
+        trace_ids=trace_ids,
+        validation_result=validation_result,
+        simulation_result=simulation_result,
+        review_manifests=review_manifests,
+        review_decision_events=review_decision_events,
+        failure_signals=_failure_signals_from_metadata(metadata),
+    )
+
+
 class FeedbackRequest(BaseModel):
     score: Literal[0, 1]
     comment: str | None = None
@@ -94,7 +613,7 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 @router.post("/{episode_id}/traces/{trace_id}/feedback", status_code=202)
 async def report_trace_feedback(
     episode_id: uuid.UUID,
-    trace_id: Annotated[int, Path(ge=-(2**31), le=2**31 - 1)],
+    trace_id: Annotated[int, FastAPIPath(ge=-(2**31), le=2**31 - 1)],
     feedback: FeedbackRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -694,6 +1213,34 @@ async def get_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_db))
                 key=lambda a: (a.asset_type != AssetType.VIDEO, -(a.id or 0)),
             )
         ],
+    )
+
+
+@router.get("/{episode_id}/replay", response_model=EpisodeReplayResponse)
+async def replay_episode(
+    episode_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reconstruct a failed episode from persisted artifacts and traces."""
+    result = await db.execute(
+        select(Episode)
+        .where(Episode.id == episode_id)
+        .options(selectinload(Episode.traces), selectinload(Episode.assets))
+    )
+    episode = result.scalar_one_or_none()
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
+    worker_session_id = metadata.worker_session_id or str(episode.id)
+    worker_client = WorkerClient(
+        base_url=settings.worker_light_url,
+        session_id=worker_session_id,
+        heavy_url=settings.worker_heavy_url,
+    )
+    return await _build_episode_replay_response(
+        episode=episode,
+        worker_client=worker_client,
     )
 
 
