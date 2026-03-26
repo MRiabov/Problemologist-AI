@@ -5,7 +5,7 @@ constraints:
   planner_target_max_unit_cost_usd: 50
   planner_target_max_weight_g: 500
 totals:
-  estimated_unit_cost_usd: 10
+  estimated_unit_cost_usd: 2.5
   estimated_weight_g: 100
   estimate_confidence: high
 manufactured_parts: []
