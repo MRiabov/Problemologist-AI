@@ -28,7 +28,12 @@ async def test_int_043_batch_execution_path():
         for i in range(2):
             session_id = f"INT-043-{uuid.uuid4().hex[:8]}"
             session_ids.append(session_id)
-            await seed_benchmark_assembly_definition(client, session_id)
+            await seed_benchmark_assembly_definition(
+                client,
+                session_id,
+                benchmark_max_unit_cost_usd=250.0,
+                planner_target_max_unit_cost_usd=150.0,
+            )
             request = AgentRunRequest(
                 task=f"Batch execution test task {i}",
                 session_id=session_id,

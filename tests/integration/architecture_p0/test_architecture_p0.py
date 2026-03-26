@@ -439,6 +439,8 @@ async def test_int_021_runtime_randomization_robustness():
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id = f"test-int-021-{int(time.time())}"
 
+        await seed_benchmark_assembly_definition(client, session_id)
+
         objectives = BenchmarkDefinition(
             objectives=ObjectivesSection(
                 goal_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
@@ -470,10 +472,11 @@ async def test_int_021_runtime_randomization_robustness():
 from build123d import *
 from shared.models.schemas import PartMetadata
 def build():
-    b = Box(0.1, 0.1, 0.1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
-    b.label = "target_box"
-    b.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
-    return b
+    with BuildPart() as p:
+        Box(0.1, 0.1, 0.1, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+    p.part.label = "target_box"
+    p.part.metadata = PartMetadata(material_id="aluminum_6061", fixed=False)
+    return p.part
 """
         req_write_script = WriteFileRequest(path="script.py", content=script_content)
         await client.post(
@@ -482,11 +485,33 @@ def build():
             headers={"X-Session-ID": session_id},
         )
 
-        bundle64 = await get_bundle(client, session_id)
+        validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(
+                script_path="script.py",
+                backend=selected_backend(),
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert validate_resp.status_code == 200, validate_resp.text
+        validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+        assert validate_data.success, validate_data.message
+        assert validate_data.artifacts is not None
+        assert validate_data.artifacts.validation_results_json is not None
+
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="validation_results.json",
+                content=validate_data.artifacts.validation_results_json,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
 
         verify_req = VerificationRequest(
             script_path="script.py",
-            bundle_base64=bundle64,
             jitter_range=(0.002, 0.002, 0.001),
             num_scenes=3,
             duration=1.0,
