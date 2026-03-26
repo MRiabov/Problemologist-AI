@@ -1,7 +1,7 @@
 objectives:
   goal_zone:
-    min: [0.64, -0.05, 0.22]
-    max: [0.76, 0.05, 0.34]
+    min: [0.44, -0.05, 0.02]
+    max: [0.56, 0.05, 0.14]
   forbid_zones: []
   build_zone:
     min: [-0.58, -0.1, 0.0]
@@ -34,6 +34,8 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 80.0
   estimated_solution_weight_g: 3333.333333333333
+  max_unit_cost: 120.0
+  max_weight_g: 2200.0
 randomization:
   static_variation_id: v1.2
   runtime_jitter_enabled: true

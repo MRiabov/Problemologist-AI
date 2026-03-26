@@ -13,6 +13,27 @@ benchmark_parts:
     label: ground_plane
     metadata:
       fixed: true
+      allows_engineer_interaction: false
+      material_id: hdpe
+  - part_id: floor_plate
+    label: floor_plate
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+  - part_id: support_tower
+    label: support_tower
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+  - part_id: raised_goal_shelf
+    label: raised_goal_shelf
+    metadata:
+      fixed: true
+      material_id: aluminum_6061
+  - part_id: lift_carriage
+    label: lift_carriage
+    metadata:
+      fixed: false
       material_id: hdpe
 
 physics:
@@ -34,6 +55,8 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 80.0
   estimated_solution_weight_g: 3333.333333333333
+  max_unit_cost: 95.0
+  max_weight_g: 1800.0
 randomization:
   static_variation_id: v1.2
   runtime_jitter_enabled: true

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -7,7 +8,6 @@ import sys
 from pathlib import Path
 
 import pytest
-import yaml
 
 from evals.logic.codex_workspace import (
     build_codex_env,
@@ -16,7 +16,7 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.models import EvalDatasetItem
 from shared.enums import AgentName
-from shared.models.schemas import PlannerSubmissionResult
+from shared.models.schemas import DatasetCurationManifest, PlannerSubmissionResult
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -37,6 +37,14 @@ def _load_submission_result(stdout: str) -> PlannerSubmissionResult:
     )
     json_text = "\n".join(lines[start_index:])
     return PlannerSubmissionResult.model_validate_json(json_text)
+
+
+def _workspace_snapshot(workspace_dir: Path) -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for path in sorted(p for p in workspace_dir.rglob("*") if p.is_file()):
+        rel_path = path.relative_to(workspace_dir).as_posix()
+        snapshot[rel_path] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
 
 
 @pytest.mark.integration_p0
@@ -125,24 +133,27 @@ async def test_codex_materialized_planner_workspace_submits(
         agent_name=agent_name,
         workspace_dir=workspace_dir,
     )
+    mirror_workspace_dir = tmp_path / f"{agent_name.value}-mirror" / row_id
+    mirror_materialized = materialize_seed_workspace(
+        item=item,
+        agent_name=agent_name,
+        workspace_dir=mirror_workspace_dir,
+    )
 
     assert materialized.helper_script_paths == ["scripts/submit_plan.sh"]
+    assert mirror_materialized.helper_script_paths == ["scripts/submit_plan.sh"]
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
+    assert materialized.prompt_text == mirror_materialized.prompt_text
+    assert materialized.copied_paths == mirror_materialized.copied_paths
+    assert _workspace_snapshot(workspace_dir) == _workspace_snapshot(
+        mirror_workspace_dir
+    )
     for fragment in prompt_fragments:
         assert fragment in materialized.prompt_text
     assert not any(path.endswith("result.py") for path in materialized.copied_paths)
     for rel_path in expected_files:
         assert (workspace_dir / rel_path).exists(), rel_path
-
-    if agent_name == AgentName.BENCHMARK_PLANNER:
-        assembly_path = workspace_dir / "benchmark_assembly_definition.yaml"
-        assembly_payload = yaml.safe_load(assembly_path.read_text(encoding="utf-8"))
-        assembly_payload["totals"]["estimated_unit_cost_usd"] = 71.5
-        assembly_path.write_text(
-            yaml.safe_dump(assembly_payload, sort_keys=False),
-            encoding="utf-8",
-        )
 
     shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
 
@@ -176,3 +187,167 @@ async def test_codex_materialized_planner_workspace_submits(
     )
     assert verification.success, verification.errors
     assert verification.verification_name == "planner_workspace_contract"
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("seed_dataset", "row_id", "agent_name", "prompt_fragments", "expected_files"),
+    [
+        (
+            "dataset/data/seed/role_based/benchmark_plan_reviewer.json",
+            "bpr-012-gap-bridge-hidden-dof",
+            AgentName.BENCHMARK_PLAN_REVIEWER,
+            (
+                "You are the Plan Reviewer.",
+                "Inspect the planner artifacts",
+                "reviews/",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+            ),
+        ),
+        (
+            "dataset/data/seed/role_based/benchmark_coder.json",
+            "bc-011-sideways-ball",
+            AgentName.BENCHMARK_CODER,
+            (
+                "You are the Coder for this workspace.",
+                "Edit `script.py` and any supporting `*.py` files",
+                "journal.md",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+                "journal.md",
+            ),
+        ),
+        (
+            "dataset/data/seed/role_based/benchmark_reviewer.json",
+            "br-012-sideways-ball-infeasible-goal",
+            AgentName.BENCHMARK_REVIEWER,
+            (
+                "You are the Execution Reviewer.",
+                "Inspect the implementation, validation results, simulation result",
+                "reviews/",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "script.py",
+                "journal.md",
+                "validation_results.json",
+                "simulation_result.json",
+            ),
+        ),
+    ],
+)
+async def test_codex_seed_workspace_materialization_is_role_specific_and_deterministic(
+    tmp_path: Path,
+    seed_dataset: str,
+    row_id: str,
+    agent_name: AgentName,
+    prompt_fragments: tuple[str, ...],
+    expected_files: tuple[str, ...],
+):
+    """
+    INT-034: reviewer evidence completeness.
+
+    Verifies curated benchmark plan-reviewer, benchmark-coder, and benchmark-reviewer
+    seed rows materialize into workspace-relative, deterministic local workspaces.
+    """
+
+    item = _load_dataset_item(seed_dataset, row_id)
+    workspace_dir = tmp_path / agent_name.value / row_id
+    mirror_workspace_dir = tmp_path / f"{agent_name.value}-mirror" / row_id
+
+    materialized = materialize_seed_workspace(
+        item=item,
+        agent_name=agent_name,
+        workspace_dir=workspace_dir,
+    )
+    mirror_materialized = materialize_seed_workspace(
+        item=item,
+        agent_name=agent_name,
+        workspace_dir=mirror_workspace_dir,
+    )
+
+    assert materialized.helper_script_paths == []
+    assert mirror_materialized.helper_script_paths == []
+    assert materialized.prompt_text == mirror_materialized.prompt_text
+    assert materialized.copied_paths == mirror_materialized.copied_paths
+    assert _workspace_snapshot(workspace_dir) == _workspace_snapshot(
+        mirror_workspace_dir
+    )
+    assert "Workspace: current directory" in materialized.prompt_text
+    assert "/workspace" not in materialized.prompt_text
+    for fragment in prompt_fragments:
+        assert fragment in materialized.prompt_text
+    for rel_path in expected_files:
+        assert (workspace_dir / rel_path).exists(), rel_path
+
+
+@pytest.mark.integration_p0
+def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metadata():
+    """
+    INT-114: benchmark planner explicit submission gate.
+
+    Exercises the seed-validation CLI against representative curated rows and
+    verifies the persisted curation manifests still expose deterministic
+    redundancy provenance.
+    """
+
+    validation_cases = (
+        ("benchmark_planner", "bp-001-forbid-zone"),
+        ("benchmark_plan_reviewer", "bpr-012-gap-bridge-hidden-dof"),
+        ("benchmark_coder", "bc-011-sideways-ball"),
+        ("benchmark_reviewer", "br-012-sideways-ball-infeasible-goal"),
+    )
+    for agent_name, row_id in validation_cases:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "scripts/validate_eval_seed.py",
+                "--skip-env-up",
+                "--agent",
+                agent_name,
+                "--task-id",
+                row_id,
+                "--fail-fast",
+                "--concurrency",
+                "1",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=300,
+        )
+
+        assert completed.returncode == 0, completed.stderr
+        assert "Validated 1 row(s): all passed." in completed.stdout, completed.stdout
+        assert f"PASS {agent_name} {row_id}:" in completed.stdout, completed.stdout
+
+    for manifest_path in (
+        ROOT / "dataset/data/generated/component_seeded/v0.0.1/manifest.json",
+        ROOT / "dataset/data/generated/workflow/v0.0.1/manifest.json",
+    ):
+        manifest = DatasetCurationManifest.model_validate_json(
+            manifest_path.read_text(encoding="utf-8")
+        )
+        assert manifest.counts.accepted_after_pending_filter > 0
+        assert manifest.counts.dedup_identity_groups_with_drops > 0
+        assert manifest.counts.rejected > 0
+        assert manifest.dropped_lineage, manifest_path
+        assert manifest.rejected, manifest_path
+        for lineage_key, dropped_episode_ids in manifest.dropped_lineage.items():
+            assert lineage_key.strip()
+            assert dropped_episode_ids == sorted(set(dropped_episode_ids))
+        for rejected_row in manifest.rejected:
+            assert rejected_row.reasons

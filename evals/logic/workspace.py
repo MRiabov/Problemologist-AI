@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from controller.clients.worker import WorkerClient
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
 from shared.agent_templates import load_common_template_files
 from shared.enums import AgentName, EvalMode
+from shared.git_utils import repo_revision
 
 
 def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | None:
@@ -42,6 +44,36 @@ def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | No
             return dataset_relative
 
     return repo_relative
+
+
+def _refresh_seed_review_manifest_revision(
+    *,
+    rel_path: str,
+    content: str,
+    root: Path,
+) -> str:
+    manifest_names = {
+        ".manifests/benchmark_review_manifest.json",
+        ".manifests/engineering_execution_review_manifest.json",
+        ".manifests/electronics_review_manifest.json",
+    }
+    if rel_path not in manifest_names:
+        return content
+
+    try:
+        manifest = json.loads(content)
+    except Exception:
+        return content
+
+    if not isinstance(manifest, dict) or "revision" not in manifest:
+        return content
+
+    current_revision = repo_revision(root)
+    if not current_revision:
+        return content
+
+    manifest["revision"] = current_revision
+    return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
 
 
 async def seed_eval_workspace(
@@ -88,6 +120,11 @@ async def seed_eval_workspace(
                         bypass_agent_permissions=True,
                     )
                 else:
+                    content = _refresh_seed_review_manifest_revision(
+                        rel_path=rel_path,
+                        content=content,
+                        root=root,
+                    )
                     await worker.write_file(
                         rel_path,
                         content,

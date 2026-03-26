@@ -4,8 +4,8 @@
   "session_id": "seed-bpr-012-gap-bridge-hidden-dof",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_assembly_definition.yaml": "ef4390d5a1f524b9d87bd3ffd50aaa5a8f6262e153be3867b22a09f5992784a3",
-    "benchmark_definition.yaml": "7ad9e13e4af29a5eb35fd09be617e61a322019d3f6253da9be15a259f30dc1e9",
+    "benchmark_assembly_definition.yaml": "c4cae06f05d70dd72ccd763bcb1787f94bd32968c8d8c5d4fbc34b5c054026bf",
+    "benchmark_definition.yaml": "c7fb5adb42e3405184030795b6c07c40fa7b8066df753348899b7ca4567995e9",
     "plan.md": "dad1b127e9141990573effd925541793182fb84e67033cad68aa88438146c8a7",
     "todo.md": "8fe76a5e33f6c3d26f4dcc40c14cedee084349f8032c433e4aea02365e818451"
   }

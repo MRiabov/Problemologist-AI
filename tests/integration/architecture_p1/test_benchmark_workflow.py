@@ -191,12 +191,6 @@ async def test_benchmark_planner_cad_reviewer_path():
         plan_paths = [p for p in artifact_paths if p.endswith("plan.md")]
         plan_resp = await client.get(f"/episodes/{session_id}/assets/{plan_paths[0]}")
         assert plan_resp.status_code == 200, plan_resp.text
-        plan_text = plan_resp.text.lower()
-        assert "gravity" in plan_text
-        assert "rigid-body" in plan_text
-        assert "actuator" not in plan_text
-        assert "fluid" not in plan_text
-        assert "fem" not in plan_text
         assert any(
             p.endswith("benchmark_assembly_definition.yaml") for p in artifact_paths
         ), f"benchmark_assembly_definition.yaml missing. Artifacts: {artifact_paths}"

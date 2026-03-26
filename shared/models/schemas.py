@@ -806,9 +806,9 @@ class DatasetCurationRejectedRow(StrictContractModel):
                 raise ValueError("reasons must normalize to non-empty codes")
             normalized.append(text)
 
-        if len(normalized) != len(set(normalized)):
-            raise ValueError("reasons must not contain duplicates")
-        return normalized
+        # Preserve the first occurrence of each normalized code while collapsing
+        # artifact-specific variants that map to the same machine-readable reason.
+        return list(dict.fromkeys(normalized))
 
 
 class DatasetCurationFamilyCoverage(StrictContractModel):

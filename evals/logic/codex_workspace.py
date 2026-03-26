@@ -462,6 +462,7 @@ def build_codex_env(*, task_id: str, session_id: str | None = None) -> dict[str,
     env.setdefault("SESSION_ID", session_id or f"local-codex-{task_id}-{os.getpid()}")
     env.setdefault("IS_HEAVY_WORKER", "1")
     env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
+    env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))
     return env
 
 
