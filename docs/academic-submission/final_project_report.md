@@ -202,7 +202,21 @@ The system is made with extensibility in mind. Researchers and practitioners can
 
 ## Evaluating the system
 
-While we didn't have enough time to properly tune the model
+We didn't yet manage to evaluate the system as an environment, however our system has already produced results in simulation rendering, and as a baseline to iterate for future work.
+
+The system for evaluating models on low-complexity tasks has already yielded minor improvements in performance, however tasks are largely unsolved yet.
+
+When evaluating the system we will first create a "golden dataset" of relevant mechanical engineering problems, featuring tasks demanding 5-10 parts in simulation - to the best of our knowledge, the previous work has not yet scaled this complexity.
+
+We will first iterate on prompts using GEPA propmpt optimization and skill evaluation, presenting evaluations only later, when the prompts were already near-optimal. We will also present ablation studies on removing Agent Skills.
+We will also present performance charts on solving rigid-body-only benchmarks, then with actuators, fluids, electronics and environments.
+
+## Conclusions and Future Work
+
+We present Problemologist, a scalable, extensible dataset generation engine and a post-training evaluation system for vision-language models to be evaluated on solving mechanical and electronics engineering problems, taking a significant improvemement in providing a quality training signal for training and during evaluation. Our goal was a system scalable and trustworthy enough that frontier research centres start training models on mechanical engineering tasks.
+The system is yet not without shortcomings. For example, due to limitations of readily available simulator supporting heat, and we can not simulate heat transfer yet. Additionally, the electronics is rather basic, however we believe that this can be readily improved on once the system proves on solving rigid-body systems.
+
+The future work should focus on attempting to fine-tune a range of models on solving the system, and generate more useful data in the process.
 
 ## References
 
