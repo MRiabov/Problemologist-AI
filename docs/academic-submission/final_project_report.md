@@ -30,13 +30,18 @@ More specifically, to maximize our contribution to science, our goals are as fol
 
 ## Related Work
 
-The closest prior work to Problemologist-AI falls into three overlapping groups: embodied benchmark generation, CAD or geometry synthesis, and digital-twin or execution-trace evaluation.
+The closest prior work to Problemologist-AI falls into two overlapping groups: CAD or geometry synthesis and optimization of agents using finite element analysis.
 
-EmboCoach-Bench [28] evaluates LLM agents on developing embodied robots in simulated robotics environments, but its tasks are expert-curated and do not jointly enforce cost, materials, or autonomous task synthesis. EnvScaler [29] and EnvGen [30] show that LLMs can generate or adapt tasks in software and game-like environments, but they remain detached from manufacturable hardware design and from physics-based validation of the resulting mechanism.
+*Closed-loop evaluation*: The closest work [27] uses an agent to design mechanical objects with CAD and closed-loop finite element analysis. However, the environment does not take into account weight and cost; and more importantly, it does not simulate dynamic environments. EnvTrace [34] applies evaluation in controlling and industrial automation and digital-twin execution, but it remains narrow in scope and does not provide an end-to-end engineering loop from benchmark synthesis to validated assembly.
+There is a long line of work available for evaluating LLMs on the capability of generating CAD models such as [35], [37], including many that are using finite element analysis [36] in their work to validate designs; however, none of these systems have been applied to production yet [40].
 
-A second line of work focuses on CAD or geometry generation. CAD Automation LLMs [31] and STEP-LLM [32] produce FreeCAD scripts or STEP/B-Rep geometry, but their evaluation is largely limited to syntax or geometric fidelity rather than manufacturability, cost compliance, and functional behavior in simulation. Related reasoning-oriented systems such as Cosmos-Reason1 [33] and EnvTrace [34] broaden the scope of embodied reasoning and digital-twin execution, but they remain narrow in scope and do not provide an end-to-end engineering loop from benchmark synthesis to validated assembly. The closest recent work in this direction is the mechanical-designer agent in [27], which combines CAD generation with closed-loop finite-element analysis, but it still does not model cost, weight, or dynamic simulation.
+*CAD reconstruction*: CAD Automation LLMs [31], STEP-LLM [32], and `cadrille` [39] produce FreeCAD scripts or reconstruct STEP/B-Rep geometry, but their evaluation is largely limited to syntax, geometric fidelity, or representation rather than manufacturability, cost compliance, and functional behavior in simulation.
 
-Problemologist-AI differs from these lines of work by combining adversarial benchmark generation, parametric CAD assembly in `build123d`, and simulation-based validation in Genesis/MuJoCo under explicit cost, material, and multi-physics constraints. This makes the system a closed-loop benchmark-and-solution environment rather than a single-task generator or evaluator.
+*Physics-tuned LLMs*: There are LLM models in particular tuned for physics problems, e.g. Cosmos-Reason [33], which could be an easy model to fine-tune, however, recent work such as `cadrille` does not use these methods.
+
+*Automated evaluation environment generation*: EnvScaler [29] and EnvGen [30] show that LLMs can generate scenarios or tasks in software and game-like environments, but they do not focus on hardware design or physics-based validation of a resulting mechanism. EmboCoach-Bench [28] and similar works synthesize tasks for robots to solve, but they do not make robot geometries.
+
+Problemologist-AI differs from these lines of work by combining adversarial benchmark generation, parametric CAD assembly in `build123d`, and simulation-based validation in Genesis/MuJoCo under explicit cost, material, and multi-physics constraints. This makes the system a closed-loop benchmark-and-solution environment, able to self-improve and drive training of models rather than a single-task generator or evaluator.
 
 ## Methodology
 
@@ -68,9 +73,9 @@ There are a number of ways how CAD models can be generated:
 
 During early studies, we attempted using custom-trained models, in particular reinforcement learning methods e.g. DQN, PPO, or more advanced world models such as Dreamerv3, however it became challenging as models had no interpretability, and complexity in steering. Just as a software engineer would like to steer code generation, we believe engineers want steerability of CAD models using natural language prompting. In addition, lack of general world knowledge combined with lack of datasets to train on make infeasible to explain to the model, what is, for example, a motor without extensive training. As such, we abandoned this path.
 
-Purely 3d-model generating methods [hunyan3d citation required] suffer from being unable to be edited by an engineer, however it should be noted that such methods are successfully used in topology optimization [citation required]. Additionally, runing a 3d-generating model to output meshes perfectly aligned with manufacturing constraints requires a signficant computational expense. It is also not yet clear how to make a diffusion model align an entire assembly which could consist from dozens, or even hundreds of parts together, though this clearly is a venue for a future work.
+Purely 3D-model generating methods [38] suffer from being unable to be edited by an engineer, however it should be noted that such methods are successfully used in topology optimization [11]. Additionally, running a 3D-generating model to output meshes perfectly aligned with manufacturing constraints requires a significant computational expense. It is also not yet clear how to make a diffusion model align an entire assembly which could consist of dozens or even hundreds of parts together, though this clearly is a venue for future work.
 
-A relevant work [https://arxiv.org/pdf/2505.22914] fine-tunes a small model to produce a quality CAD models from only having a small number of images, in spirit similar to advancements in 3d model generation, where a 3d model is generated from a set of images [hunyan3d citation], however, we are constrained by a model that would produce CAD images accurately and aligned to other models, as such we also can't yet employ it. We do believe it could be possible to fine-tune a 2d-generating model to produce relatively accurate models in the future with having enough data.
+A relevant work [39] fine-tunes a small model to produce quality CAD models from only having a small number of images, in spirit similar to advancements in 3D model generation, where a 3D model is generated from a set of images [38]; however, we are constrained by a model that would produce CAD images accurately and aligned to other models, so we also cannot yet employ it. We do believe it could be possible to fine-tune a 2D-generating model to produce relatively accurate models in the future with enough data.
 
 We choose Large Vision-Language models because they excel at reasoning and agentic, self-corrective behavior, having a significant general knowledge of physics, being relatively easy to operate and tune using prompt optimization methods, we choose VLMs to operate the system.
 
@@ -162,7 +167,7 @@ We store over 60 different event types into our database - events primarily tied
 
 A recent discovery on using GEPA (Genetic-Pareto) proves interesting - when the prompt itself is treated as "model weights", we can effectively "train" a model to solve a task without expensive fine-tuning, or even access to model weights. This is further significantly cheaper and grants us access to using closed-source models, which are state-of-the-art, at a minimal expense.
 
-As such, we don't train a model, we optimize the prompts and skills around it. It should be noted that a set of previous work has [focused on fine-tuning models on CAD data](https://sadilkhan.github.io/text2cad-project/) [cadrille citation], however we avoid it as it is again, more expensive, more complex in setup, and because prompt and skill optimization is again, equally effective [26].
+As such, we don't train a model, we optimize the prompts and skills around it. It should be noted that a set of previous work has focused on fine-tuning models on CAD data [39], however we avoid it as it is again, more expensive, more complex in setup, and because prompt and skill optimization is again, equally effective [26].
 
 #### Prompt tuning
 
@@ -225,7 +230,7 @@ While we didn't have enough time to properly tune the model
 
 [12] J. Nocedal and S. Wright, *Numerical Optimization*, 2nd ed. New York, NY, USA: Springer, 2006.
 
-[13] A. Bubeck *et al*., “Sparks of artificial general intelligence: Early experiments with GPT-4,” 2023.
+[13] A. Bubeck *et al*., “Sparks of artificial general intelligence: Early experiments with GPT-4,” *arXiv preprint arXiv:2303.12712*, 2023.
 
 [14] S. Khan *et al*., “Text-to-CAD generation through deep learning: A survey,” 2023. [Online]. Available: https://sadilkhan.github.io/text2cad-project/
 
@@ -268,3 +273,15 @@ While we didn't have enough time to properly tune the model
 [33] NVIDIA, “Cosmos-Reason1: From Physical Common Sense To Embodied Reasoning,” *arXiv preprint arXiv:2503.15558*, 2025.
 
 [34] N. van der Vleuten *et al*., “EnvTrace: Simulation-Based Semantic Evaluation of LLM Code via Execution Trace Alignment -- Demonstrated at Synchrotron Beamlines,” *arXiv preprint arXiv:2511.09964*, 2025.
+
+[35] S. Wang et al., "CAD-GPT: Synthesising CAD construction sequence with spatial reasoning-enhanced multimodal LLMs," in *Proc. AAAI Conf. Artificial Intelligence*, vol. 39, no. 8, 2025.
+
+[36] B. T. Jones et al., "A Solver-Aided Hierarchical Language for LLM-Driven CAD Design," *Computer Graphics Forum*, vol. 44, no. 7, 2025.
+
+[37] J. Li et al., "CAD-Llama: Leveraging large language models for computer-aided design parametric 3D model generation," in *Proc. IEEE/CVF Conf. Computer Vision and Pattern Recognition (CVPR)*, 2025.
+
+[38] Team Hunyuan3D, "Hunyuan3D 1.0: A Unified Framework for Text-to-3D and Image-to-3D Generation," arXiv preprint arXiv:2411.02293, 2024.
+
+[39] M. Kolodiazhnyi et al., "cadrille: Multi-modal CAD Reconstruction with Reinforcement Learning," arXiv preprint arXiv:2505.22914, 2025.
+
+[40] L. Zhang, B. Le, N. Akhtar, S.-K. Lam, and D. Ngo, "Large language models for computer-aided design: A survey," *ACM Comput. Surv.*, vol. 58, no. 9, 2026, doi:10.1145/3787499.
