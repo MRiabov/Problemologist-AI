@@ -19,6 +19,7 @@ Additionally:
 3. Include both happy-path and required fail-path assertions (especially gating/validation/refusal/event emission).
 4. Do not silently drop existing integration coverage; replacements must preserve or improve mapped coverage.
 5. Mark unimplemented IDs explicitly as deferred (P1/P2) instead of omitting them.
+6. `INT-NEG-###` is reserved for explicitly negative integration tests. The reserved negative tables under the P0/P1/P2 sections below will be populated later starting at `INT-NEG-001`; do not migrate rows yet. As a working convention, expected-failure cases should mostly live there while `INT-xxx` stays happy-path oriented.
 
 ## Non-negotiable Integration Execution Contract (applies to every `INT-xxx` and `INT-NEG-###`)
 
@@ -33,7 +34,7 @@ Additionally:
 09. Every `build123d` script used in tests must ensure every part has a `.metadata` attribute initialized with a `PartMetadata` or `CompoundMetadata` instance (imported from `shared.models.schemas`), following strict typing rules.
 10. Every JSON, YAML, XML is converted to models e.g. Pydantic models and only then assertions are happening against them (for test maintainability and explainability). If there is no model for a JSON or similar schema, add it.
 11. Tests must utilize state-based polling (e.g., waiting for specific API responses, DB states, or UI elements) rather than hardcoded sleeps or generic timeouts. This ensures tests are deterministic and fail-fast.
-12. Each `INT-xxx` or `INT-NEG-###` ID must map to **exactly one** test function. Creating multiple test functions for the same ID is forbidden. If a single ID requires multiple sub-assertions, they must be consolidated into one test.
+12. Each `INT-xxx` or `INT-NEG-###` ID must map to **exactly one** test function. The canonical ID must be declared once for that function via a dedicated `@pytest.mark.int_id(...)` marker, and the runtime `session_id` must be derived from that declared ID. Creating multiple test functions or multiple canonical declarations for the same ID is forbidden. If a single ID requires multiple sub-assertions, they must be consolidated into one test.
 
 *Exception to the importing rules*: you can import python models and enums to use appropriate schema to avoid using pure json which will need to be manually updated later.
 Commonly, these models and enums would be in `shared/` folder.
@@ -248,6 +249,11 @@ Priorities:
 | INT-127 | Legacy implicit-power compatibility | Episodes without `electronics` section implicitly set `is_powered = 1.0` for all motors; existing benchmarks pass unchanged. |
 | INT-128 | `benchmark_definition.yaml` electronics schema gate | `electronics_requirements` section validates `power_supply_available`, `wiring_constraints`, and `circuit_validation_required` fields; malformed entries rejected. |
 
+### P0 negative integration tests (`INT-NEG-###`)
+
+| ID | Test | Required assertions |
+| -- | -- | -- |
+
 ### P1: Full architecture workflow coverage
 
 | ID | Test | Required assertions |
@@ -289,6 +295,11 @@ Priorities:
 | INT-140 | Wire and electrical component costing | `validate_and_price()` includes wire cost (per-meter × length) and COTS electrical component costs in total. |
 | INT-141 | Circuit transient simulation | `simulate_circuit_transient()` produces motor ON/OFF states over time; results match expected switching sequence from netlist. |
 
+### P1 negative integration tests (`INT-NEG-###`)
+
+| ID | Test | Required assertions |
+| -- | -- | -- |
+
 ### P2: Multi-episode and evaluation architecture tests
 
 | ID | Test | Required assertions |
@@ -307,12 +318,10 @@ Priorities:
 | INT-155 | Wire routing survival under jitter | Wire routing survives runtime jitter (no tears across 5 seeds) in 70% of successful solutions. |
 | INT-156 | Circuit-gates-motor correctness | Circuit state correctly gates motor behaviour in 95% of simulations — motors don't spin without power. |
 
-### Negative integration tests (`INT-NEG-###`)
+### P2 negative integration tests (`INT-NEG-###`)
 
-- `INT-NEG-###` is reserved for explicitly negative integration tests whose correct outcome is rejection, denial, or another fail-closed result.
-- These tests still run against the real compose stack and HTTP boundaries, and they follow the same observable-boundary rules as positive integration tests.
-- Keep negative coverage in this namespace so the positive `INT-xxx` lists stay focused on success-oriented architecture coverage.
-- When a negative test uses `MockDSPyLM`, its scenario file must use the matching `INT-NEG-###.yaml` name and remain one-to-one with that test.
+| ID | Test | Required assertions |
+| -- | -- | -- |
 
 ### Agent category: orchestration/trace contract (overlay suite)
 
@@ -554,6 +563,7 @@ This section exists to force implementation as true integration tests, not unit 
 
 Marker recommendation:
 
+- `@pytest.mark.int_id("INT-034")` or `@pytest.mark.int_id("INT-NEG-001")`
 - `@pytest.mark.integration_p0`
 - `@pytest.mark.integration_p1`
 - `@pytest.mark.integration_p2`
@@ -572,4 +582,4 @@ CI gates recommendation:
 
 - This spec intentionally treats architecture statements as test requirements, including expected fail paths.
 - Existing unit tests for observability/workbench/COTS are useful, but they do not replace integration-level verification across controller-worker-db-storage boundaries.
-- If an implementation PR adds or changes integration tests, it should include the mapped `INT-xxx` or `INT-NEG-###` IDs in test names or docstrings.
+- If an implementation PR adds or changes integration tests, it should include the mapped `INT-xxx` or `INT-NEG-###` ID in the canonical `@pytest.mark.int_id(...)` marker.
