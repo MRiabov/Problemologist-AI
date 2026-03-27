@@ -43,6 +43,9 @@ from tests.integration.agent.helpers import (
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
+REPO_MANUFACTURING_CONFIG = Path(
+    "worker_heavy/workbenches/manufacturing_config.yaml"
+).read_text(encoding="utf-8")
 
 
 async def _poll_engineer_episode(
@@ -225,6 +228,11 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_assembly_ca
                 (artifact_dir / rel_path).read_bytes(),
                 bypass_agent_permissions=True,
             )
+        await worker.upload_file(
+            "manufacturing_config.yaml",
+            REPO_MANUFACTURING_CONFIG.encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
 
         await worker.upload_file(
             "benchmark_assembly_definition.yaml",

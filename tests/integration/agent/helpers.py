@@ -107,8 +107,6 @@ def _benchmark_assembly_definition_content(
     assembly = AssemblyDefinition(
         version="1.0",
         constraints=AssemblyConstraints(
-            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
-            benchmark_max_weight_g=benchmark_max_weight_g,
             planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
             planner_target_max_weight_g=planner_target_max_weight_g,
         ),
@@ -122,7 +120,7 @@ def _benchmark_assembly_definition_content(
         ),
     )
     return yaml.safe_dump(
-        assembly.model_dump(mode="json", by_alias=True),
+        assembly.model_dump(mode="json", by_alias=True, exclude_none=True),
         sort_keys=False,
     )
 
@@ -254,8 +252,8 @@ async def seed_execution_reviewer_handover(
     assembly_definition_seed = (
         "version: 1.0\n"
         "constraints:\n"
-        "  benchmark_max_unit_cost_usd: 200.0\n"
-        "  benchmark_max_weight_g: 1000.0\n"
+        "  planner_target_max_unit_cost_usd: 200.0\n"
+        "  planner_target_max_weight_g: 1000.0\n"
     )
 
     validation_record = ValidationResultRecord(

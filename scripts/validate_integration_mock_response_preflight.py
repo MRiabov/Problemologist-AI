@@ -107,8 +107,6 @@ def _benchmark_assembly_definition_content(
     assembly = AssemblyDefinition(
         version="1.0",
         constraints=AssemblyConstraints(
-            benchmark_max_unit_cost_usd=benchmark_max_unit_cost_usd,
-            benchmark_max_weight_g=benchmark_max_weight_g,
             planner_target_max_unit_cost_usd=planner_target_max_unit_cost_usd,
             planner_target_max_weight_g=planner_target_max_weight_g,
         ),
@@ -122,7 +120,7 @@ def _benchmark_assembly_definition_content(
         ),
     )
     return yaml.safe_dump(
-        assembly.model_dump(mode="json", by_alias=True),
+        assembly.model_dump(mode="json", by_alias=True, exclude_none=True),
         sort_keys=False,
     )
 
