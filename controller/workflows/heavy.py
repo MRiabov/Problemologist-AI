@@ -10,6 +10,7 @@ from shared.workers.schema import (
     HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
+    HeavyVerifyParams,
 )
 
 
@@ -36,6 +37,19 @@ class HeavyValidationWorkflow:
             "worker_validate_design",
             params,
             start_to_close_timeout=timedelta(minutes=5),
+            task_queue="heavy-tasks-queue",
+        )
+
+
+@workflow.defn
+class HeavyVerifyWorkflow:
+    @workflow.run
+    async def run(self, params: HeavyVerifyParams) -> BenchmarkToolResponse:
+        """Run runtime-randomization verification on a heavy worker."""
+        return await workflow.execute_activity(
+            "worker_verify_design",
+            params,
+            start_to_close_timeout=timedelta(minutes=10),
             task_queue="heavy-tasks-queue",
         )
 

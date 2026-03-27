@@ -26,6 +26,7 @@ from controller.workflows.heavy import (
     HeavySimulationWorkflow,
     HeavySubmitWorkflow,
     HeavyValidationWorkflow,
+    HeavyVerifyWorkflow,
 )
 from shared.agents.config import resolve_agents_config_path
 from shared.enums import AgentName, ManufacturingMethod
@@ -62,6 +63,7 @@ from shared.workers.schema import (
     HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
+    HeavyVerifyParams,
     InspectTopologyResponse,
     MediaInspectionResult,
     PreviewDesignResponse,
@@ -121,6 +123,20 @@ class RemoteFilesystemMiddleware:
         self.agent_role = agent_role
         self.episode_id = episode_id or client.session_id
         self.policy = get_fs_policy()
+
+    def _require_temporal_for_heavy_operation(self, operation: str) -> None:
+        if self.temporal_client is None:
+            error = ValueError(
+                f"deprecated functionality removed: direct {operation} fallback without Temporal"
+            )
+            logger.error(
+                "temporal_required_for_heavy_operation",
+                operation=operation,
+                session_id=self.client.session_id,
+                episode_id=self.episode_id,
+                error=str(error),
+            )
+            raise error
 
     def _check_perm(self, action: Literal["read", "write"], path: str | Path) -> None:
         """Check if action is allowed by policy."""
@@ -686,26 +702,25 @@ class RemoteFilesystemMiddleware:
             events=[SimulationRequestEvent(script_path=p_str)],
         )
 
-        if self.temporal_client:
-            # Bundle from light worker
-            bundle = await self.client.bundle_session()
-            workflow_id = _bundle_workflow_id("sim", self.client.session_id, bundle)
-            res = await self._execute_or_use_existing_workflow(
-                HeavySimulationWorkflow.run,
-                workflow_id,
-                HeavySimulationParams(
-                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                    script_path=p_str,
-                    backend=resolved_backend,
-                    smoke_test_mode=smoke_test_mode,
-                    session_id=self.client.session_id,
-                ),
-                result_type=BenchmarkToolResponse,
-            )
-            await record_simulation_result(self.episode_id, res)
-            return res
+        self._require_temporal_for_heavy_operation("simulate")
 
-        return await self.client.simulate(p_str, backend=resolved_backend)
+        # Bundle from light worker
+        bundle = await self.client.bundle_session()
+        workflow_id = _bundle_workflow_id("sim", self.client.session_id, bundle)
+        res = await self._execute_or_use_existing_workflow(
+            HeavySimulationWorkflow.run,
+            workflow_id,
+            HeavySimulationParams(
+                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
+                script_path=p_str,
+                backend=resolved_backend,
+                smoke_test_mode=smoke_test_mode,
+                session_id=self.client.session_id,
+            ),
+            result_type=BenchmarkToolResponse,
+        )
+        await record_simulation_result(self.episode_id, res)
+        return res
 
     async def preview(
         self,
@@ -716,29 +731,28 @@ class RemoteFilesystemMiddleware:
         """Trigger design preview via worker client (with bundling)."""
         p_str = str(script_path)
 
-        if self.temporal_client:
-            bundle = await self.client.bundle_session()
-            workflow_id = f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
-            res: HeavyPreviewResponse = await self._execute_or_use_existing_workflow(
-                HeavyPreviewWorkflow.run,
-                workflow_id,
-                HeavyPreviewParams(
-                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                    script_path=p_str,
-                    pitch=pitch,
-                    yaw=yaw,
-                ),
-                result_type=HeavyPreviewResponse,
-            )
-            return PreviewDesignResponse(
-                success=res.success,
-                message="Preview generated via Temporal"
-                if res.success
-                else "Preview failed",
-                image_path=res.filename,
-            )
+        self._require_temporal_for_heavy_operation("preview")
 
-        return await self.client.preview(p_str, pitch=pitch, yaw=yaw)
+        bundle = await self.client.bundle_session()
+        workflow_id = f"prev-{self.client.session_id}-{abs(hash(p_str)) % 10**8}"
+        res: HeavyPreviewResponse = await self._execute_or_use_existing_workflow(
+            HeavyPreviewWorkflow.run,
+            workflow_id,
+            HeavyPreviewParams(
+                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
+                script_path=p_str,
+                pitch=pitch,
+                yaw=yaw,
+            ),
+            result_type=HeavyPreviewResponse,
+        )
+        return PreviewDesignResponse(
+            success=res.success,
+            message="Preview generated via Temporal"
+            if res.success
+            else "Preview failed",
+            image_path=res.filename,
+        )
 
     async def validate(
         self, script_path: str | Path
@@ -746,21 +760,20 @@ class RemoteFilesystemMiddleware:
         """Trigger geometric validation via worker client (with bundling)."""
         p_str = str(script_path)
 
-        if self.temporal_client:
-            bundle = await self.client.bundle_session()
-            workflow_id = _bundle_workflow_id("val", self.client.session_id, bundle)
-            res = await self._execute_or_use_existing_workflow(
-                HeavyValidationWorkflow.run,
-                workflow_id,
-                HeavyValidationParams(
-                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                    script_path=p_str,
-                    session_id=self.client.session_id,
-                ),
-                result_type=HeavyValidationResponse,
-            )
-        else:
-            res = await self.client.validate(p_str)
+        self._require_temporal_for_heavy_operation("validate")
+
+        bundle = await self.client.bundle_session()
+        workflow_id = _bundle_workflow_id("val", self.client.session_id, bundle)
+        res = await self._execute_or_use_existing_workflow(
+            HeavyValidationWorkflow.run,
+            workflow_id,
+            HeavyValidationParams(
+                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
+                script_path=p_str,
+                session_id=self.client.session_id,
+            ),
+            result_type=HeavyValidationResponse,
+        )
 
         await record_events(
             episode_id=self.episode_id,
@@ -792,14 +805,25 @@ class RemoteFilesystemMiddleware:
         """Trigger runtime-randomization verification via worker client."""
         if smoke_test_mode is None:
             smoke_test_mode = worker_settings.smoke_test_mode
-        return await self.client.verify(
-            str(script_path),
-            backend=backend,
-            smoke_test_mode=smoke_test_mode,
-            jitter_range=jitter_range,
-            num_scenes=num_scenes,
-            duration=duration,
-            seed=seed,
+        self._require_temporal_for_heavy_operation("verify")
+
+        bundle = await self.client.bundle_session()
+        workflow_id = _bundle_workflow_id("ver", self.client.session_id, bundle)
+        return await self._execute_or_use_existing_workflow(
+            HeavyVerifyWorkflow.run,
+            workflow_id,
+            HeavyVerifyParams(
+                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
+                script_path=str(script_path),
+                backend=backend or get_default_simulator_backend(),
+                smoke_test_mode=smoke_test_mode,
+                jitter_range=jitter_range or (0.002, 0.002, 0.001),
+                num_scenes=num_scenes or 5,
+                duration=duration or 10.0,
+                seed=seed if seed is not None else 42,
+                session_id=self.client.session_id,
+            ),
+            result_type=BenchmarkToolResponse,
         )
 
     async def submit(
@@ -820,22 +844,21 @@ class RemoteFilesystemMiddleware:
             }
             effective_stage = role_to_stage.get(self.agent_role)
 
-        if self.temporal_client:
-            bundle = await self.client.bundle_session()
-            workflow_id = _bundle_workflow_id("sub", self.client.session_id, bundle)
-            res = await self._execute_or_use_existing_workflow(
-                HeavySubmitWorkflow.run,
-                workflow_id,
-                HeavySubmitParams(
-                    bundle_base64=base64.b64encode(bundle).decode("utf-8"),
-                    script_path=p_str,
-                    reviewer_stage=effective_stage or "engineering_execution_reviewer",
-                    session_id=self.client.session_id,
-                    episode_id=self.episode_id,
-                ),
-            )
-        else:
-            res = await self.client.submit(p_str, reviewer_stage=effective_stage)
+        self._require_temporal_for_heavy_operation("submit")
+
+        bundle = await self.client.bundle_session()
+        workflow_id = _bundle_workflow_id("sub", self.client.session_id, bundle)
+        res = await self._execute_or_use_existing_workflow(
+            HeavySubmitWorkflow.run,
+            workflow_id,
+            HeavySubmitParams(
+                bundle_base64=base64.b64encode(bundle).decode("utf-8"),
+                script_path=p_str,
+                reviewer_stage=effective_stage or "engineering_execution_reviewer",
+                session_id=self.client.session_id,
+                episode_id=self.episode_id,
+            ),
+        )
 
         benchmark_roles = {
             AgentName.BENCHMARK_PLANNER,

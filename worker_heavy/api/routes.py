@@ -34,7 +34,6 @@ from shared.workers.schema import (
     PreviewDesignResponse,
     RenderArtifactMetadata,
     SimulationArtifacts,
-    ValidationResultRecord,
     VerificationRequest,
 )
 from shared.workers.workbench_models import WorkbenchResult
@@ -44,12 +43,12 @@ from worker_heavy.runtime.simulation_runner import (
     run_validation_in_isolated_process,
 )
 from worker_heavy.simulation.factory import close_all_session_backends
-from worker_heavy.simulation.verification import verify_with_jitter
 from worker_heavy.utils import submit_for_review
 from worker_heavy.utils.file_validation import validate_benchmark_definition_yaml
 from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.topology import analyze_component
+from worker_heavy.utils.verification import run_verification_job
 
 logger = structlog.get_logger(__name__)
 heavy_router = APIRouter()
@@ -232,137 +231,14 @@ async def api_verify(
 ):
     """Run batched runtime-randomization verification."""
     try:
-        from shared.simulation.schemas import SimulatorBackendType
-        from worker_heavy.simulation.factory import get_simulation_builder
-
-        backend_type = request.backend
-        if isinstance(backend_type, str):
-            backend_type = SimulatorBackendType(backend_type)
-
-        num_scenes = request.num_scenes
-        duration = request.duration
-        if request.smoke_test_mode:
-            # Smoke verification should stay lightweight when callers omit the
-            # tuning knobs. Keep explicit overrides intact for focused tests.
-            num_scenes = num_scenes or 1
-            duration = duration or 1.0
-
         async with heavy_operation_admission("verify", x_session_id):
             with bundle_context(
                 request.bundle_base64, fs_router.local_backend.root
             ) as root:
-                # 1. Load and build the scene
-                objectives = None
-                objectives_path = root / "benchmark_definition.yaml"
-                if objectives_path.exists():
-                    try:
-                        raw = objectives_path.read_text(encoding="utf-8")
-                        if "[TEMPLATE]" not in raw:
-                            is_valid, objectives_or_errors = (
-                                validate_benchmark_definition_yaml(
-                                    raw,
-                                    session_id=x_session_id,
-                                )
-                            )
-                            if is_valid:
-                                objectives = objectives_or_errors
-                            else:
-                                raise ValueError("; ".join(objectives_or_errors))
-                    except Exception as e:
-                        logger.warning(
-                            "verify_objectives_load_failed",
-                            error=str(e),
-                            session_id=x_session_id,
-                        )
-
-                component = load_component_from_script(
-                    script_path=root / request.script_path
-                    if request.bundle_base64
-                    else fs_router.local_backend._resolve(request.script_path),
-                    session_root=root,
-                    script_content=request.script_content,
-                )
-
-                builder = get_simulation_builder(root, backend_type=backend_type)
-                scene_path = await asyncio.to_thread(
-                    builder.build_from_assembly,
-                    component,
-                    objectives,
-                    smoke_test_mode=request.smoke_test_mode,
-                )
-
-                # 2. Run verification
-                result = await asyncio.to_thread(
-                    verify_with_jitter,
-                    xml_path=str(scene_path),
-                    control_inputs={},  # Static inputs for now
-                    jitter_range=request.jitter_range,
-                    num_scenes=num_scenes or 5,
-                    duration=duration or 10.0,
-                    seed=request.seed,
-                    smoke_test_mode=request.smoke_test_mode,
-                    backend_type=backend_type.value,
-                    session_id=x_session_id,
-                    explicit_target_body_name=(
-                        objectives.moved_object.label if objectives else None
-                    ),
-                )
-
-                events = _collect_events(fs_router, root=root, session_id=x_session_id)
-
-                validation_result_path = root / "validation_results.json"
-                if not validation_result_path.exists():
-                    raise HTTPException(
-                        status_code=422,
-                        detail=(
-                            "validation_results.json missing; run /benchmark/validate "
-                            "before requesting runtime verification."
-                        ),
-                    )
-                try:
-                    validation_record = ValidationResultRecord.model_validate_json(
-                        validation_result_path.read_text(encoding="utf-8")
-                    )
-                except Exception as exc:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=f"validation_results.json invalid: {exc}",
-                    ) from exc
-
-                record_validation_result(
+                return await run_verification_job(
                     root,
-                    validation_record.success,
-                    validation_record.message,
-                    script_path=validation_record.script_path or request.script_path,
+                    request,
                     session_id=x_session_id,
-                    verification_result=result,
-                )
-
-                validation_result_json = validation_result_path.read_text(
-                    encoding="utf-8"
-                )
-
-                # If consistent failure, we can return failure artifacts
-                fail_obj = None
-                if result.success_rate < 0.7 and result.fail_reasons:
-                    fail_obj = SimulationFailure(
-                        reason=FailureReason.VALIDATION_FAILED,
-                        detail="; ".join(result.fail_reasons),
-                    )
-
-                artifacts = SimulationArtifacts(
-                    verification_result=result,
-                    validation_results_json=validation_result_json,
-                    scene_path=str(scene_path.relative_to(root)),
-                    failure=fail_obj,
-                )
-
-                return BenchmarkToolResponse(
-                    success=result.success_rate >= 0.7,
-                    message=f"Verification complete. Success rate: {result.success_rate:.2f} ({result.success_count}/{result.num_scenes})",
-                    confidence="high" if result.num_scenes >= 5 else "medium",
-                    artifacts=artifacts,
-                    events=events,
                 )
 
     except HTTPException:

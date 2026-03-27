@@ -17,6 +17,7 @@ from shared.workers.schema import (
     HeavySubmitParams,
     HeavyValidationParams,
     HeavyValidationResponse,
+    HeavyVerifyParams,
     RenderArtifactMetadata,
     SimulationArtifacts,
 )
@@ -25,6 +26,7 @@ from worker_heavy.utils.handover import submit_for_review
 from worker_heavy.utils.preview import preview_design
 from worker_heavy.utils.rendering import build_render_manifest
 from worker_heavy.utils.validation import validate
+from worker_heavy.utils.verification import run_verification_job
 
 logger = structlog.get_logger(__name__)
 
@@ -247,6 +249,20 @@ async def validate_design_activity(
         )
 
         return HeavyValidationResponse(success=is_valid, message=message)
+
+
+@activity.defn(name="worker_verify_design")
+async def verify_design_activity(
+    params: HeavyVerifyParams,
+) -> BenchmarkToolResponse:
+    """Execute runtime-randomization verification from a session bundle."""
+    bundle_bytes = _decode_bundle(params.bundle_base64)
+    session_id = params.session_id
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        _extract_bundle(bundle_bytes, root)
+        return await run_verification_job(root, params, session_id=session_id)
 
 
 @activity.defn(name="worker_preview_design")

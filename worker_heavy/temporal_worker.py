@@ -11,6 +11,7 @@ from worker_heavy.activities.heavy_tasks import (
     run_simulation_activity,
     submit_for_review_activity,
     validate_design_activity,
+    verify_design_activity,
 )
 
 configure_logging("worker-heavy-temporal")
@@ -50,6 +51,7 @@ async def main() -> None:
         activities=[
             run_simulation_activity,
             validate_design_activity,
+            verify_design_activity,
             preview_design_activity,
             submit_for_review_activity,
         ],

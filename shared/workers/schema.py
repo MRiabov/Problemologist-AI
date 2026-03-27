@@ -555,6 +555,12 @@ class HeavyValidationParams(BaseModel):
     smoke_test_mode: bool | None = None
 
 
+class HeavyVerifyParams(VerificationRequest):
+    """Parameters for worker_verify_design activity."""
+
+    session_id: str
+
+
 class HeavyPreviewParams(BaseModel):
     """Parameters for worker_preview_design activity."""
 
