@@ -2,6 +2,10 @@ import contextlib
 import threading
 from typing import Any
 
+from worker_heavy.simulation._mujoco_env import ensure_headless_mujoco
+
+ensure_headless_mujoco()
+
 import mujoco
 import numpy as np
 

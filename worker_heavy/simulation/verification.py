@@ -10,6 +10,10 @@ Implements the architecture contract:
 from dataclasses import dataclass
 from typing import Any
 
+from worker_heavy.simulation._mujoco_env import ensure_headless_mujoco
+
+ensure_headless_mujoco()
+
 import numpy as np
 import structlog
 
