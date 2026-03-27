@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-003-timed-gate-chute",
-  "revision": "a213d97bf670fdc554765226d105784423b949d8",
+  "revision": "7595e5cf3a2bfde1d9f94363288e8cd94a33d8ea",
   "script_path": "script.py",
   "script_sha256": "3c8823729bff20e733548aa5912d6da017e76bab5e45ac0810a6235be66b9c9b",
   "validation_success": true,
