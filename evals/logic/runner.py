@@ -112,6 +112,9 @@ EVAL_RUNNER_BACKEND_ENV = "EVAL_RUNNER_BACKEND"
 READABLE_AGENT_LOG_FILE: Path | None = None
 _READABLE_AGENT_LOG_LOCK = Lock()
 SESSION_LOG_ROOT: Path | None = None
+DEFAULT_EVAL_AGENT = AgentName.BENCHMARK_PLANNER.value
+DEFAULT_EVAL_LIMIT = 1
+DEFAULT_EVAL_CONCURRENCY = 1
 
 _EVAL_KEY_RE = re.compile(r"([a-z]{1,12}-\d{3})", re.IGNORECASE)
 _ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
@@ -2770,19 +2773,23 @@ async def run_single_eval(
         )
 
 
-async def main():
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Agent Evals")
-
-    available_agents = list(AGENT_SPECS.keys())
 
     parser.add_argument(
         "--agent",
         type=str,
-        default="all",
-        help="Agent to evaluate",
+        default=DEFAULT_EVAL_AGENT,
+        help=(f"Agent to evaluate (default: {DEFAULT_EVAL_AGENT} smoke-test run)"),
     )
     parser.add_argument(
-        "--limit", type=int, default=0, help="Limit number of eval items per agent"
+        "--limit",
+        type=int,
+        default=DEFAULT_EVAL_LIMIT,
+        help=(
+            "Limit number of eval items per agent "
+            f"(default: {DEFAULT_EVAL_LIMIT} smoke-test item)"
+        ),
     )
     parser.add_argument(
         "--random",
@@ -2826,10 +2833,10 @@ async def main():
     parser.add_argument(
         "--concurrency",
         type=int,
-        default=5,
+        default=DEFAULT_EVAL_CONCURRENCY,
         help=(
             "Max number of eval tasks to run concurrently "
-            "(default: 5 for parallel performance)"
+            f"(default: {DEFAULT_EVAL_CONCURRENCY} for smoke-test runs)"
         ),
     )
     parser.add_argument(
@@ -2876,6 +2883,11 @@ async def main():
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Console log level; detailed logs are written to files (default: ERROR)",
     )
+    return parser
+
+
+async def main():
+    parser = _build_parser()
     args = parser.parse_args()
     selected_task_ids = _parse_task_id_filters(args.task_id)
 
@@ -3065,6 +3077,7 @@ async def main():
     # Rate limiter setup (50 RPM)
     rate = Rate(50, Duration.MINUTE)
     limiter = Limiter(rate)
+    available_agents = list(AGENT_SPECS.keys())
 
     requested_agent = args.agent
     if requested_agent != "all":

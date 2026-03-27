@@ -603,6 +603,31 @@ def run_pytest_subprocess(
     has_explicit_maxfail = any(
         arg == "--maxfail" or arg.startswith("--maxfail=") for arg in pytest_args
     )
+    has_explicit_xdist = any(
+        arg == "-n"
+        or arg.startswith("-n")
+        or arg == "--dist"
+        or arg.startswith("--dist=")
+        or arg == "--numprocesses"
+        or arg.startswith("--numprocesses=")
+        for arg in pytest_args
+    )
+    has_frontend_selection = any(
+        "integration_frontend" in arg
+        or "tests/integration/frontend" in arg
+        or "tests/e2e" in arg
+        for arg in pytest_args
+    )
+    xdist_workers = os.environ.get("INTEGRATION_XDIST_WORKERS", "4").strip()
+    xdist_dist = (
+        os.environ.get("INTEGRATION_XDIST_DIST", "loadgroup").strip() or "loadgroup"
+    )
+    enable_xdist = (
+        not has_explicit_xdist
+        and not has_frontend_selection
+        and xdist_workers
+        and xdist_workers not in {"0", "0.0", "false", "False", "none", "None"}
+    )
     cmd = [
         "uv",
         "run",
@@ -617,6 +642,8 @@ def run_pytest_subprocess(
         cmd.append("--maxfail=3")
     if reverse:
         cmd.append("--reverse")
+    if enable_xdist:
+        cmd.extend(["-n", xdist_workers, "--dist", xdist_dist])
     cmd.extend(pytest_args)
     cmd.append(f"--junitxml={junit_xml}")
 

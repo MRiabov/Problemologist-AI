@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -59,9 +60,41 @@ def test_run_evals_help_exposes_codex_backend():
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert "--runner-backend" in completed.stdout
-    assert "--call-paid-api" in completed.stdout
-    assert "codex" in completed.stdout
+    normalized_stdout = " ".join(completed.stdout.split())
+    assert "--runner-backend" in normalized_stdout
+    assert "--call-paid-api" in normalized_stdout
+    assert re.search(
+        r"default:\s*benchmark_planner\s*smoke-\s*test\s*run", completed.stdout
+    )
+    assert re.search(r"default:\s*1\s*smoke-\s*test\s*item", completed.stdout)
+    assert re.search(r"default:\s*1\s*for\s*smoke-\s*test\s*runs", completed.stdout)
+    assert "codex" in normalized_stdout
+
+
+@pytest.mark.integration_p0
+def test_run_evals_codex_exec_help_exposes_workspace_write_sandbox():
+    completed = subprocess.run(
+        ["codex", "exec", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "workspace-write" in completed.stdout
+    assert "--sandbox" in completed.stdout
+
+
+@pytest.mark.integration_p0
+def test_run_evals_defaults_are_smoke_test_contract():
+    from evals.logic.runner import _build_parser
+
+    args = _build_parser().parse_args([])
+
+    assert args.agent == "benchmark_planner"
+    assert args.limit == 1
+    assert args.concurrency == 1
 
 
 @pytest.mark.integration_p0

@@ -483,21 +483,18 @@ def launch_codex_exec(
     yolo: bool = True,
 ) -> int:
     """Launch `codex exec` in a workspace and stream output to the terminal."""
-
-    if shutil.which("codex") is None:
-        raise FileNotFoundError("codex CLI was not found on PATH")
-
     cmd = [
         "codex",
         "exec",
+        "--sandbox",
+        "workspace-write",
         "-c",
         "shell_environment_policy.inherit=all",
         "--cd",
         str(workspace_dir),
         "--skip-git-repo-check",
+        "-",
     ]
-    cmd.append("--yolo" if yolo else "--full-auto")
-    cmd.append("-")
     print("launching: " + " ".join(cmd))
     completed = subprocess.run(
         cmd,
@@ -518,23 +515,19 @@ def open_codex_ui(
     yolo: bool = True,
 ) -> int:
     """Open the interactive Codex UI with a workspace prompt."""
-
-    if shutil.which("codex") is None:
-        raise FileNotFoundError("codex CLI was not found on PATH")
-
     if not (workspace_dir / ".git").exists():
         subprocess.run(["git", "init", "-q", str(workspace_dir)], check=False)
-
     cmd = [
         "codex",
-        "--cd",
-        str(workspace_dir),
+        "--sandbox",
+        "workspace-write",
         "-c",
         "shell_environment_policy.inherit=all",
+        "--cd",
+        str(workspace_dir),
         "--no-alt-screen",
+        prompt_text,
     ]
-    cmd.insert(1, "--yolo" if yolo else "--full-auto")
-    cmd.append(prompt_text)
     print("launching: " + " ".join(cmd))
     completed = subprocess.run(
         cmd,

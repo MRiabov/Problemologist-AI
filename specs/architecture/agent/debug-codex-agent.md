@@ -183,12 +183,13 @@ The accepted Codex-mode behavior is defined by integration coverage, not by unit
 
 The current validation contract is:
 
-1. `run_evals --help` exposes the codex default and the paid-provider `--call-paid-api` handle.
+1. `run_evals --help` exposes the smoke-test defaults (`benchmark_planner`, `--limit 1`, `--concurrency 1`) and the paid-provider `--call-paid-api` handle.
 2. Materialized planner workspaces contain the relative-path prompt contract.
 3. Materialized planner workspaces do not contain `/workspace` in the prompt text.
 4. Planner submission succeeds from the local workspace helper.
 5. Path traversal outside the workspace root is rejected.
-6. The controller backend still executes tasks after its preflight step.
+6. The Codex launcher uses the native `workspace-write` sandbox so model-generated shell commands can only mutate the materialized workspace and any explicitly added writable dirs.
+7. The controller backend still executes tasks after its preflight step.
 
 The integration test file that exercises this contract is [tests/integration/architecture_p0/test_codex_runner_mode.py](../../../tests/integration/architecture_p0/test_codex_runner_mode.py).
 
