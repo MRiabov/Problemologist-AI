@@ -34,6 +34,7 @@ from shared.models.schemas import (
 )
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
+from tests.integration.agent.helpers import wait_for_episode_terminal
 
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
@@ -47,16 +48,14 @@ async def _poll_engineer_episode(
     terminal_statuses: set[EpisodeStatus],
     max_attempts: int = 90,
 ) -> EpisodeResponse:
-    latest: EpisodeResponse | None = None
-    for _ in range(max_attempts):
-        resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-        assert resp.status_code == 200, resp.text
-        latest = EpisodeResponse.model_validate(resp.json())
-        if latest.status in terminal_statuses:
-            return latest
-        await asyncio.sleep(1)
-    assert latest is not None
-    return latest
+    return EpisodeResponse.model_validate(
+        await wait_for_episode_terminal(
+            client,
+            episode_id,
+            timeout_s=float(max_attempts),
+            terminal_statuses=terminal_statuses,
+        )
+    )
 
 
 async def _poll_benchmark_session(

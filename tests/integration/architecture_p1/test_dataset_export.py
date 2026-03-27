@@ -20,6 +20,7 @@ from controller.api.schemas import (
 from shared.enums import EpisodeStatus
 from shared.models.schemas import DatasetRowArchiveManifest
 from shared.simulation.schemas import SimulatorBackendType
+from tests.integration.agent.helpers import wait_for_episode_terminal
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:19000")
@@ -85,20 +86,18 @@ async def _wait_for_benchmark_completion(
 async def _wait_for_episode_terminal(
     client: AsyncClient, episode_id: str
 ) -> EpisodeResponse:
-    last_episode: EpisodeResponse | None = None
-    for _ in range(180):
-        resp = await client.get(f"/episodes/{episode_id}")
-        assert resp.status_code == 200, resp.text
-        last_episode = EpisodeResponse.model_validate(resp.json())
-        if last_episode.status in {
-            EpisodeStatus.COMPLETED,
-            EpisodeStatus.FAILED,
-            EpisodeStatus.CANCELLED,
-        }:
-            return last_episode
-        await asyncio.sleep(1.0)
-
-    pytest.fail(f"Episode {episode_id} did not reach a terminal state.")
+    return EpisodeResponse.model_validate(
+        await wait_for_episode_terminal(
+            client,
+            episode_id,
+            timeout_s=180.0,
+            terminal_statuses={
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+            },
+        )
+    )
 
 
 def _approve_review_content() -> str:

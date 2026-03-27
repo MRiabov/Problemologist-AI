@@ -281,6 +281,38 @@ def test_int_158_workflow_parity(page: Page):
     INT-158: In both workflows, prompt submission, streamed assistant output,
     and artifact refresh behave consistently through real backend events.
     """
+    page.add_init_script(
+        """
+        (() => {
+            const OriginalWebSocket = window.WebSocket;
+            const events = [];
+
+            function WrappedWebSocket(url, protocols) {
+                const ws = protocols === undefined
+                    ? new OriginalWebSocket(url)
+                    : new OriginalWebSocket(url, protocols);
+                events.push({ type: 'open', url: String(url) });
+                ws.addEventListener('message', (event) => {
+                    events.push({
+                        type: 'message',
+                        url: String(url),
+                        data: String(event.data),
+                    });
+                });
+                return ws;
+            }
+
+            WrappedWebSocket.prototype = OriginalWebSocket.prototype;
+            WrappedWebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
+            WrappedWebSocket.OPEN = OriginalWebSocket.OPEN;
+            WrappedWebSocket.CLOSING = OriginalWebSocket.CLOSING;
+            WrappedWebSocket.CLOSED = OriginalWebSocket.CLOSED;
+            window.WebSocket = WrappedWebSocket;
+            window.__websocketEvents = events;
+        })();
+        """
+    )
+
     # Test for Engineer Workflow
     page.goto(FRONTEND_URL)
     page.wait_for_load_state("networkidle")
@@ -304,6 +336,20 @@ def test_int_158_workflow_parity(page: Page):
             } catch (e) { return false; }
         }""",
         timeout=120000,
+    )
+    page.wait_for_function(
+        """() => {
+            const events = window.__websocketEvents || [];
+            return events.some((event) => {
+                if (event.type !== 'message') return false;
+                try {
+                    return JSON.parse(event.data).type === 'episode_snapshot';
+                } catch (e) {
+                    return false;
+                }
+            });
+        }""",
+        timeout=30000,
     )
     engineer_debug = _debug_info(page)
     if engineer_debug.get("isRunning"):

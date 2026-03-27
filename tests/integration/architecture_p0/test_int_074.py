@@ -1,5 +1,4 @@
 import ast
-import asyncio
 import hashlib
 import os
 import uuid
@@ -16,6 +15,8 @@ from tests.integration.agent.helpers import (
     seed_benchmark_assembly_definition,
     seed_current_revision_render_preview,
     seed_execution_reviewer_handover,
+    wait_for_episode_state,
+    wait_for_episode_terminal,
 )
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
@@ -77,21 +78,24 @@ async def _wait_for_trace(
     predicate,
     attempts: int = 10,
 ) -> list:
-    episode: EpisodeResponse | None = None
-    for _ in range(attempts):
-        await asyncio.sleep(1.0)
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-            assert ep_resp.status_code == 200, ep_resp.text
-            episode = EpisodeResponse.model_validate(ep_resp.json())
-        traces = [
-            trace
-            for trace in (episode.traces or [])
-            if trace.name == trace_name and predicate(trace)
-        ]
-        if traces:
-            return traces
-    assert episode is not None
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        episode: EpisodeResponse = EpisodeResponse.model_validate(
+            await wait_for_episode_state(
+                client,
+                episode_id,
+                timeout_s=float(attempts),
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                    EpisodeStatus.PLANNED,
+                },
+                predicate=lambda episode: any(
+                    trace.name == trace_name and predicate(trace)
+                    for trace in (episode.traces or [])
+                ),
+            )
+        )
     return [
         trace
         for trace in (episode.traces or [])
@@ -130,24 +134,18 @@ async def _run_and_wait(
     assert run_resp.status_code == 202, run_resp.text
     run = AgentRunResponse.model_validate(run_resp.json())
 
-    for _ in range(180):
-        await asyncio.sleep(1.0)
-        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{run.episode_id}")
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        if episode.status in {
-            EpisodeStatus.COMPLETED,
-            EpisodeStatus.FAILED,
-            EpisodeStatus.CANCELLED,
-            EpisodeStatus.PLANNED,
-        } or _has_expected_review_evidence(
-            episode,
-            required_checklist_pairs=(("dof_minimality", "fail"),),
-        ):
-            return episode
-
-    pytest.fail(
-        f"Episode {run.episode_id} did not surface the expected review evidence in time"
+    return EpisodeResponse.model_validate(
+        await wait_for_episode_terminal(
+            client,
+            str(run.episode_id),
+            timeout_s=180.0,
+            terminal_statuses={
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+                EpisodeStatus.PLANNED,
+            },
+        )
     )
 
 
@@ -227,20 +225,23 @@ async def _wait_for_review_evidence(
     required_checklist_pairs: tuple[tuple[str, str], ...],
     attempts: int = 10,
 ) -> EpisodeResponse:
-    episode: EpisodeResponse | None = None
-    for _ in range(attempts):
-        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        if _has_expected_review_evidence(
-            episode,
-            required_checklist_pairs=required_checklist_pairs,
-        ):
-            return episode
-        await asyncio.sleep(1.0)
-
-    assert episode is not None
-    return episode
+    return EpisodeResponse.model_validate(
+        await wait_for_episode_state(
+            client,
+            episode_id,
+            timeout_s=float(attempts),
+            terminal_statuses={
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+                EpisodeStatus.PLANNED,
+            },
+            predicate=lambda episode: _has_expected_review_evidence(
+                episode,
+                required_checklist_pairs=required_checklist_pairs,
+            ),
+        )
+    )
 
 
 @pytest.mark.integration_p0

@@ -1,17 +1,21 @@
 import asyncio
 import hashlib
+import json
 import os
 import re
 import time
 import uuid
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 
 import httpx
 import yaml
+from websockets.asyncio.client import connect as websocket_connect
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
-from shared.enums import AgentName
+from controller.api.schemas import EpisodeResponse
+from shared.enums import AgentName, EpisodeStatus
 from shared.git_utils import repo_revision
 from shared.models.schemas import AssemblyConstraints, AssemblyDefinition, CostTotals
 from shared.models.simulation import MultiRunResult, SimulationMetrics, SimulationResult
@@ -55,6 +59,18 @@ def read_log_segment(path: Path, start_offset: int) -> str:
     with path.open("rb") as f:
         f.seek(start_offset)
         return f.read().decode("utf-8", errors="ignore")
+
+
+def _controller_ws_url(path: str) -> str:
+    if CONTROLLER_URL.startswith("https://"):
+        return f"wss://{CONTROLLER_URL.removeprefix('https://').rstrip('/')}{path}"
+    return f"ws://{CONTROLLER_URL.removeprefix('http://').rstrip('/')}{path}"
+
+
+async def _fetch_episode(client: httpx.AsyncClient, episode_id: str) -> EpisodeResponse:
+    response = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+    assert response.status_code == 200, response.text
+    return EpisodeResponse.model_validate(response.json())
 
 
 def _benchmark_assembly_definition_content(
@@ -375,16 +391,74 @@ async def wait_for_episode_terminal(
     *,
     timeout_s: float = 180.0,
     poll_s: float = 1.0,
+    terminal_statuses: set[EpisodeStatus | str] | None = None,
 ) -> dict:
-    terminal = {"COMPLETED", "FAILED", "CANCELLED", "PLANNED"}
-    deadline = asyncio.get_event_loop().time() + timeout_s
+    return await wait_for_episode_state(
+        client,
+        episode_id,
+        timeout_s=timeout_s,
+        poll_s=poll_s,
+        terminal_statuses=terminal_statuses,
+    )
 
-    while asyncio.get_event_loop().time() < deadline:
-        resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-        assert resp.status_code == 200, f"Episode lookup failed: {resp.text}"
-        payload = resp.json()
-        if payload.get("status") in terminal:
-            return payload
+
+async def wait_for_episode_state(
+    client: httpx.AsyncClient,
+    episode_id: str,
+    *,
+    timeout_s: float = 180.0,
+    poll_s: float = 1.0,
+    terminal_statuses: set[EpisodeStatus | str] | None = None,
+    predicate: Callable[[EpisodeResponse], bool] | None = None,
+) -> dict:
+    terminal = {
+        status.value if isinstance(status, EpisodeStatus) else str(status)
+        for status in (
+            terminal_statuses or {"COMPLETED", "FAILED", "CANCELLED", "PLANNED"}
+        )
+    }
+    deadline = asyncio.get_running_loop().time() + timeout_s
+
+    episode = await _fetch_episode(client, episode_id)
+    if (
+        predicate is not None and predicate(episode)
+    ) or episode.status.value in terminal:
+        return episode.model_dump(mode="json")
+
+    ws_url = _controller_ws_url(f"/api/episodes/{episode_id}/ws")
+    try:
+        async with websocket_connect(ws_url, open_timeout=min(10.0, timeout_s)) as ws:
+            while asyncio.get_running_loop().time() < deadline:
+                remaining = deadline - asyncio.get_running_loop().time()
+                if remaining <= 0:
+                    break
+                raw_message = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                try:
+                    payload = (
+                        json.loads(raw_message)
+                        if isinstance(raw_message, str)
+                        else raw_message
+                    )
+                except Exception:
+                    continue
+                if not isinstance(payload, dict):
+                    continue
+                if payload.get("type") != "status_update":
+                    continue
+                episode = await _fetch_episode(client, episode_id)
+                if predicate is not None and predicate(episode):
+                    return episode.model_dump(mode="json")
+                if episode.status.value in terminal:
+                    return episode.model_dump(mode="json")
+    except Exception:
+        pass
+
+    while asyncio.get_running_loop().time() < deadline:
+        episode = await _fetch_episode(client, episode_id)
+        if (
+            predicate is not None and predicate(episode)
+        ) or episode.status.value in terminal:
+            return episode.model_dump(mode="json")
         await asyncio.sleep(poll_s)
 
     msg = f"Episode {episode_id} did not reach terminal status in {timeout_s}s"

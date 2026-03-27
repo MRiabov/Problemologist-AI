@@ -23,6 +23,7 @@ from tests.integration.agent.helpers import (
     seed_benchmark_assembly_definition,
     seed_current_revision_render_preview,
     seed_execution_reviewer_handover,
+    wait_for_episode_state,
 )
 
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -70,20 +71,17 @@ async def _wait_for_review_evidence(
     required_checklist_pairs: tuple[tuple[str, str], ...],
     attempts: int = 15,
 ) -> EpisodeResponse:
-    episode: EpisodeResponse | None = None
-    for _ in range(attempts):
-        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        if _has_review_artifacts(
-            episode,
-            required_checklist_pairs=required_checklist_pairs,
-        ):
-            return episode
-        await asyncio.sleep(1.0)
-
-    assert episode is not None
-    return episode
+    return EpisodeResponse.model_validate(
+        await wait_for_episode_state(
+            client,
+            episode_id,
+            timeout_s=float(attempts),
+            predicate=lambda episode: _has_review_artifacts(
+                episode,
+                required_checklist_pairs=required_checklist_pairs,
+            ),
+        )
+    )
 
 
 async def _wait_for_trace_name(
@@ -94,21 +92,17 @@ async def _wait_for_trace_name(
     predicate,
     attempts: int = 15,
 ) -> list:
-    episode: EpisodeResponse | None = None
-    for _ in range(attempts):
-        ep_resp = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        traces = [
-            trace
-            for trace in (episode.traces or [])
-            if trace.name == trace_name and predicate(trace)
-        ]
-        if traces:
-            return traces
-        await asyncio.sleep(1.0)
-
-    assert episode is not None
+    episode = EpisodeResponse.model_validate(
+        await wait_for_episode_state(
+            client,
+            episode_id,
+            timeout_s=float(attempts),
+            predicate=lambda episode: any(
+                trace.name == trace_name and predicate(trace)
+                for trace in (episode.traces or [])
+            ),
+        )
+    )
     return [
         trace
         for trace in (episode.traces or [])
@@ -395,28 +389,26 @@ async def test_engineering_dof_review_evidence_uses_canonical_keys():
         assert run_resp.status_code == 202, run_resp.text
         run = AgentRunResponse.model_validate(run_resp.json())
 
-        episode: EpisodeResponse | None = None
-        for _ in range(180):
-            await asyncio.sleep(1.0)
-            ep_resp = await client.get(
-                f"{CONTROLLER_URL}/api/episodes/{run.episode_id}"
-            )
-            assert ep_resp.status_code == 200, ep_resp.text
-            episode = EpisodeResponse.model_validate(ep_resp.json())
-            if episode.status in {
-                EpisodeStatus.COMPLETED,
-                EpisodeStatus.FAILED,
-                EpisodeStatus.CANCELLED,
-                EpisodeStatus.PLANNED,
-            } or _has_review_artifacts(
-                episode,
-                required_checklist_pairs=(
-                    ("dof_minimality", "pass"),
-                    ("dof_deviation_justified", "pass"),
+        episode = EpisodeResponse.model_validate(
+            await wait_for_episode_state(
+                client,
+                str(run.episode_id),
+                timeout_s=180.0,
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                    EpisodeStatus.PLANNED,
+                },
+                predicate=lambda episode: _has_review_artifacts(
+                    episode,
+                    required_checklist_pairs=(
+                        ("dof_minimality", "pass"),
+                        ("dof_deviation_justified", "pass"),
+                    ),
                 ),
-            ):
-                break
-        assert episode is not None
+            )
+        )
         if not _has_review_artifacts(
             episode,
             required_checklist_pairs=(
@@ -614,20 +606,17 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
         assert run_resp.status_code == 202, run_resp.text
         run = AgentRunResponse.model_validate(run_resp.json())
 
-        episode: EpisodeResponse | None = None
-        for _ in range(180):
-            await asyncio.sleep(1.0)
-            ep_resp = await client.get(
-                f"{CONTROLLER_URL}/api/episodes/{run.episode_id}"
+        episode = EpisodeResponse.model_validate(
+            await wait_for_episode_state(
+                client,
+                str(run.episode_id),
+                timeout_s=180.0,
+                predicate=lambda episode: _has_review_artifacts(
+                    episode,
+                    required_checklist_pairs=(("dof_deviation_justified", "fail"),),
+                ),
             )
-            assert ep_resp.status_code == 200, ep_resp.text
-            episode = EpisodeResponse.model_validate(ep_resp.json())
-            if _has_review_artifacts(
-                episode,
-                required_checklist_pairs=(("dof_deviation_justified", "fail"),),
-            ):
-                break
-        assert episode is not None
+        )
         assert _has_review_artifacts(
             episode,
             required_checklist_pairs=(("dof_deviation_justified", "fail"),),
@@ -720,23 +709,19 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
         assert render_gate_run_resp.status_code == 202, render_gate_run_resp.text
         render_gate_run = AgentRunResponse.model_validate(render_gate_run_resp.json())
 
-        render_gate_episode: EpisodeResponse | None = None
-        for _ in range(180):
-            await asyncio.sleep(1.0)
-            ep_resp = await client.get(
-                f"{CONTROLLER_URL}/api/episodes/{render_gate_run.episode_id}"
-            )
-            assert ep_resp.status_code == 200, ep_resp.text
-            render_gate_episode = EpisodeResponse.model_validate(ep_resp.json())
-            if _has_review_artifacts(
-                render_gate_episode,
-                required_checklist_pairs=(
-                    ("dof_deviation_justified", "not_applicable"),
+        render_gate_episode = EpisodeResponse.model_validate(
+            await wait_for_episode_state(
+                client,
+                str(render_gate_run.episode_id),
+                timeout_s=180.0,
+                predicate=lambda episode: _has_review_artifacts(
+                    episode,
+                    required_checklist_pairs=(
+                        ("dof_deviation_justified", "not_applicable"),
+                    ),
                 ),
-            ):
-                break
-
-        assert render_gate_episode is not None
+            )
+        )
         assert _has_review_artifacts(
             render_gate_episode,
             required_checklist_pairs=(("dof_deviation_justified", "not_applicable"),),

@@ -30,6 +30,7 @@ from shared.workers.schema import (
     ValidationResultRecord,
     WriteFileRequest,
 )
+from tests.integration.agent.helpers import wait_for_episode_terminal
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -295,24 +296,17 @@ async def _wait_for_episode_terminal(
     *,
     timeout_seconds: int = 240,
 ) -> EpisodeResponse:
-    deadline = asyncio.get_running_loop().time() + timeout_seconds
-    last_status = None
-
-    while asyncio.get_running_loop().time() < deadline:
-        response = await client.get(f"/episodes/{episode_id}")
-        assert response.status_code == 200, response.text
-        episode = EpisodeResponse.model_validate(response.json())
-        last_status = episode.status
-        if episode.status in {
-            EpisodeStatus.COMPLETED,
-            EpisodeStatus.FAILED,
-            EpisodeStatus.CANCELLED,
-        }:
-            return episode
-        await asyncio.sleep(1.0)
-
-    pytest.fail(
-        f"Episode {episode_id} did not reach a terminal state (last={last_status})"
+    return EpisodeResponse.model_validate(
+        await wait_for_episode_terminal(
+            client,
+            episode_id,
+            timeout_s=timeout_seconds,
+            terminal_statuses={
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+            },
+        )
     )
 
 
