@@ -1312,6 +1312,7 @@ async def episode_websocket(
                     "timestamp": datetime.utcnow().isoformat(),
                 }
             )
+            manager.disconnect(episode_id, websocket)
             await websocket.close(code=1008)
             return
         await websocket.send_json(
@@ -1321,6 +1322,12 @@ async def episode_websocket(
                 "episode": snapshot.model_dump(mode="json"),
                 "timestamp": datetime.utcnow().isoformat(),
             }
+        )
+        logger.info(
+            "episode_snapshot_sent",
+            episode_id=str(episode_id),
+            trace_count=len(snapshot.traces or []),
+            asset_count=len(snapshot.assets or []),
         )
         # Initial message
         await websocket.send_json(

@@ -2,6 +2,7 @@ import os
 import re
 import time
 import uuid
+from pathlib import Path
 from urllib.parse import quote
 
 import httpx
@@ -281,37 +282,7 @@ def test_int_158_workflow_parity(page: Page):
     INT-158: In both workflows, prompt submission, streamed assistant output,
     and artifact refresh behave consistently through real backend events.
     """
-    page.add_init_script(
-        """
-        (() => {
-            const OriginalWebSocket = window.WebSocket;
-            const events = [];
-
-            function WrappedWebSocket(url, protocols) {
-                const ws = protocols === undefined
-                    ? new OriginalWebSocket(url)
-                    : new OriginalWebSocket(url, protocols);
-                events.push({ type: 'open', url: String(url) });
-                ws.addEventListener('message', (event) => {
-                    events.push({
-                        type: 'message',
-                        url: String(url),
-                        data: String(event.data),
-                    });
-                });
-                return ws;
-            }
-
-            WrappedWebSocket.prototype = OriginalWebSocket.prototype;
-            WrappedWebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
-            WrappedWebSocket.OPEN = OriginalWebSocket.OPEN;
-            WrappedWebSocket.CLOSING = OriginalWebSocket.CLOSING;
-            WrappedWebSocket.CLOSED = OriginalWebSocket.CLOSED;
-            window.WebSocket = WrappedWebSocket;
-            window.__websocketEvents = events;
-        })();
-        """
-    )
+    controller_log = Path("logs/integration_tests/current/controller.log")
 
     # Test for Engineer Workflow
     page.goto(FRONTEND_URL)
@@ -337,20 +308,19 @@ def test_int_158_workflow_parity(page: Page):
         }""",
         timeout=120000,
     )
-    page.wait_for_function(
-        """() => {
-            const events = window.__websocketEvents || [];
-            return events.some((event) => {
-                if (event.type !== 'message') return false;
-                try {
-                    return JSON.parse(event.data).type === 'episode_snapshot';
-                } catch (e) {
-                    return false;
-                }
-            });
-        }""",
-        timeout=30000,
-    )
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if (
+            controller_log.exists()
+            and "episode_snapshot_sent"
+            in controller_log.read_text(encoding="utf-8", errors="ignore")
+        ):
+            break
+        time.sleep(0.5)
+    assert controller_log.exists(), "Controller log was not created."
+    assert "episode_snapshot_sent" in controller_log.read_text(
+        encoding="utf-8", errors="ignore"
+    ), "Did not observe episode_snapshot_sent in the controller log."
     engineer_debug = _debug_info(page)
     if engineer_debug.get("isRunning"):
         expect(page.get_by_text(re.compile(r"thinking", re.IGNORECASE))).to_be_visible(
