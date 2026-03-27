@@ -35,11 +35,28 @@ class MediaRecorder:
             # For MuJoCo we can use "free" or a named camera.
             # For Genesis we use "main".
             cameras = backend.get_all_camera_names()
-            cam_to_use = "main"
-            if "main" not in cameras and cameras:
-                cam_to_use = cameras[0]
+            camera_candidates = ["main"]
+            if "main" in cameras:
+                camera_candidates.extend([name for name in cameras if name != "main"])
+            else:
+                camera_candidates.extend(cameras)
 
-            frame = backend.render_camera(cam_to_use, 640, 480)
+            frame = None
+            last_error: Exception | None = None
+            for cam_to_use in camera_candidates:
+                try:
+                    frame = backend.render_camera(cam_to_use, 640, 480)
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if "Unknown MuJoCo camera" not in str(exc):
+                        raise
+
+            if frame is None:
+                if last_error is not None:
+                    raise last_error
+                return
+
             particles = backend.get_particle_positions()
             self.video_renderer.add_frame(frame, particles=particles)
         except Exception as e:
@@ -47,6 +64,9 @@ class MediaRecorder:
             if "EGL" in str(e) or "display" in str(e).lower():
                 logger.warning("camera_render_failed_skipping_video", error=str(e))
                 self.video_renderer = None  # Stop attempting to render video
+            elif "Unknown MuJoCo camera" in str(e):
+                logger.warning("camera_render_failed_skipping_video", error=str(e))
+                self.video_renderer = None
             else:
                 raise
 

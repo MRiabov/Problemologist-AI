@@ -161,6 +161,85 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+async def test_int_101b_explicit_genesis_backend_is_respected_without_fem():
+    """INT-101B: Explicit GENESIS backend must not be overwritten by heuristics."""
+    skip_unless_genesis("INT-101B requires Genesis backend availability.")
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        await _require_service(client, "worker-light", WORKER_LIGHT_URL)
+        await _require_service(client, "worker-heavy", WORKER_HEAVY_URL)
+        session_id = f"test-int-101b-{int(time.time())}"
+
+        objectives = BenchmarkDefinition(
+            physics=PhysicsConfig(backend=SimulatorBackendType.GENESIS),
+            objectives=ObjectivesSection(
+                goal_zone=BoundingBox(min=(5, 5, 5), max=(7, 7, 7)),
+                build_zone=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            ),
+            simulation_bounds=BoundingBox(min=(-10, -10, -10), max=(10, 10, 10)),
+            moved_object=MovedObject(
+                label="test_obj",
+                shape="sphere",
+                material_id="aluminum_6061",
+                start_position=(0, 0, 5),
+                runtime_jitter=(0, 0, 0),
+            ),
+            constraints=Constraints(max_unit_cost=100.0, max_weight_g=10.0),
+            benchmark_parts=_default_benchmark_parts(),
+        )
+        write_obj_req = WriteFileRequest(
+            path="benchmark_definition.yaml",
+            content=yaml.dump(objectives.model_dump(mode="json")),
+            overwrite=True,
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=write_obj_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        script = """
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Box(1, 1, 1)
+    p.label = "test_part"
+    p.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+    return p
+"""
+        write_script_req = WriteFileRequest(
+            path="script.py", content=script, overwrite=True
+        )
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=write_script_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+        )
+
+        sim_req = BenchmarkToolRequest(script_path="script.py", smoke_test_mode=True)
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/simulate",
+            json=sim_req.model_dump(mode="json"),
+            headers={"X-Session-ID": session_id},
+            timeout=900.0,
+        )
+        assert resp.status_code == 200
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        event_dict = next(
+            (
+                _event_as_dict(e)
+                for e in data.events
+                if _event_get(e, "event_type") == "simulation_backend_selected"
+            ),
+            None,
+        )
+        assert event_dict is not None, "Missing simulation_backend_selected event"
+        event = SimulationBackendSelectedEvent.model_validate(event_dict)
+        assert event.backend.lower() == "genesis"
+        assert event.fem_enabled is False
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
 async def test_int_105_fluid_containment_evaluation():
     """INT-105: Verify fluid containment objective evaluation."""
     skip_unless_genesis("INT-105 requires Genesis fluid simulation.")

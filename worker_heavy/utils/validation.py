@@ -1180,8 +1180,6 @@ def simulate(
         backend_type = get_default_simulator_backend()
         if objectives and _benchmark_requires_genesis(objectives):
             backend_type = SimulatorBackendType.GENESIS
-        else:
-            backend_type = SimulatorBackendType.MUJOCO
 
     builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
     moving_parts = assembly_definition.moving_parts if assembly_definition else []

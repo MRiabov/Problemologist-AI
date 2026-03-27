@@ -10,7 +10,6 @@ import numpy as np
 import structlog
 import trimesh
 from build123d import Compound
-from PIL import Image
 
 from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
@@ -358,10 +357,7 @@ def render_stress_heatmap(
         return output_path
     except Exception as e:
         logger.warning("render_stress_heatmap_failed", error=str(e))
-        # Create a blank error image
-        img = Image.new("RGB", (width, height), color=(255, 0, 0))
-        img.save(output_path)
-        return output_path
+        raise RuntimeError(f"render_stress_heatmap_failed: {e}") from e
 
 
 class VideoRenderer:
@@ -393,8 +389,10 @@ class VideoRenderer:
     def save(self):
         """Saves the frames as an MP4 video."""
         if not self.frames:
-            logger.error("video_render_no_frames", session_id=self.session_id)
-            return
+            logger.warning("video_render_no_frames", session_id=self.session_id)
+            raise ValueError(
+                "deprecated functionality removed: video rendering without captured frames"
+            )
 
         import cv2
 

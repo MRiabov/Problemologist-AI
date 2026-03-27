@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import uuid
@@ -5,6 +6,8 @@ import uuid
 import httpx
 import pytest
 import yaml
+import numpy as np
+from PIL import Image
 from pydantic import BaseModel
 
 from shared.enums import FailureReason, FluidEvalAt, FluidShapeType
@@ -397,6 +400,25 @@ def build():
         assert ls_resp.status_code == 200, ls_resp.text
         listing = json.dumps(ls_resp.json()).lower()
         assert "stress" in listing
+
+        stress_path = next(
+            (path for path in stress_paths if path.endswith(".png")), None
+        )
+        assert stress_path is not None, stress_paths
+
+        stress_resp = await client.get(
+            f"{WORKER_LIGHT_URL}/assets/{stress_path}",
+            headers={"X-Session-ID": session_id},
+            timeout=300.0,
+        )
+        assert stress_resp.status_code == 200, stress_resp.text
+        stress_image = np.array(
+            Image.open(io.BytesIO(stress_resp.content)).convert("RGB")
+        )
+        assert stress_image.std() > 0.0, stress_path
+        assert not np.all(stress_image == np.array([255, 0, 0], dtype=np.uint8)), (
+            "stress render fell back to a synthetic blank red image"
+        )
 
 
 @pytest.mark.integration_p1

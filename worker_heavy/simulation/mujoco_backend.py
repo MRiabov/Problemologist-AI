@@ -211,13 +211,13 @@ class MuJoCoBackend(PhysicsRendererBackend):
 
         self.renderer = mujoco.Renderer(self.model, width, height)
 
-        # Check if camera exists, otherwise fallback to default view
+        # Require an explicit camera. Silent default-view fallback hides bad
+        # scene contracts and makes render failures look like success.
         cam = self.custom_cameras.get(camera_name, camera_name)
         if isinstance(cam, str):
             cid = self._get_camera_id(cam)
             if cid == -1:
-                # logger.warning("mujoco_camera_not_found_falling_back", camera=cam)
-                cam = None
+                raise ValueError(f"Unknown MuJoCo camera: {cam}")
 
         frame = None
         depth_frame = None
