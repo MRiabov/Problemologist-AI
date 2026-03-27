@@ -408,6 +408,7 @@ async def test_codex_materialized_planner_workspace_submits(
             (
                 "You are the Execution Reviewer.",
                 "Inspect the implementation, validation results, simulation result",
+                "benchmark_assembly_definition.yaml",
                 "reviews/",
                 "bash scripts/submit_review.sh",
             ),
@@ -415,6 +416,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
                 "script.py",
                 "journal.md",
                 "validation_results.json",

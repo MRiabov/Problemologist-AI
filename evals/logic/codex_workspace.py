@@ -31,9 +31,6 @@ from shared.agent_templates import (
 )
 from shared.enums import AgentName
 from shared.models.schemas import ReviewFrontmatter
-from shared.workers.benchmark_definition_template import (
-    ensure_benchmark_definition_yaml,
-)
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -403,6 +400,7 @@ def build_codex_prompt(
         role_lines = [
             "You are the Execution Reviewer.",
             "Inspect the implementation, validation results, simulation result, and stage-specific review files.",
+            "Read `benchmark_assembly_definition.yaml` as benchmark-owned read-only context before review.",
             "Write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
             "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
             "If the latest implementation is not reviewable, reject it with concrete reasons in the review files.",
@@ -498,9 +496,6 @@ def materialize_seed_workspace(
             },
         )
     )
-
-    with contextlib.suppress(Exception):
-        ensure_benchmark_definition_yaml(workspace_dir)
 
     prompt_text = build_codex_prompt(
         item=item,

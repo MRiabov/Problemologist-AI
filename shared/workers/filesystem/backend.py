@@ -212,14 +212,6 @@ class LocalFilesystemBackend(BaseFilesystemBackend):
             logger.warning("catalog_db_seed_failed", error=str(e))
 
         try:
-            from shared.workers.benchmark_definition_template import (
-                ensure_benchmark_definition_yaml,
-            )
-
-            ensure_benchmark_definition_yaml(backend.root)
-        except Exception as e:
-            logger.warning("benchmark_definition_template_write_failed", error=str(e))
-        try:
             from shared.cots.runtime import DEFAULT_DB_PATH, get_catalog_metadata
             from shared.workers.schema import COTSReproducibilityManifest
 
