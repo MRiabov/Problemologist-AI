@@ -336,7 +336,7 @@ async def test_int_183_steerability_queue_single_consumption():
         read_log_segment(worker_light_debug_log, worker_debug_start_offset)
     )
     assert any(
-        "agent_role" in line and AgentName.ENGINEER_CODER.value in line
+        "x-agent-role" in line and AgentName.ENGINEER_CODER.value in line
         for line in worker_debug_segment.splitlines()
     ), worker_debug_segment
 
@@ -410,10 +410,6 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
     """
     controller_log = get_controller_log_path()
     start_offset = controller_log.stat().st_size if controller_log.exists() else 0
-    worker_light_debug_log = Path("logs/worker_light_debug.log")
-    worker_debug_start_offset = (
-        worker_light_debug_log.stat().st_size if worker_light_debug_log.exists() else 0
-    )
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         session_id, episode_id = await run_agent_episode(
@@ -426,6 +422,12 @@ async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
         # once execute_command starts, drop worker-light mid-call so the same
         # tool request exercises infra-level retries and terminalization.
         # We detect command start via worker log because episode trace sync can lag.
+        worker_light_debug_log = Path("logs/worker_light_debug.log")
+        worker_debug_start_offset = (
+            worker_light_debug_log.stat().st_size
+            if worker_light_debug_log.exists()
+            else 0
+        )
         saw_execute_start = False
         deadline = asyncio.get_event_loop().time() + 60.0
         while asyncio.get_event_loop().time() < deadline:

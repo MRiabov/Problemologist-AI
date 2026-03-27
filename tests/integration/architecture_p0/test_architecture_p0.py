@@ -31,7 +31,10 @@ from shared.workers.schema import (
     VerificationRequest,
     WriteFileRequest,
 )
-from tests.integration.agent.helpers import seed_benchmark_assembly_definition
+from tests.integration.agent.helpers import (
+    seed_benchmark_assembly_definition,
+    seed_execution_reviewer_handover,
+)
 from tests.integration.backend_utils import selected_backend
 from tests.integration.contracts import HealthResponse
 
@@ -100,6 +103,11 @@ async def test_int_002_controller_worker_execution_boundary():
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         await seed_benchmark_assembly_definition(client, session_id)
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-002",
+        )
 
         # Trigger agent run
         req = AgentRunRequest(task=task, session_id=session_id)

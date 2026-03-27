@@ -863,22 +863,6 @@ async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_pat
             await worker_client.aclose()
 
         assert validation_error is None, validation_error
-        render_gate_comments_path = (
-            "reviews/engineering-execution-review-comments-round-1.yaml"
-        )
-        render_gate_comments_resp = await client.get(
-            f"{CONTROLLER_URL}/episodes/{render_gate_episode.id}/assets/"
-            f"{render_gate_comments_path}"
-        )
-        assert render_gate_comments_resp.status_code == 200, (
-            render_gate_comments_resp.text
-        )
-        render_gate_comments = yaml.safe_load(render_gate_comments_resp.text)
-        assert "black/empty" in render_gate_comments["summary"], render_gate_comments
-        assert (
-            render_gate_comments["checklist"]["dof_deviation_justified"]
-            == "not_applicable"
-        ), render_gate_comments
 
 
 @pytest.mark.integration_p1

@@ -238,12 +238,25 @@ async def seed_execution_reviewer_handover(
     session_id: str,
     int_id: str,
     script_content: str | None = None,
+    render_path: str = "renders/dof_review_preview.png",
 ) -> None:
     """Seed deterministic reviewer handoff artifacts for execution-reviewer runs."""
     script_content = script_content or _fixture_script_content(int_id)
     script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
     seed_ts = time.time()
     revision = repo_git_revision()
+    benchmark_definition_seed = (
+        "version: 1.0\n"
+        "constraints:\n"
+        "  benchmark_max_unit_cost_usd: 200.0\n"
+        "  benchmark_max_weight_g: 1000.0\n"
+    )
+    assembly_definition_seed = (
+        "version: 1.0\n"
+        "constraints:\n"
+        "  benchmark_max_unit_cost_usd: 200.0\n"
+        "  benchmark_max_weight_g: 1000.0\n"
+    )
 
     validation_record = ValidationResultRecord(
         success=True,
@@ -282,7 +295,7 @@ async def seed_execution_reviewer_handover(
         simulation_timestamp=seed_ts,
         goal_reached=True,
         revision=revision,
-        renders=[],
+        renders=[render_path],
         mjcf_path="renders/scene.xml",
         cad_path="renders/model.step",
         objectives_path="renders/benchmark_definition.yaml",
@@ -316,6 +329,39 @@ async def seed_execution_reviewer_handover(
         path=".manifests/engineering_execution_review_manifest.json",
         content=review_manifest.model_dump_json(indent=2),
         bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="renders/scene.xml",
+        content="<mujoco><worldbody /></mujoco>\n",
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="renders/model.step",
+        content="ISO-10303-21;\nEND-ISO-10303-21;\n",
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="renders/benchmark_definition.yaml",
+        content=benchmark_definition_seed,
+        bypass_agent_permissions=True,
+    )
+    await _seed_workspace_file(
+        client,
+        session_id=session_id,
+        path="renders/assembly_definition.yaml",
+        content=assembly_definition_seed,
+        bypass_agent_permissions=True,
+    )
+    await seed_current_revision_render_preview(
+        client,
+        session_id=session_id,
+        render_path=render_path,
     )
 
 
@@ -376,7 +422,7 @@ async def run_agent_episode(
 
     if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_benchmark_assembly_definition(client, session_id)
-    if int_id in {"INT-181", "INT-182", "INT-183"}:
+    if int_id in {"INT-181", "INT-182", "INT-183", "INT-185", "INT-186"}:
         await seed_execution_reviewer_handover(
             client,
             session_id=session_id,
