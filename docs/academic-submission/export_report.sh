@@ -30,47 +30,11 @@ title="$(sed -n '1s/^# //p' "$md_file")"
 body_tmp="$(mktemp)"
 body_without_table_tmp="$(mktemp)"
 table_tmp="$(mktemp)"
-appendix_image_src=""
 appendix_image_dst=""
 trap 'rm -f "$body_tmp" "$body_without_table_tmp" "$table_tmp"' EXIT
 
-for candidate in \
-  "$script_dir/../../test_output/manual_zone_layout_repro/layout_render.png" \
-  "$script_dir/../../test_output/manual_zone_preview/preview/preview_pitch-25_yaw35.jpg"; do
-  if [[ -f "$candidate" ]]; then
-    appendix_image_src="$candidate"
-    appendix_image_dst="$script_dir/appendix_agent_input.png"
-    python3 - "$appendix_image_src" "$appendix_image_dst" <<'PY'
-from pathlib import Path
-from PIL import Image
-import sys
-
-src = Path(sys.argv[1])
-dst = Path(sys.argv[2])
-
-img = Image.open(src).convert("RGB")
-mask = img.convert("L").point(lambda p: 255 if p > 48 else 0)
-bbox = mask.getbbox() or (0, 0, img.width, img.height)
-pad = 90
-left = max(0, bbox[0] - pad)
-top = max(0, bbox[1] - pad)
-right = min(img.width, bbox[2] + pad)
-bottom = min(img.height, bbox[3] + pad)
-crop = img.crop((left, top, right, bottom))
-target_width = 1200
-if crop.width != target_width:
-    target_height = round(crop.height * target_width / crop.width)
-    crop = crop.resize((target_width, target_height), Image.Resampling.LANCZOS)
-crop.save(dst)
-PY
-    break
-  fi
-done
-
-if [[ -z "$appendix_image_src" ]]; then
-  echo "error: could not find a recent agent-input image in test_output" >&2
-  exit 1
-fi
+appendix_image_dst="$script_dir/appendix_agent_input.png"
+python3 "$script_dir/paper_benchmark/render_figure.py" "$appendix_image_dst"
 
 tail -n +3 "$md_file" | pandoc -f markdown -t latex --wrap=none > "$body_tmp"
 perl -0ne 'if (/(\\begin\{longtable\}.*?\\end\{longtable\})/s) { print $1 }' "$body_tmp" > "$table_tmp"
@@ -105,9 +69,9 @@ cat > "$tex_file" <<EOF
 EOF
 
 cat "$body_without_table_tmp" >> "$tex_file"
-printf '\n\\clearpage\n\\onecolumn\n\\appendices\n\n\\section{Reward Architecture Table}\n\\begingroup\n\\footnotesize\n\\setlength{\\tabcolsep}{3pt}\n' >> "$tex_file"
+printf '\n\\clearpage\n\\onecolumn\n\\appendices\n\n\\section{Reward Architecture Table}\n\\begingroup\n\\scriptsize\n\\setlength{\\tabcolsep}{2pt}\n\\renewcommand{\\arraystretch}{0.94}\n\\sloppy\n' >> "$tex_file"
 cat "$table_tmp" >> "$tex_file"
-printf '\n\\endgroup\n\\clearpage\n\\section{Representative Agent Input}\n\\begin{figure}[!htbp]\n\\centering\n\\includegraphics[width=0.95\\linewidth]{%s}\n\\caption{Normalized input observed by the engineering agent during a recent integration test.}\n\\label{fig:appendix-agent-input}\n\\end{figure}\n\\end{document}\n' "$(basename "$appendix_image_dst")" >> "$tex_file"
+printf '\n\\endgroup\n\\clearpage\n\\section{Representative Benchmark Schematic}\n\\begin{figure}[!htbp]\n\\centering\n\\includegraphics[width=0.95\\linewidth]{%s}\n\\caption{Representative schematic of the compact engineering-coder benchmark environment.}\n\\label{fig:appendix-agent-input}\n\\end{figure}\n\\end{document}\n' "$(basename "$appendix_image_dst")" >> "$tex_file"
 
 "$tectonic_bin" "$tex_file" --outdir "$script_dir" --keep-logs
 

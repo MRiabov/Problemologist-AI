@@ -94,25 +94,25 @@ We separate agents into:
 
 - Benchmark generation agents:
 
-  - Benchmark Planner - creating a plan, budgets for costs and weight, planning for off-the-shelf components such as motors, planning for degrees of freedom of individual components, and planning a design with given features in benchmarks
+  - *Benchmark Planner* - creating a plan, budgets for costs and weight, planning for off-the-shelf components such as motors, planning for degrees of freedom of individual components, and planning a design with given features in benchmarks
 
-  - Benchmark Plan Reviewer - reviewing plans to ensure the above criteria are met: for example, an agent may not invent a part that does not exist in the off-the-shelf database, and the review must maintain a high standard
+  - *Benchmark Plan Reviewer* - reviewing plans to ensure the above criteria are met: for example, an agent may not invent a part that does not exist in the off-the-shelf database, and the review must maintain a high standard
 
-  - Benchmark Coder - the agent implementing the benchmark plans. Can execute commands.
+  - *Benchmark Coder* - the agent implementing the benchmark plans. Can execute commands.
 
-  - Benchmark Execution Reviewer - an agent reviewing visuals and logical invalidity in benchmarks.
+  - *Benchmark Execution Reviewer* - an agent reviewing visuals and logical invalidity in benchmarks.
 
 - Engineering agents:
 
-  - Mechanical Engineering Planner - An agent that plans the mechanism, budgets for costs and weights to drive a solution with minimal expense and to fit the requirements set by the benchmark planner, and decides the off-the-shelf components.
+  - *Mechanical Engineering Planner* - An agent that plans the mechanism, budgets for costs and weights to drive a solution with minimal expense and to fit the requirements set by the benchmark planner, and decides the off-the-shelf components.
 
-  - Electronics Engineering Planner - an agent that plans for electronics components to be present in the environment. It plans for schematic wiring and then geometric wiring.
+  - *Electronics Engineering Planner* - an agent that plans for electronics components to be present in the environment. It plans for schematic wiring and then geometric wiring.
 
-  - Engineering Plan Reviewer - similarly to Benchmark Plan Reviewer, reviews plans for the benchmark. The plans must be able to solve the problems, must be robust upon review, and must not use nonexistent off-the-shelf components.
+  - *Engineering Plan Reviewer* - similarly to Benchmark Plan Reviewer, reviews plans for the benchmark. The plans must be able to solve the problems, must be robust upon review, and must not use nonexistent off-the-shelf components.
 
-  - Engineering Coder - An agent that implements the system. Generates geometric CAD (build123d) code, which is verified for manufacturability, cost, weight, and other invalid CAD issues (e.g. intersecting parts in an assembly); if CAD is valid, it is translated into simulation artifacts (MuJoCo and Genesis), which can later be simulated to achieve the goal.
+  - *Engineering Coder* - An agent that implements the system. Generates geometric CAD (build123d) code, which is verified for manufacturability, cost, weight, and other invalid CAD issues (e.g. intersecting parts in an assembly); if CAD is valid, it is translated into simulation artifacts (MuJoCo and Genesis), which can later be simulated to achieve the goal.
 
-  - Engineering Execution Reviewer - the final reviewer for the latest validated implementation; it checks static and dynamic evidence, verifies manufacturability, cost, and weight compliance, confirms plan fidelity or justified deviations, and approves the handoff only when the simulation-backed solution is robust.
+  - *Engineering Execution Reviewer* - the final reviewer for the latest validated implementation; it checks static and dynamic evidence, verifies manufacturability, cost, and weight compliance, confirms plan fidelity or justified deviations, and approves the handoff only when the simulation-backed solution is robust.
 
 - Other/infrastructure agents
 
@@ -142,7 +142,7 @@ We define the `build123d` framework as a framework for enabling 3D CAD construct
 
 To optimize a model in a reinforcement learning environment a reward signal is necessary [1]; the GEPA optimizer that we use to optimize our agents - as described below - also uses scoring to optimize prompts. As such, we create a reward system to be optimized against.
 
-We split reward by their functional definition - fast, syntactic checks for file presence and syntactic validity, then "milestones" - actions requiring complex solution, and judge evaluation rewards. The full table is provided in Appendix A, while Appendix B shows a normalized agent-input render from a recent integration test.
+We split reward by their functional definition - fast, syntactic checks for file presence and syntactic validity, then "milestones" - actions requiring complex solution, and judge evaluation rewards. The full table is provided in Appendix A, while Appendix B shows a compact benchmark schematic derived from the compact engineering-coder environment.
 
 | Section | Key | Weight | Type | Description | Feedback / Formula |
 | -- | -- | -: | -- | -- | -- |
