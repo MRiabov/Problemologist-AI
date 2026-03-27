@@ -160,6 +160,7 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
         "expected_manifest",
         "prompt_fragments",
         "expected_files",
+        "expected_helper_scripts",
     ),
     [
         (
@@ -181,6 +182,7 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
                 "scripts/submit_plan.py",
                 "journal.md",
             ),
+            ("scripts/submit_plan.sh",),
         ),
         (
             "dataset/data/seed/role_based/engineer_plan_reviewer.json",
@@ -196,11 +198,13 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
                 "assembly_definition.yaml",
                 "scripts/submit_plan.sh",
                 "scripts/submit_plan.py",
                 "journal.md",
             ),
+            ("scripts/submit_plan.sh",),
         ),
     ],
 )
@@ -212,6 +216,7 @@ async def test_codex_materialized_planner_workspace_submits(
     expected_manifest: str,
     prompt_fragments: tuple[str, ...],
     expected_files: tuple[str, ...],
+    expected_helper_scripts: tuple[str, ...],
 ):
     item = _load_dataset_item(seed_dataset, row_id)
     workspace_dir = tmp_path / agent_name.value / row_id
@@ -227,8 +232,8 @@ async def test_codex_materialized_planner_workspace_submits(
         workspace_dir=mirror_workspace_dir,
     )
 
-    assert materialized.helper_script_paths == ["scripts/submit_plan.sh"]
-    assert mirror_materialized.helper_script_paths == ["scripts/submit_plan.sh"]
+    assert materialized.helper_script_paths == list(expected_helper_scripts)
+    assert mirror_materialized.helper_script_paths == list(expected_helper_scripts)
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
     assert materialized.prompt_text == mirror_materialized.prompt_text
@@ -303,7 +308,14 @@ async def test_codex_materialized_planner_workspace_submits(
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("seed_dataset", "row_id", "agent_name", "prompt_fragments", "expected_files"),
+    (
+        "seed_dataset",
+        "row_id",
+        "agent_name",
+        "prompt_fragments",
+        "expected_files",
+        "expected_helper_scripts",
+    ),
     [
         (
             "dataset/data/seed/role_based/benchmark_plan_reviewer.json",
@@ -313,13 +325,17 @@ async def test_codex_materialized_planner_workspace_submits(
                 "You are the Plan Reviewer.",
                 "Inspect the planner artifacts",
                 "reviews/",
+                "bash scripts/submit_review.sh",
             ),
             (
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
+                "scripts/submit_review.sh",
+                "scripts/submit_review.py",
             ),
+            ("scripts/submit_review.sh",),
         ),
         (
             "dataset/data/seed/role_based/benchmark_coder.json",
@@ -329,6 +345,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "You are the Coder for this workspace.",
                 "Edit `script.py` and any supporting `*.py` files",
                 "journal.md",
+                "bash scripts/submit_for_review.sh",
             ),
             (
                 "plan.md",
@@ -336,7 +353,53 @@ async def test_codex_materialized_planner_workspace_submits(
                 "benchmark_definition.yaml",
                 "benchmark_assembly_definition.yaml",
                 "journal.md",
+                "scripts/submit_for_review.sh",
+                "scripts/submit_for_review.py",
             ),
+            ("scripts/submit_for_review.sh",),
+        ),
+        (
+            "dataset/data/seed/role_based/engineer_coder.json",
+            "ec-001",
+            AgentName.ENGINEER_CODER,
+            (
+                "You are the Coder for this workspace.",
+                "Edit `script.py` and any supporting `*.py` files",
+                "journal.md",
+                "bash scripts/submit_for_review.sh",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "assembly_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+                "journal.md",
+                "scripts/submit_for_review.sh",
+                "scripts/submit_for_review.py",
+            ),
+            ("scripts/submit_for_review.sh",),
+        ),
+        (
+            "dataset/data/seed/role_based/engineer_plan_reviewer.json",
+            "epr-001-sideways-transfer",
+            AgentName.ENGINEER_PLAN_REVIEWER,
+            (
+                "You are the Plan Reviewer.",
+                "Inspect the planner artifacts",
+                "reviews/",
+                "bash scripts/submit_review.sh",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+                "assembly_definition.yaml",
+                "scripts/submit_review.sh",
+                "scripts/submit_review.py",
+            ),
+            ("scripts/submit_review.sh",),
         ),
         (
             "dataset/data/seed/role_based/benchmark_reviewer.json",
@@ -346,6 +409,7 @@ async def test_codex_materialized_planner_workspace_submits(
                 "You are the Execution Reviewer.",
                 "Inspect the implementation, validation results, simulation result",
                 "reviews/",
+                "bash scripts/submit_review.sh",
             ),
             (
                 "plan.md",
@@ -355,7 +419,60 @@ async def test_codex_materialized_planner_workspace_submits(
                 "journal.md",
                 "validation_results.json",
                 "simulation_result.json",
+                "scripts/submit_review.sh",
+                "scripts/submit_review.py",
             ),
+            ("scripts/submit_review.sh",),
+        ),
+        (
+            "dataset/data/seed/role_based/engineer_execution_reviewer.json",
+            "eer-002-gap-bridge",
+            AgentName.ENGINEER_EXECUTION_REVIEWER,
+            (
+                "You are the Execution Reviewer.",
+                "Inspect the implementation, validation results, simulation result",
+                "reviews/",
+                "bash scripts/submit_review.sh",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+                "assembly_definition.yaml",
+                "script.py",
+                "journal.md",
+                "validation_results.json",
+                "simulation_result.json",
+                "scripts/submit_review.sh",
+                "scripts/submit_review.py",
+            ),
+            ("scripts/submit_review.sh",),
+        ),
+        (
+            "dataset/data/seed/role_based/electronics_reviewer.json",
+            "erv-002-diverter-gate-review",
+            AgentName.ELECTRONICS_REVIEWER,
+            (
+                "You are the Execution Reviewer.",
+                "Inspect the implementation, validation results, simulation result",
+                "reviews/",
+                "bash scripts/submit_review.sh",
+            ),
+            (
+                "plan.md",
+                "todo.md",
+                "benchmark_definition.yaml",
+                "benchmark_assembly_definition.yaml",
+                "assembly_definition.yaml",
+                "script.py",
+                "journal.md",
+                "validation_results.json",
+                "simulation_result.json",
+                "scripts/submit_review.sh",
+                "scripts/submit_review.py",
+            ),
+            ("scripts/submit_review.sh",),
         ),
     ],
 )
@@ -366,6 +483,7 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     agent_name: AgentName,
     prompt_fragments: tuple[str, ...],
     expected_files: tuple[str, ...],
+    expected_helper_scripts: tuple[str, ...],
 ):
     """
     INT-034: reviewer evidence completeness.
@@ -389,8 +507,8 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
         workspace_dir=mirror_workspace_dir,
     )
 
-    assert materialized.helper_script_paths == []
-    assert mirror_materialized.helper_script_paths == []
+    assert materialized.helper_script_paths == list(expected_helper_scripts)
+    assert mirror_materialized.helper_script_paths == list(expected_helper_scripts)
     assert materialized.prompt_text == mirror_materialized.prompt_text
     assert materialized.copied_paths == mirror_materialized.copied_paths
     assert _workspace_snapshot(workspace_dir) == _workspace_snapshot(
