@@ -600,7 +600,9 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
                 Image.open(io.BytesIO(rgb_resp.content)).convert("RGB")
             )
             height, width = rgb_image.shape[:2]
-            crop = rgb_image[height // 3 : (2 * height) // 3, width // 3 : (2 * width) // 3]
+            crop = rgb_image[
+                height // 3 : (2 * height) // 3, width // 3 : (2 * width) // 3
+            ]
             assert crop.size > 0, rgb_name
             material_means[material_id] = crop.mean(axis=(0, 1))
 

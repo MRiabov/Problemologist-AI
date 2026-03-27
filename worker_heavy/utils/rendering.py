@@ -1,6 +1,6 @@
 import os
-import uuid
 import time
+import uuid
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -14,8 +14,8 @@ from PIL import Image
 
 from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
-from shared.observability.events import emit_event
 from shared.models.schemas import BenchmarkDefinition
+from shared.observability.events import emit_event
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import (
     SimulatorBackendType,

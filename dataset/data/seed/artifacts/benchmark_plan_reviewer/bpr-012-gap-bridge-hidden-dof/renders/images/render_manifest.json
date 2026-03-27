@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": "bpr-012-gap-bridge-hidden-dof",
   "worker_session_id": "bpr-012-gap-bridge-hidden-dof",
-  "revision": "d0e2961a495df67ed492c1a882b5dc3fc1a4e2e5",
+  "revision": "a213d97bf670fdc554765226d105784423b949d8",
   "environment_version": "1.0",
   "preview_evidence_paths": [
     "renders/images/context_view_01.png",

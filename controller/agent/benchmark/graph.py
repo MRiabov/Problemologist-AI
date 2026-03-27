@@ -35,11 +35,6 @@ from controller.agent.initialization import (
     seed_manufacturing_config,
 )
 from controller.agent.node_entry_validation import (
-    BENCHMARK_CODER_HANDOVER_CHECK,
-    BENCHMARK_PLAN_REVIEW_MANIFEST,
-    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
-    BENCHMARK_REVIEW_MANIFEST,
-    BENCHMARK_REVIEWER_HANDOVER_CHECK,
     NodeEntryValidationError,
     ValidationGraph,
     benchmark_coder_handover_custom_check,
@@ -48,6 +43,13 @@ from controller.agent.node_entry_validation import (
     evaluate_node_entry_contract,
     integration_mode_enabled,
     reviewer_handover_custom_check_from_session_id,
+)
+from controller.agent.handover_constants import (
+    BENCHMARK_CODER_HANDOVER_CHECK,
+    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
+    BENCHMARK_PLAN_REVIEW_MANIFEST,
+    BENCHMARK_REVIEWER_HANDOVER_CHECK,
+    BENCHMARK_REVIEW_MANIFEST,
 )
 from controller.agent.review_handover import collect_plan_reviewer_handover_evidence
 from controller.clients.backend import RemoteFilesystemBackend

@@ -15,7 +15,7 @@ from controller.config.settings import settings
 from controller.observability.broadcast import EpisodeBroadcaster
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Trace
-from controller.utils import get_episode_id
+from controller.utils import resolve_episode_id
 from shared.enums import TraceType
 from shared.models.schemas import TraceMetadata
 
@@ -51,7 +51,7 @@ class DatabaseCallbackHandler(BaseCallbackHandler):
         episode_id: str | uuid.UUID,
         loop: asyncio.AbstractEventLoop | None = None,
     ):
-        self.episode_id = get_episode_id(episode_id)
+        self.episode_id = resolve_episode_id(episode_id)
         self.session_factory = get_sessionmaker()
         self.broadcaster = EpisodeBroadcaster.get_instance()
         self._emitted_reasoning_by_node: dict[str, set[str]] = {}

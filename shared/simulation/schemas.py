@@ -15,12 +15,13 @@ class SimulatorBackendType(StrEnum):
 def get_default_simulator_backend() -> SimulatorBackendType:
     """Resolve default backend from environment.
 
-    Empty values default to Genesis for compatibility. Invalid explicit values
-    fail closed instead of silently falling back to a different backend.
+    Empty values default to MuJoCo for rigid-body-only workflows. Invalid
+    explicit values fail closed instead of silently falling back to a different
+    backend.
     """
     raw_value = os.getenv("SIMULATION_DEFAULT_BACKEND", "").strip().upper()
     if not raw_value:
-        return SimulatorBackendType.GENESIS
+        return SimulatorBackendType.MUJOCO
     try:
         return SimulatorBackendType(raw_value)
     except ValueError:

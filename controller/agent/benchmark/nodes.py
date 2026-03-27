@@ -58,6 +58,7 @@ from .state import BenchmarkGeneratorState
 from .tools import get_benchmark_planner_tools, get_benchmark_tools
 
 logger = structlog.get_logger(__name__)
+_NATIVE_TOOL_COMPLETION_MAX_TOKENS = 1024
 _BENCHMARK_REVIEW_RENDER_PATHS = (
     "renders/cad_preview.png",
     "renders/simulation_preview.png",
@@ -684,7 +685,11 @@ class BenchmarkPlannerNode(BaseNode):
                             agent_role=AgentName.BENCHMARK_PLANNER.value,
                         ).copy(
                             timeout=settings.native_tool_completion_timeout_seconds,
-                            max_tokens=min(settings.llm_max_tokens, 1536),
+                            # Keep the tool-loop request below the current OpenRouter credit ceiling.
+                            max_tokens=min(
+                                settings.llm_max_tokens,
+                                _NATIVE_TOOL_COMPLETION_MAX_TOKENS,
+                            ),
                         )
                         response = await asyncio.to_thread(
                             native_lm,

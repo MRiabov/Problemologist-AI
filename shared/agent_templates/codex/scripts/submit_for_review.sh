@@ -24,4 +24,16 @@ if [ -n "$PROBLEMOLOGIST_REPO_ROOT" ]; then
   fi
 fi
 
+if [ -z "${XDG_CACHE_HOME:-}" ]; then
+  export XDG_CACHE_HOME="$PWD/.codex-cache"
+fi
+if [ -z "${MPLCONFIGDIR:-}" ]; then
+  export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
+fi
+export IS_HEAVY_WORKER=1
+
+if [ -z "${DISPLAY:-}" ] && command -v xvfb-run >/dev/null 2>&1; then
+  exec xvfb-run -a -s "-screen 0 1280x1024x24" "$PYTHON_BIN" scripts/submit_for_review.py "$@"
+fi
+
 exec "$PYTHON_BIN" scripts/submit_for_review.py "$@"

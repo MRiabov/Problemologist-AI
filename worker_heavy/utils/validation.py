@@ -1,5 +1,5 @@
-import json
 import gc
+import json
 import math
 import os
 from pathlib import Path
@@ -83,6 +83,29 @@ def _load_valid_benchmark_definition(
     if not is_valid:
         raise ValueError("; ".join(result))
     return result
+
+
+def _benchmark_requires_genesis(objectives: BenchmarkDefinition | None) -> bool:
+    """Return True only when the benchmark needs FEM/fluid-capable physics."""
+    if objectives is None:
+        return False
+
+    physics = getattr(objectives, "physics", None)
+    if physics and getattr(physics, "fem_enabled", False):
+        return True
+
+    if getattr(objectives, "fluids", None):
+        return True
+
+    objective_section = getattr(objectives, "objectives", None)
+    if objective_section is None:
+        return False
+
+    if getattr(objective_section, "fluid_objectives", None):
+        return True
+    if getattr(objective_section, "stress_objectives", None):
+        return True
+    return False
 
 
 def _finite_float(value: float, default: float = 0.0) -> float:
@@ -1155,8 +1178,10 @@ def simulate(
     backend_type = backend
     if backend_type is None:
         backend_type = get_default_simulator_backend()
-        if objectives and getattr(objectives, "physics", None):
-            backend_type = SimulatorBackendType(objectives.physics.backend)
+        if objectives and _benchmark_requires_genesis(objectives):
+            backend_type = SimulatorBackendType.GENESIS
+        else:
+            backend_type = SimulatorBackendType.MUJOCO
 
     builder = get_simulation_builder(output_dir=working_dir, backend_type=backend_type)
     moving_parts = assembly_definition.moving_parts if assembly_definition else []

@@ -573,7 +573,7 @@ def get_engineer_planner_tools(
         tool
         for tool in common_tools
         if _tool_name(tool)
-        not in {"search_cots_catalog", "invoke_cots_search_subagent"}
+        not in {"search_cots_catalog", "invoke_cots_search_subagent", "execute_command"}
     ]
     return filter_tools_for_agent(
         fs,

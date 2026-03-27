@@ -26,7 +26,23 @@ class FilesystemPolicy:
             normalized = "/" + normalized[len("/workspace/") :]
         elif normalized.startswith("workspace/"):
             normalized = normalized[len("workspace/") :]
-        return normalized.lstrip("/")
+
+        parts: list[str] = []
+        escaped_root = False
+        for part in normalized.lstrip("/").split("/"):
+            if part in {"", "."}:
+                continue
+            if part == "..":
+                if parts:
+                    parts.pop()
+                else:
+                    escaped_root = True
+                continue
+            parts.append(part)
+
+        if escaped_root:
+            return "__ESCAPE_ROOT__"
+        return "/".join(parts)
 
     def _match_path(self, path: str, patterns: list[str]) -> bool:
         """Check if path matches any of the gitignore-style glob patterns."""

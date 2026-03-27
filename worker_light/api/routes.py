@@ -71,7 +71,7 @@ def _bypass_enabled(requested: bool, system_header: str | None) -> bool:
 
 
 def _sanitize_workspace_alias(text: str, session_dir: Path) -> str:
-    """Hide host session roots from tool-visible command output."""
+    """Hide host session roots from tool-visible output while preserving the legacy alias."""
     if not text:
         return text
     session_root = str(session_dir.resolve())
@@ -210,8 +210,8 @@ async def _handle_light_rpc_action(
                     status_code=400,
                     detail=(
                         "Host session absolute paths are not allowed. "
-                        "Use workspace-relative paths like 'script.py' or the "
-                        "'/workspace/script.py' alias."
+                        "Use workspace-relative paths like 'script.py'. "
+                        "The '/workspace' alias is legacy compatibility only."
                     ),
                 )
 

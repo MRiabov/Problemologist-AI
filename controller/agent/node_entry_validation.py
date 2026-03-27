@@ -15,6 +15,22 @@ from controller.agent.benchmark_handover_validation import (
     validate_benchmark_planner_handoff_artifacts,
 )
 from controller.agent.config import settings as agent_settings
+from controller.agent.handover_constants import (
+    BENCHMARK_CODER_HANDOVER_CHECK,
+    BENCHMARK_PLAN_REVIEW_MANIFEST,
+    BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
+    BENCHMARK_PLANNER_HANDOFF_ARTIFACTS,
+    BENCHMARK_REVIEWER_HANDOVER_CHECK,
+    ELECTRONICS_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
+    ENGINEER_BENCHMARK_HANDOVER_CHECK,
+    ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLANNER_HANDOFF_ARTIFACTS,
+    ENGINEERING_PLAN_REVIEW_MANIFEST,
+    REVIEWER_HANDOFF_ARTIFACTS,
+    SCHEMA_BACKED_HANDOFF_PATHS,
+)
 from controller.agent.render_validation import validate_render_images_non_black
 from controller.agent.review_handover import (
     collect_plan_reviewer_handover_evidence,
@@ -60,22 +76,6 @@ REASON_REVIEWER_ENTRY_BLOCKED = "reviewer_entry_blocked"
 REASON_POLICY_INVALID = "policy_invalid"
 REASON_NO_PREVIOUS_NODE = "no_previous_node"
 REASON_CUSTOM_CHECK_FAILED = "custom_check_failed"
-
-_SCHEMA_BACKED_HANDOFF_PATHS: tuple[str, ...] = (
-    "plan.md",
-    "todo.md",
-    "plan_refusal.md",
-    "benchmark_definition.yaml",
-    "assembly_definition.yaml",
-    "benchmark_assembly_definition.yaml",
-    "validation_results.json",
-    "simulation_result.json",
-    ".manifests/benchmark_plan_review_manifest.json",
-    ".manifests/engineering_plan_review_manifest.json",
-    ".manifests/benchmark_review_manifest.json",
-    ".manifests/engineering_execution_review_manifest.json",
-    ".manifests/electronics_review_manifest.json",
-)
 
 _VISUAL_REVIEWER_TARGET_NODES: frozenset[AgentName] = frozenset(
     {
@@ -123,42 +123,6 @@ PREVIOUS_NODE_MAPS: Mapping[ValidationGraph, Mapping[AgentName, AgentName | None
     ValidationGraph.BENCHMARK: BENCHMARK_PREVIOUS_NODE_MAP,
 }
 
-ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS: tuple[str, ...] = (
-    "benchmark_assembly_definition.yaml",
-)
-BENCHMARK_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
-    "plan.md",
-    "todo.md",
-    "benchmark_definition.yaml",
-    "benchmark_assembly_definition.yaml",
-)
-REVIEWER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
-    "script.py",
-    "validation_results.json",
-    "simulation_result.json",
-)
-ENGINEER_PLANNER_HANDOFF_ARTIFACTS: tuple[str, ...] = (
-    "plan.md",
-    "todo.md",
-    "benchmark_definition.yaml",
-    "assembly_definition.yaml",
-    *ENGINEER_BENCHMARK_CONTEXT_ARTIFACTS,
-)
-BENCHMARK_PLAN_REVIEW_MANIFEST = ".manifests/benchmark_plan_review_manifest.json"
-ENGINEERING_PLAN_REVIEW_MANIFEST = ".manifests/engineering_plan_review_manifest.json"
-BENCHMARK_REVIEW_MANIFEST = ".manifests/benchmark_review_manifest.json"
-ENGINEERING_EXECUTION_REVIEW_MANIFEST = (
-    ".manifests/engineering_execution_review_manifest.json"
-)
-ELECTRONICS_REVIEW_MANIFEST = ".manifests/electronics_review_manifest.json"
-
-BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK = "benchmark_plan_reviewer_handover"
-BENCHMARK_REVIEWER_HANDOVER_CHECK = "benchmark_reviewer_handover"
-BENCHMARK_CODER_HANDOVER_CHECK = "benchmark_coder_handover"
-ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK = "engineer_plan_reviewer_handover"
-ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK = "engineer_execution_reviewer_handover"
-ELECTRONICS_REVIEWER_HANDOVER_CHECK = "electronics_reviewer_handover"
-ENGINEER_BENCHMARK_HANDOVER_CHECK = "engineer_benchmark_handover"
 _TRANSIENT_BUSY_BASE_DELAY_SECONDS = 1.0
 _TRANSIENT_BUSY_MAX_WAIT_SECONDS = 180.0
 
@@ -845,7 +809,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                     )
                 )
 
-    for rel_path in _SCHEMA_BACKED_HANDOFF_PATHS:
+    for rel_path in SCHEMA_BACKED_HANDOFF_PATHS:
         content = await worker_client.read_file_optional(rel_path)
         if content is not None:
             contents[rel_path] = content

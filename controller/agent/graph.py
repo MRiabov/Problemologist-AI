@@ -12,12 +12,6 @@ from controller.agent.context_usage import (
 )
 from controller.agent.execution_limits import evaluate_agent_hard_fail
 from controller.agent.node_entry_validation import (
-    ELECTRONICS_REVIEW_MANIFEST,
-    ELECTRONICS_REVIEWER_HANDOVER_CHECK,
-    ENGINEER_BENCHMARK_HANDOVER_CHECK,
-    ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
-    ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
-    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     NodeEntryValidationError,
     ValidationGraph,
     _materialize_reviewer_handover,
@@ -27,6 +21,14 @@ from controller.agent.node_entry_validation import (
     integration_mode_enabled,
     plan_reviewer_handover_custom_check_from_session_id,
     reviewer_handover_custom_check_from_session_id,
+)
+from controller.agent.handover_constants import (
+    ELECTRONICS_REVIEW_MANIFEST,
+    ELECTRONICS_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_BENCHMARK_HANDOVER_CHECK,
+    ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
+    ENGINEERING_EXECUTION_REVIEW_MANIFEST,
 )
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings as controller_settings

@@ -41,6 +41,7 @@ from controller.observability.langfuse import (
 )
 from controller.observability.tracing import record_worker_events
 from controller.persistence.models import Trace
+from controller.utils import EpisodeIdentity
 from shared.agents.config import load_agents_config
 from shared.enums import AgentName, TraceType
 from shared.git_utils import repo_revision
@@ -54,6 +55,7 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 _SYSTEM_TOOL_RETRY_EXHAUSTED_MARKER = "SYSTEM_TOOL_RETRY_EXHAUSTED"
+_NATIVE_TOOL_COMPLETION_MAX_TOKENS = 1024
 
 
 @dataclass
@@ -80,12 +82,13 @@ class SharedNodeContext:
         agent_role: AgentName = AgentName.ENGINEER_CODER,
     ) -> "SharedNodeContext":
         main_loop = asyncio.get_running_loop()
-        # Fallback for episode_id if not provided
-        eid = episode_id or session_id
+        identity = EpisodeIdentity.from_context(
+            session_id=session_id, episode_id=episode_id
+        )
 
         structlog.contextvars.bind_contextvars(
-            session_id=session_id,
-            episode_id=eid,
+            session_id=identity.session_id,
+            episode_id=str(identity.episode_id),
             agent_role=agent_role.value,
             stage=agent_role.value,
         )
@@ -100,7 +103,9 @@ class SharedNodeContext:
 
         if not fs:
             fs = RemoteFilesystemMiddleware(
-                worker_client, agent_role=agent_role, episode_id=eid
+                worker_client,
+                agent_role=agent_role,
+                episode_id=str(identity.episode_id),
             )
 
         request_config = settings.resolve_dspy_lm_request_config(settings.llm_model)
@@ -127,8 +132,8 @@ class SharedNodeContext:
 
         return cls(
             worker_light_url=worker_light_url,
-            session_id=session_id,
-            episode_id=eid,
+            session_id=identity.session_id,
+            episode_id=str(identity.episode_id),
             pm=PromptManager(),
             dspy_lm=dspy_lm,
             worker_client=worker_client,
@@ -1089,7 +1094,8 @@ class BaseNode:
             )
         ).copy(
             timeout=settings.native_tool_completion_timeout_seconds,
-            max_tokens=min(settings.llm_max_tokens, 1536),
+            # Keep the tool-loop request below the current OpenRouter credit ceiling.
+            max_tokens=min(settings.llm_max_tokens, _NATIVE_TOOL_COMPLETION_MAX_TOKENS),
         )
         for iteration in range(max_iters):
             native_mock_completion = getattr(native_lm, "native_tool_completion", None)

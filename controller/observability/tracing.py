@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from controller.persistence.db import get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
-from controller.utils import get_episode_id
+from controller.utils import resolve_episode_id
 from shared.enums import AssetType, TraceType
 from shared.observability.schemas import BaseEvent
 
@@ -30,7 +30,7 @@ async def record_worker_events(
     if not events:
         return
 
-    episode_uuid = get_episode_id(episode_id)
+    episode_uuid = resolve_episode_id(episode_id)
 
     session_factory = get_sessionmaker()
     async with session_factory() as db:
@@ -133,7 +133,7 @@ async def sync_asset(
         content: Optional content snippet or full content to cache.
         asset_type: Optional explicit AssetType. If None, inferred from extension.
     """
-    episode_uuid = get_episode_id(episode_id)
+    episode_uuid = resolve_episode_id(episode_id)
 
     if asset_type is None:
         p = Path(path)

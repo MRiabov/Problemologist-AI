@@ -8,7 +8,6 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 WIDTH = 1600
 HEIGHT = 1000
 
@@ -255,7 +254,9 @@ def render_projection(image_path: Path) -> None:
     # Base technical linework first.
     for part in projected_parts:
         vis_color = MODEL_COLORS.get(part.material_id, MODEL_COLORS["aluminum_6061"])
-        hid_color = MODEL_HIDDEN_COLORS.get(part.material_id, MODEL_HIDDEN_COLORS["aluminum_6061"])
+        hid_color = MODEL_HIDDEN_COLORS.get(
+            part.material_id, MODEL_HIDDEN_COLORS["aluminum_6061"]
+        )
         for segment in part.visible_segments:
             draw_segment(
                 draw,
@@ -276,7 +277,13 @@ def render_projection(image_path: Path) -> None:
         min_x, min_y, max_x, max_y = part.bounds
         return transform(((min_x + max_x) / 2.0, (min_y + max_y) / 2.0))
 
-    def label(text: str, xy: tuple[float, float], fill: tuple[int, int, int, int], *, anchor: str = "mm"):
+    def label(
+        text: str,
+        xy: tuple[float, float],
+        fill: tuple[int, int, int, int],
+        *,
+        anchor: str = "mm",
+    ):
         draw.text(
             xy,
             text,
@@ -304,7 +311,12 @@ def render_projection(image_path: Path) -> None:
         label("goal zone", (cx + 220, cy - 72), (58, 191, 92, 255), anchor="lm")
 
     # Paper-style overlay.
-    draw.text((110, 54), "Compact engineering-coder benchmark", fill=TITLE_COLOR, font=title_font)
+    draw.text(
+        (110, 54),
+        "Compact engineering-coder benchmark",
+        fill=TITLE_COLOR,
+        font=title_font,
+    )
     draw.text(
         (110, 95),
         "OCP projection with Pillow annotations",
@@ -313,7 +325,9 @@ def render_projection(image_path: Path) -> None:
     )
 
     card = (586, 106, 1018, 194)
-    draw.rounded_rectangle(card, radius=18, fill=(255, 255, 255, 210), outline=(218, 223, 232), width=2)
+    draw.rounded_rectangle(
+        card, radius=18, fill=(255, 255, 255, 210), outline=(218, 223, 232), width=2
+    )
     draw.text((610, 124), "pipeline color schema", fill=TITLE_COLOR, font=label_font)
     schema = [
         ((612, 156, 700, 176), (163, 112, 70, 242), "start"),
@@ -324,7 +338,9 @@ def render_projection(image_path: Path) -> None:
         draw.rounded_rectangle(box, radius=8, fill=fill)
         tx = (box[0] + box[2]) / 2
         ty = (box[1] + box[3]) / 2
-        draw.text((tx, ty - 1), text, fill=(255, 255, 255), font=small_font, anchor="mm")
+        draw.text(
+            (tx, ty - 1), text, fill=(255, 255, 255), font=small_font, anchor="mm"
+        )
 
     # Curved transfer arrow.
     points_curve = []
@@ -359,7 +375,9 @@ def render_projection(image_path: Path) -> None:
         w = 108 if text != "transfer" else 138
         h = 34
         rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-        draw.rounded_rectangle(rect, radius=12, fill=fill, outline=(255, 255, 255, 120), width=2)
+        draw.rounded_rectangle(
+            rect, radius=12, fill=fill, outline=(255, 255, 255, 120), width=2
+        )
         draw.text((cx, cy - 1), text, fill=text_fill, font=small_font, anchor="mm")
 
     legend_y = 890
@@ -371,8 +389,16 @@ def render_projection(image_path: Path) -> None:
     ]
     x = 110
     for text, color in legend_items:
-        draw.rounded_rectangle([x, legend_y, x + 24, legend_y + 24], radius=6, fill=color)
-        draw.text((x + 34, legend_y + 12), text, fill=TITLE_COLOR, font=subtitle_font, anchor="lm")
+        draw.rounded_rectangle(
+            [x, legend_y, x + 24, legend_y + 24], radius=6, fill=color
+        )
+        draw.text(
+            (x + 34, legend_y + 12),
+            text,
+            fill=TITLE_COLOR,
+            font=subtitle_font,
+            anchor="lm",
+        )
         x += 320
 
     canvas.convert("RGB").save(image_path)

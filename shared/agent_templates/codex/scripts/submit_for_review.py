@@ -80,7 +80,7 @@ def main() -> int:
 
     validation_ok, validation_message = validate(
         solution,
-        output_dir=workspace,
+        output_dir=str(workspace),
         session_id=session_id,
     )
     record_validation_result(
@@ -103,7 +103,7 @@ def main() -> int:
 
     simulation_result = simulate(
         solution,
-        output_dir=workspace,
+        output_dir=str(workspace),
         session_id=session_id,
     )
     if not simulation_result.success:

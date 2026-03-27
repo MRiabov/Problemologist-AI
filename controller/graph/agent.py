@@ -13,18 +13,16 @@ from shared.logging import get_logger
 logger = get_logger(__name__)
 
 
-def create_agent_graph(
-    agent_name: AgentName = AgentName.ENGINEER_CODER,
-    trace_id: str | None = None,
-    session_id: str | None = None,
-    start_node: AgentName | None = None,
+def _resolve_graph_bundle(
+    agent_name: AgentName,
+    start_node: AgentName | None,
+    session_id: str | None,
 ):
-    """
-    Factory to create/return the appropriate LangGraph based on agent_name.
-    Migrated from deepagents to LangGraph.
-    """
-    # WP10: Remove LangChain-based Langfuse callbacks
+    """Resolve the graph bundle for an agent.
 
+    The compatibility fallback to the engineering graph is kept explicit here
+    so the call site reads as routing, not as a hidden side effect.
+    """
     if start_node is not None and agent_name in {
         AgentName.ENGINEER_PLANNER,
         AgentName.ENGINEER_CODER,
@@ -42,23 +40,21 @@ def create_agent_graph(
     if agent_name == AgentName.ELECTRONICS_PLANNER:
         return electronics_planner_graph, None
 
-    if agent_name in [
+    if agent_name in {
         AgentName.ENGINEER_CODER,
         AgentName.ENGINEER_PLAN_REVIEWER,
         AgentName.ENGINEER_EXECUTION_REVIEWER,
         AgentName.ELECTRONICS_REVIEWER,
         AgentName.SKILL_AGENT,
-    ]:
-        # Unified engineering graph (Architect -> Engineer -> Critic)
+    }:
         return engineering_graph, None
 
-    if agent_name in [
+    if agent_name in {
         AgentName.BENCHMARK_PLANNER,
         AgentName.BENCHMARK_PLAN_REVIEWER,
         AgentName.BENCHMARK_CODER,
         AgentName.BENCHMARK_REVIEWER,
-    ]:
-        # Unified benchmark generation graph (Planner -> Coder -> Reviewer)
+    }:
         return define_graph(), None
 
     if agent_name == AgentName.COTS_SEARCH:
@@ -70,3 +66,17 @@ def create_agent_graph(
         session_id=session_id,
     )
     return engineering_graph, None
+
+
+def create_agent_graph(
+    agent_name: AgentName = AgentName.ENGINEER_CODER,
+    trace_id: str | None = None,
+    session_id: str | None = None,
+    start_node: AgentName | None = None,
+):
+    """
+    Factory to create/return the appropriate LangGraph based on agent_name.
+    Migrated from deepagents to LangGraph.
+    """
+    # WP10: Remove LangChain-based Langfuse callbacks
+    return _resolve_graph_bundle(agent_name, start_node, session_id)

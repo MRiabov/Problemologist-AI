@@ -106,6 +106,8 @@ def simulate(compound: Compound, **kwargs) -> BenchmarkToolResponse:
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.validation import simulate as real_simulate
 
+        if "output_dir" in kwargs and kwargs["output_dir"] is not None:
+            kwargs = {**kwargs, "output_dir": Path(kwargs["output_dir"])}
         return real_simulate(compound, **kwargs)
 
     controller_payload = {
@@ -135,6 +137,8 @@ def validate(compound: Compound, **kwargs) -> tuple[bool, str | None]:
     if os.getenv("IS_HEAVY_WORKER"):
         from worker_heavy.utils.validation import validate as real_validate
 
+        if "output_dir" in kwargs and kwargs["output_dir"] is not None:
+            kwargs = {**kwargs, "output_dir": Path(kwargs["output_dir"])}
         return real_validate(compound, **kwargs)
 
     controller_payload = {

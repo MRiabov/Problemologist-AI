@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from controller.clients.worker import WorkerClient
 from controller.config.settings import settings
 from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from controller.utils import EpisodeIdentity
 from shared.enums import AgentName
 from shared.logging import bind_log_context
 from shared.simulation.schemas import (
@@ -48,6 +49,9 @@ class ScriptToolRequest(BaseModel):
 async def _controller_script_middleware(
     session_id: str, agent_role: AgentName, request: Request, episode_id: str | None
 ):
+    identity = EpisodeIdentity.from_context(
+        session_id=session_id, episode_id=episode_id
+    )
     async with httpx.AsyncClient() as http_client:
         client = WorkerClient(
             base_url=settings.worker_light_url,
@@ -62,17 +66,20 @@ async def _controller_script_middleware(
             client,
             temporal_client=getattr(request.app.state, "temporal_client", None),
             agent_role=agent_role,
-            episode_id=episode_id or session_id,
+            episode_id=str(identity.episode_id),
         )
         yield middleware
 
 
 @contextmanager
 def _script_log_context(payload: ScriptToolRequest, session_id: str):
+    identity = EpisodeIdentity.from_context(
+        session_id=session_id, episode_id=payload.episode_id
+    )
     stage = payload.reviewer_stage or payload.agent_role.value
     with bind_log_context(
-        session_id=session_id,
-        episode_id=payload.episode_id or session_id,
+        session_id=identity.session_id,
+        episode_id=str(identity.episode_id),
         agent_role=payload.agent_role.value,
         stage=stage,
     ):

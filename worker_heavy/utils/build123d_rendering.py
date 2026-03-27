@@ -13,13 +13,13 @@ from build123d import Compound
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field
 from vtk.util.numpy_support import vtk_to_numpy
+from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkFiltersSources import vtkCubeSource
 from vtkmodules.vtkIOGeometry import vtkOBJReader
-from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkRenderingCore import (
     vtkPolyDataMapper,
-    vtkRenderWindow,
     vtkRenderer,
+    vtkRenderWindow,
     vtkWindowToImageFilter,
 )
 
@@ -93,7 +93,9 @@ def _rgba_from_hex(color: str, alpha: float = 1.0) -> tuple[float, float, float,
     return (r, g, b, alpha)
 
 
-def _material_color_rgba(material_id: str | None, manufacturing_config) -> tuple[float, float, float, float]:
+def _material_color_rgba(
+    material_id: str | None, manufacturing_config
+) -> tuple[float, float, float, float]:
     if not material_id:
         return (0.62, 0.67, 0.73, 1.0)
 
@@ -142,9 +144,11 @@ def _combined_bounds(
     max_x, max_y, max_z = bbox.max.X, bbox.max.Y, bbox.max.Z
 
     if objectives is not None:
-        for box in (
-            [objectives.objectives.goal_zone, *objectives.objectives.forbid_zones, objectives.objectives.build_zone]
-        ):
+        for box in [
+            objectives.objectives.goal_zone,
+            *objectives.objectives.forbid_zones,
+            objectives.objectives.build_zone,
+        ]:
             min_x = min(min_x, box.min[0])
             min_y = min(min_y, box.min[1])
             min_z = min(min_z, box.min[2])
@@ -155,7 +159,9 @@ def _combined_bounds(
     return (min_x, min_y, min_z), (max_x, max_y, max_z)
 
 
-def _build_box_actor(size: tuple[float, float, float]) -> tuple[vtkCubeSource, vtkPolyDataMapper]:
+def _build_box_actor(
+    size: tuple[float, float, float],
+) -> tuple[vtkCubeSource, vtkPolyDataMapper]:
     source = vtkCubeSource()
     source.SetXLength(max(size[0] * 2.0, 1e-6))
     source.SetYLength(max(size[1] * 2.0, 1e-6))
@@ -246,7 +252,10 @@ def collect_preview_scene(
                         object_id=part_index,
                         pos=tuple(float(v) for v in part_data.pos),
                         euler=tuple(float(v) for v in part_data.euler),
-                        box_size=tuple(float(v) for v in (part_data.zone_size or [0.05, 0.05, 0.05])),
+                        box_size=tuple(
+                            float(v)
+                            for v in (part_data.zone_size or [0.05, 0.05, 0.05])
+                        ),
                         zone_type=zone_type,
                         color_rgba=zone_color,
                         segmentation_color_rgb=_unique_color(part_index),
@@ -263,7 +272,9 @@ def collect_preview_scene(
                 tolerance=tolerance,
                 angular_tolerance=tolerance,
             )
-            obj_paths = sorted(str(path) for path in saved_paths if path.suffix == ".obj")
+            obj_paths = sorted(
+                str(path) for path in saved_paths if path.suffix == ".obj"
+            )
 
             render_entities.append(
                 PreviewEntity(
@@ -276,15 +287,13 @@ def collect_preview_scene(
                     pos=tuple(float(v) for v in part_data.pos),
                     euler=tuple(float(v) for v in part_data.euler),
                     mesh_paths=obj_paths,
-                    material_id=part_data.material_id or (
-                        "cots-generic" if part_data.cots_id else None
-                    ),
+                    material_id=part_data.material_id
+                    or ("cots-generic" if part_data.cots_id else None),
                     body_name=part_data.label,
                     geom_name=Path(obj_paths[0]).stem if obj_paths else None,
                     color_rgba=_material_color_rgba(
-                        part_data.material_id or (
-                            "cots-generic" if part_data.cots_id else None
-                        ),
+                        part_data.material_id
+                        or ("cots-generic" if part_data.cots_id else None),
                         manufacturing_config,
                     ),
                     segmentation_color_rgb=_unique_color(part_index),
@@ -397,7 +406,9 @@ def _add_entity_actors(
     _apply_actor_style(actor, entity, segmentation=segmentation)
 
 
-def _apply_actor_style(actor: vtk.vtkActor, entity: PreviewEntity, *, segmentation: bool) -> None:
+def _apply_actor_style(
+    actor: vtk.vtkActor, entity: PreviewEntity, *, segmentation: bool
+) -> None:
     prop = actor.GetProperty()
     if segmentation:
         color = entity.segmentation_color_rgb or (255, 255, 255)
@@ -428,7 +439,9 @@ def _build_renderer(
     segmentation: bool,
 ) -> _RendererBundle:
     renderer = vtkRenderer()
-    renderer.SetBackground(0.98, 0.98, 0.99) if not segmentation else renderer.SetBackground(0.0, 0.0, 0.0)
+    renderer.SetBackground(
+        0.98, 0.98, 0.99
+    ) if not segmentation else renderer.SetBackground(0.0, 0.0, 0.0)
 
     for entity in scene.entities:
         _add_entity_actors(renderer, entity, segmentation=segmentation)
@@ -475,7 +488,9 @@ def _vtk_image_to_numpy_rgb(
     return np.flipud(array)
 
 
-def _linearize_depth_buffer(depth_buffer: np.ndarray, near: float, far: float) -> np.ndarray:
+def _linearize_depth_buffer(
+    depth_buffer: np.ndarray, near: float, far: float
+) -> np.ndarray:
     depth = np.full_like(depth_buffer, np.inf, dtype=np.float32)
     valid = np.isfinite(depth_buffer) & (depth_buffer < 0.999999)
     if not valid.any():
@@ -676,7 +691,11 @@ class Build123dRendererBackend(RendererBackend):
 
     def _resolve_camera(
         self, camera_name: str
-    ) -> tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]:
+    ) -> tuple[
+        tuple[float, float, float],
+        tuple[float, float, float],
+        tuple[float, float, float],
+    ]:
         if self.scene is None:
             raise RuntimeError("Scene not loaded")
 
@@ -777,7 +796,9 @@ def render_preview_bundle(
             raise RuntimeError("build123d preview scene failed to load")
 
         saved_paths: list[str] = []
-        legend_entries = backend.describe_segmentation(np.zeros((1, 1, 3), dtype=np.uint8))
+        legend_entries = backend.describe_segmentation(
+            np.zeros((1, 1, 3), dtype=np.uint8)
+        )
         legend_by_path: dict[str, list[SegmentationLegendEntry]] = {}
 
         center = scene.center
@@ -831,9 +852,9 @@ def render_preview_bundle(
                         if np.isclose(depth_min, depth_max):
                             normalized = np.ones(depth_image.shape, dtype=np.float32)
                         else:
-                            normalized = (
-                                depth_image - depth_min
-                            ) / (depth_max - depth_min)
+                            normalized = (depth_image - depth_min) / (
+                                depth_max - depth_min
+                            )
                             normalized = 1.0 - np.clip(normalized, 0.0, 1.0)
                         depth_render[finite_mask] = (
                             normalized[finite_mask] * 255.0
