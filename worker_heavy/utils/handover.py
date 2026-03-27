@@ -195,6 +195,7 @@ def submit_for_review(
     session_id: str | None = None,
     reviewer_stage: ReviewerStage = "engineering_execution_reviewer",
     episode_id: str | None = None,
+    script_path: str | Path = "script.py",
 ):
     """
     Standardized handover from Coder to Reviewer.
@@ -322,69 +323,12 @@ def submit_for_review(
         )
 
     # 2. Verify prior validation (INT-018) for current script revision
-    script_path = cwd / "script.py"
+    script_path = _resolve_workspace_path(cwd, str(script_path))
     if not script_path.exists():
         logger.warning("script_missing_for_handover", session_id=session_id)
-        raise ValueError("script.py is missing (required for submission)")
+        raise ValueError(f"{script_path.name} is missing (required for submission)")
     script_mtime = script_path.stat().st_mtime
     script_sha256 = _sha256_file(script_path)
-
-    validation_results_path = cwd / "validation_results.json"
-    if not validation_results_path.exists():
-        logger.warning("prior_validation_missing", session_id=session_id)
-        raise ValueError(
-            "Prior validation missing. Call /benchmark/validate before submission."
-        )
-    validation_record = ValidationResultRecord.model_validate_json(
-        validation_results_path.read_text(encoding="utf-8")
-    )
-    if not validation_record.success:
-        logger.warning("prior_validation_failed", session_id=session_id)
-        raise ValueError(
-            "Prior validation failed. Fix validation errors before submission."
-        )
-    if validation_record.script_sha256 != script_sha256:
-        logger.warning(
-            "prior_validation_stale_for_script",
-            session_id=session_id,
-            validation_script_sha256=validation_record.script_sha256,
-            current_script_sha256=script_sha256,
-        )
-        raise ValueError(
-            "Prior validation is stale for current script revision. Re-run validate."
-        )
-
-    # 2b. Verify prior simulation for current script revision and objective success.
-    simulation_results_path = cwd / "simulation_result.json"
-    if not simulation_results_path.exists():
-        logger.warning("prior_simulation_missing", session_id=session_id)
-        raise ValueError("Prior simulation missing. Call /benchmark/simulate first.")
-    simulation_result = SimulationResult.model_validate_json(
-        simulation_results_path.read_text(encoding="utf-8")
-    )
-    if not simulation_result.success:
-        logger.warning(
-            "prior_simulation_failed",
-            summary=simulation_result.summary,
-            session_id=session_id,
-        )
-        raise ValueError(
-            "Prior simulation failed. Submission requires a successful simulation."
-        )
-    if not _goal_reached(simulation_result.summary):
-        logger.warning(
-            "goal_not_reached_in_simulation",
-            summary=simulation_result.summary,
-            session_id=session_id,
-        )
-        raise ValueError(
-            "Simulation did not report goal completion (green/goal zone reached)."
-        )
-    if simulation_results_path.stat().st_mtime < script_mtime:
-        logger.warning("prior_simulation_stale_for_script", session_id=session_id)
-        raise ValueError(
-            "Prior simulation is stale for current script revision. Re-run simulate."
-        )
 
     # 3. Perform DFM + Geometry Checks (INT-019)
     renders_dir.mkdir(parents=True, exist_ok=True)
@@ -503,6 +447,63 @@ def submit_for_review(
                     session_id=session_id,
                 )
                 raise ValueError(f"Submission rejected (Weight): {msg}")
+
+    validation_results_path = cwd / "validation_results.json"
+    if not validation_results_path.exists():
+        logger.warning("prior_validation_missing", session_id=session_id)
+        raise ValueError(
+            "Prior validation missing. Call /benchmark/validate before submission."
+        )
+    validation_record = ValidationResultRecord.model_validate_json(
+        validation_results_path.read_text(encoding="utf-8")
+    )
+    if not validation_record.success:
+        logger.warning("prior_validation_failed", session_id=session_id)
+        raise ValueError(
+            "Prior validation failed. Fix validation errors before submission."
+        )
+    if validation_record.script_sha256 != script_sha256:
+        logger.warning(
+            "prior_validation_stale_for_script",
+            session_id=session_id,
+            validation_script_sha256=validation_record.script_sha256,
+            current_script_sha256=script_sha256,
+        )
+        raise ValueError(
+            "Prior validation is stale for current script revision. Re-run validate."
+        )
+
+    # 3b. Verify prior simulation for current script revision and objective success.
+    simulation_results_path = cwd / "simulation_result.json"
+    if not simulation_results_path.exists():
+        logger.warning("prior_simulation_missing", session_id=session_id)
+        raise ValueError("Prior simulation missing. Call /benchmark/simulate first.")
+    simulation_result = SimulationResult.model_validate_json(
+        simulation_results_path.read_text(encoding="utf-8")
+    )
+    if not simulation_result.success:
+        logger.warning(
+            "prior_simulation_failed",
+            summary=simulation_result.summary,
+            session_id=session_id,
+        )
+        raise ValueError(
+            "Prior simulation failed. Submission requires a successful simulation."
+        )
+    if not _goal_reached(simulation_result.summary):
+        logger.warning(
+            "goal_not_reached_in_simulation",
+            summary=simulation_result.summary,
+            session_id=session_id,
+        )
+        raise ValueError(
+            "Simulation did not report goal completion (green/goal zone reached)."
+        )
+    if simulation_results_path.stat().st_mtime < script_mtime:
+        logger.warning("prior_simulation_stale_for_script", session_id=session_id)
+        raise ValueError(
+            "Prior simulation is stale for current script revision. Re-run simulate."
+        )
 
     # 4. Persist artifacts
     render_paths: list[str] = []

@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,10 @@ from fastapi import (
     HTTPException,
     Response,
     UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
 )
+from fastapi.encoders import jsonable_encoder
 
 from shared.enums import ResponseStatus
 from shared.workers.filesystem.router import (
@@ -41,6 +45,9 @@ from shared.workers.schema import (
     ReadFileRequest,
     ReadFileResponse,
     StatusResponse,
+    WorkerLightRpcError,
+    WorkerLightRpcRequest,
+    WorkerLightRpcResponse,
     WriteFileRequest,
 )
 from worker_light.runtime.executor import RuntimeConfig, run_command_async
@@ -118,6 +125,375 @@ async def api_inspect_topology(
 def _collect_events(fs_router) -> list[dict[str, Any]]:
     """Read and delete events.jsonl from the workspace."""
     return collect_and_cleanup_events(fs_router.local_backend.root)
+
+
+def _bundle_session_bytes(fs_router) -> bytes:
+    import io
+    import tarfile
+
+    root = fs_router.local_backend.root
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        # Exclude internal state and large asset caches, but keep renders because
+        # the reviewer handoff depends on the preview/simulation media.
+        exclude = {".git", "__pycache__", "assets"}
+
+        for path in root.rglob("*"):
+            rel_p = path.relative_to(root)
+            if any(part in exclude for part in rel_p.parts):
+                continue
+            if path.is_file():
+                tar.add(path, arcname=str(rel_p))
+
+    return buf.getvalue()
+
+
+async def _handle_light_rpc_action(
+    action: str,
+    payload: dict[str, Any],
+    fs_router,
+    *,
+    x_session_id: str,
+) -> Any:
+    if action == "fs_ls":
+        if payload.get("bypass_agent_permissions", False):
+            return fs_router.local_backend.ls(payload.get("path", "/"))
+        return fs_router.ls(payload.get("path", "/"))
+
+    if action == "fs_exists":
+        if payload.get("bypass_agent_permissions", False):
+            return {"exists": fs_router.local_backend.exists(payload.get("path", "/"))}
+        return {"exists": fs_router.exists(payload.get("path", "/"))}
+
+    if action == "fs_read":
+        if payload.get("bypass_agent_permissions", False):
+            local_path = fs_router.local_backend._resolve(payload["path"])
+            if not local_path.exists():
+                raise FileNotFoundError
+            return {"content": local_path.read_text(encoding="utf-8")}
+        return {"content": fs_router.read(payload["path"]).decode("utf-8")}
+
+    if action == "fs_read_blob":
+        if payload.get("bypass_agent_permissions", False):
+            local_path = fs_router.local_backend._resolve(payload["path"])
+            if not local_path.exists():
+                raise FileNotFoundError
+            content = local_path.read_bytes()
+        else:
+            content = fs_router.read(payload["path"])
+        return {"content_b64": base64.b64encode(content).decode("ascii")}
+
+    if action == "fs_write":
+        if payload.get("bypass_agent_permissions", False):
+            result = fs_router.local_backend.write(
+                payload["path"],
+                payload["content"],
+                overwrite=payload.get("overwrite", False),
+            )
+            if result.error:
+                raise HTTPException(status_code=500, detail=result.error)
+            return {"status": ResponseStatus.SUCCESS}
+        fs_router.write(
+            payload["path"],
+            payload["content"],
+            overwrite=payload.get("overwrite", False),
+        )
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "fs_edit":
+        edits = payload.get("edits") or []
+        if payload.get("bypass_agent_permissions", False):
+            session_dir = fs_router.local_backend.root
+            if _is_host_session_absolute_path(payload["path"], session_dir):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Host session absolute paths are not allowed. "
+                        "Use workspace-relative paths like 'script.py' or the "
+                        "'/workspace/script.py' alias."
+                    ),
+                )
+
+            if not fs_router.local_backend.exists(payload["path"]):
+                raise HTTPException(status_code=404, detail="File not found")
+            for edit in edits:
+                result = fs_router.local_backend.edit(
+                    payload["path"], edit["old_string"], edit["new_string"]
+                )
+                if result.error or (result.occurrences or 0) <= 0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"Content not found for replacement: "
+                            f"{edit['old_string'][:50]}..."
+                        ),
+                    )
+            return {"status": ResponseStatus.SUCCESS}
+
+        if not fs_router.exists(payload["path"]):
+            raise HTTPException(status_code=404, detail="File not found")
+        for edit in edits:
+            success = fs_router.edit(
+                payload["path"], edit["old_string"], edit["new_string"]
+            )
+            if not success:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Content not found for replacement: "
+                        f"{edit['old_string'][:50]}..."
+                    ),
+                )
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "fs_upload_file":
+        content = base64.b64decode(payload["content_b64"])
+        if payload.get("bypass_agent_permissions", False):
+            responses = fs_router.local_backend.upload_files(
+                [(payload["path"], content)]
+            )
+        else:
+            responses = fs_router.upload_files([(payload["path"], content)])
+
+        if responses and responses[0].error:
+            raise HTTPException(status_code=403, detail=responses[0].error)
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "fs_delete":
+        if payload.get("bypass_agent_permissions", False):
+            fs_router.local_backend.delete(payload["path"])
+            return {"status": ResponseStatus.SUCCESS}
+        fs_router.delete(payload["path"])
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "fs_grep":
+        if payload.get("bypass_agent_permissions", False):
+            matches = fs_router.local_backend.grep_raw(
+                pattern=payload["pattern"],
+                path=payload.get("path"),
+                glob=payload.get("glob"),
+            )
+        else:
+            matches = fs_router.grep_raw(
+                pattern=payload["pattern"],
+                path=payload.get("path"),
+                glob=payload.get("glob"),
+            )
+        if isinstance(matches, str):
+            raise HTTPException(status_code=400, detail=matches)
+        return matches
+
+    if action == "fs_bundle":
+        return {
+            "content_b64": base64.b64encode(_bundle_session_bytes(fs_router)).decode(
+                "ascii"
+            )
+        }
+
+    if action == "git_init":
+        from worker_light.utils.git import init_workspace_repo
+
+        init_workspace_repo(fs_router.local_backend.root)
+        return {"status": ResponseStatus.SUCCESS}
+
+    if action == "git_commit":
+        from worker_light.utils.git import commit_all
+
+        commit_hash = commit_all(fs_router.local_backend.root, payload["message"])
+        if commit_hash:
+            return {
+                "success": True,
+                "commit_hash": commit_hash,
+                "message": "Commit successful",
+            }
+        return {
+            "success": True,
+            "commit_hash": None,
+            "message": "No changes to commit",
+        }
+
+    if action == "git_status":
+        from worker_light.utils.git import get_repo_status
+
+        return get_repo_status(fs_router.local_backend.root)
+
+    if action == "git_resolve":
+        from worker_light.utils.git import (
+            resolve_conflict_ours,
+            resolve_conflict_theirs,
+        )
+
+        if payload["strategy"] == "ours":
+            success = resolve_conflict_ours(
+                fs_router.local_backend.root, payload["file_path"]
+            )
+        else:
+            success = resolve_conflict_theirs(
+                fs_router.local_backend.root, payload["file_path"]
+            )
+
+        if success:
+            return {"status": ResponseStatus.SUCCESS}
+        raise HTTPException(status_code=500, detail="Failed to resolve conflict")
+
+    if action == "git_merge_abort":
+        from worker_light.utils.git import abort_merge
+
+        if abort_merge(fs_router.local_backend.root):
+            return {"status": ResponseStatus.SUCCESS}
+        raise HTTPException(status_code=500, detail="Failed to abort merge")
+
+    if action == "git_merge_complete":
+        from worker_light.utils.git import complete_merge
+
+        commit_hash = complete_merge(
+            fs_router.local_backend.root,
+            payload.get("message"),
+            session_id=x_session_id,
+        )
+        if commit_hash:
+            return {
+                "success": True,
+                "commit_hash": commit_hash,
+                "message": "Merge completed successfully",
+            }
+        return {
+            "success": False,
+            "commit_hash": None,
+            "message": "Failed to complete merge (conflicts might remain)",
+        }
+
+    if action == "runtime_execute":
+        session_dir = fs_router.local_backend.root
+
+        config = RuntimeConfig(
+            timeout_seconds=payload["timeout"],
+            working_directory=str(session_dir),
+        )
+        from worker_light.config import settings
+
+        result = await run_command_async(
+            command=payload["code"],
+            env={
+                "SESSION_ID": x_session_id,
+                "EPISODE_ID": payload.get("episode_id") or x_session_id,
+                "WORKER_HEAVY_URL": settings.worker_heavy_url,
+                "CONTROLLER_URL": "",
+            },
+            config=config,
+            session_id=x_session_id,
+        )
+        events = _collect_events(fs_router)
+
+        return {
+            "stdout": _sanitize_workspace_alias(result.stdout, session_dir),
+            "stderr": _sanitize_workspace_alias(result.stderr, session_dir),
+            "exit_code": result.exit_code,
+            "timed_out": result.timed_out,
+            "events": events,
+        }
+
+    if action == "topology_inspect":
+        from worker_light.tools.topology import inspect_topology
+
+        try:
+            local_p = fs_router.local_backend._resolve(payload["script_path"])
+        except Exception:
+            local_p = Path(payload["script_path"])
+
+        props = inspect_topology(
+            target_id=payload["target_id"], script_path=str(local_p)
+        )
+        return {"success": True, "properties": props}
+
+    raise HTTPException(
+        status_code=400, detail=f"Unsupported worker RPC action: {action}"
+    )
+
+
+@light_router.websocket("/ws")
+async def worker_light_websocket(websocket: WebSocket):
+    session_id = websocket.headers.get("x-session-id")
+    if not session_id:
+        await websocket.accept()
+        await websocket.send_json(
+            {
+                "request_id": "",
+                "ok": False,
+                "error": {
+                    "message": "Missing X-Session-ID header",
+                    "status_code": 1008,
+                    "error_type": "WebSocketPolicyViolation",
+                },
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
+    try:
+        fs_router = await get_router(x_session_id=session_id)
+    except HTTPException as exc:
+        await websocket.accept()
+        await websocket.send_json(
+            {
+                "request_id": "",
+                "ok": False,
+                "error": {
+                    "message": str(exc.detail),
+                    "status_code": exc.status_code,
+                    "error_type": exc.__class__.__name__,
+                },
+            }
+        )
+        await websocket.close(code=1008)
+        return
+
+    await websocket.accept()
+
+    try:
+        while True:
+            raw_message = await websocket.receive_text()
+            request = WorkerLightRpcRequest.model_validate_json(raw_message)
+            try:
+                result = await _handle_light_rpc_action(
+                    request.action,
+                    request.payload,
+                    fs_router,
+                    x_session_id=session_id,
+                )
+                response = WorkerLightRpcResponse(
+                    request_id=request.request_id,
+                    ok=True,
+                    result=jsonable_encoder(result),
+                )
+            except HTTPException as exc:
+                response = WorkerLightRpcResponse(
+                    request_id=request.request_id,
+                    ok=False,
+                    error=WorkerLightRpcError(
+                        message=str(exc.detail),
+                        status_code=exc.status_code,
+                        error_type=exc.__class__.__name__,
+                    ),
+                )
+            except Exception as exc:
+                response = WorkerLightRpcResponse(
+                    request_id=request.request_id,
+                    ok=False,
+                    error=WorkerLightRpcError(
+                        message=str(exc),
+                        status_code=500,
+                        error_type=exc.__class__.__name__,
+                    ),
+                )
+
+            await websocket.send_text(response.model_dump_json())
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        logger.warning("worker_light_websocket_failed", error=str(exc))
+        raise
 
 
 @light_router.post("/fs/ls", response_model=list[FsFileEntry])
@@ -348,26 +724,8 @@ async def api_grep(
 @light_router.post("/fs/bundle")
 async def bundle_session(fs_router=Depends(get_router)):
     """Bundle the session workspace into a gzipped tarball."""
-    import io
-    import tarfile
-
-    root = fs_router.local_backend.root
-
-    buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        # Exclude internal state and large asset caches, but keep renders because
-        # the reviewer handoff depends on the preview/simulation media.
-        exclude = {".git", "__pycache__", "assets"}
-
-        for path in root.rglob("*"):
-            rel_p = path.relative_to(root)
-            if any(part in exclude for part in rel_p.parts):
-                continue
-            if path.is_file():
-                tar.add(path, arcname=str(rel_p))
-
     return Response(
-        content=buf.getvalue(),
+        content=_bundle_session_bytes(fs_router),
         media_type="application/x-gzip",
         headers={"Content-Disposition": "attachment; filename=session.tar.gz"},
     )
