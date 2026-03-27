@@ -7,13 +7,15 @@ Renders CAD models from specific camera angles for agent inspection.
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-import numpy as np
 import structlog
 from build123d import Compound, Part
 from PIL import Image
 
 from shared.models.schemas import BenchmarkDefinition
-from worker_heavy.simulation.builder import SimulationBuilder
+from worker_heavy.utils.build123d_rendering import (
+    Build123dRendererBackend,
+    camera_position_from_orbit,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -41,39 +43,31 @@ def preview_design(
     Returns:
         Path to the saved preview image
     """
-    import mujoco
-
-    # Build MJCF from component using SimulationBuilder
     with TemporaryDirectory() as temp_build_dir:
         build_dir = Path(temp_build_dir)
-        builder = SimulationBuilder(output_dir=build_dir)
-        scene_path = builder.build_from_assembly(component, objectives=objectives)
+        backend = Build123dRendererBackend(
+            workspace_root=build_dir,
+            objectives=objectives,
+        )
+        try:
+            backend.load_scene(component)
+            scene = backend.scene
+            if scene is None:
+                raise RuntimeError("build123d preview scene failed to load")
 
-        # Load into MuJoCo
-        model = mujoco.MjModel.from_xml_path(str(scene_path))
-        data = mujoco.MjData(model)
-
-        # Step once to initialize
-        mujoco.mj_step(model, data)
-
-        # Create renderer
-        renderer = mujoco.Renderer(model, height, width)
-
-        # Set up camera
-        cam = mujoco.MjvCamera()
-        mujoco.mjv_defaultCamera(cam)
-
-        # Calculate scene center and distance from bounding box
-        cam.lookat = np.array([0, 0, 0.5])
-        cam.distance = 2.0
-
-        # Set camera angles
-        cam.elevation = pitch
-        cam.azimuth = yaw
-
-        # Render
-        renderer.update_scene(data, camera=cam)
-        frame = renderer.render()
+            distance = max(scene.diagonal * 1.5, 0.5)
+            camera_position = camera_position_from_orbit(
+                scene.center, distance, pitch, yaw
+            )
+            backend.set_camera(
+                "preview",
+                pos=camera_position,
+                lookat=scene.center,
+                up=(0.0, 0.0, 1.0),
+            )
+            frame = backend.render_camera("preview", width, height)
+        finally:
+            backend.close()
 
     # Save image
     if output_dir is None:

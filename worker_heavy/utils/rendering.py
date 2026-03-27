@@ -1,7 +1,7 @@
 import os
 import uuid
+import time
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import matplotlib.pyplot as plt
 
@@ -14,10 +14,9 @@ from PIL import Image
 
 from shared.agents.config import load_agents_config
 from shared.git_utils import repo_revision
+from shared.observability.events import emit_event
 from shared.models.schemas import BenchmarkDefinition
-from shared.simulation.backends import (
-    StressField,
-)
+from shared.simulation.backends import StressField
 from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
@@ -27,7 +26,10 @@ from shared.workers.schema import (
     RenderManifest,
     RenderSiblingPaths,
 )
-from worker_heavy.simulation.factory import get_simulation_builder
+from worker_heavy.utils.build123d_rendering import (
+    PREVIEW_BACKEND_NAME,
+    render_preview_bundle,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -103,58 +105,77 @@ def build_render_manifest(
     )
 
 
-def _save_rgb_render(frame: np.ndarray, output_path: Path) -> None:
-    Image.fromarray(frame).save(output_path, "PNG")
-
-
-def _save_depth_render(depth_map: np.ndarray, output_path: Path) -> None:
-    finite_mask = np.isfinite(depth_map)
-    depth_image = np.zeros(depth_map.shape, dtype=np.uint8)
-    if finite_mask.any():
-        finite_depth = depth_map[finite_mask]
-        min_depth = float(finite_depth.min())
-        max_depth = float(finite_depth.max())
-        if np.isclose(min_depth, max_depth):
-            normalized = np.ones(depth_map.shape, dtype=np.float32)
-        else:
-            normalized = (depth_map - min_depth) / (max_depth - min_depth)
-            normalized = 1.0 - np.clip(normalized, 0.0, 1.0)
-        depth_image[finite_mask] = (normalized[finite_mask] * 255.0).astype(np.uint8)
-
-    Image.fromarray(depth_image, mode="L").save(output_path, "PNG")
-
-
-def _save_segmentation_render(segmentation_map: np.ndarray, output_path: Path) -> None:
-    seg_image = np.zeros((*segmentation_map.shape[:2], 3), dtype=np.uint8)
-    seg_image[..., :3] = segmentation_map[..., :3]
-    Image.fromarray(seg_image, mode="RGB").save(output_path, "PNG")
-
-
-def _workspace_render_path(output_path: Path, filename: str) -> Path:
-    prefix = output_path.name if output_path.name else "renders"
-    return Path(prefix) / filename
-
-
-def _build_depth_metadata(
+def _build_preview_artifacts(
+    saved_paths: list[str],
+    legend_by_path: dict[str, list],
     *,
-    group_key: str,
-    siblings: RenderSiblingPaths,
-    depth_frame: np.ndarray,
-) -> RenderArtifactMetadata:
-    finite_mask = np.isfinite(depth_frame)
-    depth_min = float(depth_frame[finite_mask].min()) if finite_mask.any() else None
-    depth_max = float(depth_frame[finite_mask].max()) if finite_mask.any() else None
-    return RenderArtifactMetadata(
-        modality="depth",
-        group_key=group_key,
-        siblings=siblings,
-        depth_min_m=depth_min,
-        depth_max_m=depth_max,
-        depth_interpretation=(
-            "Brighter pixels are nearer. Values are normalized per image from the "
-            "metric-depth range reported by depth_min_m/depth_max_m."
-        ),
-    )
+    workspace_root: Path,
+) -> tuple[dict[str, RenderArtifactMetadata], list[str]]:
+    render_paths = _workspace_relative_render_paths(saved_paths, workspace_root)
+    artifacts: dict[str, RenderArtifactMetadata] = {}
+
+    for saved_path, render_path in zip(saved_paths, render_paths, strict=True):
+        rel_path = Path(render_path)
+        render_dir = rel_path.parent
+        filename = rel_path.name
+        stem = rel_path.stem
+        if filename.endswith("_depth.png"):
+            group_key = stem.removesuffix("_depth")
+            artifacts[render_path] = RenderArtifactMetadata(
+                modality="depth",
+                group_key=group_key,
+                siblings=RenderSiblingPaths(
+                    rgb=str(render_dir / f"{group_key}.png"),
+                    depth=str(render_dir / f"{group_key}_depth.png"),
+                    segmentation=str(render_dir / f"{group_key}_segmentation.png"),
+                ),
+                depth_interpretation=(
+                    "Brighter pixels are nearer. Values are normalized per image "
+                    "from the build123d/VTK preview renderer."
+                ),
+            )
+            continue
+
+        if filename.endswith("_segmentation.png"):
+            group_key = stem.removesuffix("_segmentation")
+            artifacts[render_path] = RenderArtifactMetadata(
+                modality="segmentation",
+                group_key=group_key,
+                siblings=RenderSiblingPaths(
+                    rgb=str(render_dir / f"{group_key}.png"),
+                    depth=str(render_dir / f"{group_key}_depth.png"),
+                    segmentation=str(render_dir / f"{group_key}_segmentation.png"),
+                ),
+                segmentation_legend=legend_by_path.get(saved_path, []),
+            )
+            continue
+
+        group_key = stem
+        artifacts[render_path] = RenderArtifactMetadata(
+            modality="rgb",
+            group_key=group_key,
+            siblings=RenderSiblingPaths(
+                rgb=str(render_dir / f"{group_key}.png"),
+                depth=str(render_dir / f"{group_key}_depth.png"),
+                segmentation=str(render_dir / f"{group_key}_segmentation.png"),
+            ),
+        )
+
+    return artifacts, render_paths
+
+
+def _workspace_relative_render_paths(
+    paths: list[str], workspace_root: Path
+) -> list[str]:
+    relative_paths: list[str] = []
+    for path in paths:
+        abs_path = Path(path)
+        try:
+            rel_path = abs_path.relative_to(workspace_root)
+        except ValueError:
+            rel_path = abs_path
+        relative_paths.append(str(rel_path))
+    return relative_paths
 
 
 def prerender_24_views(
@@ -177,7 +198,12 @@ def prerender_24_views(
 
     if smoke_test_mode is None:
         smoke_test_mode = settings.smoke_test_mode
-    resolved_backend_type = backend_type or get_default_simulator_backend()
+    requested_backend = backend_type or get_default_simulator_backend()
+    requested_backend_value = (
+        requested_backend.value
+        if hasattr(requested_backend, "value")
+        else str(requested_backend)
+    )
 
     if output_dir is None:
         output_dir = os.getenv("RENDERS_DIR", "./renders")
@@ -187,7 +213,8 @@ def prerender_24_views(
     logger.info(
         "prerender_24_views_start",
         output_dir=str(output_path),
-        backend=resolved_backend_type,
+        backend=PREVIEW_BACKEND_NAME,
+        requested_backend=requested_backend_value,
         session_id=session_id,
         scene_path=str(scene_path) if scene_path else None,
         smoke_test_mode=smoke_test_mode,
@@ -206,231 +233,39 @@ def prerender_24_views(
         return []
 
     saved_files = []
-    manifest = RenderManifest()
 
     try:
-        # 1. Build Scene using get_simulation_builder (unless scene_path provided)
-        with TemporaryDirectory() as temp_build_dir:
-            if scene_path:
-                final_scene_path = Path(scene_path)
-            else:
-                build_dir = Path(temp_build_dir)
-                builder = get_simulation_builder(
-                    output_dir=build_dir, backend_type=resolved_backend_type
-                )
-                final_scene_path = builder.build_from_assembly(
-                    component,
-                    objectives=objectives,
-                    smoke_test_mode=smoke_test_mode,
-                )
+        workspace_root = output_path.parent
 
-            # 2. Initialize Backend
-            from shared.simulation.backends import SimulationScene
-            from worker_heavy.simulation.factory import get_physics_backend
+        emit_event(
+            {
+                "event_type": "validation_preview_backend_selected",
+                "requested_physics_backend": requested_backend_value,
+                "actual_preview_backend": PREVIEW_BACKEND_NAME,
+                "purpose": "validation_static_preview",
+                "session_id": session_id,
+            }
+        )
 
-            backend = get_physics_backend(
-                resolved_backend_type,
-                session_id=session_id,
-                smoke_test_mode=smoke_test_mode,
-                particle_budget=particle_budget,
-            )
-            scene = SimulationScene(scene_path=str(final_scene_path))
-
-            # OPTIMIZATION: Use render_only=True to skip expensive physics build in Genesis.
-            backend.load_scene(scene, render_only=True)
-            if resolved_backend_type == SimulatorBackendType.MUJOCO:
-                # Keep smoke-mode validation previews material-color dominant by
-                # hiding the checkerboard floor in render-only snapshots.
-                try:
-                    import mujoco
-
-                    floor_geom_id = mujoco.mj_name2id(
-                        backend.model,
-                        mujoco.mjtObj.mjOBJ_GEOM,
-                        "floor",
-                    )
-                    if floor_geom_id >= 0:
-                        backend.model.geom_rgba[floor_geom_id] = np.array(
-                            [0.0, 0.0, 0.0, 0.0], dtype=np.float32
-                        )
-                except Exception:
-                    logger.debug("mujoco_floor_hide_skipped", session_id=session_id)
-
-            # NOTE: We skip backend.step() here because it requires a built physics scene,
-            # and for 24-view static renders we only need the geometric/visual state.
-            # backend.step(0.002)
-
-            # 3. Setup Camera Parameters
-            bbox = component.bounding_box()
-            center = (
-                (bbox.min.X + bbox.max.X) / 2,
-                (bbox.min.Y + bbox.max.Y) / 2,
-                (bbox.min.Z + bbox.max.Z) / 2,
-            )
-
-            # Distance based on bbox size
-            diag = np.sqrt(bbox.size.X**2 + bbox.size.Y**2 + bbox.size.Z**2)
-            distance = max(diag * 1.5, 0.5)
-
-            # 8 horizontal angles
-            angles = [0, 45, 90, 135, 180, 225, 270, 315]
-            # 3 elevations
-            elevations = [
-                -15,
-                -45,
-                -75,
-            ]  # MuJoCo uses negative elevation for looking down
-
-            if smoke_test_mode:
-                logger.info("smoke_test_mode_reducing_render_views")
-                angles = [45]
-                elevations = [-45]
-
-            width, height = 640, 480
-
-            for elevation in elevations:
-                for angle in angles:
-                    filename = f"render_e{abs(elevation)}_a{angle}.png"
-                    filepath = output_path / filename
-                    group_key = Path(filename).stem
-
-                    # Calculate camera position from orbit
-                    # azim=angle, elev=elevation
-                    # MuJoCo orbit logic:
-                    rad_azim = np.deg2rad(angle)
-                    rad_elev = np.deg2rad(elevation)
-
-                    # Simplified orbit calculation
-                    x = center[0] + distance * np.cos(rad_elev) * np.sin(rad_azim)
-                    y = center[1] - distance * np.cos(rad_elev) * np.cos(rad_azim)
-                    z = center[2] - distance * np.sin(rad_elev)
-
-                    backend.set_camera(
-                        "prerender", pos=(x, y, z), lookat=center, up=(0, 0, 1)
-                    )
-
-                    # Render
-                    try:
-                        depth_path = (
-                            output_path / f"render_e{abs(elevation)}_a{angle}_depth.png"
-                        )
-                        segmentation_path = (
-                            output_path
-                            / f"render_e{abs(elevation)}_a{angle}_segmentation.png"
-                        )
-                        siblings = RenderSiblingPaths(
-                            rgb=(
-                                str(_workspace_render_path(output_path, filename))
-                                if render_policy.rgb
-                                else None
-                            ),
-                            depth=(
-                                str(
-                                    _workspace_render_path(output_path, depth_path.name)
-                                )
-                                if render_policy.depth
-                                else None
-                            ),
-                            segmentation=(
-                                str(
-                                    _workspace_render_path(
-                                        output_path, segmentation_path.name
-                                    )
-                                )
-                                if render_policy.segmentation
-                                else None
-                            ),
-                        )
-                        if (
-                            resolved_backend_type == SimulatorBackendType.MUJOCO
-                            and hasattr(backend, "render_camera_modalities")
-                        ):
-                            frame, depth_frame, segmentation_frame = (
-                                backend.render_camera_modalities(
-                                    "prerender",
-                                    width,
-                                    height,
-                                    include_rgb=render_policy.rgb,
-                                    include_depth=render_policy.depth,
-                                    include_segmentation=render_policy.segmentation,
-                                )
-                            )
-                            segmentation_legend = []
-                            if (
-                                render_policy.segmentation
-                                and segmentation_frame is not None
-                                and hasattr(backend, "describe_segmentation")
-                            ):
-                                segmentation_legend = backend.describe_segmentation(
-                                    segmentation_frame
-                                )
-                                if hasattr(backend, "colorize_segmentation"):
-                                    segmentation_frame = backend.colorize_segmentation(
-                                        segmentation_frame
-                                    )
-                        else:
-                            frame = backend.render_camera("prerender", width, height)
-                            depth_frame = None
-                            segmentation_frame = None
-                            segmentation_legend = []
-
-                        if render_policy.rgb and frame is not None:
-                            _save_rgb_render(frame, filepath)
-                            saved_files.append(str(filepath))
-                            manifest.artifacts[siblings.rgb] = RenderArtifactMetadata(
-                                modality="rgb",
-                                group_key=group_key,
-                                siblings=siblings,
-                            )
-                        if render_policy.depth and depth_frame is not None:
-                            _save_depth_render(depth_frame, depth_path)
-                            saved_files.append(str(depth_path))
-                            if siblings.depth:
-                                manifest.artifacts[siblings.depth] = (
-                                    _build_depth_metadata(
-                                        group_key=group_key,
-                                        siblings=siblings,
-                                        depth_frame=depth_frame,
-                                    )
-                                )
-                        if (
-                            render_policy.segmentation
-                            and segmentation_frame is not None
-                        ):
-                            _save_segmentation_render(
-                                segmentation_frame, segmentation_path
-                            )
-                            saved_files.append(str(segmentation_path))
-                            if siblings.segmentation:
-                                manifest.artifacts[siblings.segmentation] = (
-                                    RenderArtifactMetadata(
-                                        modality="segmentation",
-                                        group_key=group_key,
-                                        siblings=siblings,
-                                        segmentation_legend=segmentation_legend,
-                                    )
-                                )
-                    except Exception as e:
-                        if "EGL" in str(e) or "display" in str(e).lower():
-                            logger.warning(
-                                "prerender_camera_failed_skipping",
-                                error=str(e),
-                                angle=angle,
-                                elevation=elevation,
-                                session_id=session_id,
-                            )
-                            # If rendering fails once due to EGL, it likely will fail for all views.
-                            # We can break or continue. Let's continue to be safe, but it'll probably fail for all.
-                            continue
-                        raise
-
-            # Only close if it's not a cached backend
-            if not session_id:
-                backend.close()
-
+        preview_start = time.time()
+        saved_paths, legend_by_path = render_preview_bundle(
+            component,
+            output_dir=output_path,
+            objectives=objectives,
+            smoke_test_mode=smoke_test_mode,
+            workspace_root=workspace_root,
+            include_rgb=render_policy.rgb,
+            include_depth=render_policy.depth,
+            include_segmentation=render_policy.segmentation,
+        )
+        manifest_artifacts, render_paths = _build_preview_artifacts(
+            saved_paths,
+            legend_by_path,
+            workspace_root=workspace_root,
+        )
         manifest = build_render_manifest(
-            manifest.artifacts,
-            workspace_root=output_path.parent,
+            manifest_artifacts,
+            workspace_root=workspace_root,
             episode_id=session_id,
             worker_session_id=session_id,
             revision=revision,
@@ -443,7 +278,25 @@ def prerender_24_views(
             encoding="utf-8",
         )
 
-        logger.info("prerender_complete", count=len(saved_files), session_id=session_id)
+        emit_event(
+            {
+                "event_type": "validation_preview_render_complete",
+                "preview_backend": PREVIEW_BACKEND_NAME,
+                "image_count": len(render_paths),
+                "elapsed_render_time": time.time() - preview_start,
+                "artifact_paths": render_paths,
+                "session_id": session_id,
+            }
+        )
+
+        saved_files = list(render_paths)
+
+        logger.info(
+            "prerender_complete",
+            count=len(saved_files),
+            session_id=session_id,
+            backend=PREVIEW_BACKEND_NAME,
+        )
         return saved_files
     except Exception as e:
         import traceback

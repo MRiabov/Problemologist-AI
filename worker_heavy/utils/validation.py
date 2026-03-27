@@ -1,4 +1,5 @@
 import json
+import gc
 import math
 import os
 from pathlib import Path
@@ -37,7 +38,11 @@ from shared.simulation.schemas import (
 )
 from shared.wire_utils import calculate_path_length, check_wire_clearance
 from shared.workers.workbench_models import ManufacturingConfig
-from worker_heavy.simulation.factory import get_simulation_builder
+from worker_heavy.simulation.factory import (
+    close_all_session_backends,
+    get_simulation_builder,
+)
+from worker_heavy.utils.build123d_rendering import PREVIEW_BACKEND_NAME
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 from .dfm import (
@@ -1328,6 +1333,13 @@ def simulate(
                 video_path=None,  # Skip video during emergency retry path
             )
 
+        # Release the physics backend before starting the VTK preview pass.
+        # MuJoCo/Genesis and the build123d renderer both touch GL/X state, and
+        # keeping both alive inside the long-lived child process can crash the
+        # renderer on the next GLX make-current call.
+        close_all_session_backends()
+        gc.collect()
+
         status_msg = metrics.fail_reason or (
             "Goal achieved." if metrics.success else "Simulation stable."
         )
@@ -1604,14 +1616,13 @@ def validate(
     try:
         renders_dir = str(output_dir / "renders") if output_dir else None
 
-        # Validation preview is intentionally routed to MuJoCo regardless of
-        # the requested simulation backend to avoid Genesis render compilation.
         backend_type = SimulatorBackendType.MUJOCO
         emit_event(
             {
                 "event_type": "render_request_benchmark",
                 "num_views": 24,
-                "backend": backend_type.value,
+                "backend": PREVIEW_BACKEND_NAME,
+                "requested_physics_backend": backend_type.value,
                 "purpose": "validation_static_preview",
             }
         )

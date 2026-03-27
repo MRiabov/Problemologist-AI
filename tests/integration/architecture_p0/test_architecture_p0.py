@@ -758,9 +758,9 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_188_validation_preview_uses_mujoco_even_for_genesis_objectives():
+async def test_int_188_validation_preview_uses_build123d_even_for_genesis_objectives():
     """
-    INT-188: /benchmark/validate routes static preview rendering to MuJoCo
+    INT-188: /benchmark/validate routes static preview rendering to build123d/VTK
     even when objectives request Genesis for physics simulation.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -836,7 +836,7 @@ def build():
         ]
         assert benchmark_render_events, validate_payload.get("events", [])
         assert any(
-            event.get("backend") == SimulatorBackendType.MUJOCO.value
+            event.get("backend") == "build123d_vtk"
             and event.get("purpose") == "validation_static_preview"
             for event in benchmark_render_events
         ), benchmark_render_events

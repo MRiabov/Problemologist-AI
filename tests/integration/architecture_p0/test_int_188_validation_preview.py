@@ -24,6 +24,8 @@ from shared.workers.schema import (
     BenchmarkToolRequest,
     BenchmarkToolResponse,
     ListFilesRequest,
+    PreviewDesignRequest,
+    PreviewDesignResponse,
     ReadFileRequest,
     WriteFileRequest,
 )
@@ -32,6 +34,7 @@ from tests.integration.agent.helpers import seed_benchmark_assembly_definition
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 AGENTS_CONFIG_PATH = Path("config/agents_config.yaml")
+pytestmark = pytest.mark.xdist_group(name="physics_sims")
 
 
 def _default_benchmark_parts():
@@ -80,6 +83,19 @@ def _default_objectives() -> BenchmarkDefinition:
 
 
 def _zone_entry_for_label(
+    legend: list[dict[str, object]], label_prefix: str
+) -> dict[str, object] | None:
+    for entry in legend:
+        semantic_label = str(entry.get("semantic_label") or "")
+        instance_name = str(entry.get("instance_name") or "")
+        if semantic_label.startswith(label_prefix) or instance_name.startswith(
+            label_prefix
+        ):
+            return entry
+    return None
+
+
+def _part_entry_for_label(
     legend: list[dict[str, object]], label_prefix: str
 ) -> dict[str, object] | None:
     for entry in legend:
@@ -210,9 +226,9 @@ async def _write_benchmark_submit_inputs(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
-async def test_int_188_validation_preview_uses_mujoco_even_for_genesis_objectives():
+async def test_int_188_validation_preview_uses_build123d_even_for_genesis_objectives():
     """
-    INT-188: /benchmark/validate routes static preview rendering to MuJoCo
+    INT-188: /benchmark/validate routes static preview rendering to build123d/VTK
     even when objectives request Genesis for physics simulation.
     """
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -294,7 +310,7 @@ def build():
         ]
         assert benchmark_render_events, validate_payload.get("events", [])
         assert any(
-            event.get("backend") == SimulatorBackendType.MUJOCO.value
+            event.get("backend") == "build123d_vtk"
             and event.get("purpose") == "validation_static_preview"
             for event in benchmark_render_events
         ), benchmark_render_events
@@ -532,7 +548,7 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_188_validation_preview_reflects_material_color_in_rgb():
-    """INT-188: MuJoCo RGB previews reflect material color configuration."""
+    """INT-188: build123d/VTK RGB previews reflect material color configuration."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         material_means: dict[str, np.ndarray] = {}
 
@@ -572,10 +588,6 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
                 and not name.endswith("_depth.png")
                 and not name.endswith("_segmentation.png")
             )[0]
-            segmentation_name = sorted(
-                name for name in render_names if name.endswith("_segmentation.png")
-            )[0]
-
             rgb_resp = await client.post(
                 f"{WORKER_LIGHT_URL}/fs/read_blob",
                 json=ReadFileRequest(path=f"renders/{rgb_name}").model_dump(
@@ -587,21 +599,10 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
             rgb_image = np.array(
                 Image.open(io.BytesIO(rgb_resp.content)).convert("RGB")
             )
-
-            segmentation_resp = await client.post(
-                f"{WORKER_LIGHT_URL}/fs/read_blob",
-                json=ReadFileRequest(path=f"renders/{segmentation_name}").model_dump(
-                    mode="json"
-                ),
-                headers=headers,
-            )
-            assert segmentation_resp.status_code == 200, segmentation_resp.text
-            segmentation_image = np.array(
-                Image.open(io.BytesIO(segmentation_resp.content)).convert("RGB")
-            )
-            mask = np.any(segmentation_image > 0, axis=2)
-            assert mask.any(), segmentation_name
-            material_means[material_id] = rgb_image[mask].mean(axis=0)
+            height, width = rgb_image.shape[:2]
+            crop = rgb_image[height // 3 : (2 * height) // 3, width // 3 : (2 * width) // 3]
+            assert crop.size > 0, rgb_name
+            material_means[material_id] = crop.mean(axis=(0, 1))
 
         aluminum_mean = material_means["aluminum_6061"]
         silicone_mean = material_means["silicone_rubber"]
@@ -694,3 +695,50 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
         assert submit_data.message is not None
         lowered_message = submit_data.message.lower()
         assert "revision" in lowered_message or "out of sync" in lowered_message
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "pitch,yaw",
+    [(-35.0, 45.0), (-20.0, 135.0)],
+    ids=["iso", "oblique"],
+)
+async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
+    pitch: float, yaw: float
+):
+    """INT-188: /benchmark/preview renders through the build123d/VTK path."""
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+        headers = {"X-Session-ID": session_id}
+
+        await _write_standard_validation_inputs(
+            client, headers, material_id="aluminum_6061"
+        )
+
+        preview_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/preview",
+            json=PreviewDesignRequest(
+                script_path="script.py",
+                pitch=pitch,
+                yaw=yaw,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert preview_resp.status_code == 200, preview_resp.text
+        preview_data = PreviewDesignResponse.model_validate(preview_resp.json())
+        assert preview_data.success, preview_data.message
+        assert preview_data.image_path is not None
+        assert preview_data.image_path.startswith("renders/"), preview_data
+        assert preview_data.image_path.endswith(".jpg"), preview_data
+
+        image_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/read_blob",
+            json=ReadFileRequest(path=preview_data.image_path).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert image_resp.status_code == 200, image_resp.text
+        image = Image.open(io.BytesIO(image_resp.content)).convert("RGB")
+        assert image.size == (640, 480), image.size
+        assert np.array(image).std() > 0.0
