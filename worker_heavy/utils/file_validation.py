@@ -769,10 +769,42 @@ def validate_planner_handoff_cross_contract(
     assembly_definition: AssemblyDefinition,
     manufacturing_config: ManufacturingConfig,
 ) -> list[str]:
-    """Validate copied benchmark caps and normalized planner totals exactly."""
+    """Validate planner targets against benchmark caps and reject stale copies."""
     errors: list[str] = []
 
-    cap_pairs = (
+    planner_cap_pairs = (
+        (
+            "benchmark_definition.constraints.max_unit_cost",
+            benchmark_definition.constraints.max_unit_cost,
+            "assembly_definition.constraints.planner_target_max_unit_cost_usd",
+            assembly_definition.constraints.planner_target_max_unit_cost_usd,
+        ),
+        (
+            "benchmark_definition.constraints.max_weight_g",
+            benchmark_definition.constraints.max_weight_g,
+            "assembly_definition.constraints.planner_target_max_weight_g",
+            assembly_definition.constraints.planner_target_max_weight_g,
+        ),
+    )
+    for (
+        expected_label,
+        expected_value,
+        observed_label,
+        observed_value,
+    ) in planner_cap_pairs:
+        if expected_value is None:
+            errors.append(f"{expected_label} is missing; cannot validate planner caps")
+            continue
+        if observed_value is None:
+            errors.append(f"{observed_label} is missing; planner caps are required")
+            continue
+        if observed_value - expected_value > 1e-6:
+            errors.append(
+                f"{observed_label} ({observed_value:.2f}) must be less than or equal "
+                f"to {expected_label} ({expected_value:.2f})"
+            )
+
+    copied_cap_pairs = (
         (
             "benchmark_definition.constraints.max_unit_cost",
             benchmark_definition.constraints.max_unit_cost,
@@ -786,13 +818,20 @@ def validate_planner_handoff_cross_contract(
             assembly_definition.constraints.benchmark_max_weight_g,
         ),
     )
-    for expected_label, expected_value, observed_label, observed_value in cap_pairs:
+    for (
+        expected_label,
+        expected_value,
+        observed_label,
+        observed_value,
+    ) in copied_cap_pairs:
+        if observed_value is None:
+            continue
         if expected_value is None:
             errors.append(
-                f"{expected_label} is missing; cannot validate copied planner caps"
+                f"{expected_label} is missing; cannot validate copied benchmark caps"
             )
             continue
-        if round(observed_value, 2) != round(expected_value, 2):
+        if abs(observed_value - expected_value) > 1e-6:
             errors.append(
                 f"{observed_label} ({observed_value:.2f}) must equal "
                 f"{expected_label} ({expected_value:.2f})"

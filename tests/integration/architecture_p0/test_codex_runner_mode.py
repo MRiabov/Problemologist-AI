@@ -134,6 +134,7 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
     assert env["CODEX_HOME"] == str(codex_home_dir)
     assert env["PYTHONPATH"] == str(workspace_dir.resolve())
     assert str(ROOT) not in env["PYTHONPATH"]
+    assert env["PROBLEMOLOGIST_REPO_ROOT"] == str(ROOT)
     assert env["PYTHON_BIN"] == str(ROOT / ".venv" / "bin" / "python")
     assert (
         json.loads((codex_home_dir / "auth.json").read_text(encoding="utf-8"))[
@@ -243,10 +244,34 @@ async def test_codex_materialized_planner_workspace_submits(
 
     shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
 
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    codex_home_root = tmp_path / "codex-home"
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+    )
+
     env = build_codex_env(
-        task_id=item.id, session_id=f"INT-CODEX-{agent_name.value}-{row_id}"
+        task_id=item.id,
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id=f"INT-CODEX-{agent_name.value}-{row_id}",
     )
     assert "AGENT_NAME" not in env
+    assert env["PROBLEMOLOGIST_REPO_ROOT"] == str(ROOT)
 
     completed = subprocess.run(
         ["bash", "scripts/submit_plan.sh"],

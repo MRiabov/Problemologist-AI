@@ -1178,12 +1178,41 @@ class AssemblyUnits(StrictContractModel):
 
 
 class AssemblyConstraints(StrictContractModel):
-    """Cap values from benchmark vs planner targets."""
+    """Planner target caps plus optional copied benchmark caps for legacy files."""
 
-    benchmark_max_unit_cost_usd: float
-    benchmark_max_weight_g: float
+    benchmark_max_unit_cost_usd: float | None = None
+    benchmark_max_weight_g: float | None = None
     planner_target_max_unit_cost_usd: float
     planner_target_max_weight_g: float
+
+    @model_validator(mode="after")
+    def validate_contract(self) -> "AssemblyConstraints":
+        benchmark_caps_present = (
+            self.benchmark_max_unit_cost_usd is not None
+            or self.benchmark_max_weight_g is not None
+        )
+        if benchmark_caps_present and (
+            self.benchmark_max_unit_cost_usd is None
+            or self.benchmark_max_weight_g is None
+        ):
+            raise ValueError(
+                "benchmark_max_unit_cost_usd and benchmark_max_weight_g must be "
+                "provided together when copied benchmark caps are present"
+            )
+
+        for field_name, value in (
+            ("benchmark_max_unit_cost_usd", self.benchmark_max_unit_cost_usd),
+            ("benchmark_max_weight_g", self.benchmark_max_weight_g),
+            (
+                "planner_target_max_unit_cost_usd",
+                self.planner_target_max_unit_cost_usd,
+            ),
+            ("planner_target_max_weight_g", self.planner_target_max_weight_g),
+        ):
+            if value is not None and value <= 0:
+                raise ValueError(f"{field_name} must be > 0")
+
+        return self
 
 
 # =============================================================================
@@ -1311,27 +1340,7 @@ class AssemblyDefinition(StrictContractModel):
 
     @model_validator(mode="after")
     def validate_caps(self) -> "AssemblyDefinition":
-        """Enforce INT-011: Planner target caps must be <= benchmark caps."""
-        if (
-            self.constraints.planner_target_max_unit_cost_usd
-            > self.constraints.benchmark_max_unit_cost_usd
-        ):
-            raise ValueError(
-                f"Planner target cost "
-                f"({self.constraints.planner_target_max_unit_cost_usd}) "
-                f"must be less than or equal to benchmark max cost "
-                f"({self.constraints.benchmark_max_unit_cost_usd})"
-            )
-        if (
-            self.constraints.planner_target_max_weight_g
-            > self.constraints.benchmark_max_weight_g
-        ):
-            raise ValueError(
-                f"Planner target weight "
-                f"({self.constraints.planner_target_max_weight_g}g) "
-                f"must be less than or equal to benchmark max weight "
-                f"({self.constraints.benchmark_max_weight_g}g)"
-            )
+        """Enforce planner target positivity and budget compliance."""
 
         # Enforce INT-010: Estimated totals must be within planner target caps
         if (

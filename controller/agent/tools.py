@@ -293,8 +293,6 @@ def get_engineer_planner_tools(
 
         constraints = data.get("constraints") or {}
         required_numeric_fields = (
-            "benchmark_max_unit_cost_usd",
-            "benchmark_max_weight_g",
             "planner_target_max_unit_cost_usd",
             "planner_target_max_weight_g",
         )
@@ -306,8 +304,9 @@ def get_engineer_planner_tools(
         if missing_constraints:
             return (
                 False,
-                "Fill concrete numeric constraints in assembly_definition.yaml before "
-                f"COTS search: {', '.join(missing_constraints)}.",
+                "Fill concrete planner target constraints in assembly_definition.yaml "
+                "before COTS search: "
+                f"{', '.join(missing_constraints)}.",
             )
 
         manufactured_parts = data.get("manufactured_parts")

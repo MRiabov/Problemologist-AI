@@ -20,7 +20,9 @@ class CoderSignature(dspy.Signature):
     """
     Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
     You must use the provided tools to implement the current step in 'script.py'.
-    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
+    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml
+    handoff context copied into this workspace; benchmark caps must be read from
+    benchmark_definition.yaml rather than copied from the benchmark assembly.
     When done, use SUBMIT to provide a summary of your work.
     """
 

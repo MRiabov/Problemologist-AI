@@ -49,6 +49,7 @@ from worker_heavy.utils.file_validation import (
     validate_benchmark_definition_yaml,
     validate_plan_md_structure,
     validate_plan_refusal,
+    validate_planner_handoff_cross_contract,
 )
 
 REASON_OK = "ok"
@@ -807,6 +808,7 @@ async def validate_seeded_workspace_handoff_artifacts(
     errors: list[NodeEntryValidationError] = []
     contents: dict[str, str] = {}
     benchmark_definition_model: BenchmarkDefinition | None = None
+    benchmark_assembly_definition_model: AssemblyDefinition | None = None
     manufacturing_config_model = None
 
     if target_node in {
@@ -920,23 +922,23 @@ async def validate_seeded_workspace_handoff_artifacts(
                     )
                     for message in assembly_result
                 )
-            elif rel_path == "benchmark_assembly_definition.yaml" and isinstance(
-                assembly_result, AssemblyDefinition
-            ):
-                motion_errors = validate_benchmark_assembly_motion_contract(
-                    benchmark_definition=benchmark_definition_model,
-                    assembly_definition=assembly_result,
-                    plan_text=contents.get("plan.md"),
-                    todo_text=contents.get("todo.md"),
-                    plan_refusal_text=contents.get("plan_refusal.md"),
-                )
-                errors.extend(
-                    _seeded_schema_error(
-                        message=f"{rel_path}: {message}",
-                        artifact_path=rel_path,
+            elif isinstance(assembly_result, AssemblyDefinition):
+                if rel_path == "benchmark_assembly_definition.yaml":
+                    benchmark_assembly_definition_model = assembly_result
+                    motion_errors = validate_benchmark_assembly_motion_contract(
+                        benchmark_definition=benchmark_definition_model,
+                        assembly_definition=assembly_result,
+                        plan_text=contents.get("plan.md"),
+                        todo_text=contents.get("todo.md"),
+                        plan_refusal_text=contents.get("plan_refusal.md"),
                     )
-                    for message in motion_errors
-                )
+                    errors.extend(
+                        _seeded_schema_error(
+                            message=f"{rel_path}: {message}",
+                            artifact_path=rel_path,
+                        )
+                        for message in motion_errors
+                    )
             continue
 
         try:
@@ -979,6 +981,44 @@ async def validate_seeded_workspace_handoff_artifacts(
                     message=f"engineering planner handoff: {handover_error}",
                     artifact_path="assembly_definition.yaml",
                 )
+            )
+
+    if (
+        benchmark_definition_model is not None
+        and benchmark_assembly_definition_model is not None
+    ):
+        if manufacturing_config_model is None:
+            manufacturing_raw = await worker_client.read_file_optional(
+                "manufacturing_config.yaml"
+            )
+            if manufacturing_raw is not None:
+                try:
+                    manufacturing_config_model = (
+                        load_planner_manufacturing_config_from_text(manufacturing_raw)
+                    )
+                except Exception as exc:
+                    errors.append(
+                        _seeded_schema_error(
+                            message=(
+                                "manufacturing_config.yaml invalid for benchmark "
+                                f"handoff pricing source: {exc}"
+                            ),
+                            artifact_path="manufacturing_config.yaml",
+                        )
+                    )
+
+        if manufacturing_config_model is not None:
+            handover_errors = validate_planner_handoff_cross_contract(
+                benchmark_definition=benchmark_definition_model,
+                assembly_definition=benchmark_assembly_definition_model,
+                manufacturing_config=manufacturing_config_model,
+            )
+            errors.extend(
+                _seeded_schema_error(
+                    message=f"benchmark_assembly_definition.yaml: {message}",
+                    artifact_path="benchmark_assembly_definition.yaml",
+                )
+                for message in handover_errors
             )
 
     if target_node in _VISUAL_REVIEWER_TARGET_NODES:

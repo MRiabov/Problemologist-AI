@@ -1,5 +1,6 @@
 import os
 import uuid
+from pathlib import Path
 
 import httpx
 import pytest
@@ -34,6 +35,7 @@ from shared.models.schemas import (
 from shared.simulation.schemas import SimulatorBackendType
 from shared.workers.schema import ReviewManifest
 from tests.integration.agent.helpers import (
+    seed_benchmark_assembly_definition,
     wait_for_benchmark_state,
     wait_for_episode_terminal,
 )
@@ -196,6 +198,165 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
         and "benchmark_definition.constraints.max_weight_g" in error.message
         for error in errors
     ), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_assembly_caps():
+    """
+    INT-184: Seeded engineer-coder preflight must reject copied benchmark caps
+    that diverge from benchmark_definition.yaml.
+    """
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    artifact_dir = (
+        Path(__file__).resolve().parents[3]
+        / "dataset"
+        / "data"
+        / "seed"
+        / "artifacts"
+        / "engineer_coder"
+        / "ec-001-sideways-transfer"
+    )
+    try:
+        for rel_path in ("plan.md", "todo.md", "benchmark_definition.yaml"):
+            await worker.upload_file(
+                rel_path,
+                (artifact_dir / rel_path).read_bytes(),
+                bypass_agent_permissions=True,
+            )
+
+        await worker.upload_file(
+            "benchmark_assembly_definition.yaml",
+            (
+                'version: "1.0"\n'
+                "units:\n"
+                '  length: "mm"\n'
+                '  volume: "mm3"\n'
+                '  mass: "g"\n'
+                '  currency: "USD"\n'
+                "constraints:\n"
+                "  benchmark_max_unit_cost_usd: 95.0\n"
+                "  benchmark_max_weight_g: 1800.0\n"
+                "  planner_target_max_unit_cost_usd: 90.0\n"
+                "  planner_target_max_weight_g: 1700.0\n"
+                "manufactured_parts: []\n"
+                "cots_parts: []\n"
+                "environment_drill_operations: []\n"
+                "final_assembly: []\n"
+                "totals:\n"
+                "  estimated_unit_cost_usd: 0.0\n"
+                "  estimated_weight_g: 0.0\n"
+                "  estimate_confidence: high\n"
+                "dfm_suggestions: []\n"
+            ).encode("utf-8"),
+            bypass_agent_permissions=True,
+        )
+
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.ENGINEER_CODER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert errors, "Expected mismatched benchmark caps to fail validation."
+    assert any(
+        error.artifact_path == "benchmark_assembly_definition.yaml" for error in errors
+    ), errors
+    assert any(
+        "benchmark_max_unit_cost_usd" in error.message
+        and "benchmark_definition.constraints.max_unit_cost" in error.message
+        for error in errors
+    ), errors
+    assert any(
+        "benchmark_max_weight_g" in error.message
+        and "benchmark_definition.constraints.max_weight_g" in error.message
+        for error in errors
+    ), errors
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_only():
+    """
+    INT-184: Seeded benchmark planner handoff should validate when benchmark caps
+    come from benchmark_definition.yaml and are not duplicated in the benchmark
+    assembly file.
+    """
+    session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
+    worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            benchmark_definition = BenchmarkDefinition(
+                objectives=ObjectivesSection(
+                    goal_zone=BoundingBox(
+                        min=(10.0, 10.0, 10.0),
+                        max=(20.0, 20.0, 20.0),
+                    ),
+                    forbid_zones=[],
+                    build_zone=BoundingBox(
+                        min=(-50.0, -50.0, 0.0),
+                        max=(50.0, 50.0, 100.0),
+                    ),
+                ),
+                benchmark_parts=[
+                    {
+                        "part_id": "environment_fixture",
+                        "label": "environment_fixture",
+                        "metadata": {
+                            "fixed": True,
+                            "material_id": "aluminum_6061",
+                        },
+                    }
+                ],
+                simulation_bounds=BoundingBox(
+                    min=(-100.0, -100.0, 0.0),
+                    max=(100.0, 100.0, 100.0),
+                ),
+                moved_object=MovedObject(
+                    label="ball",
+                    shape="sphere",
+                    material_id="aluminum_6061",
+                    start_position=(0.0, 0.0, 50.0),
+                    runtime_jitter=(0.0, 0.0, 0.0),
+                ),
+                constraints=Constraints(
+                    estimated_solution_cost_usd=133.3333333333,
+                    estimated_solution_weight_g=666.6666666667,
+                    max_unit_cost=200.0,
+                    max_weight_g=1000.0,
+                ),
+            )
+
+            await worker.upload_file(
+                "benchmark_definition.yaml",
+                yaml.safe_dump(
+                    benchmark_definition.model_dump(mode="json", by_alias=True),
+                    sort_keys=False,
+                ).encode("utf-8"),
+                bypass_agent_permissions=True,
+            )
+            await seed_benchmark_assembly_definition(
+                client,
+                session_id,
+                benchmark_max_unit_cost_usd=200.0,
+                benchmark_max_weight_g=1000.0,
+            )
+        content = await worker.read_file(
+            "benchmark_assembly_definition.yaml",
+            bypass_agent_permissions=True,
+        )
+        errors = await validate_seeded_workspace_handoff_artifacts(
+            worker_client=worker,
+            target_node=AgentName.BENCHMARK_PLANNER,
+        )
+    finally:
+        await worker.aclose()
+
+    assert "benchmark_max_unit_cost_usd" not in content
+    assert "benchmark_max_weight_g" not in content
+    assert not errors, errors
 
 
 @pytest.mark.integration_p0

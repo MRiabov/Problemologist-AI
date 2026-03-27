@@ -15,4 +15,13 @@ if [ -z "$PYTHON_BIN" ]; then
   exit 127
 fi
 
+PROBLEMOLOGIST_REPO_ROOT="${PROBLEMOLOGIST_REPO_ROOT:-}"
+if [ -n "$PROBLEMOLOGIST_REPO_ROOT" ]; then
+  if [ -n "${PYTHONPATH:-}" ]; then
+    export PYTHONPATH="$PROBLEMOLOGIST_REPO_ROOT:$PYTHONPATH"
+  else
+    export PYTHONPATH="$PROBLEMOLOGIST_REPO_ROOT"
+  fi
+fi
+
 exec "$PYTHON_BIN" scripts/submit_plan.py "$@"

@@ -390,7 +390,7 @@ class BenchmarkPlannerNode(BaseNode):
             + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
             + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
             + "- In authored benchmark scripts, every top-level part label must be unique and must not be `environment` or start with `zone_` because the simulator reserves those names for the scene root and generated objective bodies.\n"
-            + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric `constraints` and `totals` fields (do not delete template sections).\n"
+            + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric planner-target `constraints` and `totals` fields; benchmark caps are sourced from `benchmark_definition.yaml` and must not be treated as duplicated ownership in the assembly file.\n"
             + "- Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be explicit in both `plan.md` and `todo.md`; one moving fixture may expose at most one DOF axis, and the handoff must state reviewer-visible motion bounds/limits plus controller facts.\n"
             + "- Hidden, unsupported, or over-actuated benchmark motion is a rejection condition, even if the scene still looks passive at a glance.\n"
             + "- If the motion contract is impossible to explain explicitly, stop and revise the handoff instead of brute-forcing `submit_plan()`.\n"

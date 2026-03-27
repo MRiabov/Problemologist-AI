@@ -532,6 +532,7 @@ def build_codex_env(
     env.setdefault("IS_HEAVY_WORKER", "1")
     env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
     env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))
+    env.setdefault("PROBLEMOLOGIST_REPO_ROOT", str(ROOT))
     return env
 
 
