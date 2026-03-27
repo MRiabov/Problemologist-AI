@@ -1018,7 +1018,10 @@ async def execute_agent_task(
                                     )
 
                     simulation_success_text: str | None = None
-                    await sync_dir("/")
+                    # Sync the session workspace only. The worker root view also
+                    # exposes read-only mounts like /utils, /skills, and /config.
+                    # Recursing from /workspace avoids sweeping those mounts.
+                    await sync_dir("/workspace")
                     await sync_workspace_review_dir()
                     # .manifests is system-owned metadata and may be denied via role
                     # policy through routed backend calls. Read directly with

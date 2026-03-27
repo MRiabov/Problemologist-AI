@@ -168,10 +168,15 @@ async def seed_manufacturing_config(
     Planner workspaces need a real pricing source but should not be granted
     normal edit permission over that file.
     """
-    template_files = load_common_template_files()
-    manufacturing_config_content = template_files.get("manufacturing_config.yaml")
-    if manufacturing_config_content is None:
+    manufacturing_config_path = (
+        Path(__file__).resolve().parents[2]
+        / "worker_heavy"
+        / "workbenches"
+        / "manufacturing_config.yaml"
+    )
+    if not manufacturing_config_path.is_file():
         return False
+    manufacturing_config_content = manufacturing_config_path.read_text(encoding="utf-8")
 
     config_path = _normalize_remote_path("manufacturing_config.yaml")
     if existing_files is None:

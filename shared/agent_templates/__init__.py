@@ -67,25 +67,7 @@ def load_template_text(template_file: str | Path) -> str:
 
 def load_common_template_files() -> dict[str, str]:
     """Load the shared boilerplate starter files."""
-    merged = _load_template_tree(COMMON_TEMPLATES_ROOT)
-
-    # Planner workspaces need the same manufacturing-config source of truth that
-    # the runtime validator uses. Copy the repository config into the workspace
-    # so the planner can validate against a real file instead of inventing a
-    # local pricing sheet.
-    manufacturing_config_path = (
-        Path(__file__).resolve().parents[2]
-        / "worker_heavy"
-        / "workbenches"
-        / "manufacturing_config.yaml"
-    )
-    if manufacturing_config_path.is_file():
-        merged.setdefault(
-            "manufacturing_config.yaml",
-            manufacturing_config_path.read_text(encoding="utf-8"),
-        )
-
-    return merged
+    return _load_template_tree(COMMON_TEMPLATES_ROOT)
 
 
 def load_template_repo_files(template_repo: str | Path) -> dict[str, str]:

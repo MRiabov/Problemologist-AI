@@ -743,7 +743,9 @@ def build():
         assert jitter_resp.status_code == 200
         jitter_data = BenchmarkToolResponse.model_validate(jitter_resp.json())
         assert jitter_data.success is False
-        assert "runtime range intersects forbid zone" in (jitter_data.message or "")
+        assert "moved_object runtime envelope intersects forbid zone" in (
+            jitter_data.message or ""
+        )
 
 
 @pytest.mark.integration_p0

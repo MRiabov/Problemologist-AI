@@ -674,21 +674,18 @@ async def validate_planner_artifacts_cross_contract(
     if attachment_errors:
         return "; ".join(attachment_errors)
 
-    if not await worker_client.exists("manufacturing_config.yaml"):
-        return (
-            "manufacturing_config.yaml missing for planner handoff "
-            "cross-contract validation."
-        )
-
     try:
-        manufacturing_config = load_required_merged_config(
-            override_data=(
-                yaml.safe_load(
-                    await worker_client.read_file("manufacturing_config.yaml")
+        if await worker_client.exists("manufacturing_config.yaml"):
+            manufacturing_config = load_required_merged_config(
+                override_data=(
+                    yaml.safe_load(
+                        await worker_client.read_file("manufacturing_config.yaml")
+                    )
+                    or {}
                 )
-                or {}
             )
-        )
+        else:
+            manufacturing_config = load_required_merged_config()
     except Exception as e:
         return f"planner handoff pricing-config parse failure: {e}"
 

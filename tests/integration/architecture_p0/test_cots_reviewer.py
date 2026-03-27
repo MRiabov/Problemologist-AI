@@ -160,6 +160,16 @@ decision: rejected
 comments: ["Not good enough"]
 evidence:
   files_checked: ["plan.md"]
+  stability_summary:
+    batchWidth: 1
+    successCount: 0
+    successRate: 0.0
+    isConsistent: false
+    sceneBuildCount: 1
+    backendRunCount: 1
+    batchedExecution: false
+    sceneSummaries: []
+  stability_summary_source: validation_results.json
 ---
 Refusing this plan.
 """

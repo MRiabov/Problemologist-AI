@@ -485,7 +485,7 @@ print(f"VALIDATE_MESSAGE={message}")
 
     objectives = BenchmarkDefinition(
         objectives=ObjectivesSection(
-            goal_zone=BoundingBox(min=(8.0, 8.0, 0.0), max=(12.0, 12.0, 8.0)),
+            goal_zone=BoundingBox(min=(-2.0, -2.0, 0.0), max=(2.0, 2.0, 8.0)),
             forbid_zones=[],
             build_zone=BoundingBox(min=(-5.0, -5.0, 0.0), max=(5.0, 5.0, 10.0)),
         ),

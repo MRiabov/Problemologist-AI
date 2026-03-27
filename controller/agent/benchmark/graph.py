@@ -1876,8 +1876,9 @@ async def _persist_session_assets(
                         timeout=2.0,
                     )
 
-            # Only sync top-level files and critical directories to avoid hangs.
-            for dir_to_sync in ["/", "/assets/", "/renders/"]:
+            # Only sync the session workspace root and critical directories to
+            # avoid sweeping read-only mounts such as /utils or /skills.
+            for dir_to_sync in ["/workspace", "/assets/", "/renders/"]:
                 try:
                     files = await asyncio.wait_for(
                         client.list_files(dir_to_sync), timeout=5.0

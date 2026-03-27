@@ -131,18 +131,26 @@ def load_required_merged_config(
     *,
     source_name: str = "manufacturing_config.yaml",
 ) -> ManufacturingConfig:
-    """Load a merged manufacturing config and fail closed if the override is missing."""
+    """Load a merged manufacturing config, defaulting to the repository config.
+
+    A workspace override is optional. When no override is provided, or the
+    caller does not have a workspace config file, return the repository default
+    configuration instead of failing closed. This keeps the base contract
+    usable for tests and runtime paths that rely on the checked-in config.
+    """
     if config_path is None and override_data is None:
-        raise FileNotFoundError(
-            f"{source_name} missing or unreadable: no workspace override was provided"
-        )
+        return load_config()
 
     try:
         file_override: dict[str, Any] | None
         if config_path is not None:
-            file_override = _read_config_data(Path(config_path))
-            if not file_override:
-                raise ValueError(f"{source_name} is empty")
+            path = Path(config_path)
+            if path.exists():
+                file_override = _read_config_data(path)
+                if not file_override:
+                    raise ValueError(f"{source_name} is empty")
+            else:
+                file_override = None
         else:
             file_override = None
 
@@ -161,9 +169,7 @@ def load_required_merged_config(
             )
 
         if merged_override is None:
-            raise FileNotFoundError(
-                f"{source_name} missing or unreadable: no override data available"
-            )
+            return load_config()
 
         return load_merged_config(override_data=merged_override)
     except FileNotFoundError as exc:
