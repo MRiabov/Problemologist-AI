@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-001-sideways-transfer",
-  "revision": "068a434ed3740ef94e4b7da4aaf0d7fd13e05e5d",
+  "revision": "6220497c8c7e49274ad1838411a627920e5b7b83",
   "script_path": "script.py",
   "script_sha256": "013fbff40ed7c9100f7f45a8cc44a7a0c2fe7e0aa13b4bac029b3aedc6bd4ae0",
   "validation_success": true,
