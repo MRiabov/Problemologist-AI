@@ -33,7 +33,7 @@ moved_object:
   runtime_jitter: [10.0, 10.0, 5.0]
 constraints:
   max_unit_cost: 56.0
-  max_weight_g: 980.0
+  max_weight_g: 1010.0
 randomization:
   static_variation_id: engineer_coder_narrow_goal_v1
   runtime_jitter_enabled: true

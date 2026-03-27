@@ -37,7 +37,7 @@ def build() -> Compound:
     with BuildPart() as part_6:
         Cylinder(radius=18, height=55, align=(Align.MIN, Align.CENTER, Align.CENTER))
     part_6_part = part_6.part.move(Location((-120, -58, 37.5)))
-    part_6_part.label = "gearmotor_12v_60rpm"
+    part_6_part.label = "ServoMotor_DS3218"
     part_6_part.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
 
     assembly = Compound(

@@ -13,7 +13,7 @@ Use a freestanding entry funnel and a single powered roller lane to catch the se
 | roller_bed | 820 x 70 x 28 | hdpe | Main lane that carries the driven roller shaft and side guides |
 | idler_guide | 820 x 18 x 24 | hdpe | Upper passive guide that keeps the ball centered over the roller lane |
 | goal_tray | 150 x 120 x 35 | hdpe | End pocket that slows the ball and contains it inside the goal zone |
-| gearmotor_12v_60rpm | COTS | steel/plastic | Single drive motor for the lateral transfer roller |
+| ServoMotor_DS3218 | COTS | steel/plastic | Single drive motor for the lateral transfer roller |
 
 **Estimated Total Weight**: 1240 g
 **Estimated Total Cost**: $62.50
@@ -35,7 +35,7 @@ Use a freestanding entry funnel and a single powered roller lane to catch the se
 | roller_bed | 41.0 | 39.4 | 8.50 |
 | idler_guide | 14.2 | 13.6 | 5.00 |
 | goal_tray | 21.0 | 20.2 | 9.00 |
-| gearmotor_12v_60rpm | n/a | 145.0 | 18.50 |
+| ServoMotor_DS3218 | n/a | 145.0 | 18.50 |
 | **TOTAL** | 272.9 | 697.0 | **62.50** |
 
 **Budget Margin**: 7% remaining versus the planner target.

@@ -1,7 +1,7 @@
 {
   "artifact_hashes": {
-    "assembly_definition.yaml": "31c0cb01c4b7add57ef24f9bfd7ded5d8a347b046f5f4b584615bf2294989bea",
-    "plan.md": "4448a18eb7c70773f614e6fb778b6bac4b3b6aec06338bc2cc77c05d07f19487",
+    "assembly_definition.yaml": "bb30cceb4d2e760f4eeb77dfc08bd5128d6bfe67f2a029dfc92dbf6c1606a4ef",
+    "plan.md": "e04c3690e37edd6ae59e64c802e153c99c2bda068e231c332062392b06df0bf1",
     "todo.md": "fe27e29c24f26cadef247ff2ddab40ed93c5f2a13537f8b4927b07f1e92555dc"
   },
   "planner_node_type": "engineer_planner",

@@ -36,8 +36,22 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://localhost:18001")
 logger = get_logger(__name__)
 
 
+class _QuietLogger:
+    def __getattr__(self, _name: str):
+        def _noop(*_args, **_kwargs):
+            return None
+
+        return _noop
+
+
+QUIET_LOGGER = _QuietLogger()
+
+
 async def _wait_for_worker_ready(
-    timeout_seconds: float = 60.0, poll_interval_seconds: float = 1.0
+    timeout_seconds: float = 60.0,
+    poll_interval_seconds: float = 1.0,
+    *,
+    errors_only: bool = False,
 ) -> None:
     deadline = time.monotonic() + timeout_seconds
     attempt = 0
@@ -49,13 +63,17 @@ async def _wait_for_worker_ready(
         try:
             health = await temp_client.get_health()
             if health.get("status") == "healthy":
-                logger.info("worker_health_check_ok", attempts=attempt)
+                if not errors_only:
+                    logger.info("worker_health_check_ok", attempts=attempt)
                 return
             last_error = f"status={health.get('status')}"
         except Exception as exc:
             last_error = str(exc)
 
-        logger.warning("worker_health_check_retry", attempt=attempt, error=last_error)
+        if not errors_only:
+            logger.warning(
+                "worker_health_check_retry", attempt=attempt, error=last_error
+            )
         await asyncio.sleep(poll_interval_seconds)
 
     raise RuntimeError(
@@ -108,6 +126,14 @@ def _parse_args() -> argparse.Namespace:
         "--fail-fast",
         action="store_true",
         help="Stop at the first invalid seed.",
+    )
+    parser.add_argument(
+        "--errors-only",
+        action="store_true",
+        help=(
+            "Suppress PASS/status output and validator success chatter. "
+            "Useful for bulk inventory sweeps such as --agent all."
+        ),
     )
     parser.add_argument(
         "--concurrency",
@@ -203,28 +229,30 @@ def _build_session_id(agent: AgentName, task_id: str) -> str:
     return f"seed-check-{agent.value}-{task_id}-{suffix}"[:120]
 
 
-def _validate_generated_curation_manifests() -> list[Path]:
+def _validate_generated_curation_manifests(*, errors_only: bool = False) -> list[Path]:
     manifest_paths = sorted(ROOT.glob("dataset/data/generated/*/v0.0.1/manifest.json"))
     validated: list[Path] = []
     for manifest_path in manifest_paths:
         manifest = load_dataset_curation_manifest(manifest_path)
-        logger.info(
-            "generated_curation_manifest_validated",
-            path=str(manifest_path),
-            family=manifest.family,
-            agent_target=manifest.agent_target,
-            accepted=manifest.counts.accepted_after_pending_filter,
-            rejected=manifest.counts.rejected,
-        )
+        if not errors_only:
+            logger.info(
+                "generated_curation_manifest_validated",
+                path=str(manifest_path),
+                family=manifest.family,
+                agent_target=manifest.agent_target,
+                accepted=manifest.counts.accepted_after_pending_filter,
+                rejected=manifest.counts.rejected,
+            )
         validated.append(manifest_path)
     return validated
 
 
 async def _validate_item(
-    agent: AgentName, item: EvalDatasetItem, *, fix: bool
+    agent: AgentName, item: EvalDatasetItem, *, fix: bool, errors_only: bool = False
 ) -> tuple[bool, str]:
     session_id = _build_session_id(agent, item.id)
     spec = AGENT_SPECS[agent]
+    item_logger = QUIET_LOGGER if errors_only else logger
     try:
         resolved_artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
         if resolved_artifact_dir is not None:
@@ -232,17 +260,18 @@ async def _validate_item(
                 resolved_artifact_dir, fix=fix
             )
             for manifest_path in updated_manifests:
-                event_name = (
-                    "seed_manifest_hashes_refreshed"
-                    if fix
-                    else "seed_manifest_hashes_drift_detected"
-                )
-                logger.info(
-                    event_name,
-                    session_id=session_id,
-                    agent_name=agent,
-                    manifest_path=str(manifest_path),
-                )
+                if not errors_only:
+                    event_name = (
+                        "seed_manifest_hashes_refreshed"
+                        if fix
+                        else "seed_manifest_hashes_drift_detected"
+                    )
+                    logger.info(
+                        event_name,
+                        session_id=session_id,
+                        agent_name=agent,
+                        manifest_path=str(manifest_path),
+                    )
 
             if updated_manifests and not fix:
                 return (
@@ -256,7 +285,7 @@ async def _validate_item(
             agent_name=agent,
             root=ROOT,
             worker_light_url=WORKER_LIGHT_URL,
-            logger=logger,
+            logger=item_logger,
         )
         await _preflight_seeded_entry_contract(
             item=item,
@@ -265,7 +294,7 @@ async def _validate_item(
             spec=spec,
             root=ROOT,
             worker_light_url=WORKER_LIGHT_URL,
-            logger=logger,
+            logger=item_logger,
         )
     except Exception as exc:
         return False, str(exc)
@@ -296,7 +325,7 @@ async def _async_main(args: argparse.Namespace) -> int:
     agents = _resolve_agents(args.agent)
 
     try:
-        _validate_generated_curation_manifests()
+        _validate_generated_curation_manifests(errors_only=args.errors_only)
     except Exception as exc:
         print("Generated curation manifest validation failed.", file=sys.stderr)
         print(str(exc), file=sys.stderr)
@@ -306,7 +335,7 @@ async def _async_main(args: argparse.Namespace) -> int:
         _run_env_up()
 
     try:
-        await _wait_for_worker_ready()
+        await _wait_for_worker_ready(errors_only=args.errors_only)
     except Exception as exc:
         print(
             "Worker is not healthy. Start the local services first if needed "
@@ -334,13 +363,16 @@ async def _async_main(args: argparse.Namespace) -> int:
         if args.fail_fast or args.concurrency == 1:
             for agent, item in work_items:
                 checked += 1
-                ok, detail = await _validate_item(agent, item, fix=args.fix)
-                status = "PASS" if ok else "FAIL"
-                print(f"{status} {agent.value} {item.id}: {detail}")
+                ok, detail = await _validate_item(
+                    agent, item, fix=args.fix, errors_only=args.errors_only
+                )
                 if not ok:
+                    print(f"FAIL {agent.value} {item.id}: {detail}")
                     failures.append((agent.value, item.id, detail))
                     if args.fail_fast:
                         break
+                elif not args.errors_only:
+                    print(f"PASS {agent.value} {item.id}: {detail}")
         else:
             semaphore = asyncio.Semaphore(args.concurrency)
 
@@ -348,7 +380,9 @@ async def _async_main(args: argparse.Namespace) -> int:
                 agent: AgentName, item: EvalDatasetItem
             ) -> tuple[AgentName, EvalDatasetItem, bool, str]:
                 async with semaphore:
-                    ok, detail = await _validate_item(agent, item, fix=args.fix)
+                    ok, detail = await _validate_item(
+                        agent, item, fix=args.fix, errors_only=args.errors_only
+                    )
                     return agent, item, ok, detail
 
             tasks = [
@@ -358,23 +392,26 @@ async def _async_main(args: argparse.Namespace) -> int:
             for completed in asyncio.as_completed(tasks):
                 agent, item, ok, detail = await completed
                 checked += 1
-                status = "PASS" if ok else "FAIL"
-                print(f"{status} {agent.value} {item.id}: {detail}")
                 if not ok:
+                    print(f"FAIL {agent.value} {item.id}: {detail}")
                     failures.append((agent.value, item.id, detail))
+                elif not args.errors_only:
+                    print(f"PASS {agent.value} {item.id}: {detail}")
 
     if checked == 0:
         print("No dataset rows matched the requested filter.", file=sys.stderr)
         return 1
 
     if failures:
-        print(
-            f"Validated {checked} row(s): {checked - len(failures)} passed, {len(failures)} failed.",
-            file=sys.stderr,
-        )
+        if not args.errors_only:
+            print(
+                f"Validated {checked} row(s): {checked - len(failures)} passed, {len(failures)} failed.",
+                file=sys.stderr,
+            )
         return 1
 
-    print(f"Validated {checked} row(s): all passed.")
+    if not args.errors_only:
+        print(f"Validated {checked} row(s): all passed.")
     return 0
 
 

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("WORKER_LIGHT_URL", "WORKER_URL"),
     )
     worker_light_transport: Literal["auto", "http", "ws"] = Field(
-        default="auto",
+        default="ws",
         validation_alias=AliasChoices("WORKER_LIGHT_TRANSPORT", "WORKER_TRANSPORT"),
     )
     worker_heavy_url: str | None = Field(

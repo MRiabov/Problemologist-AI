@@ -78,12 +78,12 @@ class WorkerClient:
         resolved_transport = (
             light_transport
             if light_transport is not None
-            else os.getenv("WORKER_LIGHT_TRANSPORT")
+            else settings.worker_light_transport
         )
         if isinstance(resolved_transport, str):
             resolved_transport = resolved_transport.strip().lower()
         if not resolved_transport or resolved_transport == "auto":
-            resolved_transport = "ws" if settings.is_integration_test else "http"
+            resolved_transport = "ws"
         if resolved_transport not in {"http", "ws"}:
             raise ValueError(
                 f"Unsupported worker light transport: {resolved_transport}"

@@ -56,6 +56,7 @@ async def _controller_script_middleware(
             heavy_url=settings.worker_heavy_url,
             controller_url="",
             agent_role=agent_role,
+            light_transport=settings.worker_light_transport,
         )
         middleware = RemoteFilesystemMiddleware(
             client,

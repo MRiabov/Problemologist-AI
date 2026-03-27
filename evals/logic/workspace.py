@@ -7,6 +7,7 @@ from controller.agent.node_entry_validation import (
     BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK,
     BENCHMARK_REVIEWER_HANDOVER_CHECK,
     ELECTRONICS_REVIEWER_HANDOVER_CHECK,
+    ENGINEER_BENCHMARK_HANDOVER_CHECK,
     ENGINEER_EXECUTION_REVIEWER_HANDOVER_CHECK,
     ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK,
     ValidationGraph,
@@ -14,6 +15,7 @@ from controller.agent.node_entry_validation import (
     benchmark_plan_reviewer_handover_custom_check_from_session_id,
     build_benchmark_node_contracts,
     build_engineer_node_contracts,
+    engineer_benchmark_handover_custom_check,
     evaluate_node_entry_contract,
     plan_reviewer_handover_custom_check_from_session_id,
     reviewer_handover_custom_check_from_session_id,
@@ -216,6 +218,11 @@ async def preflight_seeded_entry_contract(
     contract = contracts.get(target_node)
     if contract is None:
         return
+    if target_node in {
+        AgentName.ENGINEER_PLANNER,
+        AgentName.ELECTRONICS_PLANNER,
+    }:
+        contract = contract.model_copy(update={"custom_check": None})
 
     custom_checks = {
         BENCHMARK_PLAN_REVIEWER_HANDOVER_CHECK: (
@@ -239,6 +246,14 @@ async def preflight_seeded_entry_contract(
                 reviewer_label="Benchmark",
                 manifest_path=".manifests/benchmark_review_manifest.json",
                 expected_stage="benchmark_reviewer",
+            )
+        ),
+        ENGINEER_BENCHMARK_HANDOVER_CHECK: (
+            lambda *, contract, state: (  # noqa: ARG005
+                engineer_benchmark_handover_custom_check(
+                    contract=contract,
+                    state=state,
+                )
             )
         ),
         ENGINEER_PLAN_REVIEWER_HANDOVER_CHECK: (
@@ -285,6 +300,7 @@ async def preflight_seeded_entry_contract(
             state={
                 "task": item.task,
                 "episode_id": session_id,
+                "session_id": session_id,
                 "session": {
                     "session_id": session_id,
                     "custom_objectives": None,

@@ -8,6 +8,7 @@ import pytest
 import yaml
 from httpx import AsyncClient
 
+from controller.agent.review_handover import validate_reviewer_handover
 from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
@@ -15,10 +16,12 @@ from controller.api.schemas import (
     BenchmarkGenerateResponse,
     EpisodeResponse,
 )
+from controller.clients.worker import WorkerClient
 from shared.enums import AgentName, EpisodeStatus, ReviewDecision
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import PlanReviewManifest, RenderManifest
+from shared.workers.schema import PlanReviewManifest, RenderManifest, ReviewManifest
 from tests.integration.agent.helpers import (
+    WORKER_LIGHT_URL,
     repo_git_revision,
     seed_benchmark_assembly_definition,
     seed_current_revision_render_preview,
@@ -758,6 +761,108 @@ async def test_engineer_execution_reviewer_rejects_over_actuated_dofs_after_rend
             if trace.name == "review_decision"
         ]
         assert render_gate_review_traces, "Expected review_decision trace"
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_engineer_execution_reviewer_handover_accepts_preview_evidence_paths():
+    """
+    INT regression: execution reviewer handover must treat PNG preview evidence
+    as binary, not UTF-8 text.
+    """
+
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        session_id = f"INT-074-{uuid.uuid4().hex[:8]}"
+        render_path = "renders/context_view_01.png"
+        script_content = "print('preview evidence check')\n"
+
+        await seed_benchmark_assembly_definition(
+            client,
+            session_id,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-210",
+            script_content=script_content,
+        )
+        await seed_current_revision_render_preview(
+            client,
+            session_id=session_id,
+            render_path=render_path,
+        )
+
+        worker_client = WorkerClient(
+            base_url=WORKER_LIGHT_URL,
+            session_id=session_id,
+            agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        )
+        script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+
+        for path, content in (
+            ("renders/scene.xml", "<scene />\n"),
+            ("renders/model.step", "ISO-10303-21;\n"),
+            ("renders/benchmark_definition.yaml", "benchmark: true\n"),
+            ("renders/assembly_definition.yaml", "assembly: true\n"),
+        ):
+            resp = await client.post(
+                "http://127.0.0.1:18001/fs/write",
+                json={
+                    "path": path,
+                    "content": content,
+                    "overwrite": True,
+                },
+                headers={"X-Session-ID": session_id},
+            )
+            assert resp.status_code == 200, resp.text
+
+        review_manifest_json = ReviewManifest(
+            status="ready_for_review",
+            reviewer_stage="engineering_execution_reviewer",
+            session_id=session_id,
+            script_path="script.py",
+            script_sha256=script_sha256,
+            validation_success=True,
+            validation_timestamp=0.0,
+            simulation_success=True,
+            simulation_summary="Goal achieved in green zone.",
+            simulation_timestamp=0.0,
+            goal_reached=True,
+            revision=repo_git_revision(),
+            renders=[render_path],
+            preview_evidence_paths=[render_path],
+            mjcf_path="renders/scene.xml",
+            cad_path="renders/model.step",
+            objectives_path="renders/benchmark_definition.yaml",
+            assembly_definition_path="renders/assembly_definition.yaml",
+            worker_session_id=session_id,
+            benchmark_worker_session_id=session_id,
+            benchmark_episode_id=session_id,
+        ).model_dump_json(indent=2)
+        review_resp = await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": ".manifests/engineering_execution_review_manifest.json",
+                "content": review_manifest_json,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id, "X-System-FS-Bypass": "1"},
+        )
+        assert review_resp.status_code == 200, review_resp.text
+        try:
+            validation_error = await validate_reviewer_handover(
+                worker_client,
+                manifest_path=".manifests/engineering_execution_review_manifest.json",
+                expected_stage="engineering_execution_reviewer",
+            )
+        finally:
+            await worker_client.aclose()
+
+        assert validation_error is None, validation_error
         render_gate_comments_path = (
             "reviews/engineering-execution-review-comments-round-1.yaml"
         )
@@ -1018,3 +1123,103 @@ async def test_reviewer_approval_requires_media_inspection():
         assert rejected_review_trace.metadata_vars is not None
         assert rejected_review_trace.metadata_vars.decision == ReviewDecision.REJECTED
         assert "inspect_media" in (rejected_review_trace.content or "")
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_engineer_execution_reviewer_handover_accepts_png_preview_evidence():
+    """
+    INT regression: execution reviewer handover must not text-read PNG preview
+    evidence files listed in the review manifest.
+    """
+
+    async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
+        session_id = f"INT-074-{uuid.uuid4().hex[:8]}"
+        render_path = "renders/context_view_01.png"
+        script_content = "print('preview evidence check')\n"
+
+        await seed_benchmark_assembly_definition(
+            client,
+            session_id,
+            benchmark_max_unit_cost_usd=250.0,
+            benchmark_max_weight_g=2500.0,
+            planner_target_max_unit_cost_usd=250.0,
+            planner_target_max_weight_g=2500.0,
+        )
+        await seed_execution_reviewer_handover(
+            client,
+            session_id=session_id,
+            int_id="INT-210",
+            script_content=script_content,
+        )
+        await seed_current_revision_render_preview(
+            client,
+            session_id=session_id,
+            render_path=render_path,
+        )
+
+        worker_client = WorkerClient(
+            base_url=WORKER_LIGHT_URL,
+            session_id=session_id,
+            agent_role=AgentName.ENGINEER_EXECUTION_REVIEWER,
+        )
+        script_sha256 = hashlib.sha256(script_content.encode("utf-8")).hexdigest()
+
+        for path, content in (
+            ("renders/scene.xml", "<scene />\n"),
+            ("renders/model.step", "ISO-10303-21;\n"),
+            ("renders/benchmark_definition.yaml", "benchmark: true\n"),
+            ("renders/assembly_definition.yaml", "assembly: true\n"),
+        ):
+            resp = await client.post(
+                "http://127.0.0.1:18001/fs/write",
+                json={
+                    "path": path,
+                    "content": content,
+                    "overwrite": True,
+                },
+                headers={"X-Session-ID": session_id},
+            )
+            assert resp.status_code == 200, resp.text
+
+        review_manifest_json = ReviewManifest(
+            status="ready_for_review",
+            reviewer_stage="engineering_execution_reviewer",
+            session_id=session_id,
+            script_path="script.py",
+            script_sha256=script_sha256,
+            validation_success=True,
+            validation_timestamp=0.0,
+            simulation_success=True,
+            simulation_summary="Goal achieved in green zone.",
+            simulation_timestamp=0.0,
+            goal_reached=True,
+            revision=repo_git_revision(),
+            renders=[render_path],
+            preview_evidence_paths=[render_path],
+            mjcf_path="renders/scene.xml",
+            cad_path="renders/model.step",
+            objectives_path="renders/benchmark_definition.yaml",
+            assembly_definition_path="renders/assembly_definition.yaml",
+        ).model_dump_json(indent=2)
+        review_resp = await client.post(
+            "http://127.0.0.1:18001/fs/write",
+            json={
+                "path": ".manifests/engineering_execution_review_manifest.json",
+                "content": review_manifest_json,
+                "overwrite": True,
+            },
+            headers={"X-Session-ID": session_id, "X-System-FS-Bypass": "1"},
+        )
+        assert review_resp.status_code == 200, review_resp.text
+
+        try:
+            validation_error = await validate_reviewer_handover(
+                worker_client,
+                manifest_path=".manifests/engineering_execution_review_manifest.json",
+                expected_stage="engineering_execution_reviewer",
+            )
+        finally:
+            await worker_client.aclose()
+
+        assert validation_error is None, validation_error

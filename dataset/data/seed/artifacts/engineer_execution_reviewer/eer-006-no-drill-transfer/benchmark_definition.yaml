@@ -33,7 +33,7 @@ moved_object:
   runtime_jitter: [10.0, 8.0, 4.0]
 constraints:
   max_unit_cost: 54.0
-  max_weight_g: 900.0
+  max_weight_g: 980.0
 randomization:
   static_variation_id: engineer_coder_no_drill_v1
   runtime_jitter_enabled: true

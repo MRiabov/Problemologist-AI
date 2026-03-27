@@ -37,6 +37,8 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 80.0
   estimated_solution_weight_g: 3333.333333333333
+  max_unit_cost: 120.0
+  max_weight_g: 2200.0
 randomization:
   static_variation_id: v1.2
   runtime_jitter_enabled: true

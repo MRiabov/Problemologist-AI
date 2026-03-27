@@ -355,6 +355,34 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
 
 
 @pytest.mark.integration_p0
+def test_validate_eval_seed_errors_only_suppresses_pass_output():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_eval_seed.py",
+            "--skip-env-up",
+            "--agent",
+            "benchmark_planner",
+            "--task-id",
+            "bp-001-forbid-zone",
+            "--fail-fast",
+            "--concurrency",
+            "1",
+            "--errors-only",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "PASS benchmark_planner bp-001-forbid-zone:" not in completed.stdout
+    assert "Validated 1 row(s): all passed." not in completed.stdout
+
+
+@pytest.mark.integration_p0
 def test_refresh_plan_review_manifest_hashes_can_fix_drift(tmp_path: Path):
     artifact_dir = tmp_path / "seed_artifacts"
     artifact_dir.mkdir()

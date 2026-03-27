@@ -192,6 +192,11 @@ async def _validate_render_manifest_bundle(
     return None
 
 
+def _is_binary_review_artifact(path: str) -> bool:
+    """Return True for review-handoff media files that must not be read as text."""
+    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".mp4"}
+
+
 def _current_git_revision() -> str | None:
     return repo_revision(Path(__file__).resolve().parents[2])
 
@@ -240,6 +245,11 @@ async def _load_review_manifest(
     required_paths.extend(manifest.preview_evidence_paths)
 
     for path in required_paths:
+        if _is_binary_review_artifact(path):
+            if not await worker_client.exists(path):
+                return None, f"review manifest evidence missing: {path}"
+            continue
+
         content = await worker_client.read_file_optional(path)
         if content is None:
             return None, f"review manifest evidence missing: {path}"

@@ -5,7 +5,7 @@
   "session_id": "seed-eer-012-sideways-transfer-fake-cots",
   "revision": "r1",
   "script_path": "script.py",
-  "script_sha256": "13998b06fd7056728f03d8f5377340d4f028f5087532f5f705503f70eb2d317a",
+  "script_sha256": "013fbff40ed7c9100f7f45a8cc44a7a0c2fe7e0aa13b4bac029b3aedc6bd4ae0",
   "validation_success": true,
   "validation_timestamp": 1710151320,
   "simulation_success": true,
