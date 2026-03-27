@@ -467,6 +467,16 @@ async def worker_light_websocket(websocket: WebSocket):
                     ok=True,
                     result=jsonable_encoder(result),
                 )
+            except FileNotFoundError:
+                response = WorkerLightRpcResponse(
+                    request_id=request.request_id,
+                    ok=False,
+                    error=WorkerLightRpcError(
+                        message="File not found",
+                        status_code=404,
+                        error_type="FileNotFoundError",
+                    ),
+                )
             except HTTPException as exc:
                 response = WorkerLightRpcResponse(
                     request_id=request.request_id,

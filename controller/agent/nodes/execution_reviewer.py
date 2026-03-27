@@ -138,7 +138,6 @@ class ExecutionReviewerNode(BaseNode):
             benchmark_assembly_definition = await self._read_required_workspace_file(
                 "benchmark_assembly_definition.yaml"
             )
-            await self._ensure_current_revision_render_inspection()
             plan_markdown = state.plan or ""
             plan_markdown = await self._read_optional_workspace_file(
                 "plan.md", plan_markdown
@@ -399,6 +398,7 @@ class ExecutionReviewerNode(BaseNode):
                 )
 
             review = ReviewResult.model_validate(prediction.review)
+            await self._ensure_current_revision_render_inspection()
             review = apply_canonical_dof_checklist(
                 review, reviewer_stage="engineering_execution_reviewer"
             )

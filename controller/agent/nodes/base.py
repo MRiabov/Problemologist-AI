@@ -271,11 +271,12 @@ class BaseNode:
                 except Exception as exc:
                     db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
                     raise
+                self._record_tool_usage("inspect_media", result)
                 db_callback.record_tool_end_sync(
                     trace_id, self._serialize_tool_observation(result)
                 )
                 return [preview_path]
-            return []
+        return []
         # Inspect the first current-revision render every time so reviewer-stage
         # rejection paths always emit their own multimodal evidence.
         db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
@@ -286,6 +287,7 @@ class BaseNode:
         except Exception as exc:
             db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
             raise
+        self._record_tool_usage("inspect_media", result)
         db_callback.record_tool_end_sync(
             trace_id, self._serialize_tool_observation(result)
         )

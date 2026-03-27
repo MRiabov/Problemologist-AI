@@ -618,6 +618,9 @@ class RemoteFilesystemMiddleware:
                         token in msg
                         for token in (
                             "connection refused",
+                            "no close frame received or sent",
+                            "connection closed",
+                            "websocket connection closed",
                             "temporarily unavailable",
                             "name or service not known",
                             "failed to establish",

@@ -449,6 +449,25 @@ class MockDSPyLM(dspy.LM):
             observations.append(content)
         return observations
 
+    def _native_tool_call_turns(self, messages: list[dict[str, Any]]) -> int:
+        """
+        Count assistant turns that emitted native tool calls.
+
+        Some native tool loop paths re-enter before the corresponding tool
+        response is present in the message list, so transcript progress must be
+        able to advance from either the tool response or the assistant tool-call
+        turn itself.
+        """
+
+        tool_call_turns = 0
+        for msg in messages:
+            if str(msg.get("role")) != "assistant":
+                continue
+            tool_calls = msg.get("tool_calls")
+            if isinstance(tool_calls, list) and tool_calls:
+                tool_call_turns += len(tool_calls)
+        return tool_call_turns
+
     @classmethod
     def _observation_candidates(cls, observation: Any) -> list[str]:
         candidates: list[str] = []
@@ -710,7 +729,10 @@ class MockDSPyLM(dspy.LM):
         )
 
         observations = self._native_tool_observations(messages)
-        completed_tools = len(observations)
+        completed_tools = max(
+            len(observations),
+            self._native_tool_call_turns(messages),
+        )
         self._tool_progress[node_key.value] = completed_tools
 
         if "transcript" in scenario:
