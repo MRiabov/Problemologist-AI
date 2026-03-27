@@ -691,35 +691,59 @@ async def get_episode_asset(
         # Fallback for older episodes or benchmarks where session_id might be the id itself
         worker_session_id = str(episode_id)
 
+    normalized_path = path.lstrip("/")
+    candidate_asset_paths = [normalized_path]
+    if not normalized_path.startswith("workspace/"):
+        candidate_asset_paths.insert(0, f"workspace/{normalized_path}")
+
     worker_light_url = settings.worker_light_url
     # Episode assets are session-workspace artifacts. The worker also exposes
     # read-only mounts such as /reviews, so we try the workspace path first to
     # avoid accidentally resolving session review files against the static mount.
-    safe_path = path.lstrip("/")
-    candidate_paths = [safe_path]
-    if not safe_path.startswith("workspace/"):
-        candidate_paths.insert(0, f"workspace/{safe_path}")
+    candidate_paths = candidate_asset_paths
 
     async with httpx.AsyncClient() as client:
         try:
-            last_404 = None
-            for candidate_path in candidate_paths:
-                asset_url = f"{worker_light_url}/assets/{candidate_path}"
-                resp = await client.get(
-                    asset_url,
-                    headers={"X-Session-ID": worker_session_id},
-                    timeout=10.0,
+            deadline = asyncio.get_running_loop().time() + 5.0
+            while True:
+                asset_result = await db.execute(
+                    select(Asset).where(Asset.episode_id == episode_id)
                 )
-                if resp.status_code == 404:
-                    last_404 = resp
-                    continue
-                resp.raise_for_status()
+                for asset in asset_result.scalars():
+                    normalized_asset_path = _normalize_artifact_path(asset.s3_path)
+                    if normalized_asset_path not in candidate_asset_paths:
+                        continue
+                    if asset.content is not None:
+                        return Response(
+                            content=asset.content.encode("utf-8"),
+                            media_type="text/plain; charset=utf-8",
+                            status_code=200,
+                        )
+                    break
 
-                return Response(
-                    content=resp.content,
-                    media_type=resp.headers.get("content-type"),
-                    status_code=resp.status_code,
-                )
+                last_404 = None
+                for candidate_path in candidate_paths:
+                    asset_url = f"{worker_light_url}/assets/{candidate_path}"
+                    resp = await client.get(
+                        asset_url,
+                        headers={"X-Session-ID": worker_session_id},
+                        timeout=10.0,
+                    )
+                    if resp.status_code == 404:
+                        last_404 = resp
+                        continue
+                    resp.raise_for_status()
+
+                    return Response(
+                        content=resp.content,
+                        media_type=resp.headers.get("content-type"),
+                        status_code=resp.status_code,
+                    )
+
+                if asyncio.get_running_loop().time() >= deadline:
+                    break
+                await asyncio.sleep(0.25)
+
             if last_404 is not None:
                 raise HTTPException(
                     status_code=404, detail=f"Asset {path} not found on worker"
