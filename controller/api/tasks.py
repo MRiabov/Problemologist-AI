@@ -90,7 +90,7 @@ def _result_feedback(result: Any) -> str:
 
 def _is_failed_result(result: Any) -> bool:
     status = _result_status_lower(result)
-    if status == "failed":
+    if status in {"failed", "plan_rejected", "code_rejected"}:
         return True
     return bool(_extract_result_field(result, "entry_validation_terminal"))
 
