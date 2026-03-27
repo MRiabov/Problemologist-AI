@@ -2840,7 +2840,6 @@ async def main():
     )
     parser.add_argument(
         "--update-manifests",
-        "--fix",
         dest="update_manifests",
         action=argparse.BooleanOptionalAction,
         default=True,

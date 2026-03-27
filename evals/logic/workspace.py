@@ -101,15 +101,16 @@ async def seed_eval_workspace(
 
     if artifact_dir is not None:
         if not artifact_dir.exists():
-            raise FileNotFoundError(f"Seed artifact directory not found: {artifact_dir}")
+            raise FileNotFoundError(
+                f"Seed artifact directory not found: {artifact_dir}"
+            )
 
         updated_paths = refresh_seed_artifact_manifests(
             artifact_dir, fix=update_manifests
         )
         if updated_paths and not update_manifests:
             raise ValueError(
-                "Seed artifact manifest drift detected; rerun with "
-                "--update-manifests."
+                "Seed artifact manifest drift detected; rerun with --update-manifests."
             )
 
     worker = WorkerClient(base_url=worker_light_url, session_id=session_id)

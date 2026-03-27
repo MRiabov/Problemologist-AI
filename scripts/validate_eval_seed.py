@@ -21,9 +21,6 @@ from evals.logic.workspace import (  # noqa: E402
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
 )
 from evals.logic.workspace import (  # noqa: E402
-    resolve_seed_artifact_dir as _resolve_seed_artifact_dir,
-)
-from evals.logic.workspace import (  # noqa: E402
     seed_eval_workspace as _seed_eval_workspace,
 )
 from shared.enums import AgentName  # noqa: E402
@@ -113,7 +110,6 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--update-manifests",
-        "--fix",
         dest="update_manifests",
         action=argparse.BooleanOptionalAction,
         default=True,

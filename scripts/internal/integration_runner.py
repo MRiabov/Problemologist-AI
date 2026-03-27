@@ -353,7 +353,10 @@ def _build_test_level_manifest_update_disable_payload_from_ast(
                 if not int_ids:
                     continue
 
-                if not any(_is_disable_manifest_update_decorator(dec) for dec in node.decorator_list):
+                if not any(
+                    _is_disable_manifest_update_decorator(dec)
+                    for dec in node.decorator_list
+                ):
                     continue
 
                 for int_id in int_ids:
@@ -621,8 +624,8 @@ def run_pytest_subprocess(
     if extra_env:
         env.update(extra_env)
     env.setdefault("AUTO_MANIFEST_UPDATE", "1")
-    manifest_update_disable_payload = _load_or_generate_test_level_manifest_update_disable_payload(
-        _repo_root()
+    manifest_update_disable_payload = (
+        _load_or_generate_test_level_manifest_update_disable_payload(_repo_root())
     )
     env["MANIFEST_UPDATE_DISABLED_INT_IDS"] = ";;".join(
         sorted(
