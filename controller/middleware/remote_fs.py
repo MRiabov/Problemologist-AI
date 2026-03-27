@@ -288,6 +288,48 @@ class RemoteFilesystemMiddleware:
 
         return await self.client.read_file(str(path))
 
+    async def read_file_optional(self, path: str | Path) -> str | None:
+        """Read file via the Worker client and return ``None`` if it is absent."""
+        self._check_perm("read", path)
+        if self._is_visual_media_path(path):
+            mime_type, media_kind = self._media_metadata_for_path(path)
+            msg = (
+                f"{path} is {media_kind} media ({mime_type}). "
+                "read_file() is text-only. Use inspect_media(path) instead."
+            )
+            logger.warning(
+                "read_file_rejected_visual_media",
+                path=str(path),
+                mime_type=mime_type,
+                media_kind=media_kind,
+                session_id=self.client.session_id,
+            )
+            raise ValueError(msg)
+
+        p_str = str(path).lstrip("/")
+        events = [ReadFileToolEvent(path=p_str)]
+        if p_str.startswith("skills/"):
+            skill_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
+            events.append(SkillReadEvent(skill_path=path, skill_name=skill_name))
+
+        await record_events(
+            episode_id=self.episode_id,
+            events=events,
+        )
+
+        if p_str.startswith(("skills/", "utils/")):
+            module_name = p_str.split("/")[1] if "/" in p_str[7:] else p_str[7:]
+            await record_events(
+                episode_id=self.episode_id,
+                events=[
+                    LibraryUsageEvent(
+                        module_name=module_name, usage_type="reused", path=p_str
+                    )
+                ],
+            )
+
+        return await self.client.read_file_optional(str(path))
+
     async def inspect_media(self, path: str | Path) -> MediaInspectionResult:
         """Read supported visual media and prepare it for multimodal inspection."""
         self._check_perm("read", path)
@@ -423,11 +465,8 @@ class RemoteFilesystemMiddleware:
 
         for candidate_render_path in candidate_render_paths:
             manifest_path = Path(candidate_render_path).parent / "render_manifest.json"
-            if not await self.client.exists(str(manifest_path)):
-                continue
-
-            manifest_raw = await self.client.read_file(str(manifest_path))
-            if manifest_raw.startswith("Error:"):
+            manifest_raw = await self.client.read_file_optional(str(manifest_path))
+            if manifest_raw is None:
                 continue
 
             with suppress(Exception):

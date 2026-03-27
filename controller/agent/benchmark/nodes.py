@@ -151,15 +151,15 @@ class BenchmarkPlannerNode(BaseNode):
             logger.info(
                 "planner_updating_objectives", session_id=state.session.session_id
             )
-            if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
-                try:
-                    from worker_heavy.utils.file_validation import (
-                        validate_benchmark_definition_yaml,
-                    )
+            try:
+                from worker_heavy.utils.file_validation import (
+                    validate_benchmark_definition_yaml,
+                )
 
-                    obj_content = await self.ctx.worker_client.read_file(
-                        BENCHMARK_DEFINITION_FILE
-                    )
+                obj_content = await self.ctx.worker_client.read_file_optional(
+                    BENCHMARK_DEFINITION_FILE
+                )
+                if obj_content is not None:
                     is_valid, obj_result = validate_benchmark_definition_yaml(
                         obj_content,
                         session_id=str(state.session.session_id),
@@ -196,8 +196,8 @@ class BenchmarkPlannerNode(BaseNode):
                         "planner_objectives_updated",
                         session_id=state.session.session_id,
                     )
-                except Exception as e:
-                    logger.warning("planner_objectives_update_failed", error=str(e))
+            except Exception as e:
+                logger.warning("planner_objectives_update_failed", error=str(e))
 
         inputs = {
             "prompt": state.session.prompt,
@@ -1203,25 +1203,27 @@ class BenchmarkPlanReviewerNode(BaseNode):
         )
 
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("plan.md"):
-                plan_md = await self.ctx.worker_client.read_file("plan.md")
+            plan_md = (
+                await self.ctx.worker_client.read_file_optional("plan.md") or plan_md
+            )
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("todo.md"):
-                todo_md = await self.ctx.worker_client.read_file("todo.md")
+            todo_md = (
+                await self.ctx.worker_client.read_file_optional("todo.md") or todo_md
+            )
         with suppress(Exception):
-            if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
-                benchmark_definition_yaml = await self.ctx.worker_client.read_file(
+            benchmark_definition_yaml = (
+                await self.ctx.worker_client.read_file_optional(
                     BENCHMARK_DEFINITION_FILE
                 )
+                or benchmark_definition_yaml
+            )
         with suppress(Exception):
-            if await self.ctx.worker_client.exists(
-                "benchmark_assembly_definition.yaml"
-            ):
-                benchmark_assembly_definition_yaml = (
-                    await self.ctx.worker_client.read_file(
-                        "benchmark_assembly_definition.yaml"
-                    )
+            benchmark_assembly_definition_yaml = (
+                await self.ctx.worker_client.read_file_optional(
+                    "benchmark_assembly_definition.yaml"
                 )
+                or benchmark_assembly_definition_yaml
+            )
 
         evidence, evidence_error = await collect_plan_reviewer_handover_evidence(
             self.ctx.worker_client,
@@ -1475,13 +1477,12 @@ class BenchmarkCoderNode(BaseNode):
     async def _load_fresh_validation_record(
         self, *, script_content: str
     ) -> ValidationResultRecord | None:
-        if not await self.ctx.worker_client.exists("validation_results.json"):
-            return None
-
         try:
-            raw_record = await self.ctx.worker_client.read_file(
+            raw_record = await self.ctx.worker_client.read_file_optional(
                 "validation_results.json"
             )
+            if raw_record is None:
+                return None
             record = ValidationResultRecord.model_validate_json(raw_record)
         except Exception as exc:
             logger.warning("persisted_validation_record_invalid", error=str(exc))
@@ -1493,13 +1494,12 @@ class BenchmarkCoderNode(BaseNode):
         return record
 
     async def _load_successful_simulation_result(self) -> SimulationResult | None:
-        if not await self.ctx.worker_client.exists("simulation_result.json"):
-            return None
-
         try:
-            raw_result = await self.ctx.worker_client.read_file(
+            raw_result = await self.ctx.worker_client.read_file_optional(
                 "simulation_result.json"
             )
+            if raw_result is None:
+                return None
             result = SimulationResult.model_validate_json(raw_result)
         except Exception as exc:
             logger.warning("persisted_simulation_result_invalid", error=str(exc))
@@ -1520,17 +1520,21 @@ class BenchmarkCoderNode(BaseNode):
 
         benchmark_definition_yaml = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists(BENCHMARK_DEFINITION_FILE):
-                benchmark_definition_yaml = await self.ctx.worker_client.read_file(
+            benchmark_definition_yaml = (
+                await self.ctx.worker_client.read_file_optional(
                     BENCHMARK_DEFINITION_FILE
                 )
+                or benchmark_definition_yaml
+            )
         plan_input = (
             state.plan.model_dump_json() if state.plan else "# No plan.md found."
         )
         if plan_input == "# No plan.md found.":
             with suppress(Exception):
-                if await self.ctx.worker_client.exists("plan.md"):
-                    plan_input = await self.ctx.worker_client.read_file("plan.md")
+                plan_input = (
+                    await self.ctx.worker_client.read_file_optional("plan.md")
+                    or plan_input
+                )
 
         inputs = {
             "prompt": state.session.prompt,
@@ -1986,15 +1990,18 @@ class BenchmarkReviewerNode(BaseNode):
         # Read context files
         plan_md = "# No plan.md found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("plan.md"):
-                plan_md = await self.ctx.worker_client.read_file("plan.md")
+            plan_md = (
+                await self.ctx.worker_client.read_file_optional("plan.md") or plan_md
+            )
 
         objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
-                objectives = await self.ctx.worker_client.read_file(
+            objectives = (
+                await self.ctx.worker_client.read_file_optional(
                     "benchmark_definition.yaml"
                 )
+                or objectives
+            )
 
         review_round = await self._next_review_round("benchmark-execution-review")
         review_decision_filename = (

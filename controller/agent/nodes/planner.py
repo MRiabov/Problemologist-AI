@@ -55,10 +55,9 @@ class PlannerNode(BaseNode):
         # Read objectives for context
         objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
-                objectives = await self.ctx.worker_client.read_file(
-                    "benchmark_definition.yaml"
-                )
+            objectives = await self._read_optional_workspace_file(
+                "benchmark_definition.yaml", objectives
+            )
         benchmark_assembly_definition = await self._read_required_workspace_file(
             "benchmark_assembly_definition.yaml"
         )

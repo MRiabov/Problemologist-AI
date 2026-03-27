@@ -116,11 +116,11 @@ def get_benchmark_planner_tools(
         return bool(candidate_tokens) and candidate_tokens in phrase_windows
 
     async def _benchmark_owned_cots_query_reason(query: str) -> str | None:
-        if not await fs.exists("benchmark_definition.yaml"):
+        raw = await fs.read_file_optional("benchmark_definition.yaml")
+        if raw is None:
             return None
 
         try:
-            raw = await fs.read_file("benchmark_definition.yaml")
             data = yaml.safe_load(raw) or {}
         except Exception:
             return None
@@ -218,10 +218,10 @@ def get_benchmark_planner_tools(
         missing_files: list[str] = []
 
         for rel_path in required_files:
-            if not await fs.exists(rel_path):
+            content = await fs.read_file_optional(rel_path)
+            if content is None:
                 missing_files.append(rel_path)
                 continue
-            content = await fs.read_file(rel_path)
             if not content.strip():
                 missing_files.append(rel_path)
                 continue
@@ -236,9 +236,10 @@ def get_benchmark_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        if not await fs.client.exists(
+        manufacturing_config_text = await fs.client.read_file_optional(
             "manufacturing_config.yaml", bypass_agent_permissions=True
-        ):
+        )
+        if manufacturing_config_text is None:
             result = PlannerSubmissionResult(
                 ok=False,
                 status="rejected",
@@ -251,9 +252,6 @@ def get_benchmark_planner_tools(
             return result.model_dump(mode="json")
 
         try:
-            manufacturing_config_text = await fs.client.read_file(
-                "manufacturing_config.yaml", bypass_agent_permissions=True
-            )
             manufacturing_config = load_planner_manufacturing_config_from_text(
                 manufacturing_config_text
             )
@@ -305,8 +303,20 @@ def get_benchmark_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        artifacts["benchmark_assembly_definition.yaml"] = await fs.read_file(
+        benchmark_assembly_definition_text = await fs.read_file_optional(
             "benchmark_assembly_definition.yaml"
+        )
+        if benchmark_assembly_definition_text is None:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=["Missing required file: benchmark_assembly_definition.yaml"],
+                node_type=AgentName.BENCHMARK_PLANNER,
+            )
+            return result.model_dump(mode="json")
+
+        artifacts["benchmark_assembly_definition.yaml"] = (
+            benchmark_assembly_definition_text
         )
 
         is_valid, errors = validate_node_output(

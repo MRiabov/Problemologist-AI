@@ -56,25 +56,24 @@ class ElectronicsReviewerNode(BaseNode):
         # Read objectives and assembly_definition for context
         objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
-                objectives = await self.ctx.worker_client.read_file(
-                    "benchmark_definition.yaml"
-                )
+            objectives = await self._read_optional_workspace_file(
+                "benchmark_definition.yaml", objectives
+            )
 
         assembly_definition = "# No assembly_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
-                assembly_definition = await self.ctx.worker_client.read_file(
-                    "assembly_definition.yaml"
-                )
+            assembly_definition = await self._read_optional_workspace_file(
+                "assembly_definition.yaml", assembly_definition
+            )
         benchmark_assembly_definition = await self._read_required_workspace_file(
             "benchmark_assembly_definition.yaml"
         )
 
         plan_refusal = ""
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("plan_refusal.md"):
-                plan_refusal = await self.ctx.worker_client.read_file("plan_refusal.md")
+            plan_refusal = await self._read_optional_workspace_file(
+                "plan_refusal.md", plan_refusal
+            )
 
         inputs = {
             "task": state.task,

@@ -139,11 +139,11 @@ async def _validate_render_manifest_bundle(
         render_manifests.setdefault(manifest_path, set()).add(normalized_render_path)
 
     for manifest_path, expected_render_paths in render_manifests.items():
-        if not await worker_client.exists(manifest_path):
+        manifest_raw = await worker_client.read_file_optional(manifest_path)
+        if manifest_raw is None:
             return f"render manifest missing for latest preview bundle: {manifest_path}"
 
         try:
-            manifest_raw = await worker_client.read_file(manifest_path)
             render_manifest = RenderManifest.model_validate_json(manifest_raw)
         except Exception as exc:
             return f"{manifest_path} invalid: {exc}"
@@ -202,11 +202,11 @@ async def _load_review_manifest(
     manifest_path: str,
     require_git_revision: bool = True,
 ) -> tuple[ReviewManifest | None, str | None]:
-    if not await worker_client.exists(manifest_path):
+    manifest_raw = await worker_client.read_file_optional(manifest_path)
+    if manifest_raw is None:
         return None, f"{manifest_path} missing; call submit_for_review(compound) first."
 
     try:
-        manifest_raw = await worker_client.read_file(manifest_path)
         manifest = ReviewManifest.model_validate_json(manifest_raw)
     except Exception as exc:
         return None, f"{manifest_path} invalid: {exc}"
@@ -240,7 +240,8 @@ async def _load_review_manifest(
     required_paths.extend(manifest.preview_evidence_paths)
 
     for path in required_paths:
-        if not await worker_client.exists(path):
+        content = await worker_client.read_file_optional(path)
+        if content is None:
             return None, f"review manifest evidence missing: {path}"
 
     render_manifest_error = await _validate_render_manifest_bundle(
@@ -262,12 +263,12 @@ async def collect_plan_reviewer_handover_evidence(
     require_git_revision: bool = True,
 ) -> tuple[BenchmarkPlanReviewerEvidence | None, str | None]:
     """Collect latest-revision evidence for the benchmark plan reviewer."""
-    if not await worker_client.exists(manifest_path):
+    plan_manifest_raw = await worker_client.read_file_optional(manifest_path)
+    if plan_manifest_raw is None:
         return None, f"{manifest_path} missing; call submit_plan() first."
 
     try:
-        manifest_raw = await worker_client.read_file(manifest_path)
-        plan_manifest = PlanReviewManifest.model_validate_json(manifest_raw)
+        plan_manifest = PlanReviewManifest.model_validate_json(plan_manifest_raw)
     except Exception as exc:
         return None, f"{manifest_path} invalid: {exc}"
 
@@ -301,9 +302,10 @@ async def collect_plan_reviewer_handover_evidence(
         "benchmark_definition.yaml",
         "benchmark_assembly_definition.yaml",
     ):
-        if not await worker_client.exists(rel_path):
+        content = await worker_client.read_file_optional(rel_path)
+        if content is None:
             return None, f"review manifest evidence missing: {rel_path}"
-        artifacts[rel_path] = await worker_client.read_file(rel_path)
+        artifacts[rel_path] = content
 
     benchmark_definition = None
     benchmark_definition_text = artifacts.get("benchmark_definition.yaml")
@@ -349,7 +351,7 @@ async def collect_plan_reviewer_handover_evidence(
         review_manifest_path=manifest_path,
         review_manifest_revision=current_revision,
         review_manifest_script_sha256=hashlib.sha256(
-            manifest_raw.encode("utf-8")
+            plan_manifest_raw.encode("utf-8")
         ).hexdigest(),
         latest_revision_verified=True,
     )
@@ -385,10 +387,10 @@ async def validate_reviewer_handover(
             "re-run validate, simulate, and submit_for_review(compound)."
         )
 
-    if not await worker_client.exists("validation_results.json"):
-        return "validation_results.json missing."
     try:
-        val_raw = await worker_client.read_file("validation_results.json")
+        val_raw = await worker_client.read_file_optional("validation_results.json")
+        if val_raw is None:
+            return "validation_results.json missing."
         val_record = ValidationResultRecord.model_validate_json(val_raw)
     except Exception as e:
         return f"validation_results.json invalid: {e}"
@@ -459,10 +461,10 @@ async def validate_reviewer_handover(
         if verification_result.num_scenes <= 0:
             return "runtime verification summary is invalid: num_scenes must be > 0."
 
-    if not await worker_client.exists("simulation_result.json"):
-        return "simulation_result.json missing."
     try:
-        sim_raw = await worker_client.read_file("simulation_result.json")
+        sim_raw = await worker_client.read_file_optional("simulation_result.json")
+        if sim_raw is None:
+            return "simulation_result.json missing."
         sim_result = SimulationResult.model_validate_json(sim_raw)
     except Exception as e:
         return f"simulation_result.json invalid: {e}"
@@ -595,11 +597,10 @@ async def validate_plan_reviewer_handover(
     expected_stage: PlanReviewerStage = AgentName.ENGINEER_PLAN_REVIEWER,
 ) -> str | None:
     """Validate planner-to-plan-reviewer handoff using stage-specific manifest."""
-    if not await worker_client.exists(manifest_path):
-        return f"{manifest_path} missing; call submit_plan() first."
-
     try:
-        manifest_raw = await worker_client.read_file(manifest_path)
+        manifest_raw = await worker_client.read_file_optional(manifest_path)
+        if manifest_raw is None:
+            return f"{manifest_path} missing; call submit_plan() first."
         manifest = PlanReviewManifest.model_validate_json(manifest_raw)
     except Exception as e:
         return f"{manifest_path} invalid: {e}"
@@ -616,9 +617,9 @@ async def validate_plan_reviewer_handover(
         return "plan review manifest has no artifact_hashes."
 
     for rel_path, expected_hash in manifest.artifact_hashes.items():
-        if not await worker_client.exists(rel_path):
+        content = await worker_client.read_file_optional(rel_path)
+        if content is None:
             return f"planner artifact missing: {rel_path}"
-        content = await worker_client.read_file(rel_path)
         actual_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         if actual_hash != expected_hash:
             return (
@@ -638,7 +639,8 @@ async def validate_planner_artifacts_cross_contract(
     expected_stage: PlanReviewerStage = AgentName.ENGINEER_PLAN_REVIEWER,
 ) -> str | None:
     """Validate benchmark + assembly planner artifacts without requiring a manifest."""
-    if not await worker_client.exists("benchmark_definition.yaml"):
+    benchmark_raw = await worker_client.read_file_optional("benchmark_definition.yaml")
+    if benchmark_raw is None:
         return f"benchmark_definition.yaml missing for {expected_stage} handoff."
 
     assembly_definition_path = (
@@ -646,11 +648,11 @@ async def validate_planner_artifacts_cross_contract(
         if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER
         else "assembly_definition.yaml"
     )
-    if not await worker_client.exists(assembly_definition_path):
+    assembly_raw = await worker_client.read_file_optional(assembly_definition_path)
+    if assembly_raw is None:
         return f"{assembly_definition_path} missing for {expected_stage} handoff."
 
     try:
-        benchmark_raw = await worker_client.read_file("benchmark_definition.yaml")
         is_valid, benchmark_result = validate_benchmark_definition_yaml(
             benchmark_raw,
             session_id=worker_client.session_id,
@@ -661,8 +663,7 @@ async def validate_planner_artifacts_cross_contract(
             )
         benchmark_definition = benchmark_result
         assembly_definition = AssemblyDefinition.model_validate(
-            yaml.safe_load(await worker_client.read_file(assembly_definition_path))
-            or {}
+            yaml.safe_load(assembly_raw) or {}
         )
     except Exception as e:
         return f"planner handoff cross-validation parse failure: {e}"
@@ -675,14 +676,12 @@ async def validate_planner_artifacts_cross_contract(
         return "; ".join(attachment_errors)
 
     try:
-        if await worker_client.exists("manufacturing_config.yaml"):
+        manufacturing_raw = await worker_client.read_file_optional(
+            "manufacturing_config.yaml"
+        )
+        if manufacturing_raw is not None:
             manufacturing_config = load_required_merged_config(
-                override_data=(
-                    yaml.safe_load(
-                        await worker_client.read_file("manufacturing_config.yaml")
-                    )
-                    or {}
-                )
+                override_data=(yaml.safe_load(manufacturing_raw) or {})
             )
         else:
             manufacturing_config = load_required_merged_config()
@@ -700,10 +699,8 @@ async def validate_planner_artifacts_cross_contract(
     if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER:
         plan_text = None
         todo_text = None
-        if await worker_client.exists("plan.md"):
-            plan_text = await worker_client.read_file("plan.md")
-        if await worker_client.exists("todo.md"):
-            todo_text = await worker_client.read_file("todo.md")
+        plan_text = await worker_client.read_file_optional("plan.md")
+        todo_text = await worker_client.read_file_optional("todo.md")
         motion_errors = validate_benchmark_assembly_motion_contract(
             benchmark_definition=benchmark_definition,
             assembly_definition=assembly_definition,

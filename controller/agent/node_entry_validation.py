@@ -340,24 +340,6 @@ async def reviewer_handover_custom_check_from_session_id(
             expected_stage=expected_stage,
             require_git_revision=True,
         )
-        if handover_error and reviewer_label.lower() in {"execution", "electronics"}:
-            materialization_error = await _materialize_reviewer_handover(
-                client,
-                reviewer_stage=(
-                    "electronics_reviewer"
-                    if expected_stage == "electronics_reviewer"
-                    else "engineering_execution_reviewer"
-                ),
-            )
-            if materialization_error is None:
-                handover_error = await validate_reviewer_handover(
-                    client,
-                    manifest_path=manifest_path,
-                    expected_stage=expected_stage,
-                    require_git_revision=True,
-                )
-            else:
-                handover_error = materialization_error
     except Exception as exc:
         handover_error = f"reviewer handover validation exception: {exc}"
     finally:
@@ -832,7 +814,10 @@ async def validate_seeded_workspace_handoff_artifacts(
         AgentName.ENGINEER_PLANNER,
         AgentName.ELECTRONICS_PLANNER,
     }:
-        if not await worker_client.exists("manufacturing_config.yaml"):
+        manufacturing_raw = await worker_client.read_file_optional(
+            "manufacturing_config.yaml"
+        )
+        if manufacturing_raw is None:
             errors.append(
                 _seeded_schema_error(
                     message=(
@@ -845,9 +830,7 @@ async def validate_seeded_workspace_handoff_artifacts(
         else:
             try:
                 manufacturing_config_model = (
-                    load_planner_manufacturing_config_from_text(
-                        await worker_client.read_file("manufacturing_config.yaml")
-                    )
+                    load_planner_manufacturing_config_from_text(manufacturing_raw)
                 )
             except Exception as exc:
                 errors.append(
@@ -861,8 +844,9 @@ async def validate_seeded_workspace_handoff_artifacts(
                 )
 
     for rel_path in _SCHEMA_BACKED_HANDOFF_PATHS:
-        if await worker_client.exists(rel_path):
-            contents[rel_path] = await worker_client.read_file(rel_path)
+        content = await worker_client.read_file_optional(rel_path)
+        if content is not None:
+            contents[rel_path] = content
 
     for rel_path, content in contents.items():
         if rel_path == "plan.md":

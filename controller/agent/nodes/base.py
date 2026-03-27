@@ -258,23 +258,23 @@ class BaseNode:
 
         render_paths = await self._list_current_revision_render_paths()
         if not render_paths:
-            if await self.ctx.worker_client.exists("renders/dof_review_preview.png"):
+            preview_path = "renders/dof_review_preview.png"
+            preview_raw = await self.ctx.worker_client.read_file_optional(preview_path)
+            if preview_raw is not None:
                 db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
-                input_data = '{"args": ["renders/dof_review_preview.png"]}'
+                input_data = json.dumps({"args": [preview_path]})
                 trace_id = db_callback.record_tool_start_sync(
                     "inspect_media", input_data
                 )
                 try:
-                    result = await self.ctx.fs.inspect_media(
-                        "renders/dof_review_preview.png"
-                    )
+                    result = await self.ctx.fs.inspect_media(preview_path)
                 except Exception as exc:
                     db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
                     raise
                 db_callback.record_tool_end_sync(
                     trace_id, self._serialize_tool_observation(result)
                 )
-                return ["renders/dof_review_preview.png"]
+                return [preview_path]
             return []
         # Inspect the first current-revision render every time so reviewer-stage
         # rejection paths always emit their own multimodal evidence.
@@ -299,15 +299,17 @@ class BaseNode:
     async def _read_optional_workspace_file(self, path: str, missing_text: str) -> str:
         """Read a workspace file if present, otherwise return a placeholder."""
         with suppress(Exception):
-            if await self.ctx.worker_client.exists(path):
-                return await self.ctx.worker_client.read_file(path)
+            content = await self.ctx.worker_client.read_file_optional(path)
+            if content is not None:
+                return content
         return missing_text
 
     async def _read_required_workspace_file(self, path: str) -> str:
         """Read a workspace file and fail closed if it is missing."""
-        if not await self.ctx.worker_client.exists(path):
+        content = await self.ctx.worker_client.read_file_optional(path)
+        if content is None:
             raise ValueError(f"required workspace file missing: {path}")
-        return await self.ctx.worker_client.read_file(path)
+        return content
 
     async def _next_review_round(self, review_slug: str) -> int:
         pattern = re.compile(rf"^{re.escape(review_slug)}-decision-round-(\d+)\.yaml$")

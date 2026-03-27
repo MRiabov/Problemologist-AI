@@ -282,11 +282,11 @@ def get_engineer_planner_tools(
     common_tools = get_common_tools(fs, session_id)
 
     async def planner_has_first_pass_assembly() -> tuple[bool, str]:
-        if not await fs.exists("assembly_definition.yaml"):
+        raw = await fs.read_file_optional("assembly_definition.yaml")
+        if raw is None:
             return False, "Create assembly_definition.yaml first."
 
         try:
-            raw = await fs.read_file("assembly_definition.yaml")
             data = yaml.safe_load(raw) or {}
         except Exception as exc:
             return False, f"assembly_definition.yaml must be readable YAML first: {exc}"
@@ -361,9 +361,10 @@ def get_engineer_planner_tools(
         """
         from worker_heavy.utils.dfm import load_planner_manufacturing_config_from_text
 
-        if not await fs.client.exists(
+        manufacturing_config_text = await fs.client.read_file_optional(
             "manufacturing_config.yaml", bypass_agent_permissions=True
-        ):
+        )
+        if manufacturing_config_text is None:
             return {
                 "ok": False,
                 "stdout": "",
@@ -376,9 +377,6 @@ def get_engineer_planner_tools(
             }
 
         try:
-            manufacturing_config_text = await fs.client.read_file(
-                "manufacturing_config.yaml", bypass_agent_permissions=True
-            )
             load_planner_manufacturing_config_from_text(manufacturing_config_text)
         except Exception as exc:
             return {
@@ -419,10 +417,10 @@ def get_engineer_planner_tools(
         missing_files: list[str] = []
 
         for rel_path in required_files:
-            if not await fs.exists(rel_path):
+            content = await fs.read_file_optional(rel_path)
+            if content is None:
                 missing_files.append(rel_path)
                 continue
-            content = await fs.read_file(rel_path)
             if not content.strip():
                 missing_files.append(rel_path)
                 continue
@@ -437,9 +435,10 @@ def get_engineer_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        if not await fs.client.exists(
+        custom_config_text = await fs.client.read_file_optional(
             "manufacturing_config.yaml", bypass_agent_permissions=True
-        ):
+        )
+        if custom_config_text is None:
             result = PlannerSubmissionResult(
                 ok=False,
                 status="rejected",
@@ -452,9 +451,6 @@ def get_engineer_planner_tools(
             return result.model_dump(mode="json")
 
         try:
-            custom_config_text = await fs.client.read_file(
-                "manufacturing_config.yaml", bypass_agent_permissions=True
-            )
             manufacturing_config = load_planner_manufacturing_config_from_text(
                 custom_config_text
             )
@@ -488,9 +484,19 @@ def get_engineer_planner_tools(
             )
             return result.model_dump(mode="json")
 
-        artifacts["assembly_definition.yaml"] = await fs.read_file(
+        assembly_definition_text = await fs.read_file_optional(
             "assembly_definition.yaml"
         )
+        if assembly_definition_text is None:
+            result = PlannerSubmissionResult(
+                ok=False,
+                status="rejected",
+                errors=["Missing required file: assembly_definition.yaml"],
+                node_type=planner_node_type,
+            )
+            return result.model_dump(mode="json")
+
+        artifacts["assembly_definition.yaml"] = assembly_definition_text
 
         is_valid, errors = validate_node_output(
             AgentName.ENGINEER_PLANNER,

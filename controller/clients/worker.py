@@ -266,6 +266,30 @@ class WorkerClient:
         finally:
             await self._close_client(client)
 
+    async def read_file_optional(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> str | None:
+        """Read file contents and return ``None`` when the file does not exist."""
+        client = await self._get_client()
+        try:
+            response = await client.post(
+                f"{self.base_url}/fs/read",
+                json={
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+                headers=self._request_headers(
+                    bypass_agent_permissions=bypass_agent_permissions
+                ),
+                timeout=10.0,
+            )
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return response.json()["content"]
+        finally:
+            await self._close_client(client)
+
     async def exists(
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> bool:
