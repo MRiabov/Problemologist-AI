@@ -83,6 +83,17 @@ def _validate_benchmark_motion_visibility(
     session_id: str | None = None,
 ) -> list[str]:
     """Validate benchmark motion facts from structured planner artifacts."""
+    plan_refusal_text = artifacts.get("plan_refusal.md")
+    if plan_refusal_text is not None:
+        try:
+            from worker_heavy.utils.file_validation import validate_plan_refusal
+
+            is_valid_refusal, _ = validate_plan_refusal(plan_refusal_text)
+            if is_valid_refusal:
+                return []
+        except Exception:
+            pass
+
     plan_text = artifacts.get("plan.md")
     todo_text = artifacts.get("todo.md")
     benchmark_definition_text = artifacts.get("benchmark_definition.yaml")
@@ -130,6 +141,7 @@ def _validate_benchmark_motion_visibility(
         assembly_definition=assembly_definition,
         plan_text=plan_text,
         todo_text=todo_text,
+        plan_refusal_text=plan_refusal_text,
     )
 
 

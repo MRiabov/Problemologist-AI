@@ -16,9 +16,6 @@ if str(ROOT) not in sys.path:
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
 from evals.logic.models import EvalDatasetItem  # noqa: E402
-from evals.logic.seed_maintenance import (  # noqa: E402
-    refresh_plan_review_manifest_hashes as _refresh_plan_review_manifest_hashes,
-)
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
@@ -115,11 +112,14 @@ def _parse_args() -> argparse.Namespace:
         help="Skip running scripts/env_up.sh before validation.",
     )
     parser.add_argument(
+        "--update-manifests",
         "--fix",
-        action="store_true",
+        dest="update_manifests",
+        action=argparse.BooleanOptionalAction,
+        default=True,
         help=(
-            "Write deterministic seed repairs back to disk, including plan-review "
-            "manifest hashes."
+            "Repair deterministic seed-manifest drift before validation "
+            "(default: enabled)."
         ),
     )
     parser.add_argument(
@@ -248,37 +248,16 @@ def _validate_generated_curation_manifests(*, errors_only: bool = False) -> list
 
 
 async def _validate_item(
-    agent: AgentName, item: EvalDatasetItem, *, fix: bool, errors_only: bool = False
+    agent: AgentName,
+    item: EvalDatasetItem,
+    *,
+    update_manifests: bool,
+    errors_only: bool = False,
 ) -> tuple[bool, str]:
     session_id = _build_session_id(agent, item.id)
     spec = AGENT_SPECS[agent]
     item_logger = QUIET_LOGGER if errors_only else logger
     try:
-        resolved_artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
-        if resolved_artifact_dir is not None:
-            updated_manifests = _refresh_plan_review_manifest_hashes(
-                resolved_artifact_dir, fix=fix
-            )
-            for manifest_path in updated_manifests:
-                if not errors_only:
-                    event_name = (
-                        "seed_manifest_hashes_refreshed"
-                        if fix
-                        else "seed_manifest_hashes_drift_detected"
-                    )
-                    logger.info(
-                        event_name,
-                        session_id=session_id,
-                        agent_name=agent,
-                        manifest_path=str(manifest_path),
-                    )
-
-            if updated_manifests and not fix:
-                return (
-                    False,
-                    "seed plan-review manifest hashes drifted; rerun with --fix",
-                )
-
         await _seed_eval_workspace(
             item=item,
             session_id=session_id,
@@ -286,6 +265,7 @@ async def _validate_item(
             root=ROOT,
             worker_light_url=WORKER_LIGHT_URL,
             logger=item_logger,
+            update_manifests=update_manifests,
         )
         await _preflight_seeded_entry_contract(
             item=item,
@@ -364,7 +344,10 @@ async def _async_main(args: argparse.Namespace) -> int:
             for agent, item in work_items:
                 checked += 1
                 ok, detail = await _validate_item(
-                    agent, item, fix=args.fix, errors_only=args.errors_only
+                    agent,
+                    item,
+                    update_manifests=args.update_manifests,
+                    errors_only=args.errors_only,
                 )
                 if not ok:
                     print(f"FAIL {agent.value} {item.id}: {detail}")
@@ -381,7 +364,10 @@ async def _async_main(args: argparse.Namespace) -> int:
             ) -> tuple[AgentName, EvalDatasetItem, bool, str]:
                 async with semaphore:
                     ok, detail = await _validate_item(
-                        agent, item, fix=args.fix, errors_only=args.errors_only
+                        agent,
+                        item,
+                        update_manifests=args.update_manifests,
+                        errors_only=args.errors_only,
                     )
                     return agent, item, ok, detail
 

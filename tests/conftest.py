@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+from functools import lru_cache
 import os
 import re
 import time
@@ -9,6 +10,7 @@ import httpx
 import pytest
 
 from controller.agent.mock_scenarios import load_integration_mock_scenarios
+from evals.logic.seed_maintenance import refresh_repo_seed_artifact_manifests
 
 pytest_plugins = ["tests.support.fixtures.browser"]
 
@@ -52,6 +54,30 @@ def _is_integration_test(request: pytest.FixtureRequest) -> bool:
         any(m.name.startswith("integration") for m in request.node.iter_markers())
         or "integration" in request.node.nodeid
     )
+
+
+def _extract_test_int_id(nodeid: str) -> str | None:
+    match = re.search(r"test_int_(\d{3})", nodeid, re.IGNORECASE)
+    if not match:
+        return None
+    return f"INT-{match.group(1)}"
+
+
+def _manifest_update_disabled_for_request(request: pytest.FixtureRequest) -> bool:
+    if request.node.get_closest_marker("disable_manifest_update"):
+        return True
+
+    disabled_int_ids_raw = os.getenv("MANIFEST_UPDATE_DISABLED_INT_IDS", "").strip()
+    if not disabled_int_ids_raw:
+        return False
+
+    disabled_int_ids = {
+        value.strip().upper()
+        for value in disabled_int_ids_raw.split(";;")
+        if value.strip()
+    }
+    current_int_id = _extract_test_int_id(request.node.nodeid)
+    return bool(current_int_id and current_int_id in disabled_int_ids)
 
 
 def _should_enforce_integration_readiness(pytestconfig: pytest.Config) -> bool:
@@ -127,6 +153,40 @@ def ensure_integration_mock_scenario_ids(pytestconfig: pytest.Config):
         pytest.fail(
             f"Invalid integration mock scenarios in tests/integration/mock_responses/: {exc}"
         )
+
+
+@lru_cache(maxsize=1)
+def _refresh_seed_manifests_once(repo_root: str) -> tuple[str, ...]:
+    updated_paths = refresh_repo_seed_artifact_manifests(Path(repo_root), fix=True)
+    return tuple(str(path) for path in updated_paths)
+
+
+@pytest.fixture(autouse=True)
+def ensure_seed_manifests_current(request):
+    """
+    Keep deterministic seed manifests fresh during integration runs.
+
+    The repair is default-on and cached for the session so the steady-state path stays
+    cheap. Tests that intentionally exercise stale-manifest behavior can opt out with
+    @pytest.mark.disable_manifest_update.
+    """
+    if not _is_integration_test(request):
+        yield
+        return
+
+    if os.getenv("AUTO_MANIFEST_UPDATE", "1") != "1":
+        yield
+        return
+
+    if _manifest_update_disabled_for_request(request):
+        yield
+        return
+
+    repo_root = str(Path(__file__).resolve().parents[1])
+    with contextlib.suppress(Exception):
+        _refresh_seed_manifests_once(repo_root)
+
+    yield
 
 
 def _strip_ansi(text: str) -> str:

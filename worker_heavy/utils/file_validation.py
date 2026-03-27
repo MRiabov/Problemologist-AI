@@ -632,9 +632,15 @@ def validate_benchmark_assembly_motion_contract(
     assembly_definition: AssemblyDefinition,
     plan_text: str | None = None,
     todo_text: str | None = None,
+    plan_refusal_text: str | None = None,
 ) -> list[str]:
     """Validate benchmark-side moving fixtures from structured YAML only."""
     errors: list[str] = []
+    if plan_refusal_text is not None:
+        is_valid_refusal, _ = validate_plan_refusal(plan_refusal_text)
+        if is_valid_refusal:
+            return errors
+
     benchmark_part_ids = (
         {part.part_id for part in benchmark_definition.benchmark_parts}
         if benchmark_definition is not None
@@ -1087,6 +1093,7 @@ def validate_node_output(
                         assembly_definition=asm_res,
                         plan_text=files_content_map.get("plan.md"),
                         todo_text=files_content_map.get("todo.md"),
+                        plan_refusal_text=files_content_map.get("plan_refusal.md"),
                     )
                     if motion_errors:
                         errors.extend([f"{filename}: {e}" for e in motion_errors])

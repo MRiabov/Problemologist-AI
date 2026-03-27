@@ -709,6 +709,7 @@ async def validate_planner_artifacts_cross_contract(
     if expected_stage == AgentName.BENCHMARK_PLAN_REVIEWER:
         plan_text = None
         todo_text = None
+        plan_refusal_text = await worker_client.read_file_optional("plan_refusal.md")
         plan_text = await worker_client.read_file_optional("plan.md")
         todo_text = await worker_client.read_file_optional("todo.md")
         motion_errors = validate_benchmark_assembly_motion_contract(
@@ -716,6 +717,7 @@ async def validate_planner_artifacts_cross_contract(
             assembly_definition=assembly_definition,
             plan_text=plan_text,
             todo_text=todo_text,
+            plan_refusal_text=plan_refusal_text,
         )
         if motion_errors:
             return "; ".join(motion_errors)

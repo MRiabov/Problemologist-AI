@@ -194,6 +194,18 @@ def _is_allow_backend_errors_decorator(expr: ast.expr) -> bool:
     )
 
 
+def _is_disable_manifest_update_decorator(expr: ast.expr) -> bool:
+    target = expr.func if isinstance(expr, ast.Call) else expr
+    return (
+        isinstance(target, ast.Attribute)
+        and target.attr == "disable_manifest_update"
+        and isinstance(target.value, ast.Attribute)
+        and target.value.attr == "mark"
+        and isinstance(target.value.value, ast.Name)
+        and target.value.value.id == "pytest"
+    )
+
+
 def _extract_int_ids_from_test_node(node: ast.AST) -> set[str]:
     int_ids: set[str] = set()
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -299,6 +311,83 @@ def _build_test_level_backend_allowlist_payload_from_ast(
                                 rule["patterns"] = existing
                             existing.extend(raw)
     return index
+
+
+def _manifest_update_disable_cache_path(repo_root: Path) -> Path:
+    integration_log_dir_raw = os.environ.get("INTEGRATION_LOG_DIR", "").strip()
+    if integration_log_dir_raw:
+        return (
+            Path(integration_log_dir_raw)
+            / "json"
+            / "manifest_update_disabled_int_ids.json"
+        )
+    return (
+        repo_root
+        / "logs"
+        / "integration_tests"
+        / "json"
+        / "manifest_update_disabled_int_ids.json"
+    )
+
+
+def _build_test_level_manifest_update_disable_payload_from_ast(
+    repo_root: Path,
+) -> dict[str, bool]:
+    index: dict[str, bool] = {}
+    test_roots = [repo_root / "tests" / "integration", repo_root / "tests" / "e2e"]
+
+    for test_root in test_roots:
+        if not test_root.exists():
+            continue
+        for path in test_root.rglob("test_*.py"):
+            try:
+                source = path.read_text(encoding="utf-8")
+                module = ast.parse(source, filename=str(path))
+            except (OSError, SyntaxError):
+                continue
+
+            for node in module.body:
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                int_ids = _extract_int_ids_from_test_node(node)
+                if not int_ids:
+                    continue
+
+                if not any(_is_disable_manifest_update_decorator(dec) for dec in node.decorator_list):
+                    continue
+
+                for int_id in int_ids:
+                    index[int_id] = True
+    return index
+
+
+def _load_or_generate_test_level_manifest_update_disable_payload(
+    repo_root: Path,
+) -> dict[str, bool]:
+    cache_path = _manifest_update_disable_cache_path(repo_root)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    source_mtime = _latest_test_allowlist_source_mtime(repo_root)
+
+    if cache_path.exists():
+        try:
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            cached_source_mtime = float(cached.get("source_mtime", 0.0))
+            by_int = cached.get("by_int")
+            if cached_source_mtime >= source_mtime and isinstance(by_int, dict):
+                return {str(key).upper(): bool(value) for key, value in by_int.items()}
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    by_int = _build_test_level_manifest_update_disable_payload_from_ast(repo_root)
+    payload = {
+        "generated_at_epoch_s": time.time(),
+        "source_mtime": source_mtime,
+        "by_int": by_int,
+    }
+    cache_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return by_int
 
 
 def _allowlist_cache_path(repo_root: Path) -> Path:
@@ -531,6 +620,17 @@ def run_pytest_subprocess(
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
+    env.setdefault("AUTO_MANIFEST_UPDATE", "1")
+    manifest_update_disable_payload = _load_or_generate_test_level_manifest_update_disable_payload(
+        _repo_root()
+    )
+    env["MANIFEST_UPDATE_DISABLED_INT_IDS"] = ";;".join(
+        sorted(
+            int_id
+            for int_id, disabled in manifest_update_disable_payload.items()
+            if disabled
+        )
+    )
     early_stop_enabled = (
         env.get("INTEGRATION_EARLY_STOP_ON_BACKEND_ERRORS", "0").strip() == "1"
     )

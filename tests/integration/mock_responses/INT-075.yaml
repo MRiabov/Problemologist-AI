@@ -26,6 +26,11 @@ transcript:
       overwrite: true
       content_file: INT-075/engineer_planner/entry_01/04__benchmark_definition.yaml
     expected_observation: success
+  - thought: Inspect the seeded current-revision render before submitting.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/dof_review_preview.png
+    expected_observation: attached_to_model
   - tool_name: submit_plan
     expected_observation: submitted
   - finished: true
@@ -39,6 +44,11 @@ transcript:
     summary: 'INT-074 execution scenario: electronics planner submitted.'
 - node: engineer_plan_reviewer
   steps:
+  - thought: Inspect the seeded current-revision render before approving.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/dof_review_preview.png
+    expected_observation: attached_to_model
   - finished: true
     review:
       decision: APPROVED
@@ -151,6 +161,11 @@ transcript:
       required_fixes: []
 - node: engineer_execution_reviewer
   steps:
+  - thought: Inspect the seeded current-revision render before approving execution.
+    tool_name: inspect_media
+    tool_args:
+      path: renders/dof_review_preview.png
+    expected_observation: attached_to_model
   - finished: true
     review:
       decision: APPROVED

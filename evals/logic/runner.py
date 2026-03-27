@@ -892,6 +892,7 @@ def _load_agent_reward_configs() -> dict[AgentName, AgentRewardConfig]:
 async def _preflight_selected_seeded_tasks(
     *,
     tasks: list[tuple[EvalDatasetItem, AgentName]],
+    update_manifests: bool = True,
 ) -> None:
     failures: list[str] = []
 
@@ -911,6 +912,7 @@ async def _preflight_selected_seeded_tasks(
                 root=ROOT,
                 worker_light_url=WORKER_LIGHT_URL,
                 logger=logger,
+                update_manifests=update_manifests,
             )
             await _preflight_seeded_entry_contract(
                 item=item,
@@ -1735,6 +1737,7 @@ async def _run_git_eval(
     stats: dict[AgentName, Any],
     agent_name: AgentName,
     reward_agent_configs: dict[AgentName, AgentRewardConfig],
+    update_manifests: bool = True,
 ) -> bool:
     task_id = item.id
     log = logger.bind(task_id=task_id, agent_name=agent_name, eval_mode=EvalMode.GIT)
@@ -1758,6 +1761,7 @@ async def _run_git_eval(
                 root=ROOT,
                 worker_light_url=WORKER_LIGHT_URL,
                 logger=logger,
+                update_manifests=update_manifests,
             )
 
         if (
@@ -2135,6 +2139,7 @@ async def run_single_eval(
     run_judge: bool = False,
     run_reviewers_with_judge: bool = False,
     runner_backend: EvalRunnerBackend = EvalRunnerBackend.CONTROLLER,
+    update_manifests: bool = True,
 ):
     """
     Runs a single evaluation task for a specific agent type.
@@ -2150,6 +2155,7 @@ async def run_single_eval(
             stats,
             agent_name,
             reward_agent_configs,
+            update_manifests=update_manifests,
         )
         _console_message(
             f"eval case finished: {case_label} - {'success' if success else 'failed'}"
@@ -2213,6 +2219,7 @@ async def run_single_eval(
                         root=ROOT,
                         worker_light_url=WORKER_LIGHT_URL,
                         logger=logger,
+                        update_manifests=update_manifests,
                     )
                     await _preflight_seeded_entry_contract(
                         item=item,
@@ -2245,6 +2252,7 @@ async def run_single_eval(
                         root=ROOT,
                         worker_light_url=WORKER_LIGHT_URL,
                         logger=logger,
+                        update_manifests=update_manifests,
                     )
                     await _preflight_seeded_entry_contract(
                         item=item,
@@ -2831,6 +2839,17 @@ async def main():
         "--skip-env-up", action="store_true", help="Skip running scripts/env_up.sh"
     )
     parser.add_argument(
+        "--update-manifests",
+        "--fix",
+        dest="update_manifests",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Repair deterministic seed-manifest drift before seeding workspaces "
+            "(default: enabled)."
+        ),
+    )
+    parser.add_argument(
         "--call-paid-api",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -3167,7 +3186,10 @@ async def main():
     if tasks and runner_backend == EvalRunnerBackend.CONTROLLER:
         logger.info("eval_seed_preflight_start", total_tasks=len(tasks))
         try:
-            await _preflight_selected_seeded_tasks(tasks=tasks)
+            await _preflight_selected_seeded_tasks(
+                tasks=tasks,
+                update_manifests=args.update_manifests,
+            )
         except Exception as exc:
             logger.error("eval_seed_preflight_abort", error=str(exc))
             _console_message("ERROR: eval seeded preflight failed before execution.")
@@ -3199,6 +3221,7 @@ async def main():
                     run_judge=args.run_judge,
                     run_reviewers_with_judge=args.run_reviewers_with_judge,
                     runner_backend=runner_backend,
+                    update_manifests=args.update_manifests,
                 )
 
         await asyncio.gather(*(_guarded(item, agent) for item, agent in tasks))

@@ -928,6 +928,7 @@ async def validate_seeded_workspace_handoff_artifacts(
                     assembly_definition=assembly_result,
                     plan_text=contents.get("plan.md"),
                     todo_text=contents.get("todo.md"),
+                    plan_refusal_text=contents.get("plan_refusal.md"),
                 )
                 errors.extend(
                     _seeded_schema_error(

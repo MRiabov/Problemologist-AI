@@ -257,7 +257,22 @@ class BaseNode:
         """
 
         render_paths = await self._list_current_revision_render_paths()
-        if not render_paths:
+        if render_paths:
+            db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
+            input_data = json.dumps({"args": [render_paths[0]]})
+            trace_id = db_callback.record_tool_start_sync("inspect_media", input_data)
+            try:
+                result = await self.ctx.fs.inspect_media(render_paths[0])
+            except Exception as exc:
+                db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
+                raise
+            self._record_tool_usage("inspect_media", result)
+            db_callback.record_tool_end_sync(
+                trace_id, self._serialize_tool_observation(result)
+            )
+            return [render_paths[0]]
+
+        else:
             preview_path = "renders/dof_review_preview.png"
             preview_raw = await self.ctx.worker_client.read_file_optional(preview_path)
             if preview_raw is not None:
@@ -277,21 +292,6 @@ class BaseNode:
                 )
                 return [preview_path]
         return []
-        # Inspect the first current-revision render every time so reviewer-stage
-        # rejection paths always emit their own multimodal evidence.
-        db_callback = self.ctx.get_database_recorder(self.ctx.episode_id)
-        input_data = json.dumps({"args": [render_paths[0]]})
-        trace_id = db_callback.record_tool_start_sync("inspect_media", input_data)
-        try:
-            result = await self.ctx.fs.inspect_media(render_paths[0])
-        except Exception as exc:
-            db_callback.record_tool_end_sync(trace_id, str(exc), is_error=True)
-            raise
-        self._record_tool_usage("inspect_media", result)
-        db_callback.record_tool_end_sync(
-            trace_id, self._serialize_tool_observation(result)
-        )
-        return render_paths
 
     def _get_visual_inspection_policy(
         self, node_type: AgentName

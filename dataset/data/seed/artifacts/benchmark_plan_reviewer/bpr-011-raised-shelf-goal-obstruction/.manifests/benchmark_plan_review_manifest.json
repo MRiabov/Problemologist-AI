@@ -4,8 +4,8 @@
   "session_id": "seed-bpr-011-raised-shelf-goal-obstruction",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_assembly_definition.yaml": "3d094a485d89393538483ea7907c7b94dcd243d28c035ff955d5015129c6d0c0",
-    "benchmark_definition.yaml": "68435f333de607418abc4ad27d5844423ccb59415e294105d10c05974aa8a4ed",
+    "benchmark_assembly_definition.yaml": "83685977d88851e67bd3a9c0dd1d00991c04141c7a1ef4afa939868f3bcffd73",
+    "benchmark_definition.yaml": "66f5724aa334bbadb8584ca7e312046868a4cc4c906425fda8ef4b65b0cd3073",
     "plan.md": "b69aef3ac8e813a12c49cdda86a8c2798f9a457942dd464b7e3eaa4a55fa9c71",
     "todo.md": "3a50508b154f0193f3d1ed8a311517c284c9110737b2b33eff4f51aa69de9b64"
   }

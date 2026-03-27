@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import Any
 
@@ -23,9 +22,9 @@ from controller.agent.node_entry_validation import (
 )
 from controller.clients.worker import WorkerClient
 from evals.logic.models import AgentEvalSpec, EvalDatasetItem
+from evals.logic.seed_maintenance import refresh_seed_artifact_manifests
 from shared.agent_templates import load_common_template_files
 from shared.enums import AgentName, EvalMode
-from shared.git_utils import repo_revision
 
 
 def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | None:
@@ -84,36 +83,6 @@ async def validate_workspace_has_artifacts(
     return missing
 
 
-def _refresh_seed_review_manifest_revision(
-    *,
-    rel_path: str,
-    content: str,
-    root: Path,
-) -> str:
-    manifest_names = {
-        ".manifests/benchmark_review_manifest.json",
-        ".manifests/engineering_execution_review_manifest.json",
-        ".manifests/electronics_review_manifest.json",
-    }
-    if rel_path not in manifest_names:
-        return content
-
-    try:
-        manifest = json.loads(content)
-    except Exception:
-        return content
-
-    if not isinstance(manifest, dict) or "revision" not in manifest:
-        return content
-
-    current_revision = repo_revision(root)
-    if not current_revision:
-        return content
-
-    manifest["revision"] = current_revision
-    return json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
-
-
 async def seed_eval_workspace(
     *,
     item: EvalDatasetItem,
@@ -122,12 +91,26 @@ async def seed_eval_workspace(
     root: Path,
     worker_light_url: str,
     logger: Any,
+    update_manifests: bool = True,
 ) -> None:
     artifact_dir = resolve_seed_artifact_dir(item, root=root)
     inline_files = item.seed_files or {}
     template_files = load_common_template_files()
     if artifact_dir is None and not inline_files and not template_files:
         return
+
+    if artifact_dir is not None:
+        if not artifact_dir.exists():
+            raise FileNotFoundError(f"Seed artifact directory not found: {artifact_dir}")
+
+        updated_paths = refresh_seed_artifact_manifests(
+            artifact_dir, fix=update_manifests
+        )
+        if updated_paths and not update_manifests:
+            raise ValueError(
+                "Seed artifact manifest drift detected; rerun with "
+                "--update-manifests."
+            )
 
     worker = WorkerClient(base_url=worker_light_url, session_id=session_id)
     seeded_paths: list[str] = []
@@ -142,10 +125,6 @@ async def seed_eval_workspace(
             seeded_paths.append(rel_path)
 
         if artifact_dir is not None:
-            if not artifact_dir.exists():
-                raise FileNotFoundError(
-                    f"Seed artifact directory not found: {artifact_dir}"
-                )
             for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
                 rel_path = path.relative_to(artifact_dir).as_posix()
                 raw_bytes = path.read_bytes()
@@ -158,11 +137,6 @@ async def seed_eval_workspace(
                         bypass_agent_permissions=True,
                     )
                 else:
-                    content = _refresh_seed_review_manifest_revision(
-                        rel_path=rel_path,
-                        content=content,
-                        root=root,
-                    )
                     await worker.write_file(
                         rel_path,
                         content,
