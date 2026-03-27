@@ -1,4 +1,5 @@
 import asyncio
+import json
 import uuid
 
 import httpx
@@ -27,6 +28,8 @@ from shared.workers.schema import (
 CONTROLLER_URL = "http://127.0.0.1:18000"
 WORKER_LIGHT_URL = "http://127.0.0.1:18001"
 WORKER_HEAVY_URL = "http://127.0.0.1:18002"
+
+pytestmark = pytest.mark.xdist_group(name="integration_shared_serial")
 
 _BUSY_SLEEP_SECONDS = 8
 
@@ -280,6 +283,128 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
         assert "WORKER_BUSY" not in validate_resp.text
         assert "WORKER_BUSY" not in simulate_resp.text
         assert "WORKER_BUSY" not in submit_resp.text
+
+        busy_resp = await busy_task
+        assert busy_resp.status_code == 200, busy_resp.text
+        busy_data = BenchmarkToolResponse.model_validate(busy_resp.json())
+        assert busy_data.success, busy_data.message
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_193_controller_script_tools_verify_waits_through_temporal_queue():
+    """
+    INT-193: controller script-tools verify must wait through the Temporal-backed
+    heavy path instead of leaking a raw worker-heavy busy response.
+    """
+    busy_session_id = f"INT-193-BUSY-{uuid.uuid4().hex[:8]}"
+    tool_session_id = f"INT-193-TOOLS-{uuid.uuid4().hex[:8]}"
+
+    async with httpx.AsyncClient(timeout=1000.0) as client:
+        await _write_session_workspace(client, busy_session_id, "busy_script.py")
+        await _write_session_workspace(client, tool_session_id, "script.py")
+
+        create_episode_resp = await client.post(
+            f"{CONTROLLER_URL}/api/test/episodes",
+            json=AgentRunRequest(
+                task="INT-193 controller script-tools verify proxy",
+                session_id=tool_session_id,
+                agent_name=AgentName.BENCHMARK_CODER,
+            ).model_dump(mode="json"),
+            timeout=120.0,
+        )
+        assert create_episode_resp.status_code == 201, create_episode_resp.text
+        EpisodeCreateResponse.model_validate(create_episode_resp.json())
+
+        tool_validation_results = json.dumps(
+            {
+                "success": True,
+                "message": "seeded",
+                "timestamp": 0.0,
+                "script_path": "script.py",
+                "script_sha256": "1" * 64,
+                "verification_result": None,
+            }
+        )
+        tool_validation_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="validation_results.json",
+                content=tool_validation_results,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": tool_session_id},
+            timeout=1000.0,
+        )
+        assert tool_validation_resp.status_code == 200, tool_validation_resp.text
+
+        busy_validation_results = json.dumps(
+            {
+                "success": True,
+                "message": "seeded",
+                "timestamp": 0.0,
+                "script_path": "busy_script.py",
+                "script_sha256": "0" * 64,
+                "verification_result": None,
+            }
+        )
+        busy_validation_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="validation_results.json",
+                content=busy_validation_results,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": busy_session_id},
+            timeout=1000.0,
+        )
+        assert busy_validation_resp.status_code == 200, busy_validation_resp.text
+
+        busy_task = asyncio.create_task(
+            client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/verify",
+                json=BenchmarkToolRequest(
+                    script_path="busy_script.py",
+                    backend=SimulatorBackendType.MUJOCO,
+                    smoke_test_mode=True,
+                ).model_dump(mode="json"),
+                headers={"X-Session-ID": busy_session_id},
+                timeout=1000.0,
+            )
+        )
+
+        worker_busy = False
+        for _ in range(80):
+            ready_resp = await client.get(f"{WORKER_HEAVY_URL}/ready", timeout=5.0)
+            if ready_resp.status_code != 200:
+                worker_busy = True
+                break
+            await asyncio.sleep(0.2)
+
+        assert worker_busy, "worker-heavy never reported busy during the control run"
+
+        verify_resp = await client.post(
+            f"{CONTROLLER_URL}/api/script-tools/verify",
+            json={
+                "script_path": "script.py",
+                "agent_role": AgentName.BENCHMARK_CODER.value,
+                "backend": SimulatorBackendType.MUJOCO.value,
+                "smoke_test_mode": True,
+                "jitter_range": [0.0, 0.0, 0.0],
+                "num_scenes": 1,
+                "duration": 0.1,
+                "seed": 42,
+            },
+            headers={"X-Session-ID": tool_session_id},
+            timeout=1000.0,
+        )
+
+        assert verify_resp.status_code == 200, verify_resp.text
+        verify_data = BenchmarkToolResponse.model_validate(verify_resp.json())
+        assert verify_data.success, verify_data.message
+        assert verify_data.artifacts is not None
+        assert verify_data.artifacts.verification_result is not None
+        assert "WORKER_BUSY" not in verify_resp.text
 
         busy_resp = await busy_task
         assert busy_resp.status_code == 200, busy_resp.text

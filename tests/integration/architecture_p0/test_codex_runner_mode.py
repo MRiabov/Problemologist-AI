@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -64,6 +65,7 @@ def test_run_evals_help_exposes_codex_backend():
     normalized_stdout = " ".join(completed.stdout.split())
     assert "--runner-backend" in normalized_stdout
     assert "--call-paid-api" in normalized_stdout
+    assert "--level" in normalized_stdout
     assert re.search(
         r"default:\s*benchmark_planner\s*smoke-\s*test\s*run", completed.stdout
     )
@@ -96,6 +98,21 @@ def test_run_evals_defaults_are_smoke_test_contract():
     assert args.agent == "benchmark_planner"
     assert args.limit == 1
     assert args.concurrency == 1
+    assert args.level is None
+
+
+@pytest.mark.integration_p0
+def test_run_evals_level_filter_parser_accepts_repeated_and_bracketed_values():
+    from evals.logic.runner import _parse_level_filters
+
+    assert _parse_level_filters(["0", "1,2", "[3,4]", "5 or 0"]) == {
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+    }
 
 
 @pytest.mark.integration_p0
@@ -132,8 +149,10 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
 
     assert env["HOME"] == str(codex_home_root)
     assert env["CODEX_HOME"] == str(codex_home_dir)
-    assert env["PYTHONPATH"] == str(workspace_dir.resolve())
-    assert str(ROOT) not in env["PYTHONPATH"]
+    assert env["PYTHONPATH"].split(os.pathsep)[:2] == [
+        str(workspace_dir.resolve()),
+        str(ROOT),
+    ]
     assert env["PROBLEMOLOGIST_REPO_ROOT"] == str(ROOT)
     assert env["PYTHON_BIN"] == str(ROOT / ".venv" / "bin" / "python")
     assert (
@@ -148,6 +167,57 @@ def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_pat
     assert "use_legacy_landlock = true" in config_text
     assert str(workspace_dir.resolve()) in config_text
     assert "mcp_servers" not in config_text
+
+
+@pytest.mark.integration_p0
+def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    (workspace_dir / "script.py").write_text(
+        "from shared.models.schemas import PartMetadata\n"
+        "print(PartMetadata(material_id='aluminum_6061', fixed=True).model_dump())\n",
+        encoding="utf-8",
+    )
+
+    codex_home_root = tmp_path / "codex-home"
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+    )
+
+    env = build_codex_env(
+        task_id="task-1",
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id="session-1",
+    )
+
+    completed = subprocess.run(
+        [env["PYTHON_BIN"], "script.py"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "aluminum_6061" in completed.stdout
 
 
 @pytest.mark.integration_p0
@@ -277,6 +347,7 @@ async def test_codex_materialized_planner_workspace_submits(
     )
     assert "AGENT_NAME" not in env
     assert env["PROBLEMOLOGIST_REPO_ROOT"] == str(ROOT)
+    assert str(ROOT) in env["PYTHONPATH"].split(os.pathsep)
 
     completed = subprocess.run(
         ["bash", "scripts/submit_plan.sh"],
@@ -582,6 +653,37 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
             assert dropped_episode_ids == sorted(set(dropped_episode_ids))
         for rejected_row in manifest.rejected:
             assert rejected_row.reasons
+
+
+@pytest.mark.integration_p0
+def test_validate_eval_seed_can_filter_rows_by_complexity_level():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_eval_seed.py",
+            "--skip-env-up",
+            "--agent",
+            "cots_search",
+            "--task-id",
+            "cs-001-m3-bolt-match",
+            "--level",
+            "0",
+            "--fail-fast",
+            "--concurrency",
+            "1",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "Validated 1 row(s): all passed." in completed.stdout, completed.stdout
+    assert "PASS cots_search cs-001-m3-bolt-match:" in completed.stdout, (
+        completed.stdout
+    )
 
 
 @pytest.mark.integration_p0
