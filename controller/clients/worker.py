@@ -1,11 +1,13 @@
 import asyncio
 import base64
 import os
-from typing import Any, Literal
+import uuid
+from typing import Any, Literal, cast
 
 import httpx
 import structlog
 
+from controller.clients.worker_ws import WorkerLightWebSocketClient
 from controller.config.settings import settings
 from shared.enums import AgentName, ResponseStatus
 from shared.simulation.schemas import (
@@ -22,6 +24,8 @@ from shared.workers.schema import (
     GrepMatch,
     InspectTopologyResponse,
     ReviewerStage,
+    WorkerLightRpcAction,
+    WorkerLightRpcRequest,
 )
 from shared.workers.workbench_models import ManufacturingMethod, WorkbenchResult
 
@@ -46,6 +50,7 @@ class WorkerClient:
         heavy_url: str | None = None,
         controller_url: str | None = None,
         agent_role: AgentName | str = AgentName.ENGINEER_CODER,
+        light_transport: Literal["auto", "http", "ws"] | None = None,
     ):
         """Initialize the worker client.
 
@@ -70,6 +75,20 @@ class WorkerClient:
         self.agent_role = (
             agent_role.value if isinstance(agent_role, AgentName) else str(agent_role)
         )
+        resolved_transport = (
+            light_transport
+            if light_transport is not None
+            else os.getenv("WORKER_LIGHT_TRANSPORT")
+        )
+        if isinstance(resolved_transport, str):
+            resolved_transport = resolved_transport.strip().lower()
+        if not resolved_transport or resolved_transport == "auto":
+            resolved_transport = "ws" if settings.is_integration_test else "http"
+        if resolved_transport not in {"http", "ws"}:
+            raise ValueError(
+                f"Unsupported worker light transport: {resolved_transport}"
+            )
+        self.light_transport = resolved_transport
         self.headers = {
             "X-Session-ID": session_id,
             "X-Agent-Role": self.agent_role,
@@ -78,6 +97,7 @@ class WorkerClient:
         self.http_client = http_client
         self._loop_clients: dict[int, httpx.AsyncClient] = {}
         self._loop_locks: dict[int, asyncio.Lock] = {}
+        self._light_ws_client: WorkerLightWebSocketClient | None = None
 
     def _request_headers(
         self,
@@ -160,12 +180,57 @@ class WorkerClient:
         response.raise_for_status()
         return BenchmarkToolResponse.model_validate(response.json())
 
+    def _should_use_light_websocket(self) -> bool:
+        return self.light_transport == "ws"
+
+    async def _get_light_ws_client(self) -> WorkerLightWebSocketClient:
+        if self._light_ws_client is None:
+            self._light_ws_client = WorkerLightWebSocketClient(
+                self.base_url,
+                self.headers,
+            )
+        return self._light_ws_client
+
+    async def _light_ws_request(
+        self, action: str, payload: dict[str, Any]
+    ) -> dict[str, Any] | list[Any] | str | int | float | bool | None:
+        client = await self._get_light_ws_client()
+        request = WorkerLightRpcRequest(
+            request_id=uuid.uuid4().hex,
+            action=cast(WorkerLightRpcAction, action),
+            payload=payload,
+        )
+        response = await client.request(request)
+        if not response.ok:
+            self._raise_light_ws_error(response, action)
+        return response.result
+
+    def _raise_light_ws_error(self, response, action: str) -> None:
+        error = response.error
+        status_code = error.status_code if error and error.status_code else 500
+        message = (
+            error.message
+            if error
+            else f"worker-light websocket action failed: {action}"
+        )
+        request = httpx.Request("WS", self.base_url)
+        http_response = httpx.Response(
+            status_code=status_code,
+            request=request,
+            content=message.encode("utf-8"),
+        )
+        raise httpx.HTTPStatusError(message, request=request, response=http_response)
+
     async def aclose(self):
         """Explicitly close all HTTP clients created for different loops."""
         # WP08: Handle loop-specific clients
         for loop_id, client in list(self._loop_clients.items()):
             await client.aclose()
             del self._loop_clients[loop_id]
+
+        if self._light_ws_client is not None:
+            await self._light_ws_client.aclose()
+            self._light_ws_client = None
 
         # Compatibility for legacy _cached_client check in tests
         if hasattr(self, "_cached_client") and self._cached_client:
@@ -176,6 +241,12 @@ class WorkerClient:
         self, target_id: str, script_path: str = "script.py"
     ) -> InspectTopologyResponse:
         """Inspect topological features via worker."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "topology_inspect",
+                {"target_id": target_id, "script_path": script_path},
+            )
+            return InspectTopologyResponse.model_validate(result)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -195,6 +266,15 @@ class WorkerClient:
         """List contents of a directory."""
         if not path:
             path = "/"
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_ls",
+                {
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            return [FileInfo.model_validate(item) for item in result or []]
         client = await self._get_client()
         try:
             response = await client.post(
@@ -222,6 +302,17 @@ class WorkerClient:
         bypass_agent_permissions: bool = False,
     ) -> list[GrepMatch]:
         """Search for a pattern in files."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_grep",
+                {
+                    "pattern": pattern,
+                    "path": path,
+                    "glob": glob,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            return [GrepMatch.model_validate(item) for item in result or []]
         client = await self._get_client()
         try:
             response = await client.post(
@@ -246,6 +337,20 @@ class WorkerClient:
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> str:
         """Read file contents."""
+        if self._should_use_light_websocket():
+            try:
+                result = await self._light_ws_request(
+                    "fs_read",
+                    {
+                        "path": path,
+                        "bypass_agent_permissions": bypass_agent_permissions,
+                    },
+                )
+                return str((result or {}).get("content", ""))
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404:
+                    return f"Error: File '{path}' not found."
+                raise
         client = await self._get_client()
         try:
             response = await client.post(
@@ -270,6 +375,20 @@ class WorkerClient:
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> str | None:
         """Read file contents and return ``None`` when the file does not exist."""
+        if self._should_use_light_websocket():
+            try:
+                result = await self._light_ws_request(
+                    "fs_read",
+                    {
+                        "path": path,
+                        "bypass_agent_permissions": bypass_agent_permissions,
+                    },
+                )
+                return str((result or {}).get("content", ""))
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404:
+                    return None
+                raise
         client = await self._get_client()
         try:
             response = await client.post(
@@ -294,6 +413,18 @@ class WorkerClient:
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> bool:
         """Check if a file exists."""
+        if self._should_use_light_websocket():
+            try:
+                result = await self._light_ws_request(
+                    "fs_exists",
+                    {
+                        "path": path,
+                        "bypass_agent_permissions": bypass_agent_permissions,
+                    },
+                )
+                return bool((result or {}).get("exists", False))
+            except httpx.HTTPStatusError:
+                return False
         client = await self._get_client()
         try:
             response = await client.post(
@@ -325,6 +456,17 @@ class WorkerClient:
         bypass_agent_permissions: bool = False,
     ) -> bool:
         """Write content to a file."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_write",
+                {
+                    "path": path,
+                    "content": content,
+                    "overwrite": overwrite,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -347,6 +489,10 @@ class WorkerClient:
 
     async def bundle_session(self) -> bytes:
         """Bundle the session workspace into a gzipped tarball from the light worker."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request("fs_bundle", {})
+            encoded = str((result or {}).get("content_b64", ""))
+            return base64.b64decode(encoded)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -431,6 +577,16 @@ class WorkerClient:
         bypass_agent_permissions: bool = False,
     ) -> bool:
         """Upload a file with binary content."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_upload_file",
+                {
+                    "path": path,
+                    "content_b64": base64.b64encode(content).decode("ascii"),
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
             # Prepare multipart form data
@@ -457,6 +613,16 @@ class WorkerClient:
         self, path: str, *, bypass_agent_permissions: bool = False
     ) -> bytes:
         """Read file contents as binary."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_read_blob",
+                {
+                    "path": path,
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            encoded = str((result or {}).get("content_b64", ""))
+            return base64.b64decode(encoded)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -514,6 +680,16 @@ class WorkerClient:
         bypass_agent_permissions: bool = False,
     ) -> bool:
         """Edit a file with one or more operations."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "fs_edit",
+                {
+                    "path": path,
+                    "edits": [op.model_dump() for op in edits],
+                    "bypass_agent_permissions": bypass_agent_permissions,
+                },
+            )
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
             json_edits = [op.model_dump() for op in edits]
@@ -542,6 +718,16 @@ class WorkerClient:
         episode_id: str | None = None,
     ) -> ExecuteResponse:
         """Execute a shell command in the session runtime."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "runtime_execute",
+                {
+                    "code": command,
+                    "timeout": timeout,
+                    "episode_id": episode_id,
+                },
+            )
+            return ExecuteResponse.model_validate(result)
         client = await self._get_client()
         try:
             http_timeout = float(timeout) + 5.0
@@ -846,6 +1032,9 @@ class WorkerClient:
 
     async def git_init(self) -> bool:
         """Initialize a git repository in the workspace."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request("git_init", {})
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -860,6 +1049,9 @@ class WorkerClient:
 
     async def git_commit(self, message: str) -> GitCommitResponse:
         """Commit changes and sync to S3."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request("git_commit", {"message": message})
+            return GitCommitResponse.model_validate(result)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -875,6 +1067,9 @@ class WorkerClient:
 
     async def git_status(self) -> GitStatusResponse:
         """Get repository status."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request("git_status", {})
+            return GitStatusResponse.model_validate(result)
         client = await self._get_client()
         try:
             response = await client.get(
@@ -891,6 +1086,12 @@ class WorkerClient:
         self, file_path: str, strategy: Literal["ours", "theirs"]
     ) -> bool:
         """Resolve a merge conflict."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "git_resolve",
+                {"file_path": file_path, "strategy": strategy},
+            )
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -906,6 +1107,9 @@ class WorkerClient:
 
     async def git_merge_abort(self) -> bool:
         """Abort a merge."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request("git_merge_abort", {})
+            return bool((result or {}).get("status") == ResponseStatus.SUCCESS)
         client = await self._get_client()
         try:
             response = await client.post(
@@ -920,6 +1124,11 @@ class WorkerClient:
 
     async def git_merge_complete(self, message: str | None = None) -> GitCommitResponse:
         """Complete a merge."""
+        if self._should_use_light_websocket():
+            result = await self._light_ws_request(
+                "git_merge_complete", {"message": message}
+            )
+            return GitCommitResponse.model_validate(result)
         client = await self._get_client()
         try:
             response = await client.post(

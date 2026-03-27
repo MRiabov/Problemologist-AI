@@ -438,6 +438,59 @@ class GitMergeRequest(BaseModel):
     message: StrictStr | None = None
 
 
+WorkerLightRpcAction: TypeAlias = Literal[
+    "fs_ls",
+    "fs_exists",
+    "fs_read",
+    "fs_read_blob",
+    "fs_write",
+    "fs_edit",
+    "fs_upload_file",
+    "fs_delete",
+    "fs_grep",
+    "fs_bundle",
+    "git_init",
+    "git_commit",
+    "git_status",
+    "git_resolve",
+    "git_merge_abort",
+    "git_merge_complete",
+    "runtime_execute",
+    "topology_inspect",
+]
+
+
+class WorkerLightRpcRequest(BaseModel):
+    """Typed request envelope for the worker-light websocket RPC transport."""
+
+    request_id: StrictStr
+    action: WorkerLightRpcAction
+    payload: dict[StrictStr, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class WorkerLightRpcError(BaseModel):
+    """Structured error payload returned by worker-light websocket RPC."""
+
+    message: StrictStr
+    status_code: StrictInt | None = None
+    error_type: StrictStr | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class WorkerLightRpcResponse(BaseModel):
+    """Typed response envelope for the worker-light websocket RPC transport."""
+
+    request_id: StrictStr
+    ok: StrictBool
+    result: Any | None = None
+    error: WorkerLightRpcError | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class PreviewDesignRequest(BaseModel):
     """Request to preview a CAD design from specific angles."""
 

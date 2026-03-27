@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import AliasChoices, Field, StrictStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,6 +27,10 @@ class Settings(BaseSettings):
     worker_light_url: str = Field(
         default="http://127.0.0.1:18001",
         validation_alias=AliasChoices("WORKER_LIGHT_URL", "WORKER_URL"),
+    )
+    worker_light_transport: Literal["auto", "http", "ws"] = Field(
+        default="auto",
+        validation_alias=AliasChoices("WORKER_LIGHT_TRANSPORT", "WORKER_TRANSPORT"),
     )
     worker_heavy_url: str | None = Field(
         default="http://127.0.0.1:18002", alias="WORKER_HEAVY_URL"

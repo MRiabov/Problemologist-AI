@@ -129,6 +129,14 @@ class LocalWorkspaceClient:
             return f"Error: File '{path}' not found."
         return resolved.read_text(encoding="utf-8")
 
+    async def read_file_optional(
+        self, path: str, *, bypass_agent_permissions: bool = False
+    ) -> str | None:
+        resolved = self._resolve(path)
+        if not resolved.exists():
+            return None
+        return resolved.read_text(encoding="utf-8")
+
     async def write_file(
         self,
         path: str,
