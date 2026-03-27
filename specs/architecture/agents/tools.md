@@ -72,6 +72,7 @@ This is mostly for integration tests where such bypass is convenient (for system
 - `list_files` Structured listing with file metadata.
 - `read_file` Read UTF-8 text file content.
 - `write_file` Create or overwrite a file.
+  Reviewer roles use this same tool, but filesystem permissions narrow it to the stage-owned review paths.
 - `edit_file` Edit a file by replacing string occurrences.
 - `grep` Structured text search.
 - `inspect_media` Read visual evidence (`.png`, `.jpg`, `.jpeg`, and supported video frame bundles) and attach it to the model as media input for the current tool step.
@@ -79,8 +80,6 @@ This is mostly for integration tests where such bypass is convenient (for system
 - `search_cots_catalog` Search COTS parts catalog.
 - `invoke_cots_search_subagent(query: str)` Hand off one request string to the shared COTS Search node.
 - `submit_plan` Validate and submit planner handoff artifacts.
-- `submit_review` Submit reviewer final structured output (`ReviewResult`) for runtime-owned persistence/routing.
-- `write_review_file` Persist reviewer decision output to the stage-specific file.
 - `save_suggested_skill` Persist skill-agent suggested skill output.
 
 `invoke_cots_search_subagent(query: str)` is a prompt-only handoff. It passes exactly one request string to the shared `COTS Search` node and does not inherit planner/coder `task`, `plan`, or `journal` state or use graph-specific signature variants.
@@ -99,10 +98,12 @@ Rules:
 
 ### Shell-script bridge for missing tools
 
-When the architecture needs a command-like capability but does not expose it as a native tool call, the repo exposes that capability as a checked-in `.sh` script instead.
+When the architecture needs a command-like capability but does not expose it as a native tool call, the repo exposes that capability as a checked-in `.sh` script instead. That shell-script bridge is the canonical surface for custom command-like behavior, not ad hoc pseudo-tools in prompts and not newly invented ReAct tool endpoints.
 
 The shell script is the canonical command surface for that capability.
 It preserves the same runtime intent as a direct tool call, but it keeps the contract visible in the repository and callable from the workspace shell.
+Reviewer submission and planner/coder submission both use this shell-script pattern when a role needs an explicit command-like completion gate.
+For reviewer roles, the local bridge is `scripts/submit_review.sh`.
 
 Input handling follows a simple split:
 
@@ -110,7 +111,7 @@ Input handling follows a simple split:
 2. Larger inputs use file references, typically a YAML or JSON file already materialized in the workspace.
 3. YAML submission payloads are passed by path, not inlined as long command arguments.
 4. The script validates the referenced file content itself and returns deterministic exit status plus machine-readable stdout/stderr when needed.
-5. This bridge is preferred over inventing pseudo-tools in prompt text when the runtime does not have a direct callable tool for the capability.
+5. This bridge is the intended replacement for inventing pseudo-tools in prompt text when the runtime does not have a direct callable tool for the capability.
 
 `read_file` is a text-only contract. It must not be overloaded to return image bytes, base64 blobs, or multimodal payloads for binary assets. Agents must use `inspect_media(...)` for visual evidence. If a binary/media path is passed to `read_file`, runtime should fail closed with a deterministic error telling the agent to use `inspect_media(...)` instead.
 
@@ -126,7 +127,7 @@ ReAct is the first-line correction loop:
 
 Native completion-call naming contract:
 
-1. Native tool-loop reviewer nodes terminate by calling `submit_review(...)` exactly once with required signature output fields.
+1. Native tool-loop reviewer nodes terminate by writing the stage-owned review artifacts with `write_file` and then running `bash scripts/submit_review.sh` exactly once.
 2. Native tool-loop non-reviewer nodes terminate by calling `finish(...)` exactly once with required signature output fields.
 3. Planner nodes still require `submit_plan()` success before their final completion call.
 
@@ -200,7 +201,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 - The gate is conditional on actual image availability in `renders/`. If no render images exist for the current node/revision, the media requirement does not trigger.
 - Runtime behavior is fail-closed:
   - for required non-reviewer roles in native tool-loop mode, `finish` is blocked until the configured image minimum is satisfied
-  - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt (enforced before accepting `submit_review`)
+  - for reviewer roles, approval is invalid unless required media inspection occurred during the current review attempt (enforced before accepting `submit_review.sh`)
 - `read_file(...)` never satisfies visual-inspection policy, even if it points at a render path.
 
 #### Benchmark generator (CAD editor) tools
@@ -216,7 +217,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
   Validated under all environment randomization.
 
   - The validation tool also generates the standard 24-view static preview package.
-  - That static preview package uses the validation-preview renderer, which is MuJoCo by default.
+  - That static preview package uses the validation-preview renderer, which is build123d/VTK by default.
   - `validate()` is therefore a fast geometry + preview gate, not a Genesis-runtime parity gate.
 
 - `simulate(Compound) -> SimulationResult` - a simulation that, unlike the engineering simulation, can not fail, except if not valid as per `validate()`.

@@ -22,7 +22,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 - [Agent roles](./architecture/agents/roles.md): role responsibilities, required artifacts, and planner/implementer/reviewer behavior.
 - [Agent handovers and contracts](./architecture/agents/handover-contracts.md): file-level handoff contracts and refusal/review routing.
 - [Agentic framework, artifacts, and filesystem](./architecture/agents/artifacts-and-filesystem.md): DSPy/LangGraph runtime, trace requirements, and path-permission policy.
-- [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, and reviewer/planner submission gates.
+- [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, checked-in shell-script bridges for custom command-like operations, and reviewer/planner submission gates. Custom command-like behavior is defined by shell scripts, not newly invented ReAct endpoints.
 - [Debug Codex agent mode](./architecture/agent/debug-codex-agent.md): local Codex-backed eval/debug backend, workspace contract, prompt contract, and filesystem rules.
 
 ### Runtime and infrastructure

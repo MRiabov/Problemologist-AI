@@ -1,34 +1,57 @@
 from __future__ import annotations
 
+import importlib.util
 import math
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
-from scene_spec import SCENE
+
 
 WIDTH = 1600
 HEIGHT = 1000
 
-BG_TOP = (250, 251, 253)
-BG_BOTTOM = (236, 239, 244)
-TEXT = (35, 41, 54)
-MUTED = (109, 115, 130)
+FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
-COLOR_MAP = {
-    "aluminum_6061": ((200, 208, 218), (162, 171, 186), (129, 137, 151)),
-    "hdpe": ((231, 240, 241), (171, 194, 198), (126, 156, 162)),
-    "hardwood": ((168, 120, 71), (123, 82, 47), (97, 64, 37)),
-    "silicone_rubber": ((203, 76, 76), (166, 49, 49), (132, 31, 31)),
+BACKGROUND = (246, 248, 251, 255)
+TITLE_COLOR = (35, 41, 54, 255)
+SUBTITLE_COLOR = (108, 115, 130, 255)
+
+MODEL_COLORS = {
+    "aluminum_6061": (96, 109, 128, 255),
+    "hdpe": (58, 191, 92, 255),
+    "hardwood": (163, 112, 70, 255),
+    "silicone_rubber": (194, 75, 75, 255),
 }
 
-AX = (1.0, 0.46)
-AY = (-1.0, 0.46)
-AZ = (0.0, -1.0)
-SCALE = 420.0
-ORIGIN = (804.0, 760.0)
+MODEL_HIDDEN_COLORS = {
+    "aluminum_6061": (164, 172, 185, 140),
+    "hdpe": (160, 224, 166, 130),
+    "hardwood": (207, 181, 154, 130),
+    "silicone_rubber": (222, 153, 153, 130),
+}
 
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+VIEW_UP = (0.0, 0.0, 1.0)
+VIEW_OFFSET = (2.8, -2.8, 2.2)
+LOOK_AT_Z_BIAS = 0.18
+SCENE_BOX = (120, 220, 1480, 848)
+
+
+@dataclass(frozen=True)
+class Segment2D:
+    start: tuple[float, float]
+    end: tuple[float, float]
+
+
+@dataclass
+class ProjectedPart:
+    label: str
+    material_id: str
+    visible_segments: list[Segment2D]
+    hidden_segments: list[Segment2D]
+    bounds: tuple[float, float, float, float]
+    depth: float
 
 
 def load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -38,295 +61,330 @@ def load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         return ImageFont.load_default()
 
 
-def lerp(a: int, b: int, t: float) -> int:
-    return int(round(a + (b - a) * t))
+def load_assembly(script_path: Path):
+    spec = importlib.util.spec_from_file_location("paper_benchmark_script", script_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"failed to load benchmark script: {script_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if not hasattr(module, "build"):
+        raise RuntimeError("paper benchmark script does not define build()")
+    return module.build()
 
 
-def clamp(v: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, v))
+def normalize_vector(vector: tuple[float, float, float]) -> tuple[float, float, float]:
+    length = math.sqrt(sum(component * component for component in vector))
+    if length == 0:
+        return (0.0, 0.0, 0.0)
+    return tuple(component / length for component in vector)
 
 
-def project(x: float, y: float, z: float) -> tuple[float, float]:
-    return (
-        ORIGIN[0] + SCALE * (x * AX[0] + y * AY[0] + z * AZ[0]),
-        ORIGIN[1] + SCALE * (x * AX[1] + y * AY[1] + z * AZ[1]),
-    )
+def project_point_to_screen(
+    point: tuple[float, float],
+    bounds: tuple[float, float, float, float],
+    scene_box: tuple[int, int, int, int] = SCENE_BOX,
+    bias_x: float = 0.0,
+    bias_y: float = 0.0,
+) -> tuple[float, float]:
+    min_x, min_y, max_x, max_y = bounds
+    left, top, right, bottom = scene_box
+    box_w = right - left
+    box_h = bottom - top
+    content_w = max_x - min_x
+    content_h = max_y - min_y
+    if content_w <= 0 or content_h <= 0:
+        return ((left + right) / 2.0, (top + bottom) / 2.0)
+    scale = min(box_w / content_w, box_h / content_h)
+    scaled_w = content_w * scale
+    scaled_h = content_h * scale
+    offset_x = left + (box_w - scaled_w) / 2.0
+    offset_y = top + (box_h - scaled_h) / 2.0
+    x = offset_x + (point[0] - min_x) * scale + bias_x
+    y = offset_y + (max_y - point[1]) * scale + bias_y
+    return (x, y)
 
 
-def lighten(rgb: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
-    return tuple(lerp(c, 255, amount) for c in rgb)
-
-
-def darken(rgb: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
-    return tuple(lerp(c, 18, amount) for c in rgb)
-
-
-def face_colors(
-    material_id: str,
-) -> tuple[tuple[int, int, int], tuple[int, int, int], tuple[int, int, int]]:
-    top, side_a, side_b = COLOR_MAP[material_id]
-    return top, side_a, side_b
-
-
-def draw_poly(draw: ImageDraw.ImageDraw, points, fill, outline=None, width: int = 1):
-    draw.polygon(points, fill=fill, outline=outline)
-    if outline and width > 1:
-        draw.line(points + [points[0]], fill=outline, width=width, joint="curve")
-
-
-def draw_box(
+def draw_dashed_line(
     draw: ImageDraw.ImageDraw,
-    center: tuple[float, float, float],
-    size: tuple[float, float, float],
-    material_id: str,
+    start: tuple[float, float],
+    end: tuple[float, float],
     *,
-    outline: tuple[int, int, int] | None = None,
-    label: str | None = None,
-    label_pos: tuple[float, float] | None = None,
-    label_fill: tuple[int, int, int] = TEXT,
-):
-    cx, cy, cz = center
-    dx, dy, dz = size
-    x0 = cx - dx / 2.0
-    x1 = cx + dx / 2.0
-    y0 = cy - dy / 2.0
-    y1 = cy + dy / 2.0
-    z0 = cz
-    z1 = cz + dz
-
-    p000 = project(x0, y0, z0)
-    p100 = project(x1, y0, z0)
-    p110 = project(x1, y1, z0)
-    p010 = project(x0, y1, z0)
-    p001 = project(x0, y0, z1)
-    p101 = project(x1, y0, z1)
-    p111 = project(x1, y1, z1)
-    p011 = project(x0, y1, z1)
-
-    top, side_a, side_b = face_colors(material_id)
-
-    # soft shadow
-    shadow_offset = (18, 20)
-    shadow = [
-        (x + shadow_offset[0], y + shadow_offset[1])
-        for x, y in [p001, p101, p111, p011]
-    ]
-    draw.polygon(shadow, fill=(0, 0, 0, 32))
-
-    draw_poly(draw, [p000, p010, p011, p001], fill=side_a, outline=outline, width=3)
-    draw_poly(draw, [p100, p110, p111, p101], fill=side_b, outline=outline, width=3)
-    draw_poly(draw, [p001, p101, p111, p011], fill=top, outline=outline, width=3)
-
-    if label and label_pos:
-        font = load_font(28)
-        draw.text(label_pos, label, fill=label_fill, font=font, anchor="mm")
-
-
-def draw_background() -> Image.Image:
-    img = Image.new("RGBA", (WIDTH, HEIGHT), BG_TOP)
-    px = img.load()
-    for y in range(HEIGHT):
-        t = y / max(1, HEIGHT - 1)
-        row = tuple(lerp(BG_TOP[i], BG_BOTTOM[i], t) for i in range(3))
-        for x in range(WIDTH):
-            px[x, y] = row + (255,)
-    return img
-
-
-def draw_base_plate(draw: ImageDraw.ImageDraw):
-    plate = [
-        project(-0.76, -0.30, 0.0),
-        project(0.76, -0.30, 0.0),
-        project(0.62, 0.30, 0.0),
-        project(-0.62, 0.30, 0.0),
-    ]
-    shadow = [(x + 22, y + 22) for x, y in plate]
-    draw.polygon(shadow, fill=(19, 29, 44, 44))
-    draw.polygon(plate, fill=(69, 98, 129, 255), outline=(52, 78, 107), width=4)
-
-    overlay = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-    overlay_draw = ImageDraw.Draw(overlay)
-    mask = Image.new("L", (WIDTH, HEIGHT), 0)
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.polygon(plate, fill=255)
-    for i in range(-2, 22):
-        x0 = 248 + i * 42
-        overlay_draw.line(
-            [(x0, 510), (x0 + 210, 830)],
-            fill=(255, 255, 255, 16),
-            width=2,
+    fill: tuple[int, int, int, int],
+    width: int,
+    dash_length: float = 18.0,
+    gap_length: float = 11.0,
+) -> None:
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    distance = math.hypot(dx, dy)
+    if distance == 0:
+        return
+    direction_x = dx / distance
+    direction_y = dy / distance
+    position = 0.0
+    while position < distance:
+        segment_end = min(distance, position + dash_length)
+        p0 = (start[0] + direction_x * position, start[1] + direction_y * position)
+        p1 = (
+            start[0] + direction_x * segment_end,
+            start[1] + direction_y * segment_end,
         )
-    for i in range(-1, 11):
-        y = 560 + i * 26
-        overlay_draw.line(
-            [(140, y), (1410, y)],
-            fill=(255, 255, 255, 12),
-            width=1,
-        )
-    img = Image.composite(
-        overlay, Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0)), mask
+        draw.line([p0, p1], fill=fill, width=width)
+        position += dash_length + gap_length
+
+
+def draw_segment(
+    draw: ImageDraw.ImageDraw,
+    segment: Segment2D,
+    *,
+    fill: tuple[int, int, int, int],
+    width: int,
+    dashed: bool = False,
+) -> None:
+    if dashed:
+        draw_dashed_line(draw, segment.start, segment.end, fill=fill, width=width)
+    else:
+        draw.line([segment.start, segment.end], fill=fill, width=width)
+
+
+def project_assembly(assembly) -> list[ProjectedPart]:
+    bbox = assembly.bounding_box()
+    look_at = (
+        (bbox.min.X + bbox.max.X) / 2.0,
+        (bbox.min.Y + bbox.max.Y) / 2.0,
+        (bbox.min.Z + bbox.max.Z) / 2.0 + LOOK_AT_Z_BIAS,
     )
-    return img
+    viewport_origin = (
+        look_at[0] + VIEW_OFFSET[0],
+        look_at[1] + VIEW_OFFSET[1],
+        look_at[2] + VIEW_OFFSET[2],
+    )
+    view_dir = normalize_vector(
+        (
+            look_at[0] - viewport_origin[0],
+            look_at[1] - viewport_origin[1],
+            look_at[2] - viewport_origin[2],
+        )
+    )
+
+    projected_parts: list[ProjectedPart] = []
+    for child in getattr(assembly, "children", []):
+        label = getattr(child, "label", "part")
+        metadata = getattr(child, "metadata", None)
+        material_id = getattr(metadata, "material_id", "aluminum_6061")
+        visible, hidden = child.project_to_viewport(
+            viewport_origin,
+            VIEW_UP,
+            look_at=look_at,
+            focus=7.0,
+        )
+
+        vis_segments: list[Segment2D] = []
+        hid_segments: list[Segment2D] = []
+        all_points: list[tuple[float, float]] = []
+        for edge in visible:
+            p0 = edge.start_point()
+            p1 = edge.end_point()
+            start = (p0.X, p0.Y)
+            end = (p1.X, p1.Y)
+            vis_segments.append(Segment2D(start, end))
+            all_points.extend([start, end])
+        for edge in hidden:
+            p0 = edge.start_point()
+            p1 = edge.end_point()
+            start = (p0.X, p0.Y)
+            end = (p1.X, p1.Y)
+            hid_segments.append(Segment2D(start, end))
+            all_points.extend([start, end])
+
+        if not all_points:
+            continue
+        xs = [point[0] for point in all_points]
+        ys = [point[1] for point in all_points]
+        center = (
+            (min(xs) + max(xs)) / 2.0,
+            (min(ys) + max(ys)) / 2.0,
+            0.0,
+        )
+        depth = sum((center[i] - viewport_origin[i]) * view_dir[i] for i in range(3))
+        projected_parts.append(
+            ProjectedPart(
+                label=label,
+                material_id=material_id,
+                visible_segments=vis_segments,
+                hidden_segments=hid_segments,
+                bounds=(min(xs), min(ys), max(xs), max(ys)),
+                depth=depth,
+            )
+        )
+
+    projected_parts.sort(key=lambda item: item.depth, reverse=True)
+    return projected_parts
 
 
-def draw_arrow(draw: ImageDraw.ImageDraw, start, end, bend=0.0):
-    sx, sy = start
-    ex, ey = end
-    mid = ((sx + ex) / 2.0, (sy + ey) / 2.0 - bend)
-    points = []
-    for t in [i / 24.0 for i in range(25)]:
-        x = (1 - t) ** 2 * sx + 2 * (1 - t) * t * mid[0] + t**2 * ex
-        y = (1 - t) ** 2 * sy + 2 * (1 - t) * t * mid[1] + t**2 * ey
-        points.append((x, y))
-    draw.line(points, fill=(43, 108, 183), width=8, joint="curve")
+def render_projection(image_path: Path) -> None:
+    script_path = Path(__file__).resolve().with_name("script.py")
+    assembly = load_assembly(script_path)
+    projected_parts = project_assembly(assembly)
 
-    angle = math.atan2(ey - points[-2][1], ex - points[-2][0])
+    points: list[tuple[float, float]] = []
+    for part in projected_parts:
+        for segment in part.visible_segments:
+            points.extend([segment.start, segment.end])
+        for segment in part.hidden_segments:
+            points.extend([segment.start, segment.end])
+
+    if not points:
+        raise RuntimeError("projection produced no drawable geometry")
+
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    bounds = (min(xs), min(ys), max(xs), max(ys))
+
+    canvas = Image.new("RGBA", (WIDTH, HEIGHT), BACKGROUND)
+    draw = ImageDraw.Draw(canvas, "RGBA")
+    title_font = load_font(30)
+    subtitle_font = load_font(21)
+    label_font = load_font(18)
+    small_font = load_font(16)
+    part_font = load_font(19)
+
+    def transform(point: tuple[float, float]) -> tuple[float, float]:
+        return project_point_to_screen(point, bounds)
+
+    # Base technical linework first.
+    for part in projected_parts:
+        vis_color = MODEL_COLORS.get(part.material_id, MODEL_COLORS["aluminum_6061"])
+        hid_color = MODEL_HIDDEN_COLORS.get(part.material_id, MODEL_HIDDEN_COLORS["aluminum_6061"])
+        for segment in part.visible_segments:
+            draw_segment(
+                draw,
+                Segment2D(transform(segment.start), transform(segment.end)),
+                fill=vis_color,
+                width=6,
+            )
+        for segment in part.hidden_segments:
+            draw_segment(
+                draw,
+                Segment2D(transform(segment.start), transform(segment.end)),
+                fill=hid_color,
+                width=4,
+                dashed=True,
+            )
+
+    def part_center_screen(part: ProjectedPart) -> tuple[float, float]:
+        min_x, min_y, max_x, max_y = part.bounds
+        return transform(((min_x + max_x) / 2.0, (min_y + max_y) / 2.0))
+
+    def label(text: str, xy: tuple[float, float], fill: tuple[int, int, int, int], *, anchor: str = "mm"):
+        draw.text(
+            xy,
+            text,
+            fill=fill,
+            font=part_font,
+            anchor=anchor,
+            stroke_width=4,
+            stroke_fill=(246, 248, 251, 255),
+        )
+
+    part_lookup = {part.label: part for part in projected_parts}
+    if "support_tower" in part_lookup:
+        cx, cy = part_center_screen(part_lookup["support_tower"])
+        label("support tower", (cx - 6, cy - 92), (92, 100, 115, 255))
+    if "payload" in part_lookup:
+        cx, cy = part_center_screen(part_lookup["payload"])
+        label("payload", (cx - 10, cy - 58), (163, 112, 70, 255))
+    if "forbid_blocker" in part_lookup:
+        cx, cy = part_center_screen(part_lookup["forbid_blocker"])
+        label("blocker", (cx + 10, cy - 62), (194, 75, 75, 255))
+        label("forbid zone", (cx + 14, cy - 86), (194, 75, 75, 255))
+    if "goal_tray" in part_lookup:
+        cx, cy = part_center_screen(part_lookup["goal_tray"])
+        label("goal tray", (cx + 10, cy - 66), (58, 191, 92, 255))
+        label("goal zone", (cx + 220, cy - 72), (58, 191, 92, 255), anchor="lm")
+
+    # Paper-style overlay.
+    draw.text((110, 54), "Compact engineering-coder benchmark", fill=TITLE_COLOR, font=title_font)
+    draw.text(
+        (110, 95),
+        "OCP projection with Pillow annotations",
+        fill=SUBTITLE_COLOR,
+        font=subtitle_font,
+    )
+
+    card = (586, 106, 1018, 194)
+    draw.rounded_rectangle(card, radius=18, fill=(255, 255, 255, 210), outline=(218, 223, 232), width=2)
+    draw.text((610, 124), "pipeline color schema", fill=TITLE_COLOR, font=label_font)
+    schema = [
+        ((612, 156, 700, 176), (163, 112, 70, 242), "start"),
+        ((730, 156, 838, 176), (56, 112, 196, 242), "transfer"),
+        ((860, 156, 944, 176), (58, 191, 92, 242), "goal"),
+    ]
+    for box, fill, text in schema:
+        draw.rounded_rectangle(box, radius=8, fill=fill)
+        tx = (box[0] + box[2]) / 2
+        ty = (box[1] + box[3]) / 2
+        draw.text((tx, ty - 1), text, fill=(255, 255, 255), font=small_font, anchor="mm")
+
+    # Curved transfer arrow.
+    points_curve = []
+    start = (330, 322)
+    control = (720, 470)
+    end = (1030, 625)
+    for t in [i / 30.0 for i in range(31)]:
+        x = (1 - t) ** 2 * start[0] + 2 * (1 - t) * t * control[0] + t**2 * end[0]
+        y = (1 - t) ** 2 * start[1] + 2 * (1 - t) * t * control[1] + t**2 * end[1]
+        points_curve.append((x, y))
+    draw.line(points_curve, fill=(58, 112, 196, 255), width=8)
+    tip = points_curve[-1]
+    prev = points_curve[-3]
+    angle = math.atan2(tip[1] - prev[1], tip[0] - prev[0])
     size = 16
-    tip = (ex, ey)
     left = (
-        ex - size * math.cos(angle) + size * 0.55 * math.sin(angle),
-        ey - size * math.sin(angle) - size * 0.55 * math.cos(angle),
+        tip[0] - size * math.cos(angle) + size * 0.55 * math.sin(angle),
+        tip[1] - size * math.sin(angle) - size * 0.55 * math.cos(angle),
     )
     right = (
-        ex - size * math.cos(angle) - size * 0.55 * math.sin(angle),
-        ey - size * math.sin(angle) + size * 0.55 * math.cos(angle),
+        tip[0] - size * math.cos(angle) - size * 0.55 * math.sin(angle),
+        tip[1] - size * math.sin(angle) + size * 0.55 * math.cos(angle),
     )
-    draw.polygon([tip, left, right], fill=(43, 108, 183))
+    draw.polygon([tip, left, right], fill=(58, 112, 196, 255))
 
+    pipeline_chips = [
+        ((380, 436), "pick", (163, 112, 70, 220), (255, 255, 255)),
+        ((720, 555), "transfer", (56, 112, 196, 220), (255, 255, 255)),
+        ((1056, 706), "place", (58, 191, 92, 220), (255, 255, 255)),
+    ]
+    for (cx, cy), text, fill, text_fill in pipeline_chips:
+        w = 108 if text != "transfer" else 138
+        h = 34
+        rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+        draw.rounded_rectangle(rect, radius=12, fill=fill, outline=(255, 255, 255, 120), width=2)
+        draw.text((cx, cy - 1), text, fill=text_fill, font=small_font, anchor="mm")
 
-def draw_legend(draw: ImageDraw.ImageDraw):
-    font = load_font(24)
-    bold = load_font(28)
-    title = "Compact engineering-coder benchmark"
-    draw.text((110, 64), title, fill=TEXT, font=bold)
-    draw.text(
-        (110, 105),
-        "Benchmark schematic derived from a real benchmark scene",
-        fill=MUTED,
-        font=font,
-    )
-
+    legend_y = 890
     legend_items = [
-        ("Start payload", (168, 120, 71)),
-        ("Goal tray", (171, 194, 198)),
-        ("Keep-out blocker", (203, 76, 76)),
-        ("Base fixture", (162, 171, 186)),
+        ("Start payload", (163, 112, 70)),
+        ("Goal tray", (58, 191, 92)),
+        ("Keep-out blocker", (194, 75, 75)),
+        ("Base fixture", (160, 170, 186)),
     ]
     x = 110
-    y = 880
-    for label, color in legend_items:
-        draw.rounded_rectangle(
-            [x, y, x + 24, y + 24], radius=6, fill=color, outline=(255, 255, 255)
-        )
-        draw.text((x + 36, y + 12), label, fill=TEXT, font=font, anchor="lm")
-        x += 300
+    for text, color in legend_items:
+        draw.rounded_rectangle([x, legend_y, x + 24, legend_y + 24], radius=6, fill=color)
+        draw.text((x + 34, legend_y + 12), text, fill=TITLE_COLOR, font=subtitle_font, anchor="lm")
+        x += 320
 
-
-def draw_info_card(draw: ImageDraw.ImageDraw):
-    x0, y0, x1, y1 = 1030, 130, 1490, 286
-    draw.rounded_rectangle(
-        [x0, y0, x1, y1],
-        radius=22,
-        fill=(255, 255, 255, 214),
-        outline=(214, 221, 232),
-        width=2,
-    )
-    title_font = load_font(24)
-    body_font = load_font(19)
-    draw.text((1058, 156), "compact benchmark envelope", fill=TEXT, font=title_font)
-    draw.text(
-        (1058, 190), "bounds: (-1, -1, 0) to (1, 1, 2) m", fill=MUTED, font=body_font
-    )
-    draw.text((1058, 222), "payload starts at x = -0.70 m", fill=MUTED, font=body_font)
-    draw.text((1058, 254), "goal tray sits at x = 0.62 m", fill=MUTED, font=body_font)
-
-
-def draw_goal_zone(draw: ImageDraw.ImageDraw):
-    # Goal zone outline around the tray.
-    rect = [
-        project(0.48, -0.08, 0.04),
-        project(0.78, -0.08, 0.04),
-        project(0.78, 0.08, 0.04),
-        project(0.48, 0.08, 0.04),
-    ]
-    draw.line(rect + [rect[0]], fill=(79, 165, 122), width=5)
-    draw.text((1250, 470), "goal zone", fill=(79, 165, 122), font=load_font(24))
-
-
-def draw_forbid_zone(draw: ImageDraw.ImageDraw):
-    rect = [
-        project(-0.04, -0.06, 0.04),
-        project(0.14, -0.06, 0.04),
-        project(0.14, 0.06, 0.04),
-        project(-0.04, 0.06, 0.04),
-    ]
-    draw.line(rect + [rect[0]], fill=(195, 78, 78), width=5)
-    draw.text((738, 356), "forbid zone", fill=(195, 78, 78), font=load_font(24))
-
-
-def build_image() -> Image.Image:
-    canvas = draw_background()
-    plate = draw_base_plate(ImageDraw.Draw(canvas, "RGBA"))
-    canvas.alpha_composite(plate)
-    draw = ImageDraw.Draw(canvas, "RGBA")
-
-    # Fixtures.
-    draw_box(
-        draw,
-        SCENE["support_tower"]["center"],
-        SCENE["support_tower"]["size"],
-        SCENE["support_tower"]["material_id"],
-        label="support tower",
-        label_pos=(610, 290),
-        label_fill=(66, 75, 88),
-    )
-    draw_box(
-        draw,
-        SCENE["forbid_blocker"]["center"],
-        SCENE["forbid_blocker"]["size"],
-        SCENE["forbid_blocker"]["material_id"],
-        outline=(155, 28, 28),
-        label="blocker",
-        label_pos=(930, 404),
-        label_fill=(155, 28, 28),
-    )
-    draw_box(
-        draw,
-        SCENE["goal_tray"]["center"],
-        SCENE["goal_tray"]["size"],
-        SCENE["goal_tray"]["material_id"],
-        outline=(96, 131, 136),
-        label="goal tray",
-        label_pos=(1096, 598),
-        label_fill=(59, 103, 110),
-    )
-    draw_box(
-        draw,
-        SCENE["payload"]["center"],
-        SCENE["payload"]["size"],
-        SCENE["payload"]["material_id"],
-        outline=(115, 76, 43),
-        label="payload",
-        label_pos=(450, 420),
-        label_fill=(115, 76, 43),
-    )
-
-    draw_goal_zone(draw)
-    draw_forbid_zone(draw)
-    draw_arrow(draw, project(-0.67, 0.0, 0.14), project(0.60, 0.0, 0.12), bend=120.0)
-
-    draw_info_card(draw)
-    draw_legend(draw)
-    return canvas.convert("RGB")
+    canvas.convert("RGB").save(image_path)
 
 
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit("usage: render_figure.py OUTPUT_PATH")
+
     output_path = Path(sys.argv[1])
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    image = build_image()
-    image.save(output_path, "PNG")
+    render_projection(output_path)
     print(output_path)
 
 

@@ -142,7 +142,7 @@ We define the `build123d` framework as a framework for enabling 3D CAD construct
 
 To optimize a model in a reinforcement learning environment a reward signal is necessary [1]; the GEPA optimizer that we use to optimize our agents - as described below - also uses scoring to optimize prompts. As such, we create a reward system to be optimized against.
 
-We split reward by their functional definition - fast, syntactic checks for file presence and syntactic validity, then "milestones" - actions requiring complex solution, and judge evaluation rewards. The full table is provided in Appendix A, while Appendix B shows a compact benchmark schematic derived from the compact engineering-coder environment.
+We split reward by their functional definition - fast, syntactic checks for file presence and syntactic validity, then "milestones" - actions requiring complex solution, and judge evaluation rewards. The full table is provided in Appendix A, while Appendix B shows a representative `build123d`/OCP projection of the compact engineering-coder environment.
 
 | Section | Key | Weight | Type | Description | Feedback / Formula |
 | -- | -- | -: | -- | -- | -- |

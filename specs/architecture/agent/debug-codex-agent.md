@@ -17,9 +17,11 @@ This mode preserves the same workspace contract as the rest of the application:
 
 1. Seeded files are materialized into a real workspace on disk.
 2. The agent reads a workspace-local prompt file.
-3. Planner roles submit through a local shell helper that invokes Python validation under the hood.
-4. Reviewer and coder roles persist the same stage-owned artifacts that the normal runtime expects.
-5. Verification fails closed if the workspace violates the contract.
+3. Planner roles submit through a local shell helper that invokes Python validation under the hood. Any custom command-like flow in this mode should be expressed as a checked-in shell script rather than an ad hoc pseudo-tool or prompt-only ReAct trick.
+4. Coder roles use a local shell helper for execution-review handoff after validation and simulation succeed.
+5. Reviewer roles use a local shell helper for review handoff after writing the stage-owned review artifacts.
+6. Reviewer and coder roles persist the same stage-owned artifacts that the normal runtime expects.
+7. Verification fails closed if the workspace violates the contract.
 
 ## Backend selection
 
@@ -45,9 +47,11 @@ The workspace contract is:
 3. Shared boilerplate starter files come from `shared/agent_templates/common/`.
 4. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
 5. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
-6. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
-7. Seed-row artifacts are copied into the workspace before prompt generation.
-8. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
+6. Coder workspaces include `scripts/submit_for_review.sh` from `shared/agent_templates/codex/`.
+7. Reviewer workspaces include `scripts/submit_review.sh` from `shared/agent_templates/codex/`.
+8. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
+9. Seed-row artifacts are copied into the workspace before prompt generation.
+10. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
 
 The workspace materializer in [dataset/evals/materialize_seed_workspace.py](../../../dataset/evals/materialize_seed_workspace.py) is the inspection helper for this same workspace contract.
 
@@ -62,8 +66,8 @@ The canonical prompt rules are:
 2. The prompt tells the agent to use workspace-relative paths only.
 3. The prompt does not mention `/workspace` as the workspace root.
 4. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
-5. Coder prompts instruct editing `script.py` and supporting `*.py` files.
-6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`.
+5. Coder prompts instruct editing `script.py` and supporting `*.py` files, then running `bash scripts/submit_for_review.sh` after validation and simulation succeed.
+6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
 7. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 
 The prompt builder in [evals/logic/codex_workspace.py](../../../evals/logic/codex_workspace.py) is the canonical definition of that prompt text.
@@ -93,7 +97,7 @@ The local helper in [shared/agent_templates/codex/scripts/submit_plan.sh](../../
 ### Coder roles
 
 Coder roles use the same Codex workspace contract, but they do not submit plans through the planner helper.
-The prompt tells them to work in `script.py` and supporting implementation files.
+The prompt tells them to work in `script.py`, supporting implementation files, and the local execution-review helper.
 
 Coder workspaces keep the normal runtime artifact contract:
 
@@ -101,6 +105,7 @@ Coder workspaces keep the normal runtime artifact contract:
 2. Supporting `*.py` files may be added when needed.
 3. `todo.md` and `journal.md` remain writable progress artifacts.
 4. Review handoff artifacts are written only when the runtime contract requires them.
+5. `scripts/submit_for_review.sh` is the shell entrypoint for the stage handoff helper.
 
 ### Reviewer roles
 

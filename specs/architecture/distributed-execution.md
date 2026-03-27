@@ -80,7 +80,7 @@ Backend responsibility is split by operation purpose:
 
 1. `/benchmark/simulate` uses the selected physics backend.
 2. `/benchmark/validate` performs fast validation plus static preview generation.
-3. Static preview generation for `/benchmark/validate` uses MuJoCo by default even when `physics.backend=genesis`.
+3. Static preview generation for `/benchmark/validate` uses build123d/VTK by default even when `physics.backend=genesis`.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 
 Direct `worker-heavy` benchmark endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.
@@ -113,7 +113,7 @@ Worker-specific logic stays in:
   - rendering.
   - any GPU work, if necessary.
 
-Validation is still part of `worker-heavy`, but the static preview part of validation is intentionally lighter than Genesis simulation. The point of the split is to avoid paying unnecessary Genesis render cost on validation-only requests.
+Validation is still part of `worker-heavy`, but the static preview part of validation is intentionally lighter than Genesis simulation. The point of the split is to keep validation on the build123d/VTK geometry path and avoid unnecessary Genesis render cost on validation-only requests.
 
 Note: we want to offload work from `worker_heavy` as much as possible because:
 

@@ -229,7 +229,7 @@ Rules:
 18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
 19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
 20. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
-21. Those flags control whether MuJoCo-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
+21. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
 22. `shared/agent_templates/common/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
 23. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
 24. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/common/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.

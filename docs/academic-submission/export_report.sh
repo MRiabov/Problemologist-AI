@@ -34,7 +34,7 @@ appendix_image_dst=""
 trap 'rm -f "$body_tmp" "$body_without_table_tmp" "$table_tmp"' EXIT
 
 appendix_image_dst="$script_dir/appendix_agent_input.png"
-python3 "$script_dir/paper_benchmark/render_figure.py" "$appendix_image_dst"
+"$script_dir/../../.venv/bin/python" "$script_dir/paper_benchmark/render_figure.py" "$appendix_image_dst"
 
 tail -n +3 "$md_file" | pandoc -f markdown -t latex --wrap=none > "$body_tmp"
 perl -0ne 'if (/(\\begin\{longtable\}.*?\\end\{longtable\})/s) { print $1 }' "$body_tmp" > "$table_tmp"
@@ -71,7 +71,7 @@ EOF
 cat "$body_without_table_tmp" >> "$tex_file"
 printf '\n\\clearpage\n\\onecolumn\n\\appendices\n\n\\section{Reward Architecture Table}\n\\begingroup\n\\scriptsize\n\\setlength{\\tabcolsep}{2pt}\n\\renewcommand{\\arraystretch}{0.94}\n\\sloppy\n' >> "$tex_file"
 cat "$table_tmp" >> "$tex_file"
-printf '\n\\endgroup\n\\clearpage\n\\section{Representative Benchmark Schematic}\n\\begin{figure}[!htbp]\n\\centering\n\\includegraphics[width=0.95\\linewidth]{%s}\n\\caption{Representative schematic of the compact engineering-coder benchmark environment.}\n\\label{fig:appendix-agent-input}\n\\end{figure}\n\\end{document}\n' "$(basename "$appendix_image_dst")" >> "$tex_file"
+printf '\n\\endgroup\n\\clearpage\n\\section{Representative Benchmark OCP Projection}\n\\begin{figure}[!htbp]\n\\centering\n\\includegraphics[width=0.95\\linewidth]{%s}\n\\caption{Representative build123d/OCP projection of the compact engineering-coder benchmark environment.}\n\\label{fig:appendix-agent-input}\n\\end{figure}\n\\end{document}\n' "$(basename "$appendix_image_dst")" >> "$tex_file"
 
 "$tectonic_bin" "$tex_file" --outdir "$script_dir" --keep-logs
 

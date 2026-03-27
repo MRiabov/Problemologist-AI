@@ -96,7 +96,7 @@ The cache rule is:
 
 The reason is architectural rather than incidental:
 
-- `/benchmark/validate` now uses MuJoCo for static preview by default,
+- `/benchmark/validate` now uses build123d/VTK for static preview by default,
 - `/benchmark/simulate` may still use Genesis for the same session,
 - a single shared per-session backend cache would let the validation-preview path poison the later simulation path with the wrong backend instance.
 
@@ -110,7 +110,7 @@ The backend contract is:
 
 1. `physics.backend` selects the physics simulation backend.
 2. Genesis remains the backend for Genesis-only simulation behavior such as FEM and fluids.
-3. Static 24-view validation preview rendering uses MuJoCo by default.
+3. Static 24-view validation preview rendering uses build123d/VTK by default.
 4. The static validation preview path is a fast geometry/context artifact path, not a Genesis-runtime proof path.
 
 This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asymmetric:
@@ -118,7 +118,7 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
 1. `/benchmark/validate`
    - checks geometry/objective consistency,
    - generates static preview artifacts,
-   - uses MuJoCo for that static preview by default,
+   - uses build123d/VTK for that static preview by default,
    - does not add an extra Genesis load/render/build gate solely for parity checking.
    - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
 2. `/benchmark/simulate`

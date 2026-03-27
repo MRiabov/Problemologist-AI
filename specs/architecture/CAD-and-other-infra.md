@@ -79,11 +79,11 @@ Alternatively, we could use some simple GLB renderer, but MuJoCo/Gensis already 
 
 The rendering backend is not a single global choice. We split rendering by purpose:
 
-1. Static validation preview renders use MuJoCo by default.
+1. Static validation preview renders use build123d/VTK by default.
 2. Dynamic simulation artifacts use the active physics backend.
 3. Genesis-native visual outputs remain Genesis-side when the artifact depends on Genesis-only behavior such as FEM, fluids, or backend-native stress/state output.
 
-This split is intentional. Static 24-view preview does not require Genesis runtime features and is significantly faster in MuJoCo.
+This split is intentional. Static 24-view preview does not require Genesis runtime features and is therefore kept on the build123d/VTK geometry path.
 
 Validation-preview renders are context artifacts, not backend-authoritative proof of Genesis runtime compatibility. Genesis-specific runtime behavior is still established through actual Genesis simulation runs where Genesis behavior is required.
 
@@ -93,11 +93,11 @@ I presume the model will need to render a view or a set of views to get an under
 
 For the standard benchmark handoff package, we render 24 static preview views. The default policy is:
 
-1. `/benchmark/validate` generates those 24 static preview views through MuJoCo.
+1. `/benchmark/validate` generates those 24 static preview views through build123d/VTK.
 2. `/benchmark/simulate` may generate backend-native dynamic renders or videos using the selected simulation backend.
 3. We do not use `/benchmark/validate` to regenerate the same static preview through Genesis only for parity.
 
-For MuJoCo-backed static preview renders, each camera view is persisted as an image triplet under `renders/`:
+For build123d/VTK-backed static preview renders, each camera view is persisted as an image triplet under `renders/`:
 
 1. the standard RGB preview image,
 2. a sibling depth-map image with `_depth.png` suffix,

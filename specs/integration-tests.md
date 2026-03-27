@@ -138,7 +138,7 @@ This keeps backend intent explicit in pytest collection output and reduces ambig
 The architecture contract is:
 
 1. `/benchmark/validate` performs geometric validation plus static preview generation.
-2. The static preview generation path uses MuJoCo by default, even when `physics.backend=GENESIS`.
+2. The static preview generation path uses build123d/VTK by default, even when `physics.backend=GENESIS`.
 3. `/benchmark/validate` does not perform an extra Genesis load/render/build gate solely for backend parity.
 4. Genesis parity remains covered by the simulation-facing backend matrix and by Genesis simulation tests where Genesis behavior is required.
 
@@ -147,7 +147,7 @@ Validation-preview tests should therefore assert:
 1. the preview artifact contract still holds,
 2. the preview backend routing is correct,
 3. the selected simulation backend is not silently mutated for `/benchmark/simulate`.
-4. MuJoCo-backed preview images persist as RGB/depth/segmentation sibling files in `renders/`.
+4. build123d/VTK-backed preview images persist as RGB/depth/segmentation sibling files in `renders/`.
 5. `config/agents_config.yaml render.{rgb,depth,segmentation}` disables only the requested preview artifact types.
 6. `renders/render_manifest.json` persists per-image metadata, including segmentation legend entries with semantic labels and unique instance identifiers.
 7. RGB preview output reflects configured material colors for differing `material_id` values.
@@ -196,7 +196,7 @@ Priorities:
 | INT-022 | Motor overload + forcerange behavior | Force clamping behaves correctly; sustained overload produces `motor_overload` failure reason. |
 | INT-023 | Fastener validity rules | Required fastener/joint constraints are enforced (e.g., rigid connection constraints and invalid mating rejection). |
 | INT-024 | Worker benchmark validation toolchain | Benchmark `validate` catches intersecting/invalid objective setups across randomization ranges, plus duplicate top-level labels and reserved `environment` / `zone_` namespace collisions before MJCF generation. |
-| INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through MuJoCo by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; MuJoCo-backed preview renders persist RGB images plus sibling `_depth.png` and `_segmentation.png` files in `renders/` by default; `renders/render_manifest.json` persists per-image metadata and segmentation legend entries with semantic labels plus unique instance identifiers; RGB preview output reflects configured material colors for differing `material_id` values; when `benchmark_definition.yaml` contains `goal_zone`, `forbid_zones`, and `build_zone`, the preview RGB images visibly include green/red/gray objective boxes; `config/agents_config.yaml render.{rgb,depth,segmentation}` can disable any one of those artifact types independently; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
+| INT-188 | Validation preview backend split contract | `/benchmark/validate` generates the standard static preview package through build123d/VTK by default, even when `physics.backend=GENESIS`; preview artifacts remain present and valid; build123d/VTK-backed preview renders persist RGB images plus sibling `_depth.png` and `_segmentation.png` files in `renders/` by default; `renders/render_manifest.json` persists per-image metadata and segmentation legend entries with semantic labels plus unique instance identifiers; RGB preview output reflects configured material colors for differing `material_id` values; when `benchmark_definition.yaml` contains `goal_zone`, `forbid_zones`, and `build_zone`, the preview RGB images visibly include green/red/gray objective boxes; `config/agents_config.yaml render.{rgb,depth,segmentation}` can disable any one of those artifact types independently; `/benchmark/validate` does not introduce a separate Genesis load/render gate for parity. Genesis parity remains covered by simulation-backend matrix tests. |
 | INT-189 | Engineer solution evidence default contract | Finished engineer runs surface terminal metadata (`detailed_status`, `terminal_reason`, `failure_class`) and default the artifact pane to the latest solution evidence (`simulation_result.json` before `validation_results.json`, then render/video evidence) instead of the planner draft; evidence selection must remain traceable to the exact asset path. |
 | INT-206 | P1 | Failed episode replay bundle contract |
 | INT-025 | Events collection end-to-end | Worker emits `events.jsonl`, controller ingests/bulk-persists, event loss does not occur in normal path. |
@@ -430,7 +430,7 @@ This section exists to force implementation as true integration tests, not unit 
 | INT-022 | Run overload scenario in real simulation path and assert `motor_overload` behavior. | Synthetic return object with overload flag. |
 | INT-023 | Submit invalid fastener/joint setup via run flow and assert validation failure. Verify `PartMetadata` is used for joint definitions. | Unit-test of fastener rule function only. |
 | INT-024 | Run benchmark validation endpoint on conflicting geometry/objectives and assert failure. | Calling validation module directly in process. |
-| INT-188 | Call `/benchmark/validate` through the live heavy-worker path with `physics.backend=GENESIS`; assert MuJoCo-backed preview artifacts, `renders/render_manifest.json`, objective-box overlays, modality-toggle behavior, and no extra Genesis parity gate in the validation path. | Static artifact-file snapshot checks without executing the live validation path or asserting only backend-selection helpers. |
+| INT-188 | Call `/benchmark/validate` through the live heavy-worker path with `physics.backend=GENESIS`; assert build123d/VTK-backed preview artifacts, `renders/render_manifest.json`, objective-box overlays, modality-toggle behavior, and no extra Genesis parity gate in the validation path. | Static artifact-file snapshot checks without executing the live validation path or asserting only backend-selection helpers. |
 | INT-025 | Execute real episode; verify worker events ingestion/persistence end-to-end. | Reading only local mock event list. |
 | INT-026 | Verify required event families emitted from a real run, not fabricated payloads. | Event model unit tests only. |
 | INT-027 | Run simulation and assert persisted static variant/runtime seed fields. | Unit assertion against seeded fixture object. |

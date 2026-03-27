@@ -38,7 +38,7 @@ The benchmarks are consisting of CAD models which are converted into XML.
 - The benchmarks are verified for geometric validity and fast preview generation before they are handed to engineering. They are not solved by an engineer yet, just benchmarks are created and verified for validity.
   - Validity means no intersections and other problems; it also means that the code will compile in the first place.
   - MJCF is verified for correctness by XML schema and by backend-parity coverage in dedicated simulation tests.
-  - The fast validation-preview path uses MuJoCo for static handoff renders by default; it is not itself a Genesis-runtime proof path.
+  - The fast validation-preview path uses build123d/VTK for static handoff renders by default; it is not itself a Genesis-runtime proof path.
 - MJCF is created programmatically, not by a LLM.
 - Authored top-level part labels must be unique and must not be `environment` or start with `zone_`; those names are reserved for the scene root and simulator-generated objective bodies and collide with MJCF mesh/body naming if reused.
 
@@ -166,6 +166,7 @@ The benchmark loop has two reviewer stages with different responsibilities.
 5. Execute only after successful validation/simulation handoff artifacts are present for the latest revision, including `.manifests/benchmark_review_manifest.json`.
 6. When simulation video exists for the current revision, inspect that video through `inspect_media(...)` before approval. Static renders remain mandatory context, but they do not replace dynamic evidence for moving benchmarks.
 7. When render images exist for the current revision, visual inspection through `inspect_media(...)` is mandatory before approval under the role policy in `config/agents_config.yaml`.
+8. Reviewer completion uses `write_file` for the stage-owned review artifacts and then `bash scripts/submit_review.sh` as the explicit local submission gate.
 
 Benchmark-side reviewer manifest naming:
 
@@ -318,6 +319,8 @@ We choose this because electromechanical implementation is often co-dependent:
 4. a late serialized electrical-only coding stage creates unnecessary handoff loops and stale assumptions.
 
 The implementation split is therefore planner-specialized but coder-unified.
+
+Reviewer completion in the engineer graph uses `write_file` for the stage-owned review artifacts and `bash scripts/submit_review.sh` as the local submission gate.
 
 ### Engineering reviewer split
 

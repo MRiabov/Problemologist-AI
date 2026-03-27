@@ -54,7 +54,7 @@ Validation rule:
 
 ## Reviewer persistence naming contract
 
-Reviewer outputs are persisted as reviewer-scoped YAML file pairs. We do not use shared review filenames, markdown frontmatter review files, or shared per-round folders.
+Reviewer outputs are persisted as reviewer-scoped YAML file pairs. We do not use shared review filenames or shared per-round folders. Local Codex submission helpers may also accept a single markdown review document with YAML frontmatter, but routing still keys off the stage-scoped reviewer files.
 
 Required reviewer file pairs:
 
@@ -199,8 +199,8 @@ That flag is a permission, not transfer of ownership. The engineer may interact 
 These 24-view handoff renders are static preview/context artifacts. The default generation policy is:
 
 1. benchmark validation generates them through the fast validation-preview path,
-2. that preview path uses MuJoCo by default,
-3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis rendering is very, very heavy (12x slower than MuJoCo, as per research in @specs/architecture/auxillary/simulation-optimization-attempts.md - 5s vs 70s - very significant.)),
+2. that preview path uses build123d/VTK by default,
+3. the images are not a proof that Genesis runtime behavior was exercised during validation (intentionally so, as Genesis runtime behavior stays on the simulation path rather than the static preview path),
 4. Genesis parity is covered by dedicated backend parity tests and by actual Genesis simulation runs where Genesis behavior is required.
 
 Reviewer evidence contract for renders:

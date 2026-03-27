@@ -20,10 +20,11 @@ def _make_part(spec: dict[str, object]):
     label = str(spec["label"])
     material_id = str(spec["material_id"])
     fixed = bool(spec["fixed"])
+    orientation_deg = float(spec.get("orientation_deg", 0.0))
 
     with BuildPart() as part:
         Box(*size, align=(Align.CENTER, Align.CENTER, Align.MIN))
-    built = part.part.move(Location(center))
+    built = part.part.move(Location(center, (0.0, 0.0, orientation_deg)))
     built.label = label
     built.metadata = PartMetadata(material_id=material_id, fixed=fixed)
     return built
