@@ -20,7 +20,7 @@ from controller.api.routes import (
 )
 from controller.config.settings import settings
 from controller.observability.langfuse import get_langfuse_client
-from controller.persistence.db import get_sessionmaker
+from controller.persistence.db import dispose_all_engines, get_sessionmaker
 from controller.persistence.models import Asset, Episode, Trace
 from shared.enums import EpisodeStatus, ResponseStatus
 from shared.logging import configure_logging, get_logger, log_marker_middleware
@@ -81,8 +81,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Clean up if needed
-    pass
+    await dispose_all_engines()
 
 
 app = FastAPI(title="Problemologist Controller", lifespan=lifespan)

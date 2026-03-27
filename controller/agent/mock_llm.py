@@ -1,6 +1,7 @@
 import json
 import re
 from contextlib import suppress
+from functools import lru_cache
 from types import SimpleNamespace
 from typing import Any
 
@@ -29,6 +30,18 @@ REVIEWER_AGENTS = {
 }
 
 
+@lru_cache(maxsize=1)
+def _cached_integration_mock_scenarios() -> dict[str, dict[str, Any]]:
+    """
+    Load the integration mock scenario corpus once per process.
+
+    Integration runs instantiate a fresh MockDSPyLM per agent node, so without
+    this cache we repeatedly re-parse the same YAML corpus on every node setup.
+    """
+
+    return load_integration_mock_scenarios()
+
+
 class MockDSPyLM(dspy.LM):
     """Mock DSPy LM using per-test integration scenario files keyed by session_id."""
 
@@ -46,7 +59,7 @@ class MockDSPyLM(dspy.LM):
         self.session_id = session_id or "default-session"
         self.node_type = self._normalize_agent_name(node_type)
         self.provider = "openai"
-        self.scenarios = load_integration_mock_scenarios()
+        self.scenarios = _cached_integration_mock_scenarios()
         self._call_counts = {}  # Tracks calls per node key to detect loops
         self._tool_progress = {}  # Tracks completed tool steps from trajectory text
         # Tracks repeated LM invocations without tool-observation progress.

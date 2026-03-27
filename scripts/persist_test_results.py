@@ -65,8 +65,8 @@ def parse_junit(xml_path):
 
         test_cases = []
         for tc in testsuite.findall("testcase"):
-            name = tc.get("name")
-            classname = tc.get("classname")
+            name = tc.get("name") or tc.get("classname") or tc.get("file") or "unknown"
+            classname = tc.get("classname") or testsuite.get("name") or "unknown"
             tc_time_attr = tc.get("time", "0")
             try:
                 tc_time = float(tc_time_attr)

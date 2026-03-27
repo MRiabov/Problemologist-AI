@@ -34,6 +34,7 @@ INTEGRATION_WORKFLOW_HINT = (
 
 INTEGRATION_RUN_LOCK_PATH = Path("/tmp/problemologist-integration.lock")
 INTEGRATION_RUN_STATE_PATH = Path("/tmp/problemologist-integration.run.json")
+LONG_INTEGRATION_RUN_THRESHOLD_S = 7 * 60
 
 CheckKind = Literal["http", "tcp", "cmd"]
 
@@ -683,6 +684,42 @@ def _run(
         stdout=stdout,
         stderr=stderr,
     )
+
+
+def _format_elapsed_duration(elapsed_s: float) -> str:
+    total_seconds = max(0, int(round(elapsed_s)))
+    minutes, seconds = divmod(total_seconds, 60)
+    return f"{minutes}m{seconds:02d}s"
+
+
+def _maybe_notify_long_integration_run(elapsed_s: float) -> None:
+    if elapsed_s <= LONG_INTEGRATION_RUN_THRESHOLD_S:
+        return
+
+    duration = _format_elapsed_duration(elapsed_s)
+    message = f"integration tests finished after {duration}"
+    print(f"[integration-runner] {message}")
+    print("\a", end="", flush=True)
+
+    speech_commands = (
+        ["say", "integration tests finished"],
+        ["spd-say", "integration tests finished"],
+        ["espeak-ng", "integration tests finished"],
+        ["espeak", "integration tests finished"],
+    )
+    for cmd in speech_commands:
+        executable = cmd[0]
+        if not shutil.which(executable):
+            continue
+        try:
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            pass
+        break
 
 
 def _parse_check(definition: str, *, kind: CheckKind) -> HealthCheck:
@@ -1648,6 +1685,7 @@ def _run_integration_command(
 ) -> int:
     repo_root = _repo_root()
     os.chdir(repo_root)
+    command_started_at = time.monotonic()
 
     normalized_pytest_args, _, _ = _normalize_pytest_args(passthrough_pytest_args)
     lease = _acquire_integration_run_lock(
@@ -2036,6 +2074,7 @@ def _run_integration_command(
                 )
         finally:
             _release_integration_run_lock(lease)
+            _maybe_notify_long_integration_run(time.monotonic() - command_started_at)
 
 
 def _build_parser() -> argparse.ArgumentParser:

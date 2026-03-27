@@ -74,3 +74,17 @@ async def get_db():
     session_local = get_sessionmaker()
     async with session_local() as session:
         yield session
+
+
+async def dispose_all_engines() -> None:
+    """Dispose cached async engines before the event loop shuts down."""
+    with _cache_lock:
+        engines = list(_engine_cache.values())
+        _engine_cache.clear()
+        _sessionmaker_cache.clear()
+
+    for engine in engines:
+        try:
+            await engine.dispose()
+        except Exception:
+            logger.exception("engine_dispose_failed")
