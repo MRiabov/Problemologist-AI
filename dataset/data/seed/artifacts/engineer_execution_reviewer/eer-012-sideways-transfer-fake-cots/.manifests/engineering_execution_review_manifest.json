@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-012-sideways-transfer-fake-cots",
-  "revision": "1c411fb80bef5fd9e8d772bf162790e3d329cb97",
+  "revision": "d0e2961a495df67ed492c1a882b5dc3fc1a4e2e5",
   "script_path": "script.py",
   "script_sha256": "013fbff40ed7c9100f7f45a8cc44a7a0c2fe7e0aa13b4bac029b3aedc6bd4ae0",
   "validation_success": true,
