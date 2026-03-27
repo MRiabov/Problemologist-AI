@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "episode_id": "bpr-012-gap-bridge-hidden-dof",
+  "worker_session_id": "bpr-012-gap-bridge-hidden-dof",
+  "revision": "6590ad11cc60145f4fd9aecad29efeb322acca8e",
+  "environment_version": "1.0",
+  "preview_evidence_paths": [
+    "renders/images/context_view_01.png",
+    "renders/images/context_view_02.png"
+  ],
+  "artifacts": {
+    "renders/images/context_view_01.png": {
+      "modality": "rgb",
+      "group_key": "context"
+    },
+    "renders/images/context_view_02.png": {
+      "modality": "rgb",
+      "group_key": "context"
+    }
+  }
+}
