@@ -1,17 +1,20 @@
+import asyncio
 import os
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 import httpx
 import structlog
 import yaml
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from controller.agent.benchmark.graph import run_generation_session
 from controller.api.benchmark_tasks import launch_tracked_benchmark_task
+from controller.api.manager import manager
 from controller.api.schemas import (
     AssetResponse,
     BenchmarkConfirmResponse,
@@ -174,6 +177,29 @@ async def confirm_benchmark(
         status=ResponseStatus.ACCEPTED,
         message="Benchmark generation proceeding",
     )
+
+
+@router.websocket("/{session_id}/ws")
+async def benchmark_websocket(websocket: WebSocket, session_id: uuid.UUID):
+    await manager.connect(session_id, websocket)
+    try:
+        await websocket.send_json(
+            {
+                "type": "log",
+                "data": f"Subscribed to benchmark updates for session {session_id}",
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
+
+        while True:
+            await asyncio.sleep(30)
+            await websocket.send_json({"type": "heartbeat"})
+    except WebSocketDisconnect:
+        manager.disconnect(session_id, websocket)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        manager.disconnect(session_id, websocket)
+        raise e from None
 
 
 # Note: We might need an endpoint to get the status/result of a specific session
