@@ -11,7 +11,8 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow succeeds with an initial deterministic commit and a clean post-commit status."
+    "expected_criteria": "Git workflow succeeds with an initial deterministic commit and a clean post-commit status.",
+    "complexity_level": 0
   },
   {
     "id": "git-002-noop-commit",
@@ -30,7 +31,8 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow recognizes a clean repository and returns a successful no-op commit without creating a new commit hash."
+    "expected_criteria": "Git workflow recognizes a clean repository and returns a successful no-op commit without creating a new commit hash.",
+    "complexity_level": 0
   },
   {
     "id": "git-003-resolve-conflict-ours",
@@ -65,7 +67,8 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow can detect a merge conflict, resolve it with the local version, complete the merge, and report a clean repository."
+    "expected_criteria": "Git workflow can detect a merge conflict, resolve it with the local version, complete the merge, and report a clean repository.",
+    "complexity_level": 0
   },
   {
     "id": "git-004-abort-conflict-merge",
@@ -93,6 +96,7 @@
         "conflicts": []
       }
     },
-    "expected_criteria": "Git workflow can detect a merge conflict, abort the merge cleanly, and restore the repository to a clean non-merging state."
+    "expected_criteria": "Git workflow can detect a merge conflict, abort the merge cleanly, and restore the repository to a clean non-merging state.",
+    "complexity_level": 0
   }
 ]

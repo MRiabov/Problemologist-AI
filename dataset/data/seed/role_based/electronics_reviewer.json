@@ -4,20 +4,23 @@
     "task": "Review the seeded electronics implementation for the single-motor diverter gate. Confirm the 12V power path is complete, both wires stay inside the left-wall cable corridor, the seeded validation and simulation evidence correspond to the current script revision, and the reviewer returns a structured electronics decision.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/electronics_reviewer/erv-002-diverter-gate-review",
     "expected_decision": "APPROVED",
-    "expected_criteria": "Electronics reviewer starts from a contract-valid reviewer handoff package and issues a structured review grounded in the seeded electrical implementation."
+    "expected_criteria": "Electronics reviewer starts from a contract-valid reviewer handoff package and issues a structured review grounded in the seeded electrical implementation.",
+    "complexity_level": 1
   },
   {
     "id": "erv-003-diverter-gate-wire-corridor-violation",
     "task": "Review the seeded electronics implementation for the diverter gate wire-corridor violation variant. Confirm the 12V power path is complete, inspect the routed wire waypoints in `assembly_definition.yaml`, verify whether both wires remain inside the reserved left-wall cable corridor, and return a structured electronics decision grounded in the seeded artifacts.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/electronics_reviewer/erv-003-diverter-gate-wire-corridor-violation",
     "expected_decision": "REJECT_CODE",
-    "expected_criteria": "Electronics reviewer rejects implementations when the seeded wire routing leaves the reserved cable corridor even if validation and simulation otherwise succeed."
+    "expected_criteria": "Electronics reviewer rejects implementations when the seeded wire routing leaves the reserved cable corridor even if validation and simulation otherwise succeed.",
+    "complexity_level": 1
   },
   {
     "id": "erv-004-diverter-gate-power-insufficient",
     "task": "Review the seeded electronics implementation for the diverter gate power-insufficient variant. Confirm the 12V power path is complete, compare the seeded supply current limit against the motor demand in `assembly_definition.yaml`, and return a structured electronics decision grounded in the seeded artifacts.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/electronics_reviewer/erv-004-diverter-gate-power-insufficient",
     "expected_decision": "REJECT_CODE",
-    "expected_criteria": "Electronics reviewer rejects implementations when the seeded power supply cannot provide the required current for the specified motor."
+    "expected_criteria": "Electronics reviewer rejects implementations when the seeded power supply cannot provide the required current for the specified motor.",
+    "complexity_level": 1
   }
 ]

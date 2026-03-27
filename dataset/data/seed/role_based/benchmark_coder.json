@@ -3,12 +3,14 @@
     "id": "bc-011-sideways-ball",
     "task": "Use the seeded benchmark planner artifacts in the workspace to implement the sideways-ball benchmark in `script.py`. Keep planner files consistent, update `todo.md`/`journal.md`, and keep `script.py` import-safe with no `__main__` block or in-module review submission call.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-011-sideways-ball",
-    "expected_criteria": "Writes benchmark implementation artifacts and runnable benchmark code consistent with 40mm-radius steel sphere moved 1m sideways."
+    "expected_criteria": "Writes benchmark implementation artifacts and runnable benchmark code consistent with 40mm-radius steel sphere moved 1m sideways.",
+    "complexity_level": 0
   },
   {
     "id": "bc-002-tunnel",
     "task": "Use the seeded benchmark planner artifacts in the workspace to implement the tunnel benchmark in `script.py`. Keep planner files consistent, update `todo.md`/`journal.md`, and keep `script.py` import-safe with no `__main__` block or in-module review submission call.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/benchmark_coder/bc-002-tunnel",
-    "expected_criteria": "Implements geometry and goal artifacts without planner-file regressions."
+    "expected_criteria": "Implements geometry and goal artifacts without planner-file regressions.",
+    "complexity_level": 1
   }
 ]
