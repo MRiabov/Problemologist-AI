@@ -1384,7 +1384,7 @@ def simulate(
                 error=str(exc),
                 session_id=session_id,
             )
-            render_paths = []
+            return False, f"Validation preview render failed: {exc}"
         if video_path and video_path.exists():
             render_paths.append(str(video_path))
         render_paths = _workspace_relative_render_paths(render_paths, working_dir)
@@ -1673,6 +1673,7 @@ def validate(
         logger.warning(
             "validate_render_capture_failed", error=str(e), session_id=session_id
         )
+        return False, f"Validation preview render failed: {e}"
 
     return True, None
 
