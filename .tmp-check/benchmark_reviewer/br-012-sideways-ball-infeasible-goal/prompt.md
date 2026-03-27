@@ -7,6 +7,7 @@ Task:
 Review the seeded benchmark deliverables in the workspace for the sideways-ball infeasible-goal variant. Validate feasibility, objective consistency, and obvious simulation blockers using the existing handoff artifacts, with particular attention to whether the seeded goal zone remains inside the benchmark build and simulation envelope.
 
 Workspace contract:
+
 - Use workspace-relative paths only. Do not use absolute workspace root prefixes.
 - The workspace already contains the starter files, role templates, and any copied seed artifacts. Treat `.manifests/` as system-owned and do not edit it directly.
 - You are the Execution Reviewer.

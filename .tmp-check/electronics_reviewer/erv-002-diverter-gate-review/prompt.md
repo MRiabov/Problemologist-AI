@@ -7,6 +7,7 @@ Task:
 Review the seeded electronics implementation for the single-motor diverter gate. Confirm the 12V power path is complete, both wires stay inside the left-wall cable corridor, the seeded validation and simulation evidence correspond to the current script revision, and the reviewer returns a structured electronics decision.
 
 Workspace contract:
+
 - Use workspace-relative paths only. Do not use absolute workspace root prefixes.
 - The workspace already contains the starter files, role templates, and any copied seed artifacts. Treat `.manifests/` as system-owned and do not edit it directly.
 - You are the Execution Reviewer.

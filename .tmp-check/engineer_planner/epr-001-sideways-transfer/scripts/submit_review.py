@@ -11,7 +11,6 @@ import yaml
 from shared.enums import AgentName
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
 
-
 _REVIEW_PREFIX_BY_AGENT: dict[AgentName, str] = {
     AgentName.BENCHMARK_PLAN_REVIEWER: "benchmark-plan-review",
     AgentName.BENCHMARK_REVIEWER: "benchmark-execution-review",
@@ -72,7 +71,9 @@ def _parse_yaml_mapping(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     return data, None
 
 
-def _validate_review_markdown(path: Path) -> tuple[ReviewFrontmatter | None, str | None]:
+def _validate_review_markdown(
+    path: Path,
+) -> tuple[ReviewFrontmatter | None, str | None]:
     content = path.read_text(encoding="utf-8")
     match = re.search(r"^---\s*\n(.*?)\n---\s*\n?", content, re.DOTALL)
     if match is None:
@@ -105,7 +106,11 @@ def _validate_yaml_review_pair(
     try:
         comments = ReviewComments.model_validate(comments_data)
     except Exception as exc:
-        return decision, None, f"invalid review comments payload in {comments_path}: {exc}"
+        return (
+            decision,
+            None,
+            f"invalid review comments payload in {comments_path}: {exc}",
+        )
     return decision, comments, None
 
 
@@ -178,9 +183,7 @@ def main() -> int:
         latest_markdown is None or latest_decision[0] >= latest_markdown[0]
     ):
         round_number = latest_decision[0]
-        comments_path = (
-            review_dir / f"{prefix}-comments-round-{round_number}.yaml"
-        )
+        comments_path = review_dir / f"{prefix}-comments-round-{round_number}.yaml"
         if not comments_path.exists():
             _print_json(
                 {

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from importlib import import_module
 from pathlib import Path
 from typing import Any
@@ -38,8 +37,7 @@ def _load_solution() -> Compound:
         raise ValueError("script.py must define module-level result or build()")
     if not isinstance(solution, Compound):
         raise TypeError(
-            "script.py must export a build123d.Compound; "
-            f"got {type(solution).__name__}"
+            f"script.py must export a build123d.Compound; got {type(solution).__name__}"
         )
     return solution
 
@@ -142,7 +140,9 @@ def main() -> int:
         )
         return 1
 
-    manifest_path = workspace / ".manifests" / "engineering_execution_review_manifest.json"
+    manifest_path = (
+        workspace / ".manifests" / "engineering_execution_review_manifest.json"
+    )
     _print_json(
         {
             "ok": True,
