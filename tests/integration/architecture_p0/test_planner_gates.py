@@ -44,6 +44,7 @@ from shared.workers.schema import (
     ReadFileResponse,
     WriteFileRequest,
 )
+from tests.integration.agent.helpers import wait_for_benchmark_state
 
 # Constants
 WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
@@ -262,72 +263,61 @@ async def _wait_for_planned_after_submit_plan(
 async def _wait_for_submit_plan_node_types_benchmark(
     client: httpx.AsyncClient, session_id: str, required_node_type: str
 ) -> tuple[EpisodeStatus | None, set[str]]:
-    target_statuses = {
-        EpisodeStatus.PLANNED,
-        EpisodeStatus.COMPLETED,
-        EpisodeStatus.FAILED,
-    }
-    status: EpisodeStatus | None = None
-    submit_node_types: set[str] = set()
-    for _ in range(90):
-        ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-        if ep_resp.status_code == 404:
-            await asyncio.sleep(1)
-            continue
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        status = episode.status
-        submit_node_types = _submit_plan_node_types_from_episode_traces(
-            episode.traces or []
+    episode = EpisodeResponse.model_validate(
+        await wait_for_benchmark_state(
+            client,
+            session_id,
+            timeout_s=90.0,
+            terminal_statuses={
+                EpisodeStatus.PLANNED,
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+            },
+            predicate=lambda candidate: (
+                required_node_type
+                in _submit_plan_node_types_from_episode_traces(candidate.traces or [])
+            ),
         )
-        if required_node_type in submit_node_types:
-            break
-        if status in target_statuses:
-            break
-        await asyncio.sleep(1)
-    return status, submit_node_types
+    )
+    return (
+        episode.status,
+        _submit_plan_node_types_from_episode_traces(episode.traces or []),
+    )
 
 
 async def _wait_for_planned_after_submit_plan_benchmark(
     client: httpx.AsyncClient, session_id: str
 ) -> EpisodeStatus | None:
-    status: EpisodeStatus | None = None
-    for _ in range(90):
-        ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-        if ep_resp.status_code == 404:
-            await asyncio.sleep(1)
-            continue
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        status = episode.status
-        if status in {EpisodeStatus.PLANNED, EpisodeStatus.FAILED}:
-            break
-        await asyncio.sleep(1)
-    return status
+    episode = EpisodeResponse.model_validate(
+        await wait_for_benchmark_state(
+            client,
+            session_id,
+            timeout_s=90.0,
+            terminal_statuses={EpisodeStatus.PLANNED, EpisodeStatus.FAILED},
+        )
+    )
+    return episode.status
 
 
 async def _wait_for_benchmark_asset(
     client: httpx.AsyncClient, session_id: str, suffix: str
 ) -> list[str]:
-    matched_paths: list[str] = []
-    for _ in range(90):
-        ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-        if ep_resp.status_code == 404:
-            await asyncio.sleep(1)
-            continue
-        assert ep_resp.status_code == 200, ep_resp.text
-        episode = EpisodeResponse.model_validate(ep_resp.json())
-        matched_paths = [
-            asset.s3_path
-            for asset in (episode.assets or [])
-            if asset.s3_path.endswith(suffix)
-        ]
-        if matched_paths:
-            return matched_paths
-        if episode.status == EpisodeStatus.FAILED:
-            return matched_paths
-        await asyncio.sleep(1)
-    return matched_paths
+    episode = EpisodeResponse.model_validate(
+        await wait_for_benchmark_state(
+            client,
+            session_id,
+            timeout_s=90.0,
+            terminal_statuses={EpisodeStatus.FAILED},
+            predicate=lambda candidate: any(
+                asset.s3_path.endswith(suffix) for asset in (candidate.assets or [])
+            ),
+        )
+    )
+    return [
+        asset.s3_path
+        for asset in (episode.assets or [])
+        if asset.s3_path.endswith(suffix)
+    ]
 
 
 async def _generate_ready_benchmark_session(
@@ -341,38 +331,53 @@ async def _generate_ready_benchmark_session(
     run_resp = BenchmarkGenerateResponse.model_validate(resp.json())
     benchmark_session_id = str(run_resp.session_id)
 
-    confirmed = False
-    for _ in range(150):
-        status_resp = await client.get(
-            f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}"
+    planned_session = EpisodeResponse.model_validate(
+        await wait_for_benchmark_state(
+            client,
+            benchmark_session_id,
+            timeout_s=150.0,
+            terminal_statuses={
+                EpisodeStatus.PLANNED,
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+            },
         )
-        if status_resp.status_code == 200:
-            sess_data = EpisodeResponse.model_validate(status_resp.json())
-            if sess_data.status == EpisodeStatus.PLANNED and not confirmed:
-                await client.post(
-                    f"{WORKER_LIGHT_URL}/fs/write",
-                    json=WriteFileRequest(
-                        path="manufacturing_config.yaml",
-                        content=REPO_MANUFACTURING_CONFIG,
-                        overwrite=True,
-                    ).model_dump(mode="json"),
-                    headers={"X-Session-ID": benchmark_session_id},
-                )
-                await client.post(
-                    f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}/confirm",
-                    json=ConfirmRequest(comment="Proceed").model_dump(),
-                )
-                confirmed = True
-            elif sess_data.status == EpisodeStatus.COMPLETED:
-                return str(run_resp.episode_id)
-            elif sess_data.status == EpisodeStatus.FAILED:
-                pytest.fail(
-                    "Benchmark generation failed during setup "
-                    f"(session_id={benchmark_session_id})."
-                )
-        await asyncio.sleep(2)
+    )
+    if planned_session.status == EpisodeStatus.FAILED:
+        pytest.fail(
+            "Benchmark generation failed during setup "
+            f"(session_id={benchmark_session_id})."
+        )
 
-    pytest.fail("Benchmark generation failed or timed out during setup.")
+    if planned_session.status == EpisodeStatus.PLANNED:
+        await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="manufacturing_config.yaml",
+                content=REPO_MANUFACTURING_CONFIG,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers={"X-Session-ID": benchmark_session_id},
+        )
+        await client.post(
+            f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}/confirm",
+            json=ConfirmRequest(comment="Proceed").model_dump(),
+        )
+        final_session = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                benchmark_session_id,
+                timeout_s=150.0,
+                terminal_statuses={EpisodeStatus.COMPLETED, EpisodeStatus.FAILED},
+            )
+        )
+        if final_session.status == EpisodeStatus.FAILED:
+            pytest.fail(
+                "Benchmark generation failed during setup "
+                f"(session_id={benchmark_session_id})."
+            )
+
+    return str(run_resp.episode_id)
 
 
 @pytest.mark.integration_p0
@@ -698,38 +703,42 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
         session_id = str(run_resp.session_id)
         episode_id = str(run_resp.episode_id)
 
-        status: EpisodeStatus | None = None
-        latest_episode: EpisodeResponse | None = None
-        artifact_paths: list[str] = []
-        plan_review_decision_paths: list[str] = []
-        plan_review_comment_paths: list[str] = []
-        for _ in range(120):
-            ep_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-            if ep_resp.status_code != 200:
-                await asyncio.sleep(1)
-                continue
-            latest_episode = EpisodeResponse.model_validate(ep_resp.json())
-            status = latest_episode.status
-            artifact_paths = [a.s3_path for a in (latest_episode.assets or [])]
-            plan_review_decision_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark-plan-review-decision-round-1.yaml")
-            ]
-            plan_review_comment_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark-plan-review-comments-round-1.yaml")
-            ]
-            if (
-                status == EpisodeStatus.PLANNED
-                and plan_review_decision_paths
-                and plan_review_comment_paths
-            ):
-                break
-            await asyncio.sleep(1)
+        latest_episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=120.0,
+                terminal_statuses=set(),
+                predicate=lambda candidate: (
+                    candidate.status == EpisodeStatus.PLANNED
+                    and any(
+                        asset.s3_path.endswith(
+                            "benchmark-plan-review-decision-round-1.yaml"
+                        )
+                        for asset in (candidate.assets or [])
+                    )
+                    and any(
+                        asset.s3_path.endswith(
+                            "benchmark-plan-review-comments-round-1.yaml"
+                        )
+                        for asset in (candidate.assets or [])
+                    )
+                ),
+            )
+        )
+        status = latest_episode.status
+        artifact_paths = [a.s3_path for a in (latest_episode.assets or [])]
+        plan_review_decision_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+        ]
+        plan_review_comment_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+        ]
 
-        assert latest_episode is not None
         assert status == EpisodeStatus.PLANNED, (
             f"Expected benchmark plan reviewer approval to reach PLANNED, got {status}."
         )

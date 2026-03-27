@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 
 import pytest
@@ -18,7 +17,7 @@ from shared.workers.schema import (
     ReviewManifest,
     ValidationResultRecord,
 )
-from tests.integration.agent.helpers import repo_git_revision
+from tests.integration.agent.helpers import repo_git_revision, wait_for_benchmark_state
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -54,32 +53,39 @@ async def test_benchmark_to_engineer_handoff():
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
         session_id = str(benchmark_resp.session_id)
 
-        # 2. Poll for completion
-        max_retries = 150
-        benchmark_completed = False
-        last_status = None
-        confirmed = False
+        last_episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=150.0,
+                terminal_statuses={
+                    EpisodeStatus.PLANNED,
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
+            )
+        )
+        if last_episode.status == EpisodeStatus.PLANNED:
+            await client.post(
+                f"/benchmark/{session_id}/confirm",
+                json=ConfirmRequest(comment="Handoff confirm").model_dump(),
+            )
+            last_episode = EpisodeResponse.model_validate(
+                await wait_for_benchmark_state(
+                    client,
+                    session_id,
+                    timeout_s=150.0,
+                    terminal_statuses={
+                        EpisodeStatus.COMPLETED,
+                        EpisodeStatus.FAILED,
+                        EpisodeStatus.CANCELLED,
+                    },
+                )
+            )
 
-        for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{session_id}")
-            if status_resp.status_code == 200:
-                sess_data = EpisodeResponse.model_validate(status_resp.json())
-                last_status = sess_data.status
-                if last_status == EpisodeStatus.PLANNED and not confirmed:
-                    await client.post(
-                        f"/benchmark/{session_id}/confirm",
-                        json=ConfirmRequest(comment="Handoff confirm").model_dump(),
-                    )
-                    confirmed = True
-                if last_status == EpisodeStatus.COMPLETED:
-                    benchmark_completed = True
-                    break
-                if last_status == EpisodeStatus.FAILED:
-                    pytest.fail(f"Benchmark generation failed: {last_status}")
-            await asyncio.sleep(2)
-
-        if not benchmark_completed:
-            pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
+        if last_episode.status == EpisodeStatus.FAILED:
+            pytest.fail(f"Benchmark generation failed: {last_episode.status}")
 
         # 3. Verify Handoff Package Artifacts from episode assets
         episode_resp = await client.get(f"/episodes/{session_id}")

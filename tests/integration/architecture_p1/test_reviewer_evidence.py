@@ -23,6 +23,7 @@ from tests.integration.agent.helpers import (
     seed_benchmark_assembly_definition,
     seed_current_revision_render_preview,
     seed_execution_reviewer_handover,
+    wait_for_benchmark_state,
     wait_for_episode_state,
 )
 
@@ -61,6 +62,37 @@ def _is_inspect_media_trace(trace) -> bool:
     return (
         trace.name in {"inspect_media", "inspect_media_tool"}
         and getattr(trace.trace_type, "value", str(trace.trace_type)) == "TOOL_START"
+    )
+
+
+def _benchmark_plan_review_artifacts_ready(episode: EpisodeResponse) -> bool:
+    traces = episode.traces or []
+    rejected_traces = [
+        trace
+        for trace in traces
+        if trace.name == "review_decision"
+        and trace.metadata_vars is not None
+        and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+        and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+    ]
+    artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
+    decision_paths = [
+        path
+        for path in artifact_paths
+        if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+    ]
+    comments_paths = [
+        path
+        for path in artifact_paths
+        if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+    ]
+    manifest_paths = [
+        path
+        for path in artifact_paths
+        if path.endswith("benchmark_plan_review_manifest.json")
+    ]
+    return bool(
+        rejected_traces and decision_paths and comments_paths and manifest_paths
     )
 
 
@@ -133,61 +165,54 @@ async def test_reviewer_evidence_completeness():
         session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
-        ep_data: EpisodeResponse | None = None
-        # Allow a little extra time for artifact persistence on loaded runners.
-        for _ in range(180):
-            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-            if status_resp.status_code != 200:
-                await asyncio.sleep(1.0)
-                continue
-            candidate = EpisodeResponse.model_validate(status_resp.json())
-            traces = candidate.traces or []
-            artifact_paths = [asset.s3_path for asset in (candidate.assets or [])]
-            manifest_paths = [p for p in artifact_paths if p.endswith("manifest.json")]
-            stage_review_paths = [
-                p
-                for p in artifact_paths
-                if "reviews/" in p
-                and (
-                    "benchmark-plan-review-decision-round-" in p
-                    or "benchmark-plan-review-comments-round-" in p
-                    or "benchmark-execution-review-decision-round-" in p
-                    or "benchmark-execution-review-comments-round-" in p
-                    or "engineering-plan-review-decision-round-" in p
-                    or "engineering-plan-review-comments-round-" in p
-                    or "engineering-execution-review-decision-round-" in p
-                    or "engineering-execution-review-comments-round-" in p
-                    or "electronics-review-decision-round-" in p
-                    or "electronics-review-comments-round-" in p
-                )
-            ]
-            inspect_media_traces = [
-                trace for trace in traces if _is_inspect_media_trace(trace)
-            ]
-            media_events = [
-                trace for trace in traces if trace.name == "media_inspection"
-            ]
-            attachment_events = [
-                trace for trace in traces if trace.name == "llm_media_attached"
-            ]
-            review_traces = [
-                trace for trace in traces if trace.name == "review_decision"
-            ]
-            ep_data = candidate
-            if (
-                manifest_paths
-                and stage_review_paths
-                and inspect_media_traces
-                and media_events
-                and attachment_events
-                and review_traces
-            ):
-                break
-            await asyncio.sleep(1.0)
-        else:
-            pytest.fail(f"Episode did not complete in time (episode_id={episode_id})")
+        ep_data = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=180.0,
+                terminal_statuses=set(),
+                predicate=lambda candidate: (
+                    any(
+                        p.endswith("manifest.json")
+                        for p in [asset.s3_path for asset in (candidate.assets or [])]
+                    )
+                    and any(
+                        "reviews/" in p
+                        and (
+                            "benchmark-plan-review-decision-round-" in p
+                            or "benchmark-plan-review-comments-round-" in p
+                            or "benchmark-execution-review-decision-round-" in p
+                            or "benchmark-execution-review-comments-round-" in p
+                            or "engineering-plan-review-decision-round-" in p
+                            or "engineering-plan-review-comments-round-" in p
+                            or "engineering-execution-review-decision-round-" in p
+                            or "engineering-execution-review-comments-round-" in p
+                            or "electronics-review-decision-round-" in p
+                            or "electronics-review-comments-round-" in p
+                        )
+                        for p in [asset.s3_path for asset in (candidate.assets or [])]
+                    )
+                    and any(
+                        _is_inspect_media_trace(trace)
+                        for trace in (candidate.traces or [])
+                    )
+                    and any(
+                        trace.name == "media_inspection"
+                        for trace in (candidate.traces or [])
+                    )
+                    and any(
+                        trace.name == "llm_media_attached"
+                        for trace in (candidate.traces or [])
+                    )
+                    and any(
+                        trace.name == "review_decision"
+                        for trace in (candidate.traces or [])
+                    )
+                ),
+            )
+        )
 
-        ep_resp = await client.get(f"/episodes/{session_id}")
+        ep_resp = await client.get(f"/episodes/{episode_id}")
         assert ep_resp.status_code == 200
         ep_data = EpisodeResponse.model_validate(ep_resp.json())
         artifact_paths = [a.s3_path for a in (ep_data.assets or [])]
@@ -769,48 +794,41 @@ async def test_benchmark_plan_reviewer_rejection_persists_latest_revision_eviden
         session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
-        rejected_review_trace = None
-        latest_episode: EpisodeResponse | None = None
-        decision_paths: list[str] = []
-        comments_paths: list[str] = []
-        manifest_paths: list[str] = []
-        for _ in range(120):
-            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-            if status_resp.status_code != 200:
-                await asyncio.sleep(1.0)
-                continue
-            latest_episode = EpisodeResponse.model_validate(status_resp.json())
-            traces = latest_episode.traces or []
-            rejected_traces = [
-                trace
-                for trace in traces
-                if trace.name == "review_decision"
-                and trace.metadata_vars is not None
-                and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
-                and "UNSOLVABLE_SCENARIO" in (trace.content or "")
-            ]
-            artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
-            decision_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark-plan-review-decision-round-1.yaml")
-            ]
-            comments_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark-plan-review-comments-round-1.yaml")
-            ]
-            manifest_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark_plan_review_manifest.json")
-            ]
-            if rejected_traces and decision_paths and comments_paths and manifest_paths:
-                rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
-                break
-            await asyncio.sleep(1.0)
-        else:
-            pytest.fail(f"Episode did not complete in time (episode_id={episode_id})")
+        latest_episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=120.0,
+                terminal_statuses=set(),
+                predicate=_benchmark_plan_review_artifacts_ready,
+            )
+        )
+        traces = latest_episode.traces or []
+        rejected_traces = [
+            trace
+            for trace in traces
+            if trace.name == "review_decision"
+            and trace.metadata_vars is not None
+            and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+            and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+        ]
+        rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
+        artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
+        decision_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+        ]
+        comments_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+        ]
+        manifest_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark_plan_review_manifest.json")
+        ]
 
         assert latest_episode is not None
         traces = latest_episode.traces or []

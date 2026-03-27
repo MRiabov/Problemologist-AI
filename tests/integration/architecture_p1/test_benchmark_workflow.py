@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import uuid
 
@@ -29,7 +28,10 @@ from shared.workers.schema import (
     RenderManifest,
     ReviewManifest,
 )
-from tests.integration.agent.helpers import repo_git_revision
+from tests.integration.agent.helpers import (
+    repo_git_revision,
+    wait_for_benchmark_state,
+)
 
 # Adjust URL to your controller if different
 CONTROLLER_URL = "http://127.0.0.1:18000"
@@ -38,16 +40,14 @@ CONTROLLER_URL = "http://127.0.0.1:18000"
 async def _wait_for_planned_or_failed_episode(
     client: AsyncClient, episode_id: str
 ) -> EpisodeResponse:
-    latest: EpisodeResponse | None = None
-    for _ in range(120):
-        resp = await client.get(f"/api/episodes/{episode_id}")
-        assert resp.status_code == 200, resp.text
-        latest = EpisodeResponse.model_validate(resp.json())
-        if latest.status in {EpisodeStatus.PLANNED, EpisodeStatus.FAILED}:
-            return latest
-        await asyncio.sleep(1)
-    assert latest is not None
-    return latest
+    return EpisodeResponse.model_validate(
+        await wait_for_benchmark_state(
+            client,
+            episode_id,
+            timeout_s=120.0,
+            terminal_statuses={EpisodeStatus.PLANNED, EpisodeStatus.FAILED},
+        )
+    )
 
 
 @pytest.mark.integration_p1
@@ -75,42 +75,46 @@ async def test_benchmark_planner_cad_reviewer_path():
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
         session_id = str(benchmark_resp.session_id)
 
-        max_retries = 150
-        benchmark_completed = False
-        last_status = None
-        confirmed = False
+        initial_episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=150.0,
+                terminal_statuses={
+                    EpisodeStatus.PLANNED,
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
+            )
+        )
+        if initial_episode.status == EpisodeStatus.PLANNED:
+            # WP08: Call confirm to continue from planning to execution
+            confirm_resp = await client.post(
+                f"/benchmark/{session_id}/confirm",
+                json=ConfirmRequest(comment="Looks good").model_dump(),
+            )
+            assert confirm_resp.status_code in [200, 202]
+            final_episode = EpisodeResponse.model_validate(
+                await wait_for_benchmark_state(
+                    client,
+                    session_id,
+                    timeout_s=150.0,
+                    terminal_statuses={
+                        EpisodeStatus.COMPLETED,
+                        EpisodeStatus.FAILED,
+                        EpisodeStatus.CANCELLED,
+                    },
+                )
+            )
+        else:
+            final_episode = initial_episode
 
-        for _ in range(max_retries):
-            status_resp = await client.get(f"/benchmark/{session_id}")
-            if status_resp.status_code == 200:
-                sess_data = EpisodeResponse.model_validate(status_resp.json())
-                last_status = sess_data.status
+        if final_episode.status == EpisodeStatus.FAILED:
+            pytest.fail(
+                f"Benchmark generation failed with status: {final_episode.status}"
+            )
 
-                if last_status == EpisodeStatus.PLANNED and not confirmed:
-                    # WP08: Call confirm to continue from planning to execution
-                    confirm_resp = await client.post(
-                        f"/benchmark/{session_id}/confirm",
-                        json=ConfirmRequest(comment="Looks good").model_dump(),
-                    )
-                    assert confirm_resp.status_code in [200, 202]
-                    confirmed = True
-
-                if last_status == EpisodeStatus.COMPLETED:
-                    benchmark_completed = True
-                    break
-                if last_status == EpisodeStatus.FAILED:
-                    pytest.fail(
-                        f"Benchmark generation failed with status: {last_status}"
-                    )
-
-            await asyncio.sleep(2)
-
-        if not benchmark_completed:
-            pytest.fail(f"Benchmark generation timed out. Last status: {last_status}")
-
-        final_status_resp = await client.get(f"/benchmark/{session_id}")
-        assert final_status_resp.status_code == 200, final_status_resp.text
-        final_episode = EpisodeResponse.model_validate(final_status_resp.json())
         final_metadata = final_episode.metadata_vars
         assert final_metadata is not None, "Episode metadata is missing."
         assert final_metadata.terminal_reason == TerminalReason.APPROVED
@@ -331,48 +335,66 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
-        rejected_review_trace = None
-        latest_episode: EpisodeResponse | None = None
-        for _ in range(120):
-            status_resp = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
-            if status_resp.status_code != 200:
-                await asyncio.sleep(1)
-                continue
-            latest_episode = EpisodeResponse.model_validate(status_resp.json())
-            traces = latest_episode.traces or []
-            rejected_traces = [
-                trace
-                for trace in traces
-                if trace.name == "review_decision"
-                and trace.metadata_vars is not None
-                and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
-                and "UNSOLVABLE_SCENARIO" in (trace.content or "")
-            ]
-            artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
-            decision_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark-plan-review-decision-round-1.yaml")
-            ]
-            comments_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark-plan-review-comments-round-1.yaml")
-            ]
-            manifest_paths = [
-                path
-                for path in artifact_paths
-                if path.endswith("benchmark_plan_review_manifest.json")
-            ]
-            if rejected_traces and decision_paths and comments_paths and manifest_paths:
-                rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
-                break
-            await asyncio.sleep(1)
-        else:
-            pytest.fail(f"Episode did not complete in time (episode_id={episode_id})")
-
-        assert latest_episode is not None
+        latest_episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=120.0,
+                terminal_statuses=set(),
+                predicate=lambda candidate: (
+                    any(
+                        trace.name == "review_decision"
+                        and trace.metadata_vars is not None
+                        and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+                        and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+                        for trace in (candidate.traces or [])
+                    )
+                    and any(
+                        asset.s3_path.endswith(
+                            "benchmark-plan-review-decision-round-1.yaml"
+                        )
+                        for asset in (candidate.assets or [])
+                    )
+                    and any(
+                        asset.s3_path.endswith(
+                            "benchmark-plan-review-comments-round-1.yaml"
+                        )
+                        for asset in (candidate.assets or [])
+                    )
+                    and any(
+                        asset.s3_path.endswith("benchmark_plan_review_manifest.json")
+                        for asset in (candidate.assets or [])
+                    )
+                ),
+            )
+        )
         traces = latest_episode.traces or []
+        rejected_traces = [
+            trace
+            for trace in traces
+            if trace.name == "review_decision"
+            and trace.metadata_vars is not None
+            and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+            and "UNSOLVABLE_SCENARIO" in (trace.content or "")
+        ]
+        rejected_review_trace = max(rejected_traces, key=lambda trace: trace.id)
+        artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
+        decision_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark-plan-review-decision-round-1.yaml")
+        ]
+        comments_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark-plan-review-comments-round-1.yaml")
+        ]
+        manifest_paths = [
+            path
+            for path in artifact_paths
+            if path.endswith("benchmark_plan_review_manifest.json")
+        ]
+
         assert rejected_review_trace is not None, (
             "Expected benchmark plan reviewer rejection mentioning UNSOLVABLE_SCENARIO."
         )
@@ -385,6 +407,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         artifact_paths = [asset.s3_path for asset in (latest_episode.assets or [])]
         assert decision_paths, f"Decision artifact missing. Artifacts: {artifact_paths}"
         assert comments_paths, f"Comments artifact missing. Artifacts: {artifact_paths}"
+        assert manifest_paths, f"Manifest artifact missing. Artifacts: {artifact_paths}"
 
         comments_resp = await client.get(
             f"/episodes/{episode_id}/assets/{comments_paths[0]}"

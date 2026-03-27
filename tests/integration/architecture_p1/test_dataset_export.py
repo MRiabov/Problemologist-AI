@@ -1,4 +1,3 @@
-import asyncio
 import os
 import uuid
 
@@ -20,7 +19,10 @@ from controller.api.schemas import (
 from shared.enums import EpisodeStatus
 from shared.models.schemas import DatasetRowArchiveManifest
 from shared.simulation.schemas import SimulatorBackendType
-from tests.integration.agent.helpers import wait_for_episode_terminal
+from tests.integration.agent.helpers import (
+    wait_for_benchmark_state,
+    wait_for_episode_terminal,
+)
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://127.0.0.1:19000")
@@ -42,45 +44,54 @@ def _s3_client():
 async def _wait_for_benchmark_completion(
     client: AsyncClient, session_id: str
 ) -> tuple[BenchmarkGenerateResponse, EpisodeResponse]:
-    benchmark_resp: BenchmarkGenerateResponse | None = None
-    last_episode: EpisodeResponse | None = None
-    confirmed = False
-
-    for _ in range(150):
-        status_resp = await client.get(f"/benchmark/{session_id}")
-        if status_resp.status_code != 200:
-            await asyncio.sleep(1.0)
-            continue
-
-        if benchmark_resp is None:
-            benchmark_resp = BenchmarkGenerateResponse.model_validate(
-                {
-                    "status": "accepted",
-                    "message": "Benchmark generation started",
-                    "session_id": session_id,
-                    "episode_id": session_id,
-                }
-            )
-
-        last_episode = EpisodeResponse.model_validate(status_resp.json())
-        if last_episode.status == EpisodeStatus.PLANNED and not confirmed:
-            confirm_resp = await client.post(
-                f"/benchmark/{session_id}/confirm",
-                json=ConfirmRequest(comment="Proceed").model_dump(),
-            )
-            assert confirm_resp.status_code == 200, confirm_resp.text
-            confirmed = True
-        elif last_episode.status == EpisodeStatus.COMPLETED:
-            return benchmark_resp, last_episode
-        elif last_episode.status == EpisodeStatus.FAILED:
-            pytest.fail(f"Benchmark generation failed for session {session_id}")
-
-        await asyncio.sleep(1.0)
-
-    pytest.fail(
-        f"Benchmark generation timed out for session {session_id}. "
-        f"Last episode: {last_episode}"
+    benchmark_resp = BenchmarkGenerateResponse.model_validate(
+        {
+            "status": "accepted",
+            "message": "Benchmark generation started",
+            "session_id": session_id,
+            "episode_id": session_id,
+        }
     )
+
+    planned_episode = EpisodeResponse.model_validate(
+        await wait_for_benchmark_state(
+            client,
+            session_id,
+            timeout_s=150.0,
+            terminal_statuses={
+                EpisodeStatus.PLANNED,
+                EpisodeStatus.COMPLETED,
+                EpisodeStatus.FAILED,
+                EpisodeStatus.CANCELLED,
+            },
+        )
+    )
+    if planned_episode.status == EpisodeStatus.FAILED:
+        pytest.fail(f"Benchmark generation failed for session {session_id}")
+
+    if planned_episode.status == EpisodeStatus.PLANNED:
+        confirm_resp = await client.post(
+            f"/benchmark/{session_id}/confirm",
+            json=ConfirmRequest(comment="Proceed").model_dump(),
+        )
+        assert confirm_resp.status_code == 200, confirm_resp.text
+        planned_episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                session_id,
+                timeout_s=150.0,
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
+            )
+        )
+
+    if planned_episode.status == EpisodeStatus.FAILED:
+        pytest.fail(f"Benchmark generation failed for session {session_id}")
+
+    return benchmark_resp, planned_episode
 
 
 async def _wait_for_episode_terminal(
