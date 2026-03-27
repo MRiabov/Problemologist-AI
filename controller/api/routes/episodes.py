@@ -1293,9 +1293,35 @@ async def delete_episode(episode_id: uuid.UUID, db: AsyncSession = Depends(get_d
 
 
 @router.websocket("/{episode_id}/ws")
-async def episode_websocket(websocket: WebSocket, episode_id: uuid.UUID):
+async def episode_websocket(
+    websocket: WebSocket,
+    episode_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
     await manager.connect(episode_id, websocket)
     try:
+        try:
+            snapshot = await get_episode(episode_id, db)
+        except HTTPException as exc:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "episode_id": str(episode_id),
+                    "message": exc.detail,
+                    "status_code": exc.status_code,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
+            await websocket.close(code=1008)
+            return
+        await websocket.send_json(
+            {
+                "type": "episode_snapshot",
+                "episode_id": str(episode_id),
+                "episode": snapshot.model_dump(mode="json"),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
         # Initial message
         await websocket.send_json(
             {

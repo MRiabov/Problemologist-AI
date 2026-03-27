@@ -432,6 +432,33 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
       ws.onmessage = (event: MessageEvent) => {
         try {
           const message = JSON.parse(event.data);
+          if (message.type === 'episode_snapshot' && message.episode) {
+            const snapshotEpisode = message.episode as Episode;
+            void hydrateEpisodeAssets(snapshotEpisode)
+              .then((hydratedSnapshot) => {
+                setSelectedEpisode((prev: Episode | null) => {
+                  if (
+                    !prev ||
+                    prev.id !== connectionEpisodeId ||
+                    prev.id !== selectedEpisodeIdRef.current
+                  ) return prev;
+
+                  return hydratedSnapshot;
+                });
+                setEpisodes((prevEpisodes) =>
+                  prevEpisodes.map((ep) =>
+                    ep.id === connectionEpisodeId
+                      ? { ...ep, ...hydratedSnapshot }
+                      : ep,
+                  ),
+                );
+                syncRunningState(hydratedSnapshot);
+              })
+              .catch((error) => {
+                console.error("Failed to apply websocket episode snapshot", error);
+              });
+            return;
+          }
           if (message.type === 'new_trace') {
             setSelectedEpisode((prev: Episode | null) => {
               // Map payload to TraceResponse structure
