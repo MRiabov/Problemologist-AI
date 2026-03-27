@@ -11,7 +11,10 @@ from controller.agent.tools import get_engineer_tools
 from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
-from shared.observability.schemas import ReviewDecisionEvent
+from shared.observability.schemas import (
+    ExcessiveDofDetectedEvent,
+    ReviewDecisionEvent,
+)
 from shared.type_checking import type_check
 
 from .base import BaseNode, SharedNodeContext
@@ -55,17 +58,15 @@ class PlanReviewerNode(BaseNode):
         # Read objectives and assembly_definition for context
         objectives = "# No benchmark_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("benchmark_definition.yaml"):
-                objectives = await self.ctx.worker_client.read_file(
-                    "benchmark_definition.yaml"
-                )
+            objectives = await self._read_optional_workspace_file(
+                "benchmark_definition.yaml", objectives
+            )
 
         assembly_definition = "# No assembly_definition.yaml found."
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("assembly_definition.yaml"):
-                assembly_definition = await self.ctx.worker_client.read_file(
-                    "assembly_definition.yaml"
-                )
+            assembly_definition = await self._read_optional_workspace_file(
+                "assembly_definition.yaml", assembly_definition
+            )
         benchmark_assembly_definition = await self._read_required_workspace_file(
             "benchmark_assembly_definition.yaml"
         )
@@ -74,8 +75,9 @@ class PlanReviewerNode(BaseNode):
 
         plan_markdown = state.plan or ""
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("plan.md"):
-                plan_markdown = await self.ctx.worker_client.read_file("plan.md")
+            plan_markdown = await self._read_optional_workspace_file(
+                "plan.md", plan_markdown
+            )
 
         try:
             findings = collect_excessive_dof_findings(assembly_definition)
@@ -111,13 +113,7 @@ class PlanReviewerNode(BaseNode):
             )
             await record_worker_events(
                 episode_id=state.episode_id,
-                events=[
-                    {
-                        "event_type": "excessive_dof_detected",
-                        "data": payload,
-                        **payload,
-                    }
-                ],
+                events=[ExcessiveDofDetectedEvent(**payload)],
             )
         unjustified = [
             finding
@@ -212,8 +208,9 @@ class PlanReviewerNode(BaseNode):
 
         plan_refusal = ""
         with suppress(Exception):
-            if await self.ctx.worker_client.exists("plan_refusal.md"):
-                plan_refusal = await self.ctx.worker_client.read_file("plan_refusal.md")
+            plan_refusal = await self._read_optional_workspace_file(
+                "plan_refusal.md", plan_refusal
+            )
 
         inputs = {
             "task": state.task,

@@ -16,7 +16,10 @@ from controller.observability.tracing import record_worker_events
 from shared.enums import AgentName, ReviewDecision
 from shared.models.schemas import ReviewResult
 from shared.models.simulation import SimulationResult
-from shared.observability.schemas import ReviewDecisionEvent
+from shared.observability.schemas import (
+    ExcessiveDofDetectedEvent,
+    ReviewDecisionEvent,
+)
 from shared.type_checking import type_check
 
 from ..review_handover import validate_reviewer_handover
@@ -108,10 +111,13 @@ class ExecutionReviewerNode(BaseNode):
         )
 
     async def _read_validation_results_text(self) -> str:
-        if not await self.ctx.worker_client.exists("validation_results.json"):
-            return "# No validation_results.json found."
         try:
-            return await self.ctx.worker_client.read_file("validation_results.json")
+            content = await self.ctx.worker_client.read_file_optional(
+                "validation_results.json"
+            )
+            if content is None:
+                return "# No validation_results.json found."
+            return content
         except Exception:
             return "# Failed to read validation_results.json."
 
@@ -126,17 +132,17 @@ class ExecutionReviewerNode(BaseNode):
         try:
             assembly_definition = "# No assembly_definition.yaml found."
             with suppress(Exception):
-                if await self.ctx.worker_client.exists("assembly_definition.yaml"):
-                    assembly_definition = await self.ctx.worker_client.read_file(
-                        "assembly_definition.yaml"
-                    )
+                assembly_definition = await self._read_optional_workspace_file(
+                    "assembly_definition.yaml", assembly_definition
+                )
             benchmark_assembly_definition = await self._read_required_workspace_file(
                 "benchmark_assembly_definition.yaml"
             )
             await self._ensure_current_revision_render_inspection()
             plan_markdown = state.plan or ""
-            if await self.ctx.worker_client.exists("plan.md"):
-                plan_markdown = await self.ctx.worker_client.read_file("plan.md")
+            plan_markdown = await self._read_optional_workspace_file(
+                "plan.md", plan_markdown
+            )
             try:
                 findings = collect_excessive_dof_findings(assembly_definition)
             except Exception as exc:
@@ -209,13 +215,7 @@ class ExecutionReviewerNode(BaseNode):
                 )
                 await record_worker_events(
                     episode_id=state.episode_id,
-                    events=[
-                        {
-                            "event_type": "excessive_dof_detected",
-                            "data": payload,
-                            **payload,
-                        }
-                    ],
+                    events=[ExcessiveDofDetectedEvent(**payload)],
                 )
             unjustified = [
                 finding

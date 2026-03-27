@@ -5198,6 +5198,7 @@
           "cost_weight_delta",
           "library_usage",
           "review_decision",
+          "excessive_dof_detected",
           "circuit_validation",
           "wire_routing",
           "power_budget_check",

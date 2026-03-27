@@ -36,6 +36,7 @@ export enum ObservabilityEventType {
     COST_WEIGHT_DELTA = 'cost_weight_delta',
     LIBRARY_USAGE = 'library_usage',
     REVIEW_DECISION = 'review_decision',
+    EXCESSIVE_DOF_DETECTED = 'excessive_dof_detected',
     CIRCUIT_VALIDATION = 'circuit_validation',
     WIRE_ROUTING = 'wire_routing',
     POWER_BUDGET_CHECK = 'power_budget_check',

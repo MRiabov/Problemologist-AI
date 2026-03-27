@@ -133,13 +133,15 @@ def apply_canonical_dof_checklist(
 
     checklist = dict(review.checklist)
     key = canonical_dof_checklist_key(reviewer_stage)
-    if overwrite or key not in checklist:
+    if review.decision == ReviewDecision.APPROVED:
+        checklist[key] = "pass"
+        if reviewer_stage == "engineering_execution_reviewer":
+            checklist.setdefault("dof_minimality", "pass")
+        elif reviewer_stage == "engineering_plan_reviewer":
+            checklist.setdefault("dof_deviation_justified", "pass")
+    elif overwrite or key not in checklist:
         if checklist_value is None:
-            checklist_value = (
-                "pass"
-                if review.decision == ReviewDecision.APPROVED
-                else "not_applicable"
-            )
+            checklist_value = "not_applicable"
         checklist[key] = checklist_value
     return review.model_copy(update={"checklist": checklist})
 
