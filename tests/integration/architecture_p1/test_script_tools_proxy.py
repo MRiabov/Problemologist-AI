@@ -363,11 +363,15 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
         busy_task = asyncio.create_task(
             client.post(
                 f"{WORKER_HEAVY_URL}/benchmark/verify",
-                json=BenchmarkToolRequest(
-                    script_path="busy_script.py",
-                    backend=SimulatorBackendType.MUJOCO,
-                    smoke_test_mode=True,
-                ).model_dump(mode="json"),
+                json={
+                    "script_path": "busy_script.py",
+                    "backend": SimulatorBackendType.MUJOCO.value,
+                    "smoke_test_mode": True,
+                    "num_scenes": 5,
+                    "duration": 10.0,
+                    "jitter_range": [0.0, 0.0, 0.0],
+                    "seed": 42,
+                },
                 headers={"X-Session-ID": busy_session_id},
                 timeout=1000.0,
             )
@@ -391,8 +395,6 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
                 "backend": SimulatorBackendType.MUJOCO.value,
                 "smoke_test_mode": True,
                 "jitter_range": [0.0, 0.0, 0.0],
-                "num_scenes": 1,
-                "duration": 0.1,
                 "seed": 42,
             },
             headers={"X-Session-ID": tool_session_id},
@@ -404,9 +406,92 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
         assert verify_data.success, verify_data.message
         assert verify_data.artifacts is not None
         assert verify_data.artifacts.verification_result is not None
+        assert verify_data.artifacts.verification_result.num_scenes == 1
+        assert verify_data.artifacts.verification_result.backend_run_count == 1
         assert "WORKER_BUSY" not in verify_resp.text
 
         busy_resp = await busy_task
         assert busy_resp.status_code == 200, busy_resp.text
         busy_data = BenchmarkToolResponse.model_validate(busy_resp.json())
         assert busy_data.success, busy_data.message
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_int_193b_worker_heavy_smoke_verification_uses_smoke_defaults(
+    tmp_path, monkeypatch
+):
+    """INT-193B: smoke-mode verification should shrink omitted batch settings."""
+    from shared.models.simulation import MultiRunResult
+    from shared.workers.schema import ValidationResultRecord, VerificationRequest
+    from worker_heavy.utils import verification as verification_mod
+
+    root = tmp_path / "session"
+    root.mkdir()
+    (root / "scene.xml").write_text("<xml />\n", encoding="utf-8")
+    (root / "validation_results.json").write_text(
+        ValidationResultRecord(
+            success=True,
+            message="seeded",
+            timestamp=0.0,
+            script_path="script.py",
+            script_sha256="0" * 64,
+            verification_result=None,
+        ).model_dump_json(),
+        encoding="utf-8",
+    )
+
+    captured: dict[str, object] = {}
+
+    class DummyBuilder:
+        def build_from_assembly(self, component, objectives, smoke_test_mode):
+            return root / "scene.xml"
+
+    def fake_verify_with_jitter(**kwargs):
+        captured.update(kwargs)
+        return MultiRunResult(
+            num_scenes=kwargs["num_scenes"],
+            success_count=kwargs["num_scenes"],
+            success_rate=1.0,
+            is_consistent=True,
+            individual_results=[],
+            fail_reasons=[],
+        )
+
+    monkeypatch.setattr(
+        verification_mod, "_load_workspace_benchmark_definition", lambda *_, **__: None
+    )
+    monkeypatch.setattr(
+        verification_mod, "load_component_from_script", lambda *_, **__: object()
+    )
+    monkeypatch.setattr(
+        verification_mod, "get_simulation_builder", lambda *_, **__: DummyBuilder()
+    )
+    monkeypatch.setattr(verification_mod, "verify_with_jitter", fake_verify_with_jitter)
+    monkeypatch.setattr(
+        verification_mod, "collect_and_cleanup_events", lambda *_, **__: []
+    )
+    monkeypatch.setattr(
+        verification_mod, "record_validation_result", lambda *_, **__: None
+    )
+
+    response = await verification_mod.run_verification_job(
+        root=root,
+        request=VerificationRequest(
+            script_path="script.py",
+            backend=SimulatorBackendType.MUJOCO,
+            smoke_test_mode=True,
+            jitter_range=[0.0, 0.0, 0.0],
+            seed=42,
+        ),
+        session_id="INT-193B",
+    )
+
+    assert response.success is True
+    assert response.artifacts is not None
+    assert response.artifacts.verification_result is not None
+    assert response.artifacts.verification_result.num_scenes == 1
+    assert response.artifacts.verification_result.backend_run_count == 1
+    assert captured["num_scenes"] == 1
+    assert captured["duration"] == 1.0
+    assert captured["smoke_test_mode"] is True

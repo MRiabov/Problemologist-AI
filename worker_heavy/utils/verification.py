@@ -55,9 +55,13 @@ async def run_verification_job(
         num_scenes = request.num_scenes
         duration = request.duration
         if request.smoke_test_mode:
-            # Keep smoke verification lightweight unless the caller overrides it.
-            num_scenes = num_scenes or 1
-            duration = duration or 1.0
+            # Keep smoke verification lightweight unless the caller explicitly
+            # requested a larger batch or longer duration.
+            provided_fields = getattr(request, "model_fields_set", set())
+            if "num_scenes" not in provided_fields:
+                num_scenes = 1
+            if "duration" not in provided_fields:
+                duration = 1.0
 
         objectives = _load_workspace_benchmark_definition(root, session_id=session_id)
         component = load_component_from_script(
