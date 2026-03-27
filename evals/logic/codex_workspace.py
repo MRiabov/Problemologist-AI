@@ -425,7 +425,13 @@ def build_codex_prompt(
             "Edit `script.py` and any supporting `*.py` files until the implementation works.",
             "Use `python script.py` as the canonical execution path.",
             "Keep `todo.md` and `journal.md` in sync with the work you are actually doing.",
+            "Use the seeded handoff files in this workspace as the primary source of truth; do not go hunting through unrelated dataset examples unless the workspace artifacts are missing or contradictory.",
+            "Prefer the simplest geometry that satisfies the reviewed plan and the benchmark constraints; do not over-engineer alternate mechanisms.",
+            "After a quick pass over the handoff files, start writing the implementation instead of continuing to browse references.",
+            "Do not spend more than a few tool calls on exploratory reading before producing a first implementation draft.",
+            "Do not stop at a merely stable smoke test; the latest revision must pass validation and simulation for the intended task before you hand it off.",
             "When the implementation is ready, run `bash scripts/submit_for_review.sh` after validation and simulation succeed so the latest revision is handed off to review.",
+            "If the submit helper reports a blocker, fix the latest revision and rerun the full validation and simulation flow.",
         ]
     elif is_plan_reviewer_agent(agent_name):
         role_lines = [

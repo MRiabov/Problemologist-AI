@@ -44,6 +44,9 @@ from evals.logic.codex_session_trace import (
     snapshot_workspace_state as _snapshot_workspace_state,
 )
 from evals.logic.codex_workspace import (
+    LocalWorkspaceClient as _LocalWorkspaceClient,
+)
+from evals.logic.codex_workspace import (
     copy_workspace_contents as _copy_workspace_contents,
 )
 from evals.logic.codex_workspace import (
@@ -1356,6 +1359,7 @@ async def _collect_metrics_for_checks(
     check_configs: dict[str, MilestoneConfig],
     success: bool,
     session_id: str,
+    workspace_dir: Path | None = None,
     episode_data: dict[str, Any] | None,
     extra_episodes: list[dict[str, Any] | None] | None = None,
     agent_name: AgentName | None = None,
@@ -1376,12 +1380,23 @@ async def _collect_metrics_for_checks(
     needs_worker_checks = check_names.intersection(
         {"review_artifacts_complete", "plan_artifacts_present"}
     )
-    if needs_worker_checks and session_id:
-        worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
-        try:
-            if "review_artifacts_complete" in needs_worker_checks and agent_name:
-                review_prefix = AGENT_SPECS.get(agent_name).review_filename_prefix
-                if review_prefix:
+    if needs_worker_checks and agent_name:
+        review_prefix = AGENT_SPECS.get(agent_name).review_filename_prefix
+        required_files = PLANNER_REQUIRED_FILES.get(agent_name, ())
+
+        if workspace_dir is not None and workspace_dir.exists():
+            worker = _LocalWorkspaceClient(
+                root=workspace_dir,
+                session_id=session_id or f"workspace-{agent_name.value}",
+            )
+        elif session_id:
+            worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+        else:
+            worker = None
+
+        if worker is not None:
+            try:
+                if "review_artifacts_complete" in needs_worker_checks and review_prefix:
                     metrics[
                         "review_artifacts_complete"
                     ] = await _review_artifacts_complete_for_prefix(
@@ -1389,17 +1404,21 @@ async def _collect_metrics_for_checks(
                         review_filename_prefix=review_prefix,
                     )
 
-            if "plan_artifacts_present" in needs_worker_checks and agent_name:
-                required_files = PLANNER_REQUIRED_FILES.get(agent_name, ())
-                metrics["plan_artifacts_present"] = await _planner_artifacts_present(
-                    worker=worker,
-                    required_files=required_files,
-                )
-        finally:
-            await worker.aclose()
+                if "plan_artifacts_present" in needs_worker_checks and required_files:
+                    metrics[
+                        "plan_artifacts_present"
+                    ] = await _planner_artifacts_present(
+                        worker=worker,
+                        required_files=required_files,
+                    )
+            finally:
+                await worker.aclose()
 
     if any(_check_needs_constraints(check) for check in check_configs.values()):
-        metrics.update(await _load_constraint_context(session_id))
+        if workspace_dir is not None and workspace_dir.exists():
+            metrics.update(_load_constraint_context_from_workspace(workspace_dir))
+        else:
+            metrics.update(await _load_constraint_context(session_id))
 
     return metrics
 
@@ -1413,6 +1432,7 @@ async def _record_hard_check_outcomes(
     success: bool,
     episode_data: dict[str, Any] | None,
     session_id: str,
+    workspace_dir: Path | None = None,
     failure_context: dict[str, Any] | None = None,
     metrics_override: dict[str, Any] | None = None,
 ) -> bool | None:
@@ -1424,6 +1444,7 @@ async def _record_hard_check_outcomes(
         check_configs=cfg.hard_checks,
         success=success,
         session_id=session_id,
+        workspace_dir=workspace_dir,
         episode_data=episode_data,
         agent_name=agent_name,
         metrics_override=metrics_override,
@@ -1474,6 +1495,7 @@ async def _record_judge_outcomes(
     item: EvalDatasetItem,
     success: bool,
     session_id: str,
+    workspace_dir: Path | None = None,
     episode_data: dict[str, Any] | None,
     extra_episodes: list[dict[str, Any] | None] | None = None,
     metrics_override: dict[str, Any] | None = None,
@@ -1490,6 +1512,7 @@ async def _record_judge_outcomes(
         check_configs=judge_checks,
         success=success,
         session_id=session_id,
+        workspace_dir=workspace_dir,
         episode_data=episode_data,
         extra_episodes=extra_episodes,
         agent_name=agent_name,
@@ -2399,6 +2422,7 @@ async def _run_codex_eval(
             success=success,
             episode_data=None,
             session_id=session_id,
+            workspace_dir=materialized.workspace_dir,
             failure_context=(
                 {
                     "error_code": "codex_eval_failed",
@@ -2444,6 +2468,7 @@ async def _run_codex_eval(
                 item=item,
                 success=success,
                 session_id=session_id,
+                workspace_dir=materialized.workspace_dir,
                 episode_data=None,
                 extra_episodes=None,
                 metrics_override=judge_metrics,
