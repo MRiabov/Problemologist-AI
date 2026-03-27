@@ -5,6 +5,17 @@ We need evaluation criteria that would be not only functional, but tied to numbe
 Bad example: specific as "Markdown would be valid."
 Good example: Testing of markdown for structural validity be successful in 95% of cases.
 
+### Benchmark complexity levels
+
+These tiers describe benchmark and solution complexity, not the fast/medium/slow execution tiers below. The ladder widens exponentially in scope, and the part-count bands are intentionally approximate and may overlap slightly at the boundaries.
+
+1. Level 0: smoke-test only, used to verify baseline solve capability on intentionally simple behavior. Roughly 1-3 meaningful parts.
+2. Level 1: simple but nontrivial planning and reasoning tasks. Roughly 2-5 meaningful parts.
+3. Level 2: moderate tasks with a larger assembly or workflow. Roughly 5-10 meaningful parts.
+4. Level 3: complex systems. Roughly up to 25 meaningful parts.
+5. Level 4: very complex systems. Roughly up to 75 meaningful parts.
+6. Level 5: engineering AGI tier. Roughly up to 250 parts or more.
+
 ## Multi-level evaluations architecture
 
 We should be able to test evaluations on multiple tiers, specifically:

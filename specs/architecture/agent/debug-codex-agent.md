@@ -11,7 +11,13 @@
 ## Purpose
 
 The debug Codex mode exists to reduce the cost of repeated eval iteration.
-Local Codex execution is the default eval-debug path, while the controller-backed paid-provider path remains available when a run must call OpenRouter or Gemini.
+Local Codex execution is the default eval-debug path. The controller-backed API path remains available when a run must call a paid API provider or needs controller-specific orchestration traces.
+
+The conceptual split is:
+
+1. `controller` is the orchestration layer and remains the same application responsibility.
+2. The LLM/tool substrate can be either API-backed or Codex CLI-backed.
+3. Judge and reviewer logic is not exclusive to the controller path; it can run against the same deterministic workspace artifacts in Codex mode when the local contracts are satisfied.
 
 This mode preserves the same workspace contract as the rest of the application:
 
@@ -42,15 +48,15 @@ The materialized workspace is the source of truth for the session, not the repos
 
 The workspace contract is:
 
-1. The workspace root is the current directory for the Codex process.
-2. The initial prompt is written to `prompt.md` at the workspace root.
-3. Shared boilerplate starter files come from `shared/agent_templates/common/`.
-4. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
-5. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
-6. Coder workspaces include `scripts/submit_for_review.sh` from `shared/agent_templates/codex/`.
-7. Reviewer workspaces include `scripts/submit_review.sh` from `shared/agent_templates/codex/`.
-8. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
-9. Seed-row artifacts are copied into the workspace before prompt generation.
+01. The workspace root is the current directory for the Codex process.
+02. The initial prompt is written to `prompt.md` at the workspace root.
+03. Shared boilerplate starter files come from `shared/agent_templates/common/`.
+04. Role-specific planner starter files come from the role template repositories under `shared/assets/template_repos/`.
+05. Planner workspaces include `scripts/submit_plan.sh` from `shared/agent_templates/codex/`.
+06. Coder workspaces include `scripts/submit_for_review.sh` from `shared/agent_templates/codex/`.
+07. Reviewer workspaces include `scripts/submit_review.sh` from `shared/agent_templates/codex/`.
+08. Planner workspaces do not copy `result.py`, because that file is runtime-owned and not part of the seeded handoff surface.
+09. Seed-row artifacts are copied into the workspace before prompt generation.
 10. The materialized workspace remains local to the run and is not promoted into a canonical shared root.
 
 The workspace materializer in [dataset/evals/materialize_seed_workspace.py](../../../dataset/evals/materialize_seed_workspace.py) is the inspection helper for this same workspace contract.
@@ -69,6 +75,7 @@ The canonical prompt rules are:
 5. Coder prompts instruct editing `script.py` and supporting `*.py` files, then running `bash scripts/submit_for_review.sh` after validation and simulation succeed.
 6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
 7. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
+8. The prompt does not need to describe repository-level import paths or module layout.
 
 The prompt builder in [evals/logic/codex_workspace.py](../../../evals/logic/codex_workspace.py) is the canonical definition of that prompt text.
 
@@ -153,8 +160,9 @@ The runner behavior for Codex mode is:
 1. Materialize the workspace for the selected eval row.
 2. Launch `codex exec` in that workspace with the prompt text.
 3. Verify the workspace locally after Codex exits.
-4. Persist session metadata including workspace path, launch return code, verification result, and failure reason.
-5. Fail closed if the local Codex CLI is missing or the workspace verification fails.
+4. Optionally run local judge/reviewer passes against the same workspace artifacts when the run requests judge/reviewer mode and the local stage contracts are satisfied.
+5. Persist session metadata including workspace path, launch return code, verification result, judge/reviewer outcomes when run, and failure reason.
+6. Fail closed if the local Codex CLI is missing or the workspace verification fails.
 
 The runner does not require controller/worker orchestration for the agent loop in Codex mode.
 The controller-backed preflight and health checks remain part of the paid-provider/controller path only.
@@ -193,8 +201,9 @@ The current validation contract is:
 3. Materialized planner workspaces do not contain `/workspace` in the prompt text.
 4. Planner submission succeeds from the local workspace helper.
 5. Path traversal outside the workspace root is rejected.
-6. The Codex launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated `CODEX_HOME` seeded with the active auth bundle and a minimal generated `config.toml`, and a workspace-local `PYTHONPATH` so model-generated shell commands can only mutate the materialized workspace and any explicitly added writable dirs.
-7. The controller backend still executes tasks after its preflight step.
+6. The Codex launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated `CODEX_HOME` seeded with the active auth bundle and a minimal generated `config.toml`, and a `PYTHONPATH` that prefers the materialized workspace while still appending the repo root so shared repo modules import correctly during local execution.
+7. Codex judge/reviewer mode can run locally from the same workspace artifacts when requested.
+8. The controller backend still executes tasks after its preflight step.
 
 The integration test file that exercises this contract is [tests/integration/architecture_p0/test_codex_runner_mode.py](../../../tests/integration/architecture_p0/test_codex_runner_mode.py).
 
@@ -202,6 +211,4 @@ The integration test file that exercises this contract is [tests/integration/arc
 
 This mode does not create a new agent graph.
 It does not replace the controller-backed production path.
-It does not silently support judge/reviewer-chain execution in Codex mode.
-
-<!-- Future: add codex-backed judge/reviewer execution only after the local review-helper contract is defined and tested. -->
+It does not change the controller's orchestration responsibility.

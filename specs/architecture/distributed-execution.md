@@ -7,6 +7,8 @@
 - Covers persistence/storage expectations, concurrency model, WebSocket control-plane transport, and Temporal orchestration boundary.
 - Use this file when changing infra topology or controller-to-worker integration behavior.
 
+The controller remains the orchestration layer. The LLM/tool substrate under that controller can be either API-backed or Codex CLI-backed, but that is a backend choice, not a change to the controller's role.
+
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
 
 1. `worker-light` for filesystem + execution tooling,
@@ -82,6 +84,12 @@ Backend responsibility is split by operation purpose:
 2. `/benchmark/validate` performs fast validation plus static preview generation.
 3. Static preview generation for `/benchmark/validate` uses build123d/VTK by default even when `physics.backend=genesis`.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
+
+Backend choice is orthogonal to the controller/worker split:
+
+- API-backed runs execute through the controller's HTTP orchestration path.
+- Codex-backed runs execute through the local Codex workspace path.
+- Both paths still rely on the same worker services for filesystem, execution, validation, simulation, and rendering.
 
 Direct `worker-heavy` benchmark endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.
 

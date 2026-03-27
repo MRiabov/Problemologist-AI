@@ -83,6 +83,8 @@ print(resp.choices[0].message.reasoning_content)
 
 Both of the agents "live" directly in the filesystem of the container that they have been assigned to and thus runs their workflow. This serves the purpose of reducing complexity in tooling, and giving the agents the familiarity with editing tools. There are skills, a script to be written, and verification tools in the script.
 
+Agent access is sandbox-bound: an agent must not have read, write, or execution access to filesystem paths outside its assigned sandbox/workspace, except through explicitly mounted read-only runtime inputs that are part of that sandbox contract. Any escape to the host filesystem or repository root outside the sandbox is a contract violation.
+
 `execute_command(...)` follows that same terminal model: it is intended to run shell commands from the session workspace root. If any current implementation path treats it as a raw-Python-only executor, that is implementation drift rather than the architecture contract.
 
 Agent-authored Python scripts are expected to import runtime helpers from a top-level `utils` package. The submission script contract is:
@@ -216,23 +218,24 @@ Rules:
 05. Tool availability can be broad, but path permissions are enforced per role by this file.
 06. Reviewer roles (Benchmark Plan Reviewer, Benchmark Reviewer, Engineering Plan Reviewer, Engineering Execution Reviewer, Electronics Reviewer) get `write/edit` tools, but policy only allows writes to their stage-specific persisted review YAML pairs.
 07. `.manifests/**` is non-overridable deny for all LLM agent roles (read/write/edit); only backend runtime utilities may access it.
-08. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
-09. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
-10. The preferred workspace path contract is workspace-relative paths such as `plan.md`, `script.py`, `todo.md`, and `journal.md`. Agent prompts and new code must treat these relative paths as canonical.
-11. `/workspace` path aliasing is a compatibility fallback, not a normative contract. It exists because some earlier runtime/tooling behavior accidentally taught agents to address the session root as `/workspace`, and we are temporarily preserving that alias to avoid immediate refactoring cost.
-12. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
-13. `config/agents_config.yaml` is also the source of truth for per-role visual-inspection policy, not only path permissions.
-14. Visual-inspection policy is structured as `visual_inspection: {required, min_images, reminder_interval}` under each role.
-15. Current required-visual roles are: `benchmark_plan_reviewer`, `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
-16. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
-17. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
-18. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
-19. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
-20. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
-21. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
-22. `shared/agent_templates/common/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
-23. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
-24. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/common/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
+08. No agent role may be granted access to filesystem paths outside its sandbox/workspace root; mounted read-only inputs remain readable only within the sandbox boundary and are not a general filesystem escape hatch.
+09. Engineering Plan Reviewer must have tooling to run deterministic handoff checks (`validate_and_price.py` and rule-based DOF scan); if the runtime does not expose this as direct shell execution, it must expose an equivalent dedicated tool with the same fail-closed behavior.
+10. Canonical config shape is `filesystem_permissions: {read, write}` under `defaults` and each agent role. Legacy top-level `read`/`write` keys are normalized by runtime loader for backward compatibility, but new edits should use `filesystem_permissions`.
+11. The preferred workspace path contract is workspace-relative paths such as `plan.md`, `script.py`, `todo.md`, and `journal.md`. Agent prompts and new code must treat these relative paths as canonical.
+12. `/workspace` path aliasing is a compatibility fallback, not a normative contract. It exists because some earlier runtime/tooling behavior accidentally taught agents to address the session root as `/workspace`, and we are temporarily preserving that alias to avoid immediate refactoring cost.
+13. We should not expand `/workspace` usage in prompts, tests, or new code. New edits should continue to target the canonical relative-path contract, and the alias should be treated as technical debt scheduled for later cleanup when refactoring cost is acceptable.
+14. `config/agents_config.yaml` is also the source of truth for per-role visual-inspection policy, not only path permissions.
+15. Visual-inspection policy is structured as `visual_inspection: {required, min_images, reminder_interval}` under each role.
+16. Current required-visual roles are: `benchmark_plan_reviewer`, `benchmark_reviewer`, `engineer_planner`, `engineer_coder`, `engineer_plan_reviewer`, and `engineer_execution_reviewer`.
+17. Visual inspection is conditional on actual render-image availability in `renders/`; roles are not required to inspect images that do not exist yet.
+18. Reminder behavior is runtime-enforced: if a required role keeps working without inspecting the configured minimum number of render images, the runtime periodically injects deterministic reminder messages using `reminder_interval`.
+19. The current production/default policy value is `min_images: 1` for the required roles above. This is a policy choice in config, not a hardcoded architecture constant.
+20. Long operational guidance should be carried by runtime-loaded skills where possible. `config/prompts.yaml` should define the core contract, but not become the primary home for sprawling workflow instructions.
+21. `config/agents_config.yaml` also owns preview-render modality policy under top-level `render: {rgb, depth, segmentation}`.
+22. Those flags control whether build123d/VTK-backed preview artifacts are persisted into `renders/` for each modality; they do not change worker routing or backend selection policy.
+23. `shared/agent_templates/common/` is the shared source of truth for reusable starter files. Workspace bootstrap, seeded dataset materialization, and integration fixtures copy these template files into the workspace instead of duplicating the same boilerplate in row-local seed bundles.
+24. `worker_light/agent_files/` mirrors the same starter content for runtime bootstrap and local inspection. It is a mirrored runtime bundle, not an independent source of truth.
+25. When the exact same starter file is reused across agents, keep the body in `shared/agent_templates/common/` and copy it into the workspace from there rather than duplicating it in multiple artifact directories.
 
 Canonical minimal example (`config/agents_config.yaml`):
 
