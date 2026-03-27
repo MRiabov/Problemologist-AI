@@ -1,8 +1,10 @@
 import re
 from contextlib import suppress
+from typing import Any
 
 import dspy
 import structlog
+import yaml
 from langchain_core.messages import AIMessage
 
 from controller.agent.config import settings
@@ -83,13 +85,17 @@ class CoderNode(BaseNode):
         inputs = {
             "task": state.task,
             "current_step": current_step,
-            "plan": state.plan,
-            "todo": todo,
-            "assembly_definition": assembly_definition,
-            "objectives": objectives,
-            "benchmark_assembly_definition": benchmark_assembly_definition,
-            "steer_context": steer_context,
-            "feedback": state.feedback,
+            "plan": self._prepare_text_context(state.plan, max_chars=5000),
+            "todo": self._prepare_text_context(todo, max_chars=5000),
+            "assembly_definition": self._prepare_yaml_context(
+                assembly_definition, max_chars=3500
+            ),
+            "objectives": self._prepare_yaml_context(objectives, max_chars=3500),
+            "benchmark_assembly_definition": self._prepare_yaml_context(
+                benchmark_assembly_definition, max_chars=3500
+            ),
+            "steer_context": self._prepare_text_context(steer_context, max_chars=2000),
+            "feedback": self._prepare_text_context(state.feedback, max_chars=2000),
         }
         validate_files = [
             "plan.md",
@@ -173,6 +179,85 @@ class CoderNode(BaseNode):
             if line.strip().startswith("- [ ]"):
                 return line.strip().replace("- [ ]", "").strip()
         return None
+
+    def _prepare_text_context(self, text: str, *, max_chars: int) -> str:
+        """Trim oversized freeform context while preserving the leading contract."""
+        stripped = text.strip()
+        if len(stripped) <= max_chars:
+            return stripped
+        return f"{stripped[:max_chars]}\n... [truncated]"
+
+    def _prepare_yaml_context(self, text: str, *, max_chars: int) -> str:
+        """Compact YAML context to the fields the coder actually needs."""
+        stripped = text.strip()
+        if not stripped:
+            return stripped
+
+        try:
+            parsed = yaml.safe_load(stripped)
+        except Exception:
+            return self._prepare_text_context(stripped, max_chars=max_chars)
+
+        compacted = self._compact_yaml_value(parsed)
+        rendered = yaml.safe_dump(compacted, sort_keys=False).strip()
+        return (
+            rendered
+            if len(rendered) <= max_chars
+            else self._prepare_text_context(rendered, max_chars=max_chars)
+        )
+
+    def _compact_yaml_value(
+        self,
+        value: Any,
+        *,
+        depth: int = 0,
+        max_depth: int = 4,
+        max_items: int = 6,
+        max_str_chars: int = 240,
+    ) -> Any:
+        if value is None or isinstance(value, (bool, int, float)):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if len(stripped) <= max_str_chars:
+                return stripped
+            return f"{stripped[:max_str_chars]}... [truncated]"
+        if depth >= max_depth:
+            return self._compact_yaml_scalar(value, max_str_chars=max_str_chars)
+        if isinstance(value, dict):
+            return {
+                key: self._compact_yaml_value(
+                    item,
+                    depth=depth + 1,
+                    max_depth=max_depth,
+                    max_items=max_items,
+                    max_str_chars=max_str_chars,
+                )
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            items = [
+                self._compact_yaml_value(
+                    item,
+                    depth=depth + 1,
+                    max_depth=max_depth,
+                    max_items=max_items,
+                    max_str_chars=max_str_chars,
+                )
+                for item in value[:max_items]
+            ]
+            if len(value) > max_items:
+                items.append(f"... {len(value) - max_items} more items")
+            return items
+        return self._compact_yaml_scalar(value, max_str_chars=max_str_chars)
+
+    def _compact_yaml_scalar(self, value: Any, *, max_str_chars: int) -> Any:
+        if isinstance(value, str):
+            stripped = value.strip()
+            if len(stripped) <= max_str_chars:
+                return stripped
+            return f"{stripped[:max_str_chars]}... [truncated]"
+        return str(value)
 
 
 # Factory function for LangGraph
