@@ -2437,6 +2437,7 @@ async def _run_codex_eval(
         )
         if (
             run_judge
+            and run_reviewers_with_judge
             and success
             and hard_checks_passed is True
             and JUDGE_REVIEWER_CHAIN.get(agent_name)

@@ -8,9 +8,11 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from evals.logic import runner
 from evals.logic.codex_workspace import (
     build_codex_env,
     materialize_seed_workspace,
@@ -20,6 +22,7 @@ from evals.logic.codex_workspace import (
 from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
 from shared.enums import AgentName
+from shared.enums import ReviewDecision
 from shared.models.schemas import DatasetCurationManifest, PlannerSubmissionResult
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -99,6 +102,99 @@ def test_run_evals_defaults_are_smoke_test_contract():
     assert args.limit == 1
     assert args.concurrency == 1
     assert args.level is None
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_run_evals_codex_judge_does_not_launch_reviewers_without_flag(
+    tmp_path, monkeypatch
+):
+    item = EvalDatasetItem(
+        id="codex-judge-001",
+        task="codex judge reviewer gate regression",
+        complexity_level=0,
+        expected_decision=ReviewDecision.APPROVED,
+    )
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    materialized = SimpleNamespace(
+        workspace_dir=workspace_dir,
+        prompt_path=workspace_dir / "prompt.md",
+        prompt_text="prompt",
+        copied_paths=(),
+    )
+
+    monkeypatch.setattr(runner, "SESSION_LOG_ROOT", tmp_path / "session-root")
+    monkeypatch.setattr(
+        runner, "_materialize_codex_workspace", lambda **_: materialized
+    )
+    monkeypatch.setattr(runner, "_launch_codex_exec", lambda *_, **__: 0)
+
+    async def fake_verify_codex_workspace_for_agent(**_: object) -> SimpleNamespace:
+        return SimpleNamespace(
+            success=True,
+            errors=[],
+            details={},
+            verification_name="codex-verify",
+        )
+
+    async def fake_record_hard_check_outcomes(**_: object) -> bool:
+        return True
+
+    async def fake_record_judge_outcomes(**_: object) -> None:
+        return None
+
+    monkeypatch.setattr(
+        runner,
+        "_verify_codex_workspace_for_agent",
+        fake_verify_codex_workspace_for_agent,
+    )
+    monkeypatch.setattr(
+        runner, "_record_hard_check_outcomes", fake_record_hard_check_outcomes
+    )
+    monkeypatch.setattr(runner, "_record_judge_outcomes", fake_record_judge_outcomes)
+    monkeypatch.setattr(runner, "_write_eval_session_metadata", lambda **_: None)
+    monkeypatch.setattr(
+        runner,
+        "_resolve_codex_home_root",
+        lambda **_: tmp_path / "codex-home",
+    )
+    monkeypatch.setattr(
+        runner,
+        "_capture_latest_codex_session_artifacts",
+        lambda **_: None,
+    )
+
+    reviewer_called = False
+
+    async def fail_reviewer_chain_for_judge(**_: object) -> list[dict[str, object]]:
+        nonlocal reviewer_called
+        reviewer_called = True
+        raise AssertionError(
+            "reviewer chain should not run without run_reviewers_with_judge"
+        )
+
+    monkeypatch.setattr(
+        runner,
+        "_run_codex_reviewer_chain_for_judge",
+        fail_reviewer_chain_for_judge,
+    )
+
+    stats = {AgentName.BENCHMARK_CODER: {"total": 0, "success": 0}}
+    success = await runner._run_codex_eval(
+        item=item,
+        stats=stats,
+        agent_name=AgentName.BENCHMARK_CODER,
+        reward_agent_configs={},
+        case_label="judge-gate",
+        run_judge=True,
+        run_reviewers_with_judge=False,
+    )
+
+    assert success is True
+    assert reviewer_called is False
+    assert stats[AgentName.BENCHMARK_CODER]["total"] == 1
+    assert stats[AgentName.BENCHMARK_CODER]["success"] == 1
 
 
 @pytest.mark.integration_p0
