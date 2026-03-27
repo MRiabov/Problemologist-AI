@@ -2,6 +2,7 @@ from pathlib import Path
 
 import structlog
 
+from shared.simulation.backends import RendererBackend
 from worker_heavy.utils.rendering import VideoRenderer
 
 logger = structlog.get_logger(__name__)
@@ -22,7 +23,7 @@ class MediaRecorder:
         self.capture_interval = capture_interval
         self.session_id = session_id
 
-    def update(self, step_idx, backend):
+    def update(self, step_idx: int, backend: RendererBackend):
         """Capture a frame if at the right interval."""
         if not self.video_renderer or step_idx % self.capture_interval != 0:
             return

@@ -24,9 +24,21 @@ def _planner_agent(workspace: Path | None = None) -> AgentName | None:
         except ValueError:
             return None
 
-    # The Codex launcher does not need a role-specific env var here.
-    # Infer the planner variant from the workspace file layout instead.
     workspace = Path.cwd() if workspace is None else Path(workspace)
+
+    prompt_path = workspace / "prompt.md"
+    if prompt_path.exists():
+        prompt_text = prompt_path.read_text(encoding="utf-8")
+        for candidate, marker in (
+            (AgentName.BENCHMARK_PLANNER, "Agent: benchmark_planner"),
+            (AgentName.ENGINEER_PLANNER, "Agent: engineer_planner"),
+            (AgentName.ELECTRONICS_PLANNER, "Agent: electronics_planner"),
+        ):
+            if marker in prompt_text:
+                return candidate
+
+    # The Codex launcher does not need a role-specific env var here.
+    # Fall back to the workspace file layout only if the prompt marker is absent.
     benchmark_handoff = workspace / "benchmark_assembly_definition.yaml"
     engineering_handoff = workspace / "assembly_definition.yaml"
 
@@ -37,8 +49,6 @@ def _planner_agent(workspace: Path | None = None) -> AgentName | None:
         return AgentName.BENCHMARK_PLANNER
     if has_engineering_handoff and not has_benchmark_handoff:
         return AgentName.ENGINEER_PLANNER
-    if has_benchmark_handoff and has_engineering_handoff:
-        return None
     return None
 
 
@@ -135,8 +145,7 @@ def submit_plan(workspace: Path | None = None) -> PlannerSubmissionResult:
             status="rejected",
             errors=[
                 "Unable to infer planner agent from workspace: expected "
-                "benchmark_assembly_definition.yaml or "
-                "assembly_definition.yaml"
+                "prompt.md role marker or a single planner handoff file"
             ],
             node_type=AgentName.ENGINEER_PLANNER,
         )

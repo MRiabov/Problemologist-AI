@@ -11,7 +11,7 @@ from shared.simulation.backends import (
     ActuatorState,
     BodyState,
     ContactForce,
-    PhysicsBackend,
+    PhysicsRendererBackend,
     SimulationScene,
     SiteState,
     StepResult,
@@ -20,7 +20,7 @@ from shared.simulation.backends import (
 from shared.workers.schema import SegmentationLegendEntry
 
 
-class MuJoCoBackend(PhysicsBackend):
+class MuJoCoBackend(PhysicsRendererBackend):
     _lock = threading.Lock()
 
     def __init__(self, session_id: str | None = None):

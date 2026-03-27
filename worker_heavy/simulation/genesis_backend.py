@@ -30,7 +30,7 @@ from shared.simulation.backends import (
     ActuatorState,
     BodyState,
     ContactForce,
-    PhysicsBackend,
+    PhysicsRendererBackend,
     SimulationScene,
     SiteState,
     StepResult,
@@ -53,7 +53,7 @@ def _parse_compile_kernels_env() -> bool | None:
     return None
 
 
-class GenesisBackend(PhysicsBackend):
+class GenesisBackend(PhysicsRendererBackend):
     _lock = threading.Lock()
 
     def __init__(self, session_id: str | None = None, num_envs: int = 1):
