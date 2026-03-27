@@ -59,6 +59,23 @@ def build():
 """
 
 
+def _build_open_wire_script(material_id: str) -> str:
+    return f"""
+from build123d import *
+from shared.models.schemas import PartMetadata
+def build():
+    p = Wire.make_polygon([
+        (-1, -1, 0),
+        (1, -1, 0),
+        (1, 1, 0),
+        (-1, 1, 0),
+    ])
+    p.label = "wire_part"
+    p.metadata = PartMetadata(material_id="{material_id}", fixed=True)
+    return p
+"""
+
+
 def _default_objectives() -> BenchmarkDefinition:
     return BenchmarkDefinition(
         objectives=ObjectivesSection(
@@ -430,6 +447,69 @@ def build():
             image = Image.open(io.BytesIO(blob_resp.content)).convert("RGB")
             extrema = image.getextrema()
             assert any(high > 0 for _, high in extrema), extrema
+
+        fail_session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+        fail_headers = {"X-Session-ID": fail_session_id}
+        wire_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content=_build_open_wire_script("aluminum_6061"),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=fail_headers,
+        )
+        assert wire_resp.status_code == 200, wire_resp.text
+
+        wire_objectives_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="benchmark_definition.yaml",
+                content=yaml.dump(_default_objectives().model_dump(mode="json")),
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=fail_headers,
+        )
+        assert wire_objectives_resp.status_code == 200, wire_objectives_resp.text
+
+        wire_validate_resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/validate",
+            json=BenchmarkToolRequest(script_path="script.py").model_dump(mode="json"),
+            headers=fail_headers,
+            timeout=180.0,
+        )
+        assert wire_validate_resp.status_code == 200, wire_validate_resp.text
+        wire_validate_data = BenchmarkToolResponse.model_validate(
+            wire_validate_resp.json()
+        )
+        assert not wire_validate_data.success, wire_validate_data
+        assert wire_validate_data.message is not None
+        assert (
+            "preview" in wire_validate_data.message.lower()
+            or "render" in wire_validate_data.message.lower()
+        ), wire_validate_data.message
+
+        wire_events = wire_validate_resp.json().get("events", [])
+        assert any(
+            event.get("event_type") == "render_request_benchmark"
+            and event.get("backend") == "build123d_vtk"
+            and event.get("purpose") == "validation_static_preview"
+            for event in wire_events
+        ), wire_events
+
+        wire_ls_resp = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/ls",
+            json=ListFilesRequest(path="renders").model_dump(mode="json"),
+            headers=fail_headers,
+        )
+        assert wire_ls_resp.status_code == 200, wire_ls_resp.text
+        wire_render_names = [
+            entry["name"] for entry in wire_ls_resp.json() if not entry["is_dir"]
+        ]
+        assert "render_manifest.json" not in wire_render_names, wire_render_names
+        assert not any(name.endswith(".png") for name in wire_render_names), (
+            wire_render_names
+        )
 
 
 @pytest.mark.integration_p0
