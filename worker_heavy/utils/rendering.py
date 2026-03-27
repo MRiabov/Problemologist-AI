@@ -130,9 +130,9 @@ def _save_segmentation_render(segmentation_map: np.ndarray, output_path: Path) -
     Image.fromarray(seg_image, mode="RGB").save(output_path, "PNG")
 
 
-def _workspace_render_path(output_path: Path, filename: str) -> str:
+def _workspace_render_path(output_path: Path, filename: str) -> Path:
     prefix = output_path.name if output_path.name else "renders"
-    return f"{prefix}/{filename}"
+    return Path(prefix) / filename
 
 
 def _build_depth_metadata(
@@ -320,18 +320,22 @@ def prerender_24_views(
                         )
                         siblings = RenderSiblingPaths(
                             rgb=(
-                                _workspace_render_path(output_path, filename)
+                                str(_workspace_render_path(output_path, filename))
                                 if render_policy.rgb
                                 else None
                             ),
                             depth=(
-                                _workspace_render_path(output_path, depth_path.name)
+                                str(
+                                    _workspace_render_path(output_path, depth_path.name)
+                                )
                                 if render_policy.depth
                                 else None
                             ),
                             segmentation=(
-                                _workspace_render_path(
-                                    output_path, segmentation_path.name
+                                str(
+                                    _workspace_render_path(
+                                        output_path, segmentation_path.name
+                                    )
                                 )
                                 if render_policy.segmentation
                                 else None

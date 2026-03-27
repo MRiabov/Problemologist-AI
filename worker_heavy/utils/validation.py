@@ -209,15 +209,6 @@ def _validate_benchmark_definition_consistency(
         if box_error is not None:
             return box_error
 
-    build_zone_error = _validate_box_within(
-        "build_zone",
-        build_zone,
-        "simulation_bounds",
-        simulation_bounds,
-    )
-    if build_zone_error is not None:
-        return build_zone_error
-
     for zone in objectives.objectives.forbid_zones:
         zone_error = _validate_bounding_box_order(f"forbid zone '{zone.name}'", zone)
         if zone_error is not None:
@@ -283,6 +274,18 @@ def _validate_benchmark_definition_consistency(
             )
 
     return None
+
+
+def validate_benchmark_submission_simulation_bounds(
+    objectives: BenchmarkDefinition,
+) -> str | None:
+    """Fail closed when the benchmark build zone exceeds the declared bounds."""
+    return _validate_box_within(
+        "build_zone",
+        objectives.objectives.build_zone,
+        "simulation_bounds",
+        objectives.simulation_bounds,
+    )
 
 
 def _metadata_is_fixed(metadata: Any) -> bool:

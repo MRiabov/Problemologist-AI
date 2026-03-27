@@ -108,7 +108,7 @@ def _collect_submission_artifacts(
         elif render_image_paths:
             synthesized_manifest = build_render_manifest(
                 {
-                    f"/{path.lstrip('/')}": RenderArtifactMetadata(modality="rgb")
+                    path: RenderArtifactMetadata(modality="rgb")
                     for path in sorted(dict.fromkeys(render_image_paths))
                 },
                 workspace_root=root,
@@ -165,7 +165,7 @@ def _collect_simulation_artifacts(
     elif render_image_paths:
         synthesized_manifest = build_render_manifest(
             {
-                f"/{path.lstrip('/')}": RenderArtifactMetadata(modality="rgb")
+                path: RenderArtifactMetadata(modality="rgb")
                 for path in sorted(dict.fromkeys(render_image_paths))
             },
             workspace_root=root,

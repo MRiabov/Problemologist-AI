@@ -152,7 +152,7 @@ class FilesystemRouter:
                 continue
             if not self._is_static_preview_render(entry):
                 continue
-            render_paths.append(f"/{entry.relative_to(self.local_backend.root)}")
+            render_paths.append(str(entry.relative_to(self.local_backend.root)))
 
         if not render_paths:
             return

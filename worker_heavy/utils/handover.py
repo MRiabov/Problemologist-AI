@@ -24,6 +24,9 @@ from worker_heavy.utils.file_validation import (
     validate_declared_planner_cost_contract,
     validate_environment_attachment_contract,
 )
+from worker_heavy.utils.validation import (
+    validate_benchmark_submission_simulation_bounds,
+)
 from worker_heavy.workbenches.config import load_required_merged_config
 
 logger = structlog.get_logger(__name__)
@@ -73,6 +76,13 @@ def _normalize_render_path(path: str) -> str:
     return normalized
 
 
+def _resolve_workspace_path(cwd: Path, raw_path: str) -> Path:
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    return cwd / path
+
+
 def _derived_episode_id(session_id: str | None) -> str | None:
     if not session_id:
         return None
@@ -115,6 +125,22 @@ def _validate_render_manifest_bundle(
     except Exception as exc:
         raise ValueError(f"renders/render_manifest.json is invalid: {exc}") from exc
 
+    if not render_manifest.revision:
+        raise ValueError("renders/render_manifest.json revision missing")
+    current_revision = _latest_git_revision(renders_dir.parent)
+    if not current_revision:
+        raise ValueError(
+            "Unable to determine current repository git revision for latest "
+            "preview bundle validation."
+        )
+    if render_manifest.revision.strip().lower() != current_revision:
+        raise ValueError(
+            "renders/render_manifest.json is out of sync with the latest preview "
+            "bundle: revision mismatch: "
+            f"manifest={render_manifest.revision.strip().lower()} "
+            f"latest={current_revision}"
+        )
+
     details: list[str] = []
     actual_render_paths = {
         _normalize_render_path(path)
@@ -140,22 +166,6 @@ def _validate_render_manifest_bundle(
         details.append(f"missing entries: {missing}")
     if unexpected:
         details.append(f"unexpected entries: {unexpected}")
-
-    if not render_manifest.revision:
-        details.append("manifest revision missing")
-    else:
-        current_revision = _latest_git_revision(renders_dir.parent)
-        if not current_revision:
-            raise ValueError(
-                "Unable to determine current repository git revision for latest "
-                "preview bundle validation."
-            )
-        if render_manifest.revision.strip().lower() != current_revision:
-            details.append(
-                "revision mismatch: "
-                f"manifest={render_manifest.revision.strip().lower()} "
-                f"latest={current_revision}"
-            )
 
     if details:
         raise ValueError(
@@ -392,6 +402,16 @@ def submit_for_review(
             "benchmark_definition.yaml invalid: " + "; ".join(objectives_result)
         )
     objectives_model = objectives_result
+    simulation_bounds_error = validate_benchmark_submission_simulation_bounds(
+        objectives_model
+    )
+    if simulation_bounds_error:
+        logger.warning(
+            "benchmark_simulation_bounds_invalid",
+            error=simulation_bounds_error,
+            session_id=session_id,
+        )
+        raise ValueError(simulation_bounds_error)
     requested_quantity = resolve_requested_quantity(
         benchmark_definition=objectives_model
     )
@@ -487,7 +507,7 @@ def submit_for_review(
     # 4. Persist artifacts
     render_paths: list[str] = []
     for raw_render_path in simulation_result.render_paths:
-        src_path = Path(raw_render_path)
+        src_path = _resolve_workspace_path(cwd, raw_render_path)
         if not src_path.exists() or not src_path.is_file():
             logger.warning(
                 "submission_render_missing",
@@ -500,9 +520,7 @@ def submit_for_review(
             import shutil
 
             shutil.copy(src_path, dest_path)
-        render_paths.append(
-            _normalize_render_path(str(Path("renders") / src_path.name))
-        )
+        render_paths.append(str(Path("renders") / src_path.name))
     _validate_render_manifest_bundle(renders_dir=renders_dir, render_paths=render_paths)
     logger.info("renders_persisted", count=len(render_paths), session_id=session_id)
 
