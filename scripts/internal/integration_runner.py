@@ -35,6 +35,7 @@ INTEGRATION_WORKFLOW_HINT = (
 INTEGRATION_RUN_LOCK_PATH = Path("/tmp/problemologist-integration.lock")
 INTEGRATION_RUN_STATE_PATH = Path("/tmp/problemologist-integration.run.json")
 LONG_INTEGRATION_RUN_THRESHOLD_S = 7 * 60
+CTRL_C_BACKEND_ERROR_GRACE_S = 2.0
 
 CheckKind = Literal["http", "tcp", "cmd"]
 
@@ -564,8 +565,43 @@ def run_pytest_subprocess(
         bufsize=1,
     )
 
+    original_sigint_handler = signal.getsignal(signal.SIGINT)
+    original_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    early_stop_requested = False
+    interrupt_requested = False
+    interrupt_requested_at: float | None = None
+    interrupt_forwarded = False
+
     def _forward_signal(sig: int, _: object) -> None:
-        if process.poll() is None:
+        nonlocal interrupt_requested, interrupt_requested_at, interrupt_forwarded
+        if process.poll() is not None:
+            return
+
+        if sig == signal.SIGINT and early_stop_enabled:
+            if early_stop_requested:
+                if not interrupt_forwarded:
+                    interrupt_forwarded = True
+                    process.send_signal(sig)
+                return
+
+            if not interrupt_requested:
+                interrupt_requested = True
+                interrupt_requested_at = time.monotonic()
+                print(
+                    "\n[integration-runner] Ctrl-C received; waiting briefly for "
+                    "backend-error detection before interrupting pytest.\n",
+                    end="",
+                    flush=True,
+                )
+                return
+
+            if not interrupt_forwarded:
+                interrupt_forwarded = True
+                process.send_signal(sig)
+            return
+
+        if not interrupt_forwarded:
+            interrupt_forwarded = True
             process.send_signal(sig)
 
     signal.signal(signal.SIGINT, _forward_signal)
@@ -635,34 +671,52 @@ def run_pytest_subprocess(
         return None
 
     assert process.stdout is not None
-    with log_file.open("w", encoding="utf-8") as log_handle:
-        early_stop_requested = False
-        while True:
-            if not early_stop_requested:
-                early_stop_reason = _find_early_stop_reason()
-                if early_stop_reason:
-                    early_stop_requested = True
-                    msg = (
-                        "\n[integration-runner] Non-allowlisted backend error detected "
-                        "(pytest fixture will fail the active test): "
-                        f"{early_stop_reason}\n"
-                    )
-                    print(msg, end="")
-                    log_handle.write(msg)
+    try:
+        with log_file.open("w", encoding="utf-8") as log_handle:
+            while True:
+                if not early_stop_requested:
+                    early_stop_reason = _find_early_stop_reason()
+                    if early_stop_reason:
+                        early_stop_requested = True
+                        msg = (
+                            "\n[integration-runner] Non-allowlisted backend error "
+                            "detected (pytest fixture will fail the active test): "
+                            f"{early_stop_reason}\n"
+                        )
+                        print(msg, end="", flush=True)
+                        log_handle.write(msg)
+                        log_handle.flush()
 
-            if process.poll() is not None:
-                for line in process.stdout:
-                    print(line, end="")
-                    log_handle.write(line)
-                break
+                if (
+                    interrupt_requested
+                    and not interrupt_forwarded
+                    and not early_stop_requested
+                ):
+                    if (
+                        interrupt_requested_at is not None
+                        and time.monotonic() - interrupt_requested_at
+                        >= CTRL_C_BACKEND_ERROR_GRACE_S
+                    ):
+                        interrupt_forwarded = True
+                        process.send_signal(signal.SIGINT)
 
-            ready, _, _ = select.select([process.stdout], [], [], 0.5)
-            if ready:
-                line = process.stdout.readline()
-                if line:
-                    print(line, end="")
-                    log_handle.write(line)
-        process.stdout.close()
+                if process.poll() is not None:
+                    for line in process.stdout:
+                        print(line, end="")
+                        log_handle.write(line)
+                    break
+
+                ready, _, _ = select.select([process.stdout], [], [], 0.5)
+                if ready:
+                    line = process.stdout.readline()
+                    if line:
+                        print(line, end="")
+                        log_handle.write(line)
+                        log_handle.flush()
+            process.stdout.close()
+    finally:
+        signal.signal(signal.SIGINT, original_sigint_handler)
+        signal.signal(signal.SIGTERM, original_sigterm_handler)
 
     return process.wait()
 

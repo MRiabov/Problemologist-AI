@@ -5,7 +5,7 @@ import os
 import re
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from functools import lru_cache
 from pathlib import Path
 
@@ -69,6 +69,17 @@ def _controller_ws_url(path: str) -> str:
 
 async def _fetch_episode(client: httpx.AsyncClient, episode_id: str) -> EpisodeResponse:
     response = await client.get(f"{CONTROLLER_URL}/api/episodes/{episode_id}")
+    assert response.status_code == 200, response.text
+    return EpisodeResponse.model_validate(response.json())
+
+
+async def _fetch_benchmark_session(
+    client: httpx.AsyncClient,
+    session_id: str,
+) -> EpisodeResponse | None:
+    response = await client.get(f"{CONTROLLER_URL}/benchmark/{session_id}")
+    if response.status_code == 404:
+        return None
     assert response.status_code == 200, response.text
     return EpisodeResponse.model_validate(response.json())
 
@@ -411,21 +422,63 @@ async def wait_for_episode_state(
     terminal_statuses: set[EpisodeStatus | str] | None = None,
     predicate: Callable[[EpisodeResponse], bool] | None = None,
 ) -> dict:
+    return await _wait_for_resource_state(
+        fetch_resource=lambda: _fetch_episode(client, episode_id),
+        ws_path=f"/api/episodes/{episode_id}/ws",
+        timeout_s=timeout_s,
+        poll_s=poll_s,
+        terminal_statuses=terminal_statuses,
+        predicate=predicate,
+    )
+
+
+async def wait_for_benchmark_state(
+    client: httpx.AsyncClient,
+    session_id: str,
+    *,
+    timeout_s: float = 180.0,
+    poll_s: float = 1.0,
+    terminal_statuses: set[EpisodeStatus | str] | None = None,
+    predicate: Callable[[EpisodeResponse], bool] | None = None,
+) -> dict:
+    return await _wait_for_resource_state(
+        fetch_resource=lambda: _fetch_benchmark_session(client, session_id),
+        ws_path=f"/benchmark/{session_id}/ws",
+        timeout_s=timeout_s,
+        poll_s=poll_s,
+        terminal_statuses=terminal_statuses,
+        predicate=predicate,
+    )
+
+
+async def _wait_for_resource_state(
+    *,
+    fetch_resource: Callable[[], Awaitable[EpisodeResponse | None]],
+    ws_path: str,
+    timeout_s: float = 180.0,
+    poll_s: float = 1.0,
+    terminal_statuses: set[EpisodeStatus | str] | None = None,
+    predicate: Callable[[EpisodeResponse], bool] | None = None,
+) -> dict:
+    terminal_source = (
+        {"COMPLETED", "FAILED", "CANCELLED", "PLANNED"}
+        if terminal_statuses is None
+        else terminal_statuses
+    )
     terminal = {
         status.value if isinstance(status, EpisodeStatus) else str(status)
-        for status in (
-            terminal_statuses or {"COMPLETED", "FAILED", "CANCELLED", "PLANNED"}
-        )
+        for status in terminal_source
     }
     deadline = asyncio.get_running_loop().time() + timeout_s
 
-    episode = await _fetch_episode(client, episode_id)
-    if (
-        predicate is not None and predicate(episode)
-    ) or episode.status.value in terminal:
-        return episode.model_dump(mode="json")
+    resource = await fetch_resource()
+    if resource is not None and (
+        (predicate is not None and predicate(resource))
+        or resource.status.value in terminal
+    ):
+        return resource.model_dump(mode="json")
 
-    ws_url = _controller_ws_url(f"/api/episodes/{episode_id}/ws")
+    ws_url = _controller_ws_url(ws_path)
     try:
         async with websocket_connect(ws_url, open_timeout=min(10.0, timeout_s)) as ws:
             while asyncio.get_running_loop().time() < deadline:
@@ -445,23 +498,26 @@ async def wait_for_episode_state(
                     continue
                 if payload.get("type") != "status_update":
                     continue
-                episode = await _fetch_episode(client, episode_id)
-                if predicate is not None and predicate(episode):
-                    return episode.model_dump(mode="json")
-                if episode.status.value in terminal:
-                    return episode.model_dump(mode="json")
+                resource = await fetch_resource()
+                if resource is None:
+                    continue
+                if predicate is not None and predicate(resource):
+                    return resource.model_dump(mode="json")
+                if resource.status.value in terminal:
+                    return resource.model_dump(mode="json")
     except Exception:
         pass
 
     while asyncio.get_running_loop().time() < deadline:
-        episode = await _fetch_episode(client, episode_id)
-        if (
-            predicate is not None and predicate(episode)
-        ) or episode.status.value in terminal:
-            return episode.model_dump(mode="json")
+        resource = await fetch_resource()
+        if resource is not None and (
+            (predicate is not None and predicate(resource))
+            or resource.status.value in terminal
+        ):
+            return resource.model_dump(mode="json")
         await asyncio.sleep(poll_s)
 
-    msg = f"Episode {episode_id} did not reach terminal status in {timeout_s}s"
+    msg = f"Resource at {ws_path} did not reach target state in {timeout_s}s"
     raise AssertionError(msg)
 
 
