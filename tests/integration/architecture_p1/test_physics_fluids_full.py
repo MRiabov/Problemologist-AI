@@ -4,9 +4,9 @@ import os
 import uuid
 
 import httpx
+import numpy as np
 import pytest
 import yaml
-import numpy as np
 from PIL import Image
 from pydantic import BaseModel
 
