@@ -389,12 +389,13 @@ def build_codex_prompt(
             "Edit `script.py` and any supporting `*.py` files until the implementation works.",
             "Use `python script.py` as the canonical execution path.",
             "Keep `todo.md` and `journal.md` in sync with the work you are actually doing.",
-            "When the implementation is ready, make sure the normal validation, simulation, and review handoff artifacts exist.",
+            "When the implementation is ready, run `bash scripts/submit_for_review.sh` after validation and simulation succeed so the latest revision is handed off to review.",
         ]
     elif is_plan_reviewer_agent(agent_name):
         role_lines = [
             "You are the Plan Reviewer.",
-            "Inspect the planner artifacts and write the stage-specific review decision and comments files under `reviews/`.",
+            "Inspect the planner artifacts and write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
+            "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
             "Use the latest planner handoff state; do not edit planner-owned source files.",
             "If the benchmark or engineer plan is invalid, reject it with concrete reasons in the review files.",
         ]
@@ -402,7 +403,8 @@ def build_codex_prompt(
         role_lines = [
             "You are the Execution Reviewer.",
             "Inspect the implementation, validation results, simulation result, and stage-specific review files.",
-            "Write the stage-specific review decision and comments files under `reviews/`.",
+            "Write the stage-specific review decision and comments files under `reviews/` with `write_file`.",
+            "When the review is ready, run `bash scripts/submit_review.sh` to validate the handoff.",
             "If the latest implementation is not reviewable, reject it with concrete reasons in the review files.",
         ]
     else:
@@ -456,6 +458,28 @@ def materialize_seed_workspace(
         copied_paths.extend(
             _write_template_files(workspace_dir, load_codex_template_files())
         )
+    elif is_coder_agent(agent_name):
+        copied_paths.extend(
+            _write_template_files(
+                workspace_dir,
+                {
+                    rel_path: content
+                    for rel_path, content in load_codex_template_files().items()
+                    if rel_path.startswith("scripts/submit_for_review.")
+                },
+            )
+        )
+    elif is_reviewer_agent(agent_name):
+        copied_paths.extend(
+            _write_template_files(
+                workspace_dir,
+                {
+                    rel_path: content
+                    for rel_path, content in load_codex_template_files().items()
+                    if rel_path.startswith("scripts/submit_review.")
+                },
+            )
+        )
 
     artifact_dir = resolve_seed_artifact_dir(item, root=ROOT)
     if artifact_dir is not None:
@@ -489,6 +513,10 @@ def materialize_seed_workspace(
     helper_script_paths = []
     if is_planner_agent(agent_name):
         helper_script_paths.append("scripts/submit_plan.sh")
+    elif is_coder_agent(agent_name):
+        helper_script_paths.append("scripts/submit_for_review.sh")
+    elif is_reviewer_agent(agent_name):
+        helper_script_paths.append("scripts/submit_review.sh")
 
     return MaterializedWorkspace(
         workspace_dir=workspace_dir,
@@ -507,6 +535,7 @@ def build_codex_env(
     workspace_dir: Path,
     codex_home_root: Path,
     session_id: str | None = None,
+    agent_name: AgentName | None = None,
 ) -> dict[str, str]:
     """Prepare a generic Codex subprocess environment for a local workspace run."""
 
@@ -533,6 +562,8 @@ def build_codex_env(
     env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
     env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))
     env.setdefault("PROBLEMOLOGIST_REPO_ROOT", str(ROOT))
+    if agent_name is not None:
+        env.setdefault("AGENT_NAME", agent_name.value)
     return env
 
 
@@ -541,6 +572,7 @@ def launch_codex_exec(
     prompt_text: str,
     *,
     task_id: str,
+    agent_name: AgentName | None = None,
     session_id: str | None = None,
     runtime_root: Path | None = None,
     yolo: bool = True,
@@ -573,6 +605,7 @@ def launch_codex_exec(
             workspace_dir=workspace_dir,
             codex_home_root=codex_home_root,
             session_id=session_id,
+            agent_name=agent_name,
         ),
         check=False,
     )
@@ -584,6 +617,7 @@ def open_codex_ui(
     prompt_text: str,
     *,
     task_id: str,
+    agent_name: AgentName | None = None,
     session_id: str | None = None,
     runtime_root: Path | None = None,
     yolo: bool = True,
@@ -615,6 +649,7 @@ def open_codex_ui(
             workspace_dir=workspace_dir,
             codex_home_root=codex_home_root,
             session_id=session_id,
+            agent_name=agent_name,
         ),
         check=False,
     )
@@ -771,6 +806,23 @@ async def verify_coder_workspace(
     """Validate a coder workspace and its execution-review handoff manifest."""
 
     artifacts = _workspace_files_to_validate(workspace_dir)
+    required_helper_files = [
+        workspace_dir / "scripts" / "submit_for_review.sh",
+        workspace_dir / "scripts" / "submit_for_review.py",
+    ]
+    missing_helpers = [
+        str(path.relative_to(workspace_dir))
+        for path in required_helper_files
+        if not path.exists()
+    ]
+    if missing_helpers:
+        return WorkspaceVerificationResult(
+            success=False,
+            verification_name="coder_workspace_contract",
+            errors=[
+                "missing Codex submission helper file(s): " + ", ".join(missing_helpers)
+            ],
+        )
     manufacturing_config = _load_manufacturing_config(workspace_dir)
     is_valid, errors = validate_node_output(
         agent_name,

@@ -34,7 +34,7 @@ class PlanReviewerSignature(dspy.Signature):
     You must use the provided tools to read 'plan.md', 'todo.md', and 'assembly_definition.yaml'.
     You also receive benchmark-owned read-only benchmark_assembly_definition.yaml handoff context copied into this workspace.
     Ensure the plan is physically feasible, within budget, and complete.
-    When done, call `submit_review` with your final ReviewResult.
+    When done, return the final ReviewResult.
     """
 
     task = dspy.InputField()

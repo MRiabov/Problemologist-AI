@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import hashlib
 import inspect
 import json
 import re
@@ -1057,6 +1058,9 @@ class BaseNode:
         )
         submit_plan_succeeded = False
         no_tool_call_streak = 0
+        initial_script_sha256 = (
+            str(inputs.get("initial_script_sha256") or "").strip() or None
+        )
 
         def workspace_file_exists_sync(path: str) -> bool:
             future = asyncio.run_coroutine_threadsafe(
@@ -1064,6 +1068,16 @@ class BaseNode:
                 self.ctx.main_loop,
             )
             return bool(future.result(timeout=10.0))
+
+        def workspace_file_sha256_sync(path: str) -> str | None:
+            future = asyncio.run_coroutine_threadsafe(
+                self.ctx.worker_client.read_file_optional(path),
+                self.ctx.main_loop,
+            )
+            content = future.result(timeout=10.0)
+            if content is None:
+                return None
+            return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
         native_lm = (
             self.ctx.dspy_lm
@@ -1075,7 +1089,7 @@ class BaseNode:
             )
         ).copy(
             timeout=settings.native_tool_completion_timeout_seconds,
-            max_tokens=min(settings.llm_max_tokens, 2048),
+            max_tokens=min(settings.llm_max_tokens, 1536),
         )
         for iteration in range(max_iters):
             native_mock_completion = getattr(native_lm, "native_tool_completion", None)
@@ -1211,10 +1225,37 @@ class BaseNode:
                     if self._requires_script_artifact(node_type):
                         script_exists = workspace_file_exists_sync("script.py")
                         refusal_exists = workspace_file_exists_sync("plan_refusal.md")
+                        script_changed = True
+                        if script_exists and initial_script_sha256:
+                            current_script_sha256 = workspace_file_sha256_sync(
+                                "script.py"
+                            )
+                            script_changed = (
+                                current_script_sha256 is not None
+                                and current_script_sha256 != initial_script_sha256
+                            )
                         if not script_exists and not refusal_exists:
                             finish_reminder = (
                                 "Write script.py before finishing. "
                                 "If the plan is genuinely infeasible, write "
+                                "plan_refusal.md with evidence instead."
+                            )
+                            messages.append(
+                                self._tool_response_message(
+                                    tool_call_id=call.get("id", ""),
+                                    tool_name=completion_tool_name,
+                                    content=finish_reminder,
+                                )
+                            )
+                            messages.append(
+                                {"role": "system", "content": finish_reminder}
+                            )
+                            continue
+                        if not script_changed and not refusal_exists:
+                            finish_reminder = (
+                                "Modify script.py before finishing. The current "
+                                "file still matches the seeded starter. If the "
+                                "plan is genuinely infeasible, write "
                                 "plan_refusal.md with evidence instead."
                             )
                             messages.append(

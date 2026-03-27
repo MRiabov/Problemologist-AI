@@ -27,6 +27,7 @@ from controller.agent.dspy_utils import (
     map_events_to_prediction,
 )
 from controller.agent.node_entry_validation import (
+    _materialize_reviewer_handover,
     reviewer_handover_custom_check_from_session_id,
 )
 from controller.agent.review_handover import validate_reviewer_handover
@@ -1631,6 +1632,16 @@ async def _completion_contract_error(
         return None
 
     if spec.materialize_reviewer_handover:
+        worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
+        try:
+            materialize_error = await _materialize_reviewer_handover(
+                worker,
+                reviewer_stage=expected_stage,
+            )
+            if materialize_error:
+                return materialize_error
+        finally:
+            await worker.aclose()
         errors = await reviewer_handover_custom_check_from_session_id(
             session_id=session_id,
             reviewer_label="Execution",

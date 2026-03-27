@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import hashlib
 import os
 import uuid
 from contextlib import suppress
@@ -496,6 +497,13 @@ async def execute_agent_task(
                 }:
                     await seed_manufacturing_config(backend)
 
+                initial_script_content = await client.read_file_optional("script.py")
+                initial_script_sha256 = (
+                    hashlib.sha256(initial_script_content.encode("utf-8")).hexdigest()
+                    if initial_script_content is not None
+                    else None
+                )
+
                 metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
                 benchmark_id_str = (metadata.benchmark_id or "").strip()
                 if benchmark_id_str:
@@ -702,6 +710,7 @@ async def execute_agent_task(
                         "messages": [HumanMessage(content=task)],
                         "session_id": session_id,
                         "episode_id": str(episode_id),
+                        "initial_script_sha256": initial_script_sha256,
                     }
 
                 # Run the agent with tracing

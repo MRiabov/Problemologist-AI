@@ -20,6 +20,7 @@ from controller.agent.node_entry_validation import (
     ENGINEERING_EXECUTION_REVIEW_MANIFEST,
     NodeEntryValidationError,
     ValidationGraph,
+    _materialize_reviewer_handover,
     build_engineer_node_contracts,
     engineer_benchmark_handover_custom_check,
     evaluate_node_entry_contract,
@@ -516,6 +517,18 @@ async def route_after_engineer_coder(
         return END
     if await _state_requires_electronics(state):
         return AgentName.ELECTRONICS_REVIEWER
+    if state.worker_client is not None:
+        handover_error = await _materialize_reviewer_handover(
+            state.worker_client,
+            reviewer_stage="engineering_execution_reviewer",
+        )
+        if handover_error:
+            logger.warning(
+                "engineer_execution_handover_materialization_failed",
+                episode_id=state.episode_id,
+                session_id=state.session_id,
+                error=handover_error,
+            )
     return AgentName.ENGINEER_EXECUTION_REVIEWER
 
 
@@ -526,6 +539,18 @@ async def route_after_electronics_reviewer(
         return AgentName.STEER
     if await _should_end_scoped_run_after_node(state, AgentName.ELECTRONICS_REVIEWER):
         return END
+    if state.worker_client is not None:
+        handover_error = await _materialize_reviewer_handover(
+            state.worker_client,
+            reviewer_stage="engineering_execution_reviewer",
+        )
+        if handover_error:
+            logger.warning(
+                "engineer_execution_handover_materialization_failed",
+                episode_id=state.episode_id,
+                session_id=state.session_id,
+                error=handover_error,
+            )
     return AgentName.ENGINEER_EXECUTION_REVIEWER
 
 

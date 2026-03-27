@@ -5171,6 +5171,8 @@
           "scene_validation",
           "render_request_engineer",
           "render_request_benchmark",
+          "validation_preview_backend_selected",
+          "validation_preview_render_complete",
           "simulation_request",
           "simulation_result",
           "cots_search",

@@ -684,7 +684,7 @@ class BenchmarkPlannerNode(BaseNode):
                             agent_role=AgentName.BENCHMARK_PLANNER.value,
                         ).copy(
                             timeout=settings.native_tool_completion_timeout_seconds,
-                            max_tokens=min(settings.llm_max_tokens, 2048),
+                            max_tokens=min(settings.llm_max_tokens, 1536),
                         )
                         response = await asyncio.to_thread(
                             native_lm,
@@ -1935,7 +1935,7 @@ class BenchmarkReviewerSignature(dspy.Signature):
     fixtures, missing bounds/controller facts, or any final scene that does not
     clearly match the planner's explicit motion contract.
     You must use the provided tools to inspect the workspace.
-    When done, use SUBMIT to provide the final review result.
+    When done, return the final review result.
     """
 
     theme = dspy.InputField()
@@ -2004,41 +2004,16 @@ class BenchmarkReviewerNode(BaseNode):
             )
 
         review_round = await self._next_review_round("benchmark-execution-review")
-        review_decision_filename = (
-            f"reviews/benchmark-execution-review-decision-round-{review_round}.yaml"
-        )
-        review_comments_filename = (
-            f"reviews/benchmark-execution-review-comments-round-{review_round}.yaml"
-        )
-
-        # Specialized local tool
-        async def write_review_file(path: str, content: str) -> str:
-            """Write one of the stage-specific review YAML files."""
-            p = path.lstrip("/")
-            allowed_paths = {
-                review_decision_filename.lstrip("/"),
-                review_comments_filename.lstrip("/"),
-            }
-            if p not in allowed_paths:
-                return (
-                    "Error: Unauthorized path. You must write to "
-                    f"{review_decision_filename} or {review_comments_filename}"
-                )
-            success = await self.ctx.worker_client.write_file(path, content)
-            return (
-                "Review written successfully." if success else "Error writing review."
-            )
 
         def get_reviewer_tools(fs, session_id):
             tools = get_benchmark_tools(fs, session_id)
-            # Filter tools and add specialized one
             final_tools = []
             for t in tools:
                 name = getattr(t, "name", getattr(t, "__name__", None))
-                if name not in ("write_file", "edit_file"):
+                if name != "edit_file":
                     final_tools.append(t)
 
-            return filter_tools_for_agent(fs, [*final_tools, write_review_file])
+            return filter_tools_for_agent(fs, final_tools)
 
         inputs = {
             "theme": state.plan.theme if state.plan else "Unknown",

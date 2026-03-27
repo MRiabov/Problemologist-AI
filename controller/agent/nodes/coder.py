@@ -23,7 +23,9 @@ class CoderSignature(dspy.Signature):
     You also receive benchmark-owned read-only benchmark_assembly_definition.yaml
     handoff context copied into this workspace; benchmark caps must be read from
     benchmark_definition.yaml rather than copied from the benchmark assembly.
-    When done, use SUBMIT to provide a summary of your work.
+    When done, use FINISH to provide a summary of your work. The controller
+    runtime will materialize the latest execution-review handoff after the
+    implementation pass is complete.
     """
 
     task = dspy.InputField()
@@ -57,7 +59,7 @@ class CoderNode(BaseNode):
         current_step = self._get_next_step(todo)
         no_step_mode = current_step is None
         if no_step_mode:
-            current_step = "Finalize implementation and submit for review."
+            current_step = "Finalize implementation and hand off for review."
 
         # WP04: Extract steerability context
         steer_context = await self._get_steer_context(state.messages)

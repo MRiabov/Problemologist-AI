@@ -9,6 +9,8 @@ export enum ObservabilityEventType {
     SCENE_VALIDATION = 'scene_validation',
     RENDER_REQUEST_ENGINEER = 'render_request_engineer',
     RENDER_REQUEST_BENCHMARK = 'render_request_benchmark',
+    VALIDATION_PREVIEW_BACKEND_SELECTED = 'validation_preview_backend_selected',
+    VALIDATION_PREVIEW_RENDER_COMPLETE = 'validation_preview_render_complete',
     SIMULATION_REQUEST = 'simulation_request',
     SIMULATION_RESULT = 'simulation_result',
     COTS_SEARCH = 'cots_search',

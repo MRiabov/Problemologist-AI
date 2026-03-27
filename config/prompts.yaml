@@ -313,7 +313,8 @@ engineer:
       **Submission-Script Helper Surface**:
       - Use canonical `utils.*` imports in `script.py`.
       - Keep `script.py` import-safe by default. Do NOT add module-body helper calls just to force validation, simulation, or reviewer handoff.
-      - The engineering execution-review path materializes validation, simulation, and reviewer submission from the latest `script.py` system-side. Your job is to produce a correct import-safe implementation artifact, not to write protected handoff manifests yourself.
+      - The engineering execution-review path is driven by the Python helper `submit_for_review(compound)` after the latest `script.py` passes validation and simulation. Your job is to produce a correct import-safe implementation artifact and let the runtime hand the latest revision to review; do not write protected handoff manifests yourself.
+      - A coder run is not complete until the latest revision has passed validation, passed simulation, and been handed off with `submit_for_review(compound)`.
       - `get_docs_for(type: str)`: Invokes documentation subagent for build123d/skill docs.
 
       **Fastener System** (CRITICAL for rigid connections):
@@ -421,7 +422,8 @@ engineer:
       - **No leading slash on workspace files**: A leading slash on workspace artifacts is a contract violation even if the runtime currently resolves it. Always use workspace-relative paths such as `script.py`, `journal.md`, `renders/...`, and `simulation_result.json`.
       - **Shell discipline**: `execute_command(...)` already starts in the seeded workspace root. Do NOT prepend `cd /workspace`, `cd /home/user/workspace`, or use raw `python -c` / `python3 -c` checks for submission-script verification. Do not add `sys.path.insert(...)` to shell probes.
       - **Repo-boundary discipline**: Do NOT inspect repository internals such as `shared/`, `worker_light/`, `worker_heavy/`, or helper implementation files to debug submission-script behavior. Fix `script.py` from planner files, shell errors, and workspace artifacts only.
-      - **Execution-review contract**: Do NOT call `submit_for_review()` from the coder turn, and do NOT try to create reviewer manifests manually. The execution-review path will validate, simulate, and materialize `.manifests/engineering_execution_review_manifest.json` from the latest `script.py`.
+      - **Execution-review contract**: Do NOT create reviewer manifests manually. After the latest `script.py` passes validation and simulation, call the Python helper `submit_for_review(compound)` from the workflow so the runtime can hand the latest revision to simulation and review and materialize `.manifests/engineering_execution_review_manifest.json`.
+      - Treat `submit_for_review(compound)` as the required completion step for the current revision. Finishing with only a validated `script.py` is incomplete for engineer evals.
       - **COTS search**: Invoke `invoke_cots_search_subagent` only if the planner handoff is missing a required COTS part or the runtime explicitly proves a planned part is unusable.
       - **No unbacked COTS parts**: Reject your own draft as incomplete if it introduces any off-the-shelf part without a concrete catalog `part_id`.
       - **Escalation request**: If budget/weight cannot be met after reasonable optimization, call `refuse_plan(reason)` with evidence.
@@ -1037,6 +1039,7 @@ benchmark_generator:
       - **Solvability sanity**: Reject if objective is unreachable or obstructed beyond threshold.
 
       **Output**:
+      Write the stage-specific review artifacts under `reviews/` with `write_file`.
       Runtime persists two YAML artifacts under `reviews/`:
       - `benchmark-execution-review-decision-round-{N}.yaml`
       - `benchmark-execution-review-comments-round-{N}.yaml`
@@ -1056,7 +1059,7 @@ benchmark_generator:
       ```
 
       List required fixes if rejected.
-      Complete by calling `submit_review` with a structured `ReviewResult`; runtime persistence remains authoritative.
+      When the review is ready, run `bash scripts/submit_review.sh` to validate the stage handoff.
 
 # -----------------------------------------------------------------------------
 # SUBAGENTS
