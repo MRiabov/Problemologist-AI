@@ -1369,14 +1369,22 @@ def simulate(
             "Goal achieved." if metrics.success else "Simulation stable."
         )
 
-        render_paths = prerender_24_views(
-            component,
-            output_dir=str(renders_dir),
-            backend_type=backend_type,
-            session_id=session_id,
-            scene_path=str(scene_path),
-            smoke_test_mode=smoke_test_mode,
-        )
+        try:
+            render_paths = prerender_24_views(
+                component,
+                output_dir=str(renders_dir),
+                backend_type=backend_type,
+                session_id=session_id,
+                scene_path=str(scene_path),
+                smoke_test_mode=smoke_test_mode,
+            )
+        except Exception as exc:
+            logger.warning(
+                "validation_preview_render_failed",
+                error=str(exc),
+                session_id=session_id,
+            )
+            render_paths = []
         if video_path and video_path.exists():
             render_paths.append(str(video_path))
         render_paths = _workspace_relative_render_paths(render_paths, working_dir)
