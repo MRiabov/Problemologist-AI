@@ -46,6 +46,42 @@ def resolve_seed_artifact_dir(item: EvalDatasetItem, *, root: Path) -> Path | No
     return repo_relative
 
 
+def collect_seed_workspace_artifact_paths(
+    item: EvalDatasetItem,
+    *,
+    root: Path,
+) -> list[str]:
+    """Return relative paths that should exist for a seeded workspace."""
+    expected_paths: set[str] = set()
+    artifact_dir = resolve_seed_artifact_dir(item, root=root)
+    if (
+        item.seed_artifact_dir is not None
+        and artifact_dir is not None
+        and not artifact_dir.exists()
+    ):
+        raise FileNotFoundError(f"Seed artifact directory not found: {artifact_dir}")
+
+    if artifact_dir is not None and artifact_dir.exists():
+        for path in sorted(p for p in artifact_dir.rglob("*") if p.is_file()):
+            expected_paths.add(path.relative_to(artifact_dir).as_posix())
+
+    expected_paths.update((item.seed_files or {}).keys())
+    return sorted(expected_paths)
+
+
+async def validate_workspace_has_artifacts(
+    worker: WorkerClient,
+    *,
+    artifact_paths: list[str],
+) -> list[str]:
+    """Return missing relative paths from a workspace-backed filesystem."""
+    missing: list[str] = []
+    for rel_path in artifact_paths:
+        if not await worker.exists(rel_path):
+            missing.append(rel_path)
+    return missing
+
+
 def _refresh_seed_review_manifest_revision(
     *,
     rel_path: str,
@@ -159,6 +195,7 @@ async def preflight_seeded_entry_contract(
     session_id: str,
     agent_name: AgentName,
     spec: AgentEvalSpec,
+    root: Path,
     worker_light_url: str,
     logger: Any,
 ) -> None:
@@ -231,6 +268,18 @@ async def preflight_seeded_entry_contract(
 
     worker = WorkerClient(base_url=worker_light_url, session_id=session_id)
     try:
+        expected_seed_paths = collect_seed_workspace_artifact_paths(item, root=root)
+        missing_seed_paths = await validate_workspace_has_artifacts(
+            worker,
+            artifact_paths=expected_seed_paths,
+        )
+
+        if missing_seed_paths:
+            raise ValueError(
+                "Seeded workspace is missing copied seed artifact(s): "
+                + ", ".join(missing_seed_paths)
+            )
+
         result = await evaluate_node_entry_contract(
             contract=contract,
             state={

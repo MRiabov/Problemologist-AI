@@ -2219,6 +2219,7 @@ async def run_single_eval(
                         session_id=session_id,
                         agent_name=agent_name,
                         spec=spec,
+                        root=ROOT,
                         worker_light_url=WORKER_LIGHT_URL,
                         logger=logger,
                     )
@@ -2250,6 +2251,7 @@ async def run_single_eval(
                         session_id=session_id,
                         agent_name=agent_name,
                         spec=spec,
+                        root=ROOT,
                         worker_light_url=WORKER_LIGHT_URL,
                         logger=logger,
                     )

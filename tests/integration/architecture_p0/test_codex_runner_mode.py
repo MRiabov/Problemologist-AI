@@ -15,6 +15,7 @@ from evals.logic.codex_workspace import (
     verify_planner_workspace,
 )
 from evals.logic.models import EvalDatasetItem
+from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
 from shared.enums import AgentName
 from shared.models.schemas import DatasetCurationManifest, PlannerSubmissionResult
 
@@ -351,3 +352,44 @@ def test_validate_eval_seed_accepts_curated_rows_and_preserves_redundancy_metada
             assert dropped_episode_ids == sorted(set(dropped_episode_ids))
         for rejected_row in manifest.rejected:
             assert rejected_row.reasons
+
+
+@pytest.mark.integration_p0
+def test_refresh_plan_review_manifest_hashes_can_fix_drift(tmp_path: Path):
+    artifact_dir = tmp_path / "seed_artifacts"
+    artifact_dir.mkdir()
+
+    payload_path = artifact_dir / "script.py"
+    payload_path.write_text("print('hello world')\n", encoding="utf-8")
+
+    manifest_path = artifact_dir / "benchmark_plan_review_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "artifact_hashes": {
+                    "script.py": "deadbeef",
+                }
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    dry_run_updates = refresh_plan_review_manifest_hashes(artifact_dir, fix=False)
+    assert dry_run_updates == [manifest_path]
+    assert (
+        json.loads(manifest_path.read_text(encoding="utf-8"))["artifact_hashes"][
+            "script.py"
+        ]
+        == "deadbeef"
+    )
+
+    fixed_updates = refresh_plan_review_manifest_hashes(artifact_dir, fix=True)
+    assert fixed_updates == [manifest_path]
+
+    updated_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert (
+        updated_manifest["artifact_hashes"]["script.py"]
+        == hashlib.sha256(payload_path.read_bytes()).hexdigest()
+    )

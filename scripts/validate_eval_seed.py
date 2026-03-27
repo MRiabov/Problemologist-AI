@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import hashlib
 import json
 import os
 import re
@@ -17,6 +16,9 @@ if str(ROOT) not in sys.path:
 from controller.clients.worker import WorkerClient  # noqa: E402
 from evals.logic.curation import load_dataset_curation_manifest  # noqa: E402
 from evals.logic.models import EvalDatasetItem  # noqa: E402
+from evals.logic.seed_maintenance import (  # noqa: E402
+    refresh_plan_review_manifest_hashes as _refresh_plan_review_manifest_hashes,
+)
 from evals.logic.specs import AGENT_SPECS  # noqa: E402
 from evals.logic.workspace import (  # noqa: E402
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
@@ -93,6 +95,14 @@ def _parse_args() -> argparse.Namespace:
         "--skip-env-up",
         action="store_true",
         help="Skip running scripts/env_up.sh before validation.",
+    )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help=(
+            "Write deterministic seed repairs back to disk, including plan-review "
+            "manifest hashes."
+        ),
     )
     parser.add_argument(
         "--fail-fast",
@@ -193,51 +203,6 @@ def _build_session_id(agent: AgentName, task_id: str) -> str:
     return f"seed-check-{agent.value}-{task_id}-{suffix}"[:120]
 
 
-def _refresh_plan_review_manifest_hashes(
-    artifact_dir: Path,
-) -> list[Path]:
-    updated_manifests: list[Path] = []
-    manifest_names = {
-        "benchmark_plan_review_manifest.json",
-        "engineering_plan_review_manifest.json",
-    }
-
-    for manifest_path in sorted(artifact_dir.rglob("*.json")):
-        if manifest_path.name not in manifest_names:
-            continue
-
-        try:
-            manifest = json.loads(manifest_path.read_text())
-        except Exception:
-            continue
-
-        artifact_hashes = manifest.get("artifact_hashes")
-        if not isinstance(artifact_hashes, dict) or not artifact_hashes:
-            continue
-
-        updated_hashes = dict(artifact_hashes)
-        changed = False
-        for rel_path, expected_hash in artifact_hashes.items():
-            file_path = artifact_dir / rel_path
-            if not file_path.exists():
-                continue
-            actual_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
-            if actual_hash != expected_hash:
-                updated_hashes[rel_path] = actual_hash
-                changed = True
-
-        if not changed:
-            continue
-
-        manifest["artifact_hashes"] = updated_hashes
-        manifest_path.write_text(
-            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
-        )
-        updated_manifests.append(manifest_path)
-
-    return updated_manifests
-
-
 def _validate_generated_curation_manifests() -> list[Path]:
     manifest_paths = sorted(ROOT.glob("dataset/data/generated/*/v0.0.1/manifest.json"))
     validated: list[Path] = []
@@ -255,21 +220,34 @@ def _validate_generated_curation_manifests() -> list[Path]:
     return validated
 
 
-async def _validate_item(agent: AgentName, item: EvalDatasetItem) -> tuple[bool, str]:
+async def _validate_item(
+    agent: AgentName, item: EvalDatasetItem, *, fix: bool
+) -> tuple[bool, str]:
     session_id = _build_session_id(agent, item.id)
     spec = AGENT_SPECS[agent]
     try:
         resolved_artifact_dir = _resolve_seed_artifact_dir(item, root=ROOT)
         if resolved_artifact_dir is not None:
             updated_manifests = _refresh_plan_review_manifest_hashes(
-                resolved_artifact_dir
+                resolved_artifact_dir, fix=fix
             )
             for manifest_path in updated_manifests:
+                event_name = (
+                    "seed_manifest_hashes_refreshed"
+                    if fix
+                    else "seed_manifest_hashes_drift_detected"
+                )
                 logger.info(
-                    "seed_manifest_hashes_refreshed",
+                    event_name,
                     session_id=session_id,
                     agent_name=agent,
                     manifest_path=str(manifest_path),
+                )
+
+            if updated_manifests and not fix:
+                return (
+                    False,
+                    "seed plan-review manifest hashes drifted; rerun with --fix",
                 )
 
         await _seed_eval_workspace(
@@ -285,6 +263,7 @@ async def _validate_item(agent: AgentName, item: EvalDatasetItem) -> tuple[bool,
             session_id=session_id,
             agent_name=agent,
             spec=spec,
+            root=ROOT,
             worker_light_url=WORKER_LIGHT_URL,
             logger=logger,
         )
@@ -355,7 +334,7 @@ async def _async_main(args: argparse.Namespace) -> int:
         if args.fail_fast or args.concurrency == 1:
             for agent, item in work_items:
                 checked += 1
-                ok, detail = await _validate_item(agent, item)
+                ok, detail = await _validate_item(agent, item, fix=args.fix)
                 status = "PASS" if ok else "FAIL"
                 print(f"{status} {agent.value} {item.id}: {detail}")
                 if not ok:
@@ -369,7 +348,7 @@ async def _async_main(args: argparse.Namespace) -> int:
                 agent: AgentName, item: EvalDatasetItem
             ) -> tuple[AgentName, EvalDatasetItem, bool, str]:
                 async with semaphore:
-                    ok, detail = await _validate_item(agent, item)
+                    ok, detail = await _validate_item(agent, item, fix=args.fix)
                     return agent, item, ok, detail
 
             tasks = [
