@@ -49,6 +49,9 @@ from evals.logic.codex_workspace import (
     materialize_seed_workspace as _materialize_codex_workspace,
 )
 from evals.logic.codex_workspace import (
+    resolve_codex_home_root as _resolve_codex_home_root,
+)
+from evals.logic.codex_workspace import (
     verify_workspace_for_agent as _verify_codex_workspace_for_agent,
 )
 from evals.logic.models import (
@@ -1931,6 +1934,7 @@ async def _run_codex_eval(
     codex_workspace_root = (
         SESSION_LOG_ROOT.parent if SESSION_LOG_ROOT is not None else ROOT
     ) / "codex-workspaces"
+    codex_runtime_root = codex_workspace_root.parent
     codex_workspace_root.mkdir(parents=True, exist_ok=True)
     workspace_dir = codex_workspace_root / (
         f"{agent_name.value}-{task_id}-{uuid.uuid4().hex[:8]}"
@@ -1988,6 +1992,7 @@ async def _run_codex_eval(
             materialized.prompt_text,
             task_id=task_id,
             session_id=session_id,
+            runtime_root=codex_runtime_root,
             yolo=True,
         )
         if launch_return_code != 0:
@@ -2001,6 +2006,13 @@ async def _run_codex_eval(
                     artifact_root=SESSION_LOG_ROOT / eval_log_key / "codex",
                     baseline_snapshot=baseline_snapshot,
                     launched_after_ns=launch_started_at_ns,
+                    sessions_root=_resolve_codex_home_root(
+                        task_id=task_id,
+                        session_id=session_id,
+                        runtime_root=codex_runtime_root,
+                    )
+                    / ".codex"
+                    / "sessions",
                 )
             except Exception as exc:
                 codex_trace_artifacts = None

@@ -42,6 +42,7 @@ from worker_heavy.utils.file_validation import (
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 ROOT = Path(__file__).resolve().parents[2]
+_CODEX_RUNTIME_ROOT_NAME = "codex-runtime"
 
 _TEXT_SUFFIXES = {
     ".cfg",
@@ -256,6 +257,57 @@ def _write_template_files(dst_root: Path, template_files: dict[str, str]) -> lis
     return copied
 
 
+def resolve_codex_home_root(
+    *,
+    task_id: str,
+    session_id: str | None = None,
+    runtime_root: Path | None = None,
+) -> Path:
+    """Return the isolated HOME directory used for a Codex run."""
+
+    runtime_root = (runtime_root or ROOT) / _CODEX_RUNTIME_ROOT_NAME
+    session_key = session_id or f"local-codex-{task_id}-{os.getpid()}"
+    return runtime_root / "homes" / session_key
+
+
+def prepare_codex_home(
+    *,
+    codex_home_root: Path,
+    workspace_dir: Path,
+    source_auth_path: Path | None = None,
+) -> Path:
+    """Seed an isolated Codex home with the active auth bundle."""
+
+    source_auth_path = source_auth_path or (Path.home() / ".codex" / "auth.json")
+    if not source_auth_path.exists():
+        raise FileNotFoundError(f"Codex auth file not found: {source_auth_path}")
+
+    codex_home_dir = codex_home_root / ".codex"
+    codex_home_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_auth_path, codex_home_dir / "auth.json")
+    workspace_path = workspace_dir.expanduser().resolve()
+    config_path = codex_home_dir / "config.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                'model = "gpt-5.4-mini"',
+                'model_reasoning_effort = "high"',
+                'approvals_reviewer = "user"',
+                "",
+                "[features]",
+                "use_legacy_landlock = true",
+                "",
+                f'[projects."{workspace_path.as_posix()}"]',
+                'trust_level = "trusted"',
+                "respect_gitignore = false",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return codex_home_dir
+
+
 def _load_manufacturing_config(workspace_dir: Path):
     custom_config_path = workspace_dir / "manufacturing_config.yaml"
     if custom_config_path.exists():
@@ -449,12 +501,19 @@ def materialize_seed_workspace(
     )
 
 
-def build_codex_env(*, task_id: str, session_id: str | None = None) -> dict[str, str]:
+def build_codex_env(
+    *,
+    task_id: str,
+    workspace_dir: Path,
+    codex_home_root: Path,
+    session_id: str | None = None,
+) -> dict[str, str]:
     """Prepare a generic Codex subprocess environment for a local workspace run."""
 
     env = dict(os.environ)
-    py_path = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = f"{ROOT}{os.pathsep}{py_path}" if py_path else str(ROOT)
+    env["HOME"] = str(codex_home_root)
+    env["CODEX_HOME"] = str(codex_home_root / ".codex")
+    env["PYTHONPATH"] = str(workspace_dir.expanduser().resolve())
 
     venv_bin = ROOT / ".venv" / "bin"
     if venv_bin.exists():
@@ -463,6 +522,8 @@ def build_codex_env(*, task_id: str, session_id: str | None = None) -> dict[str,
             f"{venv_bin}{os.pathsep}{current_path}" if current_path else str(venv_bin)
         )
         env.setdefault("VIRTUAL_ENV", str(ROOT / ".venv"))
+        env["PYTHON_BIN"] = str(venv_bin / "python")
+    else:
         env.setdefault("PYTHON_BIN", sys.executable)
 
     env.setdefault("CONTROLLER_URL", "http://localhost:18000")
@@ -480,14 +541,20 @@ def launch_codex_exec(
     *,
     task_id: str,
     session_id: str | None = None,
+    runtime_root: Path | None = None,
     yolo: bool = True,
 ) -> int:
     """Launch `codex exec` in a workspace and stream output to the terminal."""
+    codex_home_root = resolve_codex_home_root(
+        task_id=task_id,
+        session_id=session_id,
+        runtime_root=runtime_root,
+    )
+    prepare_codex_home(codex_home_root=codex_home_root, workspace_dir=workspace_dir)
     cmd = [
         "codex",
         "exec",
-        "--sandbox",
-        "workspace-write",
+        "--full-auto",
         "-c",
         "shell_environment_policy.inherit=all",
         "--cd",
@@ -500,7 +567,12 @@ def launch_codex_exec(
         cmd,
         input=prompt_text,
         text=True,
-        env=build_codex_env(task_id=task_id, session_id=session_id),
+        env=build_codex_env(
+            task_id=task_id,
+            workspace_dir=workspace_dir,
+            codex_home_root=codex_home_root,
+            session_id=session_id,
+        ),
         check=False,
     )
     return completed.returncode
@@ -512,15 +584,21 @@ def open_codex_ui(
     *,
     task_id: str,
     session_id: str | None = None,
+    runtime_root: Path | None = None,
     yolo: bool = True,
 ) -> int:
     """Open the interactive Codex UI with a workspace prompt."""
     if not (workspace_dir / ".git").exists():
         subprocess.run(["git", "init", "-q", str(workspace_dir)], check=False)
+    codex_home_root = resolve_codex_home_root(
+        task_id=task_id,
+        session_id=session_id,
+        runtime_root=runtime_root,
+    )
+    prepare_codex_home(codex_home_root=codex_home_root, workspace_dir=workspace_dir)
     cmd = [
         "codex",
-        "--sandbox",
-        "workspace-write",
+        "--full-auto",
         "-c",
         "shell_environment_policy.inherit=all",
         "--cd",
@@ -531,7 +609,12 @@ def open_codex_ui(
     print("launching: " + " ".join(cmd))
     completed = subprocess.run(
         cmd,
-        env=build_codex_env(task_id=task_id, session_id=session_id),
+        env=build_codex_env(
+            task_id=task_id,
+            workspace_dir=workspace_dir,
+            codex_home_root=codex_home_root,
+            session_id=session_id,
+        ),
         check=False,
     )
     return completed.returncode

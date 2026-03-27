@@ -188,7 +188,7 @@ The current validation contract is:
 3. Materialized planner workspaces do not contain `/workspace` in the prompt text.
 4. Planner submission succeeds from the local workspace helper.
 5. Path traversal outside the workspace root is rejected.
-6. The Codex launcher uses the native `workspace-write` sandbox so model-generated shell commands can only mutate the materialized workspace and any explicitly added writable dirs.
+6. The Codex launcher uses the native `workspace-write` sandbox with the legacy landlock backend, an isolated `CODEX_HOME` seeded with the active auth bundle and a minimal generated `config.toml`, and a workspace-local `PYTHONPATH` so model-generated shell commands can only mutate the materialized workspace and any explicitly added writable dirs.
 7. The controller backend still executes tasks after its preflight step.
 
 The integration test file that exercises this contract is [tests/integration/architecture_p0/test_codex_runner_mode.py](../../../tests/integration/architecture_p0/test_codex_runner_mode.py).

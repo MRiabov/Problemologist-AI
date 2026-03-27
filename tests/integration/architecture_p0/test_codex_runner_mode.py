@@ -13,6 +13,7 @@ import pytest
 from evals.logic.codex_workspace import (
     build_codex_env,
     materialize_seed_workspace,
+    prepare_codex_home,
     verify_planner_workspace,
 )
 from evals.logic.models import EvalDatasetItem
@@ -95,6 +96,57 @@ def test_run_evals_defaults_are_smoke_test_contract():
     assert args.agent == "benchmark_planner"
     assert args.limit == 1
     assert args.concurrency == 1
+
+
+@pytest.mark.integration_p0
+def test_run_evals_codex_env_uses_isolated_home_and_workspace_pythonpath(tmp_path):
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    workspace_dir = tmp_path / "workspace"
+    workspace_dir.mkdir()
+    codex_home_root = tmp_path / "codex-home"
+    codex_home_dir = prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+    )
+
+    env = build_codex_env(
+        task_id="task-1",
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id="session-1",
+    )
+
+    assert env["HOME"] == str(codex_home_root)
+    assert env["CODEX_HOME"] == str(codex_home_dir)
+    assert env["PYTHONPATH"] == str(workspace_dir.resolve())
+    assert str(ROOT) not in env["PYTHONPATH"]
+    assert env["PYTHON_BIN"] == str(ROOT / ".venv" / "bin" / "python")
+    assert (
+        json.loads((codex_home_dir / "auth.json").read_text(encoding="utf-8"))[
+            "tokens"
+        ]["account_id"]
+        == "acct-1"
+    )
+    config_text = (codex_home_dir / "config.toml").read_text(encoding="utf-8")
+    assert 'model = "gpt-5.4-mini"' in config_text
+    assert 'model_reasoning_effort = "high"' in config_text
+    assert "use_legacy_landlock = true" in config_text
+    assert str(workspace_dir.resolve()) in config_text
+    assert "mcp_servers" not in config_text
 
 
 @pytest.mark.integration_p0
