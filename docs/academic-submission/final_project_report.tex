@@ -11,11 +11,12 @@
 \usepackage{ragged2e}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
+\providecommand{\tightlist}{}
+\providecommand{\subparagraph}[1]{\paragraph{#1}}
 \title{Problemologist-AI: An Agentic Framework for Mechanical Engineering Benchmark Generation and Evaluation}
-\author{}
+\author{Maksym Riabov\\x25194372@student.ncirl.ie}
 \begin{document}
 \maketitle
-
 \hypertarget{abstract}{%
 \subsection{Abstract}\label{abstract}}
 
@@ -30,7 +31,6 @@ Mechanical engineering is, in nature, very predictable. A part that is manufactu
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
-\tightlist
 \item
   Robustly validate solutions, first for their theoretical soundness - i.e.~hard-and-fast rules used for 3D model CAD correctness, then manufacturing evaluation as well as cost, weight, and other constraints as desired by an engineer (other constraints, e.g., not to use actuators to solve a given problem)
 \item
@@ -81,13 +81,12 @@ Problemologist-AI differs from these lines of work by combining adversarial benc
 
 Similarly to present systems evaluating coding capabilities in greenfield repositories, we need to define a set of problems to be solved by the engineering system.
 
-\hypertarget{types-of-problems-to-solve}{%
-\paragraph{Types of problems to solve}\label{types-of-problems-to-solve}}
+\hypertarget{types-of-problems-to-solve-by-an-engine-solving-dynamics}{%
+\paragraph{Types of problems to solve by an engine solving dynamics}\label{types-of-problems-to-solve-by-an-engine-solving-dynamics}}
 
 As this class of problems is readily solvable by major simulation pipelines such as MuJoCo, we first aim to solve multibody dynamics problems. The objective is to: given a predefined starting position of an object, create such a system that would:
 
 \begin{itemize}
-\tightlist
 \item
   Move it to a concrete position range (an Axis-Aligned Bounding Box (AABB)),
 \item
@@ -107,7 +106,6 @@ There are a number of ways how CAD models can be generated:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
-\tightlist
 \item
   Large Language Models
 \item
@@ -134,7 +132,7 @@ We also note that all aforementioned methods can be readily adapted to be evalua
 \hypertarget{translating-decisions-into-actions}{%
 \subparagraph{Translating decisions into actions}\label{translating-decisions-into-actions}}
 
-Two important findings allow us to use LLMs for engineering: first, code-CAD has emerged and become readily accessible via tools like build123d {[}4{]}. CodeCAD has existed since the 2000s; however, build123d makes it materially better in many ways and provides more industry-standard frameworks. An important finding over the last three years is that LLMs are significantly superior in using code actions as a way to interact with the environment {[}23{]}, more so than ReAct {[}16{]}. As such, we choose to generate geometric code and other artifacts (e.g.~plans) using agentic coding environments, similar to the OpenHands framework {[}9{]}.
+Two important findings allow us to use LLMs for engineering: first, code-CAD has emerged for more robust than before CAD engines and become readily accessible via tools like build123d {[}4{]}. An important finding over the last three years is that LLMs are significantly superior in using code actions as a way to interact with the environment {[}23{]}, more so than ReAct {[}16{]}. As such, we choose to generate geometric code and other artifacts (e.g.~plans) using agentic coding environments, similar to the OpenHands framework {[}9{]}.
 
 \hypertarget{separating-agents-for-different-tasks}{%
 \subparagraph{Separating agents for different tasks}\label{separating-agents-for-different-tasks}}
@@ -144,12 +142,10 @@ To separate agent concerns and prevent agents from overflowing in a context wind
 We separate agents into:
 
 \begin{itemize}
-\tightlist
 \item
   Benchmark generation agents:
 
   \begin{itemize}
-  \tightlist
   \item
     Benchmark Planner - creating a plan, budgets for costs and weight, planning for off-the-shelf components such as motors, planning for degrees of freedom of individual components, and planning a design with given features in benchmarks
   \item
@@ -163,7 +159,6 @@ We separate agents into:
   Engineering agents:
 
   \begin{itemize}
-  \tightlist
   \item
     Mechanical Engineering Planner - An agent that plans the mechanism, budgets for costs and weights to drive a solution with minimal expense and to fit the requirements set by the benchmark planner, and decides the off-the-shelf components.
   \item
@@ -179,7 +174,6 @@ We separate agents into:
   Other/infrastructure agents
 
   \begin{itemize}
-  \tightlist
   \item
     Skill creator agent
   \item
@@ -213,54 +207,9 @@ We define the \texttt{build123d} framework as a framework for enabling 3D CAD co
 
 To optimize a model in a reinforcement learning environment a reward signal is necessary {[}1{]}; the GEPA optimizer that we use to optimize our agents - as described below - also uses scoring to optimize prompts. As such, we create a reward system to be optimized against.
 
-We split reward by their functional definition - fast, syntactic checks for file presence and syntactic validity, then ``milestones'' - actions requiring complex solution, and judge evaluation rewards. For example, the below table describes a reward system for a Engineering Coder agent.
+We split reward by their functional definition - fast, syntactic checks for file presence and syntactic validity, then ``milestones'' - actions requiring complex solution, and judge evaluation rewards. The full table is provided in Appendix A, while Appendix B shows a normalized agent-input render from a recent integration test.
 
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
-  >{\raggedleft\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Section
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Key
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-Weight
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Type
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Description
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Feedback / Formula
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-\texttt{hard\_checks} & \texttt{script\_compiles} & 0.05 & hard check & \texttt{script.py} executes without Python syntax or import errors. & Minimum score: \texttt{0.02}. Success: the script compiled and executed without syntax or import errors. Failure: the script failed to compile or encountered a runtime error. \\
-\texttt{hard\_checks} & \texttt{cad\_geometry\_valid} & 0.08 & hard check & All parts export to valid OBJ meshes. & Success: CAD geometry is valid and successfully exported. Failure: geometry is invalid, has self-intersections, or failed to export. \\
-\texttt{hard\_checks} & \texttt{manufacturability\_valid} & 0.07 & hard check & All parts pass workbench manufacturability checks, such as no CNC undercuts and wall thickness above the injection molding minimum. & Success: the design passed all manufacturability constraints. Failure: the design has manufacturability issues, such as undercuts or thin walls. \\
-\texttt{hard\_checks} & \texttt{parts\_within\_build\_zone} & 0.05 & hard check & All custom-built parts are fully within the \texttt{build\_zone} AABB. & Success: all parts are correctly positioned within the designated build zone. Failure: some parts are outside the build zone. \\
-\texttt{hard\_checks} & \texttt{cost\_within\_cap} & 0.10 & partial hard check & Validated unit cost from \texttt{validate\_and\_price} is less than or equal to \texttt{max\_unit\_cost}. & Penalty formula: \texttt{max(0.0,\ 1.0\ -\ max(0.0,\ actual\_cost\ /\ max\_unit\_cost\ -\ 1.0))}. Success: manufacturing cost is within budget. Failure: manufacturing cost exceeds the budget. \\
-\texttt{hard\_checks} & \texttt{weight\_within\_cap} & 0.05 & partial hard check & Validated assembly weight is less than or equal to \texttt{max\_weight\_g}. & Penalty formula: \texttt{max(0.0,\ 1.0\ -\ max(0.0,\ actual\_weight\ /\ max\_weight\_g\ -\ 1.0))}. Success: assembly weight is within the maximum limit. Failure: assembly weight exceeds the limit. \\
-\texttt{milestones} & \texttt{simulation\_result} & 0.45 & partial milestone & Simulation outcome. Full credit is awarded for success; failed runs receive partial credit proportional to progress toward the goal. & Success formula: \texttt{0.45}. Failure formula: \texttt{0.45\ *\ (1.0\ -\ min\_distance\_achieved\ /\ initial\_distance)\ *\ 0.4}. Success: the solution solved the problem in simulation. Failure: re-examine mechanical stability, component placement, or movement range. \\
-\texttt{judge\_evaluation} & \texttt{reviewer\_accepted} & 0.02 & judge signal & The execution reviewer accepted the implementation. & - \\
-\texttt{judge\_evaluation} & \texttt{latest\_revision\_verified} & 0.005 & checklist item & Latest implementation revision was the one evaluated for submission. & - \\
-\texttt{judge\_evaluation} & \texttt{validation\_success} & 0.01 & checklist item & Validation success is satisfied at review time. & - \\
-\texttt{judge\_evaluation} & \texttt{simulation\_success} & 0.015 & checklist item & Simulation success is satisfied at review time. & - \\
-\texttt{judge\_evaluation} & \texttt{visual\_evidence\_checked} & 0.005 & checklist item & Required static evidence has been inspected. & - \\
-\texttt{judge\_evaluation} & \texttt{dynamic\_evidence\_checked} & 0.005 & checklist item & Required dynamic evidence has been inspected. & - \\
-\texttt{judge\_evaluation} & \texttt{plan\_fidelity} & 0.01 & checklist item & Implementation stays aligned with the approved plan. & - \\
-\texttt{judge\_evaluation} & \texttt{robustness} & 0.01 & checklist item & Solution is robust rather than passing a single lucky run. & - \\
-\texttt{judge\_evaluation} & \texttt{cost\_weight\_compliance} & 0.005 & checklist item & Final solution stays within cost and weight targets. & - \\
-\texttt{judge\_evaluation} & \texttt{manufacturability\_compliance} & 0.01 & checklist item & Final solution remains manufacturable under the chosen process. & - \\
-\texttt{judge\_evaluation} & \texttt{dof\_deviation\_justified} & 0.005 & checklist item & Any DOF deviation from the approved plan is justified and reviewable. & - \\
-\texttt{judge\_evaluation} & \texttt{feedback\_response\_score} & 0.03 & partial score & Fraction of valid failed reviewer checklist items addressed on the next coding revision without introducing new blocker regressions. & Partial score. \\
-\texttt{judge\_evaluation} & \texttt{bad\_feedback\_resistance\_score} & 0.02 & partial score & Score for following valid reviewer feedback while resisting incorrect or non-applicable requests in mixed-quality review seeds. & Partial score. \\
-\end{longtable}
+The full reward table is provided in Appendix~A.
 
 \hypertarget{observability}{%
 \paragraph{Observability}\label{observability}}
@@ -285,7 +234,6 @@ As with other prompt tuning methods, we define a ``gold dataset'' of evals acros
 A recent introduction of agent skills allows for tuning skills instead of prompts. This is critical in our application - as LLMs are trained poorly on mechanical engineering tools and libraries due to lack of open-source datasets, skills provide us with everything necessary in creating expert systems for CAD operation:
 
 \begin{itemize}
-\tightlist
 \item
   How to properly write build123d 3D models (something that models are confused by)
 \item
@@ -419,4 +367,68 @@ The future work should focus on attempting to fine-tune a range of models on sol
 {[}39{]} M. Kolodiazhnyi et al., ``cadrille: Multi-modal CAD Reconstruction with Reinforcement Learning,'' arXiv preprint arXiv:2505.22914, 2025.
 
 {[}40{]} L. Zhang, B. Le, N. Akhtar, S.-K. Lam, and D. Ngo, ``Large language models for computer-aided design: A survey,'' \emph{ACM Comput. Surv.}, vol.~58, no. 9, 2026, doi:10.1145/3787499.
+
+\clearpage
+\onecolumn
+\appendices
+
+\section{Reward Architecture Table}
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1667}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Section
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Key
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Weight
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Feedback / Formula
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\texttt{hard\_checks} & \texttt{script\_compiles} & 0.05 & hard check & \texttt{script.py} executes without Python syntax or import errors. & Minimum score: \texttt{0.02}. Success: the script compiled and executed without syntax or import errors. Failure: the script failed to compile or encountered a runtime error. \\
+\texttt{hard\_checks} & \texttt{cad\_geometry\_valid} & 0.08 & hard check & All parts export to valid OBJ meshes. & Success: CAD geometry is valid and successfully exported. Failure: geometry is invalid, has self-intersections, or failed to export. \\
+\texttt{hard\_checks} & \texttt{manufacturability\_valid} & 0.07 & hard check & All parts pass workbench manufacturability checks, such as no CNC undercuts and wall thickness above the injection molding minimum. & Success: the design passed all manufacturability constraints. Failure: the design has manufacturability issues, such as undercuts or thin walls. \\
+\texttt{hard\_checks} & \texttt{parts\_within\_build\_zone} & 0.05 & hard check & All custom-built parts are fully within the \texttt{build\_zone} AABB. & Success: all parts are correctly positioned within the designated build zone. Failure: some parts are outside the build zone. \\
+\texttt{hard\_checks} & \texttt{cost\_within\_cap} & 0.10 & partial hard check & Validated unit cost from \texttt{validate\_and\_price} is less than or equal to \texttt{max\_unit\_cost}. & Penalty formula: \texttt{max(0.0,\ 1.0\ -\ max(0.0,\ actual\_cost\ /\ max\_unit\_cost\ -\ 1.0))}. Success: manufacturing cost is within budget. Failure: manufacturing cost exceeds the budget. \\
+\texttt{hard\_checks} & \texttt{weight\_within\_cap} & 0.05 & partial hard check & Validated assembly weight is less than or equal to \texttt{max\_weight\_g}. & Penalty formula: \texttt{max(0.0,\ 1.0\ -\ max(0.0,\ actual\_weight\ /\ max\_weight\_g\ -\ 1.0))}. Success: assembly weight is within the maximum limit. Failure: assembly weight exceeds the limit. \\
+\texttt{milestones} & \texttt{simulation\_result} & 0.45 & partial milestone & Simulation outcome. Full credit is awarded for success; failed runs receive partial credit proportional to progress toward the goal. & Success formula: \texttt{0.45}. Failure formula: \texttt{0.45\ *\ (1.0\ -\ min\_distance\_achieved\ /\ initial\_distance)\ *\ 0.4}. Success: the solution solved the problem in simulation. Failure: re-examine mechanical stability, component placement, or movement range. \\
+\texttt{judge\_evaluation} & \texttt{reviewer\_accepted} & 0.02 & judge signal & The execution reviewer accepted the implementation. & - \\
+\texttt{judge\_evaluation} & \texttt{latest\_revision\_verified} & 0.005 & checklist item & Latest implementation revision was the one evaluated for submission. & - \\
+\texttt{judge\_evaluation} & \texttt{validation\_success} & 0.01 & checklist item & Validation success is satisfied at review time. & - \\
+\texttt{judge\_evaluation} & \texttt{simulation\_success} & 0.015 & checklist item & Simulation success is satisfied at review time. & - \\
+\texttt{judge\_evaluation} & \texttt{visual\_evidence\_checked} & 0.005 & checklist item & Required static evidence has been inspected. & - \\
+\texttt{judge\_evaluation} & \texttt{dynamic\_evidence\_checked} & 0.005 & checklist item & Required dynamic evidence has been inspected. & - \\
+\texttt{judge\_evaluation} & \texttt{plan\_fidelity} & 0.01 & checklist item & Implementation stays aligned with the approved plan. & - \\
+\texttt{judge\_evaluation} & \texttt{robustness} & 0.01 & checklist item & Solution is robust rather than passing a single lucky run. & - \\
+\texttt{judge\_evaluation} & \texttt{cost\_weight\_compliance} & 0.005 & checklist item & Final solution stays within cost and weight targets. & - \\
+\texttt{judge\_evaluation} & \texttt{manufacturability\_compliance} & 0.01 & checklist item & Final solution remains manufacturable under the chosen process. & - \\
+\texttt{judge\_evaluation} & \texttt{dof\_deviation\_justified} & 0.005 & checklist item & Any DOF deviation from the approved plan is justified and reviewable. & - \\
+\texttt{judge\_evaluation} & \texttt{feedback\_response\_score} & 0.03 & partial score & Fraction of valid failed reviewer checklist items addressed on the next coding revision without introducing new blocker regressions. & Partial score. \\
+\texttt{judge\_evaluation} & \texttt{bad\_feedback\_resistance\_score} & 0.02 & partial score & Score for following valid reviewer feedback while resisting incorrect or non-applicable requests in mixed-quality review seeds. & Partial score. \\
+\end{longtable}
+\endgroup
+\clearpage
+\section{Representative Agent Input}
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{appendix_agent_input.png}
+\caption{Normalized input observed by the engineering agent during a recent integration test.}
+\label{fig:appendix-agent-input}
+\end{figure}
 \end{document}
