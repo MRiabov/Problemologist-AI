@@ -30,7 +30,7 @@ from shared.agent_templates import (
     load_role_template_files,
 )
 from shared.enums import AgentName
-from shared.models.schemas import ReviewFrontmatter
+from shared.models.schemas import ReviewComments, ReviewFrontmatter
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -65,6 +65,10 @@ _BINARY_SUFFIXES = {
     ".step",
     ".stl",
     ".glb",
+}
+_SKIP_COPY_DIR_NAMES = {
+    ".git",
+    "__pycache__",
 }
 
 
@@ -234,13 +238,48 @@ def _workspace_files_to_validate(workspace_dir: Path) -> dict[str, str]:
 def _copy_tree(src_root: Path, dst_root: Path) -> list[str]:
     copied: list[str] = []
     for src_path in sorted(p for p in src_root.rglob("*") if p.is_file()):
-        if "__pycache__" in src_path.parts or src_path.suffix in {".pyc", ".pyo"}:
+        if any(
+            part in _SKIP_COPY_DIR_NAMES for part in src_path.parts
+        ) or src_path.suffix in {".pyc", ".pyo"}:
             continue
         rel_path = src_path.relative_to(src_root)
         dst_path = dst_root / rel_path
         dst_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_path, dst_path)
         copied.append(rel_path.as_posix())
+    return copied
+
+
+def copy_workspace_contents(
+    source_root: Path,
+    dst_root: Path,
+    *,
+    exclude_rel_paths: set[str] | None = None,
+) -> list[str]:
+    """Copy a workspace snapshot into another workspace without overwriting exclusions."""
+
+    source_root = source_root.expanduser().resolve()
+    dst_root = dst_root.expanduser().resolve()
+    exclude_rel_paths = {
+        Path(path).as_posix().lstrip("/") for path in (exclude_rel_paths or set())
+    }
+
+    copied: list[str] = []
+    for src_path in sorted(p for p in source_root.rglob("*") if p.is_file()):
+        rel_path = src_path.relative_to(source_root).as_posix()
+        if any(
+            rel_path == excluded or rel_path.startswith(f"{excluded}/")
+            for excluded in exclude_rel_paths
+        ):
+            continue
+        if any(part in _SKIP_COPY_DIR_NAMES for part in src_path.parts):
+            continue
+        if src_path.suffix in {".pyc", ".pyo"}:
+            continue
+        dst_path = dst_root / rel_path
+        dst_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_path, dst_path)
+        copied.append(rel_path)
     return copied
 
 
@@ -537,7 +576,7 @@ def build_codex_env(
     env = dict(os.environ)
     env["HOME"] = str(codex_home_root)
     env["CODEX_HOME"] = str(codex_home_root / ".codex")
-    env["PYTHONPATH"] = str(workspace_dir.expanduser().resolve())
+    workspace_path = workspace_dir.expanduser().resolve()
 
     venv_bin = ROOT / ".venv" / "bin"
     if venv_bin.exists():
@@ -557,6 +596,11 @@ def build_codex_env(
     env.setdefault("PROBLEMOLOGIST_SCRIPT_IMPORT_MODE", "0")
     env.setdefault("COTS_DB_PATH", str(ROOT / "parts.db"))
     env.setdefault("PROBLEMOLOGIST_REPO_ROOT", str(ROOT))
+    existing_pythonpath = env.get("PYTHONPATH", "")
+    pythonpath_entries = [str(workspace_path), str(ROOT)]
+    if existing_pythonpath:
+        pythonpath_entries.append(existing_pythonpath)
+    env["PYTHONPATH"] = os.pathsep.join(entry for entry in pythonpath_entries if entry)
     if agent_name is not None:
         env.setdefault("AGENT_NAME", agent_name.value)
     return env
@@ -657,9 +701,23 @@ def _load_review_frontmatter_local(
     review_filename_prefix: str,
     session_id: str,
 ) -> tuple[ReviewFrontmatter | None, str | None]:
+    review_data, _, review_error = _load_review_artifacts_local(
+        workspace_dir=workspace_dir,
+        review_filename_prefix=review_filename_prefix,
+        session_id=session_id,
+    )
+    return review_data, review_error
+
+
+def _load_review_artifacts_local(
+    *,
+    workspace_dir: Path,
+    review_filename_prefix: str,
+    session_id: str,
+) -> tuple[ReviewFrontmatter | None, ReviewComments | None, str | None]:
     reviews_dir = workspace_dir / "reviews"
     if not reviews_dir.exists():
-        return None, "reviews/ directory not found"
+        return None, None, "reviews/ directory not found"
 
     prefixes = review_filename_candidates(review_filename_prefix)
     yaml_patterns = [
@@ -698,24 +756,47 @@ def _load_review_frontmatter_local(
         try:
             content = review_path.read_text(encoding="utf-8")
         except Exception as exc:
-            return None, f"failed to read {review_path}: {exc}"
+            return None, None, f"failed to read {review_path}: {exc}"
 
         review_data, review_error = parse_review_decision_yaml(
             content,
             review_path=review_path.as_posix(),
         )
         if review_error is not None:
-            return None, review_error
+            return None, None, review_error
         if review_data is None:
-            return None, f"missing review decision payload in {review_path}"
-        return review_data, None
+            return None, None, f"missing review decision payload in {review_path}"
+
+        comments_path = (
+            reviews_dir
+            / f"{latest_yaml[1].stem.replace('-decision-round-', '-comments-round-')}.yaml"
+        )
+        if not comments_path.exists():
+            return (
+                review_data,
+                None,
+                f"missing review comments payload in {comments_path}",
+            )
+        try:
+            comments_content = comments_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            return None, None, f"failed to read {comments_path}: {exc}"
+        comments_data, comments_error = _parse_review_comments_yaml(
+            comments_content,
+            comments_path=comments_path.as_posix(),
+        )
+        if comments_error is not None:
+            return None, None, comments_error
+        if comments_data is None:
+            return None, None, f"missing review comments payload in {comments_path}"
+        return review_data, comments_data, None
 
     if latest_md is not None:
         review_path = latest_md[1]
         try:
             content = review_path.read_text(encoding="utf-8")
         except Exception as exc:
-            return None, f"failed to read {review_path}: {exc}"
+            return None, None, f"failed to read {review_path}: {exc}"
 
         is_valid, review_data = validate_review_frontmatter(
             content,
@@ -728,17 +809,39 @@ def _load_review_frontmatter_local(
                 if isinstance(review_data, list)
                 else str(review_data)
             )
-            return None, f"invalid review frontmatter in {review_path}: {details}"
+            return None, None, f"invalid review frontmatter in {review_path}: {details}"
         if not isinstance(review_data, ReviewFrontmatter):
-            return None, f"unexpected review frontmatter payload for {review_path}"
-        return review_data, None
+            return (
+                None,
+                None,
+                f"unexpected review frontmatter payload for {review_path}",
+            )
+        return review_data, None, None
 
     return (
+        None,
         None,
         "no persisted review artifact matching "
         f"reviews/{review_filename_prefix}-decision-round-<n>.yaml "
         f"or reviews/{review_filename_prefix}-<n>.md",
     )
+
+
+def _parse_review_comments_yaml(
+    content: str, *, review_path: str
+) -> tuple[ReviewComments | None, str | None]:
+    try:
+        data = yaml.safe_load(content)
+    except yaml.YAMLError as exc:
+        return None, f"invalid YAML in {review_path}: {exc}"
+
+    if not isinstance(data, dict):
+        return None, f"unexpected YAML structure in {review_path}: expected mapping"
+
+    try:
+        return ReviewComments.model_validate(data), None
+    except Exception as exc:
+        return None, f"invalid review comments payload in {review_path}: {exc}"
 
 
 async def verify_planner_workspace(
@@ -946,7 +1049,7 @@ async def verify_reviewer_workspace(
             ],
         )
 
-    review_data, review_error = _load_review_frontmatter_local(
+    review_data, comments_data, review_error = _load_review_artifacts_local(
         workspace_dir=workspace_dir,
         review_filename_prefix=review_prefix,
         session_id=session_id,
@@ -979,6 +1082,14 @@ async def verify_reviewer_workspace(
             "expected_decision": (
                 getattr(expected_decision, "value", expected_decision)
                 if expected_decision is not None
+                else None
+            ),
+            "review_decision": (
+                review_data.model_dump(mode="json") if review_data is not None else None
+            ),
+            "review_comments": (
+                comments_data.model_dump(mode="json")
+                if comments_data is not None
                 else None
             ),
         },

@@ -98,6 +98,16 @@ def _parse_args() -> argparse.Namespace:
         help="Validate only one specific task ID.",
     )
     parser.add_argument(
+        "--level",
+        action="append",
+        default=None,
+        help=(
+            "Validate only evals at the selected complexity levels. Supports a "
+            "single level, repeated flags, comma-separated values, or list syntax "
+            "like [0,1]."
+        ),
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=0,
@@ -155,6 +165,31 @@ def _parse_agent_filters(raw_agents: list[str]) -> list[str]:
     return parsed
 
 
+def _parse_level_filters(raw_levels: list[str]) -> set[int]:
+    parsed: set[int] = set()
+    for raw in raw_levels:
+        token = raw.strip()
+        if not token:
+            continue
+        if token.startswith("[") and token.endswith("]"):
+            token = token[1:-1]
+        parts = re.split(r"\s*(?:,|\bor\b|\|)\s*", token, flags=re.IGNORECASE)
+        for part in parts:
+            value = part.strip()
+            if not value:
+                continue
+            try:
+                level = int(value)
+            except ValueError as exc:
+                raise SystemExit(f"Invalid complexity level '{value}'.") from exc
+            if level < 0 or level > 5:
+                raise SystemExit(
+                    f"Invalid complexity level '{level}'. Expected an integer between 0 and 5."
+                )
+            parsed.add(level)
+    return parsed
+
+
 def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
     parsed = _parse_agent_filters(agent_args)
     if not parsed:
@@ -185,7 +220,11 @@ def _resolve_agents(agent_args: list[str]) -> list[AgentName]:
 
 
 def _load_dataset(
-    agent: AgentName, *, task_id: str | None, limit: int
+    agent: AgentName,
+    *,
+    task_id: str | None,
+    limit: int,
+    levels: set[int] | None,
 ) -> list[EvalDatasetItem]:
     dataset_roots = [
         ROOT / "dataset" / "evals" / "datasets",
@@ -210,6 +249,8 @@ def _load_dataset(
 
     if task_id:
         data = [item for item in data if item["id"] == task_id]
+    if levels:
+        data = [item for item in data if item.get("complexity_level") in levels]
     if limit > 0:
         data = data[:limit]
 
@@ -299,6 +340,9 @@ async def _async_main(args: argparse.Namespace) -> int:
         raise SystemExit("--concurrency must be >= 1")
 
     agents = _resolve_agents(args.agent)
+    levels = _parse_level_filters(args.level or [])
+    if args.level and not levels:
+        raise SystemExit("No valid --level values were parsed.")
 
     try:
         _validate_generated_curation_manifests(errors_only=args.errors_only)
@@ -327,7 +371,12 @@ async def _async_main(args: argparse.Namespace) -> int:
     work_items: list[tuple[AgentName, EvalDatasetItem]] = []
 
     for agent in agents:
-        dataset = _load_dataset(agent, task_id=args.task_id, limit=args.limit)
+        dataset = _load_dataset(
+            agent,
+            task_id=args.task_id,
+            limit=args.limit,
+            levels=levels if levels else None,
+        )
         if args.task_id and not dataset:
             failures.append((agent.value, args.task_id, "task id not found in dataset"))
             if args.fail_fast:

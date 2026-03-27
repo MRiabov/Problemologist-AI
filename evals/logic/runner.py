@@ -44,6 +44,9 @@ from evals.logic.codex_session_trace import (
     snapshot_workspace_state as _snapshot_workspace_state,
 )
 from evals.logic.codex_workspace import (
+    copy_workspace_contents as _copy_workspace_contents,
+)
+from evals.logic.codex_workspace import (
     launch_codex_exec as _launch_codex_exec,
 )
 from evals.logic.codex_workspace import (
@@ -102,7 +105,9 @@ from shared.enums import (
 )
 from shared.logging import configure_logging, get_logger
 from shared.models.schemas import EpisodeMetadata
+from shared.models.simulation import SimulationResult
 from shared.utils.evaluation import analyze_electronics_metrics
+from shared.workers.schema import ValidationResultRecord
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -649,6 +654,48 @@ def _parse_task_id_filters(raw_task_id_filters: list[str] | None) -> set[str]:
     return selected_ids
 
 
+def _parse_level_filters(raw_level_filters: list[str] | None) -> set[int]:
+    """Parse complexity-level filters from repeated --level arguments."""
+
+    if not raw_level_filters:
+        return set()
+
+    selected_levels: set[int] = set()
+    for raw_filter in raw_level_filters:
+        text = raw_filter.strip()
+        if not text:
+            continue
+
+        values_to_parse = text
+        if text.startswith("[") and text.endswith("]"):
+            with contextlib.suppress(json.JSONDecodeError):
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    for item in parsed:
+                        item_text = str(item).strip()
+                        if not item_text:
+                            continue
+                        level = int(item_text.strip("'\""))
+                        if level < 0 or level > 5:
+                            raise ValueError(
+                                f"Invalid complexity level '{level}'. Expected 0-5."
+                            )
+                        selected_levels.add(level)
+                    continue
+            values_to_parse = text[1:-1]
+
+        for candidate in re.split(r"\s*(?:,|\bor\b|\|)\s*", values_to_parse):
+            normalized = candidate.strip().strip("'\"")
+            if not normalized:
+                continue
+            level = int(normalized)
+            if level < 0 or level > 5:
+                raise ValueError(f"Invalid complexity level '{level}'. Expected 0-5.")
+            selected_levels.add(level)
+
+    return selected_levels
+
+
 def _resolve_runner_backend(
     *,
     runner_backend_arg: str | None,
@@ -1175,6 +1222,135 @@ async def _load_constraint_context(session_id: str) -> dict[str, float]:
     return {}
 
 
+def _load_constraint_context_from_workspace(workspace_dir: Path) -> dict[str, float]:
+    benchmark_definition_path = workspace_dir / "benchmark_definition.yaml"
+    if not benchmark_definition_path.exists():
+        return {}
+
+    with contextlib.suppress(Exception):
+        parsed = yaml.safe_load(benchmark_definition_path.read_text(encoding="utf-8"))
+        if not isinstance(parsed, dict):
+            return {}
+        constraints = parsed.get("constraints")
+        if not isinstance(constraints, dict):
+            return {}
+        context: dict[str, float] = {}
+        max_unit_cost = constraints.get("max_unit_cost")
+        max_weight_g = constraints.get("max_weight_g", constraints.get("max_weight"))
+        if isinstance(max_unit_cost, int | float):
+            context["max_unit_cost"] = float(max_unit_cost)
+        if isinstance(max_weight_g, int | float):
+            context["max_weight_g"] = float(max_weight_g)
+            context["max_weight"] = float(max_weight_g)
+        return context
+
+    return {}
+
+
+def _load_validation_result_record(
+    workspace_dir: Path,
+) -> ValidationResultRecord | None:
+    validation_path = workspace_dir / "validation_results.json"
+    if not validation_path.exists():
+        return None
+    with contextlib.suppress(Exception):
+        return ValidationResultRecord.model_validate_json(
+            validation_path.read_text(encoding="utf-8")
+        )
+    return None
+
+
+def _load_simulation_result(workspace_dir: Path) -> SimulationResult | None:
+    simulation_path = workspace_dir / "simulation_result.json"
+    if not simulation_path.exists():
+        return None
+    with contextlib.suppress(Exception):
+        return SimulationResult.model_validate_json(
+            simulation_path.read_text(encoding="utf-8")
+        )
+    return None
+
+
+def _codex_workspace_metrics(
+    *,
+    workspace_dir: Path,
+    success: bool,
+    verification_result: Any | None = None,
+) -> dict[str, Any]:
+    metrics: dict[str, Any] = {
+        "task_success": success,
+    }
+    metrics.update(_load_constraint_context_from_workspace(workspace_dir))
+
+    validation_record = _load_validation_result_record(workspace_dir)
+    if validation_record is not None:
+        validation_success = bool(validation_record.success)
+        metrics.update(
+            {
+                "script_compiled": validation_success,
+                "cad_geometry_valid": validation_success,
+                "manufacturability_valid": validation_success,
+                "parts_within_build_zone": validation_success,
+            }
+        )
+        if validation_record.verification_result is not None:
+            individual_results = list(
+                validation_record.verification_result.individual_results or []
+            )
+            if individual_results:
+                min_distance = None
+                initial_distance = None
+                for result in individual_results:
+                    candidate_min = getattr(result, "min_distance_to_goal", None)
+                    if isinstance(candidate_min, int | float):
+                        candidate_min_f = float(candidate_min)
+                        min_distance = (
+                            candidate_min_f
+                            if min_distance is None
+                            else min(min_distance, candidate_min_f)
+                        )
+                    candidate_initial = getattr(result, "initial_distance", None)
+                    if isinstance(candidate_initial, int | float):
+                        candidate_initial_f = float(candidate_initial)
+                        initial_distance = (
+                            candidate_initial_f
+                            if initial_distance is None
+                            else max(initial_distance, candidate_initial_f)
+                        )
+                if min_distance is not None:
+                    metrics["min_distance_to_goal"] = min_distance
+                if initial_distance is not None:
+                    metrics["initial_distance"] = max(initial_distance, 1e-9)
+
+    simulation_result = _load_simulation_result(workspace_dir)
+    if simulation_result is not None:
+        metrics.update(
+            {
+                "simulation_ran": True,
+                "simulation_success": bool(simulation_result.success),
+                "engineer_implemented_successfully": bool(simulation_result.success),
+                "actual_cost": float(simulation_result.total_cost),
+                "actual_weight": float(simulation_result.total_weight_g),
+                "estimated_cost": float(simulation_result.total_cost),
+                "estimated_weight": float(simulation_result.total_weight_g),
+            }
+        )
+
+    if verification_result is not None:
+        details = getattr(verification_result, "details", None)
+        if isinstance(details, dict):
+            if details.get("validation_success") is not None:
+                metrics["validation_success"] = details.get("validation_success")
+            if details.get("simulation_success") is not None:
+                metrics["simulation_success"] = details.get("simulation_success")
+            if details.get("review_decision") is not None:
+                metrics["review_decision"] = details.get("review_decision")
+            if details.get("review_comments") is not None:
+                metrics["review_comments"] = details.get("review_comments")
+
+    return metrics
+
+
 async def _collect_metrics_for_checks(
     *,
     check_configs: dict[str, MilestoneConfig],
@@ -1183,6 +1359,7 @@ async def _collect_metrics_for_checks(
     episode_data: dict[str, Any] | None,
     extra_episodes: list[dict[str, Any] | None] | None = None,
     agent_name: AgentName | None = None,
+    metrics_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     episodes = [episode_data]
     if extra_episodes:
@@ -1192,6 +1369,8 @@ async def _collect_metrics_for_checks(
     metrics_model = map_events_to_prediction(events)
     metrics = metrics_model.model_dump(mode="json")
     metrics["task_success"] = success
+    if metrics_override:
+        metrics.update(metrics_override)
 
     check_names = set(check_configs.keys())
     needs_worker_checks = check_names.intersection(
@@ -1235,6 +1414,7 @@ async def _record_hard_check_outcomes(
     episode_data: dict[str, Any] | None,
     session_id: str,
     failure_context: dict[str, Any] | None = None,
+    metrics_override: dict[str, Any] | None = None,
 ) -> bool | None:
     cfg = reward_agent_configs.get(agent_name)
     if cfg is None or not cfg.hard_checks:
@@ -1246,6 +1426,7 @@ async def _record_hard_check_outcomes(
         session_id=session_id,
         episode_data=episode_data,
         agent_name=agent_name,
+        metrics_override=metrics_override,
     )
 
     hard_check_stats = stats[agent_name].setdefault("hard_checks", {})
@@ -1295,6 +1476,7 @@ async def _record_judge_outcomes(
     session_id: str,
     episode_data: dict[str, Any] | None,
     extra_episodes: list[dict[str, Any] | None] | None = None,
+    metrics_override: dict[str, Any] | None = None,
 ) -> None:
     cfg = reward_agent_configs.get(agent_name)
     if cfg is None:
@@ -1311,6 +1493,7 @@ async def _record_judge_outcomes(
         episode_data=episode_data,
         extra_episodes=extra_episodes,
         agent_name=agent_name,
+        metrics_override=metrics_override,
     )
 
     judge_stats = stats[agent_name].setdefault("judge_checks", {})
@@ -1621,6 +1804,139 @@ async def _run_reviewer_chain_for_judge(
     return episodes
 
 
+def _decision_value_to_enum(value: Any) -> ReviewDecision | None:
+    if value is None:
+        return None
+    if isinstance(value, ReviewDecision):
+        return value
+    text = getattr(value, "value", value)
+    if isinstance(text, str):
+        with contextlib.suppress(ValueError):
+            return ReviewDecision(text)
+    return None
+
+
+def _codex_reviewer_metrics_from_verification(
+    *,
+    verification_result: Any,
+    expected_decision: ReviewDecision | None,
+) -> dict[str, Any]:
+    if isinstance(verification_result, dict):
+        success = bool(verification_result.get("success", False))
+        details = verification_result.get("details")
+    else:
+        success = bool(getattr(verification_result, "success", False))
+        details = getattr(verification_result, "details", None)
+
+    metrics: dict[str, Any] = {"review_artifacts_complete": success}
+    if not isinstance(details, dict):
+        return metrics
+
+    review_decision = details.get("review_decision")
+    if isinstance(review_decision, dict):
+        decision = _decision_value_to_enum(review_decision.get("decision"))
+        if decision is not None:
+            metrics["reviewer_decision"] = decision.value
+            metrics["reviewer_accepted"] = decision == ReviewDecision.APPROVED
+            review_summary = details.get("review_comments")
+            if isinstance(review_summary, dict):
+                summary = review_summary.get("summary")
+                if isinstance(summary, str):
+                    metrics["reviewer_feedback"] = summary
+                checklist = review_summary.get("checklist")
+                if isinstance(checklist, dict):
+                    metrics["checklist"] = checklist
+            if expected_decision is not None:
+                metrics["decision_correct"] = decision == expected_decision
+            else:
+                metrics["decision_correct"] = decision == ReviewDecision.APPROVED
+            metrics["review_actionable"] = decision != ReviewDecision.APPROVED
+
+    return metrics
+
+
+async def _run_codex_reviewer_chain_for_judge(
+    *,
+    item: EvalDatasetItem,
+    agent_name: AgentName,
+    source_workspace_dir: Path,
+    task_description: str,
+    session_id: str,
+    codex_workspace_root: Path,
+    codex_runtime_root: Path,
+    log,
+) -> list[dict[str, Any]]:
+    reviewer_chain = JUDGE_REVIEWER_CHAIN.get(agent_name, ())
+    if not reviewer_chain:
+        return []
+
+    reviewer_results: list[dict[str, Any]] = []
+    source_workspace_dir = source_workspace_dir.expanduser().resolve()
+
+    for reviewer_agent in reviewer_chain:
+        reviewer_session_id = f"{session_id}-{reviewer_agent.value}"
+        reviewer_workspace_dir = codex_workspace_root / (
+            f"{reviewer_agent.value}-{item.id}-{uuid.uuid4().hex[:8]}"
+        )
+        materialized = _materialize_codex_workspace(
+            item=item,
+            agent_name=reviewer_agent,
+            workspace_dir=reviewer_workspace_dir,
+        )
+        _copy_workspace_contents(
+            source_workspace_dir,
+            reviewer_workspace_dir,
+            exclude_rel_paths={"prompt.md", "reviews"},
+        )
+        log.info(
+            "codex_reviewer_workspace_materialized",
+            reviewer_agent=reviewer_agent.value,
+            workspace_dir=str(reviewer_workspace_dir),
+            prompt_path=str(materialized.prompt_path),
+        )
+
+        launch_return_code = await asyncio.to_thread(
+            _launch_codex_exec,
+            materialized.workspace_dir,
+            materialized.prompt_text,
+            task_id=item.id,
+            agent_name=reviewer_agent,
+            session_id=reviewer_session_id,
+            runtime_root=codex_runtime_root,
+            yolo=True,
+        )
+
+        verification_result = await _verify_codex_workspace_for_agent(
+            workspace_dir=materialized.workspace_dir,
+            agent_name=reviewer_agent,
+            session_id=reviewer_session_id,
+            expected_decision=item.expected_decision,
+        )
+
+        reviewer_results.append(
+            {
+                "reviewer_agent": reviewer_agent.value,
+                "session_id": reviewer_session_id,
+                "workspace_dir": str(materialized.workspace_dir),
+                "launch_return_code": launch_return_code,
+                "verification_name": verification_result.verification_name,
+                "success": verification_result.success,
+                "errors": verification_result.errors,
+                "details": verification_result.details,
+            }
+        )
+        log.info(
+            "codex_reviewer_run_completed",
+            reviewer_agent=reviewer_agent.value,
+            session_id=reviewer_session_id,
+            launch_return_code=launch_return_code,
+            verification=verification_result.verification_name,
+            success=verification_result.success,
+        )
+
+    return reviewer_results
+
+
 async def _completion_contract_error(
     *,
     spec: AgentEvalSpec,
@@ -1929,16 +2245,11 @@ async def _run_codex_eval(
     item: EvalDatasetItem,
     stats: dict[AgentName, Any],
     agent_name: AgentName,
+    reward_agent_configs: dict[AgentName, AgentRewardConfig],
     case_label: str,
     run_judge: bool = False,
     run_reviewers_with_judge: bool = False,
 ) -> bool:
-    if run_judge or run_reviewers_with_judge:
-        raise ValueError(
-            "runner backend 'codex' does not support --run-judge or "
-            "--run-reviewers-with-judge yet"
-        )
-
     task_id = item.id
     spec = AGENT_SPECS[agent_name]
     session_id = f"codex-{task_id}-{uuid.uuid4().hex[:8]}"
@@ -1965,6 +2276,8 @@ async def _run_codex_eval(
     launch_return_code: int | None = None
     verification_result = None
     codex_trace_artifacts = None
+    hard_checks_passed: bool | None = None
+    codex_reviewer_results: list[dict[str, Any]] = []
 
     try:
         materialized = _materialize_codex_workspace(
@@ -2072,6 +2385,69 @@ async def _run_codex_eval(
                 failure_reason = f"{failure_reason}; {verification_failure}"
             else:
                 failure_reason = verification_failure
+
+        codex_metrics = _codex_workspace_metrics(
+            workspace_dir=materialized.workspace_dir,
+            success=success,
+            verification_result=verification_result,
+        )
+        hard_checks_passed = await _record_hard_check_outcomes(
+            stats=stats,
+            reward_agent_configs=reward_agent_configs,
+            agent_name=agent_name,
+            item=item,
+            success=success,
+            episode_data=None,
+            session_id=session_id,
+            failure_context=(
+                {
+                    "error_code": "codex_eval_failed",
+                    "session_status": "failed",
+                    "error_message": _truncate_text(failure_reason or "", limit=220),
+                    "error_source": "evals/logic/runner.py",
+                }
+                if not success and failure_reason
+                else None
+            ),
+            metrics_override=codex_metrics,
+        )
+        if (
+            run_judge
+            and success
+            and hard_checks_passed is True
+            and JUDGE_REVIEWER_CHAIN.get(agent_name)
+        ):
+            codex_reviewer_results = await _run_codex_reviewer_chain_for_judge(
+                item=item,
+                agent_name=agent_name,
+                source_workspace_dir=materialized.workspace_dir,
+                task_description=item.task,
+                session_id=session_id,
+                codex_workspace_root=codex_workspace_root,
+                codex_runtime_root=codex_runtime_root,
+                log=log,
+            )
+
+        if run_judge:
+            judge_metrics = dict(codex_metrics)
+            if codex_reviewer_results:
+                judge_metrics.update(
+                    _codex_reviewer_metrics_from_verification(
+                        verification_result=codex_reviewer_results[0],
+                        expected_decision=item.expected_decision,
+                    )
+                )
+            await _record_judge_outcomes(
+                stats=stats,
+                reward_agent_configs=reward_agent_configs,
+                agent_name=agent_name,
+                item=item,
+                success=success,
+                session_id=session_id,
+                episode_data=None,
+                extra_episodes=None,
+                metrics_override=judge_metrics,
+            )
     except FileNotFoundError as exc:
         failure_reason = str(exc)
         log.error("codex_cli_missing", session_id=session_id, error=failure_reason)
@@ -2108,6 +2484,8 @@ async def _run_codex_eval(
             "verification_details": (
                 verification_result.details if verification_result is not None else {}
             ),
+            "hard_checks_passed": hard_checks_passed,
+            "judge_reviewer_results": codex_reviewer_results,
             "codex_session_trace": (
                 {
                     "session_id": codex_trace_artifacts.session_id,
@@ -2194,6 +2572,7 @@ async def run_single_eval(
             item=item,
             stats=stats,
             agent_name=agent_name,
+            reward_agent_configs=reward_agent_configs,
             case_label=case_label,
             run_judge=run_judge,
             run_reviewers_with_judge=run_reviewers_with_judge,
@@ -2830,15 +3209,25 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--level",
+        action="append",
+        default=None,
+        help=(
+            "Run only evals at the selected complexity levels. Supports a single "
+            "level, repeated flags, comma-separated values, or list syntax like [0,1]."
+        ),
+    )
+    parser.add_argument(
         "--verbose", action="store_true", help="Print backend traces during polling"
     )
     parser.add_argument(
         "--full-sim",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=False,
         help=(
-            "Use the full-fidelity simulation backend for this eval run "
-            "(default: enabled)."
+            "Use the full-fidelity Genesis simulation backend for this eval run "
+            "(default: disabled; MuJoCo is the default backend unless a seed "
+            "or benchmark explicitly requires Genesis)."
         ),
     )
     parser.add_argument(
@@ -2850,7 +3239,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--run-reviewers-with-judge",
         action="store_true",
         help=(
-            "When --run-judge is enabled, run reviewer stages after all hard checks "
+            "When --run-judge is enabled, run reviewer stages after hard checks "
             "pass to populate reviewer checklist metrics."
         ),
     )
@@ -2884,9 +3273,9 @@ def _build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help=(
-            "Use the paid controller/OpenRouter/Gemini path instead of local "
-            "Codex execution. The default path is Codex; --runner-backend "
-            "still provides an explicit override."
+            "Use the controller/API LLM path instead of local Codex CLI "
+            "execution. The controller still orchestrates the run; this flag "
+            "only switches how model calls/tool use happen under the hood."
         ),
     )
     parser.add_argument(
@@ -2895,8 +3284,9 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         choices=[backend.value for backend in EvalRunnerBackend],
         help=(
-            "Explicit execution backend override. Codex is the default when "
-            "neither --call-paid-api nor EVAL_RUNNER_BACKEND is set."
+            "Explicit execution backend override: 'controller' for the API LLM "
+            "path, 'codex' for the local CLI LLM path. Codex is the default "
+            "when neither --call-paid-api nor EVAL_RUNNER_BACKEND is set."
         ),
     )
     parser.add_argument(
@@ -2914,14 +3304,17 @@ async def main():
     parser = _build_parser()
     args = parser.parse_args()
     selected_task_ids = _parse_task_id_filters(args.task_id)
+    try:
+        selected_levels = _parse_level_filters(args.level)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if args.task_id and not selected_task_ids:
         parser.error("--task-id provided but no valid task IDs were parsed")
+    if args.level and not selected_levels:
+        parser.error("--level provided but no valid complexity levels were parsed")
 
-    if args.full_sim:
-        os.environ.setdefault("SIMULATION_DEFAULT_BACKEND", "GENESIS")
-    else:
-        os.environ["SIMULATION_DEFAULT_BACKEND"] = "MUJOCO"
+    os.environ["SIMULATION_DEFAULT_BACKEND"] = "GENESIS" if args.full_sim else "MUJOCO"
 
     try:
         runner_backend = _resolve_runner_backend(
@@ -2931,14 +3324,6 @@ async def main():
         )
     except ValueError as exc:
         parser.error(str(exc))
-
-    if runner_backend == EvalRunnerBackend.CODEX and (
-        args.run_judge or args.run_reviewers_with_judge
-    ):
-        parser.error(
-            "--runner-backend codex does not support --run-judge or "
-            "--run-reviewers-with-judge yet"
-        )
 
     if args.run_reviewers_with_judge and not args.run_judge:
         parser.error("--run-reviewers-with-judge requires --run-judge")
@@ -3006,7 +3391,7 @@ async def main():
     SESSION_LOG_ROOT = session_log_root
     logger.info(
         "eval_simulation_backend_selected",
-        backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "GENESIS"),
+        backend=os.environ.get("SIMULATION_DEFAULT_BACKEND", "MUJOCO"),
         full_sim=args.full_sim,
     )
     logger.info(
@@ -3174,6 +3559,12 @@ async def main():
                     if selected_task_ids:
                         data = [
                             item for item in data if item["id"] in selected_task_ids
+                        ]
+                    if selected_levels:
+                        data = [
+                            item
+                            for item in data
+                            if item.get("complexity_level") in selected_levels
                         ]
                     if args.limit > 0:
                         if args.random:
