@@ -4,7 +4,7 @@
 
 - Primary focus: controller and split-worker deployment architecture.
 - Defines `worker-light` vs `worker-heavy` responsibilities, worker APIs, and routing contract.
-- Covers persistence/storage expectations, concurrency model, and Temporal orchestration boundary.
+- Covers persistence/storage expectations, concurrency model, WebSocket control-plane transport, and Temporal orchestration boundary.
 - Use this file when changing infra topology or controller-to-worker integration behavior.
 
 There is a controller node which runs the LLM and tool calls, and a split worker plane:
@@ -13,7 +13,9 @@ There is a controller node which runs the LLM and tool calls, and a split worker
 2. `worker-heavy` for simulation + validation + rendering,
 3. `controller-worker` (Temporal worker) for durable orchestration.
 
-For both safety and performance reasons, it desirable that the LLM-generated scripts are never executed on the controller machine.
+For both safety and performance reasons, it is desirable that the LLM-generated scripts are never executed on the controller machine.
+
+Frontend-to-controller and controller-to-worker-light control traffic uses WebSockets. Temporal remains the exception for workflow and activity delivery.
 
 In the future we may well refactor to run on distributed nodes, perhaps even IPv6.
 
@@ -41,7 +43,7 @@ The worker API is physically split into two specialized services to optimize res
   - Asset serving (`/assets/*`).
   - Code linting (`/lint`).
   - Topology inspection (`/topology/inspect`).
-- **HTTP Boundary**: Typically exposed on port 18001.
+- **WebSocket transport**: Frontend-to-controller and controller-to-worker-light control traffic on port 18001.
 - **Operational profile**: High request-rate, short-lived operations, no heavy physics kernels.
 
 ### Worker Heavy
@@ -55,14 +57,14 @@ The worker API is physically split into two specialized services to optimize res
   - Rendering and preview generation (`/benchmark/preview`).
   - Asset building (`/benchmark/build`).
   - Single-flight execution gate: one active heavy job per worker instance.
-- **HTTP Boundary**: Typically exposed on port 18002.
+- **HTTP boundary**: Direct benchmark endpoints are reserved for integration tests; production job dispatch stays behind Temporal.
 - **Operational profile**: one active external heavy job at a time per instance, no in-process multi-request scheduler.
 
 ### Routing Contract (Controller -> Workers)
 
-- Controller routes light operations to light worker, (default light worker endpoint). The light worker executes scripts, which can ping the load balancer handling heavy workers.
+- Controller routes light operations to light worker over the WebSocket control channel. The light worker executes scripts, which can ping the load balancer handling heavy workers.
 - Controller routes heavy operations through Temporal workflows, not directly to `WORKER_HEAVY_URL`.
-- All worker calls are session-scoped with `X-Session-ID`.
+- All non-Temporal worker calls are session-scoped with `X-Session-ID`.
 - The `WorkerClient` is the single boundary adapter; agents do not know about service split.
 - Heavy-worker admission is fail-closed: busy workers return deterministic busy responses; they do not enqueue additional work internally.
 
@@ -81,7 +83,7 @@ Backend responsibility is split by operation purpose:
 3. Static preview generation for `/benchmark/validate` uses MuJoCo by default even when `physics.backend=genesis`.
 4. `/benchmark/validate` does not add a separate Genesis load/render gate solely for parity checking; Genesis-specific runtime behavior is established by actual Genesis simulation runs where Genesis behavior is required.
 
-Direct `worker-heavy` HTTP endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.
+Direct `worker-heavy` benchmark endpoints (`/benchmark/*`) are reserved for integration tests that verify worker-level boundaries, not an alternate orchestration model with independent queueing semantics.
 
 Temporal task delivery remains worker-poll based (long-poll task queues), while workflow completion is returned through Temporal result APIs. We do not define a Temporal-server-push webhook delivery mode for activity task dispatch in this architecture.
 
@@ -124,7 +126,7 @@ Note: we want to offload work from `worker_heavy` as much as possible because:
 
 Upon requesting simulation or rendering, worker light prepares the session bundle and git state needed for heavy execution. The controller-worker Temporal path owns the actual heavy dispatch, retry, and completion tracking.
 
-Predominantly, worker light communicates with controller-worker orchestration for heavy dispatch; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy is hidden behind Temporal/controller-worker orchestration, which also acts as the admission and retry boundary.
+Predominantly, worker light communicates with controller-worker orchestration for heavy dispatch through the WebSocket control plane; direct worker-heavy contact is reserved for integration tests that verify worker-level boundaries and for termination signals from the controller. There is a load balancer pinging `/ready` status in worker. Ideally, the worker-heavy is hidden behind Temporal/controller-worker orchestration, which also acts as the admission and retry boundary.
 
 ### OpenAPI Artifacts
 
