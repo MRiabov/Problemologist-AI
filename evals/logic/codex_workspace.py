@@ -31,6 +31,7 @@ from shared.agent_templates import (
 )
 from shared.enums import AgentName
 from shared.models.schemas import ReviewComments, ReviewFrontmatter
+from shared.skills import build_skill_catalog_lines
 from shared.workers.filesystem.backend import FileInfo
 from worker_heavy.utils.file_validation import (
     validate_node_output,
@@ -476,6 +477,8 @@ def build_codex_prompt(
         f"- {shared_note}",
     ]
     prompt_lines.extend(f"- {line}" for line in role_lines)
+    prompt_lines.append("")
+    prompt_lines.extend(build_skill_catalog_lines())
     return "\n".join(prompt_lines).rstrip() + "\n"
 
 

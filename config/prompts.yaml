@@ -813,10 +813,10 @@ benchmark_generator:
 
       **Required Context**:
       - Read `plan.md` and `benchmark_definition.yaml` first.
-      - Read `/skills/build123d_cad_drafting_skill/SKILL.md`.
-      - Follow the runtime submission-script contract exposed by `utils.submission`; do not search for repo internals or architecture docs.
-      - Read `/skills/mechanical-engineering/SKILL.md` only for mechanism design, stress/fluid, or passive-transfer geometry issues.
+      - Read `/skills/build123d_cad_drafting_skill/SKILL.md` for build123d drafting, placement, constructor, and metadata conventions.
+      - Read `/skills/mechanical-engineering/SKILL.md` for passive-transfer, stress, and fluid mechanisms.
       - Read `/skills/electronics-engineering/SKILL.md` only if the benchmark explicitly contains an `electronics` section.
+      - Follow the runtime submission-script contract exposed by `utils.submission`; do not search for repo internals or architecture docs.
 
       **Filesystem Tools** (via deepagents):
       - `read_file(path: str)`, `write_file(path: str, content: str)`, `edit_file(path: str, old_string: str, new_string: str)`
@@ -826,55 +826,25 @@ benchmark_generator:
       **Python Utils**:
       - `from utils.submission import validate, simulate, submit_for_review`
       - Do not import or reference `utils.validation` for submission-script verification in either `script.py` or shell probes; use the `utils.submission` surface above.
-      - `validate(compound: Compound) -> tuple[bool, str | None]`: Check intersections and bounds under all environment randomization.
-      - `simulate(compound: Compound) -> BenchmarkToolResponse`: Run physics test with environment constraints. Use `.success` and `.message` on the returned object.
-      - `submit_for_review(compound: Compound) -> bool`: Submit the whole benchmark compound to the Reviewer. This returns a plain boolean, not an object with `.success` or `.message`.
+      - `validate(compound: Compound) -> tuple[bool, str | None]`: Local geometry check and render preview.
+      - `simulate(compound: Compound) -> BenchmarkToolResponse`: Physics check on the current workspace artifact. Use `.success` and `.message` on the returned object.
+      - `submit_for_review(compound: Compound) -> bool`: Hand the latest revision to review. This returns a plain boolean, not an object with `.success` or `.message`.
       - `from utils.metadata import PartMetadata, CompoundMetadata`
       - `get_docs_for(type: str)`: Find documentation via subagent.
 
-      **Rules**:
-      1. **Builder Mode First**: Prefer `with BuildPart()` for constructed solids, using Box/Cylinder/Sphere and booleans inside the builder. Sketches are still for complex 2D profiles. Use direct shape algebra only when assembling already-built parts or for a very small/simple moved object where a builder adds no value.
-      2. **Scaling**: Use `scale(obj, by=scale_factors)` FUNCTION for non-uniform. The `.scale()` METHOD only takes a single float.
-      3. **Locations**: Use `with Locations(...):` (plural, context manager). `Location(...)` (singular) is NOT a context manager.
-      4. **Primitive Placement**: Build123d primitives should be created at the origin, then placed with `.move(Location((x, y, z)))` or `.moved(Location((x, y, z)))`. Do NOT use `.translate((x, y, z))` for top-level benchmark-part placement, because the simulation exporter recenters meshes and reads placement from `child.location`. Do NOT pass `position=...` or `loc=...` into `Box`, `Cylinder`, or `Sphere`.
-         - If a top-level benchmark part must be rotated in simulation/export, encode that rotation in the `Location`, for example `part.move(Location((0, 0, 0.06), (0, 2, 0)))`.
-         - The orientation tuple inside `Location((x, y, z), (rx, ry, rz))` is in degrees, matching exported Euler angles. Do NOT use radians there.
-         - If a passive-transfer path uses multiple top-level parts that must share the same slope or direction of travel, give each of those parts a compatible rotated `Location(...)`. Do not rotate only the ramp while leaving companion rails/walls flat.
-         - For chute/channel mechanisms, the transport floor and its containment rails or walls must form one continuous corridor in the exported scene. Either place those parts with the same rotated frame or author them as one combined chute. A sloped floor beside world-aligned rails/walls is an invalid discontinuity, not a usable transport path.
-         - Every child in `Compound(children=[...])` must be a distinct top-level object instance. Reusing one source shape is fine only if you derive separate placed copies from it with `.moved(...)`. When you need two rails, two walls, or symmetric supports from one builder result, always create each placement with `.moved(...)`; reserve `.move(...)` for a one-off final placement of a single object. Do NOT place the same mutable `Part` instance into the compound twice via repeated `.move(...)` calls.
-         - Do NOT rely on `part.rotate(...)` for the final exported orientation of top-level parts you create. That can leave `child.location.orientation` at zero, so the exporter emits an unrotated part even though the local build123d object looked rotated.
-      5. **Constructor Contract (CRITICAL)**:
-         - `Box` in this runtime uses positional dimensions: `Box(length, width, height)`. Do NOT call `Box(width=..., height=..., length=...)`.
-         - For vertical bottom/top alignment, use `Align.MIN` / `Align.MAX`. Do NOT use `Align.BOTTOM` or `Align.TOP`.
-         - Build the final assembly in one shot with `Compound(children=[...])`. Do NOT create `Compound()` and then mutate `compound.children` with `.append(...)`, `.extend(...)`, or reassignment.
-         - The final exported object must be a `Compound` with the complete `children` list populated exactly once. Do NOT set `result` to a `BuildPart`; if you use `BuildPart` for intermediate drafting, extract its part into the final `Compound` before assigning `result`.
-         - Every part you create must appear in the final `Compound(children=[...])` list exactly once. If you create a ramp, rail, support, goal fixture, or moved object, verify it is included before running validation.
-         - Do NOT pass `label=` into any build123d constructor (`Box`, `Sphere`, `Cylinder`, `Compound`, etc.).
-         - Create the object first, then assign labels/metadata as attributes:
-         ```python
-         from build123d import Align, Box, BuildPart, Compound, Location
+      **Geometry & Contracts**:
+      - Use `/skills/build123d_cad_drafting_skill/SKILL.md` as the source of truth for build123d drafting details. Do not restate its full geometry rules here.
+      - `benchmark_definition.yaml` is authoritative. Keep all parts you create inside `build_zone`, and size the support path for `moved_object.start_position` plus `runtime_jitter`.
+      - If the current task is passive transfer and the geometry is unclear, load `/skills/mechanical-engineering/SKILL.md` instead of improvising prompt-specific heuristics.
 
-         with BuildPart() as rail_builder:
-             Box(1.0, 0.02, 0.02, align=(Align.CENTER, Align.CENTER, Align.CENTER))
+      **Assembly Contract**:
+      - Keep the final assembly a `Compound(children=[...])` with each part included exactly once.
+      - Do not create a `BuildPart` and leave it as the final `result`; extract the finished compound first.
+      - Apply labels and metadata after the object exists.
+      - Every part and the final `Compound` need a `.metadata` attribute.
+      - Static environment parts use `PartMetadata(..., fixed=True)`; the moved object uses `PartMetadata(..., fixed=False)`.
 
-         rail_upper = rail_builder.part.moved(Location((0, 0.06, 0.09), (0, 2, 0)))
-         rail_upper.label = "obstacle_rail_upper"
-         rail_upper.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
-
-         ramp = ramp_builder.part.move(Location((0, 0, 0.06), (0, 2, 0)))
-         ramp.label = "transport_ramp"
-         ramp.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
-
-         rail_lower = rail_builder.part.moved(Location((0, -0.06, 0.09), (0, 2, 0)))
-         rail_lower.label = "obstacle_rail_lower"
-         rail_lower.metadata = PartMetadata(material_id="steel_cold_rolled", fixed=True)
-
-         benchmark = Compound(children=[rail_upper, rail_lower, ramp])
-         benchmark.label = "sideways_ball_benchmark"
-         benchmark.metadata = CompoundMetadata()
-         ```
-         - If you first wrote `rail = rail_builder.part.move(...)` and later realize you need a mirrored or rotated companion rail, stop and rebuild that section with `.moved(...)` copies. Do not mutate the same `rail_builder.part` twice.
-      6. **Labels**: Apply correct labels per the labeling convention.
+      **Labels**: Apply correct labels per the labeling convention.
       6a. **Bounds Contract (CRITICAL)**:
          - `objectives.objectives.build_zone` is the limit for benchmark geometry. All parts you create must fit inside `build_zone`.
          - `build_zone` is the region the engineer can build in; all parts you create must fit inside it.
@@ -898,33 +868,10 @@ benchmark_generator:
          - The support path must be continuous at handoff points. If a ramp or chute connects to a spawn platform or goal platform, make their support surfaces actually overlap or meet with no gap in the final geometry. "Close enough by center positions" is not sufficient.
          - Check continuity from actual part extents, not intention comments. Compare the ramp/chute footprint against the adjacent platform/support footprint and reject drafts that leave even a small unsupported gap where the moved object is supposed to roll.
          - When the start position is higher than the target goal/support height and no active drive is allowed, load `/skills/mechanical-engineering/SKILL.md` and use its mechanism-pattern guidance to choose an explicit passive transport surface.
-      7. **Script Contract (MANDATORY)**:
-         Follow the runtime submission-script contract exposed by `utils.submission` as the source of truth.
-         - Canonical submission-script imports are:
-         - `from utils.metadata import PartMetadata, CompoundMetadata`
-         - `from utils.submission import validate, simulate, submit_for_review`
-         - Keep `script.py` import-safe unless the task explicitly says otherwise.
-        - Expose the final benchmark as a module-level object such as `result = benchmark`. `build()` may exist for compatibility but is not the execution-path contract.
-         - Do NOT include `if __name__ == "__main__":` in `script.py`.
-      8. **Part & Compound Metadata (MANDATORY)**:
-         Every part and assembly (Compound) MUST have a `.metadata` attribute.
-         ```python
-         from utils.metadata import PartMetadata, CompoundMetadata
-
-         # Static benchmark fixtures: mark each child part individually.
-         obstacle.metadata = PartMetadata(material_id="abs", fixed=True)
-
-         # Moved Object (physics-bound):
-         ball.metadata = PartMetadata(material_id="pla", fixed=False)
-
-         # Final assembly metadata still exists, but it does not propagate fixedness.
-         benchmark.metadata = CompoundMetadata()
-         ```
-         `CompoundMetadata(fixed=True)` on the parent assembly does NOT make the child parts static in simulation. Use `PartMetadata(..., fixed=True)` on each static environment part.
-         - Do NOT omit the `fixed=` field on `PartMetadata`.
-         - For every environment/support part, write `PartMetadata(..., fixed=True)` explicitly.
-         - For the moved object, write `PartMetadata(..., fixed=False)` explicitly.
-         - `part_type="static"` does NOT automatically make a part static. If you omit `fixed=True`, the exported scene can mark the part as dynamic and break simulation.
+      **Script Contract (MANDATORY)**:
+      - Keep `script.py` import-safe unless the task explicitly says otherwise.
+      - Expose the final benchmark as a module-level object such as `result = benchmark`. `build()` may exist for compatibility but is not the execution-path contract.
+      - Do NOT include `if __name__ == "__main__":` in `script.py`.
 
       **Artifact Ownership (CRITICAL)**:
       - `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `benchmark_assembly_definition.yaml` are planner-stage handoff files.

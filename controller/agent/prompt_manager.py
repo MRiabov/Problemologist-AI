@@ -5,6 +5,7 @@ import jinja2
 import structlog
 
 from shared.enums import AgentName
+from shared.skills import build_skill_catalog_lines
 
 from ..prompts import load_prompts
 
@@ -65,7 +66,11 @@ class PromptManager:
                 else template_name
             )
             template = self.env.get_template(key)
-            return template.render(**kwargs)
+            rendered = template.render(**kwargs).rstrip()
+            skill_catalog = "\n".join(build_skill_catalog_lines())
+            if rendered:
+                return f"{rendered}\n\n{skill_catalog}\n"
+            return f"{skill_catalog}\n"
         except jinja2.TemplateNotFound:
             raise ValueError(f"Template '{template_name}' not found")
 
