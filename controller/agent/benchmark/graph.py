@@ -600,7 +600,7 @@ def _guarded_node(target_node: AgentName, node_callable):
                 result, BenchmarkGeneratorState
             ):
                 planner_errors = await _validate_planner_handoff(
-                    session_id=result.session.session_id,
+                    episode_id=uuid.UUID(str(result.episode_id)),
                     plan=result.plan,
                     custom_objectives=result.session.custom_objectives,
                     worker_session_id=result.worker_session_id,
@@ -716,7 +716,7 @@ def _guarded_node(target_node: AgentName, node_callable):
 
 
 async def _validate_planner_handoff(
-    session_id: uuid.UUID,
+    episode_id: uuid.UUID,
     plan: Any | None,
     custom_objectives: CustomObjectives | None = None,
     *,
@@ -732,13 +732,13 @@ async def _validate_planner_handoff(
     - User-provided objective overrides are reflected in objectives constraints.
     """
     submission, submission_error = await _get_latest_planner_submission_result(
-        session_id
+        episode_id
     )
     from controller.config.settings import settings as global_settings
 
     effective_worker_session_id = (
         worker_session_id
-        or _effective_benchmark_worker_session_id(session_id=str(session_id))
+        or _effective_benchmark_worker_session_id(session_id=str(episode_id))
     )
     client = WorkerClient(
         base_url=global_settings.worker_light_url,
@@ -846,7 +846,7 @@ def define_graph():
         if state.session.status == SessionStatus.FAILED:
             return END
         planner_errors = await _validate_planner_handoff(
-            session_id=state.session.session_id,
+            episode_id=uuid.UUID(str(state.episode_id)),
             plan=state.plan,
             custom_objectives=state.session.custom_objectives,
             worker_session_id=state.worker_session_id,
@@ -1235,7 +1235,7 @@ async def _execute_graph_streaming(
                     plan=str(final_state.plan),
                 )
                 planner_errors = await _validate_planner_handoff(
-                    session_id=session_id,
+                    episode_id=session_id,
                     plan=final_state.plan,
                     custom_objectives=final_state.session.custom_objectives,
                     worker_session_id=final_state.worker_session_id,

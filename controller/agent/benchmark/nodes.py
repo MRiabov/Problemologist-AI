@@ -906,6 +906,23 @@ class BenchmarkPlannerNode(BaseNode):
                                     self._submit_plan_error_message(submission)
                                     or "unknown validation error"
                                 )
+                                if (
+                                    "CONTRADICTORY_CONSTRAINTS"
+                                    in last_submit_error_text
+                                ):
+                                    messages.append(
+                                        {
+                                            "role": "system",
+                                            "content": (
+                                                "submit_plan() rejected terminal "
+                                                "contradictory benchmark motion: "
+                                                f"{last_submit_error_text}. Stop "
+                                                "retrying submit_plan() and let "
+                                                "handoff validation fail closed."
+                                            ),
+                                        }
+                                    )
+                                    break
                                 messages.append(
                                     {
                                         "role": "system",
@@ -940,6 +957,8 @@ class BenchmarkPlannerNode(BaseNode):
                                 self._submit_plan_error_message(submission)
                                 or last_submit_error_text
                             )
+                            if "CONTRADICTORY_CONSTRAINTS" in last_submit_error_text:
+                                break
 
                 if not submitted:
                     submit_error_suffix = (
@@ -947,6 +966,10 @@ class BenchmarkPlannerNode(BaseNode):
                         if last_submit_error_text
                         else ""
                     )
+                    if last_submit_error_text and "CONTRADICTORY_CONSTRAINTS" in (
+                        last_submit_error_text or ""
+                    ):
+                        return None, artifacts, journal_entry
                     raise ValueError(
                         "Native benchmark planner exhausted tool loop without "
                         f"successful submit_plan().{submit_error_suffix}"

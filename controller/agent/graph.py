@@ -519,9 +519,18 @@ async def route_after_engineer_coder(
         return END
     if await _state_requires_electronics(state):
         return AgentName.ELECTRONICS_REVIEWER
-    if state.worker_client is not None:
+    worker_client = state.worker_client
+    created_worker_client = False
+    if worker_client is None:
+        worker_client = WorkerClient(
+            base_url=controller_settings.worker_light_url,
+            heavy_url=controller_settings.worker_heavy_url,
+            session_id=state.session_id,
+        )
+        created_worker_client = True
+    try:
         handover_error = await _materialize_reviewer_handover(
-            state.worker_client,
+            worker_client,
             reviewer_stage="engineering_execution_reviewer",
         )
         if handover_error:
@@ -531,6 +540,9 @@ async def route_after_engineer_coder(
                 session_id=state.session_id,
                 error=handover_error,
             )
+    finally:
+        if created_worker_client:
+            await worker_client.aclose()
     return AgentName.ENGINEER_EXECUTION_REVIEWER
 
 
@@ -541,9 +553,18 @@ async def route_after_electronics_reviewer(
         return AgentName.STEER
     if await _should_end_scoped_run_after_node(state, AgentName.ELECTRONICS_REVIEWER):
         return END
-    if state.worker_client is not None:
+    worker_client = state.worker_client
+    created_worker_client = False
+    if worker_client is None:
+        worker_client = WorkerClient(
+            base_url=controller_settings.worker_light_url,
+            heavy_url=controller_settings.worker_heavy_url,
+            session_id=state.session_id,
+        )
+        created_worker_client = True
+    try:
         handover_error = await _materialize_reviewer_handover(
-            state.worker_client,
+            worker_client,
             reviewer_stage="engineering_execution_reviewer",
         )
         if handover_error:
@@ -553,6 +574,9 @@ async def route_after_electronics_reviewer(
                 session_id=state.session_id,
                 error=handover_error,
             )
+    finally:
+        if created_worker_client:
+            await worker_client.aclose()
     return AgentName.ENGINEER_EXECUTION_REVIEWER
 
 

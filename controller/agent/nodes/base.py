@@ -1062,6 +1062,7 @@ class BaseNode:
             provider=request_config.provider,
         )
         submit_plan_succeeded = False
+        terminal_submit_plan_rejection = False
         no_tool_call_streak = 0
         initial_script_sha256 = (
             str(inputs.get("initial_script_sha256") or "").strip() or None
@@ -1375,18 +1376,32 @@ class BaseNode:
                     else:
                         error_text = self._submit_plan_error_message(observation)
                         if error_text:
-                            messages.append(
-                                {
-                                    "role": "system",
-                                    "content": self._get_runtime_prompt(
-                                        self._runtime_prompt_key(
-                                            node_type,
-                                            "submit_rejected_fix_and_retry",
+                            if "CONTRADICTORY_CONSTRAINTS" in error_text:
+                                terminal_submit_plan_rejection = True
+                                messages.append(
+                                    {
+                                        "role": "system",
+                                        "content": (
+                                            "submit_plan() rejected terminal "
+                                            "contradictory benchmark motion: "
+                                            f"{error_text}. Stop retrying submit_plan() "
+                                            "and let handoff validation fail closed."
                                         ),
-                                        error_text=error_text,
-                                    ),
-                                }
-                            )
+                                    }
+                                )
+                            else:
+                                messages.append(
+                                    {
+                                        "role": "system",
+                                        "content": self._get_runtime_prompt(
+                                            self._runtime_prompt_key(
+                                                node_type,
+                                                "submit_rejected_fix_and_retry",
+                                            ),
+                                            error_text=error_text,
+                                        ),
+                                    }
+                                )
                 messages.extend(
                     self._build_media_attachment_messages(
                         node_type=node_type,
@@ -1413,6 +1428,12 @@ class BaseNode:
                     )
 
         if requires_submit_plan and not submit_plan_succeeded:
+            if terminal_submit_plan_rejection:
+                return self._planner_autosubmit_prediction(
+                    signature_cls=signature_cls,
+                    finish_fields=finish_fields,
+                    node_type=node_type,
+                )
             submit_tool = tool_fns.get("submit_plan")
             if submit_tool is not None:
                 submission = submit_tool()
