@@ -284,22 +284,19 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
 
       if (wasBenchmarkCreation && isBenchmarkRoute && !isSolvingBenchmark) {
          response = await generateBenchmark(task, objectives);
-         // Backend returns { session_id: ... }
-         if (response.session_id) {
-            response.episode_id = response.session_id; // Normalize key
-         }
       } else {
          const sessionId = `sess-${Math.random().toString(36).substring(2, 10)}`;
          response = await runAgent(task, sessionId, metadata);
       }
-      
-      if (response.episode_id) {
-        console.log("Agent started, episode_id:", response.episode_id);
-        setSelectedEpisodeIntent(response.episode_id);
-        selectedEpisodeIdRef.current = response.episode_id;
+
+      const episodeId = response.episode_id ?? response.session_id;
+      if (episodeId) {
+        console.log("Agent started, episode_id:", episodeId);
+        setSelectedEpisodeIntent(episodeId);
+        selectedEpisodeIdRef.current = episodeId;
         // Create a minimal episode object to start polling
         const newEpisode: Episode = {
-          id: response.episode_id,
+          id: episodeId,
           task: task,
           status: EpisodeStatus.RUNNING,
           created_at: new Date().toISOString(),
@@ -310,7 +307,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
           metadata_vars: {}
         };
         setSelectedEpisode(newEpisode);
-        localStorage.setItem("selectedEpisodeId", response.episode_id);
+        localStorage.setItem("selectedEpisodeId", episodeId);
         await refreshEpisodes();
       } else {
         console.error("No episode_id in response:", response);

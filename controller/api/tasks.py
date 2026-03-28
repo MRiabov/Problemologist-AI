@@ -474,7 +474,11 @@ async def execute_agent_task(
                 # Use a 32-char hex trace_id for OTEL/Langfuse v3 compatibility
                 trace_id = uuid.uuid4().hex
 
-                client = get_worker_client(session_id)
+                workspace_session_id = (
+                    infer_integration_test_id(task, session_id) or session_id
+                )
+
+                client = get_worker_client(workspace_session_id)
                 middleware = RemoteFilesystemMiddleware(
                     client,
                     agent_role=agent_name,
@@ -679,9 +683,7 @@ async def execute_agent_task(
                     except ValueError:
                         u_session_id = uuid.uuid4()
 
-                    worker_session_id = infer_integration_test_id(task, session_id)
-                    if not worker_session_id:
-                        worker_session_id = session_id
+                    worker_session_id = workspace_session_id
 
                     session = GenerationSession(
                         session_id=u_session_id,
