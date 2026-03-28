@@ -11,6 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from build123d import Box, BuildPart
 
 from evals.logic import runner
 from evals.logic.codex_workspace import (
@@ -21,9 +22,13 @@ from evals.logic.codex_workspace import (
 )
 from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
-from shared.enums import AgentName
-from shared.enums import ReviewDecision
-from shared.models.schemas import DatasetCurationManifest, PlannerSubmissionResult
+from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
+from shared.models.schemas import (
+    DatasetCurationManifest,
+    PartMetadata,
+    PlannerSubmissionResult,
+)
+from worker_heavy.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -317,6 +322,79 @@ def test_run_evals_codex_env_supports_repo_root_imports(tmp_path):
 
 
 @pytest.mark.integration_p0
+def test_run_evals_codex_vtk_preview_overrides_bad_display(tmp_path, monkeypatch):
+    monkeypatch.setenv("DISPLAY", ":109")
+
+    with BuildPart() as builder:
+        Box(1, 1, 1)
+    component = builder.part
+    component.label = "display_box"
+    component.metadata = PartMetadata(
+        manufacturing_method=ManufacturingMethod.CNC,
+        material_id="aluminum_6061",
+        fixed=True,
+    )
+
+    output_path = tmp_path / "renders" / "preview.png"
+    rendered_path = render_preview_view(
+        component,
+        output_path=output_path,
+        pitch=-35.0,
+        yaw=45.0,
+        workspace_root=tmp_path,
+    )
+
+    assert rendered_path == output_path
+    assert output_path.exists(), output_path
+    assert os.environ["DISPLAY"] != ":109"
+    assert os.environ["DISPLAY"].startswith(":")
+    assert output_path.stat().st_size > 0
+
+
+@pytest.mark.integration_p0
+def test_run_evals_codex_submit_helper_imports_workspace_script_from_cwd(
+    tmp_path,
+):
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+    )
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "PROBLEMOLOGIST_REPO_ROOT": str(ROOT),
+            "PYTHON_BIN": str(ROOT / ".venv" / "bin" / "python"),
+            "DISPLAY": ":109",
+        }
+    )
+    completed = subprocess.run(
+        ["bash", "scripts/submit_for_review.sh"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+    assert "No module named 'script'" not in combined_output, combined_output
+    assert '"stage": "load"' not in combined_output, combined_output
+    assert (
+        "validate_start" in combined_output
+        or '"stage": "validation"' in combined_output
+    )
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     (
@@ -513,6 +591,9 @@ async def test_codex_materialized_planner_workspace_submits(
                 "Edit `script.py` and any supporting `*.py` files",
                 "journal.md",
                 "bash scripts/submit_for_review.sh",
+                "utils.submission",
+                "intermediate checks before",
+                "result = build()",
             ),
             (
                 "plan.md",
@@ -534,6 +615,9 @@ async def test_codex_materialized_planner_workspace_submits(
                 "Edit `script.py` and any supporting `*.py` files",
                 "journal.md",
                 "bash scripts/submit_for_review.sh",
+                "utils.submission",
+                "intermediate checks before",
+                "result = build()",
             ),
             (
                 "plan.md",
