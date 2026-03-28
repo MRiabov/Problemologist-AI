@@ -184,7 +184,7 @@ Template files are intentional source artifacts, not ad hoc runtime defaults or 
 
 Another important note: files in e.g. Engineering Coder or Reviewer stages aren't created anew - they are reused from the previous agent.
 
-For submission scripts, direct top-level execution is canonical. The agent should be able to run `python script.py` and have the script perform its own validation/simulation/review helper calls through `utils.submission`.
+For submission scripts, direct top-level execution is canonical. The agent should be able to run `python script.py` and have the script perform its own `validate`/`simulate` checks before the review handoff through `utils.submission.submit_for_review(...)`.
 
 `build()` is now a compatibility-only helper rather than a mandatory entrypoint. Runtime may continue to support `build()` while migration is in progress, but new submission-script contracts should not depend on `build()` being present.
 

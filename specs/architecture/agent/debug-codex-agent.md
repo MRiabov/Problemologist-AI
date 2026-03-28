@@ -24,7 +24,7 @@ This mode preserves the same workspace contract as the rest of the application:
 1. Seeded files are materialized into a real workspace on disk.
 2. The agent reads a workspace-local prompt file.
 3. Planner roles submit through a local shell helper that invokes Python validation under the hood. Any custom command-like flow in this mode should be expressed as a checked-in shell script rather than an ad hoc pseudo-tool or prompt-only ReAct trick.
-4. Coder roles use a local shell helper for execution-review handoff after validation and simulation succeed.
+4. Coder roles use a local shell helper for execution-review handoff, and prompts may alternatively point at the Python submission utility from `utils.submission` in a supporting script. In that route, `validate` and `simulate` are intermediate checks before `submit_for_review`.
 5. Reviewer roles use a local shell helper for review handoff after writing the stage-owned review artifacts.
 6. Reviewer and coder roles persist the same stage-owned artifacts that the normal runtime expects.
 7. Verification fails closed if the workspace violates the contract.
@@ -72,7 +72,7 @@ The canonical prompt rules are:
 2. The prompt tells the agent to use workspace-relative paths only.
 3. The prompt does not mention `/workspace` as the workspace root.
 4. Planner prompts instruct `bash scripts/submit_plan.sh` as the submission command.
-5. Coder prompts instruct editing `script.py` and supporting `*.py` files, then running `bash scripts/submit_for_review.sh` after validation and simulation succeed.
+5. Coder prompts instruct editing `script.py` and supporting `*.py` files, then either running `bash scripts/submit_for_review.sh` or using the Python submission utility from `utils.submission` in a supporting script. In that route, `validate` and `simulate` are intermediate checks before `submit_for_review`.
 6. Reviewer prompts instruct writing stage-specific review artifacts under `reviews/`, then running `bash scripts/submit_review.sh`.
 7. The prompt includes the task text, agent name, task ID, and seed dataset name when available.
 8. The prompt does not need to describe repository-level import paths or module layout.
@@ -112,7 +112,7 @@ Coder workspaces keep the normal runtime artifact contract:
 2. Supporting `*.py` files may be added when needed.
 3. `todo.md` and `journal.md` remain writable progress artifacts.
 4. Review handoff artifacts are written only when the runtime contract requires them.
-5. `scripts/submit_for_review.sh` is the shell entrypoint for the stage handoff helper.
+5. `scripts/submit_for_review.sh` is the default shell entrypoint for the stage handoff helper; the Python utility in `utils.submission` remains available for supporting-script submission flows.
 
 ### Reviewer roles
 

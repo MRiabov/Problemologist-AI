@@ -104,6 +104,7 @@ The shell script is the canonical command surface for that capability.
 It preserves the same runtime intent as a direct tool call, but it keeps the contract visible in the repository and callable from the workspace shell.
 Reviewer submission and planner/coder submission both use this shell-script pattern when a role needs an explicit command-like completion gate.
 For reviewer roles, the local bridge is `scripts/submit_review.sh`.
+Prompts may also reference the underlying Python utility (`utils.submission.submit_for_review(...)`) as an alternative completion path when a supporting script is clearer for the role; the shell bridge remains the default command-like surface.
 
 Input handling follows a simple split:
 
@@ -228,7 +229,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 
 <!-- Note 2: LangGraph subgraphs/subagents composed with DSPy modules are what we'll use here.-->
 
-For benchmark and engineering submission scripts, direct Python calls inside the submission script are the canonical usage. The intended pattern is:
+For benchmark and engineering submission scripts, direct Python calls inside the submission script are the canonical usage. The intended pattern is to run `validate` and `simulate` as intermediate checks before `submit_for_review`:
 
 ```py
 from utils.submission import validate, simulate, submit_for_review
@@ -241,7 +242,7 @@ simulate(result)
 submit_for_review(result)
 ```
 
-The preferred execution path for the agent is to run the submission script itself, typically via a terminal command such as `python script.py`. A separate `execute_command("python -c ...")` wrapper that reconstructs the same object graph outside the script is not the normative contract.
+The preferred execution path for the agent is to run the checked-in shell helper (`bash scripts/submit_for_review.sh`). The underlying Python utility `utils.submission.submit_for_review(...)` is also available for direct invocation in a supporting script when a prompt explicitly chooses that route; `validate` and `simulate` remain intermediate checks.
 
 `build()` may still exist as a compatibility helper, but it is no longer a required submission-script entrypoint. The architecture contract is the submission script itself, not an import-only `build()` API.
 

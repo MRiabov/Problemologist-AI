@@ -21,7 +21,11 @@ To save me refactors and to speed up debugging, please read these architecture s
 
 ## Rules
 
-In this repo, the convention is to not use unit tests because they are flaky, but to use only real integration tests. They are faster to debug against. So, when implementing new logic, verify it against integration tests. The integration test list and spec can be found at @specs/integration-tests.md
+In this repo, the convention is to not use unit tests because they are flaky, but to use only real integration tests. They are faster to debug against.
+
+When you need to verify, reproduce, or debug behavior at the system boundary, use `./scripts/run_integration_tests.sh` as the only integration test entrypoint. Do not run plain `pytest` for integration verification.
+
+When implementing new logic, verify it against the narrowest relevant integration slice first, then widen only if needed. The integration test list and spec can be found at @specs/integration-tests.md
 
 ______________________________________________________________________
 
