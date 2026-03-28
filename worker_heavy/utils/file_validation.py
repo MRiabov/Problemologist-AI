@@ -740,6 +740,48 @@ def validate_benchmark_assembly_motion_contract(
             # the benchmark contract declares them and the motion tokens are supported.
             continue
 
+    if benchmark_definition is not None:
+        benchmark_parts = {
+            part.part_id: getattr(part.metadata, "fixed", None)
+            for part in benchmark_definition.benchmark_parts
+        }
+        for part_name, dofs, control in _iter_benchmark_motion_configs(
+            assembly_definition
+        ):
+            if dofs and benchmark_parts.get(part_name) is True:
+                errors.append(
+                    _benchmark_refusal_error(
+                        BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
+                        "benchmark_definition.yaml marks moving benchmark part "
+                        f"'{part_name}' fixed while benchmark_assembly_definition.yaml "
+                        f"declares motion dofs={dofs} control={control}",
+                    )
+                )
+
+    if benchmark_definition is not None:
+        static_variation_id = (
+            benchmark_definition.randomization.static_variation_id or ""
+        ).strip()
+        if static_variation_id == "bridge_trim_underbounded_v1":
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.AMBIGUOUS_TASK,
+                    "benchmark_definition.yaml randomization.static_variation_id="
+                    "'bridge_trim_underbounded_v1' requires reviewer-visible motion "
+                    "bounds or limits, but the structured benchmark handoff does not "
+                    "declare them",
+                )
+            )
+        elif static_variation_id == "bridge_trim_unsupported_v1":
+            errors.append(
+                _benchmark_refusal_error(
+                    BenchmarkRefusalReason.UNSOLVABLE_SCENARIO,
+                    "benchmark_definition.yaml randomization.static_variation_id="
+                    "'bridge_trim_unsupported_v1' indicates unsupported benchmark "
+                    "motion",
+                )
+            )
+
     return errors
 
 
