@@ -68,17 +68,6 @@ transcript:
     expected_observation: success
   - tool_name: submit_plan
     expected_observation: submitted
-  - finished: true
-    summary: INT-200 benchmark planner corrected the motion visibility and resubmitted.
-    plan:
-      theme: hidden_motion_bridge
-      target_object_properties:
-        label: transfer_cube
-        shape: cube
-      environment_perturbations:
-        static_geometry: Passive bridge with an explicit slide_y trim.
-      difficulty_score: 0.35
-      reasoning: Make the motion legible in the handoff so review can proceed.
 - node: benchmark_plan_reviewer
   steps:
   - finished: true
