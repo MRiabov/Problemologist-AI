@@ -6,12 +6,13 @@ import httpx
 import pytest
 from pydantic import TypeAdapter
 
+from controller.agent.prompt_manager import PromptManager
 from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
     EpisodeResponse,
 )
-from shared.enums import EpisodeStatus
+from shared.enums import AgentName, EpisodeStatus
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
@@ -78,3 +79,11 @@ async def test_int_045_skills_sync_lifecycle():
         assert fs_resp.status_code == 200
         content_data = ReadFileResponse.model_validate(fs_resp.json())
         assert "# Build123d CAD Drafting Skill" in content_data.content
+
+        # 5. Verify the controller backend prompt builder exposes the skill catalog.
+        prompt_manager = PromptManager()
+        for agent_name in (AgentName.ENGINEER_CODER, AgentName.BENCHMARK_CODER):
+            prompt_text = prompt_manager.render(agent_name)
+            assert "Available skills you can read:" in prompt_text
+            assert "/skills/runtime-script-contract/SKILL.md" in prompt_text
+            assert "/skills/build123d_cad_drafting_skill/SKILL.md" in prompt_text

@@ -480,6 +480,9 @@ async def test_codex_materialized_planner_workspace_submits(
     assert mirror_materialized.helper_script_paths == list(expected_helper_scripts)
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
+    assert "Available skills you can read:" in materialized.prompt_text
+    assert "/skills/runtime-script-contract/SKILL.md" in materialized.prompt_text
+    assert "/skills/build123d_cad_drafting_skill/SKILL.md" in materialized.prompt_text
     assert materialized.prompt_text == mirror_materialized.prompt_text
     assert materialized.copied_paths == mirror_materialized.copied_paths
     assert _workspace_snapshot(workspace_dir) == _workspace_snapshot(
@@ -769,6 +772,9 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
     )
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
+    assert "Available skills you can read:" in materialized.prompt_text
+    assert "/skills/runtime-script-contract/SKILL.md" in materialized.prompt_text
+    assert "/skills/build123d_cad_drafting_skill/SKILL.md" in materialized.prompt_text
     for fragment in prompt_fragments:
         assert fragment in materialized.prompt_text
     for rel_path in expected_files:
