@@ -729,10 +729,11 @@ class MockDSPyLM(dspy.LM):
         )
 
         observations = self._native_tool_observations(messages)
-        completed_tools = max(
-            len(observations),
-            self._native_tool_call_turns(messages),
-        )
+        # Transcript scenarios must advance only after tool responses are
+        # actually present. Counting assistant tool-call turns here can move
+        # the transcript forward on a blocked finish call and skip the real
+        # submit_plan step on short planner traces.
+        completed_tools = len(observations)
         self._tool_progress[node_key.value] = completed_tools
 
         if "transcript" in scenario:

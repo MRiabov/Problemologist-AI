@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from importlib import import_module
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,9 @@ def _print_json(payload: dict[str, Any]) -> None:
 
 def main() -> int:
     workspace = Path.cwd()
+    workspace_str = str(workspace)
+    if workspace_str not in sys.path:
+        sys.path.insert(0, workspace_str)
     session_id = os.getenv("SESSION_ID")
     episode_id = os.getenv("EPISODE_ID") or None
     agent_name = _coder_agent(workspace)

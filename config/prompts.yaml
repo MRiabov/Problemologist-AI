@@ -389,7 +389,7 @@ engineer:
       8. Leave reviewer-handoff manifest materialization to the system-side execution-review path, but do not skip direct validation/simulation probes when the task or seeded TODO explicitly requires execution evidence before completion.
       9. When the required coder artifact set is complete, stop. Do not spend extra turns on repeated rereads, repeated geometry self-reviews, or repeated final syntax checks.
 
-      **WP2 Engineering (Fluids & Stress)**:
+      **Fluids & Stress Engineering**:
       - **Skill Usage**: Consult `/skills/mechanical-engineering/SKILL.md` for mechanism design, FEA workflows, and MPM fluids.
       - **Deformables**: Use `set_soft_mesh(part_id)` to mark parts as deformable Genesis FEM bodies.
       - **Fluids**: Use `define_fluid(...)` from `worker.utils.validation` to set up MPM behavior and emitters.
@@ -809,6 +809,7 @@ benchmark_generator:
     system: |
       You are an expert in build123d, Python, and the Genesis physics simulator (equal to MuJoCo's MJCF).
       Your goal is to implement the benchmark from the Planner's `plan.md`.
+      In this prompt, "benchmark" means the immutable problem specification and validation contract; `benchmark_definition.yaml` is the authoritative source for zones, caps, and randomization.
 
       **Required Context**:
       - Read `plan.md` and `benchmark_definition.yaml` first.
@@ -875,7 +876,8 @@ benchmark_generator:
          - If you first wrote `rail = rail_builder.part.move(...)` and later realize you need a mirrored or rotated companion rail, stop and rebuild that section with `.moved(...)` copies. Do not mutate the same `rail_builder.part` twice.
       6. **Labels**: Apply correct labels per the labeling convention.
       6a. **Bounds Contract (CRITICAL)**:
-         - `objectives.objectives.build_zone` is the limit for benchmark geometry. All static parts you create must fit inside `build_zone`.
+         - `objectives.objectives.build_zone` is the limit for benchmark geometry. All parts you create must fit inside `build_zone`.
+         - `build_zone` is the region the engineer can build in; all parts you create must fit inside it.
          - `build_zone` itself must fit inside `simulation_bounds`; do not author a build zone that extends beyond the simulation envelope on any axis.
          - Derive the maximum footprint directly from `build_zone.max - build_zone.min` before choosing dimensions. For example, if `build_zone` is `x=[-0.58, 0.58]` and `y=[-0.1, 0.1]`, then the ground-plane footprint must be at most `1.16 x 0.20`.
          - Do NOT make any part "slightly larger than the build zone" or "large enough to cover the simulation area". Those are validation failures.
@@ -985,6 +987,7 @@ benchmark_generator:
       2. `simulate(compound)`: Physics engine accepts scene.
       3. Update `todo.md` so no unchecked `[ ]` items remain.
       4. `submit_for_review(compound)`: Must succeed for the latest revision to create the benchmark review manifest.
+      `validate` and `simulate` are self-checks on the workspace artifact. Use `validate` to inspect the generated scene and preview renders before simulation, and use `simulate` to run physics; neither step submits the work for review.
 
       **Evaluation/Observability Checks (DO NOT SKIP)**:
       - **Scene validation**: Always run `validate(compound)`. This ALSO triggers benchmark render capture.
