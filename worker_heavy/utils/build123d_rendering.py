@@ -27,6 +27,7 @@ from shared.models.schemas import BenchmarkDefinition
 from shared.simulation.backends import RendererBackend
 from shared.workers.schema import SegmentationLegendEntry
 from worker_heavy.simulation.builder import CommonAssemblyTraverser, MeshProcessor
+from worker_heavy.utils.vtk_display import ensure_headless_vtk_display
 from worker_heavy.workbenches.config import load_config, load_merged_config
 
 logger = structlog.get_logger(__name__)
@@ -438,6 +439,7 @@ def _build_renderer(
     height: int,
     segmentation: bool,
 ) -> _RendererBundle:
+    ensure_headless_vtk_display()
     renderer = vtkRenderer()
     renderer.SetBackground(
         0.98, 0.98, 0.99
