@@ -1,7 +1,12 @@
+import contextlib
 import gc
 import json
 import math
 import os
+import subprocess
+import sys
+import tempfile
+import textwrap
 from pathlib import Path
 from typing import Any, Literal
 
@@ -157,6 +162,118 @@ def _workspace_relative_render_paths(
                 continue
         normalized.append(str(candidate))
     return normalized
+
+
+def _prerender_24_views_isolated(
+    *,
+    working_dir: Path,
+    output_dir: Path,
+    backend_type: SimulatorBackendType | None,
+    session_id: str | None,
+    smoke_test_mode: bool,
+    particle_budget: int | None,
+) -> list[str]:
+    """Render previews in a fresh subprocess to avoid GL state contamination."""
+
+    repo_root = Path(__file__).resolve().parents[2]
+    child_env = os.environ.copy()
+    child_pythonpath = child_env.get("PYTHONPATH")
+    child_env["PYTHONPATH"] = (
+        f"{repo_root}{os.pathsep}{child_pythonpath}"
+        if child_pythonpath
+        else str(repo_root)
+    )
+    child_env["IS_HEAVY_WORKER"] = "1"
+
+    render_paths_fd, render_paths_name = tempfile.mkstemp(
+        prefix="prerender_paths_", suffix=".json"
+    )
+    os.close(render_paths_fd)
+    render_paths_file = Path(render_paths_name)
+
+    backend_value = backend_type.value if backend_type is not None else ""
+    child_code = textwrap.dedent(
+        """
+        from __future__ import annotations
+
+        import json
+        import sys
+        from pathlib import Path
+
+        import yaml
+
+        from shared.models.schemas import BenchmarkDefinition
+        from shared.simulation.schemas import SimulatorBackendType
+        from shared.workers.loader import load_component_from_script
+        from worker_heavy.utils.rendering import prerender_24_views
+
+        script_path = Path(sys.argv[1])
+        output_dir = Path(sys.argv[2])
+        render_paths_file = Path(sys.argv[3])
+        backend_value = sys.argv[4]
+        smoke_test_mode = sys.argv[5] == "1"
+        session_id = sys.argv[6] or None
+        particle_budget = int(sys.argv[7]) if sys.argv[7] else None
+
+        component = load_component_from_script(script_path)
+        objectives = None
+        benchmark_definition_path = script_path.parent / "benchmark_definition.yaml"
+        if benchmark_definition_path.exists():
+            content = benchmark_definition_path.read_text(encoding="utf-8")
+            if "[TEMPLATE]" not in content:
+                objectives = BenchmarkDefinition.model_validate(
+                    yaml.safe_load(content) or {}
+                )
+
+        backend_type = (
+            SimulatorBackendType(backend_value) if backend_value else None
+        )
+        render_paths = prerender_24_views(
+            component,
+            output_dir=str(output_dir),
+            objectives=objectives,
+            backend_type=backend_type,
+            session_id=session_id,
+            smoke_test_mode=smoke_test_mode,
+            particle_budget=particle_budget,
+        )
+        render_paths_file.write_text(
+            json.dumps(render_paths, indent=2),
+            encoding="utf-8",
+        )
+        """
+    ).strip()
+
+    try:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                child_code,
+                str(working_dir / "script.py"),
+                str(output_dir),
+                str(render_paths_file),
+                backend_value,
+                "1" if smoke_test_mode else "0",
+                session_id or "",
+                str(particle_budget) if particle_budget is not None else "",
+            ],
+            cwd=working_dir,
+            env=child_env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            stderr = completed.stderr.strip()
+            stdout = completed.stdout.strip()
+            message = stderr or stdout or "isolated preview render failed"
+            raise RuntimeError(message)
+
+        return json.loads(render_paths_file.read_text(encoding="utf-8"))
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            render_paths_file.unlink()
 
 
 def _benchmark_refusal_error(reason: BenchmarkRefusalReason, message: str) -> str:
@@ -1368,14 +1485,25 @@ def simulate(
         )
 
         try:
-            render_paths = prerender_24_views(
-                component,
-                output_dir=str(renders_dir),
-                backend_type=backend_type,
-                session_id=session_id,
-                scene_path=str(scene_path),
-                smoke_test_mode=smoke_test_mode,
-            )
+            isolated_script_path = working_dir / "script.py"
+            if isolated_script_path.exists():
+                render_paths = _prerender_24_views_isolated(
+                    working_dir=working_dir,
+                    output_dir=renders_dir,
+                    backend_type=backend_type,
+                    session_id=session_id,
+                    smoke_test_mode=smoke_test_mode,
+                    particle_budget=particle_budget,
+                )
+            else:
+                render_paths = prerender_24_views(
+                    component,
+                    output_dir=str(renders_dir),
+                    backend_type=backend_type,
+                    session_id=session_id,
+                    scene_path=str(scene_path),
+                    smoke_test_mode=smoke_test_mode,
+                )
         except Exception as exc:
             logger.warning(
                 "validation_preview_render_failed",
