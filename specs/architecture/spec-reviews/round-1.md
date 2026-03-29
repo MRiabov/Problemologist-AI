@@ -249,7 +249,7 @@ Right now the architecture clearly expects such a contract, but the explicit cap
 
 - `specs/architecture/agents/artifacts-and-filesystem.md` contains an unfinished note about a `capabilies.md` document.
 - Reviewer specs require rejection of unsupported or invented mechanisms.
-- `simulation-and-dod.md` lists some allowed components and joints, but not as a complete versioned capability manifest.
+- `simulation-and-rendering.md` lists some allowed components and joints, but not as a complete versioned capability manifest.
 
 #### Required spec change
 
@@ -310,7 +310,7 @@ That creates ambiguity in:
 
 #### Current evidence in the architecture
 
-- `simulation-and-dod.md` says the Engineering Planner should receive a YAML file describing what can be drilled and what cannot.
+- `simulation-and-rendering.md` says the Engineering Planner should receive a YAML file describing what can be drilled and what cannot.
 - The same section explicitly notes uncertainty about how to pass it.
 - No concrete artifact name or schema is currently specified in handover contracts.
 
@@ -347,7 +347,7 @@ That artifact should include, at minimum:
 - A concrete environment-mounting artifact is named and schema-defined.
 - Benchmark-to-engineer handoff explicitly includes it where applicable.
 - Reviewers and validators consume the same artifact instead of prompt-only heuristics.
-- `simulation-and-dod.md` no longer contains uncertainty about how the information is passed.
+- `simulation-and-rendering.md` no longer contains uncertainty about how the information is passed.
 
 ### 6. Benchmark taxonomy metadata is missing
 

@@ -105,7 +105,7 @@ For build123d/VTK-backed static preview renders, each camera view is persisted a
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel.
 
-Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. See [Simulation and "Definitions of Done"](./simulation-and-dod.md#render-profile-ownership) for the ownership split.
+Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
 
 The simulation backend exposes a typed render-capability record so the runtime can distinguish supported artifact modes from unsupported ones without introducing a YAML render contract yet.
 

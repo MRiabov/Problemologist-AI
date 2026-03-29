@@ -21,9 +21,10 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 - [Agents overview](./architecture/agents/overview.md): high-level map of benchmark generator and engineer graphs.
 - [Agent roles](./architecture/agents/roles.md): role responsibilities, required artifacts, and planner/implementer/reviewer behavior.
 - [Agent handovers and contracts](./architecture/agents/handover-contracts.md): file-level handoff contracts and refusal/review routing.
-- [Agentic framework, artifacts, and filesystem](./architecture/agents/artifacts-and-filesystem.md): DSPy/LangGraph runtime, trace requirements, and path-permission policy.
+- [Agent harness](./architecture/agents/agent-harness.md): DSPy/LangGraph runtime, debug Codex backend, workspace/prompt/runner contract, and skill-loading policy.
+- [Agent artifacts and filesystem](./architecture/agents/artifacts-and-filesystem.md): artifact surfaces, file ownership, and path-permission policy.
 - [Agent tools](./architecture/agents/tools.md): ReAct-callable tool surface, Python utility functions, checked-in shell-script bridges for custom command-like operations, and reviewer/planner submission gates. Custom command-like behavior is defined by shell scripts, not newly invented ReAct endpoints.
-- [Debug Codex agent mode](./architecture/agent/debug-codex-agent.md): local Codex-backed eval/debug backend, workspace contract, prompt contract, and filesystem rules.
+- [Definitions of success and failure](./architecture/agents/definitions-of-success-and-failure.md): objective AABB rules, runtime randomization, benchmark-side motion exception, and failure taxonomy.
 
 ### Runtime and infrastructure
 
@@ -38,7 +39,7 @@ When a task references `@specs/desired_architecture.md`, treat the files below a
 
 ### Simulation
 
-- [Simulation and Definitions of Done](./architecture/simulation-and-dod.md): physics assumptions, backend responsibility split, constraints model, and success/failure definitions.
+- [Simulation and rendering](./architecture/simulation-and-rendering.md): physics assumptions, backend responsibility split, constraints model, and rendering/preview ownership.
 - [Fluids, FEM, and stress validation](./architecture/fluids-and-deformables.md): Genesis-backed fluid simulation, deformable-material contracts, stress objectives, smoke-test policy, and WP2-specific artifacts.
 - [Electronics and electromechanical systems](./architecture/electronics-and-electromechanics.md): electrical schema, circuit-validation gate, 3D wire routing, power-gated actuation, and WP3-specific artifacts.
 

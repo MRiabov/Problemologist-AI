@@ -6,7 +6,7 @@
 - Defines what benchmark planners, engineers, reviewers, and the simulation stack must support when a task goes beyond rigid-body-only mechanics.
 - Defines the stable product-facing contracts in `benchmark_definition.yaml`, `manufacturing_config.yaml`, and the simulation/review artifact surface.
 - Use this file for fluids, deformables, and stress-validation capability planning and product behavior.
-- Use [simulation-and-dod.md](./simulation-and-dod.md) for generic simulation semantics that apply to all physics modes.
+- Use [simulation-and-rendering.md](./simulation-and-rendering.md) for generic simulation semantics that apply to all physics modes.
 
 This document is intentionally high-level and stable. It describes what the system must support and how the major pieces fit together. It does not try to mirror the current source tree.
 

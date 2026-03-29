@@ -56,7 +56,7 @@ For DSPy ReAct nodes in this architecture:
 
 Actual read/write/edit access is enforced per-role via `config/agents_config.yaml` path rules. A tool call targeting a forbidden path is rejected by policy (deterministic permission error).
 
-The canonical workspace contract uses workspace-relative paths. `/workspace` aliasing may still exist in runtime plumbing as a compatibility fallback, but it is not the preferred API contract; see `architecture/agents/artifacts-and-filesystem.md` for the rationale and cleanup intent.
+The canonical workspace contract uses workspace-relative paths. `/workspace` aliasing may still exist in runtime plumbing as a compatibility fallback, but it is not the preferred API contract; see `architecture/agents/agent-harness.md` for the rationale and cleanup intent.
 
 There is a mechanism for privileged filesystem-policy bypass, which is explicitly system-only and requires both:
 
