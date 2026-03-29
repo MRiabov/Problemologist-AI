@@ -5310,6 +5310,70 @@
         "title": "PlanReviewManifest",
         "description": "Planner handoff manifest used to gate engineering plan reviewer entry."
       },
+      "RenderMode": {
+        "type": "string",
+        "enum": [
+          "static_preview",
+          "simulation_video"
+        ],
+        "title": "RenderMode"
+      },
+      "RendererCapabilities": {
+        "properties": {
+          "backend_name": {
+            "type": "string",
+            "title": "Backend Name"
+          },
+          "artifact_modes_supported": {
+            "items": {
+              "$ref": "#/components/schemas/RenderMode"
+            },
+            "type": "array",
+            "title": "Artifact Modes Supported"
+          },
+          "supports_default_view": {
+            "type": "boolean",
+            "title": "Supports Default View",
+            "default": true
+          },
+          "supports_named_cameras": {
+            "type": "boolean",
+            "title": "Supports Named Cameras",
+            "default": true
+          },
+          "supports_rgb": {
+            "type": "boolean",
+            "title": "Supports Rgb",
+            "default": true
+          },
+          "supports_depth": {
+            "type": "boolean",
+            "title": "Supports Depth",
+            "default": false
+          },
+          "supports_segmentation": {
+            "type": "boolean",
+            "title": "Supports Segmentation",
+            "default": false
+          },
+          "default_view_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default View Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backend_name"
+        ],
+        "title": "RendererCapabilities"
+      },
       "ReplayArtifactRecord": {
         "properties": {
           "path": {
@@ -6284,6 +6348,105 @@
         "type": "object",
         "title": "SimulationMetrics"
       },
+      "SimulationRenderProvenance": {
+        "properties": {
+          "artifact_mode": {
+            "$ref": "#/components/schemas/RenderMode",
+            "default": "simulation_video"
+          },
+          "backend_type": {
+            "$ref": "#/components/schemas/SimulatorBackendType"
+          },
+          "backend_name": {
+            "type": "string",
+            "title": "Backend Name"
+          },
+          "renderer_capabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RendererCapabilities"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available_camera_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Camera Names"
+          },
+          "camera_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Camera Candidates"
+          },
+          "resolved_camera_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Camera Name"
+          },
+          "used_default_view": {
+            "type": "boolean",
+            "title": "Used Default View",
+            "default": false
+          },
+          "resolved_default_view_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Default View Label"
+          },
+          "capture_interval_steps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Interval Steps"
+          },
+          "captured_frame_count": {
+            "type": "integer",
+            "title": "Captured Frame Count",
+            "default": 0
+          },
+          "render_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Render Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "backend_type",
+          "backend_name"
+        ],
+        "title": "SimulationRenderProvenance"
+      },
       "SimulationResult": {
         "properties": {
           "success": {
@@ -6319,6 +6482,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/SimulationFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "render_provenance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationRenderProvenance"
               },
               {
                 "type": "null"

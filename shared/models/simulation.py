@@ -1,8 +1,41 @@
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from shared.enums import FailureReason
+from shared.simulation.schemas import SimulatorBackendType
+
+
+class RenderMode(StrEnum):
+    STATIC_PREVIEW = "static_preview"
+    SIMULATION_VIDEO = "simulation_video"
+
+
+class RendererCapabilities(BaseModel):
+    backend_name: str
+    artifact_modes_supported: list[RenderMode] = Field(default_factory=list)
+    supports_default_view: bool = True
+    supports_named_cameras: bool = True
+    supports_rgb: bool = True
+    supports_depth: bool = False
+    supports_segmentation: bool = False
+    default_view_label: str | None = None
+
+
+class SimulationRenderProvenance(BaseModel):
+    artifact_mode: RenderMode = RenderMode.SIMULATION_VIDEO
+    backend_type: SimulatorBackendType
+    backend_name: str
+    renderer_capabilities: RendererCapabilities | None = None
+    available_camera_names: list[str] = Field(default_factory=list)
+    camera_candidates: list[str] = Field(default_factory=list)
+    resolved_camera_name: str | None = None
+    used_default_view: bool = False
+    resolved_default_view_label: str | None = None
+    capture_interval_steps: int | None = None
+    captured_frame_count: int = 0
+    render_error: str | None = None
 
 
 class SimulationFailure(BaseModel):
@@ -74,6 +107,7 @@ class SimulationResult(BaseModel):
     failure_reason: str | None = None
     fail_mode: FailureReason | None = None
     failure: SimulationFailure | None = None
+    render_provenance: SimulationRenderProvenance | None = None
     render_paths: list[str] = Field(default_factory=list)
     mjcf_content: str | None = None
     stress_summaries: list[StressSummary] = Field(default_factory=list)

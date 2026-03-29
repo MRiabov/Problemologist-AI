@@ -5,6 +5,7 @@
 import type { FailureReason } from './FailureReason';
 import type { FluidMetricResult } from './FluidMetricResult';
 import type { SimulationFailure } from './SimulationFailure';
+import type { SimulationRenderProvenance } from './SimulationRenderProvenance';
 import type { StressFieldData } from './StressFieldData';
 import type { StressSummary } from './StressSummary';
 export type SimulationResult = {
@@ -13,6 +14,7 @@ export type SimulationResult = {
     failure_reason?: (string | null);
     fail_mode?: (FailureReason | null);
     failure?: (SimulationFailure | null);
+    render_provenance?: (SimulationRenderProvenance | null);
     render_paths?: Array<string>;
     mjcf_content?: (string | null);
     stress_summaries?: Array<StressSummary>;
