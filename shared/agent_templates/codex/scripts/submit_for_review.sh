@@ -32,8 +32,4 @@ if [ -z "${MPLCONFIGDIR:-}" ]; then
 fi
 export IS_HEAVY_WORKER=1
 
-if [ -z "${DISPLAY:-}" ] && command -v xvfb-run >/dev/null 2>&1; then
-  exec xvfb-run -a -s "-screen 0 1280x1024x24" "$PYTHON_BIN" scripts/submit_for_review.py "$@"
-fi
-
 exec "$PYTHON_BIN" scripts/submit_for_review.py "$@"
