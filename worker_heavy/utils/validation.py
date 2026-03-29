@@ -35,7 +35,7 @@ from shared.models.simulation import (
     StressSummary,
 )
 from shared.observability.events import emit_event
-from shared.observability.schemas import WireRoutingEvent
+from shared.observability.schemas import LogicFailureEvent, WireRoutingEvent
 from shared.simulation.backends import StressField
 from shared.simulation.schemas import (
     SimulatorBackendType,
@@ -552,10 +552,34 @@ def _validate_unique_top_level_labels(component: Compound) -> str | None:
     for child in children:
         label = getattr(child, "label", None)
         if label is None:
-            continue
+            msg = (
+                "Top-level part labels must be non-empty strings. Offending label: "
+                "<missing>"
+            )
+            logger.error("top_level_label_missing", label="<missing>")
+            emit_event(
+                LogicFailureEvent(
+                    file_path="script.py",
+                    constraint_name="top_level_label_contract",
+                    error_message=msg,
+                )
+            )
+            return msg
         normalized = str(label).strip()
         if not normalized:
-            continue
+            msg = (
+                "Top-level part labels must be non-empty strings. Offending label: "
+                "<blank>"
+            )
+            logger.error("top_level_label_blank", label=str(label))
+            emit_event(
+                LogicFailureEvent(
+                    file_path="script.py",
+                    constraint_name="top_level_label_contract",
+                    error_message=msg,
+                )
+            )
+            return msg
         if normalized in reserved_exact_labels:
             return (
                 "Top-level part labels may not be `environment` because that "
