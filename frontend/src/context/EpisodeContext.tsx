@@ -289,7 +289,7 @@ export function EpisodeProvider({ children }: { children: React.ReactNode }) {
          response = await runAgent(task, sessionId, metadata);
       }
 
-      const episodeId = response.episode_id ?? response.session_id;
+      const episodeId = response.episode_id;
       if (episodeId) {
         console.log("Agent started, episode_id:", episodeId);
         setSelectedEpisodeIntent(episodeId);
