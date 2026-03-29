@@ -2,6 +2,7 @@ import asyncio
 import os
 import tempfile
 import uuid
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -10,7 +11,9 @@ import yaml
 from httpx import AsyncClient
 
 from controller.api.schemas import AgentRunResponse, EpisodeResponse
-from shared.enums import EpisodeStatus
+from controller.clients.worker import WorkerClient
+from controller.middleware.remote_fs import RemoteFilesystemMiddleware
+from shared.enums import AgentName, EpisodeStatus
 from shared.models.schemas import (
     BenchmarkDefinition,
     BoundingBox,
@@ -118,6 +121,30 @@ def _count_zone_pixels(frame_rgb: np.ndarray, zone_type: str) -> int:
             & (mean < 210)
         )
     return int(mask.sum())
+
+
+def _sample_video_bytes() -> bytes:
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+
+    try:
+        frame_size = (64, 64)
+        writer = cv2.VideoWriter(
+            str(tmp_path),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            6.0,
+            frame_size,
+        )
+        assert writer.isOpened(), "Failed to initialize MP4 writer for test video"
+
+        for blue, green, red in ((255, 0, 0), (0, 255, 0), (0, 0, 255)):
+            frame = np.zeros((frame_size[1], frame_size[0], 3), dtype=np.uint8)
+            frame[:, :] = (blue, green, red)
+            writer.write(frame)
+        writer.release()
+        return tmp_path.read_bytes()
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 @pytest.mark.integration_p1
@@ -266,6 +293,44 @@ async def test_render_artifact_generation_int_039_simulation_video_shows_objecti
         assert _count_zone_pixels(frame_rgb, "goal") > 50
         assert _count_zone_pixels(frame_rgb, "forbid") > 50
         assert _count_zone_pixels(frame_rgb, "build") > 50
+
+
+@pytest.mark.integration_p1
+@pytest.mark.asyncio
+async def test_inspect_media_splits_mp4_into_frames_when_enabled():
+    """MP4 inspection should attach sampled frames when the render switch is on."""
+    session_id = f"INT-039-{uuid.uuid4().hex[:8]}"
+    episode_id = str(uuid.uuid4())
+    worker_client = WorkerClient(
+        base_url=WORKER_LIGHT_URL,
+        session_id=session_id,
+        agent_role=AgentName.ENGINEER_CODER,
+        light_transport="http",
+    )
+    try:
+        uploaded = await worker_client.upload_file(
+            "renders/sample_video.mp4",
+            _sample_video_bytes(),
+            bypass_agent_permissions=True,
+        )
+        assert uploaded, "Failed to upload sample MP4 into the workspace"
+
+        fs = RemoteFilesystemMiddleware(
+            worker_client,
+            agent_role=AgentName.ENGINEER_CODER,
+            episode_id=episode_id,
+        )
+        result = await fs.inspect_media("renders/sample_video.mp4")
+
+        assert result.media_kind == "video_frames"
+        assert result.attached_to_model is True
+        assert result.attached_media_count >= 2
+        assert len(result.data_urls) == result.attached_media_count
+        assert all(
+            url.startswith("data:image/jpeg;base64,") for url in result.data_urls
+        )
+    finally:
+        await worker_client.aclose()
 
 
 @pytest.mark.integration_p1
