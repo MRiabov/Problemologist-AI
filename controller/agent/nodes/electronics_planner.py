@@ -12,7 +12,7 @@ from shared.enums import AgentName
 from shared.observability.schemas import SubmissionValidationEvent
 from shared.type_checking import type_check
 
-from .base import BaseNode, SharedNodeContext
+from .base import BaseNode, SharedNodeContext, resolve_workspace_session_id
 
 logger = structlog.get_logger(__name__)
 
@@ -22,11 +22,11 @@ class ElectronicsPlannerSignature(dspy.Signature):
     Electronics Planner node: Designs the electrical system and power budget.
     You must use the provided tools to update 'plan.md' and 'todo.md' with electronics tasks.
     You also receive benchmark_definition.yaml and benchmark_assembly_definition.yaml handoff context copied into this workspace.
-    benchmark_definition.yaml is the source of truth for benchmark/customer caps
-    and may be updated to preserve benchmark-owned geometry/randomization while
-    materializing planner-authored benchmark estimates. benchmark_assembly_definition.yaml
-    remains benchmark-owned context and must not be treated as a second source for
-    benchmark caps.
+    benchmark_definition.yaml owns the scenario contract and planner-authored
+    estimates only; benchmark/customer caps live in
+    benchmark_assembly_definition.yaml. Preserve benchmark-owned
+    geometry/randomization, but do not materialize benchmark caps in
+    benchmark_definition.yaml.
     Before finishing, you must call `submit_plan()` and only finish when it returns ok=true.
     When done, use SUBMIT to provide a summary of your electrical plan.
     """
@@ -156,7 +156,7 @@ class ElectronicsPlannerNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def electronics_planner_node(state: AgentState) -> AgentState:
-    session_id = state.session_id
+    session_id = resolve_workspace_session_id(state)
     if not session_id:
         msg = "Missing required session_id for electronics_planner_node"
         raise ValueError(msg)

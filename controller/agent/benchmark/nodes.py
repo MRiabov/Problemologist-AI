@@ -104,10 +104,12 @@ class BenchmarkPlannerSignature(dspy.Signature):
     Planner node for benchmark generation.
     Use tools to produce planner artifacts and call `submit_plan()` before `finish`.
     Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be
-    spelled out in `plan.md` and `todo.md` with one explicit DOF axis,
-    reviewer-visible motion bounds/limits, and controller facts. Unsupported or
-    impossible benchmark setups must be rejected instead of brute-forcing
-    `submit_plan()`.
+    spelled out in `plan.md` and `todo.md` with explicit motion facts, including
+    the part identity, motion kind/topology, controller facts when present, and
+    reviewer-visible operating limits or free-body wording when applicable.
+    Benchmark fixtures may be fixed, partially constrained, motorized, or fully
+    free when the handoff declares them. Unsupported or impossible benchmark
+    setups must still be rejected instead of brute-forcing `submit_plan()`.
     Emit one tool step at a time (no multi-step batched transcripts).
     """
 
@@ -169,16 +171,12 @@ class BenchmarkPlannerNode(BaseNode):
                         raise ValueError("; ".join(obj_result))
                     obj_data = obj_result
 
-                    # Update constraints based on custom objectives
+                    # Update estimate fields based on custom objectives.
                     if custom_objectives.max_unit_cost is not None:
-                        obj_data.constraints.max_unit_cost = (
-                            custom_objectives.max_unit_cost
-                        )
                         obj_data.constraints.estimated_solution_cost_usd = (
                             custom_objectives.max_unit_cost / 1.5
                         )
                     if custom_objectives.max_weight is not None:
-                        obj_data.constraints.max_weight_g = custom_objectives.max_weight
                         obj_data.constraints.estimated_solution_weight_g = (
                             custom_objectives.max_weight / 1.5
                         )
@@ -391,10 +389,10 @@ class BenchmarkPlannerNode(BaseNode):
             + "- In `benchmark_definition.yaml`, `moved_object.start_position` must be a top-level field under `moved_object`, not nested under `static_randomization`.\n"
             + "- In `benchmark_definition.yaml`, every `benchmark_parts[*].part_id` and `benchmark_parts[*].label` must be unique.\n"
             + "- In authored benchmark scripts, every top-level part label must be unique and must not be `environment` or start with `zone_` because the simulator reserves those names for the scene root and generated objective bodies.\n"
-            + "- `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include numeric planner-target `constraints` and `totals` fields; benchmark caps are sourced from `benchmark_definition.yaml` and must not be treated as duplicated ownership in the assembly file.\n"
-            + "- Any benchmark-side motion in `benchmark_assembly_definition.yaml` must be explicit in both `plan.md` and `todo.md`; one moving fixture may expose at most one DOF axis, and the handoff must state reviewer-visible motion bounds/limits plus controller facts.\n"
-            + "- Hidden, unsupported, or over-actuated benchmark motion is a rejection condition, even if the scene still looks passive at a glance.\n"
-            + "- If the motion contract is impossible to explain explicitly, stop and revise the handoff instead of brute-forcing `submit_plan()`.\n"
+            + "- `benchmark_definition.yaml` owns the scenario contract and planner-authored estimates only; `benchmark_assembly_definition.yaml` must be a full `AssemblyDefinition` shape and include the derived benchmark/customer caps (`benchmark_max_unit_cost_usd`, `benchmark_max_weight_g`) plus numeric planner-target `constraints` and `totals` fields.\n"
+            + "- Any benchmark-side motion must be explicitly declared in `benchmark_assembly_definition.yaml`; `plan.md` and `todo.md` should mirror the same contract facts, including part identity, motion kind/topology, controller facts when present, and reviewer-visible operating limits or free-body wording when applicable.\n"
+            + "- Benchmark fixtures may be fixed, partially constrained, motorized, or fully free when the contract declares them. Do not collapse declared benchmark motion down to a one-axis rule unless the handoff itself says the fixture only has one axis.\n"
+            + "- If the motion contract cannot be stated explicitly in `benchmark_assembly_definition.yaml`, revise the handoff instead of brute-forcing `submit_plan()`.\n"
             + "- Prefer schema-safe minimal assembly for planner handoff: use empty `manufactured_parts`, `cots_parts`, and `final_assembly` unless you can provide fully valid entries (e.g., `stock_bbox_mm` must be an object with `x/y/z`, and final assembly parts use `name/config`).\n"
             + "- Keep the moved object's full runtime AABB inside `build_zone` by checking `start_position +/- runtime_jitter +/- max(radius)` on x, y, and z before `submit_plan()`.\n"
             + "- Do not use `cots_search` to price benchmark-owned fixtures or other benchmark context objects. Reserve pricing lookups for likely engineer-side solution parts, and if catalog search fails, stop retrying and use one heuristic estimate instead.\n"
@@ -906,23 +904,6 @@ class BenchmarkPlannerNode(BaseNode):
                                     self._submit_plan_error_message(submission)
                                     or "unknown validation error"
                                 )
-                                if (
-                                    "CONTRADICTORY_CONSTRAINTS"
-                                    in last_submit_error_text
-                                ):
-                                    messages.append(
-                                        {
-                                            "role": "system",
-                                            "content": (
-                                                "submit_plan() rejected terminal "
-                                                "contradictory benchmark motion: "
-                                                f"{last_submit_error_text}. Stop "
-                                                "retrying submit_plan() and let "
-                                                "handoff validation fail closed."
-                                            ),
-                                        }
-                                    )
-                                    break
                                 messages.append(
                                     {
                                         "role": "system",
@@ -957,8 +938,6 @@ class BenchmarkPlannerNode(BaseNode):
                                 self._submit_plan_error_message(submission)
                                 or last_submit_error_text
                             )
-                            if "CONTRADICTORY_CONSTRAINTS" in last_submit_error_text:
-                                break
 
                 if not submitted:
                     submit_error_suffix = (
@@ -966,10 +945,6 @@ class BenchmarkPlannerNode(BaseNode):
                         if last_submit_error_text
                         else ""
                     )
-                    if last_submit_error_text and "CONTRADICTORY_CONSTRAINTS" in (
-                        last_submit_error_text or ""
-                    ):
-                        return None, artifacts, journal_entry
                     raise ValueError(
                         "Native benchmark planner exhausted tool loop without "
                         f"successful submit_plan().{submit_error_suffix}"
@@ -1065,7 +1040,8 @@ class BenchmarkPlanReviewerSignature(dspy.Signature):
     Reject plans that reference nonexistent objects, hide benchmark-side motion,
     rely on impossible or unsupported geometry, leave the goal obstructed or
     unreachable, omit reviewer-visible motion bounds/controller facts, or
-    over-actuate a moving fixture beyond one explicit DOF axis.
+    otherwise fail to make benchmark-side motion explicit and reconstructable
+    from the handoff artifacts and evidence.
     When render images exist for the current revision, use inspect_media(path)
     on the current revision's render paths during this review attempt; file
     listing alone is not visual inspection.
@@ -1959,9 +1935,9 @@ async def summarizer_node(state: BenchmarkGeneratorState) -> BenchmarkGeneratorS
 class BenchmarkReviewerSignature(dspy.Signature):
     """
     Agentic review of the generated benchmark.
-    Reject hidden benchmark-side motion, unsupported motion, over-actuated
-    fixtures, missing bounds/controller facts, or any final scene that does not
-    clearly match the planner's explicit motion contract.
+    Reject benchmark-side motion that is hidden, unsupported, contradictory to
+    the handoff artifacts, or missing the reviewer-visible operating facts
+    required by the explicit contract.
     You must use the provided tools to inspect the workspace.
     When done, return the final review result.
     """

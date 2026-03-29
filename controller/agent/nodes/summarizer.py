@@ -12,7 +12,7 @@ from shared.enums import AgentName
 from shared.observability.schemas import ConversationLengthExceededEvent
 from shared.type_checking import type_check
 
-from .base import BaseNode, SharedNodeContext
+from .base import BaseNode, SharedNodeContext, resolve_workspace_session_id
 
 logger = structlog.get_logger(__name__)
 
@@ -104,7 +104,7 @@ class SummarizerNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def summarizer_node(state: AgentState) -> AgentState:
-    session_id = state.session_id
+    session_id = resolve_workspace_session_id(state)
     if not session_id:
         msg = "Missing required session_id for summarizer_node"
         raise ValueError(msg)
