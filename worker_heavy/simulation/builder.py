@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
 import trimesh
-from build123d import Compound, Solid, export_stl
+from build123d import Compound, Solid, Sphere, export_stl
 
 # YACV removed in favor of custom trimesh-based export capable of preserving topology
 # try:
@@ -819,12 +819,46 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                 )
                 body_locations[data.label] = (data.pos, data.euler)
 
+        # 3. Add the benchmark-mandated moved object as a dynamic body.
+        if objectives and getattr(objectives, "moved_object", None):
+            moved = objectives.moved_object
+            radius_range = getattr(moved.static_randomization, "radius", None)
+            radius = float(max(radius_range)) if radius_range else 0.01
+            ball = Sphere(radius)
+            ball.label = moved.label
+
+            mesh_path_base = self.assets_dir / moved.label
+            tolerance = 1.0 if smoke_test_mode else 0.1
+            saved_paths = self.processor.process_geometry(
+                ball,
+                mesh_path_base,
+                use_vhacd=self.use_vhacd,
+                tolerance=tolerance,
+                angular_tolerance=tolerance,
+            )
+            obj_paths = [p for p in saved_paths if p.suffix == ".obj"]
+            mesh_names = []
+            for j, path in enumerate(obj_paths):
+                mesh_name = f"{moved.label}_{j}" if len(obj_paths) > 1 else moved.label
+                self.compiler.add_mesh_asset(name=mesh_name, file_name=path.name)
+                mesh_names.append(mesh_name)
+
+            self.compiler.add_body(
+                name=moved.label,
+                mesh_names=mesh_names,
+                pos=[float(v) for v in moved.start_position],
+                euler=[0.0, 0.0, 0.0],
+                is_fixed=False,
+                geom_rgba=self._resolve_geom_rgba(moved.material_id, mfg_config),
+            )
+            body_locations[moved.label] = (list(moved.start_position), [0.0, 0.0, 0.0])
+
         # Apply collected constraints
 
         for body1, body2 in weld_constraints:
             self.compiler.add_weld(body1, body2)
 
-        # 3. Add actuators for moving parts (T011)
+        # 4. Add actuators for moving parts (T011)
         if moving_parts:
             from shared.enums import MotorControlMode
 
@@ -847,7 +881,7 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
                         cots_id=cots_lookup.get(mp.part_name),
                     )
 
-        # 4. Add Electronics (Wires/Tendons)
+        # 5. Add Electronics (Wires/Tendons)
         if electronics and hasattr(electronics, "wiring"):
             for wire in electronics.wiring:
                 if not getattr(wire, "routed_in_3d", False):
