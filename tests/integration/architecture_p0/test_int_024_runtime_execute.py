@@ -457,6 +457,71 @@ print(f"VALIDATE_MESSAGE={message}")
 
 
 @pytest.mark.integration_p0
+@pytest.mark.allow_backend_errors(
+    regexes=[
+        "top_level_label_blank",
+        "top_level_label_missing",
+        "top_level_build123d_label_missing",
+    ]
+)
+@pytest.mark.asyncio
+async def test_int_024_runtime_validate_rejects_blank_top_level_labels():
+    """
+    INT-024: top-level build123d parts must not silently accept blank labels.
+    """
+    session_id = f"INT-024-LABEL-{uuid.uuid4().hex[:8]}"
+    headers = {"X-Session-ID": session_id}
+
+    script = """
+from build123d import Align, Box, Compound
+from utils.metadata import CompoundMetadata, PartMetadata
+from utils.submission import validate
+
+def build():
+    part = Box(1, 1, 1, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    part.label = "   "
+    part.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+
+    scene = Compound(children=[part])
+    scene.label = "benchmark_assembly"
+    scene.metadata = CompoundMetadata()
+    return scene
+
+result = build()
+success, message = validate(result)
+print(f"VALIDATE_SUCCESS={success}")
+print(f"VALIDATE_MESSAGE={message}")
+"""
+
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        write_script = await client.post(
+            f"{WORKER_LIGHT_URL}/fs/write",
+            json=WriteFileRequest(
+                path="script.py",
+                content=script,
+                overwrite=True,
+            ).model_dump(mode="json"),
+            headers=headers,
+        )
+        assert write_script.status_code == 200, write_script.text
+
+        exec_response = await client.post(
+            f"{WORKER_LIGHT_URL}/runtime/execute",
+            json=ExecuteRequest(
+                code=_runtime_validate_command(),
+                timeout=120,
+            ).model_dump(mode="json"),
+            headers=headers,
+            timeout=180.0,
+        )
+        assert exec_response.status_code == 200, exec_response.text
+        data = ExecuteResponse.model_validate(exec_response.json())
+        assert data.exit_code == 0
+        assert "VALIDATE_SUCCESS=False" in data.stdout
+        assert "Top-level part labels must be non-empty strings" in data.stdout
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 async def test_int_024_runtime_validate_reports_resolved_build_zone_bounds():
     """

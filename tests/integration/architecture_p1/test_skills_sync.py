@@ -15,6 +15,7 @@ from controller.api.schemas import (
 )
 from shared.enums import AgentName, EpisodeStatus
 from shared.skills import build_skill_catalog_lines
+from shared.skills.catalog import iter_skill_catalog_entries
 from shared.workers.filesystem.backend import FileInfo
 from shared.workers.schema import ListFilesRequest, ReadFileRequest, ReadFileResponse
 from tests.integration.agent.helpers import seed_benchmark_assembly_definition
@@ -94,7 +95,21 @@ async def test_int_045_skills_sync_lifecycle():
         content_data = ReadFileResponse.model_validate(fs_resp.json())
         assert "# Build123d CAD Drafting Skill" in content_data.content
 
-        # 5. Verify the controller backend prompt builder exposes the skill catalog.
+        # 5. Verify the controller API and prompt builder expose the same checked-in
+        # skill catalog entries and exclude non-skill directories such as `.git`.
+        skills_resp = await client.get(f"{CONTROLLER_URL}/skills/")
+        assert skills_resp.status_code == 200
+        skills_payload = skills_resp.json()
+        expected_skill_entries = list(iter_skill_catalog_entries())
+        assert [item["name"] for item in skills_payload] == [
+            name for name, _ in expected_skill_entries
+        ]
+        assert [item["description"] for item in skills_payload] == [
+            description for _, description in expected_skill_entries
+        ]
+        assert all(item["name"] != ".git" for item in skills_payload)
+
+        # 6. Verify the controller backend prompt builder exposes the skill catalog.
         prompt_manager = PromptManager()
         expected_catalog_paths = sorted(
             f"/skills/{skill_dir.name}/SKILL.md"
