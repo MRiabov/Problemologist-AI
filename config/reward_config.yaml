@@ -369,7 +369,7 @@ engineer:
       cost_within_cap:
         weight: 0.12
         description: >
-          Planner-estimated cost <= benchmark_definition.yaml max_unit_cost.
+          Planner-estimated cost <= benchmark/customer cap derived from benchmark_definition.yaml estimates.
         partial: true
         penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_cost / max_unit_cost - 1.0))"
 
@@ -377,7 +377,7 @@ engineer:
       weight_within_cap:
         weight: 0.05
         description: >
-          Planner-estimated weight <= max_weight_g.
+          Planner-estimated weight <= benchmark/customer cap derived from benchmark_definition.yaml estimates.
         partial: true
         penalty_formula: "max(0.0, 1.0 - max(0.0, estimated_weight / max_weight_g - 1.0))"
 
