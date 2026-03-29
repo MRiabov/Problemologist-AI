@@ -74,8 +74,6 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 40.0
   estimated_solution_weight_g: 666.666666666667
-  max_unit_cost: 60.0
-  max_weight_g: 1000.0
 randomization:
   static_variation_id: benchmark_plan_reviewer_no_drill_transfer_v1
   runtime_jitter_enabled: true

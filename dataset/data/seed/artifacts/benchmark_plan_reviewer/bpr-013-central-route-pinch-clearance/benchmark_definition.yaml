@@ -88,8 +88,6 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 53.333333333333
   estimated_solution_weight_g: 1066.666666666667
-  max_unit_cost: 80.0
-  max_weight_g: 1600.0
 randomization:
   static_variation_id: benchmark_plan_reviewer_central_forbid_route_v1
   runtime_jitter_enabled: true

@@ -2,7 +2,7 @@
 
 <!-- 
 This plan describes HOW you will solve the benchmark scenario defined in benchmark_definition.yaml.
-The plan must respect ALL constraints: build_zone boundaries, max_unit_cost, max_weight.
+The plan must respect ALL geometry and budget constraints: build_zone boundaries from benchmark_definition.yaml and the benchmark/customer caps carried in assembly_definition.yaml.
 Think mechanically: slopes guide gravity, walls channel flow, motors provide energy.
 -->
 
@@ -32,7 +32,7 @@ List each part you will create. For EACH part, specify:
 - Purpose in the mechanism
 
 CRITICAL: All parts must fit within the build_zone from benchmark_definition.yaml.
-CRITICAL: Total weight must not exceed max_weight from benchmark_definition.yaml.
+CRITICAL: Total weight must not exceed the benchmark cap stored in assembly_definition.yaml.
 
 EXAMPLE:
 | Part | Dimensions (mm) | Material | Purpose |
@@ -47,8 +47,8 @@ EXAMPLE:
 | -- | -- | -- | -- |
 | [part_name] | [L × W × H] | [material] | [function] |
 
-**Estimated Total Weight**: [X] g (max: see constraints.max_weight)
-**Estimated Total Cost**: $[X] (max: see constraints.max_unit_cost)
+**Estimated Total Weight**: [X] g (max: see assembly_definition.yaml.constraints.benchmark_max_weight_g)
+**Estimated Total Cost**: $[X] (max: see assembly_definition.yaml.constraints.benchmark_max_unit_cost_usd)
 
 ## 3. Assembly Strategy
 
@@ -89,9 +89,11 @@ EXAMPLE:
 | right_wall | 4.8 | 5.8 | 0.72 |
 | **TOTAL** | 34.1 | 41.0 | **$5.12** |
 
-Constraints from benchmark_definition.yaml:
-- max_unit_cost: $[X]
-- max_weight: [X] g
+Constraints from assembly_definition.yaml:
+- benchmark_max_unit_cost_usd: $[X]
+- benchmark_max_weight_g: [X] g
+- planner_target_max_unit_cost_usd: $[X]
+- planner_target_max_weight_g: [X] g
 -->
 
 | Item | Volume (cm³) | Weight (g) | Cost ($) |

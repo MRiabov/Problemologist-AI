@@ -49,8 +49,6 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 67.0
   estimated_solution_weight_g: 1800.0
-  max_unit_cost: 100.5
-  max_weight_g: 2700.0
 randomization:
   static_variation_id: bridge_trim_unsupported_v1
   runtime_jitter_enabled: true

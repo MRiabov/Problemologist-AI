@@ -4,8 +4,8 @@
   "session_id": "seed-bpr-003-central-forbid-route",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_assembly_definition.yaml": "c723a99b12cda93c123b11a462d29bc494d3ed64eeee537bf94ca08a5bc158a6",
-    "benchmark_definition.yaml": "5ff83e45ffe39d74da53e02dd3e2469d4c96513550adf01601a144ba99abe420",
+    "benchmark_assembly_definition.yaml": "2c9229f17b9b796a4de9681448a4cb3717c75cf8401294ffa334a9a2eee7ce53",
+    "benchmark_definition.yaml": "6d223259e4f7594372a06f47e4504daefb1e9211ae4ab0d616b5fd040691110f",
     "plan.md": "e4d3892ed8a6545549e2dd9f5688338a54d63a3641398665cf68039870695fdd",
     "todo.md": "dc0438c42f3332947a2cf01418e85c8e8488526674266be98b93dcfa9091448e"
   }

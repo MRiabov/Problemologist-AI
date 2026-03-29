@@ -6,7 +6,7 @@ This is your execution checklist. Update it as you work.
 Mark items [x] when complete, [-] when skipped.
 
 WORKFLOW:
-1. Read benchmark_definition.yaml to understand the goal
+1. Read benchmark_definition.yaml to understand the goal and estimates
 2. Read plan.md to understand the solution strategy
 3. Implement each part from the Parts List
 4. Assemble parts according to Assembly Strategy
@@ -24,7 +24,7 @@ TIPS:
 
 ## Phase 1: Setup
 
-- [ ] Read benchmark_definition.yaml and extract key constraints
+- [ ] Read benchmark_definition.yaml and extract geometry and estimate fields
 - [ ] Read plan.md and understand solution approach
 - [ ] Note: goal_zone, build_zone, spawn position, jitter values
 
