@@ -22,7 +22,7 @@ Metadata validation is ownership-sensitive:
 4. Those benchmark-owned read-only fixtures may carry physics/render metadata, but they are excluded from manufacturability validation and pricing.
 5. Missing `manufacturing_method` / `material_id` is therefore a hard validation failure only for engineer-owned manufactured parts (and planner-owned manufactured-part definitions), not for benchmark fixtures.
 
-Benchmark definitions also carry a declarative benchmark-side fixture metadata layer in `benchmark_definition.yaml`.
+Benchmark definitions also carry a declarative benchmark-side fixture metadata layer in `benchmark_definition.yaml`, while benchmark/customer caps live in `benchmark_assembly_definition.yaml`.
 
 The rule is:
 

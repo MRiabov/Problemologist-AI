@@ -268,9 +268,9 @@ The preferred execution path for the agent is to run the checked-in shell helper
     - Engineering Plan Reviewer: `.manifests/engineering_plan_review_manifest.json`
 06. For `Benchmark Planner`, canonicalize benchmark constraints before final validation:
     - require planner-authored `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g`,
-    - derive `constraints.max_unit_cost` and `constraints.max_weight_g` as `1.5x` those estimate fields,
+    - keep those estimate fields normalized to numeric values,
     - reject planner handoff if those estimate fields are missing, non-numeric, or non-positive.
-07. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact.
+07. For `Benchmark Planner`, also reject handoff when `moved_object.material_id` is missing, empty, or not a known material in `manufacturing_config.yaml`, or when `benchmark_assembly_definition.yaml` is not a schema-valid full `AssemblyDefinition` artifact whose `constraints.benchmark_max_*` values are derived from the benchmark-definition estimates.
 08. For `Benchmark Planner`, reject handoff when moving benchmark fixtures lack explicit motion metadata, when the motion contract is contradictory or unsupported, or when the fixture motion cannot be reconstructed from the benchmark handoff artifacts and evidence.
 09. For planner handoffs with machine-readable pricing totals, the persisted file must exactly match the script-normalized values at node entry; any cent-level drift is a hard failure even when the YAML remains schema-valid.
 10. If planner handoff validation still fails when the planner node exits, orchestration routes back to planner with `REJECTED` state plus validation logs (fail-closed loopback).
