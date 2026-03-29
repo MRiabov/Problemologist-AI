@@ -57,6 +57,7 @@ class PreviewEntity(BaseModel):
     zone_type: str | None = None
     color_rgba: tuple[float, float, float, float] | None = None
     segmentation_color_rgb: tuple[int, int, int] | None = None
+    include_in_segmentation: bool = True
 
 
 class PreviewScene(BaseModel):
@@ -261,6 +262,7 @@ def collect_preview_scene(
                         zone_type=zone_type,
                         color_rgba=zone_color,
                         segmentation_color_rgb=_unique_color(part_index),
+                        include_in_segmentation=False,
                     )
                 )
                 continue
@@ -358,6 +360,7 @@ def collect_preview_scene(
                         zone_type=zone_type,
                         color_rgba=color_rgba,
                         segmentation_color_rgb=_unique_color(base_index + offset),
+                        include_in_segmentation=False,
                     )
                 )
 
@@ -386,6 +389,9 @@ def _add_entity_actors(
 ) -> None:
     if entity.kind if hasattr(entity, "kind") else False:  # pragma: no cover
         raise RuntimeError("legacy entity format is unsupported")
+
+    if segmentation and not entity.include_in_segmentation:
+        return
 
     if entity.box_size is not None:
         _, mapper = _build_box_actor(entity.box_size)
@@ -661,6 +667,8 @@ class Build123dRendererBackend(RendererBackend):
 
         legend: list[SegmentationLegendEntry] = []
         for entity in self.scene.entities:
+            if not entity.include_in_segmentation:
+                continue
             if entity.segmentation_color_rgb is None:
                 continue
             legend.append(
