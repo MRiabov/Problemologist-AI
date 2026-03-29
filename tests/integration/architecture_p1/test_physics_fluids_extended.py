@@ -23,6 +23,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-138")
 async def test_int_138_smoke_test_mode():
     """INT-138: Verify smoke-test mode for Genesis."""
     skip_unless_genesis("INT-138 targets Genesis smoke-test behavior.")
@@ -93,6 +94,7 @@ def build():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-139")
 async def test_int_139_fluid_storage_policy():
     """INT-139: Verify fluid data storage policy."""
     skip_unless_genesis("INT-139 requires Genesis fluid artifact generation.")

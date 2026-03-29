@@ -15,6 +15,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-177")
 def test_int_177_feedback_modal_edit_recall(page: Page):
     """
     INT-177: Feedback modal edit/recall + persistence contract

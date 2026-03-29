@@ -92,6 +92,7 @@ def build():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-131")
 async def test_int_131_full_fluid_objective_path():
     """
     INT-131: Full fluid benchmark workflow (planner -> engineer -> reviewer).
@@ -197,6 +198,7 @@ async def test_int_131_full_fluid_objective_path():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-133")
 async def test_int_133_unified_electromechanical_conflict_signal():
     """
     INT-133: Wire-routing conflict signal for the unified electromechanical loop.
@@ -292,6 +294,7 @@ totals:
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-134")
 async def test_int_134_stress_heatmap_render_artifact():
     """INT-134: Stress heatmap render artifacts are generated and discoverable."""
     skip_unless_genesis("INT-134 requires Genesis FEM stress rendering.")
@@ -423,6 +426,7 @@ def build():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-135")
 async def test_int_135_wire_clearance_validation():
     """INT-135: Wire route that intersects solids is rejected by validation."""
     skip_unless_genesis("INT-135 currently targets Genesis wire-clearance validation.")

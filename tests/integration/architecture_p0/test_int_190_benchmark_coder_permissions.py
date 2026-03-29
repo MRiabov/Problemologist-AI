@@ -6,6 +6,7 @@ import yaml
 
 @pytest.mark.integration
 @pytest.mark.integration_p0
+@pytest.mark.int_id("INT-190")
 def test_int_190_benchmark_coder_filesystem_scope_matches_workspace_contract():
     cfg = yaml.safe_load(Path("config/agents_config.yaml").read_text(encoding="utf-8"))
     role_cfg = cfg["agents"]["benchmark_coder"]["filesystem_permissions"]
@@ -46,6 +47,7 @@ def test_int_190_benchmark_coder_filesystem_scope_matches_workspace_contract():
 
 @pytest.mark.integration
 @pytest.mark.integration_p0
+@pytest.mark.int_id("INT-190")
 def test_int_190_unit_eval_allowlists_are_explicit_and_reviewer_driven():
     cfg = yaml.safe_load(Path("config/agents_config.yaml").read_text(encoding="utf-8"))
     agents = cfg["agents"]
@@ -108,6 +110,7 @@ def test_int_190_unit_eval_allowlists_are_explicit_and_reviewer_driven():
 
 @pytest.mark.integration
 @pytest.mark.integration_p0
+@pytest.mark.int_id("INT-190")
 def test_int_190_agent_execution_timeouts_are_role_specific():
     cfg = yaml.safe_load(Path("config/agents_config.yaml").read_text(encoding="utf-8"))
     execution_agents = cfg["execution"]["agents"]

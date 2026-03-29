@@ -10,6 +10,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-174")
 def test_int_174_cad_show_hide_behavior(page: Page):
     """
     INT-174: Users can hide/show selected parts both in design and simulation views;

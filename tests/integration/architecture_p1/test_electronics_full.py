@@ -129,6 +129,7 @@ def build():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-132")
 async def test_int_132_full_electromechanical_path():
     """
     INT-132: Full electromechanical workflow with split planning and unified implementation.
@@ -265,6 +266,7 @@ async def test_int_132_full_electromechanical_path():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-136")
 async def test_int_136_power_budget_validation():
     """INT-136: Power budget calculation validates under/over provisioning behavior."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -323,6 +325,7 @@ PY"""
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-137")
 async def test_int_137_cots_electrical_component_search():
     """INT-137: COTS search yields electrical components with required fields."""
     async with httpx.AsyncClient(timeout=120.0) as client:
@@ -355,6 +358,7 @@ async def test_int_137_cots_electrical_component_search():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-140")
 async def test_int_140_wire_and_electrical_component_costing():
     """INT-140: validate_and_price path includes wire and electrical COTS costs."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -432,6 +436,7 @@ totals:
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-141")
 async def test_int_141_circuit_transient_simulation():
     """INT-141: simulate_circuit_transient returns time-series data for a valid netlist."""
     async with httpx.AsyncClient(timeout=180.0) as client:

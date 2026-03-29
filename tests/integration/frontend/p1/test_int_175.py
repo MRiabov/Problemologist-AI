@@ -13,6 +13,7 @@ FORBIDDEN_WORKER_PORTS = ["8000", "8001", "8002"]
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-175")
 def test_int_175_controller_first_api_boundary(page: Page):
     """
     INT-175: Browser network traffic for chat/files/assets/sessions uses

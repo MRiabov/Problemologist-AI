@@ -389,6 +389,7 @@ async def _generate_ready_benchmark_session(
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-005")
 async def test_int_005_mandatory_artifacts_gate(
     session_id,
     base_headers,
@@ -473,6 +474,7 @@ async def test_int_005_mandatory_artifacts_gate(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-005")
 async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
     """INT-005: Engineer planner must emit explicit submit_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -527,6 +529,7 @@ async def test_int_005_engineer_planner_flow_emits_submit_plan_trace():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-113")
 async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
     """INT-113: Electronics planner must emit explicit submit_plan TOOL_START before completion."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -576,6 +579,7 @@ async def test_int_113_electronics_planner_flow_emits_submit_plan_trace():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-114")
 async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
     """INT-114: Benchmark planner must submit to plan review before reaching PLANNED."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -688,6 +692,7 @@ async def test_int_114_benchmark_planner_flow_emits_submit_plan_trace():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-204")
 async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_before_approval():
     """INT-204: Benchmark plan reviewer must inspect latest-revision renders before approval."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -795,6 +800,7 @@ async def test_int_204_benchmark_plan_reviewer_inspects_latest_revision_renders_
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-006")
 async def test_int_006_plan_structure_validation(
     session_id, base_headers, valid_todo, valid_objectives, valid_cost, minimal_script
 ):
@@ -851,6 +857,7 @@ Just some text here, no list or table.
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors("todo_md_invalid")
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-007")
 async def test_int_007_todo_integrity(
     session_id, base_headers, valid_plan, valid_objectives, valid_cost, minimal_script
 ):
@@ -902,6 +909,7 @@ async def test_int_007_todo_integrity(
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-008")
 async def test_int_008_objectives_validation(
     session_id,
     base_headers,
@@ -986,6 +994,7 @@ async def test_int_008_objectives_validation(
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-009")
 async def test_int_009_cost_estimation_validation(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
@@ -1075,6 +1084,7 @@ async def test_int_009_cost_estimation_validation(
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-011")
 async def test_int_011_planner_caps_enforcement(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
@@ -1132,6 +1142,7 @@ async def test_int_011_planner_caps_enforcement(
     regexes=["immutability_violation", "benchmark_definition_yaml_modified"]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-015")
 async def test_int_015_engineer_handover_immutability(
     session_id,
     base_headers,
@@ -1194,6 +1205,7 @@ async def test_int_015_engineer_handover_immutability(
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(regexes=["environment_attachment_contract_invalid"])
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-018")
 async def test_int_018_submit_handoff_rejects_forbidden_environment_drilling(
     session_id,
     base_headers,
@@ -1300,6 +1312,7 @@ def build():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-010")
 async def test_int_010_submit_handoff_rejects_missing_benchmark_drilling_cost(
     session_id,
     base_headers,
@@ -1410,6 +1423,7 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(regexes=["environment_attachment_contract_invalid"])
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-023")
 async def test_int_023_submit_handoff_rejects_forbidden_benchmark_attachment_joint(
     session_id,
     base_headers,
@@ -1520,6 +1534,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-019")
 async def test_int_019_hard_constraints_gates(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, valid_cost
 ):
@@ -1600,6 +1615,7 @@ def build():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-010")
 async def test_int_010_planner_pricing_script_integration(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
 ):
@@ -1652,6 +1668,7 @@ async def test_int_010_planner_pricing_script_integration(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-010")
 async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
     session_id, base_headers
 ):
@@ -1737,6 +1754,7 @@ async def test_int_010_validate_and_price_adds_benchmark_drilling_cost(
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-010")
 async def test_int_010_handoff_rejects_low_quantity_that_only_passes_at_volume(
     session_id, base_headers, valid_plan, valid_todo, valid_objectives
 ):
@@ -1873,6 +1891,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-019")
 async def test_int_019_single_part_benchmark_submit_succeeds_without_cost_gate(
     session_id,
     base_headers,
@@ -1997,6 +2016,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-010")
 async def test_int_010_submit_handoff_accepts_cheaper_workspace_drilling_override(
     session_id,
     base_headers,
@@ -2120,6 +2140,7 @@ def build():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-018")
 async def test_int_018_validate_and_price_integration_gate(
     session_id,
     base_headers,
@@ -2278,6 +2299,7 @@ def build():
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(regexes=["simulation_failed"])
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-018")
 async def test_int_018_benchmark_submit_accepts_yaml_motion_without_literal_tokens():
     """
     INT-018: benchmark submit must accept semantically valid motion facts from

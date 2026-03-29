@@ -263,6 +263,7 @@ def _start_and_wait_for_engineer_episode(task: str) -> EpisodeResponse:
         "engineer_planner_dspy_failed",
     ]
 )
+@pytest.mark.int_id("INT-189")
 def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
     """
     INT-189: A finished engineer run should open terminal metadata and solution
@@ -452,6 +453,7 @@ def test_int_189_engineer_run_defaults_to_solution_evidence(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-189")
 def test_int_189_persisted_event_metadata_renders_when_content_is_empty_json(
     page: Page,
 ):

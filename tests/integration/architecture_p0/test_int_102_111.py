@@ -84,6 +84,7 @@ async def setup_fem_workspace(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-102")
 async def test_int_102_111_fem_material_validation(session_id, base_headers):
     """
     INT-102: FEM material config validation before simulation.
@@ -183,6 +184,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-103")
 async def test_int_103_part_breakage_detection(session_id, base_headers):
     """
     INT-103: Verify simulation abort on ultimate_stress_pa violation.
@@ -277,6 +279,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-104")
 async def test_int_104_stress_reporting(session_id, base_headers):
     """
     INT-104: Verify SimulationResult.stress_summaries is populated.
@@ -372,6 +375,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-107")
 async def test_int_107_stress_objective_evaluation(session_id, base_headers):
     """
     INT-107: Verify STRESS_OBJECTIVE_EXCEEDED failure reason.
@@ -467,6 +471,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-109")
 async def test_int_109_physics_instability_abort(session_id, base_headers):
     """
     INT-109: Verify kinetics energy abort.

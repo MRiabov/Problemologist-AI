@@ -243,6 +243,7 @@ async def _write_benchmark_submit_inputs(
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-188")
 async def test_int_188_validation_preview_uses_build123d_even_for_genesis_objectives():
     """
     INT-188: /benchmark/validate routes static preview rendering to build123d/VTK
@@ -514,6 +515,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-188")
 async def test_int_188_validation_preview_honors_render_modality_config():
     """INT-188: validation preview respects render modality toggles in agents_config."""
     original_config = _set_render_modalities(rgb=True, depth=False, segmentation=True)
@@ -627,6 +629,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-188")
 async def test_int_188_validation_preview_reflects_material_color_in_rgb():
     """INT-188: build123d/VTK RGB previews reflect material color configuration."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -696,6 +699,7 @@ async def test_int_188_validation_preview_reflects_material_color_in_rgb():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-188")
 async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle():
     """INT-188: stale render manifests do not satisfy benchmark submission."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -786,6 +790,7 @@ async def test_int_188_validation_preview_rejects_stale_render_manifest_bundle()
     [(-35.0, 45.0), (-20.0, 135.0)],
     ids=["iso", "oblique"],
 )
+@pytest.mark.int_id("INT-188")
 async def test_int_188_validation_preview_http_preview_route_uses_vtk_renderer(
     pitch: float, yaw: float
 ):

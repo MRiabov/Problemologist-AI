@@ -70,6 +70,7 @@ async def _require_service(client: httpx.AsyncClient, name: str, url: str):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-101")
 async def test_int_101_physics_backend_selection():
     """INT-101: Verify physics backend selection and event emission."""
     skip_unless_genesis("INT-101 requires Genesis FEM/backend metadata.")
@@ -161,6 +162,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-101B")
 async def test_int_101b_explicit_genesis_backend_is_respected_without_fem():
     """INT-101B: Explicit GENESIS backend must not be overwritten by heuristics."""
     skip_unless_genesis("INT-101B requires Genesis backend availability.")
@@ -240,6 +242,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-105")
 async def test_int_105_fluid_containment_evaluation():
     """INT-105: Verify fluid containment objective evaluation."""
     skip_unless_genesis("INT-105 requires Genesis fluid simulation.")
@@ -367,6 +370,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-106")
 async def test_int_106_flow_rate_evaluation():
     """INT-106: Verify flow rate objective evaluation (stub)."""
     skip_unless_genesis("INT-106 requires Genesis fluid objective handling.")
@@ -442,6 +446,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-112")
 async def test_int_112_mujoco_backward_compat():
     """INT-112: Verify MuJoCo ignores fluid/FEM config."""
     async with httpx.AsyncClient(timeout=300.0) as client:

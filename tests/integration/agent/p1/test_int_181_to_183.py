@@ -125,6 +125,7 @@ def _slim_episode(episode: dict) -> dict:
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-181")
 async def test_int_181_tool_loop_ordering_and_clean_termination():
     """INT-181: Tool-call ordering is preserved and run terminates cleanly."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -167,6 +168,7 @@ async def test_int_181_tool_loop_ordering_and_clean_termination():
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-182")
 async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
     """INT-182: Concurrent runs remain isolated across filesystem and observability."""
     token_a = f"INT182-A-{uuid.uuid4().hex}"
@@ -265,6 +267,7 @@ async def test_int_182_concurrent_agent_run_isolation_files_traces_context():
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-183")
 async def test_int_183_steerability_queue_single_consumption():
     """INT-183: Steer prompt is queued once, consumed once, then queue stays empty."""
     steer_text = f"INT-183 steer text {uuid.uuid4().hex}"
@@ -344,6 +347,7 @@ async def test_int_183_steerability_queue_single_consumption():
 @pytest.mark.integration_agent
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-185")
 async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
     """INT-185: Agent-caused tool error is observed, no infra retry fan-out, and run continues."""
     worker_light_debug_log = Path("logs/worker_light_debug.log")
@@ -400,6 +404,7 @@ async def test_int_185_agent_failed_tool_error_routes_and_run_continues():
     "SYSTEM_TOOL_RETRY_EXHAUSTED|system_tool_retry_attempt|node_entry_validation_rejected|missing_artifact|reviewer_entry_blocked|connection refused|ConnectError|All connection attempts failed|engineer_coder_dspy_failed"
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-186")
 async def test_int_186_system_failed_tool_retry_cap_and_terminal_metadata():
     """INT-186: Infra tool failures retry up to 3 attempts then fail closed.
 

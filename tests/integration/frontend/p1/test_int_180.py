@@ -362,6 +362,7 @@ def _seed_peer_review_episode() -> tuple[
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-180")
 def test_int_180_peer_review_card_surfaces_stability_and_review_actions(page: Page):
     task, session_id, episode, asset_payloads = _seed_peer_review_episode()
 

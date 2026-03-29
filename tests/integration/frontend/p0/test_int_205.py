@@ -200,6 +200,7 @@ def _prepare_failed_engineer_run(
         "FAILED_RETRY_SCENARIO",
     ]
 )
+@pytest.mark.int_id("INT-205")
 def test_int_205_failed_engineer_retry_revises_same_benchmark(page: Page):
     """
     INT-205: Failed engineer retry must remain on the same benchmark package,

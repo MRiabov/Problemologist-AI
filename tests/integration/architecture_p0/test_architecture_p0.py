@@ -72,6 +72,7 @@ async def get_bundle(client: httpx.AsyncClient, session_id: str) -> str:
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-001")
 async def test_int_001_compose_boot_health_contract():
     """INT-001: Verify services are up and healthy."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -96,6 +97,7 @@ async def test_int_001_compose_boot_health_contract():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-002")
 async def test_int_002_controller_worker_execution_boundary():
     """INT-002: Verify controller-worker handoff and execution status."""
     session_id = f"INT-002-{uuid.uuid4().hex[:8]}"
@@ -139,6 +141,7 @@ async def test_int_002_controller_worker_execution_boundary():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-003")
 async def test_int_003_session_filesystem_isolation(worker_light_client):
     """INT-003: Verify sessions have isolated filesystems."""
     client = worker_light_client
@@ -165,6 +168,7 @@ async def test_int_003_session_filesystem_isolation(worker_light_client):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-004")
 async def test_int_004_simulation_serialization():
     """INT-004: heavy worker exposes single-flight admission, busy responses, and readiness gating."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -281,6 +285,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-020")
 async def test_int_020_simulation_failure_taxonomy():
     """INT-020: Verify simulation success/failure taxonomy."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -442,6 +447,7 @@ run()
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-021")
 async def test_int_021_runtime_randomization_robustness():
     """INT-021: Verify runtime randomization robustness (multi-seed)."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -549,6 +555,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-022")
 async def test_int_022_motor_overload_behavior(worker_light_client):
     """INT-022: Verify motor overload detection."""
     client = worker_light_client
@@ -589,6 +596,7 @@ async def test_int_022_motor_overload_behavior(worker_light_client):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-023")
 async def test_int_023_fastener_validity_rules():
     """INT-023: Verify fastener validity rules."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -633,6 +641,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_worker_benchmark_validation_toolchain():
     """
     INT-024: /benchmark/validate fails on invalid objective setups,
@@ -758,6 +767,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-188")
 async def test_int_188_validation_preview_uses_build123d_even_for_genesis_objectives():
     """
     INT-188: /benchmark/validate routes static preview rendering to build123d/VTK

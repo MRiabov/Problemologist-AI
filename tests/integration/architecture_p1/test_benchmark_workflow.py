@@ -467,6 +467,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-200")
 async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
     """
     INT-200: A benchmark workflow seeded with hidden benchmark-side motion
@@ -538,6 +539,7 @@ async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-202")
 async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
     """
     INT-202: A benchmark workflow seeded with unsupported benchmark motion must

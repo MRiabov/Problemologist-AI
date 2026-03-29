@@ -10,6 +10,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-176")
 def test_int_176_tool_call_failure_recovery(page: Page):
     """
     INT-176: Tool-call failure recovery path in chat

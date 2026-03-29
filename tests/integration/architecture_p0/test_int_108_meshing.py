@@ -28,6 +28,7 @@ def base_headers(session_id):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-108")
 async def test_int_108_tetrahedralization_pipeline(session_id, base_headers):
     """
     INT-108: Verify STL -> TetGen -> .msh flow.
