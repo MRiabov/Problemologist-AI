@@ -122,7 +122,7 @@ The plan will have the following bullet points. The plan will be validated for c
 <!-- Note: it may be interesting that the Coder could try a few "approaches" on how to reduce costs without actually editing CAD, and would get fast response for cost by just editing YAML. However, it will almost by definition deviate from the plan. -->
 
 The agent must make sure that the geometric plan is valid, the input objective does not interfere with anything (and goal objectives are not obstruted), that there is proper randomization, etc., no object coincides with each other. `moved_object.material_id` is mandatory and must reference a known material from `manufacturing_config.yaml`; empty strings or invented material IDs are invalid planner handoff.
-If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in `benchmark_definition.yaml` and must not silently mutate those constraints. Runtime may backfill corresponding estimate fields only to keep the benchmark constraint contract internally consistent.
+If the user provides explicit benchmark objective overrides (for example `max_unit_cost`, `max_weight`, `target_quantity`), the planner preserves them semantically in benchmark metadata and must not silently mutate those constraints. Runtime may backfill corresponding estimate fields only to keep the benchmark handoff internally consistent; benchmark caps live in `benchmark_assembly_definition.yaml`.
 
 `Benchmark Plan Reviewer` gate requirements:
 
@@ -293,7 +293,7 @@ For each part:
 <!-- - Order of assembly --> 
 <!-- Order of assembly is partially unnecessary because we kind of work in CAD. However, it's a good thing to think of. -->
 ## 4. Cost & Weight Budget
-- `max_unit_cost`: $X (from benchmark_definition.yaml, planner's allocation)
+- `max_unit_cost`: $X (from benchmark_assembly_definition.yaml, planner's allocation)
 - `max_weight`: Y kg
 - Assembly breakdown per part
 ## 5. Risk Assessment
@@ -416,7 +416,7 @@ randomization:
    - `attachment_policy.notes` is reviewer-facing guidance only and must not be treated as a machine-enforced fallback.
 3. It does not own engineer solution metadata, part costing inputs, or engineer motion/control metadata.
 4. Engineer solution metadata stays in `assembly_definition.yaml` and runtime CAD `.metadata`.
-5. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives `max_unit_cost` and `max_weight_g` from those estimates during `submit_plan()`.
+5. `moved_object.material_id` is mandatory and must be a known material ID from `manufacturing_config.yaml`, and for benchmark-planner handoff `constraints.estimated_solution_cost_usd` and `constraints.estimated_solution_weight_g` are planner-authored while runtime derives the benchmark/customer caps in `benchmark_assembly_definition.yaml` from those estimates during `submit_plan()`.
 
 <!-- Note: we are using metric units and degrees. -->
 

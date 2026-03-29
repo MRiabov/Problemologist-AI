@@ -4,8 +4,8 @@
   "session_id": "seed-bpr-019-fast-transfer-hidden-brake-axis",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_assembly_definition.yaml": "ec2714aba522c9c6da3450c4f56ff1e5ee21e6e8ad4f6e02c0fdaf571f03d9d2",
-    "benchmark_definition.yaml": "bb2f154ed8ef81a2edef7ae3f7a29d2359ef373e077514a116e7117a820e3001",
+    "benchmark_assembly_definition.yaml": "06e698351a934dbc8316d550f643bdfdaaa8bfffe531a8276b80a74f0da680f3",
+    "benchmark_definition.yaml": "c0f13d2c646c307ba45d912934aa6ec5bc286a2948f6b8338989b62454b8061f",
     "plan.md": "2006d285b5071ea1df8d404c66ab34a9d8d40301c64415f57c22dba19ca530db",
     "todo.md": "552e6dbbec68a244f497708d1f0204fcf8fc499202b920c157f9f9809db1e2bc"
   }

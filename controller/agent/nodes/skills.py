@@ -16,7 +16,7 @@ from shared.enums import AgentName
 from shared.observability.schemas import SkillEditEvent
 from shared.type_checking import type_check
 
-from .base import BaseNode, SharedNodeContext
+from .base import BaseNode, SharedNodeContext, resolve_workspace_session_id
 
 logger = structlog.get_logger(__name__)
 
@@ -169,7 +169,7 @@ class SkillsNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def skills_node(state: AgentState) -> AgentState:
-    session_id = state.session_id
+    session_id = resolve_workspace_session_id(state)
     if not session_id:
         msg = "Missing required session_id for skills_node"
         raise ValueError(msg)

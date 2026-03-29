@@ -10,7 +10,7 @@ from shared.type_checking import type_check
 from ..config import settings
 from ..state import AgentState
 from ..tools import get_cots_search_tools
-from .base import BaseNode, SharedNodeContext
+from .base import BaseNode, SharedNodeContext, resolve_workspace_session_id
 
 logger = structlog.get_logger(__name__)
 
@@ -73,7 +73,7 @@ class COTSSearchNode(BaseNode):
 
 @type_check
 async def cots_search_node(state: AgentState) -> AgentState:
-    session_id = state.session_id
+    session_id = resolve_workspace_session_id(state)
     if not session_id:
         msg = "Missing required session_id for cots_search_node"
         raise ValueError(msg)

@@ -340,12 +340,10 @@ async def update_objectives(
             obj_data = benchmark_result
 
             if request.max_cost is not None:
-                obj_data.constraints.max_unit_cost = request.max_cost
                 obj_data.constraints.estimated_solution_cost_usd = (
                     request.max_cost / 1.5
                 )
             if request.max_weight is not None:
-                obj_data.constraints.max_weight_g = request.max_weight
                 obj_data.constraints.estimated_solution_weight_g = (
                     request.max_weight / 1.5
                 )

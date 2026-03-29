@@ -43,7 +43,7 @@ from controller.observability.tracing import record_worker_events
 from controller.persistence.models import Trace
 from controller.utils import EpisodeIdentity
 from shared.agents.config import load_agents_config
-from shared.enums import AgentName, TraceType
+from shared.enums import AgentName, BenchmarkRefusalReason, TraceType
 from shared.git_utils import repo_revision
 from shared.models.schemas import CodeReference, ReviewResult, TraceMetadata
 from shared.observability.schemas import LlmMediaAttachedEvent
@@ -152,6 +152,14 @@ class SharedNodeContext:
         """WP08: Support manual callback retrieval for integration tests."""
         recorder = self.get_database_recorder()
         return [recorder]
+
+
+def resolve_workspace_session_id(state: "AgentState") -> str:
+    """Return the filesystem session id used for workspace reads and writes."""
+    worker_session_id = (getattr(state, "worker_session_id", None) or "").strip()
+    if worker_session_id:
+        return worker_session_id
+    return (getattr(state, "session_id", None) or "").strip()
 
 
 class BaseNode:
@@ -964,6 +972,19 @@ class BaseNode:
         return None
 
     @staticmethod
+    def _is_terminal_benchmark_planner_validation_error(
+        validation_errors: list[str],
+    ) -> bool:
+        terminal_codes = {reason.value for reason in BenchmarkRefusalReason}
+        if not validation_errors:
+            return False
+        for error in validation_errors:
+            parts = error.split(": ", 2)
+            if len(parts) < 2 or parts[1] not in terminal_codes:
+                return False
+        return True
+
+    @staticmethod
     def _planner_autosubmit_prediction(
         *,
         signature_cls: type[dspy.Signature],
@@ -1062,7 +1083,6 @@ class BaseNode:
             provider=request_config.provider,
         )
         submit_plan_succeeded = False
-        terminal_submit_plan_rejection = False
         no_tool_call_streak = 0
         initial_script_sha256 = (
             str(inputs.get("initial_script_sha256") or "").strip() or None
@@ -1376,32 +1396,18 @@ class BaseNode:
                     else:
                         error_text = self._submit_plan_error_message(observation)
                         if error_text:
-                            if "CONTRADICTORY_CONSTRAINTS" in error_text:
-                                terminal_submit_plan_rejection = True
-                                messages.append(
-                                    {
-                                        "role": "system",
-                                        "content": (
-                                            "submit_plan() rejected terminal "
-                                            "contradictory benchmark motion: "
-                                            f"{error_text}. Stop retrying submit_plan() "
-                                            "and let handoff validation fail closed."
+                            messages.append(
+                                {
+                                    "role": "system",
+                                    "content": self._get_runtime_prompt(
+                                        self._runtime_prompt_key(
+                                            node_type,
+                                            "submit_rejected_fix_and_retry",
                                         ),
-                                    }
-                                )
-                            else:
-                                messages.append(
-                                    {
-                                        "role": "system",
-                                        "content": self._get_runtime_prompt(
-                                            self._runtime_prompt_key(
-                                                node_type,
-                                                "submit_rejected_fix_and_retry",
-                                            ),
-                                            error_text=error_text,
-                                        ),
-                                    }
-                                )
+                                        error_text=error_text,
+                                    ),
+                                }
+                            )
                 messages.extend(
                     self._build_media_attachment_messages(
                         node_type=node_type,
@@ -1428,12 +1434,6 @@ class BaseNode:
                     )
 
         if requires_submit_plan and not submit_plan_succeeded:
-            if terminal_submit_plan_rejection:
-                return self._planner_autosubmit_prediction(
-                    signature_cls=signature_cls,
-                    finish_fields=finish_fields,
-                    node_type=node_type,
-                )
             submit_tool = tool_fns.get("submit_plan")
             if submit_tool is not None:
                 submission = submit_tool()
@@ -2471,6 +2471,18 @@ class BaseNode:
                     )
 
                     if not is_valid:
+                        if (
+                            node_type == AgentName.BENCHMARK_PLANNER
+                            and self._is_terminal_benchmark_planner_validation_error(
+                                validation_errors
+                            )
+                        ):
+                            logger.warning(
+                                f"{node_type}_terminal_validation_rejected",
+                                session_id=self.ctx.session_id,
+                                errors=validation_errors,
+                            )
+                            return prediction, artifacts, journal_entry
                         logger.warning(
                             f"{node_type}_validation_failed", errors=validation_errors
                         )

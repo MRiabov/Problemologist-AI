@@ -9,4 +9,6 @@ benchmark_parts:
     metadata:
       fixed: true
       material_id: aluminum_6061
-constraints: {max_unit_cost: 180, max_weight_g: 1000.0}
+constraints:
+  estimated_solution_cost_usd: 120.0
+  estimated_solution_weight_g: 666.6666666666666

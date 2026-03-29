@@ -106,7 +106,7 @@ Row-specific seed artifacts still live in their row-local seed directories. The 
 
 - Engineering Planner:
   - read: `skills/**`, `utils/**`, `benchmark_definition.yaml` (benchmark-owned constraints), `plan.md` (if materialized from shared templates), `todo.md` (if materialized from shared templates), `journal.md` (if materialized from shared templates)
-  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `benchmark_definition.yaml` (benchmark-owned task fields plus planner-owned internal max targets under benchmark caps)
+  - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned draft), `benchmark_definition.yaml` (benchmark-owned task fields and planner-authored estimates only)
 - Electronics Planner:
   - read: `skills/**`, `utils/**`, `benchmark_definition.yaml`, `plan.md` (if materialized from shared templates), `todo.md` (if materialized from shared templates), `journal.md` (if materialized from shared templates)
   - write: `plan.md`, `todo.md`, `journal.md`, `assembly_definition.yaml` (planner-owned electrical handoff), `benchmark_definition.yaml` (benchmark-owned electrical requirements and planner-owned constraints only)

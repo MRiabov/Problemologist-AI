@@ -4,8 +4,8 @@
   "session_id": "seed-bpr-017-platform-sweep-bridge-collision",
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
-    "benchmark_assembly_definition.yaml": "8ad5ecc7280185eca76925fe23bd9bd3bb8c1388f6a8171dd842f7068ec2ed4f",
-    "benchmark_definition.yaml": "cfd2e0893a8b7dfd74a5c7471220ac0510de408f5309b5e45eb274e4e3b53552",
+    "benchmark_assembly_definition.yaml": "68a498cb8b1edfe617b792a812955c648df051b187b1df6104e2af69b6e6e3d9",
+    "benchmark_definition.yaml": "ef534cecd4b8d6468efa5b373d9a6c86aac122f41d9c5c67b62952716254fa86",
     "plan.md": "e616442cfa8ee7185affae521fd2009b5c69b2ad1ba64ee01b2f2da7a6768d23",
     "todo.md": "d8e400753352948b5bf9054fb6ff2198d7bad033b0d2c12434956de0e2e01990"
   }

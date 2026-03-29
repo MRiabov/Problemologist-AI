@@ -193,12 +193,14 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
     )
     assert any(
         "benchmark_max_unit_cost_usd" in error.message
-        and "benchmark_definition.constraints.max_unit_cost" in error.message
+        and "benchmark_definition.constraints.estimated_solution_cost_usd"
+        in error.message
         for error in errors
     ), errors
     assert any(
         "benchmark_max_weight_g" in error.message
-        and "benchmark_definition.constraints.max_weight_g" in error.message
+        and "benchmark_definition.constraints.estimated_solution_weight_g"
+        in error.message
         for error in errors
     ), errors
 
@@ -274,12 +276,14 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_assembly_ca
     ), errors
     assert any(
         "benchmark_max_unit_cost_usd" in error.message
-        and "benchmark_definition.constraints.max_unit_cost" in error.message
+        and "benchmark_definition.constraints.estimated_solution_cost_usd"
+        in error.message
         for error in errors
     ), errors
     assert any(
         "benchmark_max_weight_g" in error.message
-        and "benchmark_definition.constraints.max_weight_g" in error.message
+        and "benchmark_definition.constraints.estimated_solution_weight_g"
+        in error.message
         for error in errors
     ), errors
 
@@ -288,9 +292,9 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_assembly_ca
 @pytest.mark.asyncio
 async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_only():
     """
-    INT-184: Seeded benchmark planner handoff should validate when benchmark caps
-    come from benchmark_definition.yaml and are not duplicated in the benchmark
-    assembly file.
+    INT-184: Seeded benchmark planner handoff should validate when benchmark
+    estimates in benchmark_definition.yaml deterministically derive benchmark caps
+    in benchmark_assembly_definition.yaml.
     """
     session_id = f"INT-184-{uuid.uuid4().hex[:8]}"
     worker = WorkerClient(base_url=WORKER_LIGHT_URL, session_id=session_id)
@@ -332,8 +336,6 @@ async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_
                 constraints=Constraints(
                     estimated_solution_cost_usd=133.3333333333,
                     estimated_solution_weight_g=666.6666666667,
-                    max_unit_cost=200.0,
-                    max_weight_g=1000.0,
                 ),
             )
 
@@ -362,8 +364,8 @@ async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_
     finally:
         await worker.aclose()
 
-    assert "benchmark_max_unit_cost_usd" not in content
-    assert "benchmark_max_weight_g" not in content
+    assert "benchmark_definition.constraints.max_unit_cost" not in content
+    assert "benchmark_definition.constraints.max_weight_g" not in content
     assert not errors, errors
 
 

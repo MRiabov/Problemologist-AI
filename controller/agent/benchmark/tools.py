@@ -44,7 +44,7 @@ def _workspace_environment_version(content: str) -> str | None:
 def _canonicalize_benchmark_constraints(
     benchmark_definition_content: str,
 ) -> tuple[str, list[str]]:
-    """Fill benchmark runtime caps from planner-authored solution estimates."""
+    """Normalize planner-authored benchmark solution estimates."""
     errors: list[str] = []
     try:
         raw_data = yaml.safe_load(benchmark_definition_content) or {}
@@ -85,12 +85,6 @@ def _canonicalize_benchmark_constraints(
 
     constraints["estimated_solution_cost_usd"] = float(estimated_cost)
     constraints["estimated_solution_weight_g"] = float(estimated_weight)
-    constraints["max_unit_cost"] = (
-        float(estimated_cost) * BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER
-    )
-    constraints["max_weight_g"] = (
-        float(estimated_weight) * BENCHMARK_ESTIMATE_HEADROOM_MULTIPLIER
-    )
 
     raw_data["constraints"] = constraints
     return yaml.dump(raw_data, sort_keys=False), []

@@ -68,8 +68,6 @@ moved_object:
 constraints:
   estimated_solution_cost_usd: 24.0
   estimated_solution_weight_g: 650.0
-  max_unit_cost: 36.0
-  max_weight_g: 975.0
 randomization:
   static_variation_id: gravity_passive_drop_v1
   runtime_jitter_enabled: true

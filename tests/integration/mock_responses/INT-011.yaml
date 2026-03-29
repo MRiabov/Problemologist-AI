@@ -1,0 +1,121 @@
+transcript:
+- node: benchmark_planner
+  steps:
+  - thought: Drafting a passive benchmark handoff while intentionally setting a planner target above the derived benchmark cap.
+    tool_name: write_file
+    tool_args:
+      path: plan.md
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/01__plan.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: todo.md
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/02__todo.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: submit_plan
+    expected_observation: rejected
+  - finished: true
+    summary: INT-011 benchmark planner was rejected because the planner target cost exceeded the derived benchmark cap.
+    plan:
+      theme: passive_drop_planner_cap_violation
+      target_object_properties:
+        label: projectile_ball
+        shape: sphere
+      environment_perturbations:
+        static_geometry: Passive rigid-body scene with a clear gravity path and a single fixed environment fixture.
+      difficulty_score: 0.35
+      reasoning: Keep the benchmark family simple, but set planner cost above the derived benchmark cap to verify fail-closed gating.
+- node: benchmark_planner
+  steps:
+  - thought: Repeating the same cap-violating benchmark handoff to confirm the planner gate stays fail-closed.
+    tool_name: write_file
+    tool_args:
+      path: plan.md
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/01__plan.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: todo.md
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/02__todo.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: submit_plan
+    expected_observation: rejected
+  - finished: true
+    summary: INT-011 benchmark planner repeated the planner-cap violation and remained fail-closed.
+    plan:
+      theme: passive_drop_planner_cap_violation
+      target_object_properties:
+        label: projectile_ball
+        shape: sphere
+      environment_perturbations:
+        static_geometry: Passive rigid-body scene with a clear gravity path and a single fixed environment fixture.
+      difficulty_score: 0.35
+      reasoning: Repeat the same over-limit planner target so the gate cannot silently recover.
+- node: benchmark_planner
+  steps:
+  - thought: Repeating the same cap-violating benchmark handoff to confirm the planner gate stays fail-closed.
+    tool_name: write_file
+    tool_args:
+      path: plan.md
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/01__plan.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: todo.md
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/02__todo.md
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_assembly_definition.yaml
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/03__benchmark_assembly_definition.yaml
+    expected_observation: success
+  - tool_name: write_file
+    tool_args:
+      path: benchmark_definition.yaml
+      overwrite: true
+      content_file: INT-011/benchmark_planner/entry_01/04__benchmark_definition.yaml
+    expected_observation: success
+  - tool_name: submit_plan
+    expected_observation: rejected
+  - finished: true
+    summary: INT-011 benchmark planner repeated the planner-cap violation and remained fail-closed.
+    plan:
+      theme: passive_drop_planner_cap_violation
+      target_object_properties:
+        label: projectile_ball
+        shape: sphere
+      environment_perturbations:
+        static_geometry: Passive rigid-body scene with a clear gravity path and a single fixed environment fixture.
+      difficulty_score: 0.35
+      reasoning: Repeat the same over-limit planner target so the gate cannot silently recover.

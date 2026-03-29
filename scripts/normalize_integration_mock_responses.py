@@ -17,8 +17,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
 from pydantic import ValidationError
-from ruamel.yaml import YAML
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -27,20 +27,15 @@ if str(ROOT) not in sys.path:
 from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
 from worker_heavy.workbenches.config import load_config
 
-yaml_rt = YAML(typ="rt")
-yaml_rt.preserve_quotes = True
-yaml_rt.width = 120
-yaml_rt.indent(mapping=2, sequence=4, offset=2)
-
 
 def _load_yaml(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as handle:
-        return yaml_rt.load(handle)
+        return yaml.safe_load(handle)
 
 
 def _dump_yaml(path: Path, data: Any) -> None:
     with path.open("w", encoding="utf-8") as handle:
-        yaml_rt.dump(data, handle)
+        yaml.safe_dump(data, handle, sort_keys=False)
 
 
 def _parse_float(value: Any, default: float = 0.0) -> float:
@@ -70,6 +65,11 @@ def _benchmark_caps_from_sibling_definition(path: Path) -> tuple[float, float] |
     constraints = data.get("constraints")
     if not isinstance(constraints, dict):
         return None
+
+    estimated_cost = constraints.get("estimated_solution_cost_usd")
+    estimated_weight = constraints.get("estimated_solution_weight_g")
+    if estimated_cost is not None and estimated_weight is not None:
+        return _parse_float(estimated_cost) * 1.5, _parse_float(estimated_weight) * 1.5
 
     max_unit_cost = constraints.get("max_unit_cost")
     max_weight_g = constraints.get("max_weight_g")
@@ -181,7 +181,6 @@ def _normalize_assembly_file(path: Path, *, fix: bool) -> tuple[bool, list[str]]
     empty_assembly = not (
         data.get("manufactured_parts")
         or data.get("cots_parts")
-        or data.get("final_assembly")
         or data.get("environment_drill_operations")
     )
     if empty_assembly:
@@ -208,26 +207,47 @@ def _normalize_assembly_file(path: Path, *, fix: bool) -> tuple[bool, list[str]]
     return changed, []
 
 
-def _validate_benchmark_definition_file(path: Path) -> list[str]:
+def _normalize_benchmark_definition_file(
+    path: Path, *, fix: bool
+) -> tuple[bool, list[str]]:
     data = _load_yaml(path)
     if not isinstance(data, dict):
-        return [f"{path}: YAML root must be a mapping"]
+        return False, [f"{path}: YAML root must be a mapping"]
 
     errors: list[str] = []
     try:
         BenchmarkDefinition.model_validate(data)
     except ValidationError as exc:
         errors.append(f"{path}: {exc}")
-        return errors
+        return False, errors
 
     constraints = data.get("constraints")
     if not isinstance(constraints, dict):
-        return [f"{path}: constraints must be a mapping"]
+        return False, [f"{path}: constraints must be a mapping"]
 
     est_cost = constraints.get("estimated_solution_cost_usd")
     est_weight = constraints.get("estimated_solution_weight_g")
     max_cost = constraints.get("max_unit_cost")
     max_weight = constraints.get("max_weight_g")
+    changed = False
+
+    if est_cost is None and max_cost is not None:
+        constraints["estimated_solution_cost_usd"] = round(
+            _parse_float(max_cost) / 1.5, 10
+        )
+        changed = True
+    if est_weight is None and max_weight is not None:
+        constraints["estimated_solution_weight_g"] = round(
+            _parse_float(max_weight) / 1.5, 10
+        )
+        changed = True
+
+    if "max_unit_cost" in constraints:
+        constraints.pop("max_unit_cost", None)
+        changed = True
+    if "max_weight_g" in constraints:
+        constraints.pop("max_weight_g", None)
+        changed = True
 
     if isinstance(est_cost, (int, float)) and isinstance(est_weight, (int, float)):
         expected_max_cost = round(float(est_cost) * 1.5, 10)
@@ -248,7 +268,10 @@ def _validate_benchmark_definition_file(path: Path) -> list[str]:
                 f"{path}: max_weight_g {max_weight!r} does not match 1.5x estimated_solution_weight_g ({expected_max_weight})"
             )
 
-    return errors
+    if fix and changed:
+        _dump_yaml(path, data)
+
+    return changed, errors
 
 
 def _iter_target_files(targets: list[Path]) -> list[Path]:
@@ -351,7 +374,10 @@ def main() -> int:
             continue
 
         if path.name.endswith("benchmark_definition.yaml"):
-            validation_errors.extend(_validate_benchmark_definition_file(path))
+            changed, errors = _normalize_benchmark_definition_file(path, fix=args.fix)
+            if changed:
+                changed_files.append(path)
+            validation_errors.extend(errors)
 
     if changed_files and args.fix:
         print(f"normalized {len(changed_files)} file(s):")

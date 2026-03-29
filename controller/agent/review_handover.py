@@ -206,8 +206,12 @@ async def _load_review_manifest(
     *,
     manifest_path: str,
     require_git_revision: bool = True,
+    bypass_agent_permissions: bool = True,
 ) -> tuple[ReviewManifest | None, str | None]:
-    manifest_raw = await worker_client.read_file_optional(manifest_path)
+    manifest_raw = await worker_client.read_file_optional(
+        manifest_path,
+        bypass_agent_permissions=bypass_agent_permissions,
+    )
     if manifest_raw is None:
         return None, f"{manifest_path} missing; call submit_for_review(compound) first."
 
@@ -384,6 +388,7 @@ async def validate_reviewer_handover(
         worker_client,
         manifest_path=manifest_path,
         require_git_revision=require_git_revision,
+        bypass_agent_permissions=True,
     )
     if manifest_error is not None:
         return manifest_error
@@ -554,6 +559,7 @@ async def validate_approved_benchmark_bundle(
         worker_client,
         manifest_path=".manifests/benchmark_review_manifest.json",
         require_git_revision=True,
+        bypass_agent_permissions=True,
     )
     if manifest_error is not None:
         return None, f"approved benchmark bundle invalid: {manifest_error}"
@@ -608,7 +614,10 @@ async def validate_plan_reviewer_handover(
 ) -> str | None:
     """Validate planner-to-plan-reviewer handoff using stage-specific manifest."""
     try:
-        manifest_raw = await worker_client.read_file_optional(manifest_path)
+        manifest_raw = await worker_client.read_file_optional(
+            manifest_path,
+            bypass_agent_permissions=True,
+        )
         if manifest_raw is None:
             return f"{manifest_path} missing; call submit_plan() first."
         manifest = PlanReviewManifest.model_validate_json(manifest_raw)

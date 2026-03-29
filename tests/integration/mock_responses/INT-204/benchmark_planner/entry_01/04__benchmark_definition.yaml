@@ -30,8 +30,6 @@ benchmark_parts:
 constraints:
   estimated_solution_cost_usd: 12.0
   estimated_solution_weight_g: 150.0
-  max_unit_cost: 18.0
-  max_weight_g: 225.0
 randomization:
   static_variation_id: open_corridor_v1
   runtime_jitter_enabled: true

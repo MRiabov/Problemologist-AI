@@ -6,7 +6,7 @@ units:
   currency: "USD"
 
 constraints:
-  # Copy benchmark caps from benchmark_definition.yaml, then set tighter planner targets.
+  # Copy benchmark-derived caps from benchmark_definition.yaml estimates, then set tighter planner targets.
   benchmark_max_unit_cost_usd:
   benchmark_max_weight_g:
   planner_target_max_unit_cost_usd:

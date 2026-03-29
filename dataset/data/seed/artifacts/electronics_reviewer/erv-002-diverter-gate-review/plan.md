@@ -19,8 +19,8 @@ Use a single pivoting diverter gate to switch the projectile ball from the neutr
 
 ## 4. Cost & Weight Budget
 
-- Benchmark caps: `max_unit_cost <= 65 USD`, `max_weight_g <= 1200 g`
-- Planner target: `max_unit_cost <= 52 USD`, `max_weight_g <= 900 g`
+- Benchmark caps: `benchmark_max_unit_cost_usd <= 65 USD`, `benchmark_max_weight_g <= 1200 g`
+- Planner target: `planner_target_max_unit_cost_usd <= 52 USD`, `planner_target_max_weight_g <= 900 g`
 - Keep the electrical additions within the existing planner target.
 
 ## 5. Risk Assessment

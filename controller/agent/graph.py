@@ -71,11 +71,18 @@ async def _sidecars_disabled_for_state(state: AgentState) -> bool:
         if episode is None:
             return False
         metadata = EpisodeMetadata.model_validate(episode.metadata_vars or {})
-        return bool(
-            metadata.disable_sidecars
-            or metadata.is_integration_test
-            or metadata.generation_kind == GenerationKind.SEEDED_EVAL
-        )
+    return bool(
+        metadata.disable_sidecars
+        or metadata.is_integration_test
+        or metadata.generation_kind == GenerationKind.SEEDED_EVAL
+    )
+
+
+def _worker_session_id_for_state(state: AgentState) -> str:
+    worker_session_id = (getattr(state, "worker_session_id", None) or "").strip()
+    if worker_session_id:
+        return worker_session_id
+    return (state.session_id or "").strip()
 
 
 def _requested_start_node(state: AgentState) -> AgentName | None:
@@ -98,7 +105,7 @@ async def _should_end_scoped_run_after_node(
 
 
 async def _artifact_exists_for_state(state: AgentState, artifact_path: str) -> bool:
-    session_id = (state.session_id or "").strip()
+    session_id = _worker_session_id_for_state(state)
     if not session_id:
         logger.error(
             "node_entry_validation_session_missing",
@@ -155,7 +162,7 @@ def _build_entry_rejection_feedback(
 
 
 async def _state_requires_electronics(state: AgentState) -> bool:
-    session_id = (state.session_id or "").strip()
+    session_id = _worker_session_id_for_state(state)
     if not session_id:
         return True
 

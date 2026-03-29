@@ -315,6 +315,10 @@ async def _reject_episode(client: AsyncClient, episode_id: str) -> EpisodeRespon
 decision: rejected
 comments: ["Retry lineage test rejection"]
 evidence:
+  stability_summary:
+    source: validation_results.json
+    verdict: rejected_for_retry
+    note: Intentional rejection for retry lineage coverage.
   files_checked: ["plan.md"]
 ---
 Rejecting the episode for deterministic retry coverage.

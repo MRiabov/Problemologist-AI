@@ -487,8 +487,7 @@ class BenchmarkDefinition(StrictContractModel):
     - Guide the moved_object into the goal_zone
     - Stay WITHIN the build_zone
     - AVOID all forbid_zones
-    - Respect runtime-derived max_unit_cost and max_weight constraints
-      (from benchmark-estimated solution cost/weight)
+    - Record planner-authored solution estimates used to derive benchmark caps
     - Reference benchmark-owned part metadata for fixtures and environment parts
     """
 

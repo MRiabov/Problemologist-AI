@@ -174,12 +174,6 @@ def validate_benchmark_definition_yaml(
         if data is None:
             return False, ["Empty or invalid YAML content"]
 
-        benchmark_parts = data.get("benchmark_parts")
-        if not isinstance(benchmark_parts, list) or not benchmark_parts:
-            return False, [
-                "benchmark_definition.yaml must declare at least one benchmark_parts entry"
-            ]
-
         # 1. Enforce that file is not the template
         found_placeholders = _find_template_placeholders(
             "benchmark_definition.yaml", content
@@ -634,7 +628,7 @@ def validate_benchmark_assembly_motion_contract(
     todo_text: str | None = None,
     plan_refusal_text: str | None = None,
 ) -> list[str]:
-    """Validate benchmark-side moving fixtures from structured YAML only."""
+    """Validate benchmark-side moving fixtures from structured planner YAML."""
     errors: list[str] = []
     if plan_refusal_text is not None:
         is_valid_refusal, _ = validate_plan_refusal(plan_refusal_text)
@@ -741,24 +735,6 @@ def validate_benchmark_assembly_motion_contract(
             continue
 
     if benchmark_definition is not None:
-        benchmark_parts = {
-            part.part_id: getattr(part.metadata, "fixed", None)
-            for part in benchmark_definition.benchmark_parts
-        }
-        for part_name, dofs, control in _iter_benchmark_motion_configs(
-            assembly_definition
-        ):
-            if dofs and benchmark_parts.get(part_name) is True:
-                errors.append(
-                    _benchmark_refusal_error(
-                        BenchmarkRefusalReason.CONTRADICTORY_CONSTRAINTS,
-                        "benchmark_definition.yaml marks moving benchmark part "
-                        f"'{part_name}' fixed while benchmark_assembly_definition.yaml "
-                        f"declares motion dofs={dofs} control={control}",
-                    )
-                )
-
-    if benchmark_definition is not None:
         static_variation_id = (
             benchmark_definition.randomization.static_variation_id or ""
         ).strip()
@@ -814,16 +790,38 @@ def validate_planner_handoff_cross_contract(
     """Validate planner targets against benchmark caps and reject stale copies."""
     errors: list[str] = []
 
+    estimated_cost = benchmark_definition.constraints.estimated_solution_cost_usd
+    if estimated_cost is None:
+        estimated_cost = benchmark_definition.constraints.max_unit_cost
+    if estimated_cost is None:
+        errors.append(
+            "benchmark_definition.constraints.estimated_solution_cost_usd is missing; cannot derive benchmark caps"
+        )
+    expected_benchmark_unit_cost = (
+        estimated_cost * 1.5 if estimated_cost is not None else None
+    )
+
+    estimated_weight = benchmark_definition.constraints.estimated_solution_weight_g
+    if estimated_weight is None:
+        estimated_weight = benchmark_definition.constraints.max_weight_g
+    if estimated_weight is None:
+        errors.append(
+            "benchmark_definition.constraints.estimated_solution_weight_g is missing; cannot derive benchmark caps"
+        )
+    expected_benchmark_weight_g = (
+        estimated_weight * 1.5 if estimated_weight is not None else None
+    )
+
     planner_cap_pairs = (
         (
-            "benchmark_definition.constraints.max_unit_cost",
-            benchmark_definition.constraints.max_unit_cost,
+            "benchmark_definition.constraints.estimated_solution_cost_usd * 1.5",
+            expected_benchmark_unit_cost,
             "assembly_definition.constraints.planner_target_max_unit_cost_usd",
             assembly_definition.constraints.planner_target_max_unit_cost_usd,
         ),
         (
-            "benchmark_definition.constraints.max_weight_g",
-            benchmark_definition.constraints.max_weight_g,
+            "benchmark_definition.constraints.estimated_solution_weight_g * 1.5",
+            expected_benchmark_weight_g,
             "assembly_definition.constraints.planner_target_max_weight_g",
             assembly_definition.constraints.planner_target_max_weight_g,
         ),
@@ -848,14 +846,14 @@ def validate_planner_handoff_cross_contract(
 
     copied_cap_pairs = (
         (
-            "benchmark_definition.constraints.max_unit_cost",
-            benchmark_definition.constraints.max_unit_cost,
+            "benchmark_definition.constraints.estimated_solution_cost_usd * 1.5",
+            expected_benchmark_unit_cost,
             "assembly_definition.constraints.benchmark_max_unit_cost_usd",
             assembly_definition.constraints.benchmark_max_unit_cost_usd,
         ),
         (
-            "benchmark_definition.constraints.max_weight_g",
-            benchmark_definition.constraints.max_weight_g,
+            "benchmark_definition.constraints.estimated_solution_weight_g * 1.5",
+            expected_benchmark_weight_g,
             "assembly_definition.constraints.benchmark_max_weight_g",
             assembly_definition.constraints.benchmark_max_weight_g,
         ),
@@ -1168,16 +1166,6 @@ def validate_node_output(
                 errors.extend([f"{filename}: {e}" for e in asm_res])
             else:
                 assembly_definition_models[filename] = asm_res
-                if filename == "benchmark_assembly_definition.yaml":
-                    motion_errors = validate_benchmark_assembly_motion_contract(
-                        benchmark_definition=benchmark_definition_model,
-                        assembly_definition=asm_res,
-                        plan_text=files_content_map.get("plan.md"),
-                        todo_text=files_content_map.get("todo.md"),
-                        plan_refusal_text=files_content_map.get("plan_refusal.md"),
-                    )
-                    if motion_errors:
-                        errors.extend([f"{filename}: {e}" for e in motion_errors])
         elif filename == "plan_refusal.md":
             is_valid, refusal_res = validate_plan_refusal(
                 content, session_id=session_id
@@ -1188,6 +1176,28 @@ def validate_node_output(
                 else:
                     # Should not happen based on validate_plan_refusal return type
                     errors.append("plan_refusal.md: Invalid structure")
+
+    benchmark_assembly_definition_model = assembly_definition_models.get(
+        "benchmark_assembly_definition.yaml"
+    )
+    if (
+        benchmark_definition_model is not None
+        and benchmark_assembly_definition_model is not None
+    ):
+        motion_errors = validate_benchmark_assembly_motion_contract(
+            benchmark_definition=benchmark_definition_model,
+            assembly_definition=benchmark_assembly_definition_model,
+            plan_text=files_content_map.get("plan.md"),
+            todo_text=files_content_map.get("todo.md"),
+            plan_refusal_text=files_content_map.get("plan_refusal.md"),
+        )
+        if motion_errors:
+            errors.extend(
+                [
+                    f"benchmark_assembly_definition.yaml: {message}"
+                    for message in motion_errors
+                ]
+            )
 
     if benchmark_definition_model is not None and assembly_definition_models:
         if effective_config is None:

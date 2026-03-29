@@ -264,8 +264,23 @@ def cad_simulation_metric(
             obj_yaml = obj.objectives
             # Map from BenchmarkDefinition nested structure
             if hasattr(obj_yaml, "constraints"):
-                max_unit_cost = obj_yaml.constraints.max_unit_cost
-                max_weight_g = obj_yaml.constraints.max_weight_g
+                max_unit_cost = None
+                estimated_solution_cost = getattr(
+                    obj_yaml.constraints, "estimated_solution_cost_usd", None
+                )
+                if estimated_solution_cost is not None:
+                    max_unit_cost = estimated_solution_cost * 1.5
+                elif obj_yaml.constraints.max_unit_cost is not None:
+                    max_unit_cost = obj_yaml.constraints.max_unit_cost
+
+                max_weight_g = None
+                estimated_solution_weight = getattr(
+                    obj_yaml.constraints, "estimated_solution_weight_g", None
+                )
+                if estimated_solution_weight is not None:
+                    max_weight_g = estimated_solution_weight * 1.5
+                elif obj_yaml.constraints.max_weight_g is not None:
+                    max_weight_g = obj_yaml.constraints.max_weight_g
                 if max_unit_cost is not None:
                     context["max_unit_cost"] = max_unit_cost
                 if max_weight_g is not None:

@@ -2,7 +2,7 @@
   "version": "1.0",
   "episode_id": null,
   "worker_session_id": null,
-  "revision": "8a903345a4b567ece08a34653f357d8077ae3d4b",
+  "revision": "7d6b6c30e391bf1389315a141a5ef7620747dcde",
   "environment_version": "integration-test",
   "preview_evidence_paths": [
     "renders/images/context_view_01.png",

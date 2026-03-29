@@ -14,7 +14,7 @@ from shared.models.schemas import ReviewResult
 from shared.observability.schemas import ReviewDecisionEvent
 from shared.type_checking import type_check
 
-from .base import BaseNode, SharedNodeContext
+from .base import BaseNode, SharedNodeContext, resolve_workspace_session_id
 
 logger = structlog.get_logger(__name__)
 
@@ -207,7 +207,7 @@ class ElectronicsReviewerNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def electronics_reviewer_node(state: AgentState) -> AgentState:
-    session_id = state.session_id
+    session_id = resolve_workspace_session_id(state)
     if not session_id:
         msg = "Missing required session_id for electronics_reviewer_node"
         raise ValueError(msg)

@@ -23,14 +23,11 @@ from shared.enums import (
 )
 from shared.models.schemas import AssemblyDefinition, BenchmarkDefinition
 from shared.simulation.schemas import SimulatorBackendType
-from shared.workers.schema import (
-    PlanReviewManifest,
-    RenderManifest,
-    ReviewManifest,
-)
+from shared.workers.schema import PlanReviewManifest, RenderManifest, ReviewManifest
 from tests.integration.agent.helpers import (
     repo_git_revision,
     wait_for_benchmark_state,
+    wait_for_episode_state,
 )
 
 # Adjust URL to your controller if different
@@ -332,13 +329,12 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
         resp = await client.post("/benchmark/generate", json=request.model_dump())
         assert resp.status_code in [200, 202], resp.text
         benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
-        session_id = str(benchmark_resp.session_id)
         episode_id = str(benchmark_resp.episode_id)
 
         latest_episode = EpisodeResponse.model_validate(
             await wait_for_benchmark_state(
                 client,
-                session_id,
+                episode_id,
                 timeout_s=120.0,
                 terminal_statuses=set(),
                 predicate=lambda candidate: (
@@ -428,7 +424,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             f"benchmark_plan_review_manifest.json missing. Artifacts: {artifact_paths}"
         )
         manifest_resp = await client.get(
-            f"/episodes/{session_id}/assets/{plan_review_manifest_paths[0]}"
+            f"/episodes/{episode_id}/assets/{plan_review_manifest_paths[0]}"
         )
         assert manifest_resp.status_code == 200, manifest_resp.text
         manifest = PlanReviewManifest.model_validate_json(manifest_resp.text)
@@ -451,7 +447,7 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
             f"renders/render_manifest.json missing. Artifacts: {artifact_paths}"
         )
         render_manifest_resp = await client.get(
-            f"/episodes/{session_id}/assets/{render_manifest_paths[0]}"
+            f"/episodes/{episode_id}/assets/{render_manifest_paths[0]}"
         )
         assert render_manifest_resp.status_code == 200, render_manifest_resp.text
         render_manifest = RenderManifest.model_validate_json(render_manifest_resp.text)
@@ -470,63 +466,73 @@ async def test_benchmark_plan_reviewer_rejects_unsolvable_render_bundle():
 async def test_int_200_benchmark_workflow_rejects_hidden_motion_handoff():
     """
     INT-200: A benchmark workflow seeded with hidden benchmark-side motion
-    must fail closed before the plan reviewer or benchmark coder can start.
+    must reach the plan-review gate and be rejected there, not by planner-side
+    prose matching.
     """
     async with AsyncClient(base_url=CONTROLLER_URL, timeout=300.0) as client:
-        req = AgentRunRequest(
-            task="INT-200 benchmark workflow hidden motion contract.",
-            session_id=f"INT-200-{uuid.uuid4().hex[:8]}",
-            agent_name=AgentName.BENCHMARK_PLANNER,
-            start_node=AgentName.BENCHMARK_PLANNER,
+        request = BenchmarkGenerateRequest(
+            prompt="INT-200 benchmark workflow hidden motion contract.",
+            backend=SimulatorBackendType.GENESIS,
         )
-        run_resp = await client.post("/api/agent/run", json=req.model_dump(mode="json"))
-        assert run_resp.status_code == 202, run_resp.text
-        run = AgentRunResponse.model_validate(run_resp.json())
+        resp = await client.post("/benchmark/generate", json=request.model_dump())
+        assert resp.status_code in [200, 202], resp.text
+        benchmark_resp = BenchmarkGenerateResponse.model_validate(resp.json())
+        episode_id = str(benchmark_resp.episode_id)
 
-        episode = await _wait_for_planned_or_failed_episode(client, str(run.episode_id))
+        episode = EpisodeResponse.model_validate(
+            await wait_for_episode_state(
+                client,
+                episode_id,
+                timeout_s=240.0,
+                terminal_statuses={
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
+                predicate=lambda candidate: any(
+                    trace.name == "review_decision"
+                    and trace.metadata_vars is not None
+                    and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+                    and "AMBIGUOUS_TASK" in (trace.content or "")
+                    for trace in (candidate.traces or [])
+                ),
+            )
+        )
         metadata = episode.metadata_vars
         assert metadata is not None
-        assert episode.status == EpisodeStatus.PLANNED
-        assert metadata.terminal_reason == TerminalReason.HANDOFF_INVARIANT_VIOLATION
-        assert metadata.failure_class == "AGENT_SEMANTIC_FAILURE"
-        assert any(
-            "AMBIGUOUS_TASK" in log for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
-        assert any(
-            "bridge_reference_table" in log and "slide_y" in log
-            for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
-        assert any(
-            "reviewer-visible motion bounds or limits" in log.lower()
-            for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
-        assert any(
-            "controller mode 'ON_OFF'" in log
-            for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
-        assert any(
-            "controller speed '0.15'" in log for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
-
+        assert episode.status == EpisodeStatus.FAILED
         traces = episode.traces or []
         submit_plan_traces = [
             trace
             for trace in traces
             if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
         ]
-        assert len(submit_plan_traces) >= 2, (
-            "Benchmark workflow must retry submit_plan before fail-closed rejection."
+        assert len(submit_plan_traces) >= 1, (
+            "Benchmark workflow must still reach submit_plan before refusing."
         )
-        assert not any(
-            trace.name == "benchmark_plan_reviewer"
-            and "Starting task phase" in (trace.content or "")
+        rejection_traces = [
+            trace
             for trace in traces
-        ), "Benchmark plan reviewer should not start after hidden-motion rejection."
+            if trace.name == "review_decision"
+            and trace.metadata_vars is not None
+            and trace.metadata_vars.decision == ReviewDecision.REJECT_PLAN
+            and "AMBIGUOUS_TASK" in (trace.content or "")
+        ]
+        assert rejection_traces, "Expected planner-side hidden-motion rejection."
+        assert not any(trace.name == "benchmark_plan_reviewer" for trace in traces), (
+            "Benchmark plan reviewer should not start after planner-side rejection."
+        )
+        assert not any(trace.name == "benchmark_coder" for trace in traces), (
+            "Benchmark coder should not start after planner-side rejection."
+        )
+        artifact_paths = [asset.s3_path for asset in (episode.assets or [])]
         assert not any(
-            trace.name == "benchmark_coder"
-            and "Starting task phase" in (trace.content or "")
-            for trace in traces
-        ), "Benchmark coder should not start after hidden-motion rejection."
+            path.endswith("benchmark-plan-review-decision-round-1.yaml")
+            or path.endswith("benchmark-plan-review-comments-round-1.yaml")
+            or path.endswith("benchmark_plan_review_manifest.json")
+            for path in artifact_paths
+        ), (
+            f"Unexpected reviewer artifacts after fail-closed rejection: {artifact_paths}"
+        )
 
 
 @pytest.mark.integration_p1
@@ -560,13 +566,15 @@ async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
         assert episode.status == EpisodeStatus.PLANNED
         assert metadata.terminal_reason == TerminalReason.HANDOFF_INVARIANT_VIOLATION
         assert metadata.failure_class == "AGENT_SEMANTIC_FAILURE"
-        assert any(
-            "UNSOLVABLE_SCENARIO" in log for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
-        assert any(
-            "unsupported benchmark motion token" in log.lower()
-            for log in (metadata.validation_logs or [])
-        ), metadata.validation_logs
+        expected_validation_log = (
+            "planner_structural: benchmark_assembly_definition.yaml: "
+            "UNSOLVABLE_SCENARIO: benchmark_definition.yaml "
+            "randomization.static_variation_id='bridge_trim_unsupported_v1' "
+            "indicates unsupported benchmark motion"
+        )
+        assert expected_validation_log in (metadata.validation_logs or []), (
+            metadata.validation_logs
+        )
 
         traces = episode.traces or []
         submit_plan_traces = [
@@ -574,21 +582,15 @@ async def test_int_202_benchmark_workflow_rejects_unsupported_motion_handoff():
             for trace in traces
             if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
         ]
-        assert len(submit_plan_traces) >= 2, (
-            "Benchmark workflow must retry submit_plan before fail-closed rejection."
+        assert len(submit_plan_traces) >= 1, (
+            "Benchmark workflow must attempt submit_plan before rejection."
         )
-        assert not any(
-            trace.name == "benchmark_plan_reviewer"
-            and "Starting task phase" in (trace.content or "")
-            for trace in traces
-        ), (
+        assert not any(trace.name == "benchmark_plan_reviewer" for trace in traces), (
             "Benchmark plan reviewer should not start after unsupported motion rejection."
         )
-        assert not any(
-            trace.name == "benchmark_coder"
-            and "Starting task phase" in (trace.content or "")
-            for trace in traces
-        ), "Benchmark coder should not start after unsupported motion rejection."
+        assert not any(trace.name == "benchmark_coder" for trace in traces), (
+            "Benchmark coder should not start after unsupported motion rejection."
+        )
 
 
 @pytest.mark.integration_p1

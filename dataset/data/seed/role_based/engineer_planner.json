@@ -1,9 +1,9 @@
 [
   {
     "id": "ep-001",
-    "task": "Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a raised-shelf solution that uses one motorized lift axis and leaves a clean wiring corridor for downstream electronics work. Treat the benchmark cost and weight values in `benchmark_definition.yaml` as hard customer caps, set tighter planner-owned budgets under those caps, and keep the mechanism manufacturable and robust to the listed runtime jitter.",
+    "task": "Use the seeded benchmark handoff in `benchmark_definition.yaml` to plan a raised-shelf solution that uses one motorized lift axis and leaves a clean wiring corridor for downstream electronics work. Treat the benchmark estimates in `benchmark_definition.yaml` as the scenario baseline, use `assembly_definition.yaml` for benchmark/customer caps, set tighter planner-owned budgets under those caps, and keep the mechanism manufacturable and robust to the listed runtime jitter.",
     "seed_artifact_dir": "dataset/data/seed/artifacts/engineer_planner/ep-001-raised-shelf",
-    "expected_criteria": "Writes contract-valid `plan.md`, `todo.md`, `assembly_definition.yaml`, and updated `benchmark_definition.yaml` for a raised-shelf transfer, with a feasible single-DOF lift strategy, cable-routing awareness, and planner budgets below the benchmark caps.",
+    "expected_criteria": "Writes contract-valid `plan.md`, `todo.md`, and `assembly_definition.yaml` for a raised-shelf transfer, with a feasible single-DOF lift strategy, cable-routing awareness, and planner budgets below the benchmark caps.",
     "complexity_level": 1
   },
   {

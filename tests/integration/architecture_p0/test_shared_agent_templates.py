@@ -9,7 +9,12 @@ from shared.agent_templates import load_common_template_files, load_template_tex
 @pytest.mark.integration_p0
 def test_common_agent_templates_match_worker_light_starters():
     templates = load_common_template_files()
-    assert set(templates) == {"journal.md", "script.py", "todo.md"}
+    assert set(templates) == {
+        "journal.md",
+        "manufacturing_config.yaml",
+        "script.py",
+        "todo.md",
+    }
 
     worker_light_root = Path("worker_light/agent_files")
     assert templates["script.py"] == (worker_light_root / "script.py").read_text(
@@ -21,7 +26,16 @@ def test_common_agent_templates_match_worker_light_starters():
     assert templates["journal.md"] == (worker_light_root / "journal.md").read_text(
         encoding="utf-8"
     )
+    assert templates["manufacturing_config.yaml"] == (
+        Path("shared/agent_templates/common/manufacturing_config.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
     assert load_template_text("common/script.py") == templates["script.py"]
+    assert (
+        load_template_text("common/manufacturing_config.yaml")
+        == templates["manufacturing_config.yaml"]
+    )
 
 
 @pytest.mark.integration_p0

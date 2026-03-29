@@ -23,7 +23,7 @@ from shared.observability.schemas import (
 from shared.type_checking import type_check
 
 from ..review_handover import validate_reviewer_handover
-from .base import BaseNode, SharedNodeContext
+from .base import BaseNode, SharedNodeContext, resolve_workspace_session_id
 from .dof_guard import (
     apply_canonical_dof_checklist,
     build_excessive_dof_event_payload,
@@ -642,7 +642,7 @@ class ExecutionReviewerNode(BaseNode):
 # Factory function for LangGraph
 @type_check
 async def engineer_execution_reviewer_node(state: AgentState) -> AgentState:
-    session_id = state.session_id
+    session_id = resolve_workspace_session_id(state)
     if not session_id:
         msg = "Missing required session_id for engineer_execution_reviewer_node"
         raise ValueError(msg)

@@ -47,5 +47,3 @@ benchmark_parts:
 constraints:
   estimated_solution_cost_usd: 133.33333333333334
   estimated_solution_weight_g: 666.6666666666666
-  max_unit_cost: 200.0
-  max_weight_g: 1000.0

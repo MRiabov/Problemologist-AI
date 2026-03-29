@@ -1,0 +1,8 @@
+- [x] Confirm the benchmark stays in the simple rigid-body, gravity-only family.
+- [x] Define the passive static geometry and the sphere input object in `plan.md`.
+- [x] Write objective zones and the build zone so the gravity path is clear.
+- [x] Record the cost and weight envelope for the passive fixture.
+- [x] Write `benchmark_definition.yaml` with rigid-body-only scope and explicit estimates.
+- [x] Write `benchmark_assembly_definition.yaml` with a schema-valid passive fixture handoff.
+- [x] Keep the planner target budget under the derived benchmark caps.
+- [x] Call `submit_plan()` only after the handoff files are internally consistent.

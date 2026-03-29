@@ -19,7 +19,13 @@ from controller.api.schemas import (
     ConfirmRequest,
     EpisodeResponse,
 )
-from shared.enums import AgentName, EpisodeStatus, ReviewDecision, TraceType
+from shared.enums import (
+    AgentName,
+    EpisodeStatus,
+    ReviewDecision,
+    TerminalReason,
+    TraceType,
+)
 from shared.models.schemas import (
     AssemblyConstraints,
     AssemblyDefinition,
@@ -127,7 +133,10 @@ def valid_objectives():
             start_position=(0.0, 0.0, 50.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
-        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1.0),
+        constraints=Constraints(
+            estimated_solution_cost_usd=33.333333333333336,
+            estimated_solution_weight_g=666.6666666666666,
+        ),
     )
 
 
@@ -300,13 +309,16 @@ async def _wait_for_planned_after_submit_plan_benchmark(
 
 
 async def _wait_for_benchmark_asset(
-    client: httpx.AsyncClient, session_id: str, suffix: str
+    client: httpx.AsyncClient,
+    session_id: str,
+    suffix: str,
+    timeout_s: float = 90.0,
 ) -> list[str]:
     episode = EpisodeResponse.model_validate(
         await wait_for_benchmark_state(
             client,
             session_id,
-            timeout_s=90.0,
+            timeout_s=timeout_s,
             terminal_statuses={EpisodeStatus.FAILED},
             predicate=lambda candidate: any(
                 asset.s3_path.endswith(suffix) for asset in (candidate.assets or [])
@@ -363,18 +375,23 @@ async def _generate_ready_benchmark_session(
             f"{CONTROLLER_URL}/benchmark/{benchmark_session_id}/confirm",
             json=ConfirmRequest(comment="Proceed").model_dump(),
         )
-        final_session = EpisodeResponse.model_validate(
+
+        approved_session = EpisodeResponse.model_validate(
             await wait_for_benchmark_state(
                 client,
                 benchmark_session_id,
-                timeout_s=150.0,
-                terminal_statuses={EpisodeStatus.COMPLETED, EpisodeStatus.FAILED},
+                timeout_s=300.0,
+                terminal_statuses={
+                    EpisodeStatus.COMPLETED,
+                    EpisodeStatus.FAILED,
+                    EpisodeStatus.CANCELLED,
+                },
             )
         )
-        if final_session.status == EpisodeStatus.FAILED:
+        if approved_session.status != EpisodeStatus.COMPLETED:
             pytest.fail(
                 "Benchmark generation failed during setup "
-                f"(session_id={benchmark_session_id})."
+                f"(session_id={benchmark_session_id}, status={approved_session.status})."
             )
 
     return str(run_resp.episode_id)
@@ -1075,55 +1092,59 @@ async def test_int_009_cost_estimation_validation(
     ]
 )
 @pytest.mark.asyncio
-async def test_int_011_planner_caps_enforcement(
-    session_id, base_headers, valid_plan, valid_todo, valid_objectives, minimal_script
-):
+async def test_int_011_planner_caps_enforcement(session_id, base_headers):
     """INT-011: Verify handoff blockage when planner caps exceed benchmark limits."""
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Keep invalid payload as raw data so schema validation happens in the endpoint path.
-        invalid_cost = {
-            "version": "1.0",
-            "constraints": {
-                "benchmark_max_unit_cost_usd": 50.0,
-                "benchmark_max_weight_g": 1000.0,
-                "planner_target_max_unit_cost_usd": 60.0,  # OVER LIMIT
-                "planner_target_max_weight_g": 500.0,
-            },
-            "totals": {
-                "estimated_unit_cost_usd": 40.0,
-                "estimated_weight_g": 200.0,
-                "estimate_confidence": "medium",
-            },
-        }
-        files = {
-            "plan.md": valid_plan,
-            "todo.md": valid_todo,
-            "benchmark_definition.yaml": valid_objectives,
-            "benchmark_assembly_definition.yaml": invalid_cost,
-            "manufacturing_config.yaml": REPO_MANUFACTURING_CONFIG,
-            "solution.py": minimal_script,
-        }
-        await setup_workspace(client, base_headers, files)
-        # Record validation
-        val_req = BenchmarkToolRequest(
-            script_path="solution.py", reviewer_stage=AgentName.BENCHMARK_REVIEWER
+        req = AgentRunRequest(
+            task="INT-011 benchmark planner caps under benchmark caps.",
+            session_id=session_id,
+            agent_name=AgentName.BENCHMARK_PLANNER,
+            start_node=AgentName.BENCHMARK_PLANNER,
         )
-        await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/validate",
-            json=val_req.model_dump(mode="json"),
-            headers=base_headers,
+        run_resp = await client.post(
+            f"{CONTROLLER_URL}/api/agent/run", json=req.model_dump(mode="json")
+        )
+        assert run_resp.status_code == 202, run_resp.text
+        run = AgentRunResponse.model_validate(run_resp.json())
+
+        episode = EpisodeResponse.model_validate(
+            await wait_for_benchmark_state(
+                client,
+                str(run.episode_id),
+                timeout_s=150.0,
+                terminal_statuses={EpisodeStatus.PLANNED, EpisodeStatus.FAILED},
+            )
+        )
+        metadata = episode.metadata_vars
+        assert metadata is not None
+        assert episode.status == EpisodeStatus.PLANNED
+        assert metadata.terminal_reason == TerminalReason.HANDOFF_INVARIANT_VIOLATION
+        assert metadata.failure_class == "AGENT_SEMANTIC_FAILURE"
+        expected_validation_log = (
+            "planner_structural: benchmark_assembly_definition.yaml: "
+            "assembly_definition.constraints.planner_target_max_unit_cost_usd "
+            "(60.00) must be less than or equal to "
+            "benchmark_definition.constraints.estimated_solution_cost_usd * 1.5 "
+            "(50.00)"
+        )
+        assert expected_validation_log in (metadata.validation_logs or []), (
+            metadata.validation_logs
         )
 
-        resp = await client.post(
-            f"{WORKER_HEAVY_URL}/benchmark/submit",
-            json=val_req.model_dump(mode="json"),
-            headers=base_headers,
+        traces = episode.traces or []
+        submit_plan_traces = [
+            trace
+            for trace in traces
+            if trace.trace_type == TraceType.TOOL_START and trace.name == "submit_plan"
+        ]
+        assert len(submit_plan_traces) >= 1, (
+            "Benchmark workflow must attempt submit_plan before planner-cap rejection."
         )
-        data = BenchmarkToolResponse.model_validate(resp.json())
-        assert "benchmark_assembly_definition.yaml invalid" in data.message
-        assert (
-            "Planner target cost (60.0) must be less than or equal to benchmark max cost (50.0)"
-            in data.message
+        assert not any(trace.name == "benchmark_plan_reviewer" for trace in traces), (
+            "Benchmark plan reviewer should not start after planner-cap rejection."
+        )
+        assert not any(trace.name == "benchmark_coder" for trace in traces), (
+            "Benchmark coder should not start after planner-cap rejection."
         )
 
 
@@ -1166,7 +1187,7 @@ async def test_int_015_engineer_handover_immutability(
 
         # Cheat: modify benchmark_definition.yaml
         modified_objectives = valid_objectives.model_copy(deep=True)
-        modified_objectives.constraints.max_unit_cost = 1000.0
+        modified_objectives.constraints.estimated_solution_cost_usd = 1000.0
         await setup_workspace(
             client, base_headers, {"benchmark_definition.yaml": modified_objectives}
         )
@@ -1205,8 +1226,8 @@ async def test_int_018_submit_handoff_rejects_forbidden_environment_drilling(
     """INT-018: submit handoff must fail closed on forbidden benchmark drilling."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         relaxed_objectives = valid_objectives.model_copy(deep=True)
-        relaxed_objectives.constraints.max_unit_cost = 500.0
-        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.constraints.estimated_solution_cost_usd = 500.0
+        relaxed_objectives.constraints.estimated_solution_weight_g = 10000.0
         relaxed_objectives.benchmark_parts = [
             {
                 "part_id": "environment_fixture",
@@ -1311,8 +1332,8 @@ async def test_int_010_submit_handoff_rejects_missing_benchmark_drilling_cost(
     """INT-010: submit handoff must reject totals that omit static benchmark drilling cost."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         relaxed_objectives = valid_objectives.model_copy(deep=True)
-        relaxed_objectives.constraints.max_unit_cost = 500.0
-        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.constraints.estimated_solution_cost_usd = 500.0
+        relaxed_objectives.constraints.estimated_solution_weight_g = 10000.0
         relaxed_objectives.benchmark_parts = [
             {
                 "part_id": "environment_fixture",
@@ -1421,8 +1442,8 @@ async def test_int_023_submit_handoff_rejects_forbidden_benchmark_attachment_joi
     """INT-023: submit handoff must reject fastener joints to non-attachable benchmark parts."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         relaxed_objectives = valid_objectives.model_copy(deep=True)
-        relaxed_objectives.constraints.max_unit_cost = 500.0
-        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.constraints.estimated_solution_cost_usd = 500.0
+        relaxed_objectives.constraints.estimated_solution_weight_g = 10000.0
         relaxed_objectives.benchmark_parts = [
             {
                 "part_id": "environment_fixture",
@@ -1540,8 +1561,8 @@ def build():
     return p
 """
         tight_objectives = valid_objectives.model_copy(deep=True)
-        tight_objectives.constraints.max_unit_cost = 0.01
-        tight_objectives.constraints.max_weight_g = 0.1
+        tight_objectives.constraints.estimated_solution_cost_usd = 0.01
+        tight_objectives.constraints.estimated_solution_weight_g = 0.1
         files = {
             "plan.md": valid_plan,
             "todo.md": valid_todo,
@@ -1744,8 +1765,8 @@ async def test_int_010_handoff_rejects_low_quantity_that_only_passes_at_volume(
     async with httpx.AsyncClient(timeout=300.0) as client:
         objectives = valid_objectives.model_copy(deep=True)
         objectives.constraints.target_quantity = 1
-        objectives.constraints.max_unit_cost = 40.0
-        objectives.constraints.max_weight_g = 1000.0
+        objectives.constraints.estimated_solution_cost_usd = 40.0
+        objectives.constraints.estimated_solution_weight_g = 1000.0
 
         assembly_definition = {
             "version": "1.0",
@@ -1884,8 +1905,8 @@ async def test_int_019_single_part_benchmark_submit_succeeds_without_cost_gate(
     """INT-019: benchmark submit should ignore objective cost caps even with drilling."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         objectives = valid_objectives.model_copy(deep=True)
-        objectives.constraints.max_unit_cost = 500.0
-        objectives.constraints.max_weight_g = 10000.0
+        objectives.constraints.estimated_solution_cost_usd = 500.0
+        objectives.constraints.estimated_solution_weight_g = 10000.0
         objectives.benchmark_parts = [
             {
                 "part_id": "environment_fixture",
@@ -2008,8 +2029,8 @@ async def test_int_010_submit_handoff_accepts_cheaper_workspace_drilling_overrid
     """INT-010: handoff validation must respect cheaper workspace drilling overrides."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         objectives = valid_objectives.model_copy(deep=True)
-        objectives.constraints.max_unit_cost = 500.0
-        objectives.constraints.max_weight_g = 10000.0
+        objectives.constraints.estimated_solution_cost_usd = 500.0
+        objectives.constraints.estimated_solution_weight_g = 10000.0
         objectives.benchmark_parts = [
             {
                 "part_id": "environment_fixture",
@@ -2132,8 +2153,8 @@ async def test_int_018_validate_and_price_integration_gate(
     """INT-018: Verify submit_for_review gate requires validation + simulation on latest revision."""
     async with httpx.AsyncClient(timeout=300.0) as client:
         relaxed_objectives = valid_objectives.model_copy(deep=True)
-        relaxed_objectives.constraints.max_unit_cost = 500.0
-        relaxed_objectives.constraints.max_weight_g = 10000.0
+        relaxed_objectives.constraints.estimated_solution_cost_usd = 500.0
+        relaxed_objectives.constraints.estimated_solution_weight_g = 10000.0
 
         goal_script = """
 from build123d import *
@@ -2332,7 +2353,10 @@ equivalent natural-language motion descriptions.
             start_position=(0.0, 0.0, 50.0),
             runtime_jitter=(0.0, 0.0, 0.0),
         ),
-        constraints=Constraints(max_unit_cost=50.0, max_weight_g=1.0),
+        constraints=Constraints(
+            estimated_solution_cost_usd=33.333333333333336,
+            estimated_solution_weight_g=666.6666666666666,
+        ),
     )
     assembly_definition = AssemblyDefinition(
         version="1.0",

@@ -347,17 +347,21 @@ def _seed_benchmark_assembly_from_benchmark_definition(
     benchmark_definition = BenchmarkDefinition.model_validate(
         yaml.safe_load(benchmark_definition_path.read_text(encoding="utf-8"))
     )
-    benchmark_max_unit_cost = benchmark_definition.constraints.max_unit_cost
-    benchmark_max_weight_g = benchmark_definition.constraints.max_weight_g
-    if benchmark_max_unit_cost is None or benchmark_max_weight_g is None:
+    estimated_cost = benchmark_definition.constraints.estimated_solution_cost_usd
+    if estimated_cost is None:
+        estimated_cost = benchmark_definition.constraints.max_unit_cost
+    estimated_weight = benchmark_definition.constraints.estimated_solution_weight_g
+    if estimated_weight is None:
+        estimated_weight = benchmark_definition.constraints.max_weight_g
+    if estimated_cost is None or estimated_weight is None:
         return
 
     benchmark_assembly_path.write_text(
         _benchmark_assembly_definition_content(
-            benchmark_max_unit_cost_usd=float(benchmark_max_unit_cost),
-            benchmark_max_weight_g=float(benchmark_max_weight_g),
-            planner_target_max_unit_cost_usd=float(benchmark_max_unit_cost),
-            planner_target_max_weight_g=float(benchmark_max_weight_g),
+            benchmark_max_unit_cost_usd=float(estimated_cost) * 1.5,
+            benchmark_max_weight_g=float(estimated_weight) * 1.5,
+            planner_target_max_unit_cost_usd=float(estimated_cost) * 1.5,
+            planner_target_max_weight_g=float(estimated_weight) * 1.5,
         ),
         encoding="utf-8",
     )

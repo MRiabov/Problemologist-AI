@@ -91,7 +91,7 @@ Problems with motors and moving parts are verified more consistently because the
 
 6. **Constraints handed to engineering**
    - Planner authors realistic estimate fields in `benchmark_definition.yaml`: `constraints.estimated_solution_cost_usd: 30.0` and `constraints.estimated_solution_weight_g: 733.3`.
-   - Runtime derives benchmark/customer caps during `submit_plan()`: `max_unit_cost = 1.5 * estimated_solution_cost_usd = 45.0 USD`, `max_weight_g = 1.5 * estimated_solution_weight_g = 1100.0 g`.
+   - Runtime derives benchmark/customer caps during `submit_plan()` into `benchmark_assembly_definition.yaml`: `benchmark_max_unit_cost_usd = 1.5 * estimated_solution_cost_usd = 45.0 USD`, `benchmark_max_weight_g = 1.5 * estimated_solution_weight_g = 1100.0 g`.
 
 7. **Success criteria**
    - Success if the moved object's center enters `goal_zone` without touching any forbid zone.
@@ -225,7 +225,7 @@ The Engineering Planner workflow is:
 
 1. **Intake and mandatory context read**
 
-   - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and runtime-derived benchmark/customer caps `max_unit_cost`/`max_weight_g`).
+   - Read `benchmark_definition.yaml` as present from the benchmark generator (goal/forbid/build zones, runtime jitter, planner-authored benchmark estimates, and optional legacy cap copies if a seed predates the new contract).
    - Read `benchmark_assembly_definition.yaml` as required benchmark-owned read-only handoff context copied into the engineer workspace. Use it to understand benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction, but fail closed if the file is missing and do not treat it as an engineer-owned costing artifact.
    - Read benchmark visuals (`renders/images`, 24-view context) and environment geometry metadata.
    - Read required skills/config inputs (CAD drafting skill, manufacturing knowledge when cost/quantity matters, manufacturing config + catalog).
@@ -233,7 +233,7 @@ The Engineering Planner workflow is:
 2. **Plan the mechanism and budgets**
 
    - Propose a physically feasible mechanism that fits build-zone constraints and runtime jitter, and fit
-   - Set planner-owned `max_unit_cost` and `max_weight_g` **under** benchmark/customer caps.
+   - Set planner-owned `planner_target_max_unit_cost_usd` and `planner_target_max_weight_g` **under** the benchmark/customer caps carried in `benchmark_assembly_definition.yaml`.
    - Minimize motion complexity: use the smallest DOF set needed to satisfy the objective; avoid unnecessary moving axes.
    - Select candidate COTS parts (motors/fasteners/bearings/gears) via the COTS Search subagent and carry part IDs + catalog prices into the plan.
 

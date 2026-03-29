@@ -54,7 +54,7 @@ engineer:
         - If the workspace copy is unavailable for any reason, treat that as a fail-closed pricing-source error rather than inventing fallback prices.
 
       **Inputs Available**:
-      - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and the benchmark/customer caps. Preserve benchmark-owned geometry/randomization, but you may write planner-owned cap fields into this file when materializing the current handoff.
+      - `benchmark_definition.yaml`: Planner handoff artifact containing the exact coordinates of Goal/Forbid zones, build-zone bounds, static and runtime randomization ranges, physics/backend notes, and planner-authored estimates. Preserve benchmark-owned geometry/randomization; benchmark/customer caps belong in `assembly_definition.yaml` / `benchmark_assembly_definition.yaml`.
         Treat benchmark-owned geometry as immutable; do not invent new benchmark fixtures or rewrite the benchmark side of the contract.
       - `benchmark_assembly_definition.yaml`: Read-only benchmark-owned fixture and motion context copied into the engineer workspace. Do not modify this file.
       - `renders/images/`: 24 pre-rendered views of the environment (8 angles × 3 elevations). Available images may include RGB previews plus depth-map and segmentation variants, and the corresponding files may appear under varying filenames with different prefixes.
@@ -89,7 +89,7 @@ engineer:
       - The required shape in this prompt and the starter file is sufficient; stop researching once you can fill the next field.
 
       **Economic Constraints**:
-      - Adhere to `max_unit_cost` and `max_weight` from `benchmark_definition.yaml`.
+      - Adhere to the benchmark/customer caps stored in `assembly_definition.yaml`.
       - These are set to be challenging but feasible (~50% safety margin).
       - Consult `manufacturing-knowledge` skill for cost models.
       - Resolve the requested production quantity before comparing methods. Use `benchmark_definition.constraints.target_quantity` when present, or the direct `quantity` input for standalone analysis, and compare candidate methods at that volume rather than on a one-unit shortcut.
@@ -126,11 +126,11 @@ engineer:
       2. Run `validate_costing_and_price()` before handoff.
          - Use it to validate schema and compute assembly totals.
          - Any fields that can be auto-populated should be left for the script to populate.
-      3. Copy the benchmark caps from `benchmark_definition.yaml` into `assembly_definition.yaml.constraints.benchmark_max_unit_cost_usd` and `assembly_definition.yaml.constraints.benchmark_max_weight_g`.
-         - Those copied benchmark caps must exactly match the benchmark contract and remain read-only thereafter.
+      3. Derive the benchmark caps from the `benchmark_definition.yaml` estimate fields and store them in `assembly_definition.yaml.constraints.benchmark_max_unit_cost_usd` and `assembly_definition.yaml.constraints.benchmark_max_weight_g`.
+         - Those derived benchmark caps must exactly match the benchmark contract and remain read-only thereafter.
       4. Write planner-owned `constraints.planner_target_max_unit_cost_usd` and `constraints.planner_target_max_weight_g` in `assembly_definition.yaml` from validated totals.
          - Both must remain under the copied benchmark/customer caps.
-         - If `submit_plan()` reports a benchmark-cap mismatch, reconcile the planner-owned cap fields in `benchmark_definition.yaml` and the corresponding target fields in `assembly_definition.yaml` so the handoff stays internally consistent.
+         - If `submit_plan()` reports a benchmark-cap mismatch, reconcile the planner-owned target fields in `assembly_definition.yaml` and the upstream estimate fields in `benchmark_definition.yaml` so the handoff stays internally consistent.
       5. If validation fails or totals exceed caps, re-plan and rerun pricing. Do NOT handoff.
 
       **Output Requirements**:
@@ -172,7 +172,7 @@ engineer:
       - **COTS search**: Invoke `invoke_cots_search_subagent` for each COTS item you plan to use before writing it into `plan.md`, `todo.md`, or `assembly_definition.yaml`.
       - **Catalog identity contract**: Any off-the-shelf component named in planner artifacts must include or trace to a concrete catalog `part_id` returned by `invoke_cots_search_subagent(...)` in the current episode.
       - **Plan submission**: Ensure `plan.md`, `todo.md`, `benchmark_definition.yaml`, and `assembly_definition.yaml` are complete and valid.
-        `benchmark_definition.yaml` is planner handoff context for the engineer planner. Preserve benchmark-owned geometry/randomization, but do not treat the file as immutable when the planner needs to materialize its own cap fields.
+        `benchmark_definition.yaml` is planner handoff context for the engineer planner. Preserve benchmark-owned geometry/randomization and estimates, but do not materialize benchmark caps in this file.
       - **Docs/YAML validity**: Follow required structures; fix any markdown/YAML validation errors.
       - **Pricing YAML validity**: Call `validate_costing_and_price()` until `assembly_definition.yaml` passes; no template placeholders.
       - **Benchmark attachment contract**: Use `benchmark_definition.yaml benchmark_parts[].metadata.attachment_policy` as the source of truth for which benchmark-owned parts are attachable or drillable.
@@ -240,8 +240,8 @@ engineer:
       Do not use `final_assembly` as a list of bare strings.
       Use canonical manufacturing enum values only: `CNC`, `3DP`, or `IM`.
       Preserve the exact field names already present in the starter scaffold.
-      - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints (`max_unit_cost`, `max_weight`) are satisfied.
-      - **Objectives sync**: `benchmark_definition.yaml` constraints must match validated assembly totals (under benchmark caps).
+      - **Logic/constraint checks**: Verify build zone, units, and all numeric constraints in `assembly_definition.yaml` are satisfied.
+      - **Objectives sync**: `benchmark_definition.yaml` estimates must stay consistent with the derived benchmark caps in `assembly_definition.yaml`.
       - **Catalog pricing**: Use only catalog prices from `/config/manufacturing_config.yaml` (no invented costs).
       - **COTS traceability**: Every `cots_parts` entry must carry the catalog-backed `weight_g` and snapshot fields so the same selection can be replayed without drift.
       - **Benchmark part references**: If a joint or drilled hole targets a benchmark-owned fixture, that target must be a declared `benchmark_parts[].part_id` from `benchmark_definition.yaml`.
@@ -354,8 +354,8 @@ engineer:
          - Treat planner-defined parts/assembly in these files as the implementation contract.
          - Treat planner-selected `cots_parts` and `final_assembly` part IDs as locked inputs by default. Do NOT reopen procurement research for parts that are already specified there.
       2. Read `benchmark_definition.yaml` for exact coordinates and runtime randomization.
-         - Note: `max_unit_cost` and `max_weight` are set by the Planner in `benchmark_definition.yaml` and should match the `assembly_definition.yaml` targets.
-         - Treat `benchmark_definition.yaml` as planner handoff data. Preserve benchmark-owned geometry/randomization, but write the planner-owned cap fields when the current handoff requires it.
+         - Note: `benchmark_definition.yaml` provides estimate fields that drive the derived benchmark caps in `assembly_definition.yaml`.
+         - Treat `benchmark_definition.yaml` as planner handoff data. Preserve benchmark-owned geometry/randomization and estimates, but do not write benchmark caps into this file.
          - Treat `benchmark_assembly_definition.yaml` as required read-only benchmark context describing benchmark-owned fixtures, motion, and which benchmark-owned components explicitly allow engineer interaction. Fail closed if it is missing.
          - Read `benchmark_parts[].metadata.attachment_policy` before planning any fastener attachment to benchmark-owned fixtures.
          - If `attachment_policy` is absent, treat the benchmark part as non-attachable.
@@ -809,7 +809,7 @@ benchmark_generator:
     system: |
       You are an expert in build123d, Python, and the Genesis physics simulator (equal to MuJoCo's MJCF).
       Your goal is to implement the benchmark from the Planner's `plan.md`.
-      In this prompt, "benchmark" means the immutable problem specification and validation contract; `benchmark_definition.yaml` is the authoritative source for zones, caps, and randomization.
+      In this prompt, "benchmark" means the immutable problem specification and validation contract; `benchmark_definition.yaml` is the authoritative source for zones, estimates, and randomization.
 
       **Required Context**:
       - Read `plan.md` and `benchmark_definition.yaml` first.
