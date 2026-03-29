@@ -4,6 +4,8 @@ from pathlib import Path
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from shared.simulation.smoke_mode import resolve_default_smoke_test_mode
+
 
 class WorkerSettings(BaseSettings):
     """Configuration settings for the Problemologist Worker (Heavy)."""
@@ -19,10 +21,9 @@ class WorkerSettings(BaseSettings):
     @model_validator(mode="after")
     def adjust_smoke_test_mode(self) -> "WorkerSettings":
         """Default smoke_test_mode to True if in integration test and not explicitly set."""
-        import os
-
-        if "SMOKE_TEST_MODE" not in os.environ and self.is_integration_test:
-            self.smoke_test_mode = True
+        self.smoke_test_mode = resolve_default_smoke_test_mode(
+            integration_enabled=self.is_integration_test
+        )
         return self
 
     git_repo_url: str | None = Field(default=None, alias="GIT_REPO_URL")

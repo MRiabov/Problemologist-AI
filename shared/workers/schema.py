@@ -23,6 +23,7 @@ from shared.simulation.schemas import (
     SimulatorBackendType,
     get_default_simulator_backend,
 )
+from shared.simulation.smoke_mode import ensure_smoke_test_mode_allowed
 from shared.workers.workbench_models import ManufacturingMethod
 
 ReviewerStage: TypeAlias = Literal[
@@ -245,6 +246,11 @@ class BenchmarkToolRequest(BaseModel):
         if isinstance(value, str):
             return LEGACY_REVIEWER_STAGE_ALIASES.get(value, value)
         return value
+
+    @field_validator("smoke_test_mode", mode="after")
+    @classmethod
+    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
+        return ensure_smoke_test_mode_allowed(value)
 
 
 class AnalyzeRequest(BenchmarkToolRequest):
@@ -526,6 +532,11 @@ class PreviewDesignRequest(BaseModel):
         description="If true: cap particles to 5000, label results as approximate.",
     )
 
+    @field_validator("smoke_test_mode", mode="after")
+    @classmethod
+    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
+        return ensure_smoke_test_mode_allowed(value)
+
 
 class PreviewDesignResponse(BaseModel):
     """Response from preview design endpoint."""
@@ -545,6 +556,11 @@ class HeavySimulationParams(BaseModel):
     smoke_test_mode: bool | None = None
     session_id: str
 
+    @field_validator("smoke_test_mode", mode="after")
+    @classmethod
+    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
+        return ensure_smoke_test_mode_allowed(value)
+
 
 class HeavyValidationParams(BaseModel):
     """Parameters for worker_validate_design activity."""
@@ -553,6 +569,11 @@ class HeavyValidationParams(BaseModel):
     script_path: str
     session_id: str
     smoke_test_mode: bool | None = None
+
+    @field_validator("smoke_test_mode", mode="after")
+    @classmethod
+    def validate_smoke_test_mode(cls, value: bool | None) -> bool | None:
+        return ensure_smoke_test_mode_allowed(value)
 
 
 class HeavyVerifyParams(VerificationRequest):
