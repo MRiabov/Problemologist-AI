@@ -142,7 +142,7 @@ The rule is:
 
 This keeps MuJoCo and Genesis distinct while still allowing each backend to use its own canonical default view when the runtime resolver allows that.
 
-Agent-facing inspection of persisted simulation video is config-driven. When `config/agents_config.yaml` sets `render.split_video_renders_to_images=true`, `inspect_media(...)` may decode an `.mp4` artifact into a small set of representative image frames and attach those frames to the model instead of exposing the raw video bytes as a dead end. The stored MP4 remains the canonical simulation artifact; the split only affects multimodal review.
+Agent-facing inspection of persisted simulation video is config-driven. When `config/agents_config.yaml` sets `render.split_video_renders_to_images=true`, `inspect_media(...)` may decode an `.mp4` artifact into representative image frames and attach those frames to the model instead of exposing the raw video bytes as a dead end. The sampling stride is controlled by `render.video_frame_attachment_stride`, so a 60-frame video with stride 6 yields 10 attached frames, while a 6-frame video yields 1 attached frame. `render.video_frame_jpeg_quality` controls the encoding quality of those attachments. The stored MP4 remains the canonical simulation artifact; the split only affects multimodal review.
 
 <!-- Downsides of MuJoCo?
 

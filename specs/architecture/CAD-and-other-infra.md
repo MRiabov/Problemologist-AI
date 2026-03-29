@@ -124,6 +124,8 @@ Render-modality emission is config-driven through `config/agents_config.yaml`:
 ```yaml
 render:
   split_video_renders_to_images: true
+  video_frame_attachment_stride: 6
+  video_frame_jpeg_quality: 85
   rgb:
     enabled: true
     axes: true
@@ -139,7 +141,7 @@ render:
 ```
 
 If one of the `enabled` flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
-`split_video_renders_to_images` is separate from the static preview modality flags. When enabled, agent-facing media inspection may decode persisted `.mp4` artifacts into representative image frames for multimodal review. It does not change which artifacts are stored, only how `inspect_media(...)` attaches them to the model.
+`split_video_renders_to_images` is separate from the static preview modality flags. When enabled, agent-facing media inspection may decode persisted `.mp4` artifacts into representative image frames for multimodal review. The sampling cadence is controlled by `video_frame_attachment_stride`, which means the tool attaches every Nth frame rather than imposing a fixed cap. `video_frame_jpeg_quality` controls the attachment encoding quality. These settings do not change which artifacts are stored, only how `inspect_media(...)` attaches them to the model.
 
 Each modality can independently enable world-coordinate axes and edge emphasis. Those overlays are controlled by `render.<modality>.axes` and `render.<modality>.edges`.
 

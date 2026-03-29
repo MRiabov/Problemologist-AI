@@ -174,7 +174,7 @@ I propose the following set of tools (their usage is below). Notably, the tools 
 - `inspect_media(path: str) -> dict` is the explicit visual-evidence tool.
   - It is the only agent-facing tool allowed to feed images/video-derived frames back into the model.
   - Supported first-line inputs are image files (`.png`, `.jpg`, `.jpeg`).
-  - For videos such as `simulation.mp4`, runtime may expose representative extracted frames through the same tool contract when `config/agents_config.yaml render.split_video_renders_to_images=true`. That remains a media-inspection action, not a text-file read.
+  - For videos such as `simulation.mp4`, runtime may expose representative extracted frames through the same tool contract when `config/agents_config.yaml render.split_video_renders_to_images=true`. Frame cadence is controlled by `render.video_frame_attachment_stride`, so the tool attaches every Nth frame rather than a fixed cap. That remains a media-inspection action, not a text-file read.
   - The tool returns structured metadata (for example path, media kind, frame/image count, attach success), while the actual image/frame content is attached to the LLM call through the runtime's multimodal message path.
   - When the inspected file is a render artifact under `renders/`, the tool should also return persisted render metadata from `renders/render_manifest.json` when available.
   - For segmentation renders, that metadata must include a color legend mapping rendered colors to object identity.
