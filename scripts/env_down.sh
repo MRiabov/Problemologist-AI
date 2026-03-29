@@ -60,6 +60,12 @@ pkill -9 -f "uv run uvicorn" || true
 pkill -9 -f "uv run python -m controller.temporal_worker" || true
 pkill -9 -f "uv run python -m worker_heavy.temporal_worker" || true
 
+# Tear down any Xvfb instances started by the local dev/integration flows.
+# The integration runner uses :99, while the VTK fallback helper uses the
+# 10000-10100 range when it has to start a private display.
+pkill -9 -f "Xvfb :(99|10000|1000[1-9]|100[1-9][0-9]|10100)([[:space:]]|$)" || true
+pkill -9 -f "Xvfb -displayfd" || true
+
 echo "Bringing down infrastructure containers..."
 docker compose -f docker-compose.test.yaml down -v --remove-orphans
 
