@@ -11,6 +11,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-172")
 def test_int_172_plan_approval_control_placement(page: Page):
     """
     INT-172: Approve/disapprove controls are available in both expected UI locations

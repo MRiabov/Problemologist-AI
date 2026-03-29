@@ -42,6 +42,7 @@ def _runtime_validate_command() -> str:
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_execute_command_uses_agent_policy_timeout_by_default():
     """
     INT-024: controller execute_command must inherit the agent execution
@@ -88,6 +89,7 @@ async def test_int_024_execute_command_uses_agent_policy_timeout_by_default():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_runtime_execute_masks_host_session_root_as_workspace():
     """
     INT-024: shell execution must expose the canonical `/workspace` alias
@@ -115,6 +117,7 @@ async def test_int_024_runtime_execute_masks_host_session_root_as_workspace():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_runtime_execute_reaches_benchmark_validate_toolchain():
     """
     INT-024: benchmark validation remains reachable from the light-worker
@@ -256,6 +259,7 @@ print(f"VALIDATE_MESSAGE={message}")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_runtime_validate_rejects_parent_only_fixed_metadata():
     """
     INT-024: benchmark validation fails closed when a parent Compound is marked
@@ -354,6 +358,7 @@ print(f"VALIDATE_MESSAGE={message}")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_runtime_validate_rejects_translated_top_level_parts():
     """
     INT-024: benchmark validation fails closed when top-level parts are placed
@@ -458,6 +463,7 @@ print(f"VALIDATE_MESSAGE={message}")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-024")
 async def test_int_024_runtime_validate_reports_resolved_build_zone_bounds():
     """
     INT-024: build-zone violations must report the resolved objective bounds,

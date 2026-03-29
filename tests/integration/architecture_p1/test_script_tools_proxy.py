@@ -187,6 +187,7 @@ async def _write_session_workspace(
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-192")
 async def test_int_192_controller_script_tools_validate_waits_through_temporal_queue():
     """
     INT-192: controller script-tools validate/simulate/submit must wait through the
@@ -292,6 +293,7 @@ async def test_int_192_controller_script_tools_validate_waits_through_temporal_q
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-193")
 async def test_int_193_controller_script_tools_verify_waits_through_temporal_queue():
     """
     INT-193: controller script-tools verify must wait through the Temporal-backed
@@ -418,6 +420,7 @@ async def test_int_193_controller_script_tools_verify_waits_through_temporal_que
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-193B")
 async def test_int_193b_worker_heavy_smoke_verification_uses_smoke_defaults(
     tmp_path, monkeypatch
 ):

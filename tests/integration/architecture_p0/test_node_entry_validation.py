@@ -102,6 +102,7 @@ def _node_start_traces(episode: EpisodeResponse, node_name: str) -> list[str]:
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
     """
     INT-184: Seeded planner entry must reject copied benchmark caps that diverge
@@ -205,6 +206,7 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_caps():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_assembly_caps():
     """
     INT-184: Seeded engineer-coder preflight must reject copied benchmark caps
@@ -286,6 +288,7 @@ async def test_int_184_seeded_workspace_rejects_mismatched_benchmark_assembly_ca
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_only():
     """
     INT-184: Seeded benchmark planner handoff should validate when benchmark caps
@@ -376,6 +379,7 @@ async def test_int_184_seeded_benchmark_assembly_uses_benchmark_definition_caps_
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_engineer_fail_fast_and_skip_target_node():
     """
     INT-184: Engineer path entry validation must fail-fast, skip target node execution,
@@ -442,6 +446,7 @@ async def test_int_184_engineer_fail_fast_and_skip_target_node():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_engineer_planner_requires_benchmark_assembly_definition():
     """
     INT-184: Engineer planner entry must fail closed when benchmark_assembly_definition.yaml is absent.
@@ -493,6 +498,7 @@ async def test_int_184_engineer_planner_requires_benchmark_assembly_definition()
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
     """
     INT-184: Engineer planner entry must fail closed when the approved benchmark
@@ -598,6 +604,7 @@ async def test_int_184_engineer_planner_rejects_stale_benchmark_bundle():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-184")
 async def test_int_184_benchmark_fail_fast_state_invalid_confirm_path():
     """
     INT-184: Benchmark path invalid entry must fail-fast with structured metadata

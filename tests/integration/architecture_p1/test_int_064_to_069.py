@@ -35,6 +35,7 @@ WORKER_HEAVY_URL = os.getenv("WORKER_HEAVY_URL", "http://127.0.0.1:18002")
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-064")
 async def test_int_064_cots_metadata():
     """INT-064: COTS reproducibility metadata persistence."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -80,6 +81,7 @@ async def test_int_064_cots_metadata():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-064")
 async def test_int_064_session_workspace_copies_parts_db_catalog():
     """INT-064: session workspaces must receive a usable catalog snapshot."""
     session_id = f"INT-064-{uuid.uuid4().hex[:8]}"
@@ -111,6 +113,7 @@ async def test_int_064_session_workspace_copies_parts_db_catalog():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-065")
 async def test_int_065_skills_safety():
     """INT-065: Skill safety toggle enforcement."""
     # This test requires a running agent session that uses the SkillsNode.
@@ -129,6 +132,7 @@ async def test_int_065_skills_safety():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-066")
 async def test_int_066_fluid_electronics_coupling():
     """INT-066: Fluid-on-electronics failure coupling."""
     skip_unless_genesis("INT-066 requires Genesis fluid-electronics coupling.")
@@ -256,6 +260,7 @@ fluids:
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-067")
 async def test_int_067_068_steerability():
     """INT-067 & INT-068: Steerability payload and code references."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -302,6 +307,7 @@ async def test_int_067_068_steerability():
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-069")
 async def test_int_069_frontend_contract():
     """INT-069: Frontend delivery visibility contract."""
     async with httpx.AsyncClient(timeout=300.0) as client:

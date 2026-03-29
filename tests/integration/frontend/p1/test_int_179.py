@@ -12,6 +12,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:15173")
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-179")
 def test_int_179_manual_at_mention_contract(page: Page):
     def handle_console(msg):
         if msg.type in ["log", "info", "warn", "error"]:

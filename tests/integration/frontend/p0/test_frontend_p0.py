@@ -163,6 +163,7 @@ def _start_engineer_episode_via_api(
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-157")
 def test_int_157_session_history(page: Page):
     """
     INT-157: Sidebar lists sessions from live API; selecting a session opens
@@ -277,6 +278,7 @@ def test_int_157_session_history(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-158")
 def test_int_158_workflow_parity(page: Page):
     """
     INT-158: In both workflows, prompt submission, streamed assistant output,
@@ -409,6 +411,7 @@ def test_int_158_workflow_parity(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-159")
 def test_int_159_plan_approval_comment(page: Page):
     """
     INT-159: After planner output, approve/disapprove controls appear;
@@ -522,6 +525,7 @@ def test_int_159_plan_approval_comment(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-162")
 def test_int_162_interrupt_ux_propagation(page: Page):
     """
     INT-162: Stop action posts interrupt API and the run reaches cancelled state
@@ -586,6 +590,7 @@ def test_int_162_interrupt_ux_propagation(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-163")
 def test_int_163_steerability_context_cards_multi_select(page: Page):
     """
     INT-163: Multiple topology selections create context cards and cards can be removed.
@@ -632,6 +637,7 @@ def test_int_163_steerability_context_cards_multi_select(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-167")
 def test_int_167_controller_proxied_cad_assets(page: Page):
     """
     INT-167: CAD assets are fetched via controller proxy endpoints
@@ -691,6 +697,7 @@ def test_int_167_controller_proxied_cad_assets(page: Page):
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-170")
 def test_int_170_post_run_feedback_ux_persistence(page: Page):
     """
     INT-170: Feedback controls appear only after completion

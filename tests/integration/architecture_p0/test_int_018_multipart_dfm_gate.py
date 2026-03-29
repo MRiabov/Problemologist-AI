@@ -46,6 +46,7 @@ async def _post_heavy_tool(
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(regexes=["simulation_failed"])
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-018")
 async def test_int_018_simulate_does_not_dfm_reject_simple_multipart_benchmark():
     """
     INT-018: benchmark-owned multipart fixtures must not be DFM-gated during
@@ -169,6 +170,7 @@ randomization:
 @pytest.mark.integration_p0
 @pytest.mark.allow_backend_errors(regexes=["simulation_failed"])
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-018")
 async def test_int_018_simulation_bounds_ignore_fixed_benchmark_fixtures():
     """
     INT-018: simulation_bounds apply to moving bodies, not fixed benchmark

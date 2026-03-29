@@ -51,6 +51,7 @@ async def _require_worker_services(client: httpx.AsyncClient):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-120")
 async def test_int_120_circuit_validation_gate():
     """INT-120: Verify that /validate_circuit endpoint works and simulate respects its failure."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -148,6 +149,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-121")
 async def test_int_121_short_circuit_detection():
     """INT-121: Verify short circuit detection via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -181,6 +183,7 @@ async def test_int_121_short_circuit_detection():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-122")
 async def test_int_122_overcurrent_supply_detection():
     """INT-122: Verify overcurrent supply detection via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -228,6 +231,7 @@ async def test_int_122_overcurrent_supply_detection():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-123")
 async def test_int_123_overcurrent_wire_detection():
     """INT-123: Verify overcurrent wire detection via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -276,6 +280,7 @@ async def test_int_123_overcurrent_wire_detection():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-124")
 async def test_int_124_open_circuit_detection():
     """INT-124: Verify open circuit / floating node detection via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -317,6 +322,7 @@ async def test_int_124_open_circuit_detection():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-125")
 async def test_int_125_valid_circuit_totals():
     """INT-125: Verify valid circuit returns cost and weight artifacts."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -418,6 +424,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-126")
 async def test_int_126_wire_tear_behavior():
     """
     INT-126: Simulation fails with FAILED_WIRE_TORN
@@ -517,6 +524,7 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-128")
 async def test_int_128_objectives_electronics_schema_gate():
     """
     INT-128: malformed electronics_requirements in benchmark_definition.yaml

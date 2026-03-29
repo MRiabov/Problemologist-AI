@@ -48,6 +48,7 @@ def base_headers(session_id):
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-110")
 async def test_int_110_gpu_oom_retry(session_id, base_headers):
     """
     INT-110: GPU OOM retry with particle reduction.

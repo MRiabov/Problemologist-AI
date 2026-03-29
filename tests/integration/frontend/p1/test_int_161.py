@@ -38,6 +38,7 @@ def _find_episode_id_by_task(task: str) -> str:
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-161")
 def test_int_161_tool_activity_and_reasoning_visibility(page: Page):
     """
     INT-161: Run real tool calls and assert activity feed entries originate from backend traces.

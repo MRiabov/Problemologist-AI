@@ -19,6 +19,7 @@ TEMPORAL_URL = os.getenv("TEMPORAL_URL", "127.0.0.1:17233")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-053")
 async def test_int_053_temporal_workflow_lifecycle():
     """INT-053: Verify Temporal workflow lifecycle persistence."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -60,6 +61,7 @@ async def test_int_053_temporal_workflow_lifecycle():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-055")
 async def test_int_055_s3_artifact_upload_logging():
     """INT-055: Verify S3 artifact upload logging and linkage."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -96,6 +98,7 @@ async def test_int_055_s3_artifact_upload_logging():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-054")
 async def test_int_054_temporal_failure_path():
     """INT-054: Verify Temporal outage/failure logging path (via failure injection)."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -138,6 +141,7 @@ async def test_int_054_temporal_failure_path():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-056")
 async def test_int_056_s3_upload_failure_retry():
     """INT-056: Verify S3 upload failure + retry logging."""
     # Similar issue with retries.

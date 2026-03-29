@@ -28,6 +28,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-004")
 async def test_int_004_episode_artifact_persistence():
     """INT-004: Verify artifacts are persisted and accessible via API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -71,6 +72,7 @@ async def test_int_004_episode_artifact_persistence():
     ]
 )
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-005")
 async def test_int_005_trace_realtime_broadcast():
     """INT-005: Verify traces are broadcasted via DB/API."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -98,6 +100,7 @@ async def test_int_005_trace_realtime_broadcast():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-011")
 async def test_int_011_planner_target_caps_validation():
     """INT-011: Verify planner target caps must be <= benchmark caps."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -126,6 +129,7 @@ totals:
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-014")
 async def test_int_014_cots_propagation():
     """INT-014: Verify COTS data propagates into plan and assembly definition."""
     async with httpx.AsyncClient(timeout=300.0) as client:
@@ -179,6 +183,7 @@ async def test_int_014_cots_propagation():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-025")
 async def test_int_025_events_collection_e2e():
     """INT-025: Verify worker events are ingested and persisted as traces."""
     async with httpx.AsyncClient(timeout=300.0) as client:

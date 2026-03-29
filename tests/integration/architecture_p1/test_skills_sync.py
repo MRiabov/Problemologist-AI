@@ -23,6 +23,7 @@ WORKER_LIGHT_URL = os.getenv("WORKER_LIGHT_URL", "http://127.0.0.1:18001")
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-045")
 async def test_int_045_skills_sync_lifecycle():
     """INT-045: Verify skills sync lifecycle."""
     async with httpx.AsyncClient(timeout=30.0) as client:

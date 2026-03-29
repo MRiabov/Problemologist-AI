@@ -54,6 +54,7 @@ def _ensure_model_assets(page: Page) -> None:
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-173")
 def test_int_173_exact_pointing_payload(page: Page):
     """
     INT-173: Selecting face/edge/vertex/part/subassembly produces typed context payloads

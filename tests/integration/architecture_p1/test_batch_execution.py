@@ -19,6 +19,7 @@ CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 
 @pytest.mark.integration_p1
 @pytest.mark.asyncio
+@pytest.mark.int_id("INT-043")
 async def test_int_043_batch_execution_path():
     """INT-043: Verify batch job submission and execution isolation."""
     async with httpx.AsyncClient(timeout=300.0) as client:

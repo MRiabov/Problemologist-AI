@@ -200,6 +200,7 @@ def _start_engineer_episode_via_api(*, task: str, session_id: str) -> str:
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-160")
 def test_int_160_reasoning_default_hidden_and_expandable(page: Page):
     """
     INT-160: Reasoning traces default-hidden + expandable.

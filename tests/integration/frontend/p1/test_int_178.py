@@ -54,6 +54,7 @@ def _start_running_episode(task: str) -> str:
 
 
 @pytest.mark.integration_frontend
+@pytest.mark.int_id("INT-178")
 def test_int_178_session_restore_continuity(page: Page):
     """
     INT-178: Session restore continuity (functional)
