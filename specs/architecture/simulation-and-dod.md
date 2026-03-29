@@ -127,6 +127,20 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
 
 Genesis-specific runtime behavior is therefore established by actual Genesis simulation runs where Genesis behavior is required, not by duplicating a Genesis render/build check inside fast validation.
 
+### Render profile ownership
+
+The render contract for dynamic simulation evidence is runtime-resolved and recorded with the simulation result, not by benchmark-level task config or agent config.
+
+The rule is:
+
+1. The selected physics backend determines the renderer family for simulation video.
+2. The renderer backend exposes a typed capability record that states what artifact modes and view policies it supports.
+3. The runtime-selected simulation render choice is serialized in `simulation_result.json` so reviewers can replay the exact evidence path.
+4. Static build123d/VTK preview remains a separate preview contract and continues to live in the preview manifest path.
+5. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
+
+This keeps MuJoCo and Genesis distinct while still allowing each backend to use its own canonical default view when the runtime resolver allows that.
+
 <!-- Downsides of MuJoCo?
 
 - we won't support deformation (finite element analysis)

@@ -105,6 +105,10 @@ For build123d/VTK-backed static preview renders, each camera view is persisted a
 
 Those files are context artifacts for downstream agents and reviewers. They follow the same persistence/discovery flow as the existing preview images rather than introducing a second artifact channel.
 
+Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. See [Simulation and "Definitions of Done"](./simulation-and-dod.md#render-profile-ownership) for the ownership split.
+
+The simulation backend exposes a typed render-capability record so the runtime can distinguish supported artifact modes from unsupported ones without introducing a YAML render contract yet.
+
 For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
 
 We also persist a render metadata manifest at `renders/render_manifest.json`. That manifest is the structured companion for `inspect_media(...)` and carries per-image modality metadata.
