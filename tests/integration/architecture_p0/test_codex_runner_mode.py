@@ -7,10 +7,13 @@ import re
 import shutil
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
+import yaml
 from build123d import Box, BuildPart
 
 from evals.logic import runner
@@ -24,10 +27,16 @@ from evals.logic.models import EvalDatasetItem
 from evals.logic.seed_maintenance import refresh_plan_review_manifest_hashes
 from shared.enums import AgentName, ManufacturingMethod, ReviewDecision
 from shared.models.schemas import (
+    BenchmarkDefinition,
+    BoundingBox,
+    Constraints,
     DatasetCurationManifest,
+    MovedObject,
+    ObjectivesSection,
     PartMetadata,
     PlannerSubmissionResult,
 )
+from shared.workers.schema import RenderManifest, ValidationResultRecord
 from worker_heavy.utils.build123d_rendering import render_preview_view
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -392,6 +401,183 @@ def test_run_evals_codex_submit_helper_imports_workspace_script_from_cwd(
         "validate_start" in combined_output
         or '"stage": "validation"' in combined_output
     )
+
+
+@pytest.mark.integration_p0
+@pytest.mark.int_id("INT-207")
+def test_run_evals_codex_engineer_workspace_validate_falls_back_from_bad_display(
+    tmp_path: Path,
+):
+    """
+    INT-207: an engineer workspace validation preview must recover from an
+    unusable ambient DISPLAY by logging the fallback, rendering previews, and
+    persisting the validation record.
+    """
+
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+    )
+
+    workspace_script = """
+from build123d import Align, Box, BuildPart, Compound
+
+from shared.models.schemas import CompoundMetadata, PartMetadata
+
+
+def build() -> Compound:
+    with BuildPart() as base_builder:
+        Box(12.0, 12.0, 12.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    base = base_builder.part
+    base.label = "test_box"
+    base.metadata = PartMetadata(material_id="aluminum_6061", fixed=True)
+
+    assembly = Compound(children=[base], label="fallback_preview_box")
+    assembly.metadata = CompoundMetadata(fixed=True)
+    return assembly
+
+
+result = build()
+"""
+    workspace_script_path = workspace_dir / "script.py"
+    workspace_script_path.write_text(workspace_script, encoding="utf-8")
+
+    benchmark_definition = BenchmarkDefinition(
+        objectives=ObjectivesSection(
+            goal_zone=BoundingBox(min=(20.0, 20.0, 0.0), max=(30.0, 30.0, 20.0)),
+            forbid_zones=[],
+            build_zone=BoundingBox(
+                min=(-20.0, -20.0, 0.0),
+                max=(20.0, 20.0, 30.0),
+            ),
+        ),
+        benchmark_parts=[
+            {
+                "part_id": "environment_fixture",
+                "label": "environment_fixture",
+                "metadata": {
+                    "fixed": True,
+                    "material_id": "aluminum_6061",
+                },
+            }
+        ],
+        simulation_bounds=BoundingBox(
+            min=(-50.0, -50.0, -10.0),
+            max=(50.0, 50.0, 50.0),
+        ),
+        moved_object=MovedObject(
+            label="test_box",
+            shape="box",
+            material_id="aluminum_6061",
+            start_position=(0.0, 0.0, 0.0),
+            runtime_jitter=(0.0, 0.0, 0.0),
+        ),
+        constraints=Constraints(max_unit_cost=100.0, max_weight_g=1000.0),
+    )
+    (workspace_dir / "benchmark_definition.yaml").write_text(
+        yaml.safe_dump(benchmark_definition.model_dump(mode="json"), sort_keys=False),
+        encoding="utf-8",
+    )
+
+    source_auth_path = tmp_path / "source-home" / ".codex" / "auth.json"
+    source_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    source_auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    codex_home_root = tmp_path / "codex-home"
+    prepare_codex_home(
+        codex_home_root=codex_home_root,
+        workspace_dir=workspace_dir,
+        source_auth_path=source_auth_path,
+    )
+
+    session_id = f"INT-207-{uuid4().hex[:8]}"
+    env = build_codex_env(
+        task_id=item.id,
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id=session_id,
+    )
+    env["DISPLAY"] = ":109"
+    env.pop("XAUTHORITY", None)
+
+    script_run = subprocess.run(
+        [env["PYTHON_BIN"], "script.py"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+        timeout=300,
+    )
+    assert script_run.returncode == 0, script_run.stderr
+
+    validate_code = textwrap.dedent(
+        """
+        import os
+        from pathlib import Path
+
+        from script import result
+        from shared.workers.persistence import record_validation_result
+        from utils.submission import validate
+
+        ok, message = validate(result, output_dir=".")
+        record_validation_result(
+            Path.cwd(),
+            ok,
+            message,
+            session_id=os.environ.get("SESSION_ID"),
+        )
+        print(f"VALIDATE_OK={ok}")
+        print(f"VALIDATE_MESSAGE={message}")
+        """
+    ).strip()
+    validate_run = subprocess.run(
+        [env["PYTHON_BIN"], "-c", validate_code],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+        timeout=300,
+    )
+    combined_output = "\n".join(
+        part for part in (validate_run.stdout, validate_run.stderr) if part
+    )
+
+    assert validate_run.returncode == 0, combined_output
+    assert "VALIDATE_OK=True" in combined_output, combined_output
+    assert (
+        "ambient_vtk_display_unusable_falling_back_to_private_xvfb" in combined_output
+    ), combined_output
+    assert "failed to start a private Xvfb display for VTK" not in combined_output
+    assert "Validation preview render failed" not in combined_output
+
+    validation_record = ValidationResultRecord.model_validate_json(
+        (workspace_dir / "validation_results.json").read_text(encoding="utf-8")
+    )
+    assert validation_record.success is True
+    assert validation_record.script_path == "script.py"
+
+    render_manifest = RenderManifest.model_validate_json(
+        (workspace_dir / "renders" / "render_manifest.json").read_text(encoding="utf-8")
+    )
+    assert render_manifest.preview_evidence_paths
+    assert render_manifest.artifacts
 
 
 @pytest.mark.integration_p0
