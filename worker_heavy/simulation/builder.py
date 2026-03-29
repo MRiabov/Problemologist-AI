@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from xml.dom import minidom
 
 import trimesh
-from build123d import Compound, Solid, Sphere, export_stl
+from build123d import Align, Box, Compound, Cylinder, Solid, Sphere, export_stl
 
 # YACV removed in favor of custom trimesh-based export capable of preserving topology
 # try:
@@ -48,6 +48,39 @@ class AssemblyPartData(BaseModel):
     weld_target: str | None = None
 
 
+def _build_moved_object_geometry(moved: Any):
+    """Build the authored moved object geometry from its declared shape."""
+    shape = str(getattr(moved, "shape", "sphere")).strip().lower()
+    radius_range = getattr(getattr(moved, "static_randomization", None), "radius", None)
+    radius = float(max(radius_range)) if radius_range else None
+
+    if shape == "sphere":
+        sphere_radius = radius if radius is not None else 0.01
+        return Sphere(
+            sphere_radius,
+            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+        )
+    if shape in {"cube", "box"}:
+        edge = (radius * 2.0) if radius is not None else 1.0
+        return Box(
+            edge,
+            edge,
+            edge,
+            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+        )
+    if shape == "cylinder":
+        cylinder_radius = radius if radius is not None else 0.5
+        return Cylinder(
+            radius=cylinder_radius,
+            height=(cylinder_radius * 2.0),
+            align=(Align.CENTER, Align.CENTER, Align.CENTER),
+        )
+
+    raise ValueError(
+        f"Unsupported moved_object.shape '{shape}'. Expected sphere, cube, box, or cylinder."
+    )
+
+
 class CommonAssemblyTraverser:
     """Unifies assembly traversal and metadata resolution."""
 
@@ -70,7 +103,19 @@ class CommonAssemblyTraverser:
 
         parts_data = []
         for i, child in enumerate(children):
-            label = getattr(child, "label", None) or f"part_{i}"
+            raw_label = getattr(child, "label", None)
+            label = str(raw_label).strip() if raw_label is not None else ""
+            if not label:
+                logger.error(
+                    "top_level_build123d_label_missing",
+                    part_index=i,
+                    raw_label=raw_label,
+                    part_type=type(child).__name__,
+                )
+                raise ValueError(
+                    "Top-level build123d objects must have non-empty labels. "
+                    f"Offending part index: {i}."
+                )
 
             pos, euler = CommonAssemblyTraverser._resolve_location(child)
             meta = CommonAssemblyTraverser._resolve_part_metadata(child)
@@ -822,15 +867,13 @@ class MuJoCoSimulationBuilder(SimulationBuilderBase):
         # 3. Add the benchmark-mandated moved object as a dynamic body.
         if objectives and getattr(objectives, "moved_object", None):
             moved = objectives.moved_object
-            radius_range = getattr(moved.static_randomization, "radius", None)
-            radius = float(max(radius_range)) if radius_range else 0.01
-            ball = Sphere(radius)
-            ball.label = moved.label
+            moved_part = _build_moved_object_geometry(moved)
+            moved_part.label = moved.label
 
             mesh_path_base = self.assets_dir / moved.label
             tolerance = 1.0 if smoke_test_mode else 0.1
             saved_paths = self.processor.process_geometry(
-                ball,
+                moved_part,
                 mesh_path_base,
                 use_vhacd=self.use_vhacd,
                 tolerance=tolerance,
