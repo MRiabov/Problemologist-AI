@@ -10,7 +10,13 @@ import mujoco
 import numpy as np
 
 from shared.enums import FailureReason
-from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
+from shared.models.simulation import (
+    FluidMetricResult,
+    RendererCapabilities,
+    RenderMode,
+    SimulationFailure,
+    StressSummary,
+)
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,
@@ -174,12 +180,39 @@ class MuJoCoBackend(PhysicsRendererBackend):
 
     # Rendering & Visualization
     def render(self) -> np.ndarray:
-        # Default render (e.g. from first camera or default view)
+        # Default render should work even when the scene has no named cameras.
+        # In that case, fall back to MuJoCo's free/default view rather than
+        # forcing a synthetic camera name that may not exist in the XML.
         cam_name = None
         if self.model and self.model.ncam > 0:
             cam_name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, 0)
 
-        return self.render_camera(cam_name or "fixed", 640, 480)
+        if cam_name:
+            return self.render_camera(cam_name, 640, 480)
+
+        frame, _, _ = self.render_camera_modalities(
+            None,
+            640,
+            480,
+            include_rgb=True,
+            include_depth=False,
+            include_segmentation=False,
+        )
+        if frame is None:
+            raise RuntimeError("RGB rendering was disabled for render")
+        return frame
+
+    def get_render_capabilities(self) -> RendererCapabilities:
+        return RendererCapabilities(
+            backend_name="mujoco",
+            artifact_modes_supported=[RenderMode.SIMULATION_VIDEO],
+            supports_default_view=True,
+            supports_named_cameras=True,
+            supports_rgb=True,
+            supports_depth=True,
+            supports_segmentation=True,
+            default_view_label="free",
+        )
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         frame, _, _ = self.render_camera_modalities(
@@ -196,7 +229,7 @@ class MuJoCoBackend(PhysicsRendererBackend):
 
     def render_camera_modalities(
         self,
-        camera_name: str,
+        camera_name: str | None,
         width: int,
         height: int,
         *,
@@ -512,8 +545,12 @@ class MuJoCoBackend(PhysicsRendererBackend):
 
     def get_all_camera_names(self) -> list[str]:
         names = [
-            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, i)
-            for i in range(self.model.ncam)
+            name
+            for name in (
+                mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_CAMERA, i)
+                for i in range(self.model.ncam)
+            )
+            if name
         ]
         # Include custom cameras
         for name in self.custom_cameras:

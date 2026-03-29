@@ -25,7 +25,13 @@ except Exception:
     gs = None
 
 from shared.enums import FailureReason
-from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
+from shared.models.simulation import (
+    FluidMetricResult,
+    RendererCapabilities,
+    RenderMode,
+    SimulationFailure,
+    StressSummary,
+)
 from shared.simulation.backends import (
     ActuatorState,
     BodyState,
@@ -1119,6 +1125,18 @@ class GenesisBackend(PhysicsRendererBackend):
     # Rendering & Visualization
     def render(self) -> np.ndarray:
         return self.render_camera("default", 640, 480)
+
+    def get_render_capabilities(self) -> RendererCapabilities:
+        return RendererCapabilities(
+            backend_name="genesis",
+            artifact_modes_supported=[RenderMode.SIMULATION_VIDEO],
+            supports_default_view=True,
+            supports_named_cameras=True,
+            supports_rgb=True,
+            supports_depth=True,
+            supports_segmentation=True,
+            default_view_label="default",
+        )
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         with self._lock:

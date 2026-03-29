@@ -3,7 +3,12 @@ from typing import Any, Protocol, runtime_checkable
 import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
-from shared.models.simulation import FluidMetricResult, SimulationFailure, StressSummary
+from shared.models.simulation import (
+    FluidMetricResult,
+    RendererCapabilities,
+    SimulationFailure,
+    StressSummary,
+)
 
 
 class BodyState(BaseModel):
@@ -119,6 +124,7 @@ class RendererBackend(Protocol):
     def render_camera(
         self, camera_name: str, width: int, height: int
     ) -> np.ndarray: ...
+    def get_render_capabilities(self) -> RendererCapabilities: ...
 
     def get_particle_positions(self) -> np.ndarray | None: ...
     def set_camera(

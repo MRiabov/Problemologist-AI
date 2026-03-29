@@ -24,6 +24,7 @@ from vtkmodules.vtkRenderingCore import (
 )
 
 from shared.models.schemas import BenchmarkDefinition
+from shared.models.simulation import RendererCapabilities, RenderMode
 from shared.simulation.backends import RendererBackend
 from shared.workers.schema import SegmentationLegendEntry
 from worker_heavy.simulation.builder import CommonAssemblyTraverser, MeshProcessor
@@ -577,6 +578,18 @@ class Build123dRendererBackend(RendererBackend):
 
     def render(self) -> np.ndarray:
         return self.render_camera("preview", 640, 480)
+
+    def get_render_capabilities(self) -> RendererCapabilities:
+        return RendererCapabilities(
+            backend_name=PREVIEW_BACKEND_NAME,
+            artifact_modes_supported=[RenderMode.STATIC_PREVIEW],
+            supports_default_view=True,
+            supports_named_cameras=True,
+            supports_rgb=True,
+            supports_depth=True,
+            supports_segmentation=True,
+            default_view_label="preview",
+        )
 
     def render_camera(self, camera_name: str, width: int, height: int) -> np.ndarray:
         if self.scene is None:
