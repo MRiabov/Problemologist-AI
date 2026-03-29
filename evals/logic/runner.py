@@ -1926,7 +1926,7 @@ async def _run_codex_reviewer_chain_for_judge(
             agent_name=reviewer_agent,
             session_id=reviewer_session_id,
             runtime_root=codex_runtime_root,
-            yolo=True,
+            yolo=False,
         )
 
         verification_result = await _verify_codex_workspace_for_agent(
@@ -2341,7 +2341,7 @@ async def _run_codex_eval(
             task_id=task_id,
             session_id=session_id,
             runtime_root=codex_runtime_root,
-            yolo=True,
+            yolo=False,
         )
         if launch_return_code != 0:
             failure_reason = f"codex exited with code {launch_return_code}"

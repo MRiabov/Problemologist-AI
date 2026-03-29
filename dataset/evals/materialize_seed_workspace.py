@@ -92,15 +92,15 @@ def _parse_args() -> argparse.Namespace:
         "--yolo",
         dest="yolo",
         action="store_true",
-        help=("Launch Codex with approvals and sandbox bypassed. This is the default."),
+        help="Launch Codex without approvals or sandboxing.",
     )
     yolo_group.add_argument(
         "--no-yolo",
         dest="yolo",
         action="store_false",
-        help="Launch Codex with normal approval/sandbox behavior.",
+        help="Launch Codex with the normal sandboxed behavior.",
     )
-    parser.set_defaults(yolo=True)
+    parser.set_defaults(yolo=False)
     return parser.parse_args()
 
 

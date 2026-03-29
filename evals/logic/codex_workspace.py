@@ -616,6 +616,12 @@ def build_codex_env(
     return env
 
 
+def _codex_execution_flags(*, yolo: bool) -> list[str]:
+    if yolo:
+        return ["--dangerously-bypass-approvals-and-sandbox"]
+    return ["--full-auto"]
+
+
 def launch_codex_exec(
     workspace_dir: Path,
     prompt_text: str,
@@ -636,7 +642,7 @@ def launch_codex_exec(
     cmd = [
         "codex",
         "exec",
-        "--full-auto",
+        *_codex_execution_flags(yolo=yolo),
         "-c",
         "shell_environment_policy.inherit=all",
         "--cd",
@@ -682,7 +688,7 @@ def open_codex_ui(
     prepare_codex_home(codex_home_root=codex_home_root, workspace_dir=workspace_dir)
     cmd = [
         "codex",
-        "--full-auto",
+        *_codex_execution_flags(yolo=yolo),
         "-c",
         "shell_environment_policy.inherit=all",
         "--cd",
