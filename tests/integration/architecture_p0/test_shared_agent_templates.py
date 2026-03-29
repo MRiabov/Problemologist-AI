@@ -9,9 +9,18 @@ from shared.agent_templates import load_common_template_files, load_template_tex
 @pytest.mark.integration_p0
 def test_common_agent_templates_match_worker_light_starters():
     templates = load_common_template_files()
-    assert set(templates) == {"journal.md", "script.py", "todo.md"}
+    assert set(templates) == {
+        ".admin/clear_env.py",
+        "journal.md",
+        "manufacturing_config.yaml",
+        "script.py",
+        "todo.md",
+    }
 
     worker_light_root = Path("worker_light/agent_files")
+    assert templates[".admin/clear_env.py"] == (
+        worker_light_root / ".admin/clear_env.py"
+    ).read_text(encoding="utf-8")
     assert templates["script.py"] == (worker_light_root / "script.py").read_text(
         encoding="utf-8"
     )

@@ -92,6 +92,59 @@ def test_run_evals_help_exposes_codex_backend():
 
 
 @pytest.mark.integration_p0
+def test_eval_entrypoints_fail_closed_when_controller_reports_integration_mode(
+    tmp_path,
+):
+    run_evals = subprocess.run(
+        [
+            sys.executable,
+            "dataset/evals/run_evals.py",
+            "--skip-env-up",
+            "--runner-backend",
+            "codex",
+            "--task-id",
+            "missing-task-id",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env=os.environ.copy(),
+        check=False,
+    )
+    run_evals_output = "\n".join(
+        part for part in (run_evals.stdout, run_evals.stderr) if part
+    )
+    assert run_evals.returncode != 0, run_evals_output
+    assert "integration-test setup via controller" in run_evals_output, run_evals_output
+
+    materialize_workspace = tmp_path / "materialized"
+    materialize = subprocess.run(
+        [
+            sys.executable,
+            "dataset/evals/materialize_seed_workspace.py",
+            "--agent",
+            "engineer_coder",
+            "--task-id",
+            "ec-001",
+            "--output-dir",
+            str(materialize_workspace),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env=os.environ.copy(),
+        check=False,
+    )
+    materialize_output = "\n".join(
+        part for part in (materialize.stdout, materialize.stderr) if part
+    )
+    assert materialize.returncode != 0, materialize_output
+    assert "integration-test setup via controller" in materialize_output, (
+        materialize_output
+    )
+
+
+@pytest.mark.integration_p0
 def test_run_evals_codex_exec_help_exposes_workspace_write_sandbox():
     completed = subprocess.run(
         ["codex", "exec", "--help"],
@@ -681,6 +734,7 @@ def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
                 "benchmark_assembly_definition.yaml",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -702,6 +756,7 @@ def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
                 "assembly_definition.yaml",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -743,6 +798,7 @@ async def test_codex_materialized_planner_workspace_submits(
     assert mirror_materialized.helper_script_paths == list(expected_helper_scripts)
     assert "Workspace: current directory" in materialized.prompt_text
     assert "/workspace" not in materialized.prompt_text
+    assert "python .admin/clear_env.py" in materialized.prompt_text
     assert "Available skills you can read:" in materialized.prompt_text
     assert "/skills/runtime-script-contract/SKILL.md" in materialized.prompt_text
     assert "/skills/build123d_cad_drafting_skill/SKILL.md" in materialized.prompt_text
@@ -837,8 +893,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "Inspect the planner artifacts",
                 "reviews/",
                 "bash scripts/submit_review.sh",
+                "python .admin/clear_env.py",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -860,8 +918,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "utils.submission",
                 "intermediate checks before",
                 "result = build()",
+                "python .admin/clear_env.py",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -884,8 +944,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "utils.submission",
                 "intermediate checks before",
                 "result = build()",
+                "python .admin/clear_env.py",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -906,8 +968,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "Inspect the planner artifacts",
                 "reviews/",
                 "bash scripts/submit_review.sh",
+                "python .admin/clear_env.py",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -928,8 +992,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "benchmark_assembly_definition.yaml",
                 "reviews/",
                 "bash scripts/submit_review.sh",
+                "python .admin/clear_env.py",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -952,8 +1018,10 @@ async def test_codex_materialized_planner_workspace_submits(
                 "Inspect the implementation, validation results, simulation result",
                 "reviews/",
                 "bash scripts/submit_review.sh",
+                "python .admin/clear_env.py",
             ),
             (
+                ".admin/clear_env.py",
                 "plan.md",
                 "todo.md",
                 "benchmark_definition.yaml",
@@ -1042,6 +1110,49 @@ async def test_codex_seed_workspace_materialization_is_role_specific_and_determi
         assert fragment in materialized.prompt_text
     for rel_path in expected_files:
         assert (workspace_dir / rel_path).exists(), rel_path
+
+
+@pytest.mark.integration_p0
+def test_clear_env_re_materializes_seeded_workspace_in_place(tmp_path: Path):
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+    )
+    original_snapshot = _workspace_snapshot(workspace_dir)
+
+    (workspace_dir / "journal.md").write_text("dirty\n", encoding="utf-8")
+    (workspace_dir / "scratch.txt").write_text("stale\n", encoding="utf-8")
+    shutil.rmtree(workspace_dir / ".manifests", ignore_errors=True)
+
+    codex_home_root = tmp_path / "codex-home"
+    env = build_codex_env(
+        task_id=item.id,
+        workspace_dir=workspace_dir,
+        codex_home_root=codex_home_root,
+        session_id="INT-CLEAR-ENV-ec-001",
+        agent_name=AgentName.ENGINEER_CODER,
+    )
+    completed = subprocess.run(
+        [sys.executable, ".admin/clear_env.py"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    combined_output = "\n".join(
+        part for part in (completed.stdout, completed.stderr) if part
+    )
+
+    assert completed.returncode == 0, combined_output
+    assert '"ok": true' in completed.stdout.lower()
+    assert _workspace_snapshot(workspace_dir) == original_snapshot
 
 
 @pytest.mark.integration_p0

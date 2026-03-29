@@ -10,11 +10,22 @@ from controller.api.schemas import (
     AgentRunRequest,
     EpisodeCreateResponse,
     EpisodeResponse,
+    IntegrationTestStatusResponse,
 )
 from shared.enums import AssetType, EpisodeStatus
 
 CONTROLLER_URL = os.getenv("CONTROLLER_URL", "http://127.0.0.1:18000")
 TEMPORAL_URL = os.getenv("TEMPORAL_URL", "127.0.0.1:17233")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
+async def test_controller_reports_integration_test_mode():
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        resp = await client.get(f"{CONTROLLER_URL}/api/test/is_integration_test")
+        assert resp.status_code == 200, resp.text
+        payload = IntegrationTestStatusResponse.model_validate(resp.json())
+        assert payload.is_integration_test is True
 
 
 @pytest.mark.integration_p0
