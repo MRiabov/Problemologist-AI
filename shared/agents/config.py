@@ -116,7 +116,7 @@ class RenderModalityConfig(BaseModel):
 class RenderPolicyConfig(BaseModel):
     split_video_renders_to_images: bool = False
     video_frame_attachment_stride: int = Field(default=6, ge=1)
-    video_frame_jpeg_quality: int = Field(default=85, ge=1, le=100)
+    video_frame_jpeg_quality_percent: int = Field(default=85, ge=1, le=100)
     rgb: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
     depth: RenderModalityConfig = Field(default_factory=RenderModalityConfig)
     segmentation: RenderModalityConfig = Field(default_factory=RenderModalityConfig)

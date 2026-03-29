@@ -423,7 +423,9 @@ class RemoteFilesystemMiddleware:
         video_frame_attachment_stride = (
             self.policy.config.render.video_frame_attachment_stride
         )
-        video_frame_jpeg_quality = self.policy.config.render.video_frame_jpeg_quality
+        video_frame_jpeg_quality_percent = (
+            self.policy.config.render.video_frame_jpeg_quality_percent
+        )
         binary = None
         render_metadata = None
 
@@ -494,7 +496,7 @@ class RemoteFilesystemMiddleware:
             data_urls = self._extract_video_frame_data_urls(
                 binary,
                 frame_stride=video_frame_attachment_stride,
-                jpeg_quality=video_frame_jpeg_quality,
+                jpeg_quality=video_frame_jpeg_quality_percent,
             )
             if data_urls:
                 data_url = data_urls[0]

@@ -7,7 +7,7 @@ llm:
 render:
   split_video_renders_to_images: true
   video_frame_attachment_stride: 6
-  video_frame_jpeg_quality: 85
+  video_frame_jpeg_quality_percent: 85
   rgb:
     enabled: true
     axes: true
