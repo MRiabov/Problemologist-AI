@@ -228,7 +228,6 @@ def prerender_24_views(
         segmentation_axes_enabled=render_policy.segmentation.axes,
         segmentation_edges_enabled=render_policy.segmentation.edges,
     )
-    output_path.mkdir(parents=True, exist_ok=True)
 
     if not any(
         (
@@ -237,11 +236,19 @@ def prerender_24_views(
             render_policy.segmentation.enabled,
         )
     ):
-        logger.info(
-            "prerender_skipped_all_modalities_disabled",
+        logger.error(
+            "prerender_requires_at_least_one_enabled_modality",
             session_id=session_id,
+            rgb_enabled=render_policy.rgb.enabled,
+            depth_enabled=render_policy.depth.enabled,
+            segmentation_enabled=render_policy.segmentation.enabled,
         )
-        return []
+        raise ValueError(
+            "validation preview requires at least one enabled render modality "
+            "(rgb, depth, or segmentation)"
+        )
+
+    output_path.mkdir(parents=True, exist_ok=True)
 
     saved_files = []
 

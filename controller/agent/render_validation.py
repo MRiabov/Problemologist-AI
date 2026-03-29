@@ -3,11 +3,14 @@ from __future__ import annotations
 from io import BytesIO
 from pathlib import Path
 
+import structlog
 from PIL import Image
 
 from controller.clients.worker import WorkerClient
 
 _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
+logger = structlog.get_logger(__name__)
 
 
 def _normalize_render_root(render_root: str) -> str:
@@ -75,10 +78,26 @@ async def validate_render_images_non_black(
         try:
             binary = await worker_client.read_file_binary(path)
             if not binary:
+                logger.error(
+                    "render_artifact_empty",
+                    render_root=root,
+                    path=path,
+                )
                 return f"render artifact is empty: {path}"
             if not _is_non_black_image(binary):
+                logger.error(
+                    "render_artifact_black_or_empty",
+                    render_root=root,
+                    path=path,
+                )
                 return f"render artifact appears black/empty: {path}"
         except Exception as exc:
+            logger.error(
+                "render_artifact_unreadable",
+                render_root=root,
+                path=path,
+                error=str(exc),
+            )
             return f"render artifact unreadable: {path}: {exc}"
 
     return None

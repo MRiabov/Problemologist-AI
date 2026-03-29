@@ -725,6 +725,60 @@ def build():
 
 @pytest.mark.integration_p0
 @pytest.mark.asyncio
+async def test_int_188_validation_preview_rejects_all_disabled_modalities():
+    """INT-188: validation preview fails closed when every preview modality is disabled."""
+    original_config = _set_render_modalities(
+        rgb=False,
+        depth=False,
+        segmentation=False,
+        rgb_axes=True,
+        rgb_edges=True,
+        depth_axes=True,
+        depth_edges=True,
+        segmentation_axes=True,
+        segmentation_edges=True,
+    )
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            session_id = f"INT-188-{uuid.uuid4().hex[:8]}"
+            headers = {"X-Session-ID": session_id}
+
+            await _write_standard_validation_inputs(
+                client, headers, material_id="aluminum_6061"
+            )
+
+            validate_resp = await client.post(
+                f"{WORKER_HEAVY_URL}/benchmark/validate",
+                json=BenchmarkToolRequest(script_path="script.py").model_dump(
+                    mode="json"
+                ),
+                headers=headers,
+                timeout=180.0,
+            )
+            assert validate_resp.status_code == 200, validate_resp.text
+            validate_data = BenchmarkToolResponse.model_validate(validate_resp.json())
+            assert not validate_data.success, validate_data
+            assert validate_data.message is not None
+            lowered_message = validate_data.message.lower()
+            assert "at least one enabled render modality" in lowered_message, (
+                validate_data.message
+            )
+
+            exists_resp = await client.post(
+                f"{WORKER_LIGHT_URL}/fs/exists",
+                json=ReadFileRequest(path="renders/render_manifest.json").model_dump(
+                    mode="json"
+                ),
+                headers=headers,
+            )
+            assert exists_resp.status_code == 200, exists_resp.text
+            assert exists_resp.json()["exists"] is False, exists_resp.text
+    finally:
+        AGENTS_CONFIG_PATH.write_text(original_config, encoding="utf-8")
+
+
+@pytest.mark.integration_p0
+@pytest.mark.asyncio
 async def test_int_188_validation_preview_overlays_axes_on_depth_and_segmentation_maps():
     """INT-188: depth and segmentation previews can share the axes/edge overlays."""
     original_config = _set_render_modalities(
