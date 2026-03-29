@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -49,6 +50,30 @@ class _DisplayState:
 
 _DISPLAY_STATE: _DisplayState | None = None
 
+_MAX_ERROR_LINES = 12
+
+
+def _tail_text(text: str | None, *, max_lines: int = _MAX_ERROR_LINES) -> str | None:
+    if text is None:
+        return None
+    lines = [line for line in text.splitlines() if line.strip()]
+    if not lines:
+        return None
+    return "\n".join(lines[-max_lines:])
+
+
+def _tail_bytes(data: bytes | None, *, max_lines: int = _MAX_ERROR_LINES) -> str | None:
+    if data is None:
+        return None
+    return _tail_text(data.decode("utf-8", errors="replace"), max_lines=max_lines)
+
+
+def _format_error_message(base: str, details: Sequence[str | None]) -> str:
+    rendered_details = [detail for detail in details if detail]
+    if not rendered_details:
+        return base
+    return base + ": " + " | ".join(rendered_details)
+
 
 def _stop_display() -> None:
     global _DISPLAY_STATE
@@ -69,8 +94,10 @@ def _stop_display() -> None:
     _DISPLAY_STATE = None
 
 
-def _probe_vtk_display(display: str, xauthority: str | None = None) -> bool:
-    """Return True only when VTK can connect to the given X display."""
+def _probe_vtk_display(
+    display: str, xauthority: str | None = None
+) -> tuple[bool, str | None]:
+    """Return whether VTK can connect to the given X display and why not."""
 
     env = os.environ.copy()
     env["DISPLAY"] = display
@@ -84,13 +111,17 @@ def _probe_vtk_display(display: str, xauthority: str | None = None) -> bool:
             [sys.executable, "-c", _VTK_DISPLAY_PROBE, display, xauthority or ""],
             env=env,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             check=False,
             timeout=15.0,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return False
-    return completed.returncode == 0
+        return False, "VTK probe failed to launch"
+    if completed.returncode == 0:
+        return True, None
+    return False, _tail_bytes(
+        completed.stderr
+    ) or f"VTK probe exited with {completed.returncode}"
 
 
 def _reuse_cached_ambient_display(
@@ -113,7 +144,10 @@ def _reuse_cached_ambient_display(
         and existing_display == state.display
         and existing_xauthority == state.xauthority
     ):
-        if _probe_vtk_display(existing_display, existing_xauthority):
+        probe_ok, _probe_error = _probe_vtk_display(
+            existing_display, existing_xauthority
+        )
+        if probe_ok:
             return True
         _DISPLAY_STATE = None
         return False
@@ -121,15 +155,14 @@ def _reuse_cached_ambient_display(
 
 
 def _private_display_candidates() -> list[str]:
-    """Return a short, low-numbered display search order for private Xvfb.
+    """Return a deterministic mid/high display search order for private Xvfb.
 
-    The auto-selected displayfd path can land on stale high-number sockets on
-    desktop hosts. A small candidate range is more predictable here and still
-    fail-closed if none of the displays are usable.
+    The repo convention is to start private X displays in the 10000-10100
+    range so they do not collide with normal desktop/Xwayland displays.
     """
 
-    base_display = 99
-    candidate_count = 24
+    base_display = 10000
+    candidate_count = 101
     pid_offset = os.getpid() % candidate_count
     ordered_numbers = list(
         range(base_display + pid_offset, base_display + candidate_count)
@@ -159,21 +192,31 @@ def _start_private_vtk_display() -> _DisplayState:
             ],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             close_fds=True,
         )
 
         for _probe_attempt in range(5):
             if process.poll() is not None:
-                last_error = f"Xvfb exited while starting display {display}"
+                stderr_tail = None
+                if process.stderr is not None:
+                    with suppress(Exception):
+                        stderr_tail = _tail_bytes(process.stderr.read())
+                last_error = _format_error_message(
+                    f"Xvfb exited while starting display {display}",
+                    [stderr_tail],
+                )
                 break
-            if _probe_vtk_display(display):
+            probe_ok, probe_error = _probe_vtk_display(display)
+            if probe_ok:
                 os.environ["DISPLAY"] = display
                 os.environ.pop("XAUTHORITY", None)
                 return _DisplayState(process=process, display=display)
+            last_error = _format_error_message(
+                f"VTK could not connect to private Xvfb display {display}",
+                [probe_error],
+            )
             time.sleep(0.2)
-        else:
-            last_error = f"VTK could not connect to private Xvfb display {display}"
 
         _stop_display_process(process)
 
@@ -192,6 +235,9 @@ def _stop_display_process(process: subprocess.Popen[bytes]) -> None:
             process.kill()
             with suppress(subprocess.TimeoutExpired):
                 process.wait(timeout=2.0)
+    if process.stderr is not None:
+        with suppress(Exception):
+            process.stderr.close()
 
 
 def ensure_headless_vtk_display() -> str:
@@ -209,29 +255,38 @@ def ensure_headless_vtk_display() -> str:
     if cached_ambient_display is True:
         return existing_display
 
-    if (
-        cached_ambient_display is None
-        and existing_display
-        and _probe_vtk_display(existing_display, existing_xauthority)
-    ):
-        state = _DisplayState(
-            process=None,
-            display=existing_display,
-            xauthority=existing_xauthority,
+    fallback_logged = False
+    if cached_ambient_display is None and existing_display:
+        probe_ok, probe_error = _probe_vtk_display(
+            existing_display, existing_xauthority
         )
-        _DISPLAY_STATE = state
-        return existing_display
-
-    if existing_display:
+        if probe_ok:
+            state = _DisplayState(
+                process=None,
+                display=existing_display,
+                xauthority=existing_xauthority,
+            )
+            _DISPLAY_STATE = state
+            return existing_display
         logger.error(
             "ambient_vtk_display_unusable_falling_back_to_private_xvfb",
             display=existing_display,
             xauthority=bool(existing_xauthority),
+            probe_error=probe_error,
         )
-    else:
-        logger.error(
-            "ambient_vtk_display_missing_falling_back_to_private_xvfb",
-        )
+        fallback_logged = True
+
+    if not fallback_logged:
+        if existing_display:
+            logger.error(
+                "ambient_vtk_display_unusable_falling_back_to_private_xvfb",
+                display=existing_display,
+                xauthority=bool(existing_xauthority),
+            )
+        else:
+            logger.error(
+                "ambient_vtk_display_missing_falling_back_to_private_xvfb",
+            )
 
     if state is not None and state.process is not None and state.process.poll() is None:
         os.environ["DISPLAY"] = state.display
@@ -248,18 +303,37 @@ def ensure_headless_vtk_display() -> str:
         )
         if cached_ambient_display is True:
             return existing_display
-        if (
-            cached_ambient_display is None
-            and existing_display
-            and _probe_vtk_display(existing_display, existing_xauthority)
-        ):
-            state = _DisplayState(
-                process=None,
-                display=existing_display,
-                xauthority=existing_xauthority,
+        fallback_logged = False
+        if cached_ambient_display is None and existing_display:
+            probe_ok, probe_error = _probe_vtk_display(
+                existing_display, existing_xauthority
             )
-            _DISPLAY_STATE = state
-            return existing_display
+            if probe_ok:
+                state = _DisplayState(
+                    process=None,
+                    display=existing_display,
+                    xauthority=existing_xauthority,
+                )
+                _DISPLAY_STATE = state
+                return existing_display
+            logger.error(
+                "ambient_vtk_display_unusable_falling_back_to_private_xvfb",
+                display=existing_display,
+                xauthority=bool(existing_xauthority),
+                probe_error=probe_error,
+            )
+            fallback_logged = True
+        if not fallback_logged:
+            if existing_display:
+                logger.error(
+                    "ambient_vtk_display_unusable_falling_back_to_private_xvfb",
+                    display=existing_display,
+                    xauthority=bool(existing_xauthority),
+                )
+            else:
+                logger.error(
+                    "ambient_vtk_display_missing_falling_back_to_private_xvfb",
+                )
         if (
             state is not None
             and state.process is not None
