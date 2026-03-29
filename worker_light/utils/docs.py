@@ -16,15 +16,14 @@ def get_docs_for(entity: type | Callable | str) -> str:
     else:
         query_name = str(entity)
 
-    # Try to find skills directory
-    # Assuming standard structure where this file is in worker/utils/docs.py
-    # and skills are in worker/skills or a mounted volume at /skills
+    # Try to find the checked-in repo skill directory and the mounted runtime
+    # /skills volume. Hidden overlay stores such as .agent/skills are excluded.
+    repo_skill_root = Path(__file__).resolve().parents[2] / "skills"
 
     potential_skill_paths = [
         Path("/skills"),  # Mounted volume in container
-        Path(__file__).parent.parent / "skills",  # Local dev
+        repo_skill_root,  # Checked-in repo skills
         Path("skills"),  # Current working dir
-        Path(".agent/skills"),  # Repo root skills
     ]
 
     found_docs = []

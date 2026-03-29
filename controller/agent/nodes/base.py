@@ -2115,12 +2115,13 @@ class BaseNode:
         return metadata, None
 
     def _get_skills_context(self) -> str:
-        # Note: Skills are currently local to the controller
-        skills_dir = Path(".agent/skills")
-        skills = []
-        if skills_dir.exists():
-            skills = [d.name for d in skills_dir.iterdir() if d.is_dir()]
-        return "\n".join([f"- {s}" for s in skills])
+        # Use the checked-in repo skill tree only. Hidden overlay skill stores
+        # such as `.agent/skills/` are intentionally excluded here.
+        skills_dir = Path("skills")
+        if not skills_dir.exists():
+            return ""
+        skills = sorted(d.name for d in skills_dir.iterdir() if d.is_dir())
+        return "\n".join(f"- {s}" for s in skills)
 
     async def _get_steer_context(self, messages: list[Any]) -> str:
         if not messages:

@@ -27,10 +27,9 @@ def _seed_integration_skills() -> None:
     skills_dir.mkdir(parents=True, exist_ok=True)
 
     copied = 0
-    for root in [Path(".agent/skills"), Path.home() / ".codex/skills"]:
-        if not root.exists():
-            continue
-        for skill_dir in root.iterdir():
+    repo_skill_root = Path(__file__).resolve().parents[1] / "skills"
+    if repo_skill_root.exists():
+        for skill_dir in sorted(repo_skill_root.iterdir(), key=lambda p: p.name):
             if not skill_dir.is_dir():
                 continue
             skill_md = skill_dir / "SKILL.md"
