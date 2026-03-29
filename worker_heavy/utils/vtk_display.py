@@ -120,6 +120,23 @@ def _reuse_cached_ambient_display(
     return None
 
 
+def _private_display_candidates() -> list[str]:
+    """Return a short, low-numbered display search order for private Xvfb.
+
+    The auto-selected displayfd path can land on stale high-number sockets on
+    desktop hosts. A small candidate range is more predictable here and still
+    fail-closed if none of the displays are usable.
+    """
+
+    base_display = 99
+    candidate_count = 24
+    pid_offset = os.getpid() % candidate_count
+    ordered_numbers = list(
+        range(base_display + pid_offset, base_display + candidate_count)
+    ) + list(range(base_display, base_display + pid_offset))
+    return [f":{display}" for display in ordered_numbers]
+
+
 def _start_private_vtk_display() -> _DisplayState:
     xvfb_path = shutil.which("Xvfb")
     if xvfb_path is None:
@@ -128,64 +145,36 @@ def _start_private_vtk_display() -> _DisplayState:
         )
 
     last_error: str | None = None
-    for _attempt in range(4):
-        read_fd, write_fd = os.pipe()
-        try:
-            process = subprocess.Popen(
-                [
-                    xvfb_path,
-                    "-ac",
-                    "-nolisten",
-                    "tcp",
-                    "-screen",
-                    "0",
-                    "1280x1024x24",
-                    "-displayfd",
-                    str(write_fd),
-                ],
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                pass_fds=(write_fd,),
-                close_fds=True,
-            )
-        finally:
-            os.close(write_fd)
-
-        try:
-            display_bytes = b""
-            while True:
-                chunk = os.read(read_fd, 32)
-                if not chunk:
-                    break
-                display_bytes += chunk
-                if b"\n" in chunk:
-                    break
-        finally:
-            os.close(read_fd)
-
-        display_number = display_bytes.decode("utf-8", errors="replace").strip()
-        if not display_number:
-            last_error = "Xvfb did not report a display number"
-            _stop_display_process(process)
-            continue
-
-        display = (
-            display_number if display_number.startswith(":") else f":{display_number}"
+    for display in _private_display_candidates():
+        process = subprocess.Popen(
+            [
+                xvfb_path,
+                display,
+                "-ac",
+                "-nolisten",
+                "tcp",
+                "-screen",
+                "0",
+                "1280x1024x24",
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
         )
-        if process.poll() is not None:
-            last_error = f"Xvfb exited while starting display {display}"
-            _stop_display_process(process)
-            continue
 
         for _probe_attempt in range(5):
+            if process.poll() is not None:
+                last_error = f"Xvfb exited while starting display {display}"
+                break
             if _probe_vtk_display(display):
                 os.environ["DISPLAY"] = display
                 os.environ.pop("XAUTHORITY", None)
                 return _DisplayState(process=process, display=display)
             time.sleep(0.2)
+        else:
+            last_error = f"VTK could not connect to private Xvfb display {display}"
 
-        last_error = f"VTK could not connect to private Xvfb display {display}"
         _stop_display_process(process)
 
     raise RuntimeError(

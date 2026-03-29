@@ -143,6 +143,7 @@ from controller.api.schemas import (
     AgentRunRequest,
     AgentRunResponse,
     EpisodeCreateResponse,
+    IntegrationTestStatusResponse,
 )
 from controller.api.tasks import execute_agent_task
 from controller.utils import apply_integration_test_metadata, get_episode_id
@@ -219,6 +220,18 @@ async def health_check():
         "status": "healthy",
         "is_integration_test": settings.is_integration_test,
     }
+
+
+@app.get(
+    "/api/test/is_integration_test",
+    response_model=IntegrationTestStatusResponse,
+)
+@app.get("/test/is_integration_test", response_model=IntegrationTestStatusResponse)
+async def is_integration_test():
+    """Return whether the controller is running in integration-test mode."""
+    return IntegrationTestStatusResponse(
+        is_integration_test=settings.is_integration_test
+    )
 
 
 @app.post("/api/agent/run", status_code=202, response_model=AgentRunResponse)

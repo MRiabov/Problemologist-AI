@@ -90,6 +90,7 @@ from evals.logic.specs import (
     JUDGE_REVIEWER_CHAIN,
     PLANNER_REQUIRED_FILES,
 )
+from evals.logic.startup_checks import fail_closed_if_integration_test_setup
 from evals.logic.workspace import (
     preflight_seeded_entry_contract as _preflight_seeded_entry_contract,
 )
@@ -3354,6 +3355,16 @@ async def main():
     if args.run_reviewers_with_judge and not args.run_judge:
         parser.error("--run-reviewers-with-judge requires --run-judge")
 
+    try:
+        await asyncio.to_thread(
+            fail_closed_if_integration_test_setup,
+            CONTROLLER_URL,
+            context="eval runner startup",
+        )
+    except SystemExit as exc:
+        _console_message(str(exc))
+        sys.exit(1)
+
     # Configure logging to directory (logs/evals/runs/<run_id>)
     evals_root = ROOT / "logs" / "evals"
     runs_root = evals_root / "runs"
@@ -3508,6 +3519,16 @@ async def main():
         except Exception:
             logger.exception("env_up_exception")
             sys.exit(1)
+
+    try:
+        await asyncio.to_thread(
+            fail_closed_if_integration_test_setup,
+            CONTROLLER_URL,
+            context="eval runner startup",
+        )
+    except SystemExit as exc:
+        _console_message(str(exc))
+        sys.exit(1)
 
     # Rate limiter setup (50 RPM)
     rate = Rate(50, Duration.MINUTE)

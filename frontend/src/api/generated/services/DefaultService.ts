@@ -5,6 +5,7 @@
 import type { AgentRunRequest } from '../models/AgentRunRequest';
 import type { AgentRunResponse } from '../models/AgentRunResponse';
 import type { EpisodeCreateResponse } from '../models/EpisodeCreateResponse';
+import type { IntegrationTestStatusResponse } from '../models/IntegrationTestStatusResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -83,6 +84,30 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/health',
+        });
+    }
+    /**
+     * Is Integration Test
+     * Return whether the controller is running in integration-test mode.
+     * @returns IntegrationTestStatusResponse Successful Response
+     * @throws ApiError
+     */
+    public static isIntegrationTestTestIsIntegrationTestGet(): CancelablePromise<IntegrationTestStatusResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/test/is_integration_test',
+        });
+    }
+    /**
+     * Is Integration Test
+     * Return whether the controller is running in integration-test mode.
+     * @returns IntegrationTestStatusResponse Successful Response
+     * @throws ApiError
+     */
+    public static isIntegrationTestApiTestIsIntegrationTestGet(): CancelablePromise<IntegrationTestStatusResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/test/is_integration_test',
         });
     }
     /**

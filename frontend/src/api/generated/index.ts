@@ -52,6 +52,7 @@ export type { FluidMetricResult } from './models/FluidMetricResult';
 export { GenerationKind } from './models/GenerationKind';
 export type { GeometricSelection } from './models/GeometricSelection';
 export type { HTTPValidationError } from './models/HTTPValidationError';
+export type { IntegrationTestStatusResponse } from './models/IntegrationTestStatusResponse';
 export type { MessageRequest } from './models/MessageRequest';
 export type { MultiRunResult } from './models/MultiRunResult';
 export type { ObjectStoragePointer } from './models/ObjectStoragePointer';

@@ -51,6 +51,10 @@ class BenchmarkConfirmResponse(StandardResponse):
     pass
 
 
+class IntegrationTestStatusResponse(BaseModel):
+    is_integration_test: bool
+
+
 class ObjectStoragePointer(BaseModel):
     bucket: str
     key: str

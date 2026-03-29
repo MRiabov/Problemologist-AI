@@ -28,6 +28,7 @@ from evals.logic.codex_workspace import (
     materialize_seed_workspace as materialize_codex_workspace,
 )
 from evals.logic.models import EvalDatasetItem  # noqa: E402
+from evals.logic.startup_checks import fail_closed_if_integration_test_setup
 from shared.enums import AgentName  # noqa: E402
 
 DATASET_ROOTS = (
@@ -185,6 +186,11 @@ def main() -> None:
             f"Unknown agent '{args.agent}'. Available: {available}"
         ) from exc
 
+    fail_closed_if_integration_test_setup(
+        os.getenv("CONTROLLER_URL", "http://localhost:18000"),
+        context="seed workspace materializer startup",
+    )
+
     _, rows = _load_dataset(agent)
     row = _select_row(rows, task_id=args.task_id, agent=agent)
 
@@ -208,6 +214,10 @@ def main() -> None:
 
     if args.env_up:
         _env_up()
+        fail_closed_if_integration_test_setup(
+            os.getenv("CONTROLLER_URL", "http://localhost:18000"),
+            context="seed workspace materializer startup",
+        )
 
     if args.launch_codex:
         raise SystemExit(

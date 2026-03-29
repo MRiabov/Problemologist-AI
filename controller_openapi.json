@@ -2808,6 +2808,44 @@
         }
       }
     },
+    "/test/is_integration_test": {
+      "get": {
+        "summary": "Is Integration Test",
+        "description": "Return whether the controller is running in integration-test mode.",
+        "operationId": "is_integration_test_test_is_integration_test_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationTestStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test/is_integration_test": {
+      "get": {
+        "summary": "Is Integration Test",
+        "description": "Return whether the controller is running in integration-test mode.",
+        "operationId": "is_integration_test_api_test_is_integration_test_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationTestStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/agent/run": {
       "post": {
         "summary": "Run Agent",
@@ -5048,6 +5086,19 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IntegrationTestStatusResponse": {
+        "properties": {
+          "is_integration_test": {
+            "type": "boolean",
+            "title": "Is Integration Test"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_integration_test"
+        ],
+        "title": "IntegrationTestStatusResponse"
       },
       "MessageRequest": {
         "properties": {

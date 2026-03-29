@@ -27,9 +27,22 @@ fi
 if [ -z "${XDG_CACHE_HOME:-}" ]; then
   export XDG_CACHE_HOME="$PWD/.codex-cache"
 fi
+if [ -z "${XDG_CONFIG_HOME:-}" ]; then
+  export XDG_CONFIG_HOME="$PWD/.codex-config"
+fi
+if [ -z "${TMPDIR:-}" ]; then
+  export TMPDIR="$PWD/.codex-tmp"
+fi
+if [ -z "${TEMP:-}" ]; then
+  export TEMP="$TMPDIR"
+fi
+if [ -z "${TMP:-}" ]; then
+  export TMP="$TMPDIR"
+fi
 if [ -z "${MPLCONFIGDIR:-}" ]; then
   export MPLCONFIGDIR="$XDG_CACHE_HOME/matplotlib"
 fi
+mkdir -p "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$TMPDIR" "$MPLCONFIGDIR"
 export IS_HEAVY_WORKER=1
 
 exec "$PYTHON_BIN" scripts/submit_for_review.py "$@"

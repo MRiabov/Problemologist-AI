@@ -321,6 +321,11 @@ def prepare_codex_home(
 
     codex_home_dir = codex_home_root / ".codex"
     codex_home_dir.mkdir(parents=True, exist_ok=True)
+    # Give each isolated run its own writable cache/config roots so library
+    # cache initialization does not spill across parallel sessions.
+    (codex_home_root / ".cache").mkdir(parents=True, exist_ok=True)
+    (codex_home_root / ".config").mkdir(parents=True, exist_ok=True)
+    (codex_home_root / ".tmp").mkdir(parents=True, exist_ok=True)
     shutil.copy2(source_auth_path, codex_home_dir / "auth.json")
     workspace_path = workspace_dir.expanduser().resolve()
     config_path = codex_home_dir / "config.toml"
@@ -400,7 +405,8 @@ def build_codex_prompt(
     shared_note = (
         "The workspace already contains the starter files, role templates, and "
         "any copied seed artifacts. Treat `.manifests/` as system-owned and do "
-        "not edit it directly."
+        "not edit it directly. If you need a clean retry, run `python "
+        ".admin/clear_env.py` to restore the seeded workspace in place."
     )
 
     if is_planner_agent(agent_name):
@@ -584,8 +590,24 @@ def build_codex_env(
     """Prepare a generic Codex subprocess environment for a local workspace run."""
 
     env = dict(os.environ)
+    # Codex eval workspaces run headless. Keep display-related state out of the
+    # launched agent process so preview rendering uses the repo's explicit
+    # fallback logic instead of inheriting a possibly stale host session.
+    env.pop("DISPLAY", None)
+    env.pop("XAUTHORITY", None)
+    env.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
+    env.setdefault("MUJOCO_GL", "osmesa")
+    env.setdefault("PYOPENGL_PLATFORM", "osmesa")
+    env.setdefault("PYVISTA_OFF_SCREEN", "true")
+    env.setdefault("VTK_DEFAULT_OPENGL_RENDERER", "OSMesa")
+    env.setdefault("PYGLET_HEADLESS", "1")
     env["HOME"] = str(codex_home_root)
     env["CODEX_HOME"] = str(codex_home_root / ".codex")
+    env["XDG_CACHE_HOME"] = str(codex_home_root / ".cache")
+    env["XDG_CONFIG_HOME"] = str(codex_home_root / ".config")
+    env.setdefault("TMPDIR", str(codex_home_root / ".tmp"))
+    env.setdefault("TEMP", str(codex_home_root / ".tmp"))
+    env.setdefault("TMP", str(codex_home_root / ".tmp"))
     workspace_path = workspace_dir.expanduser().resolve()
 
     venv_bin = ROOT / ".venv" / "bin"
