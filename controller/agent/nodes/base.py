@@ -2117,10 +2117,11 @@ class BaseNode:
     def _get_skills_context(self) -> str:
         # Use the checked-in repo skill tree only. Hidden overlay skill stores
         # such as `.agent/skills/` are intentionally excluded here.
-        skills_dir = Path("skills")
-        if not skills_dir.exists():
+        from shared.skills import iter_skill_catalog_entries
+
+        skills = [name for name, _ in iter_skill_catalog_entries()]
+        if not skills:
             return ""
-        skills = sorted(d.name for d in skills_dir.iterdir() if d.is_dir())
         return "\n".join(f"- {s}" for s in skills)
 
     async def _get_steer_context(self, messages: list[Any]) -> str:
