@@ -20,14 +20,9 @@ logger = structlog.get_logger(__name__)
 
 class CoderSignature(dspy.Signature):
     """
-    Coder node: Picks a task from TODO, writes code, executes it, and fixes errors.
-    You must use the provided tools to implement the current step in 'script.py'.
-    You also receive benchmark-owned read-only benchmark_assembly_definition.yaml
-    handoff context copied into this workspace; benchmark caps must be read from
-    benchmark_definition.yaml rather than copied from the benchmark assembly.
-    When done, use FINISH to provide a summary of your work. The controller
-    runtime will materialize the latest execution-review handoff after the
-    implementation pass is complete.
+    Engineer coder node: implement the approved handoff in `script.py` using the
+    current runtime contract and the relevant skills. `benchmark_assembly_definition.yaml`
+    is read-only benchmark context; do not modify it.
     """
 
     task = dspy.InputField()
