@@ -395,6 +395,83 @@ def test_run_evals_codex_submit_helper_imports_workspace_script_from_cwd(
 
 
 @pytest.mark.integration_p0
+@pytest.mark.parametrize(
+    ("extra_flags", "expected_fragment", "unexpected_fragment"),
+    [
+        ((), "--full-auto", "--dangerously-bypass-approvals-and-sandbox"),
+        (("--yolo",), "--dangerously-bypass-approvals-and-sandbox", "--full-auto"),
+    ],
+)
+def test_materialize_seed_workspace_launches_codex_with_expected_sandbox_policy(
+    tmp_path: Path,
+    extra_flags: tuple[str, ...],
+    expected_fragment: str,
+    unexpected_fragment: str,
+):
+    fake_home = tmp_path / "home"
+    auth_path = fake_home / ".codex" / "auth.json"
+    auth_path.parent.mkdir(parents=True, exist_ok=True)
+    auth_path.write_text(
+        json.dumps(
+            {
+                "OPENAI_API_KEY": None,
+                "tokens": {"account_id": "acct-1", "access_token": "token-1"},
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    codex_args_log = tmp_path / "codex-args.log"
+    codex_script = fake_bin / "codex"
+    codex_script.write_text(
+        '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$CODEX_ARGS_LOG"\nexit 0\n',
+        encoding="utf-8",
+    )
+    codex_script.chmod(0o755)
+
+    workspace_dir = tmp_path / "workspace"
+    command = [
+        sys.executable,
+        "dataset/evals/materialize_seed_workspace.py",
+        "--agent",
+        "engineer_coder",
+        "--task-id",
+        "ec-001",
+        "--output-dir",
+        str(workspace_dir),
+        "--launch-codex",
+        *extra_flags,
+    ]
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(fake_home),
+            "PATH": f"{fake_bin}{os.pathsep}{env.get('PATH', '')}",
+            "CODEX_ARGS_LOG": str(codex_args_log),
+        }
+    )
+
+    completed = subprocess.run(
+        command,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    logged_args = codex_args_log.read_text(encoding="utf-8")
+    assert expected_fragment in logged_args
+    assert unexpected_fragment not in logged_args
+    assert workspace_dir.exists()
+
+
+@pytest.mark.integration_p0
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     (
