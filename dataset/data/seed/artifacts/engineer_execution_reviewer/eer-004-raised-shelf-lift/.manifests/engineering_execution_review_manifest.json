@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-004-raised-shelf-lift",
-  "revision": "abfbd7645ec8ca3e11e0032db64635aa04c8566e",
+  "revision": "1747c3367c51cf0d58d0f8466ae259ce22885924",
   "script_path": "script.py",
   "script_sha256": "9aa9950a2bb150c73cbfd05b3e9e4e544abcf25e7614643c125f62346bf142b7",
   "validation_success": true,
