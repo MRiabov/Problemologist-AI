@@ -33,6 +33,7 @@ class AgentState(BaseModel):
     status: AgentStatus = AgentStatus.IDLE
     feedback: StrictStr = ""
     session_id: StrictStr = ""
+    worker_session_id: StrictStr | None = None
     episode_id: StrictStr = Field(default_factory=lambda: str(uuid.uuid4()))
     initial_script_sha256: StrictStr | None = None
     best_cost: float | None = None

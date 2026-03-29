@@ -188,20 +188,20 @@ def validate_benchmark_planner_handoff_payload(
                 objectives = objectives_or_errors
             if custom_objectives and objectives is not None:
                 if custom_objectives.max_unit_cost is not None:
-                    observed = objectives.constraints.max_unit_cost
-                    expected = custom_objectives.max_unit_cost
-                    if observed is None or abs(observed - expected) > 1e-6:
+                    expected_estimate = custom_objectives.max_unit_cost / 1.5
+                    observed = objectives.constraints.estimated_solution_cost_usd
+                    if observed is None or abs(observed - expected_estimate) > 1e-6:
                         errors.append(
-                            "planner_semantic: objectives.constraints.max_unit_cost "
-                            f"({observed}) does not match custom objective ({expected})"
+                            "planner_semantic: objectives.constraints.estimated_solution_cost_usd "
+                            f"({observed}) does not match derived estimate ({expected_estimate})"
                         )
                 if custom_objectives.max_weight is not None:
-                    observed = objectives.constraints.max_weight_g
-                    expected = custom_objectives.max_weight
-                    if observed is None or abs(observed - expected) > 1e-6:
+                    expected_estimate = custom_objectives.max_weight / 1.5
+                    observed = objectives.constraints.estimated_solution_weight_g
+                    if observed is None or abs(observed - expected_estimate) > 1e-6:
                         errors.append(
-                            "planner_semantic: objectives.constraints.max_weight_g "
-                            f"({observed}) does not match custom objective ({expected})"
+                            "planner_semantic: objectives.constraints.estimated_solution_weight_g "
+                            f"({observed}) does not match derived estimate ({expected_estimate})"
                         )
                 if custom_objectives.target_quantity is not None:
                     observed = objectives.constraints.target_quantity

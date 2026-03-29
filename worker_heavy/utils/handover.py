@@ -83,6 +83,23 @@ def _resolve_workspace_path(cwd: Path, raw_path: str) -> Path:
     return cwd / path
 
 
+def _benchmark_cost_weight_caps(
+    benchmark_definition: BenchmarkDefinition,
+) -> tuple[float | None, float | None]:
+    """Derive benchmark-side caps from planner-authored estimates."""
+
+    constraints = benchmark_definition.constraints
+    unit_cost_cap = constraints.estimated_solution_cost_usd
+    if unit_cost_cap is None:
+        unit_cost_cap = constraints.max_unit_cost
+
+    weight_cap = constraints.estimated_solution_weight_g
+    if weight_cap is None:
+        weight_cap = constraints.max_weight_g
+
+    return unit_cost_cap, weight_cap
+
+
 def _derived_episode_id(session_id: str | None) -> str | None:
     if not session_id:
         return None
@@ -390,6 +407,9 @@ def submit_for_review(
     if normalized_stage != "benchmark_reviewer":
         from shared.workers.workbench_models import ManufacturingMethod
 
+        benchmark_unit_cost_cap, benchmark_weight_cap = _benchmark_cost_weight_caps(
+            objectives_model
+        )
         method = (
             estimation.manufactured_parts[0].manufacturing_method
             if estimation.manufactured_parts
@@ -417,33 +437,33 @@ def submit_for_review(
             )
         if constraints:
             if (
-                constraints.max_unit_cost
-                and validation_result.unit_cost > constraints.max_unit_cost
+                benchmark_unit_cost_cap is not None
+                and validation_result.unit_cost > benchmark_unit_cost_cap
             ):
                 msg = (
                     f"Unit cost at requested quantity {requested_quantity} "
                     f"(${validation_result.unit_cost:.2f}) exceeds limit "
-                    f"${constraints.max_unit_cost:.2f}"
+                    f"${benchmark_unit_cost_cap:.2f}"
                 )
                 logger.warning(
                     "submission_cost_limit_exceeded",
                     cost=validation_result.unit_cost,
-                    limit=constraints.max_unit_cost,
+                    limit=benchmark_unit_cost_cap,
                     session_id=session_id,
                 )
                 raise ValueError(f"Submission rejected (Cost): {msg}")
 
             weight_g = validation_result.weight_g
-            if constraints.max_weight_g and weight_g > constraints.max_weight_g:
+            if benchmark_weight_cap is not None and weight_g > benchmark_weight_cap:
                 msg = (
                     f"Weight at requested quantity {requested_quantity} "
                     f"({weight_g:.1f}g) exceeds limit "
-                    f"{constraints.max_weight_g:.1f}g"
+                    f"{benchmark_weight_cap:.1f}g"
                 )
                 logger.warning(
                     "submission_weight_limit_exceeded",
                     weight=weight_g,
-                    limit=constraints.max_weight_g,
+                    limit=benchmark_weight_cap,
                     session_id=session_id,
                 )
                 raise ValueError(f"Submission rejected (Weight): {msg}")
