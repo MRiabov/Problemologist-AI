@@ -29,27 +29,6 @@ objectives:
     - 220.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: launch_lane
-  label: launch_lane
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
-- part_id: accelerator_roller
-  label: accelerator_roller
-  metadata:
-    fixed: false
-    material_id: steel_cold_rolled
-- part_id: speed_bump_guard
-  label: speed_bump_guard
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: goal_brake_tray
-  label: goal_brake_tray
-  metadata:
-    fixed: true
-    material_id: hdpe
 physics:
   backend: GENESIS
   fem_enabled: false

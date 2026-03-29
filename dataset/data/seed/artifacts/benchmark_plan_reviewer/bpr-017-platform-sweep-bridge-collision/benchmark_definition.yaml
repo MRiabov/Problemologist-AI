@@ -29,27 +29,6 @@ objectives:
     - 340.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: lift_platform
-  label: lift_platform
-  metadata:
-    fixed: false
-    material_id: hdpe
-- part_id: platform_guide_column
-  label: platform_guide_column
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
-- part_id: handoff_bridge
-  label: handoff_bridge
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: goal_shelf
-  label: goal_shelf
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
 physics:
   backend: GENESIS
   fem_enabled: false

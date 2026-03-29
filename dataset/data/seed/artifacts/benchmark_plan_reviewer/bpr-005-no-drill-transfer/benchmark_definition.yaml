@@ -20,27 +20,6 @@ objectives:
     - 220.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: ballast_base
-  label: ballast_base
-  metadata:
-    fixed: true
-    material_id: steel_cold_rolled
-- part_id: transfer_chute
-  label: transfer_chute
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: counterweight_fin
-  label: counterweight_fin
-  metadata:
-    fixed: true
-    material_id: steel_cold_rolled
-- part_id: goal_cradle
-  label: goal_cradle
-  metadata:
-    fixed: true
-    material_id: hdpe
 physics:
   backend: GENESIS
   fem_enabled: false

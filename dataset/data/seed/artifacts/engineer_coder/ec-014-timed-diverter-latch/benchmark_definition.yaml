@@ -38,17 +38,6 @@ objectives:
     - 150.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: environment_fixture
-  label: environment_fixture
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
-- part_id: swing_guard_arm
-  label: swing_guard_arm
-  metadata:
-    fixed: false
-    material_id: steel_cold_rolled
 physics:
   backend: GENESIS
   fem_enabled: false

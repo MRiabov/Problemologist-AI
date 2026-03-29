@@ -29,32 +29,6 @@ objectives:
     - 180.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: entry_funnel
-  label: entry_funnel
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: center_collision_block
-  label: center_collision_block
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
-- part_id: side_guide_left
-  label: side_guide_left
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: side_guide_right
-  label: side_guide_right
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: goal_pocket
-  label: goal_pocket
-  metadata:
-    fixed: true
-    material_id: hdpe
 physics:
   backend: GENESIS
   fem_enabled: false

@@ -29,27 +29,6 @@ objectives:
     - 280.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: upper_start_ledge
-  label: upper_start_ledge
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
-- part_id: deflector_ramp
-  label: deflector_ramp
-  metadata:
-    fixed: true
-    material_id: hdpe
-- part_id: direct_drop_shield
-  label: direct_drop_shield
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
-- part_id: lower_bin
-  label: lower_bin
-  metadata:
-    fixed: true
-    material_id: hdpe
 physics:
   backend: GENESIS
   fem_enabled: false

@@ -5,7 +5,7 @@
   "planner_node_type": "benchmark_planner",
   "artifact_hashes": {
     "benchmark_assembly_definition.yaml": "51dad8a647f1b25668ed184bde5f812474b701bab63894d1a80c1373f82bea15",
-    "benchmark_definition.yaml": "e57b17e49981c5437c788513988e3fd8e799e8962b1026edfba0517591e41a6d",
+    "benchmark_definition.yaml": "793b22bbdac475972feef4381daf52c19344773470dcb97bff196e650fc66c8c",
     "plan.md": "3a1a3053563e7cb2271a814eba599c9b8e8c51c2752a3ff32b6d59a12893e166",
     "todo.md": "5d66c54c1c10f2085885d17e3800e7c278bf32eac01759867bec31cafbdfdb97"
   }

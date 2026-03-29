@@ -29,12 +29,6 @@ objectives:
     - 280.0
   fluid_objectives: []
   stress_objectives: []
-benchmark_parts:
-- part_id: environment_fixture
-  label: environment_fixture
-  metadata:
-    fixed: true
-    material_id: aluminum_6061
 physics:
   backend: GENESIS
   fem_enabled: false
