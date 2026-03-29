@@ -1430,6 +1430,7 @@ def simulate(
 
     try:
         video_path = renders_dir / "simulation.mp4"
+        final_video_path: Path | None = video_path
         sim_duration = 0.5 if smoke_test_mode else 30.0
         metrics = loop.step(
             control_inputs=control_inputs,
@@ -1437,6 +1438,7 @@ def simulate(
             dynamic_controllers=dynamic_controllers,
             video_path=video_path,
         )
+        render_provenance = loop.render_provenance
 
         # WP2: T017: GPU OOM Retry Logic
         if metrics.fail_reason and "out of memory" in metrics.fail_reason.lower():
@@ -1452,6 +1454,11 @@ def simulate(
                     reduced_particles=5000,
                 )
             )
+
+            if video_path.exists():
+                with contextlib.suppress(Exception):
+                    video_path.unlink()
+            final_video_path = None
 
             from worker_heavy.simulation.loop import SimulationLoop
 
@@ -1472,6 +1479,7 @@ def simulate(
                 dynamic_controllers=dynamic_controllers,
                 video_path=None,  # Skip video during emergency retry path
             )
+            render_provenance = loop.render_provenance
 
         # Release the physics backend before starting the VTK preview pass.
         # MuJoCo/Genesis and the build123d renderer both touch GL/X state, and
@@ -1511,8 +1519,8 @@ def simulate(
                 session_id=session_id,
             )
             return False, f"Validation preview render failed: {exc}"
-        if video_path and video_path.exists():
-            render_paths.append(str(video_path))
+        if final_video_path and final_video_path.exists():
+            render_paths.append(str(final_video_path))
         render_paths = _workspace_relative_render_paths(render_paths, working_dir)
 
         mjcf_content = scene_path.read_text() if scene_path.exists() else None
@@ -1535,6 +1543,7 @@ def simulate(
             success=metrics.success,
             summary=status_msg,
             failure=metrics.failure,
+            render_provenance=render_provenance,
             render_paths=render_paths,
             mjcf_content=mjcf_content,
             stress_summaries=_sanitize_stress_summaries(metrics.stress_summaries),

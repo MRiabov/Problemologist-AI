@@ -10,6 +10,7 @@ from shared.models.schemas import BenchmarkDefinition, ElectronicsSection
 from shared.models.simulation import (
     SimulationFailure,
     SimulationMetrics,
+    SimulationRenderProvenance,
 )
 from shared.observability.events import emit_event
 from shared.observability.schemas import (
@@ -83,6 +84,7 @@ class SimulationLoop:
             self.backend.particle_budget = particle_budget
 
         self.particle_budget = particle_budget or (5000 if smoke_test_mode else 100000)
+        self.render_provenance: SimulationRenderProvenance | None = None
 
         try:
             # Emit backend selection event (WP2)
@@ -381,7 +383,11 @@ class SimulationLoop:
             return metrics
 
         # 2. Setup recorders
-        media_recorder = MediaRecorder(video_path, session_id=self.session_id)
+        media_recorder = MediaRecorder(
+            video_path,
+            backend_type=self.backend_type,
+            session_id=self.session_id,
+        )
 
         # 3. Apply initial controls
         self._apply_gated_controls(control_inputs)
@@ -416,6 +422,7 @@ class SimulationLoop:
             current_time = self.backend.get_state()["time"]
 
         # 7. Finalization
+        self.render_provenance = media_recorder.render_provenance
         media_recorder.save()
         self.objective_evaluator.evaluate_final(self.backend, current_time)
 
