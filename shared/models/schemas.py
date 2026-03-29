@@ -221,6 +221,14 @@ class MovedObject(StrictContractModel):
     start_position: CoercedTuple3D
     runtime_jitter: CoercedTuple3D
 
+    @field_validator("label")
+    @classmethod
+    def validate_label(cls, value: str) -> str:
+        label = value.strip()
+        if not label:
+            raise ValueError("label must be a non-empty string")
+        return label
+
     @field_validator("material_id")
     @classmethod
     def validate_material_id(cls, value: str) -> str:

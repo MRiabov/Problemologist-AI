@@ -15,11 +15,15 @@ def _load_moved_object() -> dict:
 
 
 def _build_moved_object(moved: dict):
-    label = str(moved.get("label", "projectile_ball"))
+    label = str(moved.get("label", "")).strip()
+    if not label:
+        raise ValueError("moved_object.label must be a non-empty string")
     start = moved.get("start_position", [0.0, 0.0, 0.0])
     radius_range = moved.get("static_randomization", {}).get("radius", [0.01, 0.01])
     radius = float(max(radius_range)) if radius_range else 0.01
-    material_id = str(moved.get("material_id", "abs"))
+    material_id = str(moved.get("material_id", "abs")).strip()
+    if not material_id:
+        raise ValueError("moved_object.material_id must be a non-empty string")
 
     ball = Sphere(radius, align=(Align.CENTER, Align.CENTER, Align.CENTER)).move(
         Location((float(start[0]), float(start[1]), float(start[2])))

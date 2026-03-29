@@ -959,7 +959,24 @@ async def test_int_008_objectives_validation(
         data = BenchmarkToolResponse.model_validate(resp.json())
         assert "benchmark_definition.yaml invalid" in data.message
 
-        # 3. Unknown extra fields must fail closed (top-level and nested)
+        # 3. Blank moved_object label must fail closed.
+        blank_label_obj = valid_objectives.model_dump(mode="json")
+        blank_label_obj["moved_object"]["label"] = ""
+        await setup_workspace(
+            client,
+            base_headers,
+            {**base_files, "benchmark_definition.yaml": blank_label_obj},
+        )
+        resp = await client.post(
+            f"{WORKER_HEAVY_URL}/benchmark/submit",
+            json=submit_req.model_dump(mode="json"),
+            headers=base_headers,
+        )
+        data = BenchmarkToolResponse.model_validate(resp.json())
+        assert "benchmark_definition.yaml invalid" in data.message
+        assert "label must be a non-empty string" in data.message
+
+        # 4. Unknown extra fields must fail closed (top-level and nested)
         extra_obj = valid_objectives.model_dump(mode="json")
         extra_obj["unknown_top_level"] = "forbidden"
         extra_obj["objectives"]["goal_zone"]["unexpected_key"] = 123
