@@ -457,13 +457,93 @@ def test_run_evals_codex_submit_helper_imports_workspace_script_from_cwd(
 
 
 @pytest.mark.integration_p0
+def test_run_evals_codex_submit_helper_forces_headless_rendering_env(tmp_path):
+    item = _load_dataset_item(
+        "dataset/data/seed/role_based/engineer_coder.json",
+        "ec-001",
+    )
+    workspace_dir = tmp_path / "workspace"
+    materialize_seed_workspace(
+        item=item,
+        agent_name=AgentName.ENGINEER_CODER,
+        workspace_dir=workspace_dir,
+    )
+
+    python_probe = tmp_path / "python-probe"
+    python_probe.write_text(
+        textwrap.dedent(
+            """\
+            #!/usr/bin/env python3
+            from __future__ import annotations
+
+            import json
+            import os
+            import sys
+
+            payload = {
+                "argv": sys.argv[1:],
+                "DISPLAY": os.environ.get("DISPLAY"),
+                "XAUTHORITY": os.environ.get("XAUTHORITY"),
+                "LIBGL_ALWAYS_SOFTWARE": os.environ.get("LIBGL_ALWAYS_SOFTWARE"),
+                "MUJOCO_GL": os.environ.get("MUJOCO_GL"),
+                "PYOPENGL_PLATFORM": os.environ.get("PYOPENGL_PLATFORM"),
+                "PYVISTA_OFF_SCREEN": os.environ.get("PYVISTA_OFF_SCREEN"),
+                "VTK_DEFAULT_OPENGL_RENDERER": os.environ.get(
+                    "VTK_DEFAULT_OPENGL_RENDERER"
+                ),
+                "PYGLET_HEADLESS": os.environ.get("PYGLET_HEADLESS"),
+                "PYTHONPATH": os.environ.get("PYTHONPATH"),
+            }
+            print(json.dumps(payload))
+            """
+        ),
+        encoding="utf-8",
+    )
+    python_probe.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "PROBLEMOLOGIST_REPO_ROOT": str(ROOT),
+            "PYTHON_BIN": str(python_probe),
+            "DISPLAY": ":109",
+            "XAUTHORITY": "/tmp/xauthority",
+            "MUJOCO_GL": "osmesa",
+            "PYOPENGL_PLATFORM": "osmesa",
+            "VTK_DEFAULT_OPENGL_RENDERER": "OSMesa",
+        }
+    )
+    completed = subprocess.run(
+        ["bash", "scripts/submit_for_review.sh"],
+        cwd=workspace_dir,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout.strip())
+    assert payload["argv"] == ["scripts/submit_for_review.py"]
+    assert payload["DISPLAY"] is None
+    assert payload["XAUTHORITY"] is None
+    assert payload["LIBGL_ALWAYS_SOFTWARE"] == "1"
+    assert payload["MUJOCO_GL"] == "egl"
+    assert payload["PYOPENGL_PLATFORM"] == "egl"
+    assert payload["PYVISTA_OFF_SCREEN"] == "true"
+    assert payload["VTK_DEFAULT_OPENGL_RENDERER"] == "EGL"
+    assert payload["PYGLET_HEADLESS"] == "1"
+    assert str(ROOT) in (payload["PYTHONPATH"] or "")
+
+
+@pytest.mark.integration_p0
 @pytest.mark.int_id("INT-207")
 def test_run_evals_codex_engineer_workspace_validate_falls_back_from_bad_display(
     tmp_path: Path,
 ):
     """
     INT-207: an engineer workspace validation preview must recover from an
-    unusable ambient DISPLAY by logging the fallback, rendering previews, and
+    invalid ambient DISPLAY by logging the fallback, rendering previews, and
     persisting the validation record.
     """
 

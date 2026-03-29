@@ -37,7 +37,9 @@ logger = structlog.get_logger(__name__)
 
 
 def _default_smoke_test_mode() -> bool:
-    return resolve_default_smoke_test_mode(integration_enabled=settings.is_integration_test)
+    return resolve_default_smoke_test_mode(
+        integration_enabled=settings.is_integration_test
+    )
 
 
 class WorkerClient:

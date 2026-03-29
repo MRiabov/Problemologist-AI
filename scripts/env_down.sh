@@ -66,6 +66,21 @@ pkill -9 -f "uv run python -m worker_heavy.temporal_worker" || true
 pkill -9 -f "Xvfb :(99|10000|1000[1-9]|100[1-9][0-9]|10100)([[:space:]]|$)" || true
 pkill -9 -f "Xvfb -displayfd" || true
 
+# Remove stale X11 sockets/lockfiles for the private display range so the next
+# run does not rebind against a dead display slot.
+for display in 99 $(seq 10000 10100); do
+  lock_file="/tmp/.X${display}-lock"
+  socket_file="/tmp/.X11-unix/X${display}"
+  pid=""
+  if [ -f "$lock_file" ]; then
+    pid=$(tr -dc '0-9' < "$lock_file" 2>/dev/null || true)
+  fi
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    continue
+  fi
+  rm -f "$lock_file" "$socket_file" 2>/dev/null || true
+done
+
 echo "Bringing down infrastructure containers..."
 docker compose -f docker-compose.test.yaml down -v --remove-orphans
 

@@ -25,9 +25,7 @@ def ensure_smoke_test_mode_allowed(
     return smoke_test_mode
 
 
-def resolve_default_smoke_test_mode(
-    *, integration_enabled: bool | None = None
-) -> bool:
+def resolve_default_smoke_test_mode(*, integration_enabled: bool | None = None) -> bool:
     env_smoke = os.getenv("SMOKE_TEST_MODE")
     if env_smoke is not None:
         smoke_test_mode = env_smoke.strip().lower() in _TRUTHY

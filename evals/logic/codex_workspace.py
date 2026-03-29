@@ -595,12 +595,15 @@ def build_codex_env(
     # fallback logic instead of inheriting a possibly stale host session.
     env.pop("DISPLAY", None)
     env.pop("XAUTHORITY", None)
-    env.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
-    env.setdefault("MUJOCO_GL", "osmesa")
-    env.setdefault("PYOPENGL_PLATFORM", "osmesa")
-    env.setdefault("PYVISTA_OFF_SCREEN", "true")
-    env.setdefault("VTK_DEFAULT_OPENGL_RENDERER", "OSMesa")
-    env.setdefault("PYGLET_HEADLESS", "1")
+    env["LIBGL_ALWAYS_SOFTWARE"] = "1"
+    # MuJoCo's current headless path is EGL-backed. OSMesa currently breaks
+    # import-time OpenGL setup in this workspace, so keep the codex launch env
+    # aligned with the working repo default.
+    env["MUJOCO_GL"] = "egl"
+    env["PYOPENGL_PLATFORM"] = "egl"
+    env["PYVISTA_OFF_SCREEN"] = "true"
+    env["VTK_DEFAULT_OPENGL_RENDERER"] = "EGL"
+    env["PYGLET_HEADLESS"] = "1"
     env["HOME"] = str(codex_home_root)
     env["CODEX_HOME"] = str(codex_home_root / ".codex")
     env["XDG_CACHE_HOME"] = str(codex_home_root / ".cache")
