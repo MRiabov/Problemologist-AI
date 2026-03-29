@@ -3,7 +3,7 @@
   "reviewer_stage": "engineering_execution_reviewer",
   "timestamp": "2026-03-11T12:00:00Z",
   "session_id": "seed-eer-010-diverter-gate-wiring",
-  "revision": "2c196dbefc835aa63ee32ecd34c0c2bdfde60c7d",
+  "revision": "28c3ed16a19b6db784eab2825193b563e855fefb",
   "script_path": "script.py",
   "script_sha256": "046445a4e9240c460753efac139093aaa30d6268b5dd2ba947411fea97e00916",
   "validation_success": true,
