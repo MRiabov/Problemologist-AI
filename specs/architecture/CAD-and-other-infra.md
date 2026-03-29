@@ -107,7 +107,7 @@ Those files are context artifacts for downstream agents and reviewers. They foll
 
 Dynamic simulation renders and videos are resolved at runtime from the selected simulation backend and are recorded in `simulation_result.json`; they do not take their camera/view contract from `agents_config.yaml` or from benchmark task metadata. See [Simulation and Rendering](./simulation-and-rendering.md#render-profile-ownership) for the ownership split.
 
-The simulation backend exposes a typed render-capability record so the runtime can distinguish supported artifact modes from unsupported ones without introducing a YAML render contract yet.
+The simulation backend still exposes a typed render-capability record so the runtime can distinguish supported artifact modes from unsupported ones. Static preview emission is separately governed by the YAML render policy in `config/agents_config.yaml`.
 
 For the RGB preview image, manufactured-part material colors come from the manufacturing material configuration associated with each part's `material_id`. The preview is therefore expected to preserve meaningful color differences between materials, not flatten everything to the same neutral shade.
 
@@ -123,12 +123,27 @@ Render-modality emission is config-driven through `config/agents_config.yaml`:
 
 ```yaml
 render:
-  rgb: true
-  depth: true
-  segmentation: true
+  split_video_renders_to_images: true
+  rgb:
+    enabled: true
+    axes: true
+    edges: true
+  depth:
+    enabled: true
+    axes: true
+    edges: true
+  segmentation:
+    enabled: true
+    axes: true
+    edges: true
 ```
 
-If one of those flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
+If one of the `enabled` flags is set to `false`, the corresponding preview artifact type is not emitted into `renders/`. This switch controls static preview artifact persistence, not the higher-level worker routing policy.
+`split_video_renders_to_images` is separate from the static preview modality flags. When enabled, agent-facing media inspection may decode persisted `.mp4` artifacts into representative image frames for multimodal review. It does not change which artifacts are stored, only how `inspect_media(...)` attaches them to the model.
+
+Each modality can independently enable world-coordinate axes and edge emphasis. Those overlays are controlled by `render.<modality>.axes` and `render.<modality>.edges`.
+
+The RGB static preview can overlay adaptive world-coordinate axes with tick labels and a subtle CAD-style edge emphasis. Depth and segmentation previews can use the same axes overlay, and their edge highlights use a visible non-black accent so they do not disappear into the background or read as void.
 
 ### Workbench technical details
 

@@ -149,6 +149,8 @@ The Engineer agent(s) (for whom the first point of access is Engineering Planner
 
 The benchmark-owned environment, benchmark input objects, benchmark objective markers, benchmark-owned moving fixtures, and benchmark-owned electronics are read-only task fixtures. They are validation setup, not engineer-owned deliverables: they are validated for geometry correctness, placement, randomization, benchmark solvability, and valid COTS identifiers/runtime metadata, but they are not validated for manufacturability or priced as manufactured outputs. They may be fixed, partially constrained, motorized, or fully free when the benchmark contract explicitly says so. Manufacturability validation starts at engineer-planned manufactured parts and selected COTS components only.
 
+Benchmark-owned authored labels are part of that read-only contract too: `moved_object.label` and any top-level build123d object label in the benchmark handoff must be non-empty and stable, and runtime must not invent fallback labels when one is missing.
+
 Additionally, the engineering agent will be supplied with renders for preview automatically rendered from 24 views. (Clockwise, 8 pictures, on 30 degrees up or down (configurable)).
 
 These renders are not only passive assets in storage. Reviewer and other vision-using nodes must inspect them through the dedicated media-inspection tool (`inspect_media(...)`) when visual evidence is required. Merely listing files in `renders/` or reading text artifacts that mention render paths is not treated as image review.

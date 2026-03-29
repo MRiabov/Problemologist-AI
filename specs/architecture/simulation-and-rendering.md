@@ -119,6 +119,7 @@ This means `/benchmark/validate` and `/benchmark/simulate` are intentionally asy
    - checks geometry/objective consistency,
    - generates static preview artifacts,
    - uses build123d/VTK for that static preview by default,
+   - preserves the same script-source snapshot selected by the parent request when it launches an isolated preview child, so inline `script_content` and non-default `script_path` entrypoints do not get silently replaced by `working_dir/script.py`,
    - does not add an extra Genesis load/render/build gate solely for parity checking.
    - fails closed on duplicate top-level labels or labels that use the reserved `environment` or `zone_` namespaces, because MJCF mesh/body names are derived from authored labels and the simulator owns the scene root and `zone_*` bodies.
 2. `/benchmark/simulate`
@@ -140,6 +141,8 @@ The rule is:
 5. If a backend cannot satisfy the selected render path, the failure should surface as a validation/runtime contract error rather than being hidden behind an unrelated global fallback.
 
 This keeps MuJoCo and Genesis distinct while still allowing each backend to use its own canonical default view when the runtime resolver allows that.
+
+Agent-facing inspection of persisted simulation video is config-driven. When `config/agents_config.yaml` sets `render.split_video_renders_to_images=true`, `inspect_media(...)` may decode an `.mp4` artifact into a small set of representative image frames and attach those frames to the model instead of exposing the raw video bytes as a dead end. The stored MP4 remains the canonical simulation artifact; the split only affects multimodal review.
 
 <!-- Downsides of MuJoCo?
 
