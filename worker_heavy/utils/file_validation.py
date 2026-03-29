@@ -174,12 +174,6 @@ def validate_benchmark_definition_yaml(
         if data is None:
             return False, ["Empty or invalid YAML content"]
 
-        benchmark_parts = data.get("benchmark_parts")
-        if not isinstance(benchmark_parts, list) or not benchmark_parts:
-            return False, [
-                "benchmark_definition.yaml must declare at least one benchmark_parts entry"
-            ]
-
         # 1. Enforce that file is not the template
         found_placeholders = _find_template_placeholders(
             "benchmark_definition.yaml", content
